@@ -28,12 +28,15 @@ export function CreateStoreDialog() {
   const { mutate: createStore, isPending } = useCreateStore();
 
   const handleSubmit = (data: CreateStoreInput) => {
+    console.log("Creating store with data:", data);
     createStore(data, {
-      onSuccess: () => {
+      onSuccess: (store) => {
+        console.log("Store created successfully:", store);
         toast.success(t("stores.createSuccess") || "Store created successfully");
         setOpen(false);
       },
       onError: (error) => {
+        console.error("Store creation failed:", error);
         toast.error(error.message || t("stores.createError") || "Failed to create store");
       },
     });

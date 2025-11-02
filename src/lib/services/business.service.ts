@@ -1,8 +1,13 @@
 import { Business } from "@prisma/client";
 import { businessRepository, BusinessRepository } from "@/lib/repositories/business.repository";
 import { storeRepository, StoreRepository } from "@/lib/repositories/store.repository";
-import { CreateBusinessInput, UpdateBusinessInput, CreateStoreInput } from "@/lib/validation/business.schemas";
+import {
+  CreateBusinessInput,
+  UpdateBusinessInput,
+  CreateStoreInput,
+} from "@/lib/validation/business.schemas";
 import { BusinessDto, BusinessWithStoresDto, StoreDto } from "@/types/dto";
+import { getStorageAdapter } from "@/lib/storage";
 
 /**
  * Business Service
@@ -25,10 +30,7 @@ export class BusinessService {
    *
    * @throws Error if user already has a business
    */
-  async createBusiness(
-    userId: string,
-    input: CreateBusinessInput
-  ): Promise<Business> {
+  async createBusiness(userId: string, input: CreateBusinessInput): Promise<Business> {
     // Check if user already has a business
     const existingBusiness = await this.businessRepo.findByUserId(userId);
     if (existingBusiness) {
@@ -135,6 +137,12 @@ export class BusinessService {
       throw new Error("Unauthorized to create store for this business");
     }
 
+    // Check if store name already exists for this business
+    const nameExists = await this.storeRepo.existsByName(businessId, input.name);
+    if (nameExists) {
+      throw new Error("A store with this name already exists in your business");
+    }
+
     // Create store
     return this.storeRepo.create({
       businessId,
@@ -170,10 +178,7 @@ export class BusinessService {
     input: UpdateBusinessInput
   ): Promise<StoreDto> {
     // Verify store belongs to business
-    const belongsToBusiness = await this.storeRepo.belongsToBusiness(
-      storeId,
-      businessId
-    );
+    const belongsToBusiness = await this.storeRepo.belongsToBusiness(storeId, businessId);
     if (!belongsToBusiness) {
       throw new Error("Store does not belong to this business");
     }
@@ -184,23 +189,62 @@ export class BusinessService {
       throw new Error("Unauthorized to update this store");
     }
 
+    // If updating name, check if new name already exists
+    if (input.name) {
+      const nameExists = await this.storeRepo.existsByName(
+        businessId,
+        input.name,
+        storeId // Exclude current store from check
+      );
+      if (nameExists) {
+        throw new Error("A store with this name already exists in your business");
+      }
+    }
+
     // Update store
     return this.storeRepo.update(storeId, input) as unknown as StoreDto;
   }
 
   /**
-   * Deactivate store (soft delete)
+   * Delete store (hard delete) and its associated image from Blob storage
    */
-  async deactivateStore(
-    storeId: string,
-    businessId: string,
-    userId: string
-  ): Promise<void> {
+  async deleteStore(storeId: string, businessId: string, userId: string): Promise<void> {
     // Verify ownership
-    const belongsToBusiness = await this.storeRepo.belongsToBusiness(
-      storeId,
-      businessId
-    );
+    const belongsToBusiness = await this.storeRepo.belongsToBusiness(storeId, businessId);
+    if (!belongsToBusiness) {
+      throw new Error("Store does not belong to this business");
+    }
+
+    const business = await this.businessRepo.findById(businessId);
+    if (!business || business.userId !== userId) {
+      throw new Error("Unauthorized to delete this store");
+    }
+
+    // Get store to access image URL before deletion
+    const store = await this.storeRepo.findById(storeId);
+
+    // Delete from database (hard delete)
+    await this.storeRepo.delete(storeId);
+
+    // Delete image from Blob storage if exists
+    if (store?.image && store.image.includes("blob.vercel-storage.com")) {
+      try {
+        const storage = getStorageAdapter();
+        await storage.delete(store.image);
+        console.log("✅ Image deleted from Blob storage:", store.image);
+      } catch (error) {
+        console.warn("⚠️ Failed to delete image from Blob storage:", error);
+        // Continue even if image deletion fails
+      }
+    }
+  }
+
+  /**
+   * Deactivate store (soft delete) - kept for future use
+   */
+  async deactivateStore(storeId: string, businessId: string, userId: string): Promise<void> {
+    // Verify ownership
+    const belongsToBusiness = await this.storeRepo.belongsToBusiness(storeId, businessId);
     if (!belongsToBusiness) {
       throw new Error("Store does not belong to this business");
     }
@@ -216,16 +260,9 @@ export class BusinessService {
   /**
    * Activate store
    */
-  async activateStore(
-    storeId: string,
-    businessId: string,
-    userId: string
-  ): Promise<void> {
+  async activateStore(storeId: string, businessId: string, userId: string): Promise<void> {
     // Verify ownership
-    const belongsToBusiness = await this.storeRepo.belongsToBusiness(
-      storeId,
-      businessId
-    );
+    const belongsToBusiness = await this.storeRepo.belongsToBusiness(storeId, businessId);
     if (!belongsToBusiness) {
       throw new Error("Store does not belong to this business");
     }

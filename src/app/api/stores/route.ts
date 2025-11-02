@@ -3,11 +3,7 @@ import { getServerSession } from "next-auth";
 import authOptions from "@/lib/auth";
 import { businessService } from "@/lib/services";
 import { createStoreSchema } from "@/lib/validation/business.schemas";
-import {
-  createSuccessResponse,
-  createErrorResponse,
-  ApiErrorCode,
-} from "@/types/api/responses";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
 
 /**
@@ -20,10 +16,9 @@ export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Get user's business first
@@ -46,10 +41,7 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching stores:", error);
     return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
     );
   }
@@ -65,10 +57,9 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Get user's business
@@ -86,14 +77,15 @@ export async function POST(request: Request) {
 
     // Parse and validate request body
     const body = await request.json();
+    console.log("📥 Store creation request body:", body);
+
     const input = createStoreSchema.parse(body);
+    console.log("✅ Validated store input:", input);
 
     // Create store via service
-    const store = await businessService.createStore(
-      business.id,
-      session.user.id,
-      input
-    );
+    const store = await businessService.createStore(business.id, session.user.id, input);
+
+    console.log("✅ Store created successfully:", store);
 
     return NextResponse.json(createSuccessResponse(store), { status: 201 });
   } catch (error) {
@@ -119,10 +111,7 @@ export async function POST(request: Request) {
 
     console.error("Error creating store:", error);
     return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
     );
   }

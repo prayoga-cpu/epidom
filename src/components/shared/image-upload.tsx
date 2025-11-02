@@ -16,7 +16,7 @@
 
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -55,8 +55,17 @@ export function ImageUpload({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(value);
+  const previousValueRef = useRef<string | undefined>(value);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Sync previewUrl with value prop when it changes externally
+  useEffect(() => {
+    if (value !== previousValueRef.current) {
+      setPreviewUrl(value);
+      previousValueRef.current = value;
+    }
+  }, [value]);
 
   /**
    * Validate file before upload
@@ -83,8 +92,27 @@ export function ImageUpload({
    */
   const uploadImage = useCallback(
     async (file: File) => {
+      const oldImageUrl = value; // Store old image URL before starting upload
+
       try {
         setIsUploading(true);
+
+        // Delete old image if exists (and it's a blob storage URL)
+        if (oldImageUrl && oldImageUrl.includes("blob.vercel-storage.com")) {
+          try {
+            await fetch("/api/upload", {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ url: oldImageUrl }),
+            });
+            console.log("Old image deleted:", oldImageUrl);
+          } catch (error) {
+            console.warn("Failed to delete old image:", error);
+            // Continue with upload even if delete fails
+          }
+        }
 
         // Compress image
         toast({
@@ -123,7 +151,9 @@ export function ImageUpload({
         revokeImagePreview(preview);
 
         // Update with final URL
+        console.log("Image uploaded successfully. URL:", data.url);
         setPreviewUrl(data.url);
+        previousValueRef.current = data.url;
         onChange(data.url);
 
         toast({
@@ -131,11 +161,11 @@ export function ImageUpload({
           description: "Image uploaded successfully.",
         });
       } catch (error) {
-        // Cleanup preview on error
-        if (previewUrl) {
+        // Cleanup preview on error and restore old value
+        if (previewUrl && previewUrl.startsWith("blob:")) {
           revokeImagePreview(previewUrl);
-          setPreviewUrl(undefined);
         }
+        setPreviewUrl(oldImageUrl);
 
         const message = error instanceof Error ? error.message : "Failed to upload image";
 
@@ -150,7 +180,7 @@ export function ImageUpload({
         setIsUploading(false);
       }
     },
-    [onChange, previewUrl, toast]
+    [value, onChange, toast, previewUrl]
   );
 
   /**
@@ -223,18 +253,40 @@ export function ImageUpload({
   /**
    * Handle remove image
    */
-  const handleRemove = useCallback(() => {
+  const handleRemove = useCallback(async () => {
+    const currentUrl = previewUrl || value;
+
+    // Delete from blob storage if it's a blob storage URL
+    if (currentUrl && currentUrl.includes("blob.vercel-storage.com")) {
+      try {
+        await fetch("/api/upload", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url: currentUrl }),
+        });
+        console.log("Image deleted from storage:", currentUrl);
+      } catch (error) {
+        console.warn("Failed to delete image from storage:", error);
+        // Continue with removal even if delete fails
+      }
+    }
+
+    // Cleanup blob preview URL
     if (previewUrl && previewUrl.startsWith("blob:")) {
       revokeImagePreview(previewUrl);
     }
+
     setPreviewUrl(undefined);
+    previousValueRef.current = undefined;
     onChange(undefined);
 
     toast({
       title: "Image removed",
       description: "The image has been removed.",
     });
-  }, [previewUrl, onChange, toast]);
+  }, [previewUrl, value, onChange, toast]);
 
   /**
    * Open file picker

@@ -81,6 +81,13 @@ export function StoreCard({ store }: StoreCardProps) {
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             priority={false}
+            unoptimized={store.image?.includes('blob.vercel-storage.com') ? false : true}
+            onError={(e) => {
+              console.error('Image load error for store:', store.name, store.image);
+              // Fallback to placeholder on error
+              const target = e.target as HTMLImageElement;
+              target.src = '/images/placeholder-store.png';
+            }}
           />
         </div>
 
