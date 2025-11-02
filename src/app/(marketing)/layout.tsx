@@ -31,7 +31,7 @@ export default function LandingLayout({
         <Suspense fallback={<div>Loading...</div>}>
           <I18nProvider>
             <SiteHeader />
-            <main className="min-h-screen">{children}</main>
+            <main className="lg:min-h-screen">{children}</main>
             <SiteFooter />
             <CookieConsentBar />
           </I18nProvider>

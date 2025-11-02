@@ -20,14 +20,14 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
 
   return (
     <main
-      className="min-h-screen bg-white pt-16 pb-8 sm:pt-20 sm:pb-12 md:pt-24 md:pb-16 lg:pt-32 lg:pb-24"
+      className="min-h-screen bg-white pt-24 md:pt-32"
       style={{ color: "var(--color-brand-primary)" }}
     >
       <div className="animate-slide-up">
         <PaymentHero plan={selectedPlan} />
       </div>
       <div className="animate-slide-up-delayed">
-        <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
           {selectedPlan === "enterprise" ? (
             // Enterprise plan - show contact sales form
             <div className="mx-auto max-w-4xl">
@@ -36,7 +36,7 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
           ) : (
             // Starter and Pro plans - show payment form
             <div
-              className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-1 lg:grid-cols-3 lg:grid-rows-1 lg:gap-8"
+              className="grid grid-cols-1 gap-6 md:gap-12 lg:grid-cols-3 lg:grid-rows-1 lg:gap-8"
               style={{ gridTemplateRows: "1fr" }}
             >
               <div className="order-2 lg:order-1 lg:col-span-2">

@@ -28,8 +28,8 @@ export function PaymentHero({ plan }: PaymentHeroProps) {
   const { title, subtitle } = getHeroContent();
 
   return (
-    <section className="pb-8 sm:pb-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section className="py-8 md:py-12 lg:py-16">
+      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
         <div className="text-center">
           <Button asChild variant="ghost" className="mb-6 text-gray-600 hover:text-gray-900">
             <Link href="/pricing" className="flex items-center gap-2">
@@ -38,10 +38,10 @@ export function PaymentHero({ plan }: PaymentHeroProps) {
             </Link>
           </Button>
 
-          <h1 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+          <h1 className="mb-4 text-3xl font-bold tracking-tight md:text-5xl">
             {title}
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-gray-600 sm:text-xl">{subtitle}</p>
+          <p className="mx-auto max-w-2xl text-lg text-gray-600 md:text-xl">{subtitle}</p>
         </div>
       </div>
     </section>

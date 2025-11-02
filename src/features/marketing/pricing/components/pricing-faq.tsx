@@ -12,9 +12,9 @@ export function PricingFaq() {
   const { t } = useI18n();
 
   return (
-    <section className="pb-12 sm:pb-16 md:pb-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h2 className="mb-6 text-center text-2xl font-bold tracking-tight sm:mb-8 sm:text-3xl md:text-4xl">
+    <section className="pb-12 md:pb-20 lg:pb-24">
+      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+        <h2 className="mb-6 text-center text-2xl font-bold tracking-tight md:mb-8 md:text-4xl">
           {t("pricing.faq.title")}
         </h2>
         <Accordion type="single" collapsible className="w-full">

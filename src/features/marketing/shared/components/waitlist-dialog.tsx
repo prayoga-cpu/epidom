@@ -163,7 +163,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       <DialogTrigger asChild>
         <Button
           size="lg"
-          className={`h-10 rounded-full px-6 font-semibold transition-colors ${
+          className={`h-10 rounded-full px-4 font-semibold transition-colors md:px-5 lg:px-6 ${
             variant === "home"
               ? "text-white hover:bg-gray-700"
               : variant === "sidebar"
@@ -179,7 +179,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           }
           aria-label={t("waitlist.openButtonAria")}
         >
-          {t("waitlist.openButton")}
+          <span className="text-sm md:text-sm lg:text-base">{t("waitlist.openButton")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent aria-describedby="waitlist-description" className="sm:max-w-md">

@@ -8,7 +8,7 @@ function LogoWithSkeleton() {
   const [isLoading, setIsLoading] = useState(true);
 
   return (
-    <div className="mb-6 sm:mb-8">
+    <div className="mb-6 md:mb-8">
       <div className="relative mx-auto h-8 w-[120px] flex items-center justify-center">
         {isLoading && (
           <div className="absolute inset-0 animate-pulse rounded bg-gray-200" />
@@ -39,15 +39,15 @@ export function PricingHero() {
   const { t } = useI18n();
 
   return (
-    <section className="py-8 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section className="py-8 md:py-12 lg:py-16">
+      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
         <div className="text-center">
           {/* Logo */}
           <LogoWithSkeleton />
 
           {/* Title */}
           <h1
-            className="mb-4 text-3xl leading-tight font-bold tracking-tight sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl"
+            className="mb-4 text-3xl leading-tight font-bold tracking-tight md:mb-6 md:text-5xl lg:text-6xl"
             style={{ color: "var(--color-brand-primary)" }}
           >
             {t("pricing.heroTitle")}
@@ -55,7 +55,7 @@ export function PricingHero() {
 
           {/* Description */}
           <p
-            className="mx-auto max-w-4xl text-lg leading-relaxed sm:text-xl md:text-2xl"
+            className="mx-auto max-w-4xl text-lg leading-relaxed md:text-2xl"
             style={{ color: "var(--color-brand-primary)" }}
           >
             {t("pricing.heroDescription")}

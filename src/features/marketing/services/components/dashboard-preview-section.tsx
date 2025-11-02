@@ -7,17 +7,17 @@ export function DashboardPreviewSection() {
   const { t } = useI18n();
 
   return (
-    <section className="relative z-10 flex items-center overflow-visible bg-white py-6 sm:min-h-screen sm:py-12">
+    <section className="relative z-10 flex items-center overflow-visible bg-white py-8 md:py-4 lg:py-16">
       <div className="services-narrow-container">
-        <div className="grid grid-cols-1 items-center gap-4 sm:gap-8 lg:grid-cols-10 lg:gap-8">
+        <div className="grid grid-cols-1 items-center gap-4 md:gap-6 lg:grid-cols-10 lg:gap-8">
           {/* Left Column - Dashboard Image (70%) */}
           <div className="order-2 lg:order-1 lg:col-span-7">
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg shadow-2xl">
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg">
               <Image
                 src="/images/dashboard.png"
                 alt="Dashboard interface preview"
                 fill
-                className="object-cover"
+                className="object-cover scale-[1.01]"
                 priority={true}
                 quality={85}
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 70vw, 50vw"
@@ -29,7 +29,7 @@ export function DashboardPreviewSection() {
 
           {/* Right Column - Text Content (30%) */}
           <div className="order-1 lg:order-2 lg:col-span-3">
-            <div className="space-y-3 text-left sm:space-y-10">
+            <div className="space-y-3 text-left md:space-y-5">
               {/* Subtitle */}
               <h2 className="text-subtitle" style={{ color: "var(--color-brand-primary)" }}>
                 {t("services.dashboard.subtitle")}

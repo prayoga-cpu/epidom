@@ -11,12 +11,12 @@ interface ContactItemProps {
 
 function ContactItem({ icon: Icon, label, children }: ContactItemProps) {
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-4 md:gap-6">
       <div className="mt-1 flex-shrink-0">
-        <Icon className="h-5 w-5" style={{ color: "#444444" }} />
+        <Icon className="h-5 w-5 md:h-6 md:w-6" style={{ color: "#444444" }} />
       </div>
-      <div>
-        <h3 className="text-muted-foreground mb-2 text-sm font-semibold tracking-wider uppercase">
+      <div className="flex-1">
+        <h3 className="text-muted-foreground mb-2 text-sm font-semibold tracking-wider uppercase md:mb-3 md:text-base">
           {label}
         </h3>
         {children}
@@ -29,55 +29,39 @@ export function ContactInfo() {
   const { t } = useI18n();
 
   return (
-    <div className="py-8 sm:py-12">
-      <div>
-        <h1
-          className="mb-6 text-3xl leading-tight font-bold tracking-tight sm:mb-8 sm:text-4xl md:text-5xl lg:text-6xl"
-          style={{ color: "#444444" }}
-        >
-          {t("contact.title")}
-        </h1>
-
-        <p
-          className="mb-6 text-lg leading-relaxed sm:mb-8 sm:text-xl md:text-2xl"
-          style={{ color: "#444444" }}
-        >
-          {t("contact.subtitle")}
-        </p>
-
-        <div className="space-y-4 sm:space-y-5">
+    <div>
+      <div className="space-y-6 md:space-y-8">
           <ContactItem icon={MapPin} label={t("contact.labels.address")}>
-              <div className="space-y-0.5">
-                <p className="text-sm sm:text-base md:text-lg" style={{ color: "#444444" }}>
-                  {t("contact.info.address.line1")}
-                </p>
-                <p className="text-sm sm:text-base md:text-lg" style={{ color: "#444444" }}>
-                  {t("contact.info.address.line2")}
-                </p>
-              </div>
+            <div className="space-y-1 md:space-y-1.5">
+              <p className="text-sm leading-relaxed md:text-lg" style={{ color: "#444444" }}>
+                {t("contact.info.address.line1")}
+              </p>
+              <p className="text-sm leading-relaxed md:text-lg" style={{ color: "#444444" }}>
+                {t("contact.info.address.line2")}
+              </p>
+            </div>
           </ContactItem>
 
           <ContactItem icon={Phone} label={t("contact.labels.phone")}>
-              <a
-                href={`tel:${t("contact.info.phone.number").replace(/[^\d+]/g, "")}`}
-                className="block text-sm transition-opacity hover:opacity-70 sm:text-base md:text-lg"
-                style={{ color: "var(--color-brand-primary)" }}
-              >
-                {t("contact.info.phone.number")}
-              </a>
+            <a
+              href={`tel:${t("contact.info.phone.number").replace(/[^\d+]/g, "")}`}
+              className="block text-sm leading-relaxed transition-opacity hover:opacity-70 md:text-lg"
+              style={{ color: "var(--color-brand-primary)" }}
+            >
+              {t("contact.info.phone.number")}
+            </a>
           </ContactItem>
 
           <ContactItem icon={Mail} label={t("contact.labels.email")}>
-                <a
-                  href={`mailto:${t("contact.info.email.address")}`}
-                  className="text-sm transition-opacity hover:opacity-70 sm:text-base md:text-lg"
-                  style={{ color: "var(--color-brand-primary)" }}
-                >
-                  {t("contact.info.email.address")}
-                </a>
+            <a
+              href={`mailto:${t("contact.info.email.address")}`}
+              className="block text-sm leading-relaxed transition-opacity hover:opacity-70 md:text-lg"
+              style={{ color: "var(--color-brand-primary)" }}
+            >
+              {t("contact.info.email.address")}
+            </a>
           </ContactItem>
         </div>
-      </div>
     </div>
   );
 }

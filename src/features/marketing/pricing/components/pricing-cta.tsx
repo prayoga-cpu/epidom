@@ -36,16 +36,16 @@ export function PricingCta() {
   };
 
   return (
-    <section className="pb-10 sm:pb-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="bg-muted/30 rounded-2xl border-2 p-6 text-center sm:p-8 md:p-12">
-          <h3 className="text-xl font-bold tracking-tight sm:text-2xl md:text-3xl">
+    <section className="pb-10 md:pb-12 lg:pb-16">
+      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+        <div className="bg-muted/30 rounded-2xl border-2 p-6 text-center md:p-8 lg:p-12">
+          <h3 className="text-xl font-bold tracking-tight md:text-3xl">
             {t("pricing.finalCta.title")}
           </h3>
-          <p className="text-muted-foreground mx-auto mt-3 max-w-2xl text-sm sm:text-base">
+          <p className="text-muted-foreground mx-auto mt-3 max-w-2xl text-sm md:text-base">
             {t("pricing.finalCta.desc")}
           </p>
-          <div className="mt-6 flex flex-col flex-wrap items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col flex-wrap items-center justify-center gap-3 md:flex-row">
             <DynamicWaitlistDialog />
             <Button
               variant="secondary"

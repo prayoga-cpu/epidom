@@ -39,34 +39,31 @@ export function ContactMap() {
   }, []);
 
   return (
-    <div className="py-8 sm:py-12">
-      <div className="h-80 w-full overflow-hidden rounded-lg shadow-lg sm:h-96 lg:h-[496px] [&_.leaflet-control-attribution]:hidden">
-          <MapContainer
-            center={MAP_POSITION}
-            zoom={15}
-            style={{ height: "100%", width: "100%" }}
-            scrollWheelZoom={true}
-            zoomControl={true}
-          >
-            <TileLayer
-              attribution=""
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <Marker position={MAP_POSITION}>
-              <Popup>
-                <div className="text-center">
-                  <h3
-                    className="mb-2 text-lg font-semibold"
-                    style={{ color: "var(--color-brand-primary)" }}
-                  >
-                    EPIDOM
-                  </h3>
-                  <p className="mb-1 text-sm text-gray-600">{t("contact.info.address.line1")}</p>
-                  <p className="text-sm text-gray-600">{t("contact.info.address.line2")}</p>
-                </div>
-              </Popup>
-            </Marker>
-          </MapContainer>
+    <div>
+      <div className="h-80 w-full overflow-hidden rounded-lg shadow-lg md:aspect-square lg:h-[560px] [&_.leaflet-control-attribution]:hidden">
+        <MapContainer
+          center={MAP_POSITION}
+          zoom={15}
+          style={{ height: "100%", width: "100%" }}
+          scrollWheelZoom={true}
+          zoomControl={true}
+        >
+          <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <Marker position={MAP_POSITION}>
+            <Popup>
+              <div className="text-center">
+                <h3
+                  className="mb-2 text-lg font-semibold"
+                  style={{ color: "var(--color-brand-primary)" }}
+                >
+                  EPIDOM
+                </h3>
+                <p className="mb-1 text-sm text-gray-600">{t("contact.info.address.line1")}</p>
+                <p className="text-sm text-gray-600">{t("contact.info.address.line2")}</p>
+              </div>
+            </Popup>
+          </Marker>
+        </MapContainer>
       </div>
     </div>
   );
