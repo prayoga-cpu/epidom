@@ -24,8 +24,6 @@ export function LoginForm() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    console.log("Attempting login with email:", email);
-
     try {
       const result = await signIn("credentials", {
         email,
@@ -33,16 +31,13 @@ export function LoginForm() {
         redirect: false,
       });
 
-      console.log("SignIn result:", result);
-
       if (result?.error) {
         console.error("Login error:", result.error);
         setError(t("messages.invalidCredentials") || "Invalid email or password");
         setLoading(false);
       } else if (result?.ok) {
         // Login successful
-        console.log("Login successful, redirecting to dashboard");
-        router.push("/dashboard");
+        router.push("/stores");
         router.refresh();
       } else {
         console.error("Unexpected result:", result);

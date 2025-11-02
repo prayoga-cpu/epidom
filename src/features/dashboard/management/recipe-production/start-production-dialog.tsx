@@ -114,7 +114,6 @@ export function StartProductionDialog({
 
     try {
       // TODO: Replace with actual API call to POST /api/production/batches
-      console.log("Starting production batch:", data);
 
       // Simulate API delay
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -126,13 +125,12 @@ export function StartProductionDialog({
         .toString()
         .padStart(3, "0")}`;
 
-      const descriptionText = t("management.recipeProduction.toasts.productionStarted.description") || "Production batch {batchNumber} has been started";
+      const descriptionText =
+        t("management.recipeProduction.toasts.productionStarted.description") ||
+        "Production batch {batchNumber} has been started";
       toast({
         title: t("management.recipeProduction.toasts.productionStarted.title"),
-        description: descriptionText.replace(
-          "{batchNumber}",
-          batchNumber
-        ),
+        description: descriptionText.replace("{batchNumber}", batchNumber),
       });
 
       form.reset();
@@ -186,7 +184,9 @@ export function StartProductionDialog({
                       <p className="text-muted-foreground">
                         {t("management.recipeProduction.timePerBatch")}
                       </p>
-                      <p className="font-medium">{recipe.productionTimeMinutes} {t("common.time.minutesShort")}</p>
+                      <p className="font-medium">
+                        {recipe.productionTimeMinutes} {t("common.time.minutesShort")}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">
@@ -272,7 +272,8 @@ export function StartProductionDialog({
                         {totalTime} {t("common.time.minutesShort")}
                         {totalTime >= 60 && (
                           <span className="text-muted-foreground ml-1 text-sm font-normal">
-                            ({(totalTime / 60).toFixed(1)}{t("common.time.hoursShort")})
+                            ({(totalTime / 60).toFixed(1)}
+                            {t("common.time.hoursShort")})
                           </span>
                         )}
                       </p>
@@ -313,7 +314,11 @@ export function StartProductionDialog({
                                 !dateValue && "text-muted-foreground"
                               )}
                             >
-                              {dateValue ? format(dateValue, "PPP") : <span>{t("common.datePicker.pickDate")}</span>}
+                              {dateValue ? (
+                                format(dateValue, "PPP")
+                              ) : (
+                                <span>{t("common.datePicker.pickDate")}</span>
+                              )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>

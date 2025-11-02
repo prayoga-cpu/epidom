@@ -100,8 +100,6 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
     //   }),
     // });
 
-    console.log("Supplier data to submit:", data);
-
     setIsSubmitting(false);
     toast({
       title: "Supplier Added Successfully",
@@ -159,7 +157,10 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormItem>
                       <FormLabel>Contact Person</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.suppliers.form.contactPersonPlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("data.suppliers.form.contactPersonPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>Primary contact name</FormDescription>
                       <FormMessage />
@@ -174,7 +175,11 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder={t("data.suppliers.form.emailPlaceholder")} {...field} />
+                        <Input
+                          type="email"
+                          placeholder={t("data.suppliers.form.emailPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>Business email</FormDescription>
                       <FormMessage />
@@ -238,7 +243,10 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormItem>
                       <FormLabel>Country</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.suppliers.form.countryPlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("data.suppliers.form.countryPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -260,7 +268,9 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={t("data.suppliers.form.selectPaymentTerms")} />
+                            <SelectValue
+                              placeholder={t("data.suppliers.form.selectPaymentTerms")}
+                            />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -284,7 +294,10 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormItem>
                       <FormLabel>Delivery Schedule</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.suppliers.form.deliverySchedulePlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("data.suppliers.form.deliverySchedulePlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>Regular delivery days</FormDescription>
                       <FormMessage />

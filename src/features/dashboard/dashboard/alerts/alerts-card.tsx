@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { MOCK_ALERTS_FULL, MOCK_MATERIALS } from "@/mocks";
 import { AlertType, AlertStatus, AlertPriority } from "@/types/entities";
 import { ArrowRight, AlertCircle } from "lucide-react";
@@ -11,6 +12,7 @@ import DashboardCard from "../_components/dashboard-card";
 
 export default function AlertsCard() {
   const { t } = useI18n();
+  const { storeId } = useCurrentStore();
 
   // Filter critical and high priority alerts only
   const criticalAlerts = useMemo(() => {
@@ -78,7 +80,7 @@ export default function AlertsCard() {
   );
 
   const cardOther = (
-    <Link href="/alerts">
+    <Link href={`/store/${storeId}/alerts`}>
       <Button variant="ghost" size="sm" className="h-8 gap-1">
         {t("dashboard.alertsCard.viewAll")}
         <ArrowRight className="h-3 w-3" />

@@ -8,6 +8,7 @@ import { I18nProvider } from "@/components/lang/i18n-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import PageShell from "@/features/dashboard/shared/page-shell";
 import { SessionProvider } from "@/components/providers/session-provider";
+import LoadingPage from "@/features/loading/loading-page";
 
 export const metadata: Metadata = {
   title: "Epidom - Admin Dashboard",
@@ -22,7 +23,7 @@ export default function Layout({
   return (
     <div className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
       <ErrorBoundary>
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<LoadingPage />}>
           <SessionProvider>
             <I18nProvider>
               <PageShell>{children}</PageShell>

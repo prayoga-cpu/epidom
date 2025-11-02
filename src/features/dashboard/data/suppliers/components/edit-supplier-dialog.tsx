@@ -121,16 +121,12 @@ export default function EditSupplierDialog({
     //   body: JSON.stringify(data),
     // });
 
-    console.log("Supplier data to update:", { id: supplier.id, ...data });
-
     setIsSubmitting(false);
-    const updatedDesc = t("data.suppliers.toasts.updated.description") || "{name} has been updated successfully.";
+    const updatedDesc =
+      t("data.suppliers.toasts.updated.description") || "{name} has been updated successfully.";
     toast({
       title: t("data.suppliers.toasts.updated.title"),
-      description: updatedDesc.replace(
-        "{name}",
-        data.name
-      ),
+      description: updatedDesc.replace("{name}", data.name),
     });
 
     onOpenChange(false);
@@ -170,14 +166,17 @@ export default function EditSupplierDialog({
                   control={form.control}
                   name="contactPerson"
                   render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Person</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("data.suppliers.form.contactPersonPlaceholder")} {...field} />
-                    </FormControl>
-                    <FormDescription>Primary contact name</FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    <FormItem>
+                      <FormLabel>Contact Person</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("data.suppliers.form.contactPersonPlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>Primary contact name</FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -256,7 +255,10 @@ export default function EditSupplierDialog({
                     <FormItem>
                       <FormLabel>Country</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.suppliers.form.countryPlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("data.suppliers.form.countryPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -278,7 +280,9 @@ export default function EditSupplierDialog({
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={t("data.suppliers.form.selectPaymentTerms")} />
+                            <SelectValue
+                              placeholder={t("data.suppliers.form.selectPaymentTerms")}
+                            />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -302,7 +306,10 @@ export default function EditSupplierDialog({
                     <FormItem>
                       <FormLabel>Delivery Schedule</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.suppliers.form.deliverySchedulePlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("data.suppliers.form.deliverySchedulePlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>Regular delivery days</FormDescription>
                       <FormMessage />

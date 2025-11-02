@@ -121,8 +121,6 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
     //   }),
     // });
 
-    console.log("Product data to submit:", submitData);
-
     setIsSubmitting(false);
     toast({
       title: "Product Added Successfully",
@@ -267,7 +265,10 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                     <FormItem>
                       <FormLabel>Category *</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("data.products.form.categoryPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -49,7 +49,6 @@ export const SiteHeader = memo(function SiteHeader({
    */
   const handleLogout = () => {
     // TODO: Implement logout logic using NextAuth
-    console.log("Logout clicked");
   };
 
   return (

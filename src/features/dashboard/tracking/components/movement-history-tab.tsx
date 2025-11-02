@@ -45,11 +45,6 @@ export function MovementHistoryTab({ onMovementClick }: MovementHistoryTabProps)
   // const totalCount = movementsData?.totalCount || 0;
 
   const handleApplyFilters = () => {
-    console.log("Applying filters for TanStack Query:", {
-      ...movementFilters,
-      page: currentPage,
-      limit: pageSize,
-    });
     // When using TanStack Query, simply call refetch() or the query will auto-refetch
     // when dependencies in queryKey change
   };
@@ -86,7 +81,10 @@ export function MovementHistoryTab({ onMovementClick }: MovementHistoryTabProps)
           <div>
             <h2 className="text-lg font-medium">{t("tracking.movementHistory")}</h2>
             <p className="text-muted-foreground text-sm">
-              {(t("tracking.showingMovements") || "Showing {count} movements").replace("{count}", movements.length.toString())}
+              {(t("tracking.showingMovements") || "Showing {count} movements").replace(
+                "{count}",
+                movements.length.toString()
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -116,7 +114,6 @@ export function MovementHistoryTab({ onMovementClick }: MovementHistoryTabProps)
             handleApplyFilters(); // Triggers API call with new page size
           }}
           onSortChange={(field, order) => {
-            console.log("Sort changed:", field, order);
             // TODO: With TanStack Query, sorting params should be in queryKey
             // Add sortField and sortOrder to state, then the query will auto-refetch
             // Example:

@@ -790,6 +790,15 @@ export const fr = {
     title: "Tableau de Bord",
     description:
       "Bienvenue sur le tableau de bord. Ici, vous pouvez voir l'état actuel de vos commandes, recettes et stocks.",
+    storeSelector: {
+      label: "Sélectionner un magasin",
+      select: "Sélectionner un magasin",
+      createFirst: "Créer un Magasin",
+      createNew: "Créer un nouveau magasin",
+      searchPlaceholder: "Rechercher un magasin...",
+      noStores: "Aucun magasin trouvé",
+      yourStores: "Vos Magasins",
+    },
     alertsCard: {
       title: "Alertes Critiques",
       description: "Alertes de stock nécessitant une attention immédiate",

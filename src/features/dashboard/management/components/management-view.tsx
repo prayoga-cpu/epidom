@@ -47,7 +47,6 @@ export function ManagementView() {
   // Handler for deleting delivery (placeholder for now)
   const handleDeleteDelivery = (deliveryId: string) => {
     // TODO: Implement delete confirmation
-    console.log("Delete delivery:", deliveryId);
   };
 
   return (

@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
     // Performance optimizations
     unoptimized: false,
     loader: "default",
+    // Allow images from Vercel Blob Storage
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.public.blob.vercel-storage.com",
+        port: "",
+        pathname: "/**",
+      },
+    ],
   },
   // Enable React strict mode for better error detection
   reactStrictMode: true,

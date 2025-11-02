@@ -784,6 +784,15 @@ export const en = {
     title: "Dashboard",
     description:
       "Welcome to the dashboard. Here you can see the current status of your orders, recipes, and stock.",
+    storeSelector: {
+      label: "Select store",
+      select: "Select store",
+      createFirst: "Create Store",
+      createNew: "Create new store",
+      searchPlaceholder: "Search store...",
+      noStores: "No stores found",
+      yourStores: "Your Stores",
+    },
     alertsCard: {
       title: "Critical Alerts",
       description: "Stock alerts requiring immediate attention",

@@ -787,6 +787,15 @@ export const id = {
     title: "Dasbor",
     description:
       "Selamat datang di dasbor. Di sini Anda dapat melihat status terkini pesanan, resep, dan stok Anda.",
+    storeSelector: {
+      label: "Pilih toko",
+      select: "Pilih toko",
+      createFirst: "Buat Toko",
+      createNew: "Buat toko baru",
+      searchPlaceholder: "Cari toko...",
+      noStores: "Tidak ada toko ditemukan",
+      yourStores: "Toko Anda",
+    },
     alertsCard: {
       title: "Peringatan Kritis",
       description: "Peringatan stok yang memerlukan perhatian segera",

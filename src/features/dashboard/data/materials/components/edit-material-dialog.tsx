@@ -125,21 +125,17 @@ export default function EditMaterialDialog({
     //   body: JSON.stringify(data),
     // });
 
-    console.log("Material update data:", { id: material.id, ...data });
-
     setIsSubmitting(false);
 
     if (onSave) {
       onSave(material.id, data);
     }
 
-    const updatedDesc = t("data.materials.toasts.updated.description") || "{name} has been updated successfully.";
+    const updatedDesc =
+      t("data.materials.toasts.updated.description") || "{name} has been updated successfully.";
     toast({
       title: t("data.materials.toasts.updated.title"),
-      description: updatedDesc.replace(
-        "{name}",
-        data.name
-      ),
+      description: updatedDesc.replace("{name}", data.name),
     });
 
     onOpenChange(false);
@@ -342,7 +338,10 @@ export default function EditMaterialDialog({
                   <FormItem>
                     <FormLabel>Storage Location</FormLabel>
                     <FormControl>
-                      <Input placeholder={t("data.materials.form.locationPlaceholder")} {...field} />
+                      <Input
+                        placeholder={t("data.materials.form.locationPlaceholder")}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

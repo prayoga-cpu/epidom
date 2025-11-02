@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlertsCount } from "@/features/dashboard/alerts/hooks/use-alerts-count";
+import { useCurrentStore } from "./hooks/use-current-store";
 import { dashboardNavigation, type NavSection } from "@/config/navigation.config";
 
 /**
@@ -39,6 +40,7 @@ interface SidebarProps {
 export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useI18n();
+  const { storeId } = useCurrentStore();
 
   return (
     <aside
@@ -71,7 +73,8 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
               )}
               <ul className="space-y-1.5">
                 {section.items.map((item) => {
-                  const active = pathname === item.href;
+                  const fullHref = storeId ? `/store/${storeId}${item.href}` : item.href;
+                  const active = pathname === fullHref;
                   const label = t(item.labelKey);
                   const Icon = item.icon;
                   const badge = useBadgeCount(item.badgeKey);
@@ -79,7 +82,7 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                   return (
                     <li key={item.href}>
                       <Link
-                        href={item.href}
+                        href={fullHref}
                         className={cn(
                           "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition",
                           active

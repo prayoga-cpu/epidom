@@ -66,11 +66,7 @@ interface EditProductDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export default function EditProductDialog({
-  product,
-  open,
-  onOpenChange,
-}: EditProductDialogProps) {
+export default function EditProductDialog({ product, open, onOpenChange }: EditProductDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { t } = useI18n();
@@ -139,16 +135,12 @@ export default function EditProductDialog({
     //   body: JSON.stringify(submitData),
     // });
 
-    console.log("Product data to update:", { id: product.id, ...submitData });
-
     setIsSubmitting(false);
-    const updatedDesc = t("data.products.toasts.updated.description") || "{name} has been updated successfully.";
+    const updatedDesc =
+      t("data.products.toasts.updated.description") || "{name} has been updated successfully.";
     toast({
       title: t("data.products.toasts.updated.title"),
-      description: updatedDesc.replace(
-        "{name}",
-        data.name
-      ),
+      description: updatedDesc.replace("{name}", data.name),
     });
 
     onOpenChange(false);
@@ -279,7 +271,10 @@ export default function EditProductDialog({
                     <FormItem>
                       <FormLabel>Category *</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("data.products.form.categoryPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -363,9 +358,9 @@ export default function EditProductDialog({
                 />
               </div>
               {costPrice > 0 && (
-                <div className="rounded-lg bg-muted p-3 text-sm">
+                <div className="bg-muted rounded-lg p-3 text-sm">
                   <p className="font-medium">Suggested Pricing:</p>
-                  <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                  <ul className="text-muted-foreground mt-1 space-y-0.5">
                     <li>• Wholesale: ${suggestedWholesalePrice} (1.8x markup)</li>
                     <li>• Retail: ${suggestedRetailPrice} (2.5x markup)</li>
                   </ul>
