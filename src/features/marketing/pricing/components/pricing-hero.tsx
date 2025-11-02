@@ -1,39 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import Image from "next/image";
-import { useState } from "react";
-
-function LogoWithSkeleton() {
-  const [isLoading, setIsLoading] = useState(true);
-
-  return (
-    <div className="mb-6 md:mb-8">
-      <div className="relative mx-auto h-8 w-[120px] flex items-center justify-center">
-        {isLoading && (
-          <div className="absolute inset-0 animate-pulse rounded bg-gray-200" />
-        )}
-        <Image
-          src="/images/logo-black.png"
-          alt="EPIDOM"
-          width={120}
-          height={32}
-          className="relative h-8 w-auto"
-          style={{
-            width: "auto",
-            height: "auto",
-            filter:
-              "invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)",
-            opacity: isLoading ? 0 : 1,
-            transition: "opacity 0.3s ease-in-out",
-          }}
-          onLoad={() => setIsLoading(false)}
-          onError={() => setIsLoading(false)}
-        />
-      </div>
-    </div>
-  );
-}
+import { LogoWithSkeleton } from "@/features/marketing/shared/components/logo-with-skeleton";
 
 export function PricingHero() {
   const { t } = useI18n();
@@ -43,7 +11,14 @@ export function PricingHero() {
       <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
         <div className="text-center">
           {/* Logo */}
-          <LogoWithSkeleton />
+          <div className="mb-6 md:mb-8">
+            <LogoWithSkeleton
+              src="/images/logo-black.png"
+              alt="EPIDOM"
+              filter="invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)"
+              wrapperClassName="relative mx-auto h-8 w-[120px] flex items-center justify-center"
+            />
+          </div>
 
           {/* Title */}
           <h1

@@ -113,8 +113,8 @@ function FlipUnit({ value, label }: { value: number; label: string }) {
             key={i}
             className="relative mx-1 flex h-10 w-8 items-center justify-center rounded-md border-2 bg-white text-sm font-bold shadow-md transition-all duration-300 hover:shadow-lg sm:h-12 sm:w-10 sm:text-base md:h-14 md:w-12 md:text-lg lg:h-16 lg:w-14 lg:text-xl"
             style={{
-              borderColor: "#444444",
-              color: "#444444",
+              borderColor: "var(--color-brand-primary)",
+              color: "var(--color-brand-primary)",
             }}
           >
             {digit}

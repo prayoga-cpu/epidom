@@ -172,10 +172,10 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           }`}
           style={
             variant === "home"
-              ? { backgroundColor: "#444444" }
+              ? { backgroundColor: "var(--color-brand-primary)" }
               : variant === "sidebar"
-                ? { backgroundColor: "#444444" }
-                : { color: "#444444" }
+                ? { backgroundColor: "var(--color-brand-primary)" }
+                : { color: "var(--color-brand-primary)" }
           }
           aria-label={t("waitlist.openButtonAria")}
         >
@@ -278,7 +278,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
             <Button
               type="submit"
               className="btn-smooth rounded-full px-6 font-semibold"
-              style={{ backgroundColor: "#444444", color: "white" }}
+              style={{ backgroundColor: "var(--color-brand-primary)", color: "var(--color-brand-white)" }}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Submitting..." : t("waitlist.submit")}

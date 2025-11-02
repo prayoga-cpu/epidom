@@ -229,7 +229,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
         onClick={handleSubmit}
         disabled={isSubmitting}
         className="mb-6 h-11 w-full rounded-lg text-base font-semibold transition-colors duration-200 hover:bg-gray-700 sm:mb-8 sm:h-12 sm:text-lg"
-        style={{ backgroundColor: "#444444", color: "white" }}
+        style={{ backgroundColor: "var(--color-brand-primary)", color: "var(--color-brand-white)" }}
       >
         {isSubmitting ? t("payments.processing") : t("payments.completePayment")}
       </Button>

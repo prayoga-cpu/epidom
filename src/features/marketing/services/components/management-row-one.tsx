@@ -32,7 +32,7 @@ export function ManagementRowOne() {
             </h3>
 
             {/* Description */}
-            <p className="text-description" style={{ color: "#444444" }}>
+            <p className="text-description" style={{ color: "var(--color-brand-primary)" }}>
               {t("services.management.description")}
             </p>
 

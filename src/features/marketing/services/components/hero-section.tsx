@@ -31,7 +31,7 @@ export function HeroSection() {
             <div className="w-full md:w-fit">
               <div
                 className="rounded-2xl p-6 text-left text-white md:p-8"
-                style={{ backgroundColor: "#444444" }}
+                style={{ backgroundColor: "var(--color-brand-primary)" }}
               >
                 <div className="space-y-4 md:space-y-5">
                   <div className="text-lg font-semibold md:text-xl lg:text-2xl">

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -10,51 +10,7 @@ import { usePathname } from "next/navigation";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ChevronRight } from "lucide-react";
-
-function LogoWithSkeleton({
-  src,
-  alt,
-  width = 120,
-  height = 32,
-  className = "h-8 w-auto",
-  filter,
-  sizes,
-}: {
-  src: string;
-  alt: string;
-  width?: number;
-  height?: number;
-  className?: string;
-  filter?: string;
-  sizes?: string;
-}) {
-  const [isLoading, setIsLoading] = useState(true);
-
-  return (
-    <div className="relative h-8 w-[120px] flex items-center justify-center">
-      {isLoading && (
-        <div className="absolute inset-0 animate-pulse rounded bg-gray-200" />
-      )}
-      <Image
-        src={src}
-        alt={alt}
-        width={width}
-        height={height}
-        className={`relative ${className}`}
-        style={{
-          width: "auto",
-          height: "auto",
-          ...(filter && { filter }),
-          opacity: isLoading ? 0 : 1,
-          transition: "opacity 0.3s ease-in-out",
-        }}
-        sizes={sizes}
-        onLoad={() => setIsLoading(false)}
-        onError={() => setIsLoading(false)}
-      />
-    </div>
-  );
-}
+import { LogoWithSkeleton } from "./logo-with-skeleton";
 
 interface SiteHeaderProps {
   variant?: "landing" | "authenticated";
@@ -74,7 +30,7 @@ export const SiteHeader = memo(function SiteHeader({
   };
 
   return (
-    <header className="mobile-navbar" style={{ color: "white" }}>
+    <header className="mobile-navbar" style={{ color: "var(--color-brand-white)" }}>
       <nav
         aria-label="Main"
         className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-4"

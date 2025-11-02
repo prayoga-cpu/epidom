@@ -36,7 +36,7 @@ export function DashboardPreviewSection() {
               </h2>
 
               {/* Description */}
-              <p className="text-description" style={{ color: "#444444" }}>
+              <p className="text-description" style={{ color: "var(--color-brand-primary)" }}>
                 {t("services.dashboard.description")}
               </p>
             </div>

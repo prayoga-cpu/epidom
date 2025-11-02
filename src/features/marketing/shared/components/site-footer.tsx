@@ -10,7 +10,7 @@ export const SiteFooter = memo(function SiteFooter() {
     <footer
       role="contentinfo"
       className="border-border/20 border-t"
-      style={{ backgroundColor: "#444444", color: "white" }}
+      style={{ backgroundColor: "var(--color-brand-primary)", color: "var(--color-brand-white)" }}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-8 py-8 sm:gap-10 sm:py-12 md:grid-cols-2 md:py-16 lg:grid-cols-3">
@@ -64,4 +64,3 @@ export const SiteFooter = memo(function SiteFooter() {
   );
 });
 
-export default SiteFooter;

@@ -43,12 +43,12 @@ export function DataRowOne() {
             </h2>
 
             {/* Description 1 */}
-            <p className="text-description mb-5 md:mb-10" style={{ color: "#444444" }}>
+            <p className="text-description mb-5 md:mb-10" style={{ color: "var(--color-brand-primary)" }}>
               {t("services.data.description1")}
             </p>
 
             {/* Description 2 */}
-            <p className="text-description" style={{ color: "#444444" }}>
+            <p className="text-description" style={{ color: "var(--color-brand-primary)" }}>
               {t("services.data.description2")}
             </p>
 

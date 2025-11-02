@@ -22,7 +22,7 @@ export function FeatureComparison() {
                 </th>
                 <th
                   className="border-l-2 p-3 text-center font-semibold md:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
                   {t("pricing.compare.headers.pro")}
                 </th>
@@ -39,7 +39,7 @@ export function FeatureComparison() {
                 </td>
                 <td
                   className="border-l-2 p-3 text-center md:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
@@ -52,7 +52,7 @@ export function FeatureComparison() {
                 <td className="p-3 text-center md:p-4">—</td>
                 <td
                   className="border-l-2 p-3 text-center md:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
@@ -67,7 +67,7 @@ export function FeatureComparison() {
                 </td>
                 <td
                   className="border-l-2 p-3 text-center md:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
@@ -80,7 +80,7 @@ export function FeatureComparison() {
                 <td className="p-3 text-center md:p-4">—</td>
                 <td
                   className="border-l-2 p-3 text-center md:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
@@ -95,7 +95,7 @@ export function FeatureComparison() {
                 </td>
                 <td
                   className="border-l-2 p-3 text-center md:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
                   {t("pricing.compare.rows.support.pro")}
                 </td>
