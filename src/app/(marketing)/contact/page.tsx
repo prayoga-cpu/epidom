@@ -1,20 +1,80 @@
+/**
+ * Contact Page
+ *
+ * Contact information and location map for EPIDOM.
+ * Responsive layout: tablet shows 2-column grid, desktop shows extended map.
+ *
+ * @page
+ */
+
 import { ContactInfo } from "@/features/marketing/contact/components/contact-info";
 import { ContactMap } from "@/features/marketing/contact/components/contact-map";
+import { generateMetadata as genMeta } from "@/lib/seo";
+import { ContactHeader } from "@/features/marketing/contact/components/contact-header";
+
+export const metadata = genMeta({
+  title: "Contact Us - EPIDOM",
+  description:
+    "Get in touch with EPIDOM. Whether you're a potential client, interested in our food inventory management services, or have questions, we're here to help.",
+  keywords: [
+    "contact EPIDOM",
+    "food inventory management support",
+    "restaurant software contact",
+    "customer support",
+    "EPIDOM help",
+  ],
+  openGraph: {
+    title: "Contact Us - EPIDOM",
+    description: "Get in touch with EPIDOM for questions about our food inventory management solution.",
+    url: "https://epidom.com/contact",
+  },
+});
 
 export default function ContactPage() {
   return (
     <main
-      className="min-h-screen bg-white pt-24 sm:pt-32"
+      className="bg-white pt-24 md:pt-32 lg:pt-16"
       style={{ color: "var(--color-brand-primary)" }}
     >
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-12">
-        <div className="animate-slide-up">
-          <ContactInfo />
+      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+        {/* Tablet Layout: Header Full Width + 2 Columns */}
+        <div className="md:block lg:hidden">
+          {/* Header Section - Full Width */}
+          <div className="animate-slide-up py-8 md:py-4">
+            <ContactHeader />
+          </div>
+
+          {/* Content Section - 2 Columns */}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-6 pb-8 md:pb-12">
+            <div className="animate-slide-up-delayed">
+            <ContactInfo />
+          </div>
+            <div className="animate-slide-up-delayed">
+              <ContactMap />
+            </div>
+          </div>
         </div>
-        <div className="animate-slide-up-delayed">
-          <ContactMap />
+
+        {/* Desktop Layout: Original - Grid 2 Columns with ContactInfo containing header */}
+        <div className="hidden lg:grid lg:grid-cols-2 lg:items-start lg:gap-0 lg:min-h-[calc(100vh-4rem)]">
+          <div className="animate-slide-up flex flex-col justify-center h-full lg:pr-8">
+            <ContactInfoWithHeader />
+          </div>
+          <div className="animate-slide-up-delayed flex items-center justify-center h-full w-full lg:ml-0 lg:-mr-[calc((100vw-80rem)/2+2rem)] lg:pr-0">
+            <ContactMap />
+          </div>
         </div>
       </div>
     </main>
+  );
+}
+
+// Desktop version with header inside ContactInfo
+function ContactInfoWithHeader() {
+  return (
+    <div className="py-8 md:py-12 lg:py-8">
+      <ContactHeader />
+      <ContactInfo />
+    </div>
   );
 }

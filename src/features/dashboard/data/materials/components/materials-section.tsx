@@ -73,6 +73,18 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
     return "in_stock";
   };
 
+  // Helper function to get stock status label
+  const getStockStatusLabel = (status: StockFilter): string => {
+    const labels: Record<StockFilter, string> = {
+      all: t("filters.allStock") || "All Stock",
+      in_stock: t("filters.inStock") || "In Stock",
+      low_stock: t("filters.lowStock") || "Low Stock",
+      critical: t("filters.critical") || "Critical",
+      overstocked: t("filters.overstocked") || "Overstocked",
+    };
+    return labels[status];
+  };
+
   // Filtered and sorted materials
   const processedMaterials = useMemo(() => {
     let filtered = materials;
@@ -170,9 +182,13 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
 
   const handleDeleteConfirm = () => {
     // TODO: API call to delete material
+    const deletedDesc = t("data.materials.toasts.deleted.description") || "{name} has been deleted successfully.";
     toast({
-      title: "Material Deleted",
-      description: `${selectedMaterial?.name} has been deleted successfully.`,
+      title: t("data.materials.toasts.deleted.title"),
+      description: deletedDesc.replace(
+        "{name}",
+        selectedMaterial?.name || ""
+      ),
     });
     setDeleteDialogOpen(false);
     setSelectedMaterial(null);
@@ -180,9 +196,13 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
 
   const handleBulkDelete = () => {
     // TODO: API call to bulk delete materials
+    const bulkDeletedDesc = t("data.materials.toasts.bulkDeleted.description") || "{count} materials have been deleted successfully.";
     toast({
-      title: "Materials Deleted",
-      description: `${selectedIds.size} materials have been deleted successfully.`,
+      title: t("data.materials.toasts.bulkDeleted.title"),
+      description: bulkDeletedDesc.replace(
+        "{count}",
+        selectedIds.size.toString()
+      ),
     });
     setSelectedIds(new Set());
   };
@@ -275,7 +295,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Category" />
+                  <SelectValue placeholder={t("filters.placeholderCategory")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">
@@ -293,7 +313,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
               <Select value={supplierFilter} onValueChange={setSupplierFilter}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Supplier" />
+                  <SelectValue placeholder={t("filters.placeholderSupplier")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">
@@ -311,7 +331,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
               <Select value={stockFilter} onValueChange={(v) => setStockFilter(v as StockFilter)}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Stock Status" />
+                  <SelectValue placeholder={t("filters.placeholderStockStatus")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filters.allStock") || "All Stock"}</SelectItem>
@@ -335,7 +355,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
               >
                 <SelectTrigger>
                   <ArrowUpDown className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Sort by" />
+                  <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
@@ -391,8 +411,9 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              Showing {processedMaterials.length} of {materials.length}{" "}
-              {t("data.materials") || "materials"}
+              {t("common.showing") || "Showing"} {processedMaterials.length}{" "}
+              {t("common.of") || "of"} {materials.length}{" "}
+              {t("data.materials.pageTitle") || "materials"}
             </p>
           </div>
 
@@ -441,13 +462,13 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                         }
                         className="ml-2 text-xs"
                       >
-                        {stockStatus.replace("_", " ")}
+                        {getStockStatusLabel(stockStatus)}
                       </Badge>
                     </div>
                     <div>
                       {material.sku && (
                         <p className="text-muted-foreground mt-1 truncate text-xs">
-                          SKU: {material.sku}
+                          {t("common.sku")}: {material.sku}
                         </p>
                       )}
                     </div>
@@ -457,19 +478,19 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                     {/* Material Info */}
                     <div className="text-muted-foreground space-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span>Stock:</span>
+                        <span>{t("common.stock")}:</span>
                         <span className="text-foreground font-medium">
                           {material.currentStock} {material.unit}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Cost:</span>
+                        <span>{t("common.cost")}:</span>
                         <span className="text-foreground font-medium">
                           ${material.costPerUnit}/{material.unit}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Category:</span>
+                        <span>{t("common.category")}:</span>
                         <span className="text-foreground font-medium">
                           {material.category.replace("_", " ")}
                         </span>
@@ -491,7 +512,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>View Material</p>
+                            <p>{t("data.materials.tooltips.view")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -506,7 +527,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Edit Material</p>
+                            <p>{t("data.materials.tooltips.edit")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -521,7 +542,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Delete Material</p>
+                            <p>{t("data.materials.tooltips.delete")}</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -570,9 +591,9 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title="Delete Material"
-        description={`Are you sure you want to delete "${selectedMaterial?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
+        title={t("data.materials.toasts.deleted.title") || "Delete Material"}
+        description={(t("data.materials.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedMaterial?.name || "")}
+        confirmText={t("common.actions.delete") || "Delete"}
         variant="destructive"
       />
     </>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth-client";
+import { useI18n } from "@/components/lang/i18n-provider";
 import { ProfileHeader } from "@/features/dashboard/profile/components/profile-header";
 import { PersonalInfoCard } from "@/features/dashboard/profile/components/personal-info-card";
 import { BusinessInfoCard } from "@/features/dashboard/profile/components/business-info-card";
@@ -10,6 +11,7 @@ import { ActivityLogCard } from "@/features/dashboard/profile/components/activit
 import type { ProfileData } from "@/features/dashboard/profile/types";
 
 export default function ProfilePage() {
+  const { t } = useI18n();
   const { user: sessionUser, loading: sessionLoading } = useUser();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export default function ProfilePage() {
   if (sessionLoading || loading) {
     return (
       <div className="flex min-h-[calc(100vh-150px)] w-full items-center justify-center py-12">
-        <p className="text-muted-foreground">Loading profile...</p>
+        <p className="text-muted-foreground">{t("profile.loading")}</p>
       </div>
     );
   }
@@ -50,7 +52,7 @@ export default function ProfilePage() {
   if (!sessionUser || !profileData) {
     return (
       <div className="flex min-h-[calc(100vh-150px)] w-full items-center justify-center py-12">
-        <p className="text-muted-foreground">Failed to load profile</p>
+        <p className="text-muted-foreground">{t("profile.failedToLoad")}</p>
       </div>
     );
   }

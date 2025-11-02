@@ -78,7 +78,7 @@ export function ProductionBatchCard({
             <div>
               <p className="font-medium">{batch.batchNumber}</p>
               <p className="text-sm text-muted-foreground">
-                {t("management.recipeProduction.started")}: {batch.startedAt ? format(new Date(batch.startedAt), "MMM d, yyyy HH:mm") : "N/A"}
+                {t("management.recipeProduction.started")}: {batch.startedAt ? format(new Date(batch.startedAt), "MMM d, yyyy HH:mm") : t("common.notAvailable")}
               </p>
             </div>
             <Badge className={statusConfig.color}>

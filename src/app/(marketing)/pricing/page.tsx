@@ -1,3 +1,12 @@
+/**
+ * Pricing Page
+ *
+ * Displays EPIDOM pricing plans and feature comparison.
+ * Sections: Hero, Pricing Cards, Feature Comparison, FAQ, CTA
+ *
+ * @page
+ */
+
 import { PricingHero } from "@/features/marketing/pricing/components/pricing-hero";
 import { PricingCards } from "@/features/marketing/pricing/components/pricing-cards";
 import { FeatureComparison } from "@/features/marketing/pricing/components/feature-comparison";
@@ -7,7 +16,7 @@ import { PricingCta } from "@/features/marketing/pricing/components/pricing-cta"
 export default function PricingPage() {
   return (
     <main
-      className="min-h-screen bg-white pt-24 sm:pt-32"
+      className="min-h-screen bg-white pt-24 md:pt-32"
       style={{ color: "var(--color-brand-primary)" }}
     >
       <div className="animate-slide-up">

@@ -1,5 +1,19 @@
 "use client";
 
+/**
+ * Waitlist Dialog Component
+ *
+ * Lead generation form for users to join the EPIDOM waitlist.
+ * Features:
+ * - Client-side validation and rate limiting
+ * - Three variants: default, home (larger button), sidebar (compact)
+ * - Prevents navbar shift when dialog opens (scrollbar handling)
+ * - Submits to external API endpoint
+ * - Toast notifications for feedback
+ *
+ * @component
+ */
+
 import * as React from "react";
 import { memo } from "react";
 import {
@@ -18,7 +32,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { validateWaitlistForm, waitlistRateLimiter, type ValidationError } from "@/lib/validation";
 
+/**
+ * Props for WaitlistDialog component
+ */
 interface WaitlistDialogProps {
+  /** Button variant: "default", "home" (larger), or "sidebar" (compact) */
   variant?: "default" | "home" | "sidebar";
 }
 
@@ -163,7 +181,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       <DialogTrigger asChild>
         <Button
           size="lg"
-          className={`h-10 rounded-full px-6 font-semibold transition-colors ${
+          className={`h-10 rounded-full px-4 font-semibold transition-colors md:px-5 lg:px-6 ${
             variant === "home"
               ? "text-white hover:bg-gray-700"
               : variant === "sidebar"
@@ -172,14 +190,14 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           }`}
           style={
             variant === "home"
-              ? { backgroundColor: "#444444" }
+              ? { backgroundColor: "var(--color-brand-primary)" }
               : variant === "sidebar"
-                ? { backgroundColor: "#444444" }
-                : { color: "#444444" }
+                ? { backgroundColor: "var(--color-brand-primary)" }
+                : { color: "var(--color-brand-primary)" }
           }
           aria-label={t("waitlist.openButtonAria")}
         >
-          {t("waitlist.openButton")}
+          <span className="text-sm md:text-sm lg:text-base">{t("waitlist.openButton")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent aria-describedby="waitlist-description" className="sm:max-w-md">
@@ -278,7 +296,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
             <Button
               type="submit"
               className="btn-smooth rounded-full px-6 font-semibold"
-              style={{ backgroundColor: "#444444", color: "white" }}
+              style={{ backgroundColor: "var(--color-brand-primary)", color: "var(--color-brand-white)" }}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Submitting..." : t("waitlist.submit")}

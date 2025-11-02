@@ -121,11 +121,11 @@ export function EditBusinessInfoDialog({
     } catch (error) {
       console.error("Error updating business:", error);
       toast({
-        title: "Error",
+        title: t("common.error"),
         description:
           error instanceof Error
             ? error.message
-            : "Failed to update business information. Please try again.",
+            : t("profile.errors.businessUpdateFailed"),
         variant: "destructive",
       });
     }
@@ -142,8 +142,8 @@ export function EditBusinessInfoDialog({
           </DialogTitle>
           <DialogDescription>
             {business
-              ? "Update your business contact information and details"
-              : "Add your business information to complete your profile"}
+              ? t("profile.forms.editBusinessInfoDescription")
+              : t("profile.forms.addBusinessInfoDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -161,7 +161,7 @@ export function EditBusinessInfoDialog({
                     <div className="relative">
                       <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Epidom Bakery"
+                        placeholder={t("profile.forms.businessNamePlaceholder") || "Epidom Bakery"}
                         className="pl-9"
                         {...field}
                         value={field.value || ""}

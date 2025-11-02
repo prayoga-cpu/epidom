@@ -1,3 +1,13 @@
+/**
+ * Services Page
+ *
+ * Showcases all EPIDOM features and functionality.
+ * Displays preview sections with animated mockups and descriptions.
+ * Sections: Hero, Dashboard, Management, Tracking, Data, Alerts
+ *
+ * @page
+ */
+
 import { HeroSection } from "@/features/marketing/services/components/hero-section";
 import { DashboardPreviewSection } from "@/features/marketing/services/components/dashboard-preview-section";
 import { ManagementRowOne } from "@/features/marketing/services/components/management-row-one";
@@ -10,29 +20,29 @@ import { AlertsPreviewSection } from "@/features/marketing/services/components/a
 export default function ServicesPage() {
   return (
     <main
-      className="min-h-screen bg-white pt-24 sm:pt-32"
+      className="min-h-screen bg-white pt-24 md:pt-32"
       style={{ color: "var(--color-brand-primary)" }}
     >
-      <div className="animate-slide-up px-6 sm:px-0">
+      <div className="animate-slide-up mb-8 md:mb-12">
         <HeroSection />
       </div>
-      <div className="animate-slide-up-delayed px-6 sm:px-0">
+      <div className="animate-slide-up-delayed mb-8 md:mb-12">
         <DashboardPreviewSection />
       </div>
-      <div className="animate-slide-up-delayed-2 mb-8 px-6 sm:mb-12 sm:px-0">
+      <div className="animate-slide-up-delayed-2 mb-8 md:mb-12">
         <ManagementRowOne />
         <ManagementRowTwo />
       </div>
-      <div className="animate-slide-up-delayed-3 mb-8 px-6 sm:mb-12 sm:px-0">
+      <div className="animate-slide-up-delayed-3 mb-8 md:mb-12">
         <TrackingPreviewSection />
       </div>
-      <div className="mb-8 px-6 sm:mb-12 sm:px-0">
+      <div className="mb-8 md:mb-12">
         <DataRowOne />
       </div>
-      <div className="mb-8 px-6 sm:mb-12 sm:px-0">
+      <div className="mb-8 md:mb-12">
         <DataRowTwo />
       </div>
-      <div className="animate-slide-up-delayed-3 px-6 sm:px-0">
+      <div className="animate-slide-up-delayed-3">
         <AlertsPreviewSection />
       </div>
     </main>

@@ -169,9 +169,13 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
 
   const handleDeleteConfirm = () => {
     // TODO: API call to delete recipe
+    const deletedDesc = t("data.recipes.toasts.deleted.description") || "{name} has been deleted successfully.";
     toast({
-      title: "Recipe Deleted",
-      description: `${selectedRecipe?.name} has been deleted successfully.`,
+      title: t("data.recipes.toasts.deleted.title"),
+      description: deletedDesc.replace(
+        "{name}",
+        selectedRecipe?.name || ""
+      ),
     });
     setDeleteDialogOpen(false);
     setSelectedRecipe(null);
@@ -179,9 +183,13 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
 
   const handleBulkDelete = () => {
     // TODO: API call to bulk delete recipes
+    const bulkDeletedDesc = t("data.recipes.toasts.bulkDeleted.description") || "{count} recipes have been deleted successfully.";
     toast({
-      title: "Recipes Deleted",
-      description: `${selectedIds.size} recipes have been deleted successfully.`,
+      title: t("data.recipes.toasts.bulkDeleted.title"),
+      description: bulkDeletedDesc.replace(
+        "{count}",
+        selectedIds.size.toString()
+      ),
     });
     setSelectedIds(new Set());
   };
@@ -254,7 +262,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder="Search by name, description, or category..."
+                placeholder={t("actions.searchPlaceholder") || "Search..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -267,7 +275,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Category" />
+                  <SelectValue placeholder={t("filters.placeholderCategory")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">
@@ -292,7 +300,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
               >
                 <SelectTrigger>
                   <ArrowUpDown className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Sort by" />
+                  <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
@@ -354,7 +362,9 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              Showing {processedRecipes.length} of {recipes.length} recipes
+              {t("common.showing") || "Showing"} {processedRecipes.length}{" "}
+              {t("common.of") || "of"} {recipes.length}{" "}
+              {t("data.recipes.pageTitle") || "recipes"}
             </p>
           </div>
 
@@ -414,7 +424,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                       <div className="text-muted-foreground flex items-center gap-2 text-xs">
                         <ChefHat className="h-3 w-3" />
                         <span>
-                          Yield: {recipe.yieldQuantity} {recipe.yieldUnit}
+                          {t("data.recipes.cards.yield")}: {recipe.yieldQuantity} {recipe.yieldUnit}
                         </span>
                       </div>
                       <div className="text-muted-foreground flex items-center gap-2 text-xs">
@@ -427,11 +437,11 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                           <span className="text-foreground font-medium">
                             {formatCurrency(recipe.costPerBatch)}
                           </span>
-                          <span className="text-muted-foreground"> per batch</span>
+                          <span className="text-muted-foreground"> {t("data.recipes.cards.perBatch")}</span>
                         </div>
                       </div>
                       <div className="bg-muted rounded px-2 py-1 text-xs">
-                        <span className="text-muted-foreground">Per unit: </span>
+                        <span className="text-muted-foreground">{t("data.recipes.cards.perUnit")}: </span>
                         <span className="text-foreground font-semibold">
                           {formatCurrency(costPerUnit)}
                         </span>
@@ -440,8 +450,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
 
                     {/* Ingredients Count */}
                     <div className="text-muted-foreground mt-3 text-xs">
-                      {recipe.ingredients.length} ingredient
-                      {recipe.ingredients.length !== 1 ? "s" : ""}
+                      {recipe.ingredients.length} {recipe.ingredients.length !== 1 ? t("data.recipes.cards.ingredients") : t("data.recipes.cards.ingredient")}
                     </div>
 
                     {/* Hover Actions */}
@@ -459,7 +468,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>View Recipe</p>
+                            <p>{t("data.recipes.tooltips.view")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -474,7 +483,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Edit Recipe</p>
+                            <p>{t("data.recipes.tooltips.edit")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -489,7 +498,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Duplicate Recipe</p>
+                            <p>{t("data.recipes.tooltips.duplicate")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -504,7 +513,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Delete Recipe</p>
+                            <p>{t("data.recipes.tooltips.delete")}</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -567,9 +576,9 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title="Delete Recipe"
-        description={`Are you sure you want to delete "${selectedRecipe?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
+        title={t("data.recipes.toasts.deleted.title") || "Delete Recipe"}
+        description={(t("data.recipes.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedRecipe?.name || "")}
+        confirmText={t("common.actions.delete") || "Delete"}
         variant="destructive"
       />
     </>

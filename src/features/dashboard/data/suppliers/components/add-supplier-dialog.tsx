@@ -116,8 +116,8 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+          <Button size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
             {t("common.actions.add") || "Add Supplier"}
           </Button>
         )}
@@ -144,7 +144,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   <FormItem>
                     <FormLabel>Supplier Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Grain & Co" {...field} />
+                      <Input placeholder={t("data.suppliers.form.namePlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -159,7 +159,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormItem>
                       <FormLabel>Contact Person</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Jean Dupont" {...field} />
+                        <Input placeholder={t("data.suppliers.form.contactPersonPlaceholder")} {...field} />
                       </FormControl>
                       <FormDescription>Primary contact name</FormDescription>
                       <FormMessage />
@@ -174,7 +174,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="contact@supplier.com" {...field} />
+                        <Input type="email" placeholder={t("data.suppliers.form.emailPlaceholder")} {...field} />
                       </FormControl>
                       <FormDescription>Business email</FormDescription>
                       <FormMessage />
@@ -190,7 +190,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="+33 1 23 45 67 89" {...field} />
+                      <Input placeholder={t("data.suppliers.form.phonePlaceholder")} {...field} />
                     </FormControl>
                     <FormDescription>Business phone number</FormDescription>
                     <FormMessage />
@@ -209,7 +209,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   <FormItem>
                     <FormLabel>Street Address</FormLabel>
                     <FormControl>
-                      <Input placeholder="15 Rue de la Boulangerie" {...field} />
+                      <Input placeholder={t("data.suppliers.form.addressPlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -224,7 +224,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormItem>
                       <FormLabel>City</FormLabel>
                       <FormControl>
-                        <Input placeholder="Paris" {...field} />
+                        <Input placeholder={t("data.suppliers.form.cityPlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -238,7 +238,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormItem>
                       <FormLabel>Country</FormLabel>
                       <FormControl>
-                        <Input placeholder="France" {...field} />
+                        <Input placeholder={t("data.suppliers.form.countryPlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -260,7 +260,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select payment terms" />
+                            <SelectValue placeholder={t("data.suppliers.form.selectPaymentTerms")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -284,7 +284,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormItem>
                       <FormLabel>Delivery Schedule</FormLabel>
                       <FormControl>
-                        <Input placeholder="Monday, Wednesday, Friday" {...field} />
+                        <Input placeholder={t("data.suppliers.form.deliverySchedulePlaceholder")} {...field} />
                       </FormControl>
                       <FormDescription>Regular delivery days</FormDescription>
                       <FormMessage />
@@ -310,7 +310,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                           step="0.1"
                           min="0"
                           max="5"
-                          placeholder="4.5"
+                          placeholder={t("data.suppliers.form.ratingPlaceholder")}
                           {...field}
                         />
                       </FormControl>
@@ -332,7 +332,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                           step="1"
                           min="0"
                           max="100"
-                          placeholder="95"
+                          placeholder={t("data.suppliers.form.onTimeDeliveryRatePlaceholder")}
                           {...field}
                         />
                       </FormControl>
@@ -355,7 +355,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Any additional information about this supplier..."
+                        placeholder={t("data.suppliers.form.notesPlaceholder")}
                         className="min-h-[100px]"
                         {...field}
                       />

@@ -115,7 +115,7 @@ export function ActivityLogCard() {
             <Activity className="h-5 w-5 text-primary" />
             <CardTitle>{t("profile.activity.title")}</CardTitle>
           </div>
-          <Badge variant="secondary">{MOCK_ACTIVITY.length} {t("profile.sections.activity")}</Badge>
+          <Badge variant="secondary">{MOCK_ACTIVITY.length} {t("profile.activity.items")}</Badge>
         </div>
         <CardDescription>
           {t("profile.activity.description")}
@@ -167,8 +167,8 @@ export function ActivityLogCard() {
               onClick={() => setShowAll(!showAll)}
             >
               {showAll
-                ? "Show Less"
-                : `${t("profile.activity.viewAll")} (${MOCK_ACTIVITY.length - 5} more)`}
+                ? t("profile.activity.showLess")
+                : `${t("profile.activity.viewAll")} (${MOCK_ACTIVITY.length - 5} ${t("profile.activity.more")})`}
             </Button>
           </div>
         )}

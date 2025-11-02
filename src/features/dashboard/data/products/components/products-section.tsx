@@ -73,6 +73,18 @@ export function ProductsSection({ products }: ProductsSectionProps) {
     return "in_stock";
   };
 
+  // Helper function to get stock status label
+  const getStockStatusLabel = (status: StockFilter): string => {
+    const labels: Record<StockFilter, string> = {
+      all: t("filters.allStock") || "All Stock",
+      in_stock: t("filters.inStock") || "In Stock",
+      low_stock: t("filters.lowStock") || "Low Stock",
+      critical: t("filters.critical") || "Critical",
+      overstocked: t("filters.overstocked") || "Overstocked",
+    };
+    return labels[status];
+  };
+
   // Helper function to calculate profit margin
   const getProfitMargin = (product: Product): number => {
     if (!product.retailPrice || !product.costPrice) return 0;
@@ -181,9 +193,13 @@ export function ProductsSection({ products }: ProductsSectionProps) {
 
   const handleDeleteConfirm = () => {
     // TODO: API call to delete product
+    const deletedDesc = t("data.products.toasts.deleted.description") || "{name} has been deleted successfully.";
     toast({
-      title: "Product Deleted",
-      description: `${selectedProduct?.name} has been deleted successfully.`,
+      title: t("data.products.toasts.deleted.title"),
+      description: deletedDesc.replace(
+        "{name}",
+        selectedProduct?.name || ""
+      ),
     });
     setDeleteDialogOpen(false);
     setSelectedProduct(null);
@@ -191,9 +207,13 @@ export function ProductsSection({ products }: ProductsSectionProps) {
 
   const handleBulkDelete = () => {
     // TODO: API call to bulk delete products
+    const bulkDeletedDesc = t("data.products.toasts.bulkDeleted.description") || "{count} products have been deleted successfully.";
     toast({
-      title: "Products Deleted",
-      description: `${selectedIds.size} products have been deleted successfully.`,
+      title: t("data.products.toasts.bulkDeleted.title"),
+      description: bulkDeletedDesc.replace(
+        "{count}",
+        selectedIds.size.toString()
+      ),
     });
     setSelectedIds(new Set());
   };
@@ -269,7 +289,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder="Search by name, SKU, or description..."
+                placeholder={t("actions.searchPlaceholder") || "Search..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -282,7 +302,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Category" />
+                  <SelectValue placeholder={t("filters.placeholderCategory")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">
@@ -300,7 +320,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
               <Select value={stockFilter} onValueChange={(v) => setStockFilter(v as StockFilter)}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Stock Status" />
+                  <SelectValue placeholder={t("filters.placeholderStockStatus")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filters.allStock") || "All Stock"}</SelectItem>
@@ -324,7 +344,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
               >
                 <SelectTrigger>
                   <ArrowUpDown className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Sort by" />
+                  <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
@@ -387,7 +407,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing") || "Showing"} {processedProducts.length} {t("common.of") || "of"}{" "}
-              {products.length} {t("data.products") || "products"}
+              {products.length} {t("data.products.pageTitle") || "products"}
             </p>
           </div>
 
@@ -424,7 +444,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                           {product.name}
                         </h3>
                         {product.sku && (
-                          <p className="text-muted-foreground text-xs">SKU: {product.sku}</p>
+                          <p className="text-muted-foreground text-xs">{t("common.sku")}: {product.sku}</p>
                         )}
                       </div>
 
@@ -441,7 +461,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                         }
                         className="ml-auto text-xs"
                       >
-                        {stockStatus.replace("_", " ")}
+                        {getStockStatusLabel(stockStatus)}
                       </Badge>
                     </div>
 
@@ -451,30 +471,30 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                     <div className="text-muted-foreground my-2 space-y-1 text-xs">
                       {product.category && (
                         <div className="flex justify-between">
-                          <span>Category:</span>
+                          <span>{t("common.category")}:</span>
                           <span className="text-foreground font-medium">{product.category}</span>
                         </div>
                       )}
                       {recipe && (
                         <div className="flex justify-between">
-                          <span>Recipe:</span>
+                          <span>{t("common.recipe")}:</span>
                           <span className="text-foreground font-medium">{recipe.name}</span>
                         </div>
                       )}
                       <div className="flex justify-between">
-                        <span>Stock:</span>
+                        <span>{t("common.stock")}:</span>
                         <span className="text-foreground font-medium">
                           {formatNumber(product.currentStock || 0)} {product.unit}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Price:</span>
+                        <span>{t("common.price")}:</span>
                         <span className="text-foreground font-medium">
                           {formatCurrency(product.retailPrice || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Profit:</span>
+                        <span>{t("common.profit")}:</span>
                         <span
                           className={`font-medium ${
                             profitMargin >= 50
@@ -504,7 +524,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>View product</p>
+                            <p>{t("data.products.tooltips.view")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -519,7 +539,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Edit Product</p>
+                            <p>{t("data.products.tooltips.edit")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -534,7 +554,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Delete Product</p>
+                            <p>{t("data.products.tooltips.delete")}</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -591,9 +611,9 @@ export function ProductsSection({ products }: ProductsSectionProps) {
             onOpenChange={setEditDialogOpen}
           />
           <ConfirmationDialog
-            title="Delete Product"
-            description={`Are you sure you want to delete "${selectedProduct.name}"? This action cannot be undone.`}
-            confirmText="Delete Product"
+            title={t("data.products.toasts.deleted.title") || "Delete Product"}
+            description={(t("data.products.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedProduct.name)}
+            confirmText={t("common.actions.delete") || "Delete"}
             onConfirm={handleDeleteConfirm}
             variant="destructive"
             open={deleteDialogOpen}

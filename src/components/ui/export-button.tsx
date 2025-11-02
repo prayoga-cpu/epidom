@@ -11,6 +11,7 @@ import {
 import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { exportData } from "@/lib/utils/export";
 import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface ExportButtonProps<T extends Record<string, any>> {
   data: T[];
@@ -33,12 +34,13 @@ export function ExportButton<T extends Record<string, any>>({
 }: ExportButtonProps<T>) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { t } = useI18n();
 
   const handleExport = async (format: "csv" | "excel" | "pdf") => {
     if (data.length === 0) {
       toast({
-        title: "No data to export",
-        description: "There is no data available to export.",
+        title: t("messages.noDataToExport") || "No data to export",
+        description: t("messages.noDataToExportDesc") || "There is no data available to export.",
         variant: "destructive",
       });
       return;
@@ -48,14 +50,14 @@ export function ExportButton<T extends Record<string, any>>({
     try {
       await exportData(data, format, filename, columns, title);
       toast({
-        title: "Export successful",
-        description: `Data exported as ${format.toUpperCase()}`,
+        title: t("messages.exportSuccessful") || "Export successful",
+        description: `${t("common.actions.export") || "Export"} ${format.toUpperCase()}`,
       });
     } catch (error) {
       console.error("Export failed:", error);
       toast({
-        title: "Export failed",
-        description: "An error occurred while exporting the data.",
+        title: t("messages.exportFailed") || "Export failed",
+        description: t("messages.exportFailedDesc") || "An error occurred while exporting the data.",
         variant: "destructive",
       });
     } finally {
@@ -70,12 +72,12 @@ export function ExportButton<T extends Record<string, any>>({
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Exporting...
+              {t("common.actions.exporting") || "Exporting..."}
             </>
           ) : (
             <>
               <Download className="mr-2 h-4 w-4" />
-              Export
+              {t("common.actions.export") || "Export"}
             </>
           )}
         </Button>
@@ -83,15 +85,15 @@ export function ExportButton<T extends Record<string, any>>({
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => handleExport("csv")}>
           <FileText className="mr-2 h-4 w-4" />
-          Export as CSV
+          {t("common.actions.exportAsCsv") || "Export as CSV"}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleExport("excel")}>
           <FileSpreadsheet className="mr-2 h-4 w-4" />
-          Export as Excel
+          {t("common.actions.exportAsExcel") || "Export as Excel"}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleExport("pdf")}>
           <FileText className="mr-2 h-4 w-4" />
-          Export as PDF
+          {t("common.actions.exportAsPdf") || "Export as PDF"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

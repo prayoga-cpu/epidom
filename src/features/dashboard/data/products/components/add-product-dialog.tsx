@@ -154,8 +154,8 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+          <Button size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
             {t("common.actions.add") || "Add Product"}
           </Button>
         )}
@@ -182,7 +182,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                     <FormItem>
                       <FormLabel>Product Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Baguette Tradition" {...field} />
+                        <Input placeholder={t("data.products.form.namePlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,7 +196,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                     <FormItem>
                       <FormLabel>SKU</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., BAG-TRD" {...field} />
+                        <Input placeholder={t("data.products.form.skuPlaceholder")} {...field} />
                       </FormControl>
                       <FormDescription>Stock Keeping Unit (optional)</FormDescription>
                       <FormMessage />
@@ -213,7 +213,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                     <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Product description..."
+                        placeholder={t("data.products.form.descriptionPlaceholder")}
                         className="min-h-[80px]"
                         {...field}
                       />
@@ -242,7 +242,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a recipe (optional)" />
+                            <SelectValue placeholder={t("data.products.form.selectRecipe")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -267,7 +267,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                     <FormItem>
                       <FormLabel>Category *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Bread, Pastry" {...field} />
+                        <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -282,7 +282,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                   <FormItem>
                     <FormLabel>Image URL</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com/image.jpg" {...field} />
+                      <Input placeholder={t("data.products.form.imageUrlPlaceholder")} {...field} />
                     </FormControl>
                     <FormDescription>Product image URL (optional)</FormDescription>
                     <FormMessage />

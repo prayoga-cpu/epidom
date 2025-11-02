@@ -86,7 +86,7 @@ export function MovementHistoryTab({ onMovementClick }: MovementHistoryTabProps)
           <div>
             <h2 className="text-lg font-medium">{t("tracking.movementHistory")}</h2>
             <p className="text-muted-foreground text-sm">
-              {t("tracking.showingMovements").replace("{count}", movements.length.toString())}
+              {(t("tracking.showingMovements") || "Showing {count} movements").replace("{count}", movements.length.toString())}
             </p>
           </div>
           <div className="flex items-center gap-2">

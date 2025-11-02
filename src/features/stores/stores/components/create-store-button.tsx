@@ -16,6 +16,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 
+interface FormFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}
+
+function FormField({ id, label, value, onChange, placeholder }: FormFieldProps) {
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id} className="text-sm font-medium sm:text-base">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required
+        className="h-10 text-sm sm:h-11 sm:text-base"
+      />
+    </div>
+  );
+}
+
 export function CreateStoreButton() {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -27,7 +53,6 @@ export function CreateStoreButton() {
     // TODO: Implement API call to create store
     console.log("Creating store:", { storeName, city });
 
-    // Reset form and close dialog
     setStoreName("");
     setCity("");
     setOpen(false);
@@ -38,9 +63,9 @@ export function CreateStoreButton() {
       <DialogTrigger asChild>
         <Button
           size="lg"
-          className="w-full rounded-full bg-neutral-900 px-6 py-5 text-sm font-medium text-white shadow-lg transition-all hover:bg-neutral-800 hover:shadow-xl sm:w-auto sm:px-8 sm:py-6 sm:text-base"
+          className="w-full rounded-full bg-[var(--color-brand-primary)] px-4 py-2.5 text-xs font-medium text-white shadow-md transition-all hover:opacity-90 hover:shadow-lg sm:w-auto sm:px-6 sm:py-3 sm:text-sm md:px-8 md:py-3.5 md:text-base"
         >
-          <Plus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+          <Plus className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4 md:h-5 md:w-5" />
           {t("stores.createStore")}
         </Button>
       </DialogTrigger>
@@ -55,32 +80,20 @@ export function CreateStoreButton() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 sm:gap-6 sm:py-6">
-            <div className="grid gap-2">
-              <Label htmlFor="storeName" className="text-sm font-medium sm:text-base">
-                {t("stores.storeName")}
-              </Label>
-              <Input
-                id="storeName"
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                placeholder="Boutique boulangerie n°1"
-                required
-                className="h-10 text-sm sm:h-11 sm:text-base"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="city" className="text-sm font-medium sm:text-base">
-                {t("stores.city")}
-              </Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Paris"
-                required
-                className="h-10 text-sm sm:h-11 sm:text-base"
-              />
-            </div>
+            <FormField
+              id="storeName"
+              label={t("stores.storeName")}
+              value={storeName}
+              onChange={setStoreName}
+              placeholder="Boutique boulangerie n°1"
+            />
+            <FormField
+              id="city"
+              label={t("stores.city")}
+              value={city}
+              onChange={setCity}
+              placeholder="Paris"
+            />
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button
@@ -93,7 +106,7 @@ export function CreateStoreButton() {
             </Button>
             <Button
               type="submit"
-              className="w-full bg-neutral-900 text-sm text-white hover:bg-neutral-800 sm:w-auto sm:text-base"
+              className="w-full bg-[var(--color-brand-primary)] text-sm text-white hover:opacity-90 sm:w-auto sm:text-base"
             >
               {t("actions.save")}
             </Button>

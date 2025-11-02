@@ -52,24 +52,24 @@ DATABASE_URL="postgresql://user:password@localhost:5432/epidom"
 
 This app uses Next.js 15 App Router with four route groups:
 
-- **Landing routes** (`/(landing)/*`) - Public marketing pages (`/`, `/services`, `/pricing`, `/contact`)
+- **Marketing routes** (`/(marketing)/*`) - Public marketing pages (`/`, `/services`, `/pricing`, `/contact`, `/payments`)
   - Uses `I18nProvider` for internationalization
   - Layout includes `SiteHeader`, `SiteFooter`, and `CookieConsentBar`
   - Uses Lato font from Google Fonts
 
-- **Auth routes** (`/(auth)/*`) - Authentication pages (`/login`, `/register`)
-  - Uses `I18nProvider` for internationalization
+- **Auth routes** (`/(app)/(auth)/*`) - Authentication pages (`/login`, `/register`)
+  - Uses `I18nProvider` and `SessionProvider` for internationalization
   - Simple layout with no navigation components
   - **Note:** Auth is PARTIALLY implemented with NextAuth + Credentials provider (see Authentication section below)
 
-- **Stores routes** (`/(stores)/*`) - Store selection pages (`/stores`)
+- **Stores routes** (`/(app)/(stores)/*`) - Store selection pages (`/stores`)
   - Uses `I18nProvider` for internationalization
   - Reuses `SiteHeader` with `variant="authenticated"` (logo + logout, no nav links)
   - Multi-store support: users select which store to manage
   - **Flow:** Login → Store Selection → Dashboard (per store)
-  - Uses Lato font from Google Fonts (same as landing)
+  - Uses Lato font from Google Fonts (same as marketing)
 
-- **Dashboard routes** (`/(dashboard)/*`) - Application routes
+- **Dashboard routes** (`/(app)/(dashboard)/*`) - Application routes
   - Pages: `/dashboard`, `/tracking`, `/data`, `/management`, `/alerts`, `/profile`
   - Uses `I18nProvider` for internationalization
   - Wrapped in `PageShell` (Topbar + Sidebar + content area)
@@ -83,32 +83,34 @@ Root layout (src/app/layout.tsx)
   └─ Analytics
   └─ children (route group layouts)
 
-Landing layout (src/app/(landing)/layout.tsx)
+Marketing layout (src/app/(marketing)/layout.tsx)
   └─ I18nProvider
       ├─ SiteHeader
       ├─ main content
       ├─ SiteFooter
       └─ CookieConsentBar
 
-Auth layout (src/app/(auth)/layout.tsx)
-  └─ I18nProvider
-      └─ page content
+Auth layout (src/app/(app)/(auth)/layout.tsx)
+  └─ SessionProvider
+      └─ I18nProvider
+          └─ page content
 
-Stores layout (src/app/(stores)/layout.tsx)
+Stores layout (src/app/(app)/(stores)/layout.tsx)
   └─ I18nProvider
       ├─ SiteHeader (variant="authenticated", showNav=false)
       └─ main content
 
-Dashboard layout (src/app/(dashboard)/layout.tsx)
-  └─ I18nProvider
-      └─ PageShell (Topbar, Sidebar, main content)
-          └─ page content
+Dashboard layout (src/app/(app)/(dashboard)/layout.tsx)
+  └─ SessionProvider
+      └─ I18nProvider
+          └─ PageShell (Topbar, Sidebar, main content)
+              └─ page content
 ```
 
 ### Key Providers & Components
 
 1. **I18nProvider** (`src/components/lang/i18n-provider.tsx`)
-   - Used across all route groups (landing, auth, dashboard, stores)
+   - Used across all route groups (marketing, auth, dashboard, stores)
    - Supports 3 languages: English (en), French (fr), Indonesian (id)
    - Stores locale in localStorage (key: `locale`)
    - Exports: `useI18n()` hook with `locale`, `setLocale()`, `t()` translation function
@@ -127,8 +129,8 @@ Dashboard layout (src/app/(dashboard)/layout.tsx)
    - Exports `useErrorHandler()` hook and `withErrorBoundary()` HOC
    - Logs errors in development mode
 
-4. **SiteHeader** (`src/features/landing/components/site-header.tsx`)
-   - Reusable header component for both landing and authenticated pages
+4. **SiteHeader** (`src/features/marketing/shared/components/site-header.tsx`)
+   - Reusable header component for both marketing and authenticated pages
    - Props:
      - `variant`: "landing" (default) | "authenticated"
      - `showNav`: true (default) | false
@@ -154,7 +156,8 @@ src/
 │   │   ├── page.tsx                # /
 │   │   ├── services/page.tsx
 │   │   ├── pricing/page.tsx
-│   │   └── contact/page.tsx
+│   │   ├── contact/page.tsx
+│   │   └── payments/page.tsx
 │   │
 │   ├── (app)/                      # Authenticated app area
 │   │   ├── (auth)/                 # Login/Register routes
@@ -164,7 +167,7 @@ src/
 │   │   │
 │   │   ├── (stores)/               # Store selection
 │   │   │   ├── layout.tsx
-│   │   │   └── page.tsx
+│   │   │   └── stores/page.tsx
 │   │   │
 │   │   └── (dashboard)/            # Main dashboard routes
 │   │       ├── layout.tsx          # Contains Sidebar + Topbar
@@ -187,41 +190,76 @@ src/
 │   └── globals.css
 │
 ├── components/                     # Truly shared UI (cross-feature)
-│   ├── ui/                         # Shadcn or atomic UI
-│   ├── layout/                     # Shared layout elements (e.g., SiteHeader)
-│   ├── feedback/                   # Toast, modal, spinner
-│   └── icons/                      # Reusable icons or SVGs
+│   ├── ui/                         # Shadcn components (button, dialog, etc.)
+│   ├── lang/                       # I18n components (i18n-provider, lang-switcher)
+│   ├── providers/                  # Context providers (SessionProvider, QueryProvider)
+│   ├── seo/                        # SEO components (structured-data)
+│   └── error-boundary.tsx          # Error handling
 │
 ├── features/                       # Feature-driven modules
 │   ├── auth/
-│   │   ├── components/             # LoginForm, RegisterForm
-│   │   ├── hooks/                  # useLogin, useLogout
-│   │   ├── services/               # auth.api.ts, session.ts
-│   │   └── types/                  # auth.types.ts
+│   │   ├── login/
+│   │   │   └── components/
+│   │   └── register/
+│   │       └── components/
 │   │
-│   ├── posts/
-│   │   ├── components/             # PostCard, PostList
-│   │   ├── hooks/                  # usePosts, useCreatePost
-│   │   ├── services/               # posts.api.ts
-│   │   └── types/                  # post.types.ts
+│   ├── dashboard/
+│   │   ├── dashboard/
+│   │   │   └── _components/
+│   │   ├── alerts/
+│   │   │   ├── components/
+│   │   │   └── hooks/
+│   │   ├── tracking/
+│   │   │   └── components/
+│   │   ├── data/
+│   │   │   ├── components/
+│   │   │   ├── materials/
+│   │   │   │   └── components/
+│   │   │   ├── recipes/
+│   │   │   │   └── components/
+│   │   │   ├── products/
+│   │   │   │   └── components/
+│   │   │   └── suppliers/
+│   │   │       └── components/
+│   │   ├── management/
+│   │   │   ├── components/
+│   │   │   ├── delivery/
+│   │   │   ├── edit-stock/
+│   │   │   ├── production-history/
+│   │   │   └── recipe-production/
+│   │   ├── profile/
+│   │   │   ├── components/
+│   │   │   └── types.ts
+│   │   └── shared/                 # PageShell, Sidebar, Topbar
 │   │
-│   ├── stores/
-│   │   ├── components/             # StoreList, StoreSelector
-│   │   ├── hooks/                  # useStores, useSelectStore
-│   │   ├── services/               # stores.api.ts
-│   │   └── types/                  # store.types.ts
+│   ├── marketing/
+│   │   ├── contact/
+│   │   │   └── components/
+│   │   ├── payments/
+│   │   │   └── components/
+│   │   ├── pricing/
+│   │   │   └── components/
+│   │   ├── services/
+│   │   │   └── components/
+│   │   └── shared/
+│   │       └── components/         # SiteHeader, SiteFooter, Hero, etc.
 │   │
-│   └── shared/                     # Cross-feature helpers
-│       ├── hooks/                  # useDebounce, useFetch
-│       ├── components/             # Shared feature components
-│       ├── services/               # Common API logic
-│       └── utils/                  # Feature-specific utilities
+│   └── stores/
+│       └── stores/
+│           └── components/
 │
 ├── lib/                            # Core app-level utilities
-│   ├── api/                        # Fetch wrappers, axios configs
+│   ├── api/                        # Fetch wrappers, API clients
+│   ├── repositories/               # Data access layer
+│   ├── services/                   # Business logic layer
 │   ├── utils/                      # Common helpers (formatDate, clsx)
-│   ├── auth/                       # NextAuth config
-│   └── i18n/                       # Internationalization setup
+│   ├── validation/                 # Zod validation schemas
+│   ├── auth.ts                     # NextAuth config
+│   ├── auth-client.ts              # Client-side auth hooks
+│   ├── prisma.ts                   # Prisma client singleton
+│   ├── logger.ts                   # Error logging utility
+│   ├── seo.ts                      # SEO utilities
+│   └── validation.ts               # Legacy validation utils
 │
 └── types/                          # Global types
     ├── env.d.ts
@@ -241,8 +279,8 @@ src/
 
 - `src/features/dashboard/dashboard/components/` - Components for the dashboard page
 - `src/features/dashboard/components/` - Shared across all dashboard pages (PageShell, Topbar, Sidebar)
-- `src/features/landing/pricing/components/` - Components for the pricing page
-- `src/features/landing/components/` - Shared across all landing pages (SiteHeader, SiteFooter)
+- `src/features/marketing/pricing/components/` - Components for the pricing page
+- `src/features/marketing/shared/components/` - Shared across all marketing pages (SiteHeader, SiteFooter)
 - `src/features/auth/login/components/` - Components for the login page
 
 ### Styling
@@ -251,9 +289,9 @@ src/
 - Uses OKLCH color space for better color consistency
 - Dark mode support via `.dark` class
 - Custom design tokens for shadcn/ui components (card, popover, primary, etc.)
-- Multiple font systems:
+  - Multiple font systems:
   - **Dashboard/Auth**: Geist Sans and Geist Mono from Vercel
-  - **Landing pages**: Lato from Google Fonts
+  - **Marketing pages**: Lato from Google Fonts
 
 ### Path Aliases
 
@@ -486,39 +524,39 @@ The app uses a unified translation system across all routes:
 
 Following the clean architecture pattern:
 
-1. **Create the page** in `src/app/(dashboard)/[route-name]/page.tsx` (keep it thin, ~10-20 lines)
+1. **Create the page** in `src/app/(app)/(dashboard)/[route-name]/page.tsx` (keep it thin, ~10-20 lines)
 2. **Create components directory**: `src/features/dashboard/[route-name]/components/`
 3. **Extract components**: Create page-specific components in the components directory
 4. **Import in page**: Import and compose components in the page file
-5. **Add navigation**: Update `src/features/dashboard/components/sidebar.tsx`
+5. **Add navigation**: Update `src/features/dashboard/shared/sidebar.tsx`
 6. **Add translations**: Update `src/locales/` files (en.ts, fr.ts, id.ts)
 
 **Example structure:**
 
 ```
-src/app/(dashboard)/inventory/page.tsx (imports components)
+src/app/(app)/(dashboard)/inventory/page.tsx (imports components)
 src/features/dashboard/inventory/components/
   ├── inventory-table.tsx
   ├── add-item-dialog.tsx
   └── stock-alerts.tsx
 ```
 
-### Adding Landing Pages
+### Adding Marketing Pages
 
 Following the clean architecture pattern:
 
-1. **Create the page** in `src/app/(landing)/[route-name]/page.tsx` (keep it thin, ~10-20 lines)
-2. **Create components directory**: `src/features/landing/[route-name]/components/`
+1. **Create the page** in `src/app/(marketing)/[route-name]/page.tsx` (keep it thin, ~10-20 lines)
+2. **Create components directory**: `src/features/marketing/[route-name]/components/`
 3. **Extract components**: Create page-specific components (sections, forms, etc.)
 4. **Import in page**: Import and compose components in the page file
-5. **Add navigation**: Update `src/features/landing/components/site-header.tsx`
+5. **Add navigation**: Update `src/features/marketing/shared/components/site-header.tsx`
 6. **Add translations**: Update `src/locales/` files (en.ts, fr.ts, id.ts)
 
 **Example structure:**
 
 ```
-src/app/(landing)/about/page.tsx (imports components)
-src/features/landing/about/components/
+src/app/(marketing)/about/page.tsx (imports components)
+src/features/marketing/about/components/
   ├── about-hero.tsx
   ├── team-section.tsx
   └── company-history.tsx
@@ -528,7 +566,7 @@ src/features/landing/about/components/
 
 Following the clean architecture pattern:
 
-1. **Create the page** in `src/app/(auth)/[route-name]/page.tsx` (keep it thin)
+1. **Create the page** in `src/app/(app)/(auth)/[route-name]/page.tsx` (keep it thin)
 2. **Create components directory**: `src/features/auth/[route-name]/components/`
 3. **Extract components**: Create form components and other UI elements
 4. **Import in page**: Import and compose components in the page file
@@ -582,7 +620,7 @@ async function onSubmit(formData: FormData) {
 - **TypeScript strict mode**: Enabled in tsconfig.json
 - **Vercel Analytics**: Integrated in root layout
 - **Unified I18n system**: Single `I18nProvider` used across all routes with translations in `src/locales/`
-- **Four route groups**: Landing (public), Auth (NextAuth), Stores (multi-store selector), Dashboard (per-store)
+- **Four route groups**: Marketing (public), Auth (NextAuth), Stores (multi-store selector), Dashboard (per-store)
 - **Error handling**: ErrorBoundary with custom fallback UI and recovery options
 
 ## Clean Architecture Best Practices

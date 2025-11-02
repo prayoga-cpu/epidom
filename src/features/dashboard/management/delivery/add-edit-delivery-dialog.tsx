@@ -147,8 +147,8 @@ export default function AddEditDeliveryDialog({
     // Validation
     if (!deliveryReference.trim()) {
       toast({
-        title: "Validation Error",
-        description: "Delivery reference is required",
+        title: t("common.validation.error"),
+        description: t("management.delivery.dialogs.addEditDelivery.validation.referenceRequired"),
         variant: "destructive",
       });
       return;
@@ -156,8 +156,8 @@ export default function AddEditDeliveryDialog({
 
     if (!supplierId) {
       toast({
-        title: "Validation Error",
-        description: "Please select a supplier",
+        title: t("common.validation.error"),
+        description: t("management.delivery.dialogs.addEditDelivery.validation.supplierRequired"),
         variant: "destructive",
       });
       return;
@@ -165,8 +165,8 @@ export default function AddEditDeliveryDialog({
 
     if (!expectedDate) {
       toast({
-        title: "Validation Error",
-        description: "Expected date is required",
+        title: t("common.validation.error"),
+        description: t("management.delivery.dialogs.addEditDelivery.validation.expectedDateRequired"),
         variant: "destructive",
       });
       return;
@@ -174,8 +174,8 @@ export default function AddEditDeliveryDialog({
 
     if (items.length === 0) {
       toast({
-        title: "Validation Error",
-        description: "Please add at least one item",
+        title: t("common.validation.error"),
+        description: t("management.delivery.dialogs.addEditDelivery.validation.atLeastOneItem"),
         variant: "destructive",
       });
       return;
@@ -185,8 +185,8 @@ export default function AddEditDeliveryDialog({
     const hasEmptyItems = items.some((item) => !item.materialId || item.quantity <= 0);
     if (hasEmptyItems) {
       toast({
-        title: "Validation Error",
-        description: "All items must have a material and quantity greater than 0",
+        title: t("common.validation.error"),
+        description: t("management.delivery.dialogs.addEditDelivery.validation.itemsMustHaveMaterial"),
         variant: "destructive",
       });
       return;
@@ -204,12 +204,14 @@ export default function AddEditDeliveryDialog({
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
+      const createdDesc = t("management.delivery.dialogs.addEditDelivery.toasts.created.description") || "Delivery {reference} has been created successfully";
+      const updatedDesc = t("management.delivery.dialogs.addEditDelivery.toasts.updated.description") || "Delivery {reference} has been updated successfully";
       toast({
-        title: mode === "add" ? "Delivery Created" : "Delivery Updated",
+        title: mode === "add" ? t("management.delivery.dialogs.addEditDelivery.toasts.created.title") : t("management.delivery.dialogs.addEditDelivery.toasts.updated.title"),
         description:
           mode === "add"
-            ? `Delivery ${deliveryReference} has been created successfully`
-            : `Delivery ${deliveryReference} has been updated successfully`,
+            ? createdDesc.replace("{reference}", deliveryReference)
+            : updatedDesc.replace("{reference}", deliveryReference),
       });
       onOpenChange(false);
     }, 1000);
@@ -220,19 +222,19 @@ export default function AddEditDeliveryDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>
-            {mode === "add" ? "Add New Delivery" : "Edit Delivery"}
+            {mode === "add" ? t("management.delivery.dialogs.addEditDelivery.addTitle") : t("management.delivery.dialogs.addEditDelivery.editTitle")}
           </DialogTitle>
           <DialogDescription>
             {mode === "add"
-              ? "Create a new supplier delivery record"
-              : `Update delivery ${delivery?.deliveryReference}`}
+              ? t("management.delivery.dialogs.addEditDelivery.addDescription")
+              : (t("management.delivery.dialogs.addEditDelivery.editDescription") || "Update delivery {reference}").replace("{reference}", delivery?.deliveryReference || "")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Delivery Reference */}
           <div className="space-y-2">
-            <Label htmlFor="deliveryReference">Delivery Reference *</Label>
+            <Label htmlFor="deliveryReference">{t("management.delivery.dialogs.addEditDelivery.deliveryReference")} *</Label>
             <Input
               id="deliveryReference"
               value={deliveryReference}
@@ -244,10 +246,10 @@ export default function AddEditDeliveryDialog({
 
           {/* Supplier */}
           <div className="space-y-2">
-            <Label htmlFor="supplier">Supplier *</Label>
+            <Label htmlFor="supplier">{t("management.delivery.dialogs.addEditDelivery.supplier")} *</Label>
             <Select value={supplierId} onValueChange={setSupplierId}>
               <SelectTrigger id="supplier">
-                <SelectValue placeholder="Select a supplier" />
+                <SelectValue placeholder={t("management.delivery.dialogs.addEditDelivery.selectSupplier")} />
               </SelectTrigger>
               <SelectContent>
                 {MOCK_SUPPLIERS.map((supplier) => (
@@ -262,7 +264,7 @@ export default function AddEditDeliveryDialog({
           {/* Delivery Type & Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="deliveryType">Delivery Type *</Label>
+              <Label htmlFor="deliveryType">{t("management.delivery.dialogs.addEditDelivery.deliveryType")} *</Label>
               <Select
                 value={deliveryType}
                 onValueChange={(value) => setDeliveryType(value as DeliveryType)}
@@ -271,14 +273,14 @@ export default function AddEditDeliveryDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={DeliveryType.INCOMING}>Incoming</SelectItem>
-                  <SelectItem value={DeliveryType.OUTGOING}>Outgoing</SelectItem>
+                  <SelectItem value={DeliveryType.INCOMING}>{t("management.delivery.type.incoming")}</SelectItem>
+                  <SelectItem value={DeliveryType.OUTGOING}>{t("management.delivery.type.outgoing")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
+              <Label htmlFor="status">{t("management.delivery.dialogs.addEditDelivery.status")} *</Label>
               <Select
                 value={status}
                 onValueChange={(value) => setStatus(value as SupplierDeliveryStatus)}
@@ -287,10 +289,10 @@ export default function AddEditDeliveryDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={SupplierDeliveryStatus.PENDING}>Pending</SelectItem>
-                  <SelectItem value={SupplierDeliveryStatus.IN_TRANSIT}>In Transit</SelectItem>
-                  <SelectItem value={SupplierDeliveryStatus.RECEIVED}>Received</SelectItem>
-                  <SelectItem value={SupplierDeliveryStatus.CANCELLED}>Cancelled</SelectItem>
+                  <SelectItem value={SupplierDeliveryStatus.PENDING}>{t("management.delivery.status.pending")}</SelectItem>
+                  <SelectItem value={SupplierDeliveryStatus.IN_TRANSIT}>{t("management.delivery.status.inTransit")}</SelectItem>
+                  <SelectItem value={SupplierDeliveryStatus.RECEIVED}>{t("management.delivery.status.received")}</SelectItem>
+                  <SelectItem value={SupplierDeliveryStatus.CANCELLED}>{t("management.delivery.status.cancelled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -298,7 +300,7 @@ export default function AddEditDeliveryDialog({
 
           {/* Expected Date */}
           <div className="space-y-2">
-            <Label htmlFor="expectedDate">Expected Date *</Label>
+            <Label htmlFor="expectedDate">{t("management.delivery.dialogs.addEditDelivery.expectedDate")} *</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -307,7 +309,7 @@ export default function AddEditDeliveryDialog({
                   className="w-full justify-start text-left font-normal"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {expectedDate ? formatDate(expectedDate) : "Select expected date"}
+                  {expectedDate ? formatDate(expectedDate) : t("management.delivery.dialogs.addEditDelivery.selectExpectedDate")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -319,17 +321,17 @@ export default function AddEditDeliveryDialog({
           {/* Items Section */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Items *</Label>
+              <Label>{t("management.delivery.dialogs.addEditDelivery.items")} *</Label>
               <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add Item
+                {t("management.delivery.dialogs.addEditDelivery.addItem")}
               </Button>
             </div>
 
             {items.length === 0 ? (
               <div className="bg-muted/30 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground text-sm">
-                  No items added yet. Click "Add Item" to add materials.
+                  {t("management.delivery.dialogs.addEditDelivery.noItemsYet")}
                 </p>
               </div>
             ) : (
@@ -337,10 +339,10 @@ export default function AddEditDeliveryDialog({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead className="w-[120px]">Quantity</TableHead>
-                      <TableHead className="w-[100px]">Unit</TableHead>
-                      <TableHead>Notes</TableHead>
+                      <TableHead>{t("management.delivery.dialogs.addEditDelivery.material")}</TableHead>
+                      <TableHead className="w-[120px]">{t("management.delivery.dialogs.addEditDelivery.quantity")}</TableHead>
+                      <TableHead className="w-[100px]">{t("management.delivery.dialogs.addEditDelivery.unit")}</TableHead>
+                      <TableHead>{t("management.delivery.dialogs.addEditDelivery.notes")}</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -353,7 +355,7 @@ export default function AddEditDeliveryDialog({
                             onValueChange={(value) => handleItemChange(index, "materialId", value)}
                           >
                             <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Select material" />
+                              <SelectValue placeholder={t("management.delivery.dialogs.addEditDelivery.selectMaterial")} />
                             </SelectTrigger>
                             <SelectContent>
                               {MOCK_MATERIALS.map((material) => (
@@ -398,7 +400,7 @@ export default function AddEditDeliveryDialog({
                           <Input
                             value={item.notes}
                             onChange={(e) => handleItemChange(index, "notes", e.target.value)}
-                            placeholder="Optional notes"
+                            placeholder={t("management.delivery.dialogs.addEditDelivery.optionalNotes")}
                             className="h-9"
                           />
                         </TableCell>
@@ -423,28 +425,28 @@ export default function AddEditDeliveryDialog({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t("management.delivery.dialogs.addEditDelivery.notes")}</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any additional notes about this delivery..."
+              placeholder={t("management.delivery.dialogs.addEditDelivery.additionalNotes")}
               rows={3}
             />
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting
                 ? mode === "add"
-                  ? "Creating..."
-                  : "Updating..."
+                  ? t("management.delivery.dialogs.addEditDelivery.creating")
+                  : t("management.delivery.dialogs.addEditDelivery.updating")
                 : mode === "add"
-                  ? "Create Delivery"
-                  : "Update Delivery"}
+                  ? t("management.delivery.dialogs.addEditDelivery.createDelivery")
+                  : t("management.delivery.dialogs.addEditDelivery.updateDelivery")}
             </Button>
           </DialogFooter>
         </form>

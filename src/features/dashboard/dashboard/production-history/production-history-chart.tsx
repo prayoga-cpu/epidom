@@ -1,21 +1,16 @@
 "use client";
-
+import { useI18n } from "@/components/lang/i18n-provider";
+import { ExportButton } from "@/components/ui/export-button";
+import DashboardCard from "../_components/dashboard-card";
+import Chart from "./components/chart";
 import { useState, useMemo } from "react";
 import { DateRange } from "react-day-picker";
-import StockLevel from "./stock-level";
-import OrdersPending from "./orders-pending";
-import ActiveRecipes from "./active-recipes";
-import ProductionHistoryChart from "./production-history-chart";
-import CurrentWorkflow from "./current-workflow";
-import OrdersToPrepareTable from "./orders-to-prepare-table";
-import {
-  MOCK_ORDERS,
-  MOCK_DASHBOARD_STATS,
-  MOCK_PRODUCTION_HISTORY_WEEKLY,
-  MOCK_WORKFLOW_STATS,
-} from "@/mocks";
+import { MOCK_ORDERS, MOCK_DASHBOARD_STATS, MOCK_PRODUCTION_HISTORY_WEEKLY } from "@/mocks";
+import { exportData } from "@/features/dashboard/dashboard/production-history/utils/export";
 
-export function DashboardView() {
+export default function ProductionHistoryChart() {
+  const { t } = useI18n();
+
   // Initialize without date filter (show all data by default)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,33 +74,19 @@ export function DashboardView() {
   }, [filteredOrders]);
 
   return (
-    <div className="grid w-full gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">
-          Welcome to the dashboard. Here you can see the current status of your orders, recipes, and
-          stock.
-        </p>
-      </div>
-      {/* Stat Cards */}
-      <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StockLevel stockUtilization={dashboardStats.stockUtilization} />
-        <OrdersPending totalOpenOrders={dashboardStats.totalOpenOrders} />
-        <ActiveRecipes totalActiveRecipes={dashboardStats.activeRecipes} />
-      </div>
-
-      {/* Charts and Workflow */}
-      <div className="grid w-full gap-4 lg:grid-cols-3">
-        <ProductionHistoryChart chartData={filteredChartData} />
-        <CurrentWorkflow
-          inStock={MOCK_WORKFLOW_STATS.inStock}
-          processing={MOCK_WORKFLOW_STATS.processing}
-          delivered={MOCK_WORKFLOW_STATS.delivered}
+    <DashboardCard
+      cardClassName="col-span-4"
+      cardTitle={t("pages.prodHistory")}
+      cardDescription={t("pages.prodHistoryDesc")}
+      cardOther={
+        <ExportButton
+          data={exportData({ chartData: filteredChartData })}
+          filename="production-history"
+          variant="outline"
+          size="sm"
         />
-      </div>
-
-      {/* Orders Table */}
-      <OrdersToPrepareTable orders={filteredOrders} />
-    </div>
+      }
+      cardContent={<Chart chartData={filteredChartData} />}
+    />
   );
 }

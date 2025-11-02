@@ -63,14 +63,14 @@ export default function UpdateDeliveryStatusDialog({
     // Define valid status transitions
     if (currentStatus === SupplierDeliveryStatus.PENDING) {
       statuses.push(
-        { value: SupplierDeliveryStatus.IN_TRANSIT, label: "In Transit" },
-        { value: SupplierDeliveryStatus.RECEIVED, label: "Received" },
-        { value: SupplierDeliveryStatus.CANCELLED, label: "Cancelled" }
+        { value: SupplierDeliveryStatus.IN_TRANSIT, label: t("management.delivery.status.inTransit") || "In Transit" },
+        { value: SupplierDeliveryStatus.RECEIVED, label: t("management.delivery.status.received") || "Received" },
+        { value: SupplierDeliveryStatus.CANCELLED, label: t("management.delivery.status.cancelled") || "Cancelled" }
       );
     } else if (currentStatus === SupplierDeliveryStatus.IN_TRANSIT) {
       statuses.push(
-        { value: SupplierDeliveryStatus.RECEIVED, label: "Received" },
-        { value: SupplierDeliveryStatus.CANCELLED, label: "Cancelled" }
+        { value: SupplierDeliveryStatus.RECEIVED, label: t("management.delivery.status.received") || "Received" },
+        { value: SupplierDeliveryStatus.CANCELLED, label: t("management.delivery.status.cancelled") || "Cancelled" }
       );
     }
 
@@ -82,8 +82,8 @@ export default function UpdateDeliveryStatusDialog({
 
     if (!newStatus) {
       toast({
-        title: "Validation Error",
-        description: "Please select a new status",
+        title: t("common.validation.error"),
+        description: t("management.delivery.updateStatus.selectNewStatus"),
         variant: "destructive",
       });
       return;
@@ -91,8 +91,8 @@ export default function UpdateDeliveryStatusDialog({
 
     if (newStatus === SupplierDeliveryStatus.RECEIVED && !receivedDate) {
       toast({
-        title: "Validation Error",
-        description: "Please select a received date",
+        title: t("common.validation.error"),
+        description: t("management.delivery.updateStatus.selectReceivedDate"),
         variant: "destructive",
       });
       return;
@@ -106,9 +106,11 @@ export default function UpdateDeliveryStatusDialog({
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
+      const statusLabel = getAvailableStatuses().find(s => s.value === newStatus)?.label || newStatus;
+      const descriptionText = t("management.delivery.updateStatus.toasts.updated.description") || "Delivery status has been updated to {status}";
       toast({
-        title: "Status Updated",
-        description: `Delivery status has been updated to ${newStatus}`,
+        title: t("management.delivery.updateStatus.toasts.updated.title"),
+        description: descriptionText.replace("{status}", statusLabel),
       });
       onOpenChange(false);
     }, 1000);
@@ -120,27 +122,27 @@ export default function UpdateDeliveryStatusDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Update Delivery Status</DialogTitle>
+          <DialogTitle>{t("management.delivery.updateStatus.title")}</DialogTitle>
           <DialogDescription>
-            Change the status of delivery {delivery?.deliveryReference}
+            {(t("management.delivery.updateStatus.description") || "Update delivery status").replace("{reference}", delivery?.deliveryReference || "")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Current Status */}
           <div className="space-y-2">
-            <Label>Current Status</Label>
+            <Label>{t("management.delivery.updateStatus.currentStatus")}</Label>
             <div>
-              <Badge variant="secondary">{delivery?.status}</Badge>
+              <Badge variant="secondary">{t(`management.delivery.status.${delivery?.status?.toLowerCase()}`) || delivery?.status}</Badge>
             </div>
           </div>
 
           {/* New Status */}
           <div className="space-y-2">
-            <Label htmlFor="status">New Status *</Label>
+            <Label htmlFor="status">{t("management.delivery.updateStatus.newStatus")} *</Label>
             <Select value={newStatus} onValueChange={setNewStatus}>
               <SelectTrigger id="status">
-                <SelectValue placeholder="Select new status" />
+                <SelectValue placeholder={t("management.delivery.updateStatus.selectNewStatusPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {availableStatuses.map((status) => (
@@ -155,7 +157,7 @@ export default function UpdateDeliveryStatusDialog({
           {/* Received Date (only if status is RECEIVED) */}
           {newStatus === SupplierDeliveryStatus.RECEIVED && (
             <div className="space-y-2">
-              <Label htmlFor="receivedDate">Received Date *</Label>
+              <Label htmlFor="receivedDate">{t("management.delivery.updateStatus.receivedDate")} *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -164,7 +166,7 @@ export default function UpdateDeliveryStatusDialog({
                     className="w-full justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {receivedDate ? formatDate(receivedDate) : "Select received date"}
+                    {receivedDate ? formatDate(receivedDate) : t("management.delivery.updateStatus.selectReceivedDatePlaceholder")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -181,10 +183,10 @@ export default function UpdateDeliveryStatusDialog({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t("common.notes")}</Label>
             <Textarea
               id="notes"
-              placeholder="Add notes about this status change..."
+              placeholder={t("management.delivery.updateStatus.notesPlaceholder")}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
@@ -193,10 +195,10 @@ export default function UpdateDeliveryStatusDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting || availableStatuses.length === 0}>
-              {isSubmitting ? "Updating..." : "Update Status"}
+              {isSubmitting ? t("management.delivery.updateStatus.updating") : t("management.delivery.updateStatus.updateStatus")}
             </Button>
           </DialogFooter>
         </form>

@@ -142,9 +142,13 @@ export default function EditProductDialog({
     console.log("Product data to update:", { id: product.id, ...submitData });
 
     setIsSubmitting(false);
+    const updatedDesc = t("data.products.toasts.updated.description") || "{name} has been updated successfully.";
     toast({
-      title: "Product Updated Successfully",
-      description: `${data.name} has been updated.`,
+      title: t("data.products.toasts.updated.title"),
+      description: updatedDesc.replace(
+        "{name}",
+        data.name
+      ),
     });
 
     onOpenChange(false);
@@ -190,7 +194,7 @@ export default function EditProductDialog({
                     <FormItem>
                       <FormLabel>Product Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Baguette Tradition" {...field} />
+                        <Input placeholder={t("data.products.form.namePlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -204,7 +208,7 @@ export default function EditProductDialog({
                     <FormItem>
                       <FormLabel>SKU</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., BAG-TRD" {...field} />
+                        <Input placeholder={t("data.products.form.skuPlaceholder")} {...field} />
                       </FormControl>
                       <FormDescription>Stock Keeping Unit (optional)</FormDescription>
                       <FormMessage />
@@ -221,7 +225,7 @@ export default function EditProductDialog({
                     <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Product description..."
+                        placeholder={t("data.products.form.descriptionPlaceholder")}
                         className="min-h-[80px]"
                         {...field}
                       />
@@ -250,7 +254,7 @@ export default function EditProductDialog({
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a recipe (optional)" />
+                            <SelectValue placeholder={t("data.products.form.selectRecipe")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -275,7 +279,7 @@ export default function EditProductDialog({
                     <FormItem>
                       <FormLabel>Category *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Bread, Pastry" {...field} />
+                        <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -290,7 +294,7 @@ export default function EditProductDialog({
                   <FormItem>
                     <FormLabel>Image URL</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com/image.jpg" {...field} />
+                      <Input placeholder={t("data.products.form.imageUrlPlaceholder")} {...field} />
                     </FormControl>
                     <FormDescription>Product image URL (optional)</FormDescription>
                     <FormMessage />

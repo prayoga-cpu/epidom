@@ -266,7 +266,7 @@ export default function DuplicateRecipeDialog({
                         {t("data.recipes.duplicateDialog.nameLabel") || "New Recipe Name"} *
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Baguette Tradition (Copy)" {...field} />
+                        <Input placeholder={t("data.recipes.namePlaceholder") || "Recipe name"} {...field} />
                       </FormControl>
                       <FormDescription>
                         {t("data.recipes.duplicateDialog.nameDescription") ||

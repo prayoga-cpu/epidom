@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, CreditCard, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface SubscriptionInfoCardProps {
   subscription?: {
@@ -17,6 +18,8 @@ interface SubscriptionInfoCardProps {
 }
 
 export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps) {
+  const { t } = useI18n();
+
   const getStatusColor = (status?: string) => {
     switch (status) {
       case "ACTIVE":
@@ -30,14 +33,39 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
     }
   };
 
+  const getStatusLabel = (status?: string) => {
+    switch (status) {
+      case "ACTIVE":
+        return t("profile.subscription.status.active") || status;
+      case "CANCELED":
+        return t("profile.subscription.status.canceled") || status;
+      case "PAST_DUE":
+        return t("profile.subscription.status.pastDue") || status;
+      default:
+        return status || "";
+    }
+  };
+
   const getPlanDetails = (plan?: string) => {
     switch (plan) {
       case "PRO":
-        return { name: "Pro", price: "€79/month", color: "text-purple-600" };
+        return {
+          name: t("profile.subscription.plans.pro") || "Pro",
+          price: t("profile.subscription.pricing.pro") || "€79/month",
+          color: "text-purple-600"
+        };
       case "ENTERPRISE":
-        return { name: "Enterprise", price: "Custom", color: "text-blue-600" };
+        return {
+          name: t("profile.subscription.plans.enterprise") || "Enterprise",
+          price: t("profile.subscription.pricing.enterprise") || "Custom",
+          color: "text-blue-600"
+        };
       default:
-        return { name: "Starter", price: "€29/month", color: "text-gray-600" };
+        return {
+          name: t("profile.subscription.plans.starter") || "Starter",
+          price: t("profile.subscription.pricing.starter") || "€29/month",
+          color: "text-gray-600"
+        };
     }
   };
 
@@ -45,14 +73,14 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
     return (
       <Card className="border-2">
         <CardHeader>
-          <CardTitle className="text-xl font-bold">Subscription</CardTitle>
+          <CardTitle className="text-xl font-bold">{t("profile.subscription.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <CreditCard className="text-muted-foreground mb-4 h-12 w-12" />
-            <p className="text-muted-foreground mb-4">No active subscription</p>
+            <p className="text-muted-foreground mb-4">{t("profile.subscription.noActiveSubscription")}</p>
             <Button asChild>
-              <Link href="/pricing">View Plans</Link>
+              <Link href="/pricing">{t("profile.subscription.viewPlans")}</Link>
             </Button>
           </div>
         </CardContent>
@@ -67,15 +95,15 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
   return (
     <Card className="border-2">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-xl font-bold">Subscription</CardTitle>
-        <Badge className={getStatusColor(subscription.status)}>{subscription.status}</Badge>
+        <CardTitle className="text-xl font-bold">{t("profile.subscription.title")}</CardTitle>
+        <Badge className={getStatusColor(subscription.status)}>{getStatusLabel(subscription.status)}</Badge>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Plan Details */}
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
             <div>
-              <p className="text-muted-foreground text-sm">Current Plan</p>
+              <p className="text-muted-foreground text-sm">{t("profile.subscription.currentPlan")}</p>
               <p className={`text-2xl font-bold ${planDetails.color}`}>{planDetails.name}</p>
             </div>
             <p className="text-xl font-semibold">{planDetails.price}</p>
@@ -87,17 +115,17 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
           <div className="space-y-3 border-t pt-4">
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="text-muted-foreground h-4 w-4" />
-              <span className="text-muted-foreground">Billing Period</span>
+              <span className="text-muted-foreground">{t("profile.subscription.billingPeriod")}</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-muted-foreground text-xs">Period Start</p>
+                <p className="text-muted-foreground text-xs">{t("profile.subscription.periodStart")}</p>
                 <p className="font-semibold">
                   {new Date(subscription.currentPeriodStart).toLocaleDateString()}
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs">Period End</p>
+                <p className="text-muted-foreground text-xs">{t("profile.subscription.periodEnd")}</p>
                 <p className="font-semibold">
                   {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
                 </p>
@@ -112,10 +140,10 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
             <AlertCircle className="mt-0.5 h-5 w-5 text-yellow-600 dark:text-yellow-500" />
             <div className="flex-1">
               <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                Subscription Ending
+                {t("profile.subscription.warnings.ending.title")}
               </p>
               <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-300">
-                Your subscription will not renew at the end of the current period.
+                {t("profile.subscription.warnings.ending.description")}
               </p>
             </div>
           </div>
@@ -125,9 +153,9 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
           <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-900/20">
             <AlertCircle className="mt-0.5 h-5 w-5 text-red-600 dark:text-red-500" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-red-800 dark:text-red-200">Payment Required</p>
+              <p className="text-sm font-medium text-red-800 dark:text-red-200">{t("profile.subscription.warnings.pastDue.title")}</p>
               <p className="mt-1 text-xs text-red-700 dark:text-red-300">
-                Your payment is past due. Please update your payment method.
+                {t("profile.subscription.warnings.pastDue.description")}
               </p>
             </div>
           </div>
@@ -136,11 +164,11 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
         {/* Actions */}
         <div className="flex gap-2 pt-2">
           <Button variant="outline" asChild className="flex-1">
-            <Link href="/pricing">Change Plan</Link>
+            <Link href="/pricing">{t("profile.subscription.changePlan")}</Link>
           </Button>
           {isActive && !subscription.cancelAtPeriodEnd && (
             <Button variant="outline" className="flex-1">
-              Manage Billing
+              {t("profile.subscription.manageBilling")}
             </Button>
           )}
         </div>

@@ -1,5 +1,20 @@
 "use client";
 
+/**
+ * Site Header Component
+ *
+ * Reusable navigation header used across all marketing pages.
+ * Features:
+ * - Responsive design (desktop navigation + mobile sheet menu)
+ * - Two variants: landing (shows waitlist CTA) or authenticated (shows logout)
+ * - Internationalization support with language switcher
+ * - Active page highlighting with visual feedback
+ * - Accessible navigation with ARIA labels
+ * - Sticky/fixed positioning controlled by CSS classes
+ *
+ * @component
+ */
+
 import { memo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -10,9 +25,15 @@ import { usePathname } from "next/navigation";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ChevronRight } from "lucide-react";
+import { LogoWithSkeleton } from "./logo-with-skeleton";
 
+/**
+ * Props for SiteHeader component
+ */
 interface SiteHeaderProps {
+  /** Header variant: "landing" shows waitlist CTA, "authenticated" shows logout button */
   variant?: "landing" | "authenticated";
+  /** Whether to show main navigation links (Home, Services, Pricing, Contact) */
   showNav?: boolean;
 }
 
@@ -23,22 +44,25 @@ export const SiteHeader = memo(function SiteHeader({
   const pathname = usePathname();
   const { t } = useI18n();
 
+  /**
+   * Handle logout action (TODO: implement NextAuth signOut)
+   */
   const handleLogout = () => {
-    // TODO: Implement logout logic
+    // TODO: Implement logout logic using NextAuth
     console.log("Logout clicked");
   };
 
   return (
-    <header className="mobile-navbar" style={{ color: "white" }}>
+    <header className="mobile-navbar" style={{ color: "var(--color-brand-white)" }}>
       <nav
         aria-label="Main"
-        className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4"
+        className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-4"
       >
-        <div className="flex items-center gap-4 sm:gap-8">
+        <div className="flex items-center gap-4 sm:gap-6 md:gap-8">
           {/* Logo */}
           <Link
             href="/"
-            className="block transition-opacity hover:opacity-80"
+            className="block flex-shrink-0 transition-opacity hover:opacity-80"
             aria-label={t("common.nav.homepage")}
           >
             <Image
@@ -46,7 +70,7 @@ export const SiteHeader = memo(function SiteHeader({
               alt="EPIDOM logo"
               width={120}
               height={32}
-              className="h-7 w-auto sm:h-8"
+              className="h-7 w-auto sm:h-8 md:h-8"
               style={{ width: "auto", height: "auto" }}
               sizes="(max-width: 768px) 120px, 120px"
               priority
@@ -55,12 +79,12 @@ export const SiteHeader = memo(function SiteHeader({
 
           {/* Desktop navigation */}
           {showNav && (
-            <ul className="hidden items-center gap-6 sm:gap-8 md:flex">
+            <ul className="hidden items-center gap-4 md:flex md:gap-5 lg:gap-6">
               <li>
                 <Link
                   href="/"
                   aria-current={pathname === "/" ? "page" : undefined}
-                  className={`text-sm font-medium transition-colors hover:text-white/80 sm:text-base ${
+                  className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
                     pathname === "/"
                       ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
                       : ""
@@ -73,7 +97,7 @@ export const SiteHeader = memo(function SiteHeader({
                 <Link
                   href="/services"
                   aria-current={pathname === "/services" ? "page" : undefined}
-                  className={`text-sm font-medium transition-colors hover:text-white/80 sm:text-base ${
+                  className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
                     pathname === "/services"
                       ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
                       : ""
@@ -86,7 +110,7 @@ export const SiteHeader = memo(function SiteHeader({
                 <Link
                   href="/pricing"
                   aria-current={pathname === "/pricing" ? "page" : undefined}
-                  className={`text-sm font-medium transition-colors hover:text-white/80 sm:text-base ${
+                  className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
                     pathname === "/pricing"
                       ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
                       : ""
@@ -99,7 +123,7 @@ export const SiteHeader = memo(function SiteHeader({
                 <Link
                   href="/contact"
                   aria-current={pathname === "/contact" ? "page" : undefined}
-                  className={`text-sm font-medium transition-colors hover:text-white/80 sm:text-base ${
+                  className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
                     pathname === "/contact"
                       ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
                       : ""
@@ -112,19 +136,19 @@ export const SiteHeader = memo(function SiteHeader({
           )}
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden items-center gap-3 md:flex">
-            <div>
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+          <div className="hidden items-center gap-3 md:flex md:gap-4">
+            <div className="flex-shrink-0">
               <LangSwitcher />
             </div>
-            <div>
+            <div className="flex-shrink-0">
               {variant === "landing" ? (
                 <WaitlistDialog />
               ) : (
                 <Button
                   onClick={handleLogout}
                   variant="outline"
-                  className="rounded-full border-0 bg-white px-6 text-neutral-900 hover:bg-neutral-100"
+                  className="rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
                 >
                   {t("actions.logout")}
                 </Button>
@@ -163,18 +187,13 @@ export const SiteHeader = memo(function SiteHeader({
               {/* Header Section */}
               <div className="border-border/20 flex items-center justify-between border-b p-6">
                 <Link href="/" aria-label={t("common.nav.homepage")} className="flex items-center">
-                  <Image
+                  <LogoWithSkeleton
                     src="/images/logo-black.png"
                     alt="EPIDOM logo"
                     width={120}
                     height={32}
                     className="h-8 w-auto"
-                    style={{
-                      width: "auto",
-                      height: "auto",
-                      filter:
-                        "invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)",
-                    }}
+                    filter="invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)"
                     sizes="(max-width: 768px) 120px, 120px"
                   />
                   <span className="sr-only">{t("common.brand")}</span>

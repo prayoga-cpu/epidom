@@ -1,12 +1,26 @@
 "use client";
 
+/**
+ * Payment Summary Component
+ *
+ * Order summary sidebar showing plan details and pricing.
+ * Displays features and billing period for selected plan.
+ * Sticky positioning on desktop.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 
+/**
+ * Props for PaymentSummary component
+ */
 interface PaymentSummaryProps {
+  /** Selected plan type */
   plan?: "starter" | "pro" | "enterprise";
 }
 

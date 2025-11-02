@@ -300,7 +300,7 @@ export function StockHistoryDialog({
             <div className="bg-muted/50 rounded-lg p-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {t("tracking.showingMovements").replace(
+                  {(t("tracking.showingMovements") || "Showing {count} movements").replace(
                     "{count}",
                     movementsWithBalance.length.toString()
                   )}

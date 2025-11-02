@@ -190,16 +190,16 @@ export function ProductionHistoryCard() {
 
   // Prepare export data
   const exportData = sortedBatches.map((batch) => ({
-    "Batch Number": batch.batchNumber,
-    Recipe: getRecipeName(batch.recipeId),
-    Status: getStatusConfig(batch.status).label,
-    "Planned Quantity": batch.quantityPlanned,
-    "Produced Quantity": batch.quantityProduced,
-    "Quality Score": batch.qualityScore ?? "N/A",
-    "Started At": batch.startedAt ? format(new Date(batch.startedAt as string | Date), "yyyy-MM-dd HH:mm") : "N/A",
-    "Completed At": batch.completedAt
+    [t("management.productionHistory.batchNumber")]: batch.batchNumber,
+    [t("management.productionHistory.recipe")]: getRecipeName(batch.recipeId),
+    [t("management.productionHistory.status")]: getStatusConfig(batch.status).label,
+    [t("management.productionHistory.metrics.plannedQuantity")]: batch.quantityPlanned,
+    [t("management.productionHistory.metrics.producedQuantity")]: batch.quantityProduced,
+    [t("management.productionHistory.qualityScore")]: batch.qualityScore ?? t("common.notAvailable"),
+    [t("management.productionHistory.startedAt")]: batch.startedAt ? format(new Date(batch.startedAt as string | Date), "yyyy-MM-dd HH:mm") : t("common.notAvailable"),
+    [t("management.productionHistory.completedAt")]: batch.completedAt
       ? format(new Date(batch.completedAt), "yyyy-MM-dd HH:mm")
-      : "N/A",
+      : t("common.notAvailable"),
   }));
 
   return (
@@ -428,10 +428,10 @@ export function ProductionHistoryCard() {
                           {batch.quantityProduced} / {batch.quantityPlanned}
                         </TableCell>
                         <TableCell className="text-right">
-                          {batch.qualityScore !== null && batch.qualityScore !== undefined ? batch.qualityScore.toFixed(1) : "N/A"}
+                          {batch.qualityScore !== null && batch.qualityScore !== undefined ? batch.qualityScore.toFixed(1) : t("common.notAvailable")}
                         </TableCell>
                         <TableCell>
-                          {batch.startedAt ? format(new Date(batch.startedAt as string | Date), "MMM d, yyyy HH:mm") : "N/A"}
+                          {batch.startedAt ? format(new Date(batch.startedAt as string | Date), "MMM d, yyyy HH:mm") : t("common.notAvailable")}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button

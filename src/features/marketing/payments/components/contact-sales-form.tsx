@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Contact Sales Form Component
+ *
+ * Lead form for Enterprise plan inquiries.
+ * Collects company information and custom requirements.
+ * Simulates form submission (TODO: integrate with CRM/email).
+ *
+ * @component
+ */
+
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { logger } from "@/lib/logger";

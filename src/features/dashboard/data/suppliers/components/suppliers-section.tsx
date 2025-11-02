@@ -166,9 +166,13 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
 
   const handleDeleteConfirm = () => {
     // TODO: API call to delete supplier
+    const deletedDesc = t("data.suppliers.toasts.deleted.description") || "{name} has been deleted successfully.";
     toast({
-      title: "Supplier Deleted",
-      description: `${selectedSupplier?.name} has been deleted successfully.`,
+      title: t("data.suppliers.toasts.deleted.title"),
+      description: deletedDesc.replace(
+        "{name}",
+        selectedSupplier?.name || ""
+      ),
     });
     setDeleteDialogOpen(false);
     setSelectedSupplier(null);
@@ -176,9 +180,13 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
 
   const handleBulkDelete = () => {
     // TODO: API call to bulk delete suppliers
+    const bulkDeletedDesc = t("data.suppliers.toasts.bulkDeleted.description") || "{count} suppliers have been deleted successfully.";
     toast({
-      title: "Suppliers Deleted",
-      description: `${selectedIds.size} suppliers have been deleted successfully.`,
+      title: t("data.suppliers.toasts.bulkDeleted.title"),
+      description: bulkDeletedDesc.replace(
+        "{count}",
+        selectedIds.size.toString()
+      ),
     });
     setSelectedIds(new Set());
   };
@@ -257,7 +265,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder="Search by name, contact, or location..."
+                placeholder={t("actions.searchPlaceholder") || "Search..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -270,7 +278,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
               <Select value={paymentTermsFilter} onValueChange={setPaymentTermsFilter}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Payment Terms" />
+                  <SelectValue placeholder={t("filters.placeholderPaymentTerms")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filters.allTerms") || "All Terms"}</SelectItem>
@@ -297,7 +305,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
               >
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Rating" />
+                  <SelectValue placeholder={t("filters.placeholderRating")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filters.allRatings") || "All Ratings"}</SelectItem>
@@ -323,7 +331,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
               >
                 <SelectTrigger>
                   <ArrowUpDown className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Sort by" />
+                  <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
@@ -376,7 +384,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing") || "Showing"} {processedSuppliers.length}{" "}
-              {t("common.of") || "of"} {suppliers.length} {t("data.suppliers") || "suppliers"}
+              {t("common.of") || "of"} {suppliers.length} {t("data.suppliers.pageTitle") || "suppliers"}
             </p>
           </div>
 
@@ -436,7 +444,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
                     <div className="text-muted-foreground space-y-1 text-xs">
                       {supplier.email && (
                         <div className="flex justify-between">
-                          <span>Email:</span>
+                          <span>{t("common.email")}:</span>
                           <span className="text-foreground truncate font-medium">
                             {supplier.email.split("@")[0]}...
                           </span>
@@ -444,13 +452,13 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
                       )}
                       {supplier.phone && (
                         <div className="flex justify-between">
-                          <span>Phone:</span>
+                          <span>{t("common.phone")}:</span>
                           <span className="text-foreground font-medium">{supplier.phone}</span>
                         </div>
                       )}
                       {(supplier.city || supplier.country) && (
                         <div className="flex justify-between">
-                          <span>Location:</span>
+                          <span>{t("common.location")}:</span>
                           <span className="text-foreground font-medium">
                             {[supplier.city, supplier.country].filter(Boolean).join(", ")}
                           </span>
@@ -458,7 +466,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
                       )}
                       {supplier.paymentTerms && (
                         <div className="flex justify-between">
-                          <span>Payment:</span>
+                          <span>{t("common.payment")}:</span>
                           <span className="text-foreground font-medium">
                             {supplier.paymentTerms}
                           </span>
@@ -466,7 +474,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
                       )}
                       {supplier.onTimeDeliveryRate !== undefined && (
                         <div className="flex justify-between">
-                          <span>Delivery:</span>
+                          <span>{t("common.delivery")}:</span>
                           <span
                             className={`font-medium ${
                               supplier.onTimeDeliveryRate >= 95
@@ -498,7 +506,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>View Supplier</p>
+                            <p>{t("data.suppliers.tooltips.view")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -513,7 +521,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Edit Supplier</p>
+                            <p>{t("data.suppliers.tooltips.edit")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -528,7 +536,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Delete Supplier</p>
+                            <p>{t("data.suppliers.tooltips.delete")}</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -587,9 +595,9 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
             onOpenChange={setEditDialogOpen}
           />
           <ConfirmationDialog
-            title="Delete Supplier"
-            description={`Are you sure you want to delete "${selectedSupplier.name}"? This action cannot be undone.`}
-            confirmText="Delete Supplier"
+            title={t("data.suppliers.toasts.deleted.title") || "Delete Supplier"}
+            description={(t("data.suppliers.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedSupplier.name)}
+            confirmText={t("common.actions.delete") || "Delete"}
             onConfirm={handleDeleteConfirm}
             variant="destructive"
             open={deleteDialogOpen}

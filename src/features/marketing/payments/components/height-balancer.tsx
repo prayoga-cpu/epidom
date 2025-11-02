@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Height Balancer Component
+ *
+ * Utility component to balance heights between two containers.
+ * Used for payment page layout to ensure form and summary match.
+ * Only active on desktop (lg+ breakpoint).
+ *
+ * @component
+ */
+
 import { useEffect, useRef } from "react";
 
 export function HeightBalancer() {

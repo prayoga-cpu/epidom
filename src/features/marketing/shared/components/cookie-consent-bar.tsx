@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Cookie Consent Bar Component
+ *
+ * GDPR-compliant cookie consent notification.
+ * Fixed bottom banner, shows once per user session.
+ * Stores user preference in localStorage.
+ *
+ * @component
+ */
+
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";

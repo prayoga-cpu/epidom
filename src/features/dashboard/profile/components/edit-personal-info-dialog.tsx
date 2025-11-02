@@ -122,9 +122,9 @@ export function EditPersonalInfoDialog({
     } catch (error) {
       console.error("Error updating profile:", error);
       toast({
-        title: "Error",
+        title: t("common.error"),
         description:
-          error instanceof Error ? error.message : "Failed to update profile. Please try again.",
+          error instanceof Error ? error.message : t("profile.errors.updateFailed"),
         variant: "destructive",
       });
     }
@@ -135,7 +135,7 @@ export function EditPersonalInfoDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t("profile.forms.editPersonalInfo")}</DialogTitle>
-          <DialogDescription>Update your personal information and preferences</DialogDescription>
+          <DialogDescription>{t("profile.forms.editPersonalInfoDescription")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -163,7 +163,7 @@ export function EditPersonalInfoDialog({
               <FormControl>
                 <Input type="email" value={user.email} disabled className="bg-muted" />
               </FormControl>
-              <FormDescription>Email cannot be changed</FormDescription>
+              <FormDescription>{t("profile.forms.emailCannotBeChanged")}</FormDescription>
             </FormItem>
 
             <FormField
@@ -199,9 +199,9 @@ export function EditPersonalInfoDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="fr">Français</SelectItem>
-                        <SelectItem value="id">Bahasa</SelectItem>
+                        <SelectItem value="en">{t("common.language.en")}</SelectItem>
+                        <SelectItem value="fr">{t("common.language.fr")}</SelectItem>
+                        <SelectItem value="id">{t("common.language.id")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

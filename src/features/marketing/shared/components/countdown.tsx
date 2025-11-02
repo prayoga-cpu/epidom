@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Countdown Component
+ *
+ * Landing page countdown timer for EPIDOM launch date.
+ * Features flip-board style timer units with brand colors.
+ * Currently disabled on homepage (see page.tsx comment).
+ *
+ * @component
+ */
+
 import { memo } from "react";
 import Countdown from "react-countdown";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -10,8 +20,10 @@ import { useEffect, useState } from "react";
 export const CountdownComponent = memo(function CountdownComponent() {
   const { t } = useI18n();
   const [isClient, setIsClient] = useState(false);
+  /** Target launch date: November 12, 2025 */
   const targetDate = new Date("2025-11-12T00:00:00");
 
+  /** Hydrate client-side to avoid SSR mismatch */
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -113,8 +125,8 @@ function FlipUnit({ value, label }: { value: number; label: string }) {
             key={i}
             className="relative mx-1 flex h-10 w-8 items-center justify-center rounded-md border-2 bg-white text-sm font-bold shadow-md transition-all duration-300 hover:shadow-lg sm:h-12 sm:w-10 sm:text-base md:h-14 md:w-12 md:text-lg lg:h-16 lg:w-14 lg:text-xl"
             style={{
-              borderColor: "#444444",
-              color: "#444444",
+              borderColor: "var(--color-brand-primary)",
+              color: "var(--color-brand-primary)",
             }}
           >
             {digit}

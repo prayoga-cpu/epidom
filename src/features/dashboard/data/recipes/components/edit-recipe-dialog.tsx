@@ -333,7 +333,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select material" />
+                                    <SelectValue placeholder={t("data.recipes.ingredients.selectMaterial") || "Select material"} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -407,7 +407,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                             <FormItem>
                               <FormLabel>Notes</FormLabel>
                               <FormControl>
-                                <Input placeholder="Optional notes" {...field} />
+                                <Input placeholder={t("data.recipes.ingredients.notesPlaceholder") || "Optional notes"} {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

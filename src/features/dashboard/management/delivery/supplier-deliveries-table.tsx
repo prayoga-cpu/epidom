@@ -127,6 +127,34 @@ export function SupplierDeliveriesTable({
     return type === DeliveryType.INCOMING ? Package : Truck;
   };
 
+  // Get status label
+  const getStatusLabel = (status: SupplierDeliveryStatus) => {
+    switch (status) {
+      case SupplierDeliveryStatus.PENDING:
+        return t("management.delivery.status.pending") || "Pending";
+      case SupplierDeliveryStatus.IN_TRANSIT:
+        return t("management.delivery.status.inTransit") || "In Transit";
+      case SupplierDeliveryStatus.RECEIVED:
+        return t("management.delivery.status.received") || "Received";
+      case SupplierDeliveryStatus.CANCELLED:
+        return t("management.delivery.status.cancelled") || "Cancelled";
+      default:
+        return status;
+    }
+  };
+
+  // Get delivery type label
+  const getTypeLabel = (type: DeliveryType) => {
+    switch (type) {
+      case DeliveryType.INCOMING:
+        return t("management.delivery.type.incoming") || "Incoming";
+      case DeliveryType.OUTGOING:
+        return t("management.delivery.type.outgoing") || "Outgoing";
+      default:
+        return type;
+    }
+  };
+
   // Filtered and sorted deliveries
   const processedDeliveries = useMemo(() => {
     let filtered = [...deliveries];
@@ -385,7 +413,7 @@ export function SupplierDeliveriesTable({
                         <TableCell>
                           <Badge variant={getTypeVariant(delivery.deliveryType)} className="gap-1">
                             <TypeIcon className="h-3 w-3" />
-                            {delivery.deliveryType}
+                            {getTypeLabel(delivery.deliveryType)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -397,11 +425,11 @@ export function SupplierDeliveriesTable({
                         <TableCell>
                           <Badge variant={getStatusVariant(delivery.status)} className="gap-1">
                             <StatusIcon className="h-3 w-3" />
-                            {delivery.status}
+                            {getStatusLabel(delivery.status)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          {delivery.items.length} item{delivery.items.length !== 1 ? "s" : ""}
+                          {delivery.items.length} {delivery.items.length !== 1 ? t("management.delivery.items") : t("management.delivery.item")}
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
@@ -416,7 +444,7 @@ export function SupplierDeliveriesTable({
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>View Delivery</TooltipContent>
+                              <TooltipContent>{t("management.delivery.actions.viewDelivery")}</TooltipContent>
                             </Tooltip>
                             {onEditDelivery && (
                               <Tooltip>
@@ -430,7 +458,7 @@ export function SupplierDeliveriesTable({
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Edit Delivery</TooltipContent>
+                                <TooltipContent>{t("management.delivery.actions.editDelivery")}</TooltipContent>
                               </Tooltip>
                             )}
                             {onPrintDelivery && (
@@ -445,7 +473,7 @@ export function SupplierDeliveriesTable({
                                     <Printer className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Print Delivery</TooltipContent>
+                                <TooltipContent>{t("management.delivery.actions.printDelivery")}</TooltipContent>
                               </Tooltip>
                             )}
                           </div>
@@ -462,7 +490,7 @@ export function SupplierDeliveriesTable({
           {totalPages > 1 && (
             <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">Rows per page:</span>
+                <span className="text-muted-foreground text-sm">{t("common.pagination.rowsPerPage")}:</span>
                 <Select
                   value={pageSize.toString()}
                   onValueChange={(value) => {
@@ -484,7 +512,7 @@ export function SupplierDeliveriesTable({
 
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">
-                  Page {currentPage} of {totalPages}
+                  {t("common.pagination.page")} {currentPage} {t("common.of")} {totalPages}
                 </span>
                 <div className="flex gap-1">
                   <Button
@@ -493,7 +521,7 @@ export function SupplierDeliveriesTable({
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                   >
-                    Previous
+                    {t("common.actions.previous")}
                   </Button>
                   <Button
                     variant="outline"
@@ -501,7 +529,7 @@ export function SupplierDeliveriesTable({
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                   >
-                    Next
+                    {t("common.actions.next")}
                   </Button>
                 </div>
               </div>

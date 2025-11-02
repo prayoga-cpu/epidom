@@ -68,6 +68,33 @@ export function SupplierDeliveryDetails({
 
   const delivery = selectedDelivery;
 
+  // Helper function to translate system notes
+  const translateSystemNote = (note: string | null | undefined): string => {
+    if (!note) return "";
+
+    // Map of English system notes to translation keys
+    const systemNoteMap: Record<string, string> = {
+      "Delivery scheduled": "management.delivery.details.systemNotes.deliveryScheduled",
+      "Shipment departed from supplier warehouse": "management.delivery.details.systemNotes.shipmentDeparted",
+      "All items received in good condition": "management.delivery.details.systemNotes.itemsReceived",
+      "Out for delivery": "management.delivery.details.systemNotes.outForDelivery",
+      "Order placed, awaiting confirmation": "management.delivery.details.systemNotes.orderPlaced",
+      "Weekly bulk order scheduled": "management.delivery.details.systemNotes.weeklyBulkOrder",
+      "Special order for specialty items": "management.delivery.details.systemNotes.specialOrder",
+      "Regular dairy delivery": "management.delivery.details.systemNotes.regularDairyDelivery",
+      "Regular weekly delivery - all items inspected and stored properly": "management.delivery.details.systemNotes.regularWeeklyDelivery",
+    };
+
+    // Check if note matches a system message
+    const translationKey = systemNoteMap[note];
+    if (translationKey) {
+      return t(translationKey) || note;
+    }
+
+    // If not a system message, return as-is (could be user input)
+    return note;
+  };
+
   // Get status styling
   const getStatusVariant = (status: SupplierDeliveryStatus) => {
     switch (status) {
@@ -107,6 +134,34 @@ export function SupplierDeliveryDetails({
     return type === DeliveryType.INCOMING ? Package : Truck;
   };
 
+  // Get status label
+  const getStatusLabel = (status: SupplierDeliveryStatus) => {
+    switch (status) {
+      case SupplierDeliveryStatus.PENDING:
+        return t("management.delivery.status.pending") || "Pending";
+      case SupplierDeliveryStatus.IN_TRANSIT:
+        return t("management.delivery.status.inTransit") || "In Transit";
+      case SupplierDeliveryStatus.RECEIVED:
+        return t("management.delivery.status.received") || "Received";
+      case SupplierDeliveryStatus.CANCELLED:
+        return t("management.delivery.status.cancelled") || "Cancelled";
+      default:
+        return status;
+    }
+  };
+
+  // Get delivery type label
+  const getTypeLabel = (type: DeliveryType) => {
+    switch (type) {
+      case DeliveryType.INCOMING:
+        return t("management.delivery.type.incoming") || "Incoming";
+      case DeliveryType.OUTGOING:
+        return t("management.delivery.type.outgoing") || "Outgoing";
+      default:
+        return type;
+    }
+  };
+
   const StatusIcon = getStatusIcon(delivery.status);
   const TypeIcon = getTypeIcon(delivery.deliveryType);
 
@@ -121,11 +176,11 @@ export function SupplierDeliveryDetails({
           <div className="flex flex-col gap-1">
             <Badge variant={getStatusVariant(delivery.status)} className="gap-1">
               <StatusIcon className="h-3 w-3" />
-              {delivery.status}
+              {getStatusLabel(delivery.status)}
             </Badge>
             <Badge variant={getTypeVariant(delivery.deliveryType)} className="gap-1">
               <TypeIcon className="h-3 w-3" />
-              {delivery.deliveryType}
+              {getTypeLabel(delivery.deliveryType)}
             </Badge>
           </div>
         </div>
@@ -206,9 +261,9 @@ export function SupplierDeliveryDetails({
                     <TableRow key={index}>
                       <TableCell className="text-xs">
                         <div>
-                          <div className="font-medium">{item.material?.name || "Unknown Material"}</div>
+                          <div className="font-medium">{item.material?.name || t("management.delivery.details.unknownMaterial")}</div>
                           {item.material?.sku && (
-                            <div className="text-muted-foreground text-xs">SKU: {item.material.sku}</div>
+                            <div className="text-muted-foreground text-xs">{t("common.sku")}: {item.material.sku}</div>
                           )}
                         </div>
                       </TableCell>
@@ -253,8 +308,8 @@ export function SupplierDeliveryDetails({
                     <div className="flex-1 pb-3">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="text-sm font-medium">{history.status}</p>
-                          <p className="text-muted-foreground text-xs">{history.notes}</p>
+                          <p className="text-sm font-medium">{getStatusLabel(history.status)}</p>
+                          <p className="text-muted-foreground text-xs">{translateSystemNote(history.notes)}</p>
                           {history.userName && (
                             <p className="text-muted-foreground mt-0.5 text-xs">
                               {t("management.delivery.details.by") || "by"} {history.userName}
@@ -281,7 +336,7 @@ export function SupplierDeliveryDetails({
               {t("management.delivery.details.notes") || "Notes"}
             </h3>
             <div className="bg-muted/30 rounded-lg p-3">
-              <p className="text-muted-foreground text-xs">{delivery.notes}</p>
+              <p className="text-muted-foreground text-xs">{translateSystemNote(delivery.notes)}</p>
             </div>
           </div>
         )}

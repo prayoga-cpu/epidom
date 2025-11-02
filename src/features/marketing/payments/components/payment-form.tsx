@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Payment Form Component
+ *
+ * Checkout form for Starter and Pro plans.
+ * Includes billing information and credit card inputs.
+ * Simulates payment processing (TODO: integrate Stripe).
+ *
+ * @component
+ */
+
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { logger } from "@/lib/logger";
@@ -10,7 +20,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CreditCard, Lock, User, Mail, Building } from "lucide-react";
 
+/**
+ * Props for PaymentForm component
+ */
 interface PaymentFormProps {
+  /** Plan type: starter or pro */
   plan: "starter" | "pro";
 }
 
@@ -229,7 +243,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
         onClick={handleSubmit}
         disabled={isSubmitting}
         className="mb-6 h-11 w-full rounded-lg text-base font-semibold transition-colors duration-200 hover:bg-gray-700 sm:mb-8 sm:h-12 sm:text-lg"
-        style={{ backgroundColor: "#444444", color: "white" }}
+        style={{ backgroundColor: "var(--color-brand-primary)", color: "var(--color-brand-white)" }}
       >
         {isSubmitting ? t("payments.processing") : t("payments.completePayment")}
       </Button>

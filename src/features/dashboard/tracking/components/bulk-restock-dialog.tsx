@@ -200,7 +200,7 @@ export function BulkRestockDialog({
             {/* Selected Items */}
             <div>
               <h3 className="text-sm font-semibold mb-3">
-                {t("tracking.itemsSelected").replace(
+                {(t("tracking.itemsSelected") || "{count} items selected").replace(
                   "{count}",
                   selectedItems.length.toString()
                 )}

@@ -40,5 +40,7 @@
   // Files
   "files.eol": "\n",
   "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true
+  "files.insertFinalNewline": true,
+  "prisma-smart-formatter.typescript.defaultFormatter": "esbenp.prettier-vscode",
+  "prisma-smart-formatter.typescriptreact.defaultFormatter": "esbenp.prettier-vscode"
 }

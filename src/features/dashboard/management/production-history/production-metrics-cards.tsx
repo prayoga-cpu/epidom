@@ -63,7 +63,7 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
     {
       title: t("management.productionHistory.metrics.averageQuality"),
       value: metrics.avgQuality.toFixed(1),
-      suffix: " / 10",
+      suffix: ` ${t("common.of")} 10`,
       icon: Star,
       iconColor: "text-yellow-600 dark:text-yellow-400",
       bgColor: "bg-yellow-100 dark:bg-yellow-900",
@@ -81,7 +81,7 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
     {
       title: t("management.productionHistory.metrics.totalOutput"),
       value: metrics.totalOutput,
-      suffix: " units",
+      suffix: ` ${t("management.productionHistory.metrics.units")}`,
       icon: Package,
       iconColor: "text-purple-600 dark:text-purple-400",
       bgColor: "bg-purple-100 dark:bg-purple-900",

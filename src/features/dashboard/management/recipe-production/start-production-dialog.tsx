@@ -126,9 +126,10 @@ export function StartProductionDialog({
         .toString()
         .padStart(3, "0")}`;
 
+      const descriptionText = t("management.recipeProduction.toasts.productionStarted.description") || "Production batch {batchNumber} has been started";
       toast({
         title: t("management.recipeProduction.toasts.productionStarted.title"),
-        description: t("management.recipeProduction.toasts.productionStarted.description").replace(
+        description: descriptionText.replace(
           "{batchNumber}",
           batchNumber
         ),
@@ -185,7 +186,7 @@ export function StartProductionDialog({
                       <p className="text-muted-foreground">
                         {t("management.recipeProduction.timePerBatch")}
                       </p>
-                      <p className="font-medium">{recipe.productionTimeMinutes} min</p>
+                      <p className="font-medium">{recipe.productionTimeMinutes} {t("common.time.minutesShort")}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">
@@ -268,10 +269,10 @@ export function StartProductionDialog({
                         {t("management.recipeProduction.totalTime")}
                       </p>
                       <p className="text-lg font-bold">
-                        {totalTime} min
+                        {totalTime} {t("common.time.minutesShort")}
                         {totalTime >= 60 && (
                           <span className="text-muted-foreground ml-1 text-sm font-normal">
-                            ({(totalTime / 60).toFixed(1)}h)
+                            ({(totalTime / 60).toFixed(1)}{t("common.time.hoursShort")})
                           </span>
                         )}
                       </p>
@@ -312,7 +313,7 @@ export function StartProductionDialog({
                                 !dateValue && "text-muted-foreground"
                               )}
                             >
-                              {dateValue ? format(dateValue, "PPP") : <span>Pick a date</span>}
+                              {dateValue ? format(dateValue, "PPP") : <span>{t("common.datePicker.pickDate")}</span>}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>

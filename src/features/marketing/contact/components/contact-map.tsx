@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Contact Map Component
+ *
+ * Interactive map showing EPIDOM office location using Leaflet.
+ * Uses dynamic imports to prevent SSR issues with Leaflet library.
+ * Fixes Next.js marker icon issue via useEffect.
+ *
+ * @component
+ */
+
 import dynamic from "next/dynamic";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useEffect } from "react";
@@ -17,14 +27,14 @@ const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), 
 
 const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false });
 
+/** Coordinates for EPIDOM office: 1 Av. Marcel Ramolfo Garnier, Massy, 91300, France */
+const MAP_POSITION: [number, number] = [48.7311, 2.2678];
+
 export function ContactMap() {
   const { t } = useI18n();
 
-  // Coordinates for 1 Av. Marcel Ramolfo Garnier, Massy, 91300, France
-  const position: [number, number] = [48.7311, 2.2678];
-
   useEffect(() => {
-    // Fix Leaflet marker icons issue
+    // Fix Leaflet marker icons issue in Next.js
     if (typeof window !== "undefined") {
       const L = require("leaflet");
 
@@ -39,38 +49,31 @@ export function ContactMap() {
   }, []);
 
   return (
-    <div className="py-8 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <div className="h-80 w-full overflow-hidden rounded-lg shadow-lg sm:h-96 lg:h-[496px]">
-            <MapContainer
-              center={position}
-              zoom={15}
-              style={{ height: "100%", width: "100%" }}
-              scrollWheelZoom={true}
-              zoomControl={true}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <Marker position={position}>
-                <Popup>
-                  <div className="text-center">
-                    <h3
-                      className="mb-2 text-lg font-semibold"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    >
-                      EPIDOM
-                    </h3>
-                    <p className="mb-1 text-sm text-gray-600">{t("contact.info.address.line1")}</p>
-                    <p className="text-sm text-gray-600">{t("contact.info.address.line2")}</p>
-                  </div>
-                </Popup>
-              </Marker>
-            </MapContainer>
-          </div>
-        </div>
+    <div className="lg:w-full lg:pt-24 lg:pb-8">
+      <div className="h-80 w-full overflow-hidden rounded-lg shadow-lg md:aspect-square lg:h-[450px] lg:w-full [&_.leaflet-control-attribution]:hidden">
+        <MapContainer
+          center={MAP_POSITION}
+          zoom={15}
+          style={{ height: "100%", width: "100%" }}
+          scrollWheelZoom={true}
+          zoomControl={true}
+        >
+          <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <Marker position={MAP_POSITION}>
+            <Popup>
+              <div className="text-center">
+                <h3
+                  className="mb-2 text-lg font-semibold"
+                  style={{ color: "var(--color-brand-primary)" }}
+                >
+                  EPIDOM
+                </h3>
+                <p className="mb-1 text-sm text-gray-600">{t("contact.info.address.line1")}</p>
+                <p className="text-sm text-gray-600">{t("contact.info.address.line2")}</p>
+              </div>
+            </Popup>
+          </Marker>
+        </MapContainer>
       </div>
     </div>
   );

@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Feature Comparison Component
+ *
+ * Comparison table showing features across Starter, Pro, and Enterprise plans.
+ * Highlighted Pro column with brand color border.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Check } from "lucide-react";
 
@@ -7,99 +16,99 @@ export function FeatureComparison() {
   const { t } = useI18n();
 
   return (
-    <section className="pb-12 sm:pb-16 md:pb-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h2 className="mb-6 text-center text-2xl font-bold tracking-tight sm:mb-8 sm:text-3xl md:text-4xl">
+    <section className="pb-12 md:pb-20 lg:pb-24">
+      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+        <h2 className="mb-6 text-center text-2xl font-bold tracking-tight md:mb-8 md:text-4xl">
           {t("pricing.compare.title")}
         </h2>
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead className="bg-muted/60">
               <tr className="text-left">
-                <th className="p-3 font-semibold sm:p-4">{t("pricing.compare.headers.feature")}</th>
-                <th className="p-3 text-center font-semibold sm:p-4">
+                <th className="p-3 font-semibold md:p-4">{t("pricing.compare.headers.feature")}</th>
+                <th className="p-3 text-center font-semibold md:p-4">
                   {t("pricing.compare.headers.starter")}
                 </th>
                 <th
-                  className="border-l-2 p-3 text-center font-semibold sm:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  className="border-l-2 p-3 text-center font-semibold md:p-4"
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
                   {t("pricing.compare.headers.pro")}
                 </th>
-                <th className="p-3 text-center font-semibold sm:p-4">
+                <th className="p-3 text-center font-semibold md:p-4">
                   {t("pricing.compare.headers.enterprise")}
                 </th>
               </tr>
             </thead>
             <tbody>
               <tr className="hover:bg-muted/30 border-t">
-                <td className="p-3 sm:p-4">{t("pricing.compare.rows.pointOfSale.name")}</td>
-                <td className="p-3 text-center sm:p-4">
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                <td className="p-3 md:p-4">{t("pricing.compare.rows.pointOfSale.name")}</td>
+                <td className="p-3 text-center md:p-4">
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
                 <td
-                  className="border-l-2 p-3 text-center sm:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  className="border-l-2 p-3 text-center md:p-4"
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
-                <td className="p-3 text-center sm:p-4">
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                <td className="p-3 text-center md:p-4">
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
               </tr>
               <tr className="hover:bg-muted/30 border-t">
-                <td className="p-3 sm:p-4">{t("pricing.compare.rows.multiSite.name")}</td>
-                <td className="p-3 text-center sm:p-4">—</td>
+                <td className="p-3 md:p-4">{t("pricing.compare.rows.multiSite.name")}</td>
+                <td className="p-3 text-center md:p-4">—</td>
                 <td
-                  className="border-l-2 p-3 text-center sm:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  className="border-l-2 p-3 text-center md:p-4"
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
-                <td className="p-3 text-center sm:p-4">
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                <td className="p-3 text-center md:p-4">
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
               </tr>
               <tr className="hover:bg-muted/30 border-t">
-                <td className="p-3 sm:p-4">{t("pricing.compare.rows.supplierManagement.name")}</td>
-                <td className="p-3 text-center sm:p-4">
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                <td className="p-3 md:p-4">{t("pricing.compare.rows.supplierManagement.name")}</td>
+                <td className="p-3 text-center md:p-4">
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
                 <td
-                  className="border-l-2 p-3 text-center sm:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  className="border-l-2 p-3 text-center md:p-4"
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
-                <td className="p-3 text-center sm:p-4">
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                <td className="p-3 text-center md:p-4">
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
               </tr>
               <tr className="hover:bg-muted/30 border-t">
-                <td className="p-3 sm:p-4">{t("pricing.compare.rows.reports.name")}</td>
-                <td className="p-3 text-center sm:p-4">—</td>
+                <td className="p-3 md:p-4">{t("pricing.compare.rows.reports.name")}</td>
+                <td className="p-3 text-center md:p-4">—</td>
                 <td
-                  className="border-l-2 p-3 text-center sm:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  className="border-l-2 p-3 text-center md:p-4"
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
-                <td className="p-3 text-center sm:p-4">
-                  <Check className="text-primary mx-auto h-4 w-4 sm:h-5 sm:w-5" />
+                <td className="p-3 text-center md:p-4">
+                  <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
               </tr>
               <tr className="hover:bg-muted/30 border-t">
-                <td className="p-3 sm:p-4">{t("pricing.compare.rows.support.name")}</td>
-                <td className="p-3 text-center sm:p-4">
+                <td className="p-3 md:p-4">{t("pricing.compare.rows.support.name")}</td>
+                <td className="p-3 text-center md:p-4">
                   {t("pricing.compare.rows.support.starter")}
                 </td>
                 <td
-                  className="border-l-2 p-3 text-center sm:p-4"
-                  style={{ borderLeftColor: "#444444" }}
+                  className="border-l-2 p-3 text-center md:p-4"
+                  style={{ borderLeftColor: "var(--color-brand-primary)" }}
                 >
                   {t("pricing.compare.rows.support.pro")}
                 </td>
-                <td className="p-3 text-center sm:p-4">
+                <td className="p-3 text-center md:p-4">
                   {t("pricing.compare.rows.support.enterprise")}
                 </td>
               </tr>

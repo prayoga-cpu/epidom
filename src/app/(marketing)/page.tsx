@@ -1,4 +1,14 @@
-import { LazyCountdownComponent } from "@/lib/dynamic-imports.client";
+/**
+ * Home Page (Landing Page)
+ *
+ * Main landing page for EPIDOM marketing site.
+ * Features hero section with lazy-loaded components for performance.
+ * Uses structured data for SEO and Open Graph metadata.
+ *
+ * @page
+ */
+
+import { LazyCountdownComponent, LazyHero } from "@/lib/dynamic-imports.client";
 import { generateMetadata } from "@/lib/seo";
 import { ProductStructuredData } from "@/components/seo/structured-data";
 
@@ -43,13 +53,15 @@ export const metadata = generateMetadata({
 
 export default function HomePage() {
   return (
-    <main>
+    <main className="bg-white pt-12 md:pt-32 lg:pt-0">
       <ProductStructuredData />
-      {/* Countdown section - temporary until launch */}
+      {/* Countdown section */}
       <LazyCountdownComponent />
 
-      {/* Hero section - commented out until launch */}
-      {/* <LazyHero /> */}
+      {/* Hero section - main content */}
+      <div className="animate-slide-up">
+        <LazyHero />
+      </div>
     </main>
   );
 }

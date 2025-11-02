@@ -172,16 +172,16 @@ export function EditStockCard() {
 
   // Export data
   const exportData = filteredItems.map((item) => ({
-    SKU: item.sku,
-    Name: item.name,
-    Type: item.type === "material" ? "Material" : "Product",
-    "Current Stock": item.currentStock,
-    "Min Stock": item.minStock,
-    "Max Stock": item.maxStock,
-    Unit: item.unit,
-    "Cost Per Unit": item.costPerUnit,
-    "Stock Value": item.currentStock * item.costPerUnit,
-    Status: getStockStatus(item).label,
+    [t("common.sku")]: item.sku,
+    [t("common.name")]: item.name,
+    [t("common.type")]: item.type === "material" ? t("management.editStock.material") : t("management.editStock.product"),
+    [t("management.editStock.currentStock")]: item.currentStock,
+    [t("management.editStock.minStock")]: item.minStock,
+    [t("management.editStock.maxStock")]: item.maxStock,
+    [t("management.editStock.unit")]: item.unit,
+    [t("common.cost")]: item.costPerUnit,
+    [t("management.editStock.stockValue")]: item.currentStock * item.costPerUnit,
+    [t("management.editStock.status")]: getStockStatus(item).label,
   }));
 
   // Handle viewing adjustment history
@@ -369,7 +369,7 @@ export function EditStockCard() {
                     <div>
                       <h3 className="text-xl font-semibold">{selectedItem.name}</h3>
                       <div className="mt-1 flex items-center gap-2">
-                        <p className="text-muted-foreground text-sm">SKU: {selectedItem.sku}</p>
+                        <p className="text-muted-foreground text-sm">{t("common.sku")}: {selectedItem.sku}</p>
                         <Badge variant="outline">
                           {selectedItem.type === "material"
                             ? t("management.editStock.material")

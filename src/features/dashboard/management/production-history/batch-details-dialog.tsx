@@ -183,7 +183,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                         {t("management.productionHistory.qualityScore")}
                       </p>
                       <p className="text-xl font-bold">
-                        {batch.qualityScore?.toFixed(1) || "N/A"}/10
+                        {batch.qualityScore?.toFixed(1) || t("common.notAvailable")}/10
                       </p>
                     </div>
                   </div>
@@ -261,7 +261,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                   <p className="text-muted-foreground">
                     {t("management.productionHistory.expectedTime")}
                   </p>
-                  <p className="font-medium">{recipe.productionTimeMinutes} minutes</p>
+                  <p className="font-medium">{recipe.productionTimeMinutes} {t("common.time.minutes")}</p>
                 </div>
               </div>
             </CardContent>
@@ -327,7 +327,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                             new Date(batch.startedAt as string | Date),
                             "MMMM d, yyyy 'at' HH:mm"
                           )
-                        : "N/A"}
+                        : t("common.notAvailable")}
                     </p>
                   </div>
                 </div>
@@ -352,12 +352,12 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                         {t("management.productionHistory.totalDuration")}
                       </p>
                       <p className="font-medium">
-                        {duration.hours > 0 ? `${duration.hours} hours ` : ""}
-                        {duration.remainingMinutes} minutes
+                        {duration.hours > 0 ? `${duration.hours} ${t("common.time.hours")} ` : ""}
+                        {duration.remainingMinutes} {t("common.time.minutes")}
                         {recipe.productionTimeMinutes && (
                           <span className="text-muted-foreground ml-2 text-sm">
                             ({t("management.productionHistory.expected")}:{" "}
-                            {recipe.productionTimeMinutes} min)
+                            {recipe.productionTimeMinutes} {t("common.time.minutesShort")})
                           </span>
                         )}
                       </p>

@@ -122,15 +122,15 @@ export function AdjustmentHistoryDialog({
 
   // Export data
   const exportData = adjustmentsWithBalance.map((adj) => ({
-    Date: formatDateTime(adj.createdAt),
-    Type: adj.isIncrease ? "Increase (+)" : "Decrease (-)",
-    Quantity: `${adj.isIncrease ? "+" : "-"}${Math.abs(adj.quantity)}`,
-    Unit: adj.unit,
-    Reason: adj.reason,
-    "Running Balance": adj.runningBalance,
-    User: adj.userName,
-    Reference: adj.referenceId || "-",
-    Notes: adj.notes || "-",
+    [t("common.date")]: formatDateTime(adj.createdAt),
+    [t("common.type")]: adj.isIncrease ? t("management.editStock.increase") + " (+)" : t("management.editStock.decrease") + " (-)",
+    [t("management.editStock.quantity")]: `${adj.isIncrease ? "+" : "-"}${Math.abs(adj.quantity)}`,
+    [t("management.editStock.unit")]: adj.unit,
+    [t("management.editStock.reason")]: adj.reason,
+    [t("management.editStock.runningBalance")]: adj.runningBalance,
+    [t("common.user")]: adj.userName,
+    [t("common.reference")]: adj.referenceId || "-",
+    [t("common.notes")]: adj.notes || "-",
   }));
 
   if (!itemId) return null;
@@ -154,9 +154,9 @@ export function AdjustmentHistoryDialog({
                 <div>
                   <p className="font-medium">{itemInfo.name}</p>
                   <p className="text-muted-foreground text-sm">
-                    {itemInfo.sku && `SKU: ${itemInfo.sku} • `}Unit: {itemInfo.unit}
+                    {itemInfo.sku && `${t("common.sku")}: ${itemInfo.sku} • `}{t("management.editStock.unit")}: {itemInfo.unit}
                     {itemInfo.currentStock !== undefined &&
-                      ` • Current Stock: ${itemInfo.currentStock} ${itemInfo.unit}`}
+                      ` • ${t("management.editStock.currentStock")}: ${itemInfo.currentStock} ${itemInfo.unit}`}
                   </p>
                 </div>
               </div>
@@ -304,7 +304,7 @@ export function AdjustmentHistoryDialog({
                           {adj.referenceId && (
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Hash className="h-3.5 w-3.5" />
-                              <span>Ref: {adj.referenceId}</span>
+                              <span>{t("common.reference")}: {adj.referenceId}</span>
                             </div>
                           )}
 

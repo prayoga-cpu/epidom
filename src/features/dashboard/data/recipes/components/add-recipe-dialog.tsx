@@ -306,7 +306,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                     <FormItem>
                       <FormLabel>Recipe Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Artisan Sourdough Bread" {...field} />
+                        <Input placeholder={t("data.recipes.form.namePlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -321,7 +321,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                       <FormLabel>Description</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Traditional sourdough bread with a crispy crust..."
+                          placeholder={t("data.recipes.form.descriptionPlaceholder")}
                           rows={3}
                           {...field}
                         />
@@ -341,7 +341,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue placeholder={t("data.recipes.form.selectCategory")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -381,7 +381,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select unit" />
+                              <SelectValue placeholder={t("data.recipes.form.selectUnit")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -475,7 +475,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Select material" />
+                                      <SelectValue placeholder={t("data.recipes.ingredients.selectMaterial") || "Select material"} />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -554,7 +554,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                               <FormItem>
                                 <FormLabel>Notes (optional)</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="e.g., sifted, room temperature" {...field} />
+                                  <Input placeholder={t("data.recipes.ingredients.notesPlaceholder")} {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
