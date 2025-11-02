@@ -5,7 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Building2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,7 +24,8 @@ import {
 } from "@/components/ui/form";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { updateBusinessSchema } from "@/lib/validation/business.schemas";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { useUpdateBusiness } from "../hooks/use-profile";
 
 interface EditBusinessInfoDialogProps {
   open: boolean;
@@ -34,7 +41,7 @@ interface EditBusinessInfoDialogProps {
     website?: string | null;
   } | null;
   userId: string;
-  onUpdate: () => void;
+  onUpdate?: () => void;
 }
 
 type FormData = z.infer<typeof updateBusinessSchema>;
@@ -47,7 +54,7 @@ export function EditBusinessInfoDialog({
   onUpdate,
 }: EditBusinessInfoDialogProps) {
   const { t } = useI18n();
-  const { toast } = useToast();
+  const updateBusiness = useUpdateBusiness();
   const isCreating = !business;
 
   const form = useForm<FormData>({
@@ -80,53 +87,26 @@ export function EditBusinessInfoDialog({
 
   async function onSubmit(data: FormData) {
     try {
-      // TODO: Replace with actual API call using TanStack Query
-      const response = await fetch("/api/user/business", {
-        method: business ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          ...data,
-        }),
-      });
+      await updateBusiness.mutateAsync(data);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        // Handle validation errors
-        if (result.error?.code === "VALIDATION_ERROR" && result.error?.details) {
-          result.error.details.forEach((detail: { field: string; message: string }) => {
-            form.setError(detail.field as keyof FormData, {
-              type: "manual",
-              message: detail.message,
-            });
-          });
-          return;
-        }
-
-        throw new Error(result.error?.message || "Failed to update business information");
-      }
-
-      toast({
-        title: business
+      toast.success(
+        business
           ? t("profile.toasts.businessUpdated.title")
           : t("profile.toasts.businessCreated.title"),
-        description: business
-          ? t("profile.toasts.businessUpdated.description")
-          : t("profile.toasts.businessCreated.description"),
-      });
+        {
+          description: business
+            ? t("profile.toasts.businessUpdated.description")
+            : t("profile.toasts.businessCreated.description"),
+        }
+      );
 
-      onUpdate();
+      onUpdate?.();
       onOpenChange(false);
     } catch (error) {
       console.error("Error updating business:", error);
-      toast({
-        title: t("common.error"),
+      toast.error(t("common.error"), {
         description:
-          error instanceof Error
-            ? error.message
-            : t("profile.errors.businessUpdateFailed"),
-        variant: "destructive",
+          error instanceof Error ? error.message : t("profile.errors.businessUpdateFailed"),
       });
     }
   }
@@ -136,9 +116,7 @@ export function EditBusinessInfoDialog({
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {business
-              ? t("profile.forms.editBusinessInfo")
-              : t("profile.business.addBusinessInfo")}
+            {business ? t("profile.forms.editBusinessInfo") : t("profile.business.addBusinessInfo")}
           </DialogTitle>
           <DialogDescription>
             {business
@@ -159,7 +137,7 @@ export function EditBusinessInfoDialog({
                   </FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Building2 className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
                       <Input
                         placeholder={t("profile.forms.businessNamePlaceholder") || "Epidom Bakery"}
                         className="pl-9"
@@ -293,22 +271,14 @@ export function EditBusinessInfoDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={form.formState.isSubmitting}
+                disabled={updateBusiness.isPending}
                 className="flex-1"
               >
                 {t("profile.actions.cancel")}
               </Button>
-              <Button
-                type="submit"
-                disabled={form.formState.isSubmitting}
-                className="flex-1"
-              >
-                {form.formState.isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {isCreating
-                  ? t("profile.business.addBusinessInfo")
-                  : t("profile.actions.save")}
+              <Button type="submit" disabled={updateBusiness.isPending} className="flex-1">
+                {updateBusiness.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isCreating ? t("profile.business.addBusinessInfo") : t("profile.actions.save")}
               </Button>
             </div>
           </form>

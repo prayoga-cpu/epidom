@@ -17,7 +17,7 @@ interface PersonalInfoCardProps {
     timezone: string;
     currency: string;
   };
-  onUpdate: () => void;
+  onUpdate?: () => void;
 }
 
 export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
