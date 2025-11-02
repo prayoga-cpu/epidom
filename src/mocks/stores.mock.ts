@@ -13,20 +13,38 @@ export interface Store {
 export const MOCK_STORES: Store[] = [
   {
     id: "1",
-    name: "Boutique boulangerie n°1",
-    city: "Bali",
+    name: "Artisan Bakery Paris Centre",
+    city: "Paris",
     image: "/images/pantry-shelf.jpg",
   },
   {
     id: "2",
-    name: "test",
-    city: "paris",
+    name: "Épicerie Fine Lyon",
+    city: "Lyon",
     image: "/images/pantry-shelf.jpg",
   },
   {
     id: "3",
-    name: "Mur Mur",
-    city: "Canggu",
+    name: "Pâtisserie Marseille",
+    city: "Marseille",
+    image: "/images/pantry-shelf.jpg",
+  },
+  {
+    id: "4",
+    name: "Boulangerie Traditionnelle Toulouse",
+    city: "Toulouse",
+    image: "/images/pantry-shelf.jpg",
+  },
+  {
+    id: "5",
+    name: "Chocolaterie Nice",
+    city: "Nice",
+    image: "/images/pantry-shelf.jpg",
+  },
+  {
+    id: "6",
+    name: "Fromagerie Bordeaux",
+    city: "Bordeaux",
     image: "/images/pantry-shelf.jpg",
   },
 ];
