@@ -24,7 +24,7 @@ export const metadata = genMeta({
 export default function ContactPage() {
   return (
     <main
-      className="bg-white pt-24 md:pt-32"
+      className="bg-white pt-24 md:pt-32 lg:pt-16"
       style={{ color: "var(--color-brand-primary)" }}
     >
       <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
@@ -47,11 +47,11 @@ export default function ContactPage() {
         </div>
 
         {/* Desktop Layout: Original - Grid 2 Columns with ContactInfo containing header */}
-        <div className="hidden lg:grid lg:grid-cols-2 lg:items-center lg:gap-12 lg:pb-16">
-          <div className="animate-slide-up">
+        <div className="hidden lg:grid lg:grid-cols-2 lg:items-start lg:gap-0 lg:min-h-[calc(100vh-4rem)]">
+          <div className="animate-slide-up flex flex-col justify-center h-full lg:pr-8">
             <ContactInfoWithHeader />
           </div>
-          <div className="animate-slide-up-delayed flex items-center justify-center h-full pt-8 lg:pt-16">
+          <div className="animate-slide-up-delayed flex items-center justify-center h-full w-full lg:ml-0 lg:-mr-[calc((100vw-80rem)/2+2rem)] lg:pr-0">
             <ContactMap />
           </div>
         </div>
@@ -63,7 +63,7 @@ export default function ContactPage() {
 // Desktop version with header inside ContactInfo
 function ContactInfoWithHeader() {
   return (
-    <div className="py-8 md:py-12 lg:py-16">
+    <div className="py-8 md:py-12 lg:py-8">
       <ContactHeader />
       <ContactInfo />
     </div>

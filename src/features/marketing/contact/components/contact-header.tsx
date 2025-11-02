@@ -8,14 +8,14 @@ export function ContactHeader() {
   return (
     <div>
       <h1
-        className="mb-6 text-3xl leading-tight font-bold tracking-tight md:mb-8 md:text-5xl lg:text-6xl"
+        className="mb-6 text-3xl leading-tight font-bold tracking-tight md:mb-8 md:text-5xl lg:mb-4 lg:text-5xl"
         style={{ color: "#444444" }}
       >
         {t("contact.title")}
       </h1>
 
       <p
-        className="mb-6 text-lg leading-relaxed md:mb-8 md:text-2xl"
+        className="mb-6 text-lg leading-relaxed md:mb-8 md:text-2xl lg:mb-6 lg:text-xl"
         style={{ color: "#444444" }}
       >
         {t("contact.subtitle")}

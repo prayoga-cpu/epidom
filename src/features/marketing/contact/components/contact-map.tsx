@@ -39,8 +39,8 @@ export function ContactMap() {
   }, []);
 
   return (
-    <div>
-      <div className="h-80 w-full overflow-hidden rounded-lg shadow-lg md:aspect-square lg:h-[560px] [&_.leaflet-control-attribution]:hidden">
+    <div className="lg:w-full lg:pt-24 lg:pb-8">
+      <div className="h-80 w-full overflow-hidden rounded-lg shadow-lg md:aspect-square lg:h-[450px] lg:w-full [&_.leaflet-control-attribution]:hidden">
         <MapContainer
           center={MAP_POSITION}
           zoom={15}
