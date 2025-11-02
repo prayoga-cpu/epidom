@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Pricing CTA Component
+ *
+ * Final call-to-action section on pricing page.
+ * Features waitlist signup and smooth scroll to pricing cards.
+ *
+ * @component
+ */
+
 import { Button } from "@/components/ui/button";
 import { DynamicWaitlistDialog } from "@/lib/dynamic-imports.client";
 import { useI18n } from "@/components/lang/i18n-provider";

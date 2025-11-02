@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Alerts Preview Section
+ *
+ * Showcases alert notifications and monitoring features.
+ * Layout: description + small preview 40% (left), large preview 60% (right).
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import Image from "next/image";
 

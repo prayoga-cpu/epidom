@@ -1,11 +1,25 @@
 "use client";
 
+/**
+ * Payment Hero Component
+ *
+ * Hero banner for payment checkout pages.
+ * Shows dynamic title/subtitle based on selected plan.
+ * Includes back button to pricing page.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Props for PaymentHero component
+ */
 interface PaymentHeroProps {
+  /** Selected plan: starter, pro, or enterprise */
   plan: "starter" | "pro" | "enterprise";
 }
 

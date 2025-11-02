@@ -1,8 +1,20 @@
 "use client";
 
+/**
+ * Logo with Skeleton Loading
+ *
+ * Shared logo component with loading skeleton to prevent layout shift.
+ * Shows animated pulse while image loads.
+ *
+ * @component
+ */
+
 import { useState } from "react";
 import Image from "next/image";
 
+/**
+ * Props for LogoWithSkeleton component
+ */
 interface LogoWithSkeletonProps {
   src: string;
   alt: string;

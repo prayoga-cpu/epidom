@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Contact Map Component
+ *
+ * Interactive map showing EPIDOM office location using Leaflet.
+ * Uses dynamic imports to prevent SSR issues with Leaflet library.
+ * Fixes Next.js marker icon issue via useEffect.
+ *
+ * @component
+ */
+
 import dynamic from "next/dynamic";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useEffect } from "react";
@@ -17,7 +27,7 @@ const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), 
 
 const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false });
 
-// Coordinates for 1 Av. Marcel Ramolfo Garnier, Massy, 91300, France
+/** Coordinates for EPIDOM office: 1 Av. Marcel Ramolfo Garnier, Massy, 91300, France */
 const MAP_POSITION: [number, number] = [48.7311, 2.2678];
 
 export function ContactMap() {

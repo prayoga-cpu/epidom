@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Dashboard Preview Section
+ *
+ * Displays dashboard mockup with priority loading and blur placeholder.
+ * Layout: image 70% (left), description 30% (right).
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import Image from "next/image";
 

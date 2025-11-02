@@ -1,6 +1,18 @@
+/**
+ * Container Component
+ *
+ * Reusable container wrapper with consistent padding and max-width.
+ * Used to standardize page layouts across marketing pages.
+ *
+ * @component
+ */
+
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props for Container component
+ */
 interface ContainerProps {
   children: ReactNode;
   className?: string;

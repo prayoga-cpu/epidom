@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Feature Comparison Component
+ *
+ * Comparison table showing features across Starter, Pro, and Enterprise plans.
+ * Highlighted Pro column with brand color border.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Check } from "lucide-react";
 

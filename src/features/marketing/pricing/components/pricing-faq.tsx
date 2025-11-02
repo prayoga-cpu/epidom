@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Pricing FAQ Component
+ *
+ * Frequently asked questions about EPIDOM pricing and plans.
+ * Uses shadcn Accordion for expandable Q&A format.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import {
   Accordion,

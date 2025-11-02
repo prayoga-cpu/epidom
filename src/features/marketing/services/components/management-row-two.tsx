@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Management Row Two Section
+ *
+ * Displays production history and delivery management mockups.
+ * Layout: large mockup 75% (left), two small mockups 25% (right).
+ *
+ * @component
+ */
+
 import Image from "next/image";
 
 export function ManagementRowTwo() {

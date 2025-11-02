@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Countdown Component
+ *
+ * Landing page countdown timer for EPIDOM launch date.
+ * Features flip-board style timer units with brand colors.
+ * Currently disabled on homepage (see page.tsx comment).
+ *
+ * @component
+ */
+
 import { memo } from "react";
 import Countdown from "react-countdown";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -10,8 +20,10 @@ import { useEffect, useState } from "react";
 export const CountdownComponent = memo(function CountdownComponent() {
   const { t } = useI18n();
   const [isClient, setIsClient] = useState(false);
+  /** Target launch date: November 12, 2025 */
   const targetDate = new Date("2025-11-12T00:00:00");
 
+  /** Hydrate client-side to avoid SSR mismatch */
   useEffect(() => {
     setIsClient(true);
   }, []);

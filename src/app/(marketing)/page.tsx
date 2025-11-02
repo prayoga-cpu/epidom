@@ -1,3 +1,13 @@
+/**
+ * Home Page (Landing Page)
+ *
+ * Main landing page for EPIDOM marketing site.
+ * Features hero section with lazy-loaded components for performance.
+ * Uses structured data for SEO and Open Graph metadata.
+ *
+ * @page
+ */
+
 import { LazyCountdownComponent, LazyHero } from "@/lib/dynamic-imports.client";
 import { generateMetadata } from "@/lib/seo";
 import { ProductStructuredData } from "@/components/seo/structured-data";

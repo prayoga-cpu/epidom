@@ -1,3 +1,13 @@
+/**
+ * Marketing Layout
+ *
+ * Shared layout for all marketing pages (Home, Services, Pricing, Contact, Payments).
+ * Provides global providers: I18n, ErrorBoundary, SiteHeader, SiteFooter, CookieConsentBar.
+ * Uses Lato font from Google Fonts for landing pages.
+ *
+ * @layout
+ */
+
 import type { Metadata } from "next";
 import { SiteHeader } from "@/features/marketing/shared/components/site-header";
 import { SiteFooter } from "@/features/marketing/shared/components/site-footer";
@@ -7,6 +17,7 @@ import { CookieConsentBar } from "@/features/marketing/shared/components/cookie-
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Lato } from "next/font/google";
 
+/** Lato font configuration for marketing pages */
 const lato = Lato({
   subsets: ["latin"],
   weight: ["100", "300", "400", "700", "900"],

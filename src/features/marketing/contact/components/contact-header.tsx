@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Contact Header Component
+ *
+ * Page header for contact page with title and subtitle.
+ * Responsive typography sizing.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 
 export function ContactHeader() {

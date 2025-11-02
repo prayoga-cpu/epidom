@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Data Row Two Section
+ *
+ * Showcases supplier and material data management.
+ * Layout: two small mockups 25% (left), large overview mockup 75% (right).
+ *
+ * @component
+ */
+
 import Image from "next/image";
 
 export function DataRowTwo() {

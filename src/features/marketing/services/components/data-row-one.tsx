@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Data Row One Section
+ *
+ * Showcases data management features with mockup previews.
+ * Layout: large mockups 60% (left), description + small mockups 40% (right).
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import Image from "next/image";
 

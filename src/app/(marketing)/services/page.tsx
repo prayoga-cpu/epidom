@@ -1,3 +1,13 @@
+/**
+ * Services Page
+ *
+ * Showcases all EPIDOM features and functionality.
+ * Displays preview sections with animated mockups and descriptions.
+ * Sections: Hero, Dashboard, Management, Tracking, Data, Alerts
+ *
+ * @page
+ */
+
 import { HeroSection } from "@/features/marketing/services/components/hero-section";
 import { DashboardPreviewSection } from "@/features/marketing/services/components/dashboard-preview-section";
 import { ManagementRowOne } from "@/features/marketing/services/components/management-row-one";

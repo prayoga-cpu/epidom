@@ -1,5 +1,19 @@
 "use client";
 
+/**
+ * Waitlist Dialog Component
+ *
+ * Lead generation form for users to join the EPIDOM waitlist.
+ * Features:
+ * - Client-side validation and rate limiting
+ * - Three variants: default, home (larger button), sidebar (compact)
+ * - Prevents navbar shift when dialog opens (scrollbar handling)
+ * - Submits to external API endpoint
+ * - Toast notifications for feedback
+ *
+ * @component
+ */
+
 import * as React from "react";
 import { memo } from "react";
 import {
@@ -18,7 +32,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { validateWaitlistForm, waitlistRateLimiter, type ValidationError } from "@/lib/validation";
 
+/**
+ * Props for WaitlistDialog component
+ */
 interface WaitlistDialogProps {
+  /** Button variant: "default", "home" (larger), or "sidebar" (compact) */
   variant?: "default" | "home" | "sidebar";
 }
 

@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Site Footer Component
+ *
+ * Global footer displayed across all marketing pages.
+ * Displays company information, contact details, and copyright.
+ * Uses brand primary color (#444444) with white text.
+ *
+ * @component
+ */
+
 import { memo } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";

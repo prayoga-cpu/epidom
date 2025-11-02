@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Tracking Preview Section
+ *
+ * Showcases active stock tracking features with centered mockup.
+ * Full-width layout with centered title and large preview image.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import Image from "next/image";
 

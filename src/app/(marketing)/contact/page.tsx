@@ -1,3 +1,12 @@
+/**
+ * Contact Page
+ *
+ * Contact information and location map for EPIDOM.
+ * Responsive layout: tablet shows 2-column grid, desktop shows extended map.
+ *
+ * @page
+ */
+
 import { ContactInfo } from "@/features/marketing/contact/components/contact-info";
 import { ContactMap } from "@/features/marketing/contact/components/contact-map";
 import { generateMetadata as genMeta } from "@/lib/seo";

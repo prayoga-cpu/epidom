@@ -1,3 +1,12 @@
+/**
+ * Pricing Page
+ *
+ * Displays EPIDOM pricing plans and feature comparison.
+ * Sections: Hero, Pricing Cards, Feature Comparison, FAQ, CTA
+ *
+ * @page
+ */
+
 import { PricingHero } from "@/features/marketing/pricing/components/pricing-hero";
 import { PricingCards } from "@/features/marketing/pricing/components/pricing-cards";
 import { FeatureComparison } from "@/features/marketing/pricing/components/feature-comparison";

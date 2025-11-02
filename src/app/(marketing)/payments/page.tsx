@@ -1,9 +1,22 @@
+/**
+ * Payments Page
+ *
+ * Payment checkout page with dynamic plan selection via query params.
+ * Enterprise plan shows contact sales form, others show payment form.
+ * Responsive layout: form 2/3 width (left), summary 1/3 (right).
+ *
+ * @page
+ */
+
 import { PaymentHero } from "@/features/marketing/payments/components/payment-hero";
 import { PaymentForm } from "@/features/marketing/payments/components/payment-form";
 import { PaymentSummary } from "@/features/marketing/payments/components/payment-summary";
 import { PaymentSecurity } from "@/features/marketing/payments/components/payment-security";
 import { ContactSalesForm } from "@/features/marketing/payments/components/contact-sales-form";
 
+/**
+ * Props for PaymentsPage component
+ */
 interface PaymentsPageProps {
   searchParams: Promise<{
     plan?: string;

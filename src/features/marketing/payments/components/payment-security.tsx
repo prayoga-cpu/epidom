@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Payment Security Component
+ *
+ * Security badges and trust signals for payment pages.
+ * Displays SSL, PCI compliance, and encryption features.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Lock, CreditCard, CheckCircle } from "lucide-react";

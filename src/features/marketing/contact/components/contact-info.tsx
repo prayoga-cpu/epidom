@@ -1,14 +1,27 @@
 "use client";
 
+/**
+ * Contact Info Component
+ *
+ * Displays company contact information (address, phone, email).
+ * Reusable ContactItem component for consistent layout.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import { MapPin, Phone, Mail, LucideIcon } from "lucide-react";
 
+/**
+ * Props for ContactItem component
+ */
 interface ContactItemProps {
   icon: LucideIcon;
   label: string;
   children: React.ReactNode;
 }
 
+/** Reusable contact item with icon and content */
 function ContactItem({ icon: Icon, label, children }: ContactItemProps) {
   return (
     <div className="flex items-start gap-4 md:gap-6 lg:gap-4">

@@ -1,9 +1,21 @@
 "use client";
 
+/**
+ * Safe Image Component
+ *
+ * Next.js Image wrapper with error handling and graceful fallback.
+ * Shows gradient placeholder on error to prevent broken images.
+ *
+ * @component
+ */
+
 import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props for SafeImage component
+ */
 interface SafeImageProps {
   src: string;
   alt: string;

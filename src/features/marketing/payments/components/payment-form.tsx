@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Payment Form Component
+ *
+ * Checkout form for Starter and Pro plans.
+ * Includes billing information and credit card inputs.
+ * Simulates payment processing (TODO: integrate Stripe).
+ *
+ * @component
+ */
+
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { logger } from "@/lib/logger";
@@ -10,7 +20,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CreditCard, Lock, User, Mail, Building } from "lucide-react";
 
+/**
+ * Props for PaymentForm component
+ */
 interface PaymentFormProps {
+  /** Plan type: starter or pro */
   plan: "starter" | "pro";
 }
 

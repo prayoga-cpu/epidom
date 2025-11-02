@@ -1,5 +1,18 @@
 "use client";
 
+/**
+ * Pricing Cards Component
+ *
+ * Interactive pricing cards for Starter, Pro, and Enterprise plans.
+ * Features:
+ * - Horizontal scroll on mobile/tablet with navigation buttons
+ * - Auto-centers Pro plan on initial load
+ * - Desktop grid layout
+ * - Smooth scrolling
+ *
+ * @component
+ */
+
 import { memo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";

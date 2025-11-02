@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Services Hero Section
+ *
+ * Hero banner for services page with title and feature highlights.
+ * Grid layout: text content (left) + feature block (right).
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 
 export function HeroSection() {

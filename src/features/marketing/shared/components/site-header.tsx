@@ -1,5 +1,20 @@
 "use client";
 
+/**
+ * Site Header Component
+ *
+ * Reusable navigation header used across all marketing pages.
+ * Features:
+ * - Responsive design (desktop navigation + mobile sheet menu)
+ * - Two variants: landing (shows waitlist CTA) or authenticated (shows logout)
+ * - Internationalization support with language switcher
+ * - Active page highlighting with visual feedback
+ * - Accessible navigation with ARIA labels
+ * - Sticky/fixed positioning controlled by CSS classes
+ *
+ * @component
+ */
+
 import { memo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -12,8 +27,13 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { ChevronRight } from "lucide-react";
 import { LogoWithSkeleton } from "./logo-with-skeleton";
 
+/**
+ * Props for SiteHeader component
+ */
 interface SiteHeaderProps {
+  /** Header variant: "landing" shows waitlist CTA, "authenticated" shows logout button */
   variant?: "landing" | "authenticated";
+  /** Whether to show main navigation links (Home, Services, Pricing, Contact) */
   showNav?: boolean;
 }
 
@@ -24,8 +44,11 @@ export const SiteHeader = memo(function SiteHeader({
   const pathname = usePathname();
   const { t } = useI18n();
 
+  /**
+   * Handle logout action (TODO: implement NextAuth signOut)
+   */
   const handleLogout = () => {
-    // TODO: Implement logout logic
+    // TODO: Implement logout logic using NextAuth
     console.log("Logout clicked");
   };
 

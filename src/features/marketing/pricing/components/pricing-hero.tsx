@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Pricing Hero Section
+ *
+ * Hero banner for pricing page with logo, title, and description.
+ * Centered layout with brand logo at top.
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import { LogoWithSkeleton } from "@/features/marketing/shared/components/logo-with-skeleton";
 

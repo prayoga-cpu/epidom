@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Management Row One Section
+ *
+ * Displays management features with lazy-loaded images on intersection.
+ * Uses Intersection Observer for performance optimization.
+ * Layout: text + small mockup 40% (left), large mockup 60% (right).
+ *
+ * @component
+ */
+
 import { useI18n } from "@/components/lang/i18n-provider";
 import Image from "next/image";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";

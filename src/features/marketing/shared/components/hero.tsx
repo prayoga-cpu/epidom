@@ -1,5 +1,16 @@
 "use client";
 
+/**
+ * Hero Section Component
+ *
+ * Main hero section for homepage with split layout:
+ * - Desktop: 50/50 split with image left, content right
+ * - Mobile/Tablet: Full-width image above content
+ * Features lazy-loading image with priority on first viewport.
+ *
+ * @component
+ */
+
 import Image from "next/image";
 import { WaitlistDialog } from "./waitlist-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
