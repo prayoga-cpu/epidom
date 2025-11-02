@@ -75,14 +75,17 @@ export function SupplierDeliveryDetails({
     // Map of English system notes to translation keys
     const systemNoteMap: Record<string, string> = {
       "Delivery scheduled": "management.delivery.details.systemNotes.deliveryScheduled",
-      "Shipment departed from supplier warehouse": "management.delivery.details.systemNotes.shipmentDeparted",
-      "All items received in good condition": "management.delivery.details.systemNotes.itemsReceived",
+      "Shipment departed from supplier warehouse":
+        "management.delivery.details.systemNotes.shipmentDeparted",
+      "All items received in good condition":
+        "management.delivery.details.systemNotes.itemsReceived",
       "Out for delivery": "management.delivery.details.systemNotes.outForDelivery",
       "Order placed, awaiting confirmation": "management.delivery.details.systemNotes.orderPlaced",
       "Weekly bulk order scheduled": "management.delivery.details.systemNotes.weeklyBulkOrder",
       "Special order for specialty items": "management.delivery.details.systemNotes.specialOrder",
       "Regular dairy delivery": "management.delivery.details.systemNotes.regularDairyDelivery",
-      "Regular weekly delivery - all items inspected and stored properly": "management.delivery.details.systemNotes.regularWeeklyDelivery",
+      "Regular weekly delivery - all items inspected and stored properly":
+        "management.delivery.details.systemNotes.regularWeeklyDelivery",
     };
 
     // Check if note matches a system message
@@ -171,7 +174,9 @@ export function SupplierDeliveryDetails({
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-lg">{delivery.deliveryReference}</CardTitle>
-            <p className="text-muted-foreground mt-1 text-xs">{t("management.delivery.details.deliveryId") || "Delivery ID"}: {delivery.id}</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t("management.delivery.details.deliveryId") || "Delivery ID"}: {delivery.id}
+            </p>
           </div>
           <div className="flex flex-col gap-1">
             <Badge variant={getStatusVariant(delivery.status)} className="gap-1">
@@ -225,12 +230,17 @@ export function SupplierDeliveryDetails({
           <div className="bg-muted/30 space-y-1.5 rounded-lg p-3 text-sm">
             <div className="text-muted-foreground flex items-center gap-2 text-xs">
               <Calendar className="h-3 w-3" />
-              <span className="font-medium">{t("management.delivery.details.expected") || "Expected"}:</span> {formatDateTime(delivery.expectedDate)}
+              <span className="font-medium">
+                {t("management.delivery.details.expected") || "Expected"}:
+              </span>{" "}
+              {formatDateTime(delivery.expectedDate)}
             </div>
             {delivery.receivedDate && (
               <div className="text-muted-foreground flex items-center gap-2 text-xs">
                 <CheckCircle2 className="h-3 w-3" />
-                <span className="font-medium">{t("management.delivery.details.received") || "Received"}:</span>{" "}
+                <span className="font-medium">
+                  {t("management.delivery.details.received") || "Received"}:
+                </span>{" "}
                 {formatDateTime(delivery.receivedDate)}
               </div>
             )}
@@ -249,10 +259,18 @@ export function SupplierDeliveryDetails({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">{t("management.delivery.details.material") || "Material"}</TableHead>
-                  <TableHead className="text-right text-xs">{t("management.delivery.details.quantity") || "Quantity"}</TableHead>
-                  <TableHead className="text-xs">{t("management.delivery.details.unit") || "Unit"}</TableHead>
-                  <TableHead className="text-xs">{t("management.delivery.details.notes") || "Notes"}</TableHead>
+                  <TableHead className="text-xs">
+                    {t("management.delivery.details.material") || "Material"}
+                  </TableHead>
+                  <TableHead className="text-right text-xs">
+                    {t("management.delivery.details.quantity") || "Quantity"}
+                  </TableHead>
+                  <TableHead className="text-xs">
+                    {t("management.delivery.details.unit") || "Unit"}
+                  </TableHead>
+                  <TableHead className="text-xs">
+                    {t("management.delivery.details.notes") || "Notes"}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -261,9 +279,14 @@ export function SupplierDeliveryDetails({
                     <TableRow key={index}>
                       <TableCell className="text-xs">
                         <div>
-                          <div className="font-medium">{item.material?.name || t("management.delivery.details.unknownMaterial")}</div>
+                          <div className="font-medium">
+                            {item.material?.name ||
+                              t("management.delivery.details.unknownMaterial")}
+                          </div>
                           {item.material?.sku && (
-                            <div className="text-muted-foreground text-xs">{t("common.sku")}: {item.material.sku}</div>
+                            <div className="text-muted-foreground text-xs">
+                              {t("common.sku")}: {item.material.sku}
+                            </div>
                           )}
                         </div>
                       </TableCell>
@@ -309,14 +332,16 @@ export function SupplierDeliveryDetails({
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-sm font-medium">{getStatusLabel(history.status)}</p>
-                          <p className="text-muted-foreground text-xs">{translateSystemNote(history.notes)}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {translateSystemNote(history.notes)}
+                          </p>
                           {history.userName && (
                             <p className="text-muted-foreground mt-0.5 text-xs">
                               {t("management.delivery.details.by") || "by"} {history.userName}
                             </p>
                           )}
                         </div>
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-muted-foreground mr-2 text-end text-xs">
                           {formatDate(history.createdAt)}
                         </p>
                       </div>
@@ -385,8 +410,14 @@ export function SupplierDeliveryDetails({
 
         {/* Metadata */}
         <div className="text-muted-foreground space-y-1 text-xs">
-          <p>{t("management.delivery.details.created") || "Created"}: {formatDateTime(delivery.createdAt)}</p>
-          <p>{t("management.delivery.details.updated") || "Updated"}: {formatDateTime(delivery.updatedAt)}</p>
+          <p>
+            {t("management.delivery.details.created") || "Created"}:{" "}
+            {formatDateTime(delivery.createdAt)}
+          </p>
+          <p>
+            {t("management.delivery.details.updated") || "Updated"}:{" "}
+            {formatDateTime(delivery.updatedAt)}
+          </p>
         </div>
       </CardContent>
     </Card>
