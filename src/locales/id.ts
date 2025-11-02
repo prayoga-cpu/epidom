@@ -785,7 +785,8 @@ export const id = {
   },
   dashboard: {
     title: "Dasbor",
-    description: "Selamat datang di dasbor. Di sini Anda dapat melihat status terkini pesanan, resep, dan stok Anda.",
+    description:
+      "Selamat datang di dasbor. Di sini Anda dapat melihat status terkini pesanan, resep, dan stok Anda.",
     alertsCard: {
       title: "Peringatan Kritis",
       description: "Peringatan stok yang memerlukan perhatian segera",
@@ -942,7 +943,8 @@ export const id = {
       addDescription: "Buat resep baru dengan bahan dan instruksi. Langkah {step} dari {total}",
       editDescription: "Perbarui detail resep, bahan, dan instruksi.",
       detailsDescription: "Lihat informasi lengkap tentang resep ini",
-      duplicateDescription: "Buat salinan resep ini dengan nama baru. Semua bahan dan instruksi akan disalin.",
+      duplicateDescription:
+        "Buat salinan resep ini dengan nama baru. Semua bahan dan instruksi akan disalin.",
 
       // Form sections
       sections: {
@@ -967,7 +969,8 @@ export const id = {
         productionTimePlaceholder: "180",
         productionTimeHint: "Total waktu untuk memproduksi resep ini",
         instructions: "Instruksi Memasak",
-        instructionsPlaceholder: "1. Panaskan oven hingga 220°C\n2. Campurkan bahan kering dalam mangkuk besar\n3. Tambahkan air dan uleni selama 10 menit\n4. Diamkan selama 1 jam\n5. Bentuk menjadi roti\n6. Panggang selama 35-40 menit",
+        instructionsPlaceholder:
+          "1. Panaskan oven hingga 220°C\n2. Campurkan bahan kering dalam mangkuk besar\n3. Tambahkan air dan uleni selama 10 menit\n4. Diamkan selama 1 jam\n5. Bentuk menjadi roti\n6. Panggang selama 35-40 menit",
         instructionsHint: "Berikan instruksi langkah demi langkah untuk membuat resep ini",
       },
 
@@ -984,7 +987,7 @@ export const id = {
         title: "Bahan",
         description: "Tambahkan bahan yang diperlukan untuk resep ini",
         addIngredient: "Tambah Bahan",
-        noIngredients: "Belum ada bahan yang ditambahkan. Klik \"Tambah Bahan\" untuk memulai.",
+        noIngredients: 'Belum ada bahan yang ditambahkan. Klik "Tambah Bahan" untuk memulai.',
         material: "Bahan",
         selectMaterial: "Pilih bahan",
         quantity: "Jumlah",
@@ -1020,7 +1023,8 @@ export const id = {
       // Duplicate dialog
       duplicateDialog: {
         title: "Duplikasi Resep",
-        description: "Buat salinan resep ini dengan nama baru. Semua bahan dan instruksi akan disalin.",
+        description:
+          "Buat salinan resep ini dengan nama baru. Semua bahan dan instruksi akan disalin.",
         nameLabel: "Nama Resep Baru",
         nameDescription: "Masukkan nama unik untuk resep yang diduplikasi",
         originalRecipe: "Resep Asli",
@@ -1120,7 +1124,8 @@ export const id = {
       addTitle: "Tambah Produk Baru",
       editTitle: "Edit Produk",
       detailsTitle: "Detail Produk",
-      addDescription: "Tambahkan produk baru ke inventaris Anda. Hubungkan ke resep untuk perhitungan biaya otomatis.",
+      addDescription:
+        "Tambahkan produk baru ke inventaris Anda. Hubungkan ke resep untuk perhitungan biaya otomatis.",
       editDescription: "Perbarui informasi produk",
       detailsDescription: "Lihat informasi lengkap tentang produk ini",
 
@@ -1215,7 +1220,8 @@ export const id = {
       addTitle: "Tambah Pemasok Baru",
       editTitle: "Edit Pemasok",
       detailsTitle: "Detail Pemasok",
-      addDescription: "Tambahkan pemasok baru ke daftar kontak Anda. Isi sebanyak mungkin informasi.",
+      addDescription:
+        "Tambahkan pemasok baru ke daftar kontak Anda. Isi sebanyak mungkin informasi.",
       editDescription: "Perbarui informasi pemasok",
       detailsDescription: "Lihat informasi lengkap tentang pemasok ini",
 
@@ -1815,7 +1821,6 @@ export const id = {
         printDelivery: "Cetak Pengiriman",
         created: "Dibuat",
         updated: "Diperbarui",
-        unknownMaterial: "Tidak Dikenal",
         systemNotes: {
           deliveryScheduled: "Pengiriman dijadwalkan",
           shipmentDeparted: "Pengiriman berangkat dari gudang supplier",
@@ -1825,7 +1830,8 @@ export const id = {
           weeklyBulkOrder: "Pesanan besar mingguan dijadwalkan",
           specialOrder: "Pesanan khusus untuk item spesial",
           regularDairyDelivery: "Pengiriman produk susu rutin",
-          regularWeeklyDelivery: "Pengiriman mingguan rutin - semua item diperiksa dan disimpan dengan baik",
+          regularWeeklyDelivery:
+            "Pengiriman mingguan rutin - semua item diperiksa dan disimpan dengan baik",
         },
       },
       dialogs: {

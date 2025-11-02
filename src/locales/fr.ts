@@ -788,7 +788,8 @@ export const fr = {
   },
   dashboard: {
     title: "Tableau de Bord",
-    description: "Bienvenue sur le tableau de bord. Ici, vous pouvez voir l'état actuel de vos commandes, recettes et stocks.",
+    description:
+      "Bienvenue sur le tableau de bord. Ici, vous pouvez voir l'état actuel de vos commandes, recettes et stocks.",
     alertsCard: {
       title: "Alertes Critiques",
       description: "Alertes de stock nécessitant une attention immédiate",
@@ -1618,7 +1619,8 @@ export const fr = {
         },
         pastDue: {
           title: "Paiement Requis",
-          description: "Votre paiement est en retard. Veuillez mettre à jour votre moyen de paiement.",
+          description:
+            "Votre paiement est en retard. Veuillez mettre à jour votre moyen de paiement.",
         },
       },
     },
@@ -1677,8 +1679,10 @@ export const fr = {
       editPersonalInfo: "Modifier les Informations Personnelles",
       editPersonalInfoDescription: "Mettez à jour vos informations personnelles et préférences",
       editBusinessInfo: "Modifier les Informations d'Entreprise",
-      editBusinessInfoDescription: "Mettez à jour les informations de contact et les détails de votre entreprise",
-      addBusinessInfoDescription: "Ajoutez les informations de votre entreprise pour compléter votre profil",
+      editBusinessInfoDescription:
+        "Mettez à jour les informations de contact et les détails de votre entreprise",
+      addBusinessInfoDescription:
+        "Ajoutez les informations de votre entreprise pour compléter votre profil",
       namePlaceholder: "Entrez votre nom complet",
       emailPlaceholder: "votre@email.com",
       phonePlaceholder: "+33 1 23 45 67 89",
@@ -1702,7 +1706,8 @@ export const fr = {
     // Erreurs
     errors: {
       updateFailed: "Échec de la mise à jour du profil. Veuillez réessayer.",
-      businessUpdateFailed: "Échec de la mise à jour des informations d'entreprise. Veuillez réessayer.",
+      businessUpdateFailed:
+        "Échec de la mise à jour des informations d'entreprise. Veuillez réessayer.",
     },
 
     // Messages toast
@@ -1830,7 +1835,6 @@ export const fr = {
         printDelivery: "Imprimer la Livraison",
         created: "Créé",
         updated: "Mis à jour",
-        unknownMaterial: "Inconnu",
         systemNotes: {
           deliveryScheduled: "Livraison programmée",
           shipmentDeparted: "Expédition partie de l'entrepôt du fournisseur",
@@ -1840,7 +1844,8 @@ export const fr = {
           weeklyBulkOrder: "Commande groupée hebdomadaire programmée",
           specialOrder: "Commande spéciale pour articles spécialisés",
           regularDairyDelivery: "Livraison laitière régulière",
-          regularWeeklyDelivery: "Livraison hebdomadaire régulière - tous les articles inspectés et stockés correctement",
+          regularWeeklyDelivery:
+            "Livraison hebdomadaire régulière - tous les articles inspectés et stockés correctement",
         },
       },
       dialogs: {
@@ -1869,7 +1874,8 @@ export const fr = {
           contactPerson: "Personne de Contact",
           printedOn: "Imprimé le",
           generatedBy: "Généré par : Système de Gestion EPIDOM",
-          pdfNotImplemented: "La fonctionnalité d'export PDF sera implémentée avec une bibliothèque PDF",
+          pdfNotImplemented:
+            "La fonctionnalité d'export PDF sera implémentée avec une bibliothèque PDF",
         },
         addEditDelivery: {
           addTitle: "Ajouter une Nouvelle Livraison",
@@ -1906,7 +1912,8 @@ export const fr = {
             supplierRequired: "Veuillez sélectionner un fournisseur",
             expectedDateRequired: "La date prévue est requise",
             atLeastOneItem: "Veuillez ajouter au moins un article",
-            itemsMustHaveMaterial: "Tous les articles doivent avoir une matière et une quantité supérieure à 0",
+            itemsMustHaveMaterial:
+              "Tous les articles doivent avoir une matière et une quantité supérieure à 0",
           },
           toasts: {
             created: {

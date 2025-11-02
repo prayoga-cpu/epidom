@@ -55,8 +55,8 @@ export default function HomePage() {
   return (
     <main className="bg-white pt-12 md:pt-32 lg:pt-0">
       <ProductStructuredData />
-      {/* Countdown section - temporarily disabled */}
-      {/* <LazyCountdownComponent /> */}
+      {/* Countdown section */}
+      <LazyCountdownComponent />
 
       {/* Hero section - main content */}
       <div className="animate-slide-up">
