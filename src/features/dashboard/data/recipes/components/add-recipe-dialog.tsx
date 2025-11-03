@@ -34,7 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   Plus,
   Loader2,
@@ -47,36 +47,16 @@ import {
   Calculator,
   ClipboardList,
 } from "lucide-react";
-import { MOCK_MATERIALS } from "@/mocks";
-import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useParams } from "next/navigation";
+import { useCreateRecipe } from "../hooks/use-recipes";
+import { useMaterials } from "../../materials/hooks/use-materials";
+import {
+  createRecipeFormSchema,
+  type CreateRecipeFormInput,
+} from "@/lib/validation/inventory.schemas";
 
-// Ingredient item schema
-const ingredientSchema = z.object({
-  materialId: z.string().min(1, "Material is required"),
-  quantity: z.coerce.number().positive("Quantity must be greater than 0"),
-  unit: z.string().min(1, "Unit is required"),
-  notes: z.string().optional(),
-});
-
-// Multi-step form schema
-const recipeSchema = z.object({
-  // Step 1: Basic Information
-  name: z.string().min(2, "Recipe name must be at least 2 characters"),
-  description: z.string().optional(),
-  category: z.string().min(1, "Category is required"),
-  yieldQuantity: z.coerce.number().positive("Yield quantity must be greater than 0"),
-  yieldUnit: z.string().min(1, "Yield unit is required"),
-  productionTimeMinutes: z.coerce.number().positive("Production time must be greater than 0"),
-
-  // Step 2: Ingredients
-  ingredients: z.array(ingredientSchema).min(1, "At least one ingredient is required"),
-
-  // Step 3: Instructions
-  instructions: z.string().min(10, "Instructions must be at least 10 characters"),
-});
-
-type RecipeFormValues = z.infer<typeof recipeSchema>;
+type RecipeFormValues = CreateRecipeFormInput;
 
 interface AddRecipeDialogProps {
   trigger?: React.ReactNode;
@@ -102,12 +82,18 @@ const RECIPE_CATEGORIES = [
 export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
   const { t } = useI18n();
+  const params = useParams();
+  const storeId = params.storeId as string;
+
+  // Fetch real materials for dropdown
+  const { data: materialsData } = useMaterials(storeId);
+  const materials = materialsData?.materials || [];
+
+  const createRecipe = useCreateRecipe(storeId);
 
   const form = useForm<RecipeFormValues>({
-    resolver: zodResolver(recipeSchema),
+    resolver: zodResolver(createRecipeFormSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -126,10 +112,10 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     const ingredients = form.watch("ingredients");
     let totalCost = 0;
 
-    ingredients.forEach((ingredient) => {
-      const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+    ingredients?.forEach((ingredient) => {
+      const material = materials.find((m) => m.id === ingredient.materialId);
       if (material) {
-        totalCost += material.costPerUnit * ingredient.quantity;
+        totalCost += Number(material.unitCost) * ingredient.quantity;
       }
     });
 
@@ -147,30 +133,31 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   };
 
   const onSubmit = async (data: RecipeFormValues) => {
-    setIsSubmitting(true);
+    try {
+      console.log("Recipe form data being submitted:", data);
+      await createRecipe.mutateAsync(data);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success(t("Recipe created successfully"));
+      form.reset();
+      setCurrentStep(1);
+      setOpen(false);
+    } catch (error) {
+      console.error("Recipe creation error:", error);
+      toast.error(t("Failed to create recipe. Please try again."));
+    }
+  };
 
-    // TODO: Replace with actual API call
-    // const response = await fetch("/api/recipes", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     ...data,
-    //     costPerBatch: calculateEstimatedCost(),
-    //   }),
-    // });
+  // Prevent form submission on Enter key from input/textarea fields
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    const target = e.target as HTMLElement;
+    const isInputField = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
 
-    setIsSubmitting(false);
-    toast({
-      title: "Recipe Created Successfully",
-      description: `${data.name} has been added to your recipes.`,
-    });
-
-    form.reset();
-    setCurrentStep(1);
-    setOpen(false);
+    if (e.key === "Enter" && isInputField) {
+      e.preventDefault();
+      if (currentStep < 4) {
+        nextStep();
+      }
+    }
   };
 
   const nextStep = async () => {
@@ -208,7 +195,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   };
 
   const addIngredient = () => {
-    const currentIngredients = form.watch("ingredients");
+    const currentIngredients = form.watch("ingredients") || [];
     form.setValue("ingredients", [
       ...currentIngredients,
       { materialId: "", quantity: 0, unit: "", notes: "" },
@@ -216,7 +203,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   };
 
   const removeIngredient = (index: number) => {
-    const currentIngredients = form.watch("ingredients");
+    const currentIngredients = form.watch("ingredients") || [];
     form.setValue(
       "ingredients",
       currentIngredients.filter((_, i) => i !== index)
@@ -295,7 +282,11 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            onKeyDown={handleKeyDown}
+            className="space-y-6"
+          >
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <div className="space-y-4">
@@ -365,7 +356,14 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                       <FormItem>
                         <FormLabel>Yield Quantity *</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" min="0.01" placeholder="2" {...field} />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            placeholder="2"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -407,7 +405,13 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                     <FormItem>
                       <FormLabel>Production Time (minutes) *</FormLabel>
                       <FormControl>
-                        <Input type="number" min="1" placeholder="180" {...field} />
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="180"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        />
                       </FormControl>
                       <FormDescription>Total time to produce this recipe</FormDescription>
                       <FormMessage />
@@ -433,7 +437,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   </Button>
                 </div>
 
-                {form.watch("ingredients").length === 0 && (
+                {(form.watch("ingredients") || []).length === 0 && (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                       <Package className="text-muted-foreground mb-2 h-12 w-12" />
@@ -445,11 +449,9 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                 )}
 
                 <div className="space-y-3">
-                  {form.watch("ingredients").map((_, index) => {
+                  {(form.watch("ingredients") || []).map((_, index) => {
                     const selectedMaterialId = form.watch(`ingredients.${index}.materialId`);
-                    const selectedMaterial = MOCK_MATERIALS.find(
-                      (m) => m.id === selectedMaterialId
-                    );
+                    const selectedMaterial = materials.find((m) => m.id === selectedMaterialId);
 
                     return (
                       <Card key={index}>
@@ -475,13 +477,19 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue placeholder={t("data.recipes.ingredients.selectMaterial") || "Select material"} />
+                                      <SelectValue
+                                        placeholder={
+                                          t("data.recipes.ingredients.selectMaterial") ||
+                                          "Select material"
+                                        }
+                                      />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {MOCK_MATERIALS.map((material) => (
+                                    {materials.map((material) => (
                                       <SelectItem key={material.id} value={material.id}>
-                                        {material.name} ({material.category.replace("_", " ")})
+                                        {material.name} (
+                                        {material.category?.replace("_", " ") || "Uncategorized"})
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -505,6 +513,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                       min="0.01"
                                       placeholder="500"
                                       {...field}
+                                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -534,12 +543,13 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                             <div className="bg-muted rounded-md p-3 text-sm">
                               <p className="font-medium">Cost Estimate</p>
                               <p className="text-muted-foreground">
-                                ${selectedMaterial.costPerUnit} per {selectedMaterial.unit} ×{" "}
+                                ${Number(selectedMaterial.unitCost).toFixed(2)} per{" "}
+                                {selectedMaterial.unit} ×{" "}
                                 {form.watch(`ingredients.${index}.quantity`) || 0} ={" "}
                                 <span className="text-foreground font-semibold">
                                   $
                                   {(
-                                    selectedMaterial.costPerUnit *
+                                    Number(selectedMaterial.unitCost) *
                                     (form.watch(`ingredients.${index}.quantity`) || 0)
                                   ).toFixed(2)}
                                 </span>
@@ -554,7 +564,10 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                               <FormItem>
                                 <FormLabel>Notes (optional)</FormLabel>
                                 <FormControl>
-                                  <Input placeholder={t("data.recipes.ingredients.notesPlaceholder")} {...field} />
+                                  <Input
+                                    placeholder={t("data.recipes.ingredients.notesPlaceholder")}
+                                    {...field}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -658,7 +671,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   <CardContent className="space-y-3 pt-6">
                     <div className="flex items-start justify-between">
                       <h4 className="font-semibold">
-                        Ingredients ({form.watch("ingredients").length})
+                        Ingredients ({(form.watch("ingredients") || []).length})
                       </h4>
                       <Button
                         type="button"
@@ -670,17 +683,17 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      {form.watch("ingredients").map((ingredient, index) => {
-                        const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+                      {(form.watch("ingredients") || []).map((ingredient, idx) => {
+                        const material = materials.find((m) => m.id === ingredient.materialId);
                         return (
-                          <div key={index} className="flex items-center justify-between text-sm">
+                          <div key={idx} className="flex justify-between text-sm">
                             <span>
                               {material?.name} - {ingredient.quantity} {ingredient.unit}
                             </span>
                             <span className="text-muted-foreground">
                               $
                               {material
-                                ? (material.costPerUnit * ingredient.quantity).toFixed(2)
+                                ? (Number(material.unitCost) * ingredient.quantity).toFixed(2)
                                 : "0.00"}
                             </span>
                           </div>
@@ -739,7 +752,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
-                disabled={isSubmitting}
+                disabled={createRecipe.isPending}
               >
                 {t("actions.cancel") || "Cancel"}
               </Button>
@@ -755,8 +768,8 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" disabled={createRecipe.isPending}>
+                  {createRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {t("data.recipes.create") || "Create Recipe"}
                 </Button>
               )}

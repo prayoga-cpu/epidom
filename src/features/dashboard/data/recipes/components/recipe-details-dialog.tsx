@@ -1,5 +1,6 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -27,18 +28,18 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import type { Recipe } from "@/types/entities";
 import { formatCurrency, formatDate, formatDuration } from "@/lib/utils/formatting";
-import { MOCK_MATERIALS, MOCK_PRODUCTS } from "@/mocks";
 import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useMaterials } from "../../materials/hooks/use-materials";
+import type { RecipeWithIngredients } from "../hooks/use-recipes";
 
 interface RecipeDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  recipe: Recipe;
-  onEdit?: (recipe: Recipe) => void;
+  recipe: RecipeWithIngredients;
+  onEdit?: (recipe: RecipeWithIngredients) => void;
   onDelete?: (recipeId: string) => void;
 }
 
@@ -51,14 +52,20 @@ export default function RecipeDetailsDialog({
 }: RecipeDetailsDialogProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t } = useI18n();
+  const params = useParams();
+  const storeId = params.storeId as string;
+
+  // Fetch materials for ingredient details
+  const { data: materialsData } = useMaterials(storeId);
+  const materials = materialsData?.materials || [];
 
   // Calculate total cost from ingredients
   const calculateTotalCost = () => {
     let total = 0;
     recipe.ingredients.forEach((ingredient) => {
-      const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+      const material = materials.find((m) => m.id === ingredient.materialId);
       if (material) {
-        total += material.costPerUnit * ingredient.quantity;
+        total += Number(material.unitCost) * ingredient.quantity;
       }
     });
     return total;
@@ -89,25 +96,6 @@ export default function RecipeDetailsDialog({
   const totalCost = calculateTotalCost();
   const costPerUnit = calculateCostPerUnit();
   const { suggestedPrice, profit, margin } = calculateProfitMargin();
-
-  // Find products using this recipe
-  const productsUsingRecipe = MOCK_PRODUCTS.filter((p) => p.recipeId === recipe.id);
-
-  // Helper function to get stock status
-  const getStockStatus = (product: typeof MOCK_PRODUCTS[0]) => {
-    const stockPercentage = (product.currentStock / product.maxStock) * 100;
-    if (product.currentStock <= 0) {
-      return { label: "Out of Stock", variant: "destructive" as const, icon: XCircle };
-    } else if (product.currentStock < product.minStock) {
-      return { label: "Critical", variant: "destructive" as const, icon: XCircle };
-    } else if (product.currentStock <= product.minStock * 1.5) {
-      return { label: "Low Stock", variant: "secondary" as const, icon: AlertCircle };
-    } else if (stockPercentage > 100) {
-      return { label: "Overstocked", variant: "secondary" as const, icon: AlertCircle };
-    } else {
-      return { label: "In Stock", variant: "default" as const, icon: CheckCircle };
-    }
-  };
 
   return (
     <>
@@ -200,9 +188,9 @@ export default function RecipeDetailsDialog({
               <CardContent>
                 <div className="space-y-3">
                   {recipe.ingredients.map((ingredient, index) => {
-                    const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+                    const material = materials.find((m) => m.id === ingredient.materialId);
                     const ingredientCost = material
-                      ? material.costPerUnit * ingredient.quantity
+                      ? Number(material.unitCost) * ingredient.quantity
                       : 0;
 
                     return (
@@ -216,7 +204,7 @@ export default function RecipeDetailsDialog({
                             </p>
                             {material && (
                               <p className="text-muted-foreground text-xs">
-                                {formatCurrency(material.costPerUnit)}/{material.unit} ×{" "}
+                                {formatCurrency(Number(material.unitCost))}/{material.unit} ×{" "}
                                 {ingredient.quantity} {ingredient.unit}
                               </p>
                             )}
@@ -224,7 +212,10 @@ export default function RecipeDetailsDialog({
                           <div className="text-right">
                             <p className="font-semibold">{formatCurrency(ingredientCost)}</p>
                             <p className="text-muted-foreground text-xs">
-                              {((ingredientCost / totalCost) * 100).toFixed(1)}%
+                              {totalCost > 0
+                                ? ((ingredientCost / totalCost) * 100).toFixed(1)
+                                : "0"}
+                              %
                             </p>
                           </div>
                         </div>
@@ -299,67 +290,6 @@ export default function RecipeDetailsDialog({
                     <p>• Premium (70% margin): {formatCurrency(costPerUnit * 3.33)}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Products Using This Recipe */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <ShoppingBag className="h-5 w-5" />
-                  Products Using This Recipe ({productsUsingRecipe.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {productsUsingRecipe.length === 0 ? (
-                  <div className="text-muted-foreground py-8 text-center">
-                    <ShoppingBag className="mx-auto mb-3 h-12 w-12 opacity-20" />
-                    <p className="text-sm">No products are currently using this recipe</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {productsUsingRecipe.map((product, index) => {
-                      const status = getStockStatus(product);
-                      const StatusIcon = status.icon;
-
-                      return (
-                        <div key={product.id}>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">{product.name}</p>
-                                <Badge variant={status.variant} className="text-xs">
-                                  <StatusIcon className="mr-1 h-3 w-3" />
-                                  {status.label}
-                                </Badge>
-                              </div>
-                              {product.sku && (
-                                <p className="text-muted-foreground mt-1 text-xs">
-                                  SKU: {product.sku}
-                                </p>
-                              )}
-                              <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
-                                <span>
-                                  Stock: {product.currentStock} / {product.maxStock} {product.unit}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold">{formatCurrency(product.retailPrice)}</p>
-                              <p className="text-muted-foreground text-xs">Retail Price</p>
-                              {product.wholesalePrice && (
-                                <p className="text-muted-foreground mt-1 text-xs">
-                                  Wholesale: {formatCurrency(product.wholesalePrice)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          {index < productsUsingRecipe.length - 1 && <Separator className="mt-3" />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </CardContent>
             </Card>
 

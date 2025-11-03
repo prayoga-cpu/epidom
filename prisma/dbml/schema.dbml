@@ -119,7 +119,6 @@ Table products {
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  recipe recipes
   stockMovements stock_movements [not null]
   productionBatches production_batches [not null]
   orderItems order_items [not null]
@@ -133,29 +132,46 @@ Table ingredients {
   name String [not null]
   description String
   category String
-  image String
   unit String [not null, default: 'kg']
   unitCost Decimal [not null]
   currentStock Decimal [not null, default: 0]
-  minStockLevel Decimal [not null, default: 0]
-  criticalLevel Decimal
-  supplierId String
-  supplier suppliers
+  minStock Decimal [not null, default: 0]
+  maxStock Decimal [not null, default: 1000]
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   recipeIngredients recipe_ingredients [not null]
   stockMovements stock_movements [not null]
+  materialSuppliers ingredient_suppliers [not null]
+}
+
+Table ingredient_suppliers {
+  id String [pk]
+  materialId String [not null]
+  material ingredients [not null]
+  supplierId String [not null]
+  supplier suppliers [not null]
+  price Decimal [not null]
+  isPreferred Boolean [not null, default: false]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+
+  indexes {
+    (materialId, supplierId) [unique]
+  }
 }
 
 Table recipes {
   id String [pk]
   storeId String [not null]
   store stores [not null]
-  productId String [unique, not null]
-  product products [not null]
-  batchSize Decimal [not null]
-  batchUnit String [not null, default: 'piece']
+  name String [not null]
+  description String
+  category String
+  yieldQuantity Decimal [not null]
+  yieldUnit String [not null]
+  productionTimeMinutes Int [not null]
+  costPerBatch Decimal [not null, default: 0]
   instructions String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -167,15 +183,16 @@ Table recipe_ingredients {
   id String [pk]
   recipeId String [not null]
   recipe recipes [not null]
-  ingredientId String [not null]
-  ingredient ingredients [not null]
+  materialId String [not null]
+  material ingredients [not null]
   quantity Decimal [not null]
   unit String [not null]
+  notes String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 
   indexes {
-    (recipeId, ingredientId) [unique]
+    (recipeId, materialId) [unique]
   }
 }
 
@@ -204,8 +221,8 @@ Table stock_movements {
   id String [pk]
   productId String
   product products
-  ingredientId String
-  ingredient ingredients
+  materialId String
+  material ingredients
   type MovementType [not null]
   quantity Decimal [not null]
   unit String [not null]
@@ -233,7 +250,7 @@ Table suppliers {
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  ingredients ingredients [not null]
+  materialSuppliers ingredient_suppliers [not null]
 }
 
 Table orders {
@@ -352,15 +369,15 @@ Ref: products.storeId > stores.id [delete: Cascade]
 
 Ref: ingredients.storeId > stores.id [delete: Cascade]
 
-Ref: ingredients.supplierId > suppliers.id [delete: Set Null]
+Ref: ingredient_suppliers.materialId > ingredients.id [delete: Cascade]
+
+Ref: ingredient_suppliers.supplierId > suppliers.id [delete: Cascade]
 
 Ref: recipes.storeId > stores.id [delete: Cascade]
 
-Ref: recipes.productId - products.id [delete: Cascade]
-
 Ref: recipe_ingredients.recipeId > recipes.id [delete: Cascade]
 
-Ref: recipe_ingredients.ingredientId > ingredients.id [delete: Cascade]
+Ref: recipe_ingredients.materialId > ingredients.id [delete: Cascade]
 
 Ref: production_batches.storeId > stores.id [delete: Cascade]
 
@@ -370,7 +387,7 @@ Ref: production_batches.recipeId > recipes.id [delete: Set Null]
 
 Ref: stock_movements.productId > products.id [delete: Cascade]
 
-Ref: stock_movements.ingredientId > ingredients.id [delete: Cascade]
+Ref: stock_movements.materialId > ingredients.id [delete: Cascade]
 
 Ref: stock_movements.orderId > orders.id [delete: Set Null]
 

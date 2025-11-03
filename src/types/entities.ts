@@ -104,25 +104,36 @@ export enum SupplierDeliveryStatus {
 // CORE ENTITIES
 // ============================================================================
 
+export interface MaterialSupplier {
+  id: string;
+  materialId: string;
+  supplierId: string;
+  price: number;
+  isPreferred: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  supplier: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface Material {
   id: string;
   name: string;
-  sku?: string;
-  category: MaterialCategory;
-  description?: string;
-  supplierId: string;
-  supplier?: Supplier;
+  sku: string;
+  category?: string | null;
+  description?: string | null;
   unit: string;
-  costPerUnit: number;
+  unitCost: number;
   currentStock: number;
   minStock: number;
   maxStock: number;
-  location?: string;
-  barcode?: string;
-  imageUrl?: string;
+  isActive: boolean;
   storeId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  ingredientSuppliers: MaterialSupplier[];
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface Recipe {
@@ -422,28 +433,28 @@ export interface ApiResponse<T> {
 // Material DTOs
 export interface CreateMaterialDto {
   name: string;
-  sku?: string;
-  category: MaterialCategory;
+  sku: string;
+  category?: string;
   description?: string;
-  supplierId: string;
   unit: string;
-  costPerUnit: number;
-  minStock: number;
-  maxStock: number;
-  location?: string;
-  barcode?: string;
-  imageUrl?: string;
+  unitCost: number;
+  currentStock?: number;
+  minStock?: number;
+  maxStock?: number;
+  suppliers?: Array<{
+    supplierId: string;
+    price: number;
+    isPreferred?: boolean;
+  }>;
 }
 
-export interface UpdateMaterialDto extends Partial<CreateMaterialDto> {
-  currentStock?: number;
-}
+export interface UpdateMaterialDto extends Partial<CreateMaterialDto> {}
 
 export interface MaterialFilters extends PaginationParams {
   search?: string;
-  category?: MaterialCategory | MaterialCategory[];
+  category?: string;
   supplierId?: string;
-  stockStatus?: "critical" | "low" | "ok" | "excess";
+  stockStatus?: "in_stock" | "low_stock" | "out_of_stock" | "overstocked";
 }
 
 // Recipe DTOs

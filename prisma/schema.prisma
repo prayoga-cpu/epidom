@@ -122,7 +122,7 @@ model Store {
 
   // Relations - all store data
   products         Product[]
-  ingredients      Ingredient[]
+  ingredients      Material[]
   recipes          Recipe[]
   suppliers        Supplier[]
   orders           Order[]
@@ -207,7 +207,6 @@ model Product {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  recipe          Recipe?
   stockMovements  StockMovement[]
   productionBatches ProductionBatch[]
   orderItems      OrderItem[]
@@ -218,7 +217,7 @@ model Product {
   @@map("products")
 }
 
-model Ingredient {
+model Material {
   id              String    @id @default(cuid())
   storeId         String
   store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -227,7 +226,6 @@ model Ingredient {
   name            String
   description     String?
   category        String?   // flour, dairy, sugar, etc.
-  image           String?
 
   // Purchasing
   unit            String    @default("kg") // kg, liter, piece, etc.
@@ -235,12 +233,8 @@ model Ingredient {
 
   // Stock
   currentStock    Decimal   @db.Decimal(10, 2) @default(0)
-  minStockLevel   Decimal   @db.Decimal(10, 2) @default(0)
-  criticalLevel   Decimal?  @db.Decimal(10, 2)
-
-  // Supplier info
-  supplierId      String?
-  supplier        Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  minStock        Decimal   @db.Decimal(10, 2) @default(0)
+  maxStock        Decimal   @db.Decimal(10, 2) @default(1000)
 
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
@@ -248,12 +242,33 @@ model Ingredient {
 
   recipeIngredients RecipeIngredient[]
   stockMovements  StockMovement[]
+  materialSuppliers MaterialSupplier[] @relation("MaterialToSuppliers")
 
   @@index([storeId])
   @@index([category])
-  @@index([supplierId])
   @@index([isActive])
   @@map("ingredients")
+}
+
+// Junction table for many-to-many relationship between Ingredient and Supplier
+model MaterialSupplier {
+  id           String     @id @default(cuid())
+  materialId   String
+  material     Material   @relation("MaterialToSuppliers", fields: [materialId], references: [id], onDelete: Cascade)
+  supplierId   String
+  supplier     Supplier   @relation("SupplierToMaterials", fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // Supplier-specific pricing
+  price        Decimal    @db.Decimal(10, 2)
+  isPreferred  Boolean    @default(false)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([materialId, supplierId])
+  @@index([materialId])
+  @@index([supplierId])
+  @@map("ingredient_suppliers")
 }
 
 // ============================================
@@ -261,24 +276,27 @@ model Ingredient {
 // ============================================
 
 model Recipe {
-  id              String    @id @default(cuid())
-  storeId         String
-  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id                    String    @id @default(cuid())
+  storeId               String
+  store                 Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  productId       String    @unique
-  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name                  String
+  description           String?   @db.Text
+  category              String?
+  yieldQuantity         Decimal   @db.Decimal(10, 2)
+  yieldUnit             String
+  productionTimeMinutes Int
+  costPerBatch          Decimal   @db.Decimal(10, 2) @default(0)
+  instructions          String?   @db.Text
 
-  batchSize       Decimal   @db.Decimal(10, 2) // yield quantity
-  batchUnit       String    @default("piece")
-  instructions    String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  ingredients     RecipeIngredient[]
-  productionBatches ProductionBatch[]
+  ingredients           RecipeIngredient[]
+  productionBatches     ProductionBatch[]
 
   @@index([storeId])
+  @@index([category])
   @@map("recipes")
 }
 
@@ -286,16 +304,17 @@ model RecipeIngredient {
   id              String     @id @default(cuid())
   recipeId        String
   recipe          Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  ingredientId    String
-  ingredient      Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  materialId      String
+  material        Material   @relation(fields: [materialId], references: [id], onDelete: Cascade)
 
   quantity        Decimal    @db.Decimal(10, 3)
   unit            String
+  notes           String?
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  @@unique([recipeId, ingredientId])
+  @@unique([recipeId, materialId])
   @@map("recipe_ingredients")
 }
 
@@ -356,11 +375,11 @@ enum MovementType {
 model StockMovement {
   id              String        @id @default(cuid())
 
-  // Polymorphic relation - either product OR ingredient
+  // Polymorphic relation - either product OR material
   productId       String?
   product         Product?      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  ingredientId    String?
-  ingredient      Ingredient?   @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  materialId      String?
+  material        Material?     @relation(fields: [materialId], references: [id], onDelete: Cascade)
 
   type            MovementType
   quantity        Decimal       @db.Decimal(10, 3)
@@ -379,7 +398,7 @@ model StockMovement {
   createdAt       DateTime      @default(now())
 
   @@index([productId])
-  @@index([ingredientId])
+  @@index([materialId])
   @@index([type])
   @@index([createdAt])
   @@map("stock_movements")
@@ -410,7 +429,7 @@ model Supplier {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  ingredients     Ingredient[]
+  materialSuppliers MaterialSupplier[] @relation("SupplierToMaterials")
 
   @@index([storeId])
   @@index([isActive])

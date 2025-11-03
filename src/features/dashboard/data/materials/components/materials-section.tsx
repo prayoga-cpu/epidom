@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,45 +18,69 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import MaterialDetailsDialog from "./material-details-dialog";
 import EditMaterialDialog from "./edit-material-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { ExportButton } from "@/components/ui/export-button";
 import AddMaterialDialog from "./add-material-dialog";
 import type { Material } from "@/types/entities";
-import { MaterialCategory } from "@/types/entities";
-import { MOCK_SUPPLIERS } from "@/mocks";
 import {
   Search,
   Filter,
-  ArrowUpDown,
   Eye,
   Pencil,
   Trash2,
   X,
+  Loader2,
+  Download,
+  AlertCircle,
   CheckSquare,
-  Square,
+  PackageOpen,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import {
+  useMaterials,
+  useDeleteMaterial,
+  useBulkDeleteMaterials,
+  useExportMaterials,
+} from "../hooks/use-materials";
 
-interface MaterialsSectionProps {
-  materials: Material[];
+type StockFilter = "in_stock" | "low_stock" | "out_of_stock" | "overstocked" | undefined;
+
+// Helper function to get stock status
+function getStockStatus(current: number, min: number, max: number): string {
+  if (current <= 0) return "Out of Stock";
+  if (current <= min) return "Low Stock";
+  if (current > max) return "Overstocked";
+  return "In Stock";
 }
 
-type SortField = "name" | "stock" | "cost" | "category";
-type SortOrder = "asc" | "desc";
-type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
+// Helper function to get stock status variant
+function getStockStatusVariant(
+  status: string
+): "default" | "destructive" | "secondary" | "outline" {
+  if (status === "Out of Stock") return "destructive";
+  if (status === "Low Stock") return "outline";
+  if (status === "Overstocked") return "secondary";
+  return "default";
+}
 
-export function MaterialsSection({ materials }: MaterialsSectionProps) {
+export function MaterialsSection() {
   const { t } = useI18n();
-  const { toast } = useToast();
+  const params = useParams();
+  const storeId = params.storeId as string;
 
-  // State
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [supplierFilter, setSupplierFilter] = useState<string>("all");
-  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  // Filters state
+  const [filters, setFilters] = useState({
+    search: "",
+    category: "",
+    supplierId: "",
+    stockStatus: undefined as StockFilter,
+    sortBy: "createdAt" as const,
+    sortOrder: "desc" as const,
+    skip: 0,
+    take: 50,
+  });
+
+  // UI state
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -63,82 +88,129 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Helper function to determine stock status
-  const getStockStatus = (material: Material): StockFilter => {
-    const { currentStock, minStock, maxStock } = material;
-    if (currentStock === 0) return "critical";
-    if (currentStock < minStock * 0.5) return "critical";
-    if (currentStock <= minStock) return "low_stock";
-    if (currentStock >= maxStock) return "overstocked";
-    return "in_stock";
-  };
+  // Data fetching
+  const { data, isLoading, error, refetch } = useMaterials(storeId, filters);
+  const materials = data?.materials || [];
+  const total = data?.total || 0;
 
-  // Helper function to get stock status label
-  const getStockStatusLabel = (status: StockFilter): string => {
-    const labels: Record<StockFilter, string> = {
-      all: t("filters.allStock") || "All Stock",
-      in_stock: t("filters.inStock") || "In Stock",
-      low_stock: t("filters.lowStock") || "Low Stock",
-      critical: t("filters.critical") || "Critical",
-      overstocked: t("filters.overstocked") || "Overstocked",
-    };
-    return labels[status];
-  };
+  const deleteMaterial = useDeleteMaterial(storeId);
+  const bulkDelete = useBulkDeleteMaterials(storeId);
+  const exportMaterials = useExportMaterials(storeId);
 
-  // Filtered and sorted materials
+  // Get unique categories from materials
+  const categories = useMemo(() => {
+    const cats = new Set(materials.map((m) => m.category).filter(Boolean));
+    return Array.from(cats).sort();
+  }, [materials]);
+
+  // Filter and process materials
   const processedMaterials = useMemo(() => {
-    let filtered = materials;
+    let filtered = [...materials];
 
     // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (filters.search) {
+      const query = filters.search.toLowerCase();
       filtered = filtered.filter(
         (m) =>
           m.name.toLowerCase().includes(query) ||
           m.sku?.toLowerCase().includes(query) ||
-          m.description?.toLowerCase().includes(query)
+          m.category?.toLowerCase().includes(query)
       );
     }
 
     // Category filter
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((m) => m.category === categoryFilter);
+    if (filters.category) {
+      filtered = filtered.filter((m) => m.category === filters.category);
     }
 
-    // Supplier filter
-    if (supplierFilter !== "all") {
-      filtered = filtered.filter((m) => m.supplierId === supplierFilter);
+    // Stock status filter
+    if (filters.stockStatus) {
+      filtered = filtered.filter((m) => {
+        const status = getStockStatus(
+          Number(m.currentStock),
+          Number(m.minStock),
+          Number(m.maxStock)
+        );
+        const statusMap: Record<string, StockFilter> = {
+          "Out of Stock": "out_of_stock",
+          "Low Stock": "low_stock",
+          Overstocked: "overstocked",
+          "In Stock": "in_stock",
+        };
+        return statusMap[status] === filters.stockStatus;
+      });
     }
-
-    // Stock filter
-    if (stockFilter !== "all") {
-      filtered = filtered.filter((m) => getStockStatus(m) === stockFilter);
-    }
-
-    // Sort
-    filtered = [...filtered].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortField) {
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "stock":
-          comparison = a.currentStock - b.currentStock;
-          break;
-        case "cost":
-          comparison = a.costPerUnit - b.costPerUnit;
-          break;
-        case "category":
-          comparison = a.category.localeCompare(b.category);
-          break;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
 
     return filtered;
-  }, [materials, searchQuery, categoryFilter, supplierFilter, stockFilter, sortField, sortOrder]);
+  }, [materials, filters.search, filters.category, filters.stockStatus]);
+
+  // Filter handlers
+  const handleSearch = (value: string) => {
+    setFilters((prev) => ({ ...prev, search: value, skip: 0 }));
+  };
+
+  const handleCategoryFilter = (value: string) => {
+    setFilters((prev) => ({ ...prev, category: value === "all" ? "" : value, skip: 0 }));
+  };
+
+  const handleStockStatusFilter = (value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      stockStatus: value === "all" ? undefined : (value as StockFilter),
+      skip: 0,
+    }));
+  };
+
+  // Actions
+  const handleView = (material: Material) => {
+    setSelectedMaterial(material);
+    setViewDialogOpen(true);
+  };
+
+  const handleEdit = (material: Material) => {
+    setSelectedMaterial(material);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (material: Material) => {
+    setSelectedMaterial(material);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedMaterial) return;
+
+    try {
+      await deleteMaterial.mutateAsync(selectedMaterial.id);
+      toast.success(t("data.materials.toasts.deleted.title") || "Material deleted successfully");
+      setDeleteDialogOpen(false);
+      setSelectedMaterial(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete material");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      await bulkDelete.mutateAsync({ ids: Array.from(selectedIds) });
+      toast.success(`Deleted ${selectedIds.size} material(s) successfully`);
+      setSelectedIds(new Set());
+      setBulkSelectMode(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete materials");
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportMaterials.mutateAsync(filters);
+      // Download handled automatically in the hook
+    } catch (error) {
+      toast.error("Failed to export materials");
+    }
+  };
 
   // Bulk selection handlers
   const toggleBulkSelect = () => {
@@ -164,89 +236,66 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
     setSelectedIds(newSelected);
   };
 
-  // Action handlers
-  const handleView = (material: Material) => {
-    setSelectedMaterial(material);
-    setViewDialogOpen(true);
-  };
-
-  const handleEdit = (material: Material) => {
-    setSelectedMaterial(material);
-    setEditDialogOpen(true);
-  };
-
-  const handleDeleteClick = (material: Material) => {
-    setSelectedMaterial(material);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    // TODO: API call to delete material
-    const deletedDesc = t("data.materials.toasts.deleted.description") || "{name} has been deleted successfully.";
-    toast({
-      title: t("data.materials.toasts.deleted.title"),
-      description: deletedDesc.replace(
-        "{name}",
-        selectedMaterial?.name || ""
-      ),
-    });
-    setDeleteDialogOpen(false);
-    setSelectedMaterial(null);
-  };
-
-  const handleBulkDelete = () => {
-    // TODO: API call to bulk delete materials
-    const bulkDeletedDesc = t("data.materials.toasts.bulkDeleted.description") || "{count} materials have been deleted successfully.";
-    toast({
-      title: t("data.materials.toasts.bulkDeleted.title"),
-      description: bulkDeletedDesc.replace(
-        "{count}",
-        selectedIds.size.toString()
-      ),
-    });
-    setSelectedIds(new Set());
-  };
-
-  // Export columns configuration
-  const exportColumns = [
-    { key: "name" as const, header: "Name" },
-    { key: "sku" as const, header: "SKU" },
-    { key: "category" as const, header: "Category" },
-    { key: "currentStock" as const, header: "Current Stock" },
-    { key: "unit" as const, header: "Unit" },
-    { key: "costPerUnit" as const, header: "Cost Per Unit" },
-    { key: "minStock" as const, header: "Min Stock" },
-    { key: "maxStock" as const, header: "Max Stock" },
-  ];
-
-  // Clear all filters
+  // Clear filters
   const clearFilters = () => {
-    setSearchQuery("");
-    setCategoryFilter("all");
-    setSupplierFilter("all");
-    setStockFilter("all");
-    setSortField("name");
-    setSortOrder("asc");
+    setFilters({
+      search: "",
+      category: "",
+      supplierId: "",
+      stockStatus: undefined,
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      skip: 0,
+      take: 50,
+    });
   };
 
-  const hasActiveFilters =
-    searchQuery || categoryFilter !== "all" || supplierFilter !== "all" || stockFilter !== "all";
+  const hasActiveFilters = !!(filters.search || filters.category || filters.stockStatus);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="border-destructive rounded-lg border p-4">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="text-destructive h-5 w-5" />
+          <p className="text-destructive text-sm">Error loading materials: {error.message}</p>
+        </div>
+        <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-2">
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>
-      <Card className="overflow-hidden shadow-md">
-        <CardHeader className="border-b pb-4">
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+        <CardHeader className="border-b">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">
-              {t("data.materials.pageTitle") || "Materials"}
-            </CardTitle>
+            <CardTitle className="text-lg">{t("data.materials.title") || "Materials"}</CardTitle>
             <div className="flex items-center gap-2">
-              <ExportButton
-                data={processedMaterials}
-                filename="materials"
-                columns={exportColumns}
-                title="Materials"
-              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={exportMaterials.isPending}
+              >
+                {exportMaterials.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Export
+              </Button>
               <AddMaterialDialog />
               {bulkSelectMode && selectedIds.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
@@ -267,7 +316,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                 ) : (
                   <>
                     <CheckSquare className="mr-2 h-4 w-4" />
-                    {t("common.actions.view") || "Select"}
+                    Select
                   </>
                 )}
               </Button>
@@ -275,109 +324,50 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pb-6">
           {/* Search and Filters */}
           <div className="flex flex-col gap-3">
             {/* Search */}
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("actions.searchPlaceholder") || "Search..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t("common.search") || "Search..."}
+                value={filters.search}
+                onChange={(e) => handleSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
 
             {/* Filters Row */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Category Filter */}
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Select value={filters.category || "all"} onValueChange={handleCategoryFilter}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderCategory")} />
+                  <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">
-                    {t("common.actions.filter") || "All Categories"}
-                  </SelectItem>
-                  {Object.values(MaterialCategory).map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category.replace("_", " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Supplier Filter */}
-              <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-                <SelectTrigger>
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderSupplier")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    {t("filters.allSuppliers") || "All Suppliers"}
-                  </SelectItem>
-                  {MOCK_SUPPLIERS.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category ?? "none"}>
+                      {category}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               {/* Stock Status Filter */}
-              <Select value={stockFilter} onValueChange={(v) => setStockFilter(v as StockFilter)}>
+              <Select value={filters.stockStatus ?? "all"} onValueChange={handleStockStatusFilter}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderStockStatus")} />
+                  <SelectValue placeholder="All Stock Levels" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t("filters.allStock") || "All Stock"}</SelectItem>
-                  <SelectItem value="in_stock">{t("filters.inStock") || "In Stock"}</SelectItem>
-                  <SelectItem value="low_stock">{t("filters.lowStock") || "Low Stock"}</SelectItem>
-                  <SelectItem value="critical">{t("filters.critical") || "Critical"}</SelectItem>
-                  <SelectItem value="overstocked">
-                    {t("filters.overstocked") || "Overstocked"}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Sort */}
-              <Select
-                value={`${sortField}-${sortOrder}`}
-                onValueChange={(v) => {
-                  const [field, order] = v.split("-") as [SortField, SortOrder];
-                  setSortField(field);
-                  setSortOrder(order);
-                }}
-              >
-                <SelectTrigger>
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderSortBy")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
-                  <SelectItem value="name-desc">{t("sort.nameZA") || "Name (Z-A)"}</SelectItem>
-                  <SelectItem value="stock-asc">
-                    {t("sort.stockLowHigh") || "Stock (Low-High)"}
-                  </SelectItem>
-                  <SelectItem value="stock-desc">
-                    {t("sort.stockHighLow") || "Stock (High-Low)"}
-                  </SelectItem>
-                  <SelectItem value="cost-asc">
-                    {t("sort.costLowHigh") || "Cost (Low-High)"}
-                  </SelectItem>
-                  <SelectItem value="cost-desc">
-                    {t("sort.costHighLow") || "Cost (High-Low)"}
-                  </SelectItem>
-                  <SelectItem value="category-asc">
-                    {t("sort.categoryAZ") || "Category (A-Z)"}
-                  </SelectItem>
-                  <SelectItem value="category-desc">
-                    {t("sort.categoryZA") || "Category (Z-A)"}
-                  </SelectItem>
+                  <SelectItem value="all">All Stock Levels</SelectItem>
+                  <SelectItem value="in_stock">In Stock</SelectItem>
+                  <SelectItem value="low_stock">Low Stock</SelectItem>
+                  <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                  <SelectItem value="overstocked">Overstocked</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -392,7 +382,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
 
             {/* Bulk Select All */}
             {bulkSelectMode && (
-              <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
+              <div className="bg-muted/50 mr-2 flex items-center gap-2 rounded-lg border p-3">
                 <Checkbox
                   checked={
                     selectedIds.size === processedMaterials.length && processedMaterials.length > 0
@@ -412,27 +402,32 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing") || "Showing"} {processedMaterials.length}{" "}
-              {t("common.of") || "of"} {materials.length}{" "}
-              {t("data.materials.pageTitle") || "materials"}
+              {t("common.of") || "of"} {total} {t("data.materials.title") || "materials"}
             </p>
           </div>
 
           {/* Materials Grid */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {processedMaterials.map((material) => {
-              const stockStatus = getStockStatus(material);
+              const currentStock = Number(material.currentStock);
+              const minStock = Number(material.minStock);
+              const maxStock = Number(material.maxStock);
+              const stockStatus = getStockStatus(currentStock, minStock, maxStock);
               const isSelected = selectedIds.has(material.id);
+              const preferredSupplier =
+                material.ingredientSuppliers?.find((s) => s.isPreferred) ||
+                material.ingredientSuppliers?.[0];
 
               return (
-                <div
+                <Card
                   key={material.id}
-                  className={`group bg-card relative rounded-lg border p-4 px-6 shadow-sm transition-all hover:shadow-md ${
+                  className={`group bg-card relative rounded-lg border px-0 py-4 shadow-sm transition-all hover:shadow-md ${
                     isSelected ? "ring-primary ring-2" : ""
                   }`}
                 >
                   {/* Bulk Select Checkbox */}
                   {bulkSelectMode && (
-                    <div className="absolute top-2 left-2">
+                    <div className="absolute top-4 left-2">
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => toggleSelectItem(material.id)}
@@ -441,65 +436,61 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                   )}
 
                   {/* Material Content */}
-                  <div className={bulkSelectMode ? "pl-6" : ""}>
-                    <div className="flex items-end justify-between">
+                  <CardContent className={`${bulkSelectMode ? "pl-8" : ""}`}>
+                    <div className="mb-2 flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="w-[80px] truncate text-sm leading-tight font-semibold">
+                        <h3 className="w-[85px] truncate text-sm leading-tight font-semibold">
                           {material.name}
                         </h3>
+                        {material.sku && (
+                          <p className="text-muted-foreground text-xs">SKU: {material.sku}</p>
+                        )}
                       </div>
 
                       {/* Stock Status Badge */}
                       <Badge
-                        variant={
-                          stockStatus === "critical"
-                            ? "destructive"
-                            : stockStatus === "low_stock"
-                              ? "default"
-                              : stockStatus === "overstocked"
-                                ? "secondary"
-                                : "outline"
-                        }
-                        className="ml-2 text-xs"
+                        variant={getStockStatusVariant(stockStatus)}
+                        className="ml-auto text-xs"
                       >
-                        {getStockStatusLabel(stockStatus)}
+                        {stockStatus}
                       </Badge>
                     </div>
-                    <div>
-                      {material.sku && (
-                        <p className="text-muted-foreground mt-1 truncate text-xs">
-                          {t("common.sku")}: {material.sku}
-                        </p>
-                      )}
-                    </div>
 
-                    <Separator className="my-2" />
+                    <Separator />
 
                     {/* Material Info */}
-                    <div className="text-muted-foreground space-y-1 text-xs">
+                    <div className="text-muted-foreground my-2 space-y-1 text-xs">
+                      {material.category && (
+                        <div className="flex justify-between">
+                          <span>{t("common.category")}:</span>
+                          <span className="text-foreground font-medium">{material.category}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span>{t("common.stock")}:</span>
                         <span className="text-foreground font-medium">
-                          {material.currentStock} {material.unit}
+                          {currentStock} {material.unit}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>{t("common.cost")}:</span>
+                        <span>Unit Cost:</span>
                         <span className="text-foreground font-medium">
-                          ${material.costPerUnit}/{material.unit}
+                          ${Number(material.unitCost).toFixed(2)}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>{t("common.category")}:</span>
-                        <span className="text-foreground font-medium">
-                          {material.category.replace("_", " ")}
-                        </span>
-                      </div>
+                      {preferredSupplier && (
+                        <div className="flex justify-between">
+                          <span>Supplier:</span>
+                          <span className="text-foreground font-medium">
+                            {preferredSupplier.supplier.name}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Hover Actions */}
                     {!bulkSelectMode && (
-                      <div className="mt-2 grid grid-cols-3 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -512,7 +503,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{t("data.materials.tooltips.view")}</p>
+                            <p>View Details</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -527,7 +518,7 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{t("data.materials.tooltips.edit")}</p>
+                            <p>Edit</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -542,28 +533,35 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{t("data.materials.tooltips.delete")}</p>
+                            <p>Delete</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
                     )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               );
             })}
-
             {/* Empty State */}
             {processedMaterials.length === 0 && (
-              <div className="col-span-full py-12 text-center">
-                <p className="text-muted-foreground">
+              <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
+                <h3 className="mb-2 text-lg font-semibold">
+                  {t("messages.noMaterialsFound") || "No materials found"}
+                </h3>
+                <p className="text-muted-foreground mb-4 text-sm">
                   {hasActiveFilters
-                    ? t("messages.noMatchingFilters") || "No materials match your filters"
-                    : t("messages.noMaterialsFound") || "No materials found"}
+                    ? t("messages.noMatchingFilters") ||
+                      "Try adjusting your filters or search query"
+                    : t("messages.getStartedMaterial") ||
+                      "Get started by adding your first material"}
                 </p>
-                {hasActiveFilters && (
-                  <Button variant="link" onClick={clearFilters} className="mt-2">
-                    {t("common.actions.clearAllFilters") || "Clear all filters"}
+                {hasActiveFilters ? (
+                  <Button variant="outline" onClick={clearFilters}>
+                    {t("common.actions.clearFilters") || "Clear Filters"}
                   </Button>
+                ) : (
+                  <AddMaterialDialog />
                 )}
               </div>
             )}
@@ -572,28 +570,45 @@ export function MaterialsSection({ materials }: MaterialsSectionProps) {
       </Card>
 
       {/* Dialogs */}
-      {selectedMaterial && (
-        <>
-          <MaterialDetailsDialog
-            material={selectedMaterial}
-            open={viewDialogOpen}
-            onOpenChange={setViewDialogOpen}
-          />
-          <EditMaterialDialog
-            material={selectedMaterial}
-            open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
-          />
-        </>
-      )}
+      <MaterialDetailsDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        material={selectedMaterial}
+        onEdit={handleEdit}
+        onDelete={(id) => {
+          const material = materials.find((m) => m.id === id);
+          if (material) handleDeleteClick(material);
+        }}
+      />
+
+      <EditMaterialDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        material={selectedMaterial}
+      />
 
       <ConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title={t("data.materials.toasts.deleted.title") || "Delete Material"}
-        description={(t("data.materials.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedMaterial?.name || "")}
-        confirmText={t("common.actions.delete") || "Delete"}
+        title={t("data.materials.deleteConfirm.title") || "Delete Material"}
+        description={
+          t("data.materials.deleteConfirm.description") ||
+          `Are you sure you want to delete "${selectedMaterial?.name}"? This action cannot be undone.`
+        }
+        confirmText={t("actions.delete") || "Delete"}
+        cancelText={t("actions.cancel") || "Cancel"}
+        variant="destructive"
+      />
+
+      <ConfirmationDialog
+        open={bulkSelectMode && selectedIds.size > 0 && false}
+        onOpenChange={() => {}}
+        onConfirm={handleBulkDelete}
+        title="Delete Multiple Materials"
+        description={`Are you sure you want to delete ${selectedIds.size} material(s)? This action cannot be undone.`}
+        confirmText="Delete All"
+        cancelText="Cancel"
         variant="destructive"
       />
     </>

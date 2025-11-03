@@ -193,13 +193,11 @@ export function ProductsSection({ products }: ProductsSectionProps) {
 
   const handleDeleteConfirm = () => {
     // TODO: API call to delete product
-    const deletedDesc = t("data.products.toasts.deleted.description") || "{name} has been deleted successfully.";
+    const deletedDesc =
+      t("data.products.toasts.deleted.description") || "{name} has been deleted successfully.";
     toast({
       title: t("data.products.toasts.deleted.title"),
-      description: deletedDesc.replace(
-        "{name}",
-        selectedProduct?.name || ""
-      ),
+      description: deletedDesc.replace("{name}", selectedProduct?.name || ""),
     });
     setDeleteDialogOpen(false);
     setSelectedProduct(null);
@@ -207,13 +205,12 @@ export function ProductsSection({ products }: ProductsSectionProps) {
 
   const handleBulkDelete = () => {
     // TODO: API call to bulk delete products
-    const bulkDeletedDesc = t("data.products.toasts.bulkDeleted.description") || "{count} products have been deleted successfully.";
+    const bulkDeletedDesc =
+      t("data.products.toasts.bulkDeleted.description") ||
+      "{count} products have been deleted successfully.";
     toast({
       title: t("data.products.toasts.bulkDeleted.title"),
-      description: bulkDeletedDesc.replace(
-        "{count}",
-        selectedIds.size.toString()
-      ),
+      description: bulkDeletedDesc.replace("{count}", selectedIds.size.toString()),
     });
     setSelectedIds(new Set());
   };
@@ -444,7 +441,9 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                           {product.name}
                         </h3>
                         {product.sku && (
-                          <p className="text-muted-foreground text-xs">{t("common.sku")}: {product.sku}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {t("common.sku")}: {product.sku}
+                          </p>
                         )}
                       </div>
 
@@ -511,7 +510,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
 
                     {/* Hover Actions */}
                     {!bulkSelectMode && (
-                      <div className="mt-2 grid grid-cols-3 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -612,7 +611,10 @@ export function ProductsSection({ products }: ProductsSectionProps) {
           />
           <ConfirmationDialog
             title={t("data.products.toasts.deleted.title") || "Delete Product"}
-            description={(t("data.products.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedProduct.name)}
+            description={(
+              t("data.products.toasts.deleted.description") ||
+              "{name} has been deleted successfully."
+            ).replace("{name}", selectedProduct.name)}
             confirmText={t("common.actions.delete") || "Delete"}
             onConfirm={handleDeleteConfirm}
             variant="destructive"

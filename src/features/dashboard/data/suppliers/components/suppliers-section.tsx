@@ -166,13 +166,11 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
 
   const handleDeleteConfirm = () => {
     // TODO: API call to delete supplier
-    const deletedDesc = t("data.suppliers.toasts.deleted.description") || "{name} has been deleted successfully.";
+    const deletedDesc =
+      t("data.suppliers.toasts.deleted.description") || "{name} has been deleted successfully.";
     toast({
       title: t("data.suppliers.toasts.deleted.title"),
-      description: deletedDesc.replace(
-        "{name}",
-        selectedSupplier?.name || ""
-      ),
+      description: deletedDesc.replace("{name}", selectedSupplier?.name || ""),
     });
     setDeleteDialogOpen(false);
     setSelectedSupplier(null);
@@ -180,13 +178,12 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
 
   const handleBulkDelete = () => {
     // TODO: API call to bulk delete suppliers
-    const bulkDeletedDesc = t("data.suppliers.toasts.bulkDeleted.description") || "{count} suppliers have been deleted successfully.";
+    const bulkDeletedDesc =
+      t("data.suppliers.toasts.bulkDeleted.description") ||
+      "{count} suppliers have been deleted successfully.";
     toast({
       title: t("data.suppliers.toasts.bulkDeleted.title"),
-      description: bulkDeletedDesc.replace(
-        "{count}",
-        selectedIds.size.toString()
-      ),
+      description: bulkDeletedDesc.replace("{count}", selectedIds.size.toString()),
     });
     setSelectedIds(new Set());
   };
@@ -384,7 +381,8 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing") || "Showing"} {processedSuppliers.length}{" "}
-              {t("common.of") || "of"} {suppliers.length} {t("data.suppliers.pageTitle") || "suppliers"}
+              {t("common.of") || "of"} {suppliers.length}{" "}
+              {t("data.suppliers.pageTitle") || "suppliers"}
             </p>
           </div>
 
@@ -493,7 +491,7 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
 
                     {/* Hover Actions */}
                     {!bulkSelectMode && (
-                      <div className="mt-2 grid grid-cols-3 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -596,7 +594,10 @@ export function SuppliersSection({ suppliers }: SuppliersSectionProps) {
           />
           <ConfirmationDialog
             title={t("data.suppliers.toasts.deleted.title") || "Delete Supplier"}
-            description={(t("data.suppliers.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedSupplier.name)}
+            description={(
+              t("data.suppliers.toasts.deleted.description") ||
+              "{name} has been deleted successfully."
+            ).replace("{name}", selectedSupplier.name)}
             confirmText={t("common.actions.delete") || "Delete"}
             onConfirm={handleDeleteConfirm}
             variant="destructive"

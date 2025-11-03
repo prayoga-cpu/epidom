@@ -24,14 +24,14 @@ export default function NavUser() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="text-primary-foreground flex items-center gap-2 rounded-2xl hover:bg-white/10 hover:text-white"
+          className="text-primary-foreground flex max-w-[120px] items-center gap-2 overflow-hidden rounded-2xl hover:bg-white/10 hover:text-white"
         >
           <Avatar className="size-6">
             <AvatarFallback className="text-foreground bg-white text-xs">
               {user?.name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden sm:inline">{user?.name ?? user?.email}</span>
+          <span className="hidden truncate sm:inline">{user?.name ?? user?.email}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
