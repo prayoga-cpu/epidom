@@ -36,6 +36,7 @@ import { Plus, Loader2, X, Star } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateMaterial } from "../hooks/use-materials";
+import { useSuppliers } from "../../suppliers/hooks/use-suppliers";
 import { useParams } from "next/navigation";
 import {
   createIngredientFormSchema,
@@ -57,6 +58,15 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   const storeId = params.storeId as string;
 
   const createMaterial = useCreateMaterial(storeId);
+
+  // Fetch suppliers for dropdown
+  const { data: suppliersData } = useSuppliers(storeId, {
+    sortBy: "name",
+    sortOrder: "asc",
+    skip: 0,
+    take: 100,
+  });
+  const suppliers = suppliersData?.suppliers || [];
 
   const form = useForm({
     resolver: zodResolver(formSchema) as any,
@@ -82,6 +92,10 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
   async function onSubmit(data: any) {
     try {
+      // Filter out invalid suppliers (those with "none" or empty supplierId)
+      const validSuppliers =
+        data.suppliers?.filter((s: any) => s.supplierId && s.supplierId !== "none") || [];
+
       // Ensure we have default values for required fields
       const payload = {
         ...data,
@@ -90,6 +104,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         minStock: data.minStock || 0,
         maxStock: data.maxStock || 1000,
         isActive: data.isActive ?? true,
+        suppliers: validSuppliers.length > 0 ? validSuppliers : undefined,
       };
 
       await createMaterial.mutateAsync(payload);
@@ -343,16 +358,29 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                       name={`suppliers.${index}.supplierId` as any}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Supplier ID *</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Supplier ID or name"
-                              {...field}
-                              value={field.value as string}
-                            />
-                          </FormControl>
+                          <FormLabel>Supplier *</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={(field.value as string) || "none"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a supplier..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none" disabled>
+                                Select a supplier...
+                              </SelectItem>
+                              {suppliers.map((supplier) => (
+                                <SelectItem key={supplier.id} value={supplier.id}>
+                                  {supplier.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormDescription className="text-xs">
-                            Enter supplier ID (future: dropdown selector)
+                            Choose a supplier for this material
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

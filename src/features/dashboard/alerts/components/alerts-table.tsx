@@ -52,10 +52,13 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
         ? MOCK_MATERIALS.find((m) => m.id === alert.materialId)
         : null;
 
-      const supplierId = alert.supplierId ?? material?.supplierId;
+      const primarySupplier =
+        material?.materialSuppliers?.find((s) => s.isPreferred) ||
+        material?.materialSuppliers?.[0];
+      const supplierId = alert.supplierId ?? primarySupplier?.supplierId;
       const supplier = supplierId
         ? MOCK_SUPPLIERS.find((s) => s.id === supplierId)
-        : null;
+        : primarySupplier?.supplier || null;
 
       const currentStock = alert.metadata?.currentStock ?? material?.currentStock ?? 0;
       const minStock = alert.metadata?.minStock ?? material?.minStock ?? 0;

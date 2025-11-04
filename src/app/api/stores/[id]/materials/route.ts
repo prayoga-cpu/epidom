@@ -3,15 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { materialService } from "@/lib/services/material.service";
 import { businessService } from "@/lib/services";
-import {
-  createIngredientSchema,
-  materialFilterSchema,
-} from "@/lib/validation/inventory.schemas";
-import {
-  createSuccessResponse,
-  createErrorResponse,
-  ApiErrorCode,
-} from "@/types/api/responses";
+import { createIngredientSchema, materialFilterSchema } from "@/lib/validation/inventory.schemas";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
 
 /**
@@ -20,30 +13,23 @@ import { ZodError } from "zod";
  * Get all materials for a store with optional filtering.
  * Query params: search, category, supplierId, stockStatus, sortBy, sortOrder, skip, take
  */
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
-    const storeId = params.id;
+    const { id: storeId } = await params;
 
     // Verify user owns the business that owns this store
     const business = await businessService.getBusinessByUserId(session.user.id);
     if (!business) {
       return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.BUSINESS_NOT_FOUND,
-          "Business not found"
-        ),
+        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
         { status: 404 }
       );
     }
@@ -94,10 +80,7 @@ export async function GET(
 
     console.error("Error fetching materials:", error);
     return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
     );
   }
@@ -108,30 +91,23 @@ export async function GET(
  *
  * Create a new material for a store.
  */
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
-    const storeId = params.id;
+    const { id: storeId } = await params;
 
     // Verify user owns the business that owns this store
     const business = await businessService.getBusinessByUserId(session.user.id);
     if (!business) {
       return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.BUSINESS_NOT_FOUND,
-          "Business not found"
-        ),
+        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
         { status: 404 }
       );
     }
@@ -181,10 +157,7 @@ export async function POST(
       // Check for specific error messages
       if (error.message.includes("SKU already exists")) {
         return NextResponse.json(
-          createErrorResponse(
-            ApiErrorCode.VALIDATION_ERROR,
-            error.message
-          ),
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
           { status: 409 }
         );
       }
@@ -192,10 +165,7 @@ export async function POST(
 
     console.error("Error creating material:", error);
     return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
     );
   }

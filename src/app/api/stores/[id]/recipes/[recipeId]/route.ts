@@ -18,8 +18,16 @@ const updateRecipeSchema = z.object({
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
   yieldQuantity: z.number().positive("Yield quantity must be positive").optional(),
-  yieldUnit: z.string().min(1, "Yield unit is required").max(20, "Yield unit is too long").optional(),
-  productionTimeMinutes: z.number().int().nonnegative("Production time must be non-negative").optional(),
+  yieldUnit: z
+    .string()
+    .min(1, "Yield unit is required")
+    .max(20, "Yield unit is too long")
+    .optional(),
+  productionTimeMinutes: z
+    .number()
+    .int()
+    .nonnegative("Production time must be non-negative")
+    .optional(),
   instructions: z.string().max(5000, "Instructions are too long").optional(),
   ingredients: z.array(recipeIngredientSchema).optional(),
 });
@@ -30,7 +38,7 @@ const updateRecipeSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; recipeId: string } }
+  { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
   try {
     // Verify authentication
@@ -39,7 +47,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { recipeId } = params;
+    const { recipeId } = await params;
 
     // Get recipe from service
     const recipe = await recipeService.getRecipeById(recipeId);
@@ -65,7 +73,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; recipeId: string } }
+  { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
   try {
     // Verify authentication
@@ -74,7 +82,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: storeId, recipeId } = params;
+    const { id: storeId, recipeId } = await params;
     const body = await request.json();
 
     // Validate request body
@@ -117,7 +125,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; recipeId: string } }
+  { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
   try {
     // Verify authentication
@@ -126,7 +134,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: storeId, recipeId } = params;
+    const { id: storeId, recipeId } = await params;
 
     // Delete recipe via service
     await recipeService.deleteRecipe(recipeId, storeId);

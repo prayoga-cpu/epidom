@@ -47,8 +47,11 @@ export function AlertDetailsDialog({
   const material = alert.materialId
     ? MOCK_MATERIALS.find((m) => m.id === alert.materialId)
     : null;
-  const supplier = material?.supplierId
-    ? MOCK_SUPPLIERS.find((s) => s.id === material.supplierId)
+  const primarySupplier =
+    material?.materialSuppliers?.find((s) => s.isPreferred) ||
+    material?.materialSuppliers?.[0];
+  const supplier = primarySupplier
+    ? MOCK_SUPPLIERS.find((s) => s.id === primarySupplier.supplierId)
     : null;
 
   const currentStock = alert.metadata?.currentStock ?? material?.currentStock ?? 0;

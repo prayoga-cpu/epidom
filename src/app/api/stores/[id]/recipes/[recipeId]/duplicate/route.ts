@@ -15,7 +15,7 @@ const duplicateRecipeSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; recipeId: string } }
+  { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
   try {
     // Verify authentication
@@ -24,7 +24,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: storeId, recipeId } = params;
+    const { id: storeId, recipeId } = await params;
     const body = await request.json();
 
     // Validate request body

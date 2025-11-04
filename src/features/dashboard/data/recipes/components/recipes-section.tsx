@@ -35,6 +35,7 @@ import {
   Copy,
   Download,
   Loader2,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
@@ -229,7 +230,7 @@ export function RecipesSection() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -425,7 +426,7 @@ export function RecipesSection() {
               return (
                 <div
                   key={recipe.id}
-                  className={`group bg-card relative rounded-lg border p-4 shadow-sm transition-all hover:shadow-md ${
+                  className={`group bg-card relative rounded-lg border p-4 shadow-sm transition-all hover:shadow-md px-6${
                     isSelected ? "ring-primary ring-2" : ""
                   }`}
                 >
@@ -502,11 +503,20 @@ export function RecipesSection() {
                     </div>
 
                     {/* Ingredients Count */}
-                    <div className="text-muted-foreground mt-3 text-xs">
-                      {recipe.ingredients.length}{" "}
-                      {recipe.ingredients.length !== 1
-                        ? t("data.recipes.cards.ingredients")
-                        : t("data.recipes.cards.ingredient")}
+                    <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
+                      <span>
+                        {recipe.ingredients.length}{" "}
+                        {recipe.ingredients.length !== 1
+                          ? t("data.recipes.cards.ingredients")
+                          : t("data.recipes.cards.ingredient")}
+                      </span>
+                      {recipe.products && recipe.products.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          <Package className="mr-1 h-3 w-3" />
+                          {recipe.products.length}{" "}
+                          {recipe.products.length === 1 ? "product" : "products"}
+                        </Badge>
+                      )}
                     </div>
 
                     {/* Hover Actions */}

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cuidSchema, priceSchema, decimalSchema, urlSchema } from "./common.schemas";
+import { cuidSchema, priceSchema, decimalSchema } from "./common.schemas";
 
 /**
  * Inventory management validation schemas (Products & Ingredients)
@@ -12,13 +12,13 @@ const baseProductSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
-  image: urlSchema,
   costPrice: priceSchema,
   sellingPrice: priceSchema,
   currentStock: decimalSchema.default(0),
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").default("piece"),
-  minStockLevel: decimalSchema.default(0),
-  criticalLevel: decimalSchema.optional(),
+  minStock: decimalSchema.default(0),
+  maxStock: decimalSchema.default(1000),
+  recipeId: cuidSchema.optional(),
   productionTime: z.number().int().nonnegative("Production time must be non-negative").optional(),
   shelfLife: z.number().int().positive("Shelf life must be positive").optional(),
   isActive: z.boolean().default(true),
@@ -127,8 +127,22 @@ export const createIngredientFormSchema = baseIngredientFormSchema
 export type CreateIngredientFormInput = z.infer<typeof createIngredientFormSchema>;
 
 export const updateIngredientSchema = baseIngredientSchema
-  .omit({ storeId: true, suppliers: true })
-  .partial();
+  .omit({ storeId: true })
+  .partial()
+  .refine(
+    (data) => {
+      // Ensure only one supplier is marked as preferred
+      if (data.suppliers) {
+        const preferredCount = data.suppliers.filter((s) => s.isPreferred).length;
+        return preferredCount <= 1;
+      }
+      return true;
+    },
+    {
+      message: "Only one supplier can be marked as preferred",
+      path: ["suppliers"],
+    }
+  );
 
 export type UpdateIngredientInput = z.infer<typeof updateIngredientSchema>;
 
@@ -286,17 +300,17 @@ export type CreateStockMovementInput = z.infer<typeof createStockMovementSchema>
 export const createSupplierSchema = z.object({
   storeId: cuidSchema,
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
-  contactPerson: z.string().max(100, "Contact person name is too long").optional(),
-  email: z.string().email("Invalid email format").optional().or(z.literal("")),
-  phone: z
+  contactPerson: z
     .string()
-    .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format")
+    .max(100, "Contact person name is too long")
     .optional()
     .or(z.literal("")),
-  address: z.string().max(200, "Address is too long").optional(),
-  city: z.string().max(100, "City name is too long").optional(),
-  country: z.string().max(100, "Country name is too long").optional(),
-  notes: z.string().max(1000, "Notes are too long").optional(),
+  email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  phone: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
+  address: z.string().max(200, "Address is too long").optional().or(z.literal("")),
+  city: z.string().max(100, "City name is too long").optional().or(z.literal("")),
+  country: z.string().max(100, "Country name is too long").optional().or(z.literal("")),
+  notes: z.string().max(1000, "Notes are too long").optional().or(z.literal("")),
   isActive: z.boolean().default(true),
 });
 

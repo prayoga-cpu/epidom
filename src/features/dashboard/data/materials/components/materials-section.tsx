@@ -19,7 +19,7 @@ import MaterialDetailsDialog from "./material-details-dialog";
 import EditMaterialDialog from "./edit-material-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import AddMaterialDialog from "./add-material-dialog";
-import type { Material } from "@/types/entities";
+import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import {
   Search,
   Filter,
@@ -81,7 +81,7 @@ export function MaterialsSection() {
   });
 
   // UI state
-  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<MaterialWithSuppliers | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -162,17 +162,17 @@ export function MaterialsSection() {
   };
 
   // Actions
-  const handleView = (material: Material) => {
+  const handleView = (material: MaterialWithSuppliers) => {
     setSelectedMaterial(material);
     setViewDialogOpen(true);
   };
 
-  const handleEdit = (material: Material) => {
+  const handleEdit = (material: MaterialWithSuppliers) => {
     setSelectedMaterial(material);
     setEditDialogOpen(true);
   };
 
-  const handleDeleteClick = (material: Material) => {
+  const handleDeleteClick = (material: MaterialWithSuppliers) => {
     setSelectedMaterial(material);
     setDeleteDialogOpen(true);
   };
@@ -256,7 +256,7 @@ export function MaterialsSection() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -414,9 +414,9 @@ export function MaterialsSection() {
               const maxStock = Number(material.maxStock);
               const stockStatus = getStockStatus(currentStock, minStock, maxStock);
               const isSelected = selectedIds.has(material.id);
-              const preferredSupplier =
-                material.ingredientSuppliers?.find((s) => s.isPreferred) ||
-                material.ingredientSuppliers?.[0];
+              const primarySupplier =
+                material.materialSuppliers?.find((s) => s.isPreferred) ||
+                material.materialSuppliers?.[0];
 
               return (
                 <Card
@@ -478,14 +478,13 @@ export function MaterialsSection() {
                           ${Number(material.unitCost).toFixed(2)}
                         </span>
                       </div>
-                      {preferredSupplier && (
-                        <div className="flex justify-between">
-                          <span>Supplier:</span>
-                          <span className="text-foreground font-medium">
-                            {preferredSupplier.supplier.name}
-                          </span>
-                        </div>
-                      )}
+
+                      <div className="flex justify-between">
+                        <span>Supplier:</span>
+                        <span className="text-foreground font-medium">
+                          {primarySupplier ? primarySupplier.supplier.name : "N/A"}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Hover Actions */}

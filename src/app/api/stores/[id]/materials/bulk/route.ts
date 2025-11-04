@@ -19,7 +19,7 @@ import { ZodError } from "zod";
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -31,7 +31,7 @@ export async function DELETE(
       );
     }
 
-    const storeId = params.id;
+    const { id: storeId } = await params;
 
     // Verify user owns the business that owns this store
     const business = await businessService.getBusinessByUserId(session.user.id);

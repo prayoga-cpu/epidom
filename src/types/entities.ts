@@ -131,7 +131,7 @@ export interface Material {
   maxStock: number;
   isActive: boolean;
   storeId: string;
-  ingredientSuppliers: MaterialSupplier[];
+  materialSuppliers?: MaterialSupplier[];
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -165,42 +165,29 @@ export interface RecipeIngredient {
 
 export interface Product {
   id: string;
+  storeId: string;
+  sku: string;
   name: string;
-  sku?: string;
-  description?: string;
-  recipeId?: string;
-  recipe?: Recipe;
-  category?: string;
+  description?: string | null;
+  category?: string | null;
+  costPrice: number;
+  sellingPrice: number;
   currentStock: number;
+  unit: string;
   minStock: number;
   maxStock: number;
-  retailPrice: number;
-  wholesalePrice?: number;
-  costPrice: number;
-  unit: string;
-  imageUrl?: string;
-  barcode?: string;
-  storeId: string;
-  variants?: ProductVariant[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface ProductVariant {
-  id: string;
-  productId: string;
-  name: string;
-  sku?: string;
-  retailPrice: number;
-  wholesalePrice?: number;
-  attributes: Record<string, string>; // e.g., { size: "large", flavor: "chocolate" }
-  priceAdjustment?: number;
+  recipeId?: string | null;
+  productionTime?: number | null;
+  shelfLife?: number | null;
+  isActive: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface Supplier {
   id: string;
   name: string;
-  contactPerson?: string;
+  contactPerson?: string | null;
   email?: string;
   phone?: string;
   address?: string;
@@ -386,19 +373,6 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
 }
-
-export interface TeamMember {
-  id: string;
-  userId: string;
-  user?: User;
-  storeId: string;
-  role: UserRole;
-  permissions?: string[];
-  invitedBy?: string;
-  invitedAt?: Date;
-  acceptedAt?: Date;
-}
-
 // ============================================================================
 // API REQUEST/RESPONSE DTOs
 // ============================================================================
@@ -484,16 +458,16 @@ export interface RecipeFilters extends PaginationParams {
 // Product DTOs
 export interface CreateProductDto {
   name: string;
-  sku?: string;
+  sku: string;
   description?: string;
-  recipeId?: string;
   category?: string;
-  retailPrice: number;
-  wholesalePrice?: number;
+  sellingPrice: number;
   costPrice: number;
   unit: string;
-  imageUrl?: string;
-  variants?: Omit<ProductVariant, "id" | "productId">[];
+  minStockLevel?: number;
+  criticalLevel?: number;
+  productionTime?: number;
+  shelfLife?: number;
 }
 
 export interface UpdateProductDto extends Partial<CreateProductDto> {}

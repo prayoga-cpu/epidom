@@ -187,7 +187,6 @@ model Product {
   name            String
   description     String?
   category        String?   // bread, pastries, cakes, etc.
-  image           String?
 
   // Pricing
   costPrice       Decimal   @db.Decimal(10, 2)
@@ -196,10 +195,12 @@ model Product {
   // Stock
   currentStock    Decimal   @db.Decimal(10, 2) @default(0)
   unit            String    @default("piece") // piece, kg, box, etc.
-  minStockLevel   Decimal   @db.Decimal(10, 2) @default(0)
-  criticalLevel   Decimal?  @db.Decimal(10, 2) // for alerts
+  minStock        Decimal   @db.Decimal(10, 2) @default(0)
+  maxStock        Decimal   @db.Decimal(10, 2) @default(1000)
 
   // Production
+  recipeId        String?
+  recipe          Recipe?   @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   productionTime  Int?      // in minutes
   shelfLife       Int?      // in days
 
@@ -213,6 +214,7 @@ model Product {
 
   @@index([storeId])
   @@index([category])
+  @@index([recipeId])
   @@index([isActive])
   @@map("products")
 }
@@ -292,6 +294,7 @@ model Recipe {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
+  products              Product[]
   ingredients           RecipeIngredient[]
   productionBatches     ProductionBatch[]
 

@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Package, DollarSign, Calendar, Edit, Trash2, Star } from "lucide-react";
-import { Material } from "@/types/entities";
+import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -15,8 +15,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 interface MaterialDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  material: Material | null;
-  onEdit?: (material: Material) => void;
+  material: MaterialWithSuppliers | null;
+  onEdit?: (material: MaterialWithSuppliers) => void;
   onDelete?: (materialId: string) => void;
 }
 
@@ -41,14 +41,6 @@ function calculateStockPercentage(current: number, max: number): number {
   return Math.min((current / max) * 100, 100);
 }
 
-interface MaterialDetailsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  material: Material | null;
-  onEdit?: (material: Material) => void;
-  onDelete?: (materialId: string) => void;
-}
-
 export default function MaterialDetailsDialog({
   open,
   onOpenChange,
@@ -66,6 +58,8 @@ export default function MaterialDetailsDialog({
   const maxStock = Number(material.maxStock);
   const stockStatus = getStockStatus(currentStock, minStock, maxStock);
   const stockPercentage = calculateStockPercentage(currentStock, maxStock);
+
+  console.log(material);
 
   const handleDelete = () => {
     if (onDelete) {
@@ -149,11 +143,11 @@ export default function MaterialDetailsDialog({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {material.ingredientSuppliers.length === 0 ? (
+                {!material.materialSuppliers || material.materialSuppliers.length === 0 ? (
                   <p className="text-muted-foreground text-sm">No suppliers linked</p>
                 ) : (
                   <div className="space-y-2">
-                    {material.ingredientSuppliers.map((supplierLink) => (
+                    {material.materialSuppliers.map((supplierLink) => (
                       <div
                         key={supplierLink.id}
                         className="flex items-center justify-between rounded-lg border p-3"

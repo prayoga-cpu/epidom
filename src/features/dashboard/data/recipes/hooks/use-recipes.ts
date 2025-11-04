@@ -34,6 +34,18 @@ export interface RecipeWithIngredients {
       currentStock: number;
     };
   }>;
+  products?: Array<{
+    id: string;
+    name: string;
+    sku: string | null;
+    category: string | null;
+    unit: string;
+    currentStock: number;
+    minStock: number;
+    maxStock: number;
+    costPrice: number;
+    sellingPrice: number;
+  }>;
 }
 
 export interface RecipesResponse {

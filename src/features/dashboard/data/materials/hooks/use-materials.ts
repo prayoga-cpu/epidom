@@ -8,10 +8,11 @@ import {
   BulkDeleteInput,
 } from "@/lib/validation/inventory.schemas";
 import { ApiSuccessResponse } from "@/types/api/responses";
-import { Material } from "@/types/entities";
+import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
+import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
 
 export interface MaterialsResponse {
-  materials: Material[];
+  materials: MaterialWithSuppliers[];
   total: number;
 }
 
@@ -21,10 +22,8 @@ export const materialKeys = {
   lists: (storeId: string) => [...materialKeys.all(storeId), "list"] as const,
   list: (storeId: string, filters?: MaterialFilterInput) =>
     [...materialKeys.lists(storeId), filters] as const,
-  details: (storeId: string) =>
-    [...materialKeys.all(storeId), "detail"] as const,
-  detail: (storeId: string, id: string) =>
-    [...materialKeys.details(storeId), id] as const,
+  details: (storeId: string) => [...materialKeys.all(storeId), "detail"] as const,
+  detail: (storeId: string, id: string) => [...materialKeys.details(storeId), id] as const,
 };
 
 /**
@@ -65,7 +64,7 @@ export function useMaterials(storeId: string, filters?: MaterialFilterInput) {
  * Fetch a single material by ID
  */
 export function useMaterial(storeId: string, id: string) {
-  return useQuery<Material>({
+  return useQuery<MaterialWithSuppliers>({
     queryKey: materialKeys.detail(storeId, id),
     queryFn: async () => {
       const response = await fetch(`/api/stores/${storeId}/materials/${id}`);
@@ -75,7 +74,7 @@ export function useMaterial(storeId: string, id: string) {
         throw new Error(errorData.error?.message || "Failed to fetch material");
       }
 
-      const data: ApiSuccessResponse<Material> = await response.json();
+      const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
       return data.data;
     },
     enabled: !!storeId && !!id,
@@ -88,7 +87,7 @@ export function useMaterial(storeId: string, id: string) {
 export function useCreateMaterial(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<Material, Error, Omit<CreateIngredientInput, "storeId">>({
+  return useMutation<MaterialWithSuppliers, Error, Omit<CreateIngredientInput, "storeId">>({
     mutationFn: async (input) => {
       const response = await fetch(`/api/stores/${storeId}/materials`, {
         method: "POST",
@@ -103,12 +102,14 @@ export function useCreateMaterial(storeId: string) {
         throw new Error(errorData.error?.message || "Failed to create material");
       }
 
-      const data: ApiSuccessResponse<Material> = await response.json();
+      const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
       return data.data;
     },
     onSuccess: () => {
       // Invalidate all material lists for this store
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
+      // Invalidate supplier lists to update material counts in supplier cards
+      queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
     },
   });
 }
@@ -119,7 +120,7 @@ export function useCreateMaterial(storeId: string) {
 export function useUpdateMaterial(storeId: string, id: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<Material, Error, UpdateIngredientInput>({
+  return useMutation<MaterialWithSuppliers, Error, UpdateIngredientInput>({
     mutationFn: async (input) => {
       const response = await fetch(`/api/stores/${storeId}/materials/${id}`, {
         method: "PATCH",
@@ -134,7 +135,7 @@ export function useUpdateMaterial(storeId: string, id: string) {
         throw new Error(errorData.error?.message || "Failed to update material");
       }
 
-      const data: ApiSuccessResponse<Material> = await response.json();
+      const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
       return data.data;
     },
     onSuccess: (updatedMaterial) => {
@@ -142,6 +143,8 @@ export function useUpdateMaterial(storeId: string, id: string) {
       queryClient.setQueryData(materialKeys.detail(storeId, id), updatedMaterial);
       // Invalidate material lists to refetch
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
+      // Invalidate supplier lists to update material counts in supplier cards
+      queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
     },
   });
 }

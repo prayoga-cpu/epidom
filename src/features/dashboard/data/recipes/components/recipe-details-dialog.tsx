@@ -27,8 +27,9 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  Box,
 } from "lucide-react";
-import { formatCurrency, formatDate, formatDuration } from "@/lib/utils/formatting";
+import { formatCurrency, formatDate, formatDuration, formatNumber } from "@/lib/utils/formatting";
 import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -233,6 +234,69 @@ export default function RecipeDetailsDialog({
                 </div>
               </CardContent>
             </Card>
+
+            {/* Linked Products Section */}
+            {recipe.products && recipe.products.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Box className="h-5 w-5" />
+                    Linked Products ({recipe.products.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {recipe.products.map((product, index) => (
+                      <div key={product.id}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-muted-foreground text-sm">
+                              {product.category && (
+                                <Badge variant="secondary" className="mr-2 text-xs">
+                                  {product.category}
+                                </Badge>
+                              )}
+                              {product.sku && <span className="text-xs">SKU: {product.sku}</span>}
+                            </p>
+                            <div className="mt-1 flex items-center gap-4 text-xs">
+                              <span className="text-muted-foreground">
+                                Stock: {formatNumber(Number(product.currentStock))} {product.unit}
+                              </span>
+                              <span className="text-muted-foreground">
+                                Price: {formatCurrency(Number(product.sellingPrice))}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge
+                              variant={
+                                Number(product.currentStock) > Number(product.minStock)
+                                  ? "default"
+                                  : "destructive"
+                              }
+                            >
+                              {Number(product.currentStock) > Number(product.minStock)
+                                ? "In Stock"
+                                : "Low Stock"}
+                            </Badge>
+                          </div>
+                        </div>
+                        {index < (recipe.products?.length ?? 0) - 1 && (
+                          <Separator className="mt-3" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-muted/50 mt-4 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs">
+                      💡 These products are created using this recipe. Changes to the recipe will
+                      affect the production cost of these products.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Cost Analysis */}
             <Card className="border-primary/50 bg-primary/5">

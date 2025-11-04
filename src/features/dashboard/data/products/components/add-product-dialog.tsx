@@ -33,43 +33,49 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Loader2, ChefHat } from "lucide-react";
-import { MOCK_RECIPES } from "@/mocks";
+import { Plus, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCreateProduct } from "../hooks/use-products";
+import { useRecipes } from "../../recipes/hooks/use-recipes";
+import { toast as sonnerToast } from "sonner";
 
 // Zod validation schema
 const productSchema = z.object({
   name: z.string().min(2, "Product name must be at least 2 characters"),
   sku: z.string().optional(),
   description: z.string().optional(),
-  recipeId: z.string().optional(),
   category: z.string().min(1, "Please enter a category"),
   retailPrice: z.coerce.number().positive("Retail price must be greater than 0"),
-  wholesalePrice: z.coerce
-    .number()
-    .positive("Wholesale price must be greater than 0")
-    .optional()
-    .or(z.literal(0)),
   costPrice: z.coerce.number().positive("Cost price must be greater than 0"),
   unit: z.string().min(1, "Please enter a unit"),
   currentStock: z.coerce.number().min(0, "Stock cannot be negative"),
   minStock: z.coerce.number().min(0, "Minimum stock cannot be negative"),
   maxStock: z.coerce.number().positive("Maximum stock must be greater than 0"),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  recipeId: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
 interface AddProductDialogProps {
+  storeId: string;
   children?: React.ReactNode;
 }
 
-export default function AddProductDialog({ children }: AddProductDialogProps) {
+export default function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { t } = useI18n();
+  const createProduct = useCreateProduct(storeId);
+
+  // Fetch recipes for selection
+  const { data: recipesData } = useRecipes(storeId, {
+    sortBy: "name" as const,
+    sortOrder: "asc" as const,
+    skip: 0,
+    take: 100,
+  });
+  const recipes = recipesData?.recipes || [];
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -77,74 +83,63 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
       name: "",
       sku: "",
       description: "",
-      recipeId: "none",
       category: "",
       retailPrice: 0,
-      wholesalePrice: 0,
       costPrice: 0,
-      unit: "unit",
+      unit: "piece",
       currentStock: 0,
       minStock: 0,
-      maxStock: 0,
-      imageUrl: "",
+      maxStock: 1000,
+      recipeId: "none",
     },
   });
 
-  // Watch recipe selection to auto-fill category and calculate suggested prices
-  const selectedRecipeId = form.watch("recipeId");
   const costPrice = form.watch("costPrice");
 
   // Auto-suggest retail price based on 2.5x markup
   const suggestedRetailPrice = costPrice ? (costPrice * 2.5).toFixed(2) : "0.00";
-  // Auto-suggest wholesale price based on 1.8x markup
-  const suggestedWholesalePrice = costPrice ? (costPrice * 1.8).toFixed(2) : "0.00";
+
+  const isSubmitting = createProduct.isPending;
 
   const onSubmit = async (data: ProductFormValues) => {
-    setIsSubmitting(true);
+    try {
+      // Map form fields to API schema
+      // Note: retailPrice maps to sellingPrice
+      const apiData = {
+        sku: data.sku || `PRD-${Date.now()}`, // Auto-generate SKU if not provided
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        costPrice: data.costPrice,
+        sellingPrice: data.retailPrice,
+        currentStock: data.currentStock,
+        unit: data.unit,
+        minStock: data.minStock,
+        maxStock: data.maxStock,
+        recipeId: data.recipeId || undefined,
+        storeId,
+        isActive: true,
+      };
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      await createProduct.mutateAsync(apiData);
 
-    // Convert "none" to undefined for API
-    const submitData = {
-      ...data,
-      recipeId: data.recipeId === "none" ? undefined : data.recipeId,
-    };
+      sonnerToast.success(t("data.products.toasts.created.title") || "Product created", {
+        description:
+          t("data.products.toasts.created.description")?.replace("{name}", data.name) ||
+          `${data.name} has been added to your products.`,
+      });
 
-    // TODO: Replace with actual API call
-    // const response = await fetch("/api/products", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     ...submitData,
-    //     storeId: "STORE-001", // Get from context/session
-    //   }),
-    // });
-
-    setIsSubmitting(false);
-    toast({
-      title: "Product Added Successfully",
-      description: `${data.name} has been added to your products.`,
-    });
-
-    form.reset();
-    setOpen(false);
-  };
-
-  // Update category when recipe is selected
-  const handleRecipeChange = (recipeId: string) => {
-    if (recipeId === "none") {
-      // No recipe selected, don't auto-fill
-      return;
-    }
-    const recipe = MOCK_RECIPES.find((r) => r.id === recipeId);
-    if (recipe) {
-      form.setValue("category", recipe.category || "");
-      // Optionally set cost price based on recipe cost per unit
-      if (recipe.costPerBatch && recipe.yieldQuantity) {
-        const costPerUnit = recipe.costPerBatch / recipe.yieldQuantity;
-        form.setValue("costPrice", parseFloat(costPerUnit.toFixed(2)));
-      }
+      form.reset();
+      setOpen(false);
+    } catch (error) {
+      console.error("Error creating product:", error);
+      sonnerToast.error(t("data.products.toasts.createError.title") || "Failed to create product", {
+        description:
+          error instanceof Error
+            ? error.message
+            : t("data.products.toasts.createError.description") ||
+              "An error occurred while creating the product.",
+      });
     }
   };
 
@@ -221,71 +216,47 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                 )}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="recipeId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <ChefHat className="mr-1 inline h-4 w-4" />
-                        Linked Recipe
-                      </FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          handleRecipeChange(value);
-                        }}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("data.products.form.selectRecipe")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">No recipe</SelectItem>
-                          {MOCK_RECIPES.map((recipe) => (
-                            <SelectItem key={recipe.id} value={recipe.id}>
-                              {recipe.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>Link to production recipe</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("data.products.form.categoryPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category *</FormLabel>
+                    <FormControl>
+                      <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
-                name="imageUrl"
+                name="recipeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Image URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("data.products.form.imageUrlPlaceholder")} {...field} />
-                    </FormControl>
-                    <FormDescription>Product image URL (optional)</FormDescription>
+                    <FormLabel>Recipe (Optional)</FormLabel>
+                    <Select
+                      onValueChange={(value) =>
+                        field.onChange(value === "none" ? undefined : value)
+                      }
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a recipe..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {recipes.map((recipe) => (
+                          <SelectItem key={recipe.id} value={recipe.id}>
+                            {recipe.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>Link this product to a production recipe</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -295,7 +266,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
             {/* Pricing */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold">Pricing</h3>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="costPrice"
@@ -313,30 +284,10 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
 
                 <FormField
                   control={form.control}
-                  name="wholesalePrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Wholesale Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder={suggestedWholesalePrice}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>B2B price (optional)</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="retailPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Retail Price *</FormLabel>
+                      <FormLabel>Selling Price *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -353,11 +304,10 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
               </div>
               {costPrice > 0 && (
                 <div className="bg-muted rounded-lg p-3 text-sm">
-                  <p className="font-medium">Suggested Pricing:</p>
-                  <ul className="text-muted-foreground mt-1 space-y-0.5">
-                    <li>• Wholesale: ${suggestedWholesalePrice} (1.8x markup)</li>
-                    <li>• Retail: ${suggestedRetailPrice} (2.5x markup)</li>
-                  </ul>
+                  <p className="font-medium">Suggested Selling Price:</p>
+                  <p className="text-muted-foreground mt-1">
+                    ${suggestedRetailPrice} (2.5x markup)
+                  </p>
                 </div>
               )}
             </div>
@@ -429,9 +379,9 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                     <FormItem>
                       <FormLabel>Max Stock *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                        <Input type="number" placeholder="1000" {...field} />
                       </FormControl>
-                      <FormDescription>Storage limit</FormDescription>
+                      <FormDescription>Maximum stock level</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

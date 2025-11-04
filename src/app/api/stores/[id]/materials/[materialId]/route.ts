@@ -14,7 +14,7 @@ import { ZodError } from "zod";
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string; materialId: string } }
+  { params }: { params: Promise<{ id: string; materialId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,8 +25,7 @@ export async function GET(
       });
     }
 
-    const storeId = await params.id;
-    const materialId = params.materialId;
+    const { id: storeId, materialId } = await params;
 
     // Verify user owns the business that owns this store
     const business = await businessService.getBusinessByUserId(session.user.id);
@@ -83,7 +82,7 @@ export async function GET(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string; materialId: string } }
+  { params }: { params: Promise<{ id: string; materialId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -94,8 +93,7 @@ export async function PATCH(
       });
     }
 
-    const storeId = params.id;
-    const materialId = params.materialId;
+    const { id: storeId, materialId } = await params;
 
     // Verify user owns the business that owns this store
     const business = await businessService.getBusinessByUserId(session.user.id);
@@ -175,7 +173,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string; materialId: string } }
+  { params }: { params: Promise<{ id: string; materialId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -186,8 +184,7 @@ export async function DELETE(
       });
     }
 
-    const storeId = params.id;
-    const materialId = params.materialId;
+    const { id: storeId, materialId } = await params;
 
     // Verify user owns the business that owns this store
     const business = await businessService.getBusinessByUserId(session.user.id);

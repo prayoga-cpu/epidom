@@ -15,7 +15,7 @@ const bulkDeleteSchema = z.object({
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
@@ -24,7 +24,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const storeId = params.id;
+    const { id: storeId } = await params;
     const body = await request.json();
 
     // Validate request body

@@ -41,7 +41,7 @@ const recipeFilterSchema = z.object({
  * GET /api/stores/[id]/recipes
  * Get all recipes for a store with optional filtering
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Verify authentication
     const session = await getServerSession(authOptions);
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const storeId = params.id;
+    const { id: storeId } = await params;
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  * POST /api/stores/[id]/recipes
  * Create a new recipe
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Verify authentication
     const session = await getServerSession(authOptions);
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const storeId = params.id;
+    const { id: storeId } = await params;
     const body = await request.json();
 
     // Validate request body

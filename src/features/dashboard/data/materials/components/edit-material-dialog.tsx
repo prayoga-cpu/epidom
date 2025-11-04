@@ -32,11 +32,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Loader2, Plus, X, Star } from "lucide-react";
-import { Material } from "@/types/entities";
+import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUpdateMaterial } from "../hooks/use-materials";
+import { useSuppliers } from "../../suppliers/hooks/use-suppliers";
 import {
   updateIngredientFormSchema,
   type UpdateIngredientFormInput,
@@ -45,7 +46,7 @@ import {
 interface EditMaterialDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  material: Material | null;
+  material: MaterialWithSuppliers | null;
 }
 
 export default function EditMaterialDialog({
@@ -53,13 +54,21 @@ export default function EditMaterialDialog({
   onOpenChange,
   material,
 }: EditMaterialDialogProps) {
-  const { toast } = useToast();
   const { t } = useI18n();
   const params = useParams();
   const storeId = params.storeId as string;
   const materialId = material?.id || "";
 
   const updateMaterial = useUpdateMaterial(storeId, materialId);
+
+  // Fetch suppliers for dropdown
+  const { data: suppliersData } = useSuppliers(storeId, {
+    sortBy: "name",
+    sortOrder: "asc",
+    skip: 0,
+    take: 100,
+  });
+  const suppliers = suppliersData?.suppliers || [];
 
   const form = useForm<UpdateIngredientFormInput>({
     resolver: zodResolver(updateIngredientFormSchema) as any,
@@ -96,7 +105,7 @@ export default function EditMaterialDialog({
         minStock: Number(material.minStock),
         maxStock: Number(material.maxStock),
         suppliers:
-          material.ingredientSuppliers?.map((s) => ({
+          material.materialSuppliers?.map((s) => ({
             supplierId: s.supplierId,
             price: Number(s.price),
             isPreferred: s.isPreferred,
@@ -109,22 +118,26 @@ export default function EditMaterialDialog({
     if (!material) return;
 
     try {
-      await updateMaterial.mutateAsync(data);
-      toast({
-        title: t("data.materials.toasts.updated.title") || "Success",
-        description:
-          t("data.materials.toasts.updated.description")?.replace(
-            "{name}",
-            data.name || material.name
-          ) || "Material updated successfully",
-      });
+      // Filter out invalid suppliers (those with "none" or empty supplierId)
+      const validSuppliers =
+        data.suppliers?.filter((s: any) => s.supplierId && s.supplierId !== "none") || [];
+
+      const payload = {
+        ...data,
+        // Always send suppliers array, even if empty, to allow removing all suppliers
+        suppliers: validSuppliers,
+      };
+
+      await updateMaterial.mutateAsync(payload);
+      toast.success(
+        t("data.materials.toasts.updated.description")?.replace(
+          "{name}",
+          data.name || material.name
+        ) || "Material updated successfully"
+      );
       onOpenChange(false);
     } catch (error) {
-      toast({
-        title: t("common.error") || "Error",
-        description: error instanceof Error ? error.message : "Failed to update material",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to update material");
     }
   };
 
@@ -355,16 +368,29 @@ export default function EditMaterialDialog({
                       name={`suppliers.${index}.supplierId` as any}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Supplier ID *</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Supplier ID or name"
-                              {...field}
-                              value={field.value as string}
-                            />
-                          </FormControl>
+                          <FormLabel>Supplier *</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={(field.value as string) || "none"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a supplier..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none" disabled>
+                                Select a supplier...
+                              </SelectItem>
+                              {suppliers.map((supplier) => (
+                                <SelectItem key={supplier.id} value={supplier.id}>
+                                  {supplier.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormDescription className="text-xs">
-                            Enter supplier ID (future: dropdown selector)
+                            Choose a supplier for this material
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

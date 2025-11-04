@@ -82,7 +82,10 @@ export default function PlaceOrderDialog({
     : null;
 
   // Get supplier from material
-  const suggestedSupplier = material?.supplierId || "";
+  const primarySupplier =
+    material?.materialSuppliers?.find((s) => s.isPreferred) ||
+    material?.materialSuppliers?.[0];
+  const suggestedSupplier = primarySupplier?.supplierId || "";
 
   // Calculate suggested quantity (fill to min stock)
   const suggestedQuantity = alert?.metadata?.recommendedOrderQty

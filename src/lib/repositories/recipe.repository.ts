@@ -1,4 +1,4 @@
-import { Recipe, Prisma } from "@prisma/client";
+import { Recipe, Prisma, Product } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
 
 /**
@@ -24,6 +24,7 @@ export type RecipeWithIngredients = Recipe & {
       currentStock: Prisma.Decimal;
     };
   }>;
+  products?: Product[];
 };
 
 export interface RecipeFilters {
@@ -95,6 +96,7 @@ export class RecipeRepository extends BaseRepository {
             },
             orderBy: { createdAt: "asc" },
           },
+          products: true,
         },
         orderBy,
         skip,
@@ -132,6 +134,7 @@ export class RecipeRepository extends BaseRepository {
           },
           orderBy: { createdAt: "asc" },
         },
+        products: true,
       },
     });
 

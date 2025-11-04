@@ -48,6 +48,11 @@ export interface UpdateMaterialInput {
   currentStock?: number;
   minStock?: number;
   maxStock?: number;
+  suppliers?: Array<{
+    supplierId: string;
+    price: number;
+    isPreferred?: boolean;
+  }>;
 }
 
 export interface UpdateSupplierInput {
@@ -162,12 +167,61 @@ export class MaterialService {
       }
     }
 
-    // Use transaction if stock is changing
-    if (input.currentStock !== undefined && input.currentStock !== Number(material.currentStock)) {
+    // Ensure only one supplier is marked as preferred
+    if (input.suppliers && input.suppliers.length > 0) {
+      const preferredCount = input.suppliers.filter((s) => s.isPreferred).length;
+      if (preferredCount > 1) {
+        throw new Error("Only one supplier can be marked as preferred");
+      }
+    }
+
+    // Use transaction if stock is changing or suppliers are being updated
+    if (
+      (input.currentStock !== undefined && input.currentStock !== Number(material.currentStock)) ||
+      input.suppliers !== undefined
+    ) {
       return await prisma.$transaction(async (tx) => {
-        const oldStock = Number(material.currentStock);
-        const newStock = input.currentStock!;
-        const difference = newStock - oldStock;
+        // Handle stock changes
+        if (
+          input.currentStock !== undefined &&
+          input.currentStock !== Number(material.currentStock)
+        ) {
+          const oldStock = Number(material.currentStock);
+          const newStock = input.currentStock!;
+          const difference = newStock - oldStock;
+
+          // Create stock movement
+          await tx.stockMovement.create({
+            data: {
+              materialId: materialId,
+              type: difference > 0 ? MovementType.ADJUSTMENT : MovementType.ADJUSTMENT,
+              quantity: Math.abs(difference),
+              unit: material.unit,
+              balanceAfter: newStock,
+              notes: `Stock ${difference > 0 ? "increase" : "decrease"} - Manual adjustment`,
+            },
+          });
+        }
+
+        // Handle supplier updates
+        if (input.suppliers !== undefined) {
+          // Delete existing supplier relationships
+          await tx.materialSupplier.deleteMany({
+            where: { materialId },
+          });
+
+          // Create new supplier relationships if any
+          if (input.suppliers.length > 0) {
+            await tx.materialSupplier.createMany({
+              data: input.suppliers.map((s) => ({
+                materialId,
+                supplierId: s.supplierId,
+                price: s.price,
+                isPreferred: s.isPreferred ?? false,
+              })),
+            });
+          }
+        }
 
         // Convert numbers to Decimal for Prisma
         const updateData: Partial<Material> = {};
@@ -182,25 +236,14 @@ export class MaterialService {
         if (input.maxStock !== undefined) updateData.maxStock = input.maxStock as any;
 
         // Update material
-        const updated = await this.materialRepo.update(materialId, updateData);
-
-        // Create stock movement
-        await tx.stockMovement.create({
-          data: {
-            materialId: materialId,
-            type: difference > 0 ? MovementType.ADJUSTMENT : MovementType.ADJUSTMENT,
-            quantity: Math.abs(difference),
-            unit: material.unit,
-            balanceAfter: newStock,
-            notes: `Stock ${difference > 0 ? "increase" : "decrease"} - Manual adjustment`,
-          },
+        return await tx.material.update({
+          where: { id: materialId },
+          data: updateData,
         });
-
-        return updated;
       });
     }
 
-    // No stock change, just update
+    // No stock change and no suppliers update, just update basic properties
     // Convert numbers to Decimal for Prisma
     const updateData: Partial<Material> = {};
     if (input.name !== undefined) updateData.name = input.name;
