@@ -34,17 +34,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { MOCK_SUPPLIERS, MOCK_MATERIALS } from "@/mocks";
-import { type Alert } from "@/types/entities";
+import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { useCreateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+import { MOCK_MATERIALS } from "@/mocks";
 import { ShoppingCart, Loader2, Package } from "lucide-react";
-
-// Priority enum
-enum Priority {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  URGENT = "urgent",
-}
+import { useParams } from "next/navigation";
 
 // Zod validation schema
 const placeOrderSchema = z.object({
@@ -55,7 +49,6 @@ const placeOrderSchema = z.object({
     .positive("Quantity must be positive")
     .min(0.01, "Quantity must be at least 0.01"),
   expectedDeliveryDate: z.string().min(1, "Please select an expected delivery date"),
-  priority: z.nativeEnum(Priority),
   notes: z.string().optional(),
 });
 
@@ -67,31 +60,22 @@ interface PlaceOrderDialogProps {
   alert?: Alert | null;
 }
 
-export default function PlaceOrderDialog({
-  open,
-  onOpenChange,
-  alert,
-}: PlaceOrderDialogProps) {
+export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialogProps) {
   const { t } = useI18n();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const params = useParams();
+  const storeId = params?.storeId as string;
 
-  // Get material from alert
-  const material = alert?.materialId
-    ? MOCK_MATERIALS.find((m) => m.id === alert.materialId)
-    : null;
+  // Create supplier order mutation
+  const createOrder = useCreateSupplierOrder(storeId);
 
-  // Get supplier from material
-  const primarySupplier =
-    material?.materialSuppliers?.find((s) => s.isPreferred) ||
-    material?.materialSuppliers?.[0];
-  const suggestedSupplier = primarySupplier?.supplierId || "";
+  // Get preferred supplier or first available supplier from alert
+  const suggestedSupplier =
+    alert?.suppliers?.find((s) => s.isPreferred)?.id || alert?.suppliers?.[0]?.id || "";
 
   // Calculate suggested quantity (fill to min stock)
-  const suggestedQuantity = alert?.metadata?.recommendedOrderQty
-    ? alert.metadata.recommendedOrderQty
-    : material
-    ? Math.max(0, material.minStock - material.currentStock)
+  const suggestedQuantity = alert
+    ? Math.max(0, Number(alert.minStock) - Number(alert.currentStock))
     : 0;
 
   const form = useForm<PlaceOrderFormData>({
@@ -101,7 +85,6 @@ export default function PlaceOrderDialog({
       materialId: alert?.materialId || "",
       quantity: suggestedQuantity,
       expectedDeliveryDate: "",
-      priority: Priority.MEDIUM,
       notes: "",
     },
   });
@@ -114,42 +97,39 @@ export default function PlaceOrderDialog({
         materialId: alert.materialId || "",
         quantity: suggestedQuantity,
         expectedDeliveryDate: "",
-        priority: alert.priority === "critical" || alert.priority === "high" ? Priority.HIGH : Priority.MEDIUM,
-        notes: `Order from alert: ${alert.title}`,
+        notes: `Restock order for ${alert.materialName} (${alert.materialSku})`,
       });
     }
   }, [open, alert, form, suggestedSupplier, suggestedQuantity]);
 
   const onSubmit = async (data: PlaceOrderFormData) => {
-    setIsSubmitting(true);
+    if (!alert) return;
 
     try {
-      // TODO: Replace with API call
-      // const response = await fetch('/api/orders/restock', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     supplierId: data.supplierId,
-      //     materialId: data.materialId,
-      //     quantity: data.quantity,
-      //     expectedDeliveryDate: data.expectedDeliveryDate,
-      //     priority: data.priority,
-      //     notes: data.notes,
-      //     alertId: alert?.id, // Link to alert for tracking
-      //   }),
-      // });
-      //
-      // if (!response.ok) throw new Error('Failed to create order');
+      const supplier = alert.suppliers?.find((s) => s.id === data.supplierId);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!supplier) {
+        throw new Error("Supplier not found");
+      }
 
-      const supplier = MOCK_SUPPLIERS.find((s) => s.id === data.supplierId);
-      const selectedMaterial = MOCK_MATERIALS.find((m) => m.id === data.materialId);
+      // Create supplier order with the API
+      await createOrder.mutateAsync({
+        supplierId: data.supplierId,
+        items: [
+          {
+            materialId: data.materialId,
+            quantity: data.quantity,
+            unit: alert.unit,
+            unitPrice: supplier.price,
+          },
+        ],
+        expectedDate: data.expectedDeliveryDate,
+        notes: data.notes || `Restock order from alert for ${alert.materialName}`,
+      });
 
       toast({
         title: t("alerts.toasts.orderCreated"),
-        description: `Order reminder created: ${data.quantity} ${selectedMaterial?.unit || "units"} of ${selectedMaterial?.name || "material"} from ${supplier?.name || "supplier"}`,
+        description: `Order created: ${data.quantity} ${alert.unit} of ${alert.materialName} from ${supplier.name}`,
       });
 
       form.reset();
@@ -157,40 +137,36 @@ export default function PlaceOrderDialog({
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to create order reminder. Please try again.",
+        description:
+          error instanceof Error ? error.message : "Failed to create order. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  // Get selected material for display
-  const selectedMaterialId = form.watch("materialId");
-  const selectedMaterial = MOCK_MATERIALS.find((m) => m.id === selectedMaterialId);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>{t("alerts.createOrderDialog.title")}</DialogTitle>
-          <DialogDescription>
-            {t("alerts.createOrderDialog.description")}
-          </DialogDescription>
+          <DialogDescription>{t("alerts.createOrderDialog.description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Alert Info (if from alert) */}
             {alert && (
-              <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+              <div className="bg-muted/50 space-y-2 rounded-lg p-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium text-sm">{alert.title}</p>
-                  <Badge variant="outline">
-                    {alert.priority === "critical" ? "Urgent" : alert.priority}
+                  <p className="text-sm font-medium">{alert.materialName}</p>
+                  <Badge variant={alert.severity === "critical" ? "destructive" : "outline"}>
+                    {alert.severity === "critical" ? "Urgent" : "Warning"}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">{alert.message}</p>
+                <p className="text-muted-foreground text-xs">
+                  Current stock: {alert.currentStock} {alert.unit} / Min: {alert.minStock}{" "}
+                  {alert.unit} ({alert.stockPercentage}%)
+                </p>
               </div>
             )}
 
@@ -208,12 +184,19 @@ export default function PlaceOrderDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {MOCK_SUPPLIERS.map((supplier) => (
+                      {alert?.suppliers?.map((supplier) => (
                         <SelectItem key={supplier.id} value={supplier.id}>
-                          <div className="flex flex-col">
-                            <span>{supplier.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {supplier.phone}
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-2">
+                              {supplier.name}
+                              {supplier.isPreferred && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Preferred
+                                </Badge>
+                              )}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {supplier.price} per {alert.unit}
                             </span>
                           </div>
                         </SelectItem>
@@ -225,36 +208,49 @@ export default function PlaceOrderDialog({
               )}
             />
 
-            {/* Material */}
-            <FormField
-              control={form.control}
-              name="materialId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("alerts.createOrderDialog.material")} *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("alerts.createOrderDialog.selectMaterial")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {MOCK_MATERIALS.map((mat) => (
-                        <SelectItem key={mat.id} value={mat.id}>
-                          <div className="flex items-center justify-between gap-2">
-                            <span>{mat.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              ({mat.currentStock}/{mat.minStock} {mat.unit})
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Material - Hidden field since we already have materialId from alert */}
+            <input type="hidden" {...form.register("materialId")} />
+
+            {/* Material Display */}
+            {alert && (
+              <div className="rounded-md border p-3">
+                <p className="text-sm font-medium">{alert.materialName}</p>
+                <p className="text-muted-foreground text-xs">SKU: {alert.materialSku}</p>
+              </div>
+            )}
+
+            {/* Material - Fallback selector if no alert */}
+            {!alert && (
+              <FormField
+                control={form.control}
+                name="materialId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("alerts.createOrderDialog.material")} *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("alerts.createOrderDialog.selectMaterial")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {MOCK_MATERIALS.map((mat) => (
+                          <SelectItem key={mat.id} value={mat.id}>
+                            <div className="flex items-center justify-between gap-2">
+                              <span>{mat.name}</span>
+                              <span className="text-muted-foreground text-xs">
+                                ({mat.currentStock}/{mat.minStock} {mat.unit})
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Quantity */}
             <FormField
@@ -263,7 +259,7 @@ export default function PlaceOrderDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("alerts.createOrderDialog.quantity")} *</FormLabel>
-                  <div className="flex gap-2 items-end">
+                  <div className="flex items-end gap-2">
                     <FormControl>
                       <Input
                         type="number"
@@ -274,19 +270,16 @@ export default function PlaceOrderDialog({
                         className="flex-1"
                       />
                     </FormControl>
-                    {selectedMaterial && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted min-w-[60px] justify-center">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          {selectedMaterial.unit}
-                        </span>
+                    {alert && (
+                      <div className="bg-muted flex min-w-[60px] items-center justify-center gap-2 rounded-md px-3 py-2">
+                        <Package className="text-muted-foreground h-4 w-4" />
+                        <span className="text-sm font-medium">{alert.unit}</span>
                       </div>
                     )}
                   </div>
-                  {selectedMaterial && suggestedQuantity > 0 && (
+                  {alert && suggestedQuantity > 0 && (
                     <FormDescription>
-                      {t("alerts.createOrderDialog.suggested")}: {suggestedQuantity}{" "}
-                      {selectedMaterial.unit}
+                      {t("alerts.createOrderDialog.suggested")}: {suggestedQuantity} {alert.unit}
                     </FormDescription>
                   )}
                   <FormMessage />
@@ -312,35 +305,6 @@ export default function PlaceOrderDialog({
               )}
             />
 
-            {/* Priority */}
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("alerts.createOrderDialog.priority")} *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={Priority.LOW}>{t("alerts.priorities.low")}</SelectItem>
-                      <SelectItem value={Priority.MEDIUM}>
-                        {t("alerts.priorities.medium")}
-                      </SelectItem>
-                      <SelectItem value={Priority.HIGH}>{t("alerts.priorities.high")}</SelectItem>
-                      <SelectItem value={Priority.URGENT}>
-                        {t("alerts.priorities.urgent")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             {/* Notes */}
             <FormField
               control={form.control}
@@ -355,9 +319,7 @@ export default function PlaceOrderDialog({
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    {t("alerts.createOrderDialog.notesHint")}
-                  </FormDescription>
+                  <FormDescription>{t("alerts.createOrderDialog.notesHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -368,12 +330,12 @@ export default function PlaceOrderDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={createOrder.isPending}
               >
                 {t("common.actions.cancel")}
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={createOrder.isPending}>
+                {createOrder.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 {t("alerts.createOrderDialog.submit")}
               </Button>

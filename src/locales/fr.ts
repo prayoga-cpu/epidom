@@ -1479,7 +1479,11 @@ export const fr = {
       createOrder: "Créer Commande",
       callSupplier: "Appeler",
       emailSupplier: "Email",
+      noSupplier: "Aucun Fournisseur",
     },
+
+    // Supplier info
+    noSupplierAssigned: "Aucun Fournisseur Assigné",
 
     // Details Dialog
     detailsDialog: {
@@ -1528,8 +1532,14 @@ export const fr = {
     current: "Actuel",
     required: "Requis",
     toOrder: "À Commander",
+    quantity: "Quantité",
+    price: "Prix",
+    total: "Total",
+    orderTotal: "Total de la Commande",
+    expectedDelivery: "Livraison Prévue",
     noOrdersToPlace: "Aucune Commande à Passer",
     noOrdersDescription: "Vous n'avez aucune commande en attente pour le moment",
+    errorLoadingOrders: "Échec du chargement des commandes",
 
     // Toasts
     toasts: {

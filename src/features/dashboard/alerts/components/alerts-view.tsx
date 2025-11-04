@@ -10,7 +10,7 @@ import { OrdersView } from "./orders-view";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlertsCount } from "../hooks/use-alerts-count";
-import { type Alert } from "@/types/entities";
+import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 
 export function AlertsView() {
   const router = useRouter();
@@ -35,19 +35,13 @@ export function AlertsView() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [isOrders, pathname, router, searchParams]);
 
-  // Handle view alert details
-  const handleViewDetails = (alert: Alert) => {
-    setSelectedAlert(alert);
-    setIsDetailsDialogOpen(true);
-  };
-
   // Handle create order from alert
   const handleCreateOrder = (alert: Alert) => {
     setSelectedAlert(alert);
     setIsOrderDialogOpen(true);
   };
 
-  // Handle create order from details dialog
+  // Handle create order from details dialog (deprecated - details dialog removed)
   const handleCreateOrderFromDetails = () => {
     setIsDetailsDialogOpen(false);
     setIsOrderDialogOpen(true);
@@ -75,21 +69,19 @@ export function AlertsView() {
           </Button>
         </CardHeader>
         <CardContent className="p-0">
-          {isOrders ? (
-            <OrdersView />
-          ) : (
-            <AlertsTable onViewDetails={handleViewDetails} onCreateOrder={handleCreateOrder} />
-          )}
+          {isOrders ? <OrdersView /> : <AlertsTable onCreateOrder={handleCreateOrder} />}
         </CardContent>
       </Card>
 
-      {/* Alert Details Dialog */}
-      <AlertDetailsDialog
-        open={isDetailsDialogOpen}
-        onOpenChange={setIsDetailsDialogOpen}
-        alert={selectedAlert}
-        onCreateOrder={handleCreateOrderFromDetails}
-      />
+      {/* Alert Details Dialog - Deprecated, details now shown inline */}
+      {selectedAlert && isDetailsDialogOpen && (
+        <AlertDetailsDialog
+          open={isDetailsDialogOpen}
+          onOpenChange={setIsDetailsDialogOpen}
+          alert={selectedAlert as any}
+          onCreateOrder={handleCreateOrderFromDetails}
+        />
+      )}
 
       {/* Place Order Dialog */}
       <PlaceOrderDialog

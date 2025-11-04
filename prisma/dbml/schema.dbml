@@ -16,9 +16,9 @@ Table users {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   accounts accounts [not null]
+  alerts alerts [not null]
   business businesses
   subscription subscriptions
-  alerts alerts [not null]
 }
 
 Table accounts {
@@ -44,7 +44,6 @@ Table accounts {
 Table businesses {
   id String [pk]
   userId String [unique, not null]
-  user users [not null]
   name String [not null]
   address String
   city String
@@ -58,13 +57,13 @@ Table businesses {
   locale String [not null, default: 'en']
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  user users [not null]
   stores stores [not null]
 }
 
 Table stores {
   id String [pk]
   businessId String [not null]
-  business businesses [not null]
   name String [not null]
   address String
   city String
@@ -75,18 +74,19 @@ Table stores {
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  products products [not null]
   ingredients ingredients [not null]
-  recipes recipes [not null]
-  suppliers suppliers [not null]
   orders orders [not null]
   productionBatches production_batches [not null]
+  products products [not null]
+  recipes recipes [not null]
+  business businesses [not null]
+  supplierOrders supplier_orders [not null]
+  suppliers suppliers [not null]
 }
 
 Table subscriptions {
   id String [pk]
   userId String [unique, not null]
-  user users [not null]
   stripeCustomerId String [unique, not null]
   stripeSubscriptionId String [unique]
   stripePriceId String
@@ -97,12 +97,11 @@ Table subscriptions {
   cancelAtPeriodEnd Boolean [not null, default: false]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  user users [not null]
 }
 
 Table products {
   id String [pk]
-  storeId String [not null]
-  store stores [not null]
   sku String [unique, not null]
   name String [not null]
   description String
@@ -111,24 +110,24 @@ Table products {
   sellingPrice Decimal [not null]
   currentStock Decimal [not null, default: 0]
   unit String [not null, default: 'piece']
-  minStock Decimal [not null, default: 0]
-  maxStock Decimal [not null, default: 1000]
-  recipeId String
-  recipe recipes
   productionTime Int
   shelfLife Int
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  stockMovements stock_movements [not null]
-  productionBatches production_batches [not null]
+  storeId String [not null]
+  maxStock Decimal [not null, default: 1000]
+  minStock Decimal [not null, default: 0]
+  recipeId String
   orderItems order_items [not null]
+  productionBatches production_batches [not null]
+  recipe recipes
+  store stores [not null]
+  stockMovements stock_movements [not null]
 }
 
 Table ingredients {
   id String [pk]
-  storeId String [not null]
-  store stores [not null]
   sku String [unique, not null]
   name String [not null]
   description String
@@ -136,26 +135,29 @@ Table ingredients {
   unit String [not null, default: 'kg']
   unitCost Decimal [not null]
   currentStock Decimal [not null, default: 0]
-  minStock Decimal [not null, default: 0]
-  maxStock Decimal [not null, default: 1000]
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  maxStock Decimal [not null, default: 1000]
+  minStock Decimal [not null, default: 0]
+  storeId String [not null]
+  materialSuppliers ingredient_suppliers [not null]
+  store stores [not null]
   recipeIngredients recipe_ingredients [not null]
   stockMovements stock_movements [not null]
-  materialSuppliers ingredient_suppliers [not null]
+  supplierOrderItems supplier_order_items [not null]
 }
 
 Table ingredient_suppliers {
   id String [pk]
-  materialId String [not null]
-  material ingredients [not null]
   supplierId String [not null]
-  supplier suppliers [not null]
   price Decimal [not null]
   isPreferred Boolean [not null, default: false]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  materialId String [not null]
+  material ingredients [not null]
+  supplier suppliers [not null]
 
   indexes {
     (materialId, supplierId) [unique]
@@ -164,34 +166,34 @@ Table ingredient_suppliers {
 
 Table recipes {
   id String [pk]
-  storeId String [not null]
-  store stores [not null]
-  name String [not null]
-  description String
-  category String
-  yieldQuantity Decimal [not null]
-  yieldUnit String [not null]
-  productionTimeMinutes Int [not null]
-  costPerBatch Decimal [not null, default: 0]
   instructions String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  storeId String [not null]
+  category String
+  costPerBatch Decimal [not null, default: 0]
+  description String
+  name String [not null]
+  productionTimeMinutes Int [not null]
+  yieldQuantity Decimal [not null]
+  yieldUnit String [not null]
+  productionBatches production_batches [not null]
   products products [not null]
   ingredients recipe_ingredients [not null]
-  productionBatches production_batches [not null]
+  store stores [not null]
 }
 
 Table recipe_ingredients {
   id String [pk]
   recipeId String [not null]
-  recipe recipes [not null]
-  materialId String [not null]
-  material ingredients [not null]
   quantity Decimal [not null]
   unit String [not null]
-  notes String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  notes String
+  materialId String [not null]
+  material ingredients [not null]
+  recipe recipes [not null]
 
   indexes {
     (recipeId, materialId) [unique]
@@ -200,13 +202,9 @@ Table recipe_ingredients {
 
 Table production_batches {
   id String [pk]
-  storeId String [not null]
-  store stores [not null]
   batchNumber String [unique, not null]
   productId String [not null]
-  product products [not null]
   recipeId String
-  recipe recipes
   plannedQuantity Decimal [not null]
   actualQuantity Decimal
   unit String [not null]
@@ -216,31 +214,33 @@ Table production_batches {
   notes String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  storeId String [not null]
+  product products [not null]
+  recipe recipes
+  store stores [not null]
   stockMovements stock_movements [not null]
 }
 
 Table stock_movements {
   id String [pk]
   productId String
-  product products
-  materialId String
-  material ingredients
   type MovementType [not null]
   quantity Decimal [not null]
   unit String [not null]
   balanceAfter Decimal [not null]
   orderId String
-  order orders
   productionBatchId String
-  productionBatch production_batches
   notes String
   createdAt DateTime [default: `now()`, not null]
+  materialId String
+  material ingredients
+  order orders
+  product products
+  productionBatch production_batches
 }
 
 Table suppliers {
   id String [pk]
-  storeId String [not null]
-  store stores [not null]
   name String [not null]
   contactPerson String
   email String
@@ -252,13 +252,49 @@ Table suppliers {
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  storeId String [not null]
   materialSuppliers ingredient_suppliers [not null]
+  supplierOrders supplier_orders [not null]
+  store stores [not null]
+}
+
+Table supplier_orders {
+  id String [pk]
+  storeId String [not null]
+  supplierId String [not null]
+  orderNumber String [unique, not null]
+  status SupplierOrderStatus [not null, default: 'PENDING']
+  orderDate DateTime [default: `now()`, not null]
+  expectedDate DateTime
+  receivedDate DateTime
+  subtotal Decimal [not null]
+  tax Decimal [not null, default: 0]
+  shipping Decimal [not null, default: 0]
+  total Decimal [not null]
+  notes String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  items supplier_order_items [not null]
+  store stores [not null]
+  supplier suppliers [not null]
+}
+
+Table supplier_order_items {
+  id String [pk]
+  orderId String [not null]
+  materialId String [not null]
+  quantity Decimal [not null]
+  unit String [not null]
+  unitPrice Decimal [not null]
+  total Decimal [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  material ingredients [not null]
+  order supplier_orders [not null]
 }
 
 Table orders {
   id String [pk]
-  storeId String [not null]
-  store stores [not null]
   orderNumber String [unique, not null]
   customerName String [not null]
   customerEmail String
@@ -275,28 +311,29 @@ Table orders {
   notes String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  storeId String [not null]
   items order_items [not null]
+  store stores [not null]
   stockMovements stock_movements [not null]
 }
 
 Table order_items {
   id String [pk]
   orderId String [not null]
-  order orders [not null]
   productId String [not null]
-  product products [not null]
   quantity Decimal [not null]
   unit String [not null]
   unitPrice Decimal [not null]
   total Decimal [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  order orders [not null]
+  product products [not null]
 }
 
 Table alerts {
   id String [pk]
   userId String [not null]
-  user users [not null]
   type AlertType [not null]
   severity AlertSeverity [not null, default: 'INFO']
   title String [not null]
@@ -305,6 +342,7 @@ Table alerts {
   entityId String
   isRead Boolean [not null, default: false]
   createdAt DateTime [default: `now()`, not null]
+  user users [not null]
 }
 
 Enum SubscriptionPlan {
@@ -334,6 +372,13 @@ Enum MovementType {
   SALE
   ADJUSTMENT
   WASTE
+}
+
+Enum SupplierOrderStatus {
+  PENDING
+  PLACED
+  RECEIVED
+  CANCELLED
 }
 
 Enum OrderStatus {
@@ -367,9 +412,9 @@ Ref: stores.businessId > businesses.id [delete: Cascade]
 
 Ref: subscriptions.userId - users.id [delete: Cascade]
 
-Ref: products.storeId > stores.id [delete: Cascade]
+Ref: products.recipeId > recipes.id
 
-Ref: products.recipeId > recipes.id [delete: Set Null]
+Ref: products.storeId > stores.id [delete: Cascade]
 
 Ref: ingredients.storeId > stores.id [delete: Cascade]
 
@@ -379,25 +424,33 @@ Ref: ingredient_suppliers.supplierId > suppliers.id [delete: Cascade]
 
 Ref: recipes.storeId > stores.id [delete: Cascade]
 
-Ref: recipe_ingredients.recipeId > recipes.id [delete: Cascade]
-
 Ref: recipe_ingredients.materialId > ingredients.id [delete: Cascade]
 
-Ref: production_batches.storeId > stores.id [delete: Cascade]
+Ref: recipe_ingredients.recipeId > recipes.id [delete: Cascade]
 
 Ref: production_batches.productId > products.id [delete: Cascade]
 
-Ref: production_batches.recipeId > recipes.id [delete: Set Null]
+Ref: production_batches.recipeId > recipes.id
 
-Ref: stock_movements.productId > products.id [delete: Cascade]
+Ref: production_batches.storeId > stores.id [delete: Cascade]
 
 Ref: stock_movements.materialId > ingredients.id [delete: Cascade]
 
-Ref: stock_movements.orderId > orders.id [delete: Set Null]
+Ref: stock_movements.orderId > orders.id
 
-Ref: stock_movements.productionBatchId > production_batches.id [delete: Set Null]
+Ref: stock_movements.productId > products.id [delete: Cascade]
+
+Ref: stock_movements.productionBatchId > production_batches.id
 
 Ref: suppliers.storeId > stores.id [delete: Cascade]
+
+Ref: supplier_orders.storeId > stores.id [delete: Cascade]
+
+Ref: supplier_orders.supplierId > suppliers.id [delete: Cascade]
+
+Ref: supplier_order_items.materialId > ingredients.id [delete: Cascade]
+
+Ref: supplier_order_items.orderId > supplier_orders.id [delete: Cascade]
 
 Ref: orders.storeId > stores.id [delete: Cascade]
 

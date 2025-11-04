@@ -1471,7 +1471,11 @@ export const id = {
       createOrder: "Buat Pesanan",
       callSupplier: "Telepon",
       emailSupplier: "Email",
+      noSupplier: "Tidak Ada Pemasok",
     },
+
+    // Supplier info
+    noSupplierAssigned: "Tidak Ada Pemasok",
 
     // Details Dialog
     detailsDialog: {
@@ -1520,8 +1524,14 @@ export const id = {
     current: "Saat Ini",
     required: "Diperlukan",
     toOrder: "Perlu Dipesan",
+    quantity: "Kuantitas",
+    price: "Harga",
+    total: "Total",
+    orderTotal: "Total Pesanan",
+    expectedDelivery: "Pengiriman Diharapkan",
     noOrdersToPlace: "Tidak Ada Pesanan yang Perlu Dibuat",
     noOrdersDescription: "Anda tidak memiliki pesanan yang tertunda saat ini",
+    errorLoadingOrders: "Gagal memuat pesanan",
 
     // Toasts
     toasts: {

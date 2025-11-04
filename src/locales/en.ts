@@ -1472,7 +1472,11 @@ export const en = {
       createOrder: "Create Order",
       callSupplier: "Call",
       emailSupplier: "Email",
+      noSupplier: "No Supplier",
     },
+
+    // Supplier info
+    noSupplierAssigned: "No Supplier Assigned",
 
     // Details Dialog
     detailsDialog: {
@@ -1521,8 +1525,14 @@ export const en = {
     current: "Current",
     required: "Required",
     toOrder: "To Order",
+    quantity: "Quantity",
+    price: "Price",
+    total: "Total",
+    orderTotal: "Order Total",
+    expectedDelivery: "Expected Delivery",
     noOrdersToPlace: "No Orders to Place",
     noOrdersDescription: "You don't have any pending orders at the moment",
+    errorLoadingOrders: "Failed to load orders",
 
     // Toasts
     toasts: {
