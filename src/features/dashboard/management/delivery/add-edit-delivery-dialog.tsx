@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -25,12 +26,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useI18n } from "@/components/lang/i18n-provider";
 import {
   SupplierDelivery,
-  DeliveryType,
   SupplierDeliveryStatus,
-  SupplierDeliveryItem
+  SupplierDeliveryItem,
 } from "@/types/entities";
 import { MOCK_SUPPLIERS, MOCK_MATERIALS } from "@/mocks";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { formatDate } from "@/lib/utils/formatting";
 import { CalendarIcon, Plus, Trash2 } from "lucide-react";
 import {
@@ -41,6 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useUpdateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 
 interface AddEditDeliveryDialogProps {
   open: boolean;
@@ -64,23 +66,25 @@ export default function AddEditDeliveryDialog({
 }: AddEditDeliveryDialogProps) {
   const { t } = useI18n();
   const { toast } = useToast();
+  const params = useParams();
+  const storeId = params?.storeId as string;
 
   // Form state
   const [deliveryReference, setDeliveryReference] = useState("");
   const [supplierId, setSupplierId] = useState("");
-  const [deliveryType, setDeliveryType] = useState<DeliveryType>(DeliveryType.INCOMING);
   const [status, setStatus] = useState<SupplierDeliveryStatus>(SupplierDeliveryStatus.PENDING);
   const [expectedDate, setExpectedDate] = useState<Date | undefined>(undefined);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<DeliveryItemForm[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Use mutation hook for updating
+  const updateMutation = useUpdateSupplierOrder(storeId, delivery?.id || "");
 
   // Initialize form with delivery data when editing
   useEffect(() => {
     if (delivery && mode === "edit") {
       setDeliveryReference(delivery.deliveryReference);
       setSupplierId(delivery.supplierId);
-      setDeliveryType(delivery.deliveryType);
       setStatus(delivery.status);
       setExpectedDate(new Date(delivery.expectedDate));
       setNotes(delivery.notes || "");
@@ -96,7 +100,6 @@ export default function AddEditDeliveryDialog({
       // Reset form for add mode
       setDeliveryReference(generateDeliveryReference());
       setSupplierId("");
-      setDeliveryType(DeliveryType.INCOMING);
       setStatus(SupplierDeliveryStatus.PENDING);
       setExpectedDate(undefined);
       setNotes("");
@@ -144,7 +147,37 @@ export default function AddEditDeliveryDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
+    // For edit mode, only validate what can be edited (expectedDate and notes)
+    if (mode === "edit") {
+      if (!expectedDate) {
+        toast({
+          title: t("common.validation.error"),
+          description: t(
+            "management.delivery.dialogs.addEditDelivery.validation.expectedDateRequired"
+          ),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!delivery) return;
+
+      // Use mutation hook to update
+      updateMutation.mutate(
+        {
+          expectedDate: expectedDate.toISOString(),
+          notes: notes || undefined,
+        },
+        {
+          onSuccess: () => {
+            onOpenChange(false);
+          },
+        }
+      );
+      return;
+    }
+
+    // Add mode validation (for future implementation)
     if (!deliveryReference.trim()) {
       toast({
         title: t("common.validation.error"),
@@ -166,7 +199,9 @@ export default function AddEditDeliveryDialog({
     if (!expectedDate) {
       toast({
         title: t("common.validation.error"),
-        description: t("management.delivery.dialogs.addEditDelivery.validation.expectedDateRequired"),
+        description: t(
+          "management.delivery.dialogs.addEditDelivery.validation.expectedDateRequired"
+        ),
         variant: "destructive",
       });
       return;
@@ -186,35 +221,20 @@ export default function AddEditDeliveryDialog({
     if (hasEmptyItems) {
       toast({
         title: t("common.validation.error"),
-        description: t("management.delivery.dialogs.addEditDelivery.validation.itemsMustHaveMaterial"),
+        description: t(
+          "management.delivery.dialogs.addEditDelivery.validation.itemsMustHaveMaterial"
+        ),
         variant: "destructive",
       });
       return;
     }
 
-    setIsSubmitting(true);
-
-    // TODO: API call to create/update delivery
-    // if (mode === "add") {
-    //   await createDelivery({ deliveryReference, supplierId, deliveryType, status, expectedDate, notes, items });
-    // } else {
-    //   await updateDelivery(delivery.id, { deliveryReference, supplierId, deliveryType, status, expectedDate, notes, items });
-    // }
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const createdDesc = t("management.delivery.dialogs.addEditDelivery.toasts.created.description") || "Delivery {reference} has been created successfully";
-      const updatedDesc = t("management.delivery.dialogs.addEditDelivery.toasts.updated.description") || "Delivery {reference} has been updated successfully";
-      toast({
-        title: mode === "add" ? t("management.delivery.dialogs.addEditDelivery.toasts.created.title") : t("management.delivery.dialogs.addEditDelivery.toasts.updated.title"),
-        description:
-          mode === "add"
-            ? createdDesc.replace("{reference}", deliveryReference)
-            : updatedDesc.replace("{reference}", deliveryReference),
-      });
-      onOpenChange(false);
-    }, 1000);
+    // TODO: Implement add mode API call when needed
+    toast({
+      title: t("common.validation.error"),
+      description: "Add mode is not implemented yet. Orders should be created from alerts.",
+      variant: "destructive",
+    });
   };
 
   return (
@@ -222,34 +242,46 @@ export default function AddEditDeliveryDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>
-            {mode === "add" ? t("management.delivery.dialogs.addEditDelivery.addTitle") : t("management.delivery.dialogs.addEditDelivery.editTitle")}
+            {mode === "add"
+              ? t("management.delivery.dialogs.addEditDelivery.addTitle")
+              : t("management.delivery.dialogs.addEditDelivery.editTitle")}
           </DialogTitle>
           <DialogDescription>
             {mode === "add"
               ? t("management.delivery.dialogs.addEditDelivery.addDescription")
-              : (t("management.delivery.dialogs.addEditDelivery.editDescription") || "Update delivery {reference}").replace("{reference}", delivery?.deliveryReference || "")}
+              : (
+                  t("management.delivery.dialogs.addEditDelivery.editDescription") ||
+                  "Update delivery {reference}"
+                ).replace("{reference}", delivery?.deliveryReference || "")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Delivery Reference */}
           <div className="space-y-2">
-            <Label htmlFor="deliveryReference">{t("management.delivery.dialogs.addEditDelivery.deliveryReference")} *</Label>
+            <Label htmlFor="deliveryReference">
+              {t("management.delivery.dialogs.addEditDelivery.deliveryReference")} *
+            </Label>
             <Input
               id="deliveryReference"
               value={deliveryReference}
               onChange={(e) => setDeliveryReference(e.target.value)}
               placeholder="DEL-2025-001"
               required
+              disabled={mode === "edit"}
             />
           </div>
 
           {/* Supplier */}
           <div className="space-y-2">
-            <Label htmlFor="supplier">{t("management.delivery.dialogs.addEditDelivery.supplier")} *</Label>
-            <Select value={supplierId} onValueChange={setSupplierId}>
+            <Label htmlFor="supplier">
+              {t("management.delivery.dialogs.addEditDelivery.supplier")} *
+            </Label>
+            <Select value={supplierId} onValueChange={setSupplierId} disabled={mode === "edit"}>
               <SelectTrigger id="supplier">
-                <SelectValue placeholder={t("management.delivery.dialogs.addEditDelivery.selectSupplier")} />
+                <SelectValue
+                  placeholder={t("management.delivery.dialogs.addEditDelivery.selectSupplier")}
+                />
               </SelectTrigger>
               <SelectContent>
                 {MOCK_SUPPLIERS.map((supplier) => (
@@ -261,46 +293,46 @@ export default function AddEditDeliveryDialog({
             </Select>
           </div>
 
-          {/* Delivery Type & Status */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="deliveryType">{t("management.delivery.dialogs.addEditDelivery.deliveryType")} *</Label>
-              <Select
-                value={deliveryType}
-                onValueChange={(value) => setDeliveryType(value as DeliveryType)}
-              >
-                <SelectTrigger id="deliveryType">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={DeliveryType.INCOMING}>{t("management.delivery.type.incoming")}</SelectItem>
-                  <SelectItem value={DeliveryType.OUTGOING}>{t("management.delivery.type.outgoing")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">{t("management.delivery.dialogs.addEditDelivery.status")} *</Label>
-              <Select
-                value={status}
-                onValueChange={(value) => setStatus(value as SupplierDeliveryStatus)}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SupplierDeliveryStatus.PENDING}>{t("management.delivery.status.pending")}</SelectItem>
-                  <SelectItem value={SupplierDeliveryStatus.IN_TRANSIT}>{t("management.delivery.status.inTransit")}</SelectItem>
-                  <SelectItem value={SupplierDeliveryStatus.RECEIVED}>{t("management.delivery.status.received")}</SelectItem>
-                  <SelectItem value={SupplierDeliveryStatus.CANCELLED}>{t("management.delivery.status.cancelled")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Status */}
+          <div className="space-y-2">
+            <Label htmlFor="status">
+              {t("management.delivery.dialogs.addEditDelivery.status")} *
+            </Label>
+            <Select
+              value={status}
+              onValueChange={(value) => setStatus(value as SupplierDeliveryStatus)}
+              disabled={mode === "edit"}
+            >
+              <SelectTrigger id="status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SupplierDeliveryStatus.PENDING}>
+                  {t("management.delivery.status.pending")}
+                </SelectItem>
+                <SelectItem value={SupplierDeliveryStatus.IN_TRANSIT}>
+                  {t("management.delivery.status.inTransit")}
+                </SelectItem>
+                <SelectItem value={SupplierDeliveryStatus.RECEIVED}>
+                  {t("management.delivery.status.received")}
+                </SelectItem>
+                <SelectItem value={SupplierDeliveryStatus.CANCELLED}>
+                  {t("management.delivery.status.cancelled")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {mode === "edit" && (
+              <p className="text-muted-foreground text-xs">
+                Use "Update Status" button to change delivery status
+              </p>
+            )}
           </div>
 
           {/* Expected Date */}
           <div className="space-y-2">
-            <Label htmlFor="expectedDate">{t("management.delivery.dialogs.addEditDelivery.expectedDate")} *</Label>
+            <Label htmlFor="expectedDate">
+              {t("management.delivery.dialogs.addEditDelivery.expectedDate")} *
+            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -309,11 +341,18 @@ export default function AddEditDeliveryDialog({
                   className="w-full justify-start text-left font-normal"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {expectedDate ? formatDate(expectedDate) : t("management.delivery.dialogs.addEditDelivery.selectExpectedDate")}
+                  {expectedDate
+                    ? formatDate(expectedDate)
+                    : t("management.delivery.dialogs.addEditDelivery.selectExpectedDate")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={expectedDate} onSelect={setExpectedDate} initialFocus />
+                <Calendar
+                  mode="single"
+                  selected={expectedDate}
+                  onSelect={setExpectedDate}
+                  initialFocus
+                />
               </PopoverContent>
             </Popover>
           </div>
@@ -322,11 +361,18 @@ export default function AddEditDeliveryDialog({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>{t("management.delivery.dialogs.addEditDelivery.items")} *</Label>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("management.delivery.dialogs.addEditDelivery.addItem")}
-              </Button>
+              {mode === "add" && (
+                <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("management.delivery.dialogs.addEditDelivery.addItem")}
+                </Button>
+              )}
             </div>
+            {mode === "edit" && (
+              <p className="text-muted-foreground text-xs">
+                Items cannot be modified after delivery creation
+              </p>
+            )}
 
             {items.length === 0 ? (
               <div className="bg-muted/30 rounded-lg border border-dashed p-8 text-center">
@@ -339,84 +385,104 @@ export default function AddEditDeliveryDialog({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("management.delivery.dialogs.addEditDelivery.material")}</TableHead>
-                      <TableHead className="w-[120px]">{t("management.delivery.dialogs.addEditDelivery.quantity")}</TableHead>
-                      <TableHead className="w-[100px]">{t("management.delivery.dialogs.addEditDelivery.unit")}</TableHead>
-                      <TableHead>{t("management.delivery.dialogs.addEditDelivery.notes")}</TableHead>
+                      <TableHead>
+                        {t("management.delivery.dialogs.addEditDelivery.material")}
+                      </TableHead>
+                      <TableHead className="w-[120px]">
+                        {t("management.delivery.dialogs.addEditDelivery.quantity")}
+                      </TableHead>
+                      <TableHead className="w-[100px]">
+                        {t("management.delivery.dialogs.addEditDelivery.unit")}
+                      </TableHead>
+                      <TableHead>
+                        {t("management.delivery.dialogs.addEditDelivery.notes")}
+                      </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <Select
-                            value={item.materialId}
-                            onValueChange={(value) => handleItemChange(index, "materialId", value)}
-                          >
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder={t("management.delivery.dialogs.addEditDelivery.selectMaterial")} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {MOCK_MATERIALS.map((material) => (
-                                <SelectItem key={material.id} value={material.id}>
-                                  {material.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={item.quantity || ""}
-                            onChange={(e) =>
-                              handleItemChange(index, "quantity", parseFloat(e.target.value) || 0)
-                            }
-                            className="h-9"
-                            min="0"
-                            step="0.01"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={item.unit}
-                            onValueChange={(value) => handleItemChange(index, "unit", value)}
-                          >
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="kg">kg</SelectItem>
-                              <SelectItem value="g">g</SelectItem>
-                              <SelectItem value="liter">liter</SelectItem>
-                              <SelectItem value="ml">ml</SelectItem>
-                              <SelectItem value="units">units</SelectItem>
-                              <SelectItem value="piece">piece</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            value={item.notes}
-                            onChange={(e) => handleItemChange(index, "notes", e.target.value)}
-                            placeholder={t("management.delivery.dialogs.addEditDelivery.optionalNotes")}
-                            className="h-9"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveItem(index)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {items.map((item, index) => {
+                      // Get material name for display in edit mode
+                      // In edit mode, get from delivery object; in add mode, get from MOCK_MATERIALS
+                      const material = mode === "edit" && delivery
+                        ? delivery.items.find((i) => i.materialId === item.materialId)?.material
+                        : MOCK_MATERIALS.find((m) => m.id === item.materialId);
+                      return (
+                        <TableRow key={index}>
+                          <TableCell>
+                            {mode === "edit" ? (
+                              <span className="text-sm">{material?.name || "Unknown Material"}</span>
+                            ) : (
+                              <Select
+                                value={item.materialId}
+                                onValueChange={(value) =>
+                                  handleItemChange(index, "materialId", value)
+                                }
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue
+                                    placeholder={t(
+                                      "management.delivery.dialogs.addEditDelivery.selectMaterial"
+                                    )}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {MOCK_MATERIALS.map((material) => (
+                                    <SelectItem key={material.id} value={material.id}>
+                                      {material.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.quantity || ""}
+                              onChange={(e) =>
+                                handleItemChange(index, "quantity", parseFloat(e.target.value) || 0)
+                              }
+                              className="h-9"
+                              min="0"
+                              step="0.01"
+                              disabled={mode === "edit"}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={item.unit}
+                              className="h-9"
+                              disabled={mode === "edit"}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={item.notes}
+                              onChange={(e) => handleItemChange(index, "notes", e.target.value)}
+                              placeholder={t(
+                                "management.delivery.dialogs.addEditDelivery.optionalNotes"
+                              )}
+                              className="h-9"
+                              disabled={mode === "edit"}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {mode === "add" && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveItem(index)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -439,11 +505,9 @@ export default function AddEditDeliveryDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("common.actions.cancel")}
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? mode === "add"
-                  ? t("management.delivery.dialogs.addEditDelivery.creating")
-                  : t("management.delivery.dialogs.addEditDelivery.updating")
+            <Button type="submit" disabled={mode === "edit" && updateMutation.isPending}>
+              {mode === "edit" && updateMutation.isPending
+                ? t("management.delivery.dialogs.addEditDelivery.updating")
                 : mode === "add"
                   ? t("management.delivery.dialogs.addEditDelivery.createDelivery")
                   : t("management.delivery.dialogs.addEditDelivery.updateDelivery")}

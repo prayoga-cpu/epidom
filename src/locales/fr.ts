@@ -60,6 +60,9 @@ export const fr = {
       error: "Erreur de Validation",
     },
     error: "Erreur",
+    notes: "Notes",
+    page: "Page",
+    other: "Autre",
     actions: {
       cancel: "Annuler",
       save: "Enregistrer",
@@ -1537,6 +1540,10 @@ export const fr = {
     total: "Total",
     orderTotal: "Total de la Commande",
     expectedDelivery: "Livraison Prévue",
+    markAsPlaced: "Marquer comme Passée",
+    placing: "En cours...",
+    orderPlaced: "Commande marquée comme passée",
+    orderPlacedError: "Échec de la mise à jour de la commande",
     noOrdersToPlace: "Aucune Commande à Passer",
     noOrdersDescription: "Vous n'avez aucune commande en attente pour le moment",
     errorLoadingOrders: "Échec du chargement des commandes",
@@ -1870,7 +1877,7 @@ export const fr = {
       dialogs: {
         updateStatus: {
           title: "Mettre à Jour le Statut de la Livraison",
-          description: "Mettre à jour le statut de cette livraison",
+          description: "Changer le statut de la livraison {reference}",
           currentStatus: "Statut Actuel",
           newStatus: "Nouveau Statut",
           receivedDate: "Date de Réception",
@@ -1879,6 +1886,18 @@ export const fr = {
           notesPlaceholder: "Ajoutez des notes sur ce changement de statut...",
           updateButton: "Mettre à Jour le Statut",
           success: "Statut mis à jour avec succès",
+          selectNewStatus: "Veuillez sélectionner un nouveau statut",
+          selectReceivedDate: "Veuillez sélectionner une date de réception",
+          selectNewStatusPlaceholder: "Sélectionner un nouveau statut",
+          selectReceivedDatePlaceholder: "Sélectionner la date de réception",
+          updating: "Mise à jour...",
+          updateStatus: "Mettre à Jour le Statut",
+          toasts: {
+            updated: {
+              title: "Statut Mis à Jour",
+              description: "Le statut de la livraison a été mis à jour à {status}",
+            },
+          },
         },
         printDelivery: {
           title: "Imprimer la Livraison",

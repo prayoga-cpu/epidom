@@ -60,6 +60,9 @@ export const id = {
       error: "Kesalahan Validasi",
     },
     error: "Kesalahan",
+    notes: "Catatan",
+    page: "Halaman",
+    other: "Lainnya",
     actions: {
       cancel: "Batalkan",
       save: "Simpan",
@@ -1529,6 +1532,10 @@ export const id = {
     total: "Total",
     orderTotal: "Total Pesanan",
     expectedDelivery: "Pengiriman Diharapkan",
+    markAsPlaced: "Tandai Sudah Dipesan",
+    placing: "Memproses...",
+    orderPlaced: "Pesanan ditandai sudah dipesan",
+    orderPlacedError: "Gagal menandai pesanan",
     noOrdersToPlace: "Tidak Ada Pesanan yang Perlu Dibuat",
     noOrdersDescription: "Anda tidak memiliki pesanan yang tertunda saat ini",
     errorLoadingOrders: "Gagal memuat pesanan",
@@ -1856,7 +1863,7 @@ export const id = {
       dialogs: {
         updateStatus: {
           title: "Perbarui Status Pengiriman",
-          description: "Perbarui status pengiriman ini",
+          description: "Ubah status pengiriman {reference}",
           currentStatus: "Status Saat Ini",
           newStatus: "Status Baru",
           receivedDate: "Tanggal Diterima",
@@ -1865,6 +1872,18 @@ export const id = {
           notesPlaceholder: "Tambahkan catatan tentang perubahan status ini...",
           updateButton: "Perbarui Status",
           success: "Status berhasil diperbarui",
+          selectNewStatus: "Harap pilih status baru",
+          selectReceivedDate: "Harap pilih tanggal diterima",
+          selectNewStatusPlaceholder: "Pilih status baru",
+          selectReceivedDatePlaceholder: "Pilih tanggal diterima",
+          updating: "Memperbarui...",
+          updateStatus: "Perbarui Status",
+          toasts: {
+            updated: {
+              title: "Status Diperbarui",
+              description: "Status pengiriman telah diperbarui menjadi {status}",
+            },
+          },
         },
         printDelivery: {
           title: "Cetak Pengiriman",

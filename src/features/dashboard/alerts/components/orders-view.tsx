@@ -6,17 +6,45 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useSupplierOrders } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
-import { Phone, Mail, MapPin, Package, Loader2, AlertCircle } from "lucide-react";
+import {
+  useSupplierOrders,
+  useUpdateSupplierOrder,
+} from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+import { Phone, Mail, MapPin, Package, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export function OrdersView() {
   const { t } = useI18n();
   const params = useParams();
   const storeId = params?.storeId as string;
+  const [placingOrder, setPlacingOrder] = useState<string | null>(null);
 
   const { data, isLoading, error } = useSupplierOrders(storeId);
+
+  // Handler to mark order as placed
+  const handleMarkAsPlaced = async (orderId: string) => {
+    setPlacingOrder(orderId);
+    try {
+      const response = await fetch(`/api/stores/${storeId}/supplier-orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "PLACED" }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update order");
+
+      toast.success(t("alerts.orderPlaced") || "Order marked as placed!");
+
+      // Refresh the data
+      window.location.reload();
+    } catch (error) {
+      toast.error(t("alerts.orderPlacedError") || "Failed to mark order as placed");
+    } finally {
+      setPlacingOrder(null);
+    }
+  };
 
   // Group orders by supplier and filter only PENDING status
   const ordersBySupplier = useMemo(() => {
@@ -196,21 +224,49 @@ export function OrdersView() {
 
                     {/* Order Summary */}
                     {orders.length > 0 && (
-                      <div className="bg-primary/5 mt-3 rounded-md p-3">
-                        <div className="flex items-center justify-between text-sm font-semibold">
-                          <span>{t("alerts.orderTotal")}:</span>
-                          <span className="text-primary">
-                            $
-                            {orders.reduce((sum, order) => sum + Number(order.total), 0).toFixed(2)}
-                          </span>
-                        </div>
-                        {orders[0].expectedDate && (
-                          <div className="text-muted-foreground mt-1 text-xs">
-                            {t("alerts.expectedDelivery")}:{" "}
-                            {new Date(orders[0].expectedDate).toLocaleDateString()}
+                      <>
+                        <div className="bg-primary/5 mt-3 rounded-md p-3">
+                          <div className="flex items-center justify-between text-sm font-semibold">
+                            <span>{t("alerts.orderTotal")}:</span>
+                            <span className="text-primary">
+                              $
+                              {orders
+                                .reduce((sum, order) => sum + Number(order.total), 0)
+                                .toFixed(2)}
+                            </span>
                           </div>
-                        )}
-                      </div>
+                          {orders[0].expectedDate && (
+                            <div className="text-muted-foreground mt-1 text-xs">
+                              {t("alerts.expectedDelivery")}:{" "}
+                              {new Date(orders[0].expectedDate).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="mt-3 flex gap-2">
+                          {orders.map((order) => (
+                            <Button
+                              key={order.id}
+                              onClick={() => handleMarkAsPlaced(order.id)}
+                              disabled={placingOrder === order.id}
+                              className="flex-1"
+                            >
+                              {placingOrder === order.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  {t("alerts.placing")}
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  {t("alerts.markAsPlaced")}
+                                </>
+                              )}
+                            </Button>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 </CardContent>
