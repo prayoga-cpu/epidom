@@ -1,13 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StockLevelsTab } from "./stock-levels-tab";
-import { MovementHistoryTab } from "./movement-history-tab";
-import { TrackingDialogs } from "./tracking-dialogs";
-import type { StockMovement } from "@/types/entities";
-import type { StockRow } from "@/mocks/inventory.mock";
 
 export function TrackingView() {
   const { t } = useI18n();
