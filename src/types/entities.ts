@@ -17,11 +17,10 @@ export enum MaterialCategory {
 }
 
 export enum ProductionStatus {
-  PENDING = "pending",
-  IN_PROGRESS = "in_progress",
-  QUALITY_CHECK = "quality_check",
-  COMPLETED = "completed",
-  FAILED = "failed",
+  PLANNED = "PLANNED",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
 }
 
 export enum OrderStatus {

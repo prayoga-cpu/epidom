@@ -16,11 +16,11 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
   // Calculate metrics
   const metrics = useMemo(() => {
     const totalBatches = batches.length;
-    const completedBatches = batches.filter((b) => b.status === "completed");
+    const completedBatches = batches.filter((b) => b.status === "COMPLETED");
     const inProgressBatches = batches.filter(
-      (b) => b.status === "in_progress" || b.status === "quality_check" || b.status === "pending"
+      (b) => b.status === "IN_PROGRESS" || b.status === "PLANNED"
     );
-    const failedBatches = batches.filter((b) => b.status === "failed");
+    const cancelledBatches = batches.filter((b) => b.status === "CANCELLED");
 
     // Calculate average quality score (only for completed batches with scores)
     const batchesWithScores = completedBatches.filter((b) => b.qualityScore !== null);
@@ -33,18 +33,18 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
     // Calculate production efficiency (actual vs target quantity)
     const efficiency =
       completedBatches.length > 0
-        ? (completedBatches.reduce((sum, b) => sum + b.quantityProduced, 0) /
-            completedBatches.reduce((sum, b) => sum + b.quantityPlanned, 0)) *
+        ? (completedBatches.reduce((sum, b) => sum + (b.actualQuantity || 0), 0) /
+            completedBatches.reduce((sum, b) => sum + b.plannedQuantity, 0)) *
           100
         : 0;
 
     // Calculate total output
-    const totalOutput = batches.reduce((sum, b) => sum + b.quantityProduced, 0);
+    const totalOutput = batches.reduce((sum, b) => sum + (b.actualQuantity || 0), 0);
 
     return {
       totalBatches,
       inProgressBatches: inProgressBatches.length,
-      failedBatches: failedBatches.length,
+      cancelledBatches: cancelledBatches.length,
       avgQuality,
       efficiency,
       totalOutput,
@@ -56,8 +56,8 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
       title: t("management.productionHistory.metrics.totalBatches"),
       value: metrics.totalBatches,
       icon: Package,
-      iconColor: "text-blue-600 dark:text-blue-400",
-      bgColor: "bg-blue-100 dark:bg-blue-900",
+      iconColor: "text-gray-700 dark:text-gray-300",
+      bgColor: "bg-gray-200 dark:bg-gray-700",
       description: t("management.productionHistory.metrics.totalBatchesDescription"),
     },
     {
@@ -65,8 +65,8 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
       value: metrics.avgQuality.toFixed(1),
       suffix: ` ${t("common.of")} 10`,
       icon: Star,
-      iconColor: "text-yellow-600 dark:text-yellow-400",
-      bgColor: "bg-yellow-100 dark:bg-yellow-900",
+      iconColor: "text-gray-700 dark:text-gray-300",
+      bgColor: "bg-gray-200 dark:bg-gray-700",
       description: t("management.productionHistory.metrics.averageQualityDescription"),
     },
     {
@@ -74,8 +74,8 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
       value: metrics.efficiency.toFixed(1),
       suffix: "%",
       icon: TrendingUp,
-      iconColor: "text-green-600 dark:text-green-400",
-      bgColor: "bg-green-100 dark:bg-green-900",
+      iconColor: "text-gray-700 dark:text-gray-300",
+      bgColor: "bg-gray-200 dark:bg-gray-700",
       description: t("management.productionHistory.metrics.efficiencyDescription"),
     },
     {
@@ -83,8 +83,8 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
       value: metrics.totalOutput,
       suffix: ` ${t("management.productionHistory.metrics.units")}`,
       icon: Package,
-      iconColor: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-100 dark:bg-purple-900",
+      iconColor: "text-gray-700 dark:text-gray-300",
+      bgColor: "bg-gray-200 dark:bg-gray-700",
       description: t("management.productionHistory.metrics.totalOutputDescription"),
     },
   ];

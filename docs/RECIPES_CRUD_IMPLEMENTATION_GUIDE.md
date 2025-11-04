@@ -358,7 +358,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    const storeId = params.id;
+    const storeId = (await params).id;
     const searchParams = request.nextUrl.searchParams;
 
     // Parse and validate filters
@@ -403,7 +403,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       );
     }
 
-    const storeId = params.id;
+    const storeId = (await params).id;
     const body = await request.json();
 
     // Validate input
@@ -510,7 +510,7 @@ export async function PATCH(
       );
     }
 
-    const storeId = params.id;
+    const storeId = (await params).id;
     const recipeId = params.recipeId;
     const body = await request.json();
 
@@ -557,7 +557,7 @@ export async function DELETE(
       );
     }
 
-    await recipeService.deleteRecipe(params.recipeId, params.id);
+    await recipeService.deleteRecipe(params.recipeId, (await params).id);
 
     return NextResponse.json<ApiSuccessResponse<{ message: string }>>(
       { success: true, data: { message: "Recipe deleted successfully" } },
@@ -616,7 +616,7 @@ export async function POST(
     const body = await request.json();
     const { newName } = duplicateSchema.parse(body);
 
-    const recipe = await recipeService.duplicateRecipe(params.recipeId, params.id, newName);
+    const recipe = await recipeService.duplicateRecipe(params.recipeId, (await params).id, newName);
 
     return NextResponse.json<ApiSuccessResponse<typeof recipe>>(
       { success: true, data: recipe },
@@ -668,7 +668,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const body = await request.json();
     const { ids } = bulkDeleteSchema.parse(body);
 
-    const deletedCount = await recipeService.bulkDeleteRecipes(ids, params.id);
+    const deletedCount = await recipeService.bulkDeleteRecipes(ids, (await params).id);
 
     return NextResponse.json<ApiSuccessResponse<{ message: string; deletedCount: number }>>(
       {
@@ -719,7 +719,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const storeId = params.id;
+    const storeId = (await params).id;
     const searchParams = request.nextUrl.searchParams;
 
     const filters = recipeFilterSchema.parse({

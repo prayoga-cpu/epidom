@@ -13,8 +13,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ProductionBatch } from "@/types/entities";
-import { MOCK_RECIPES, MOCK_RECIPE_INGREDIENTS, MOCK_MATERIALS } from "@/mocks";
 import {
   Package,
   Clock,
@@ -23,10 +21,10 @@ import {
   CheckCircle,
   Loader2,
   XCircle,
-  AlertCircle,
   Calendar,
   Download,
   Edit,
+  Ban,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils/formatting";
@@ -34,95 +32,90 @@ import { formatCurrency } from "@/lib/utils/formatting";
 interface BatchDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  batch: ProductionBatch;
+  batch: any; // ProductionBatchWithRelations from API
 }
 
 export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDialogProps) {
   const { t } = useI18n();
 
-  // Get recipe details
-  const recipe = useMemo(() => {
-    return MOCK_RECIPES.find((r) => r.id === batch.recipeId);
-  }, [batch.recipeId]);
+  // Use recipe from batch relations
+  const recipe = batch.recipe;
+  const product = batch.product;
 
-  // Get ingredient consumption
+  // Get ingredient consumption from recipe
   const ingredientConsumption = useMemo(() => {
-    if (!recipe) return [];
+    if (!recipe?.ingredients) return [];
 
-    const ingredients = MOCK_RECIPE_INGREDIENTS.filter((ri) => ri.recipeId === recipe.id);
+    const batchMultiplier = batch.plannedQuantity / (recipe.yieldQuantity || 1);
 
-    return ingredients
-      .map((ingredient) => {
-        const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+    return recipe.ingredients
+      .map((ingredient: any) => {
+        const material = ingredient.material;
         if (!material) return null;
 
-        const quantityUsed = ingredient.quantity * 1; // Assuming 1 batch was made
-        const cost = quantityUsed * material.costPerUnit;
+        const quantityUsed = ingredient.quantity * batchMultiplier;
+        const cost = quantityUsed * material.unitCost;
 
         return {
           materialName: material.name,
           quantityUsed,
-          unit: material.unit,
-          costPerUnit: material.costPerUnit,
+          unit: ingredient.unit,
+          costPerUnit: material.unitCost,
           totalCost: cost,
         };
       })
       .filter(Boolean);
-  }, [recipe]);
+  }, [recipe, batch.plannedQuantity]);
 
   // Calculate cost analysis
   const costAnalysis = useMemo(() => {
     if (!recipe) return { estimated: 0, actual: 0, variance: 0 };
 
-    const estimated = recipe.costPerBatch;
+    const batchMultiplier = batch.plannedQuantity / (recipe.yieldQuantity || 1);
+    const estimated = Number(recipe.costPerBatch) * batchMultiplier;
     const actual = ingredientConsumption.reduce((sum, ing) => sum + (ing?.totalCost || 0), 0);
     const variance = actual - estimated;
 
     return { estimated, actual, variance };
-  }, [recipe, ingredientConsumption]);
+  }, [recipe, ingredientConsumption, batch.plannedQuantity]);
 
   // Calculate production duration
   const duration = useMemo(() => {
-    if (!batch.completedAt || !batch.startedAt) return null;
-    const start = new Date(batch.startedAt as string | Date).getTime();
-    const end = new Date(batch.completedAt as string | Date).getTime();
+    if (!batch.completedDate || !batch.scheduledDate) return null;
+    const start = new Date(batch.scheduledDate).getTime();
+    const end = new Date(batch.completedDate).getTime();
     const diff = end - start;
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     return { minutes, hours, remainingMinutes };
-  }, [batch.startedAt, batch.completedAt]);
+  }, [batch.scheduledDate, batch.completedDate]);
 
-  // Get status configuration
+  // Get status configuration with neutral colors
   const getStatusConfig = (status: string) => {
     const configs = {
-      pending: {
-        label: t("management.productionHistory.statuses.pending"),
-        color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100",
+      PLANNED: {
+        label: t("management.productionHistory.statuses.planned") || "Planned",
+        color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100",
         icon: Clock,
       },
-      in_progress: {
-        label: t("management.productionHistory.statuses.inProgress"),
-        color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+      IN_PROGRESS: {
+        label: t("management.productionHistory.statuses.inProgress") || "In Progress",
+        color: "bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-50",
         icon: Loader2,
       },
-      quality_check: {
-        label: t("management.productionHistory.statuses.qualityCheck"),
-        color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
-        icon: AlertCircle,
-      },
-      completed: {
-        label: t("management.productionHistory.statuses.completed"),
-        color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+      COMPLETED: {
+        label: t("management.productionHistory.statuses.completed") || "Completed",
+        color: "bg-gray-300 text-gray-950 dark:bg-gray-600 dark:text-white",
         icon: CheckCircle,
       },
-      failed: {
-        label: t("management.productionHistory.statuses.failed"),
-        color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
-        icon: XCircle,
+      CANCELLED: {
+        label: t("management.productionHistory.statuses.cancelled") || "Cancelled",
+        color: "bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400",
+        icon: Ban,
       },
     };
-    return configs[status as keyof typeof configs] || configs.pending;
+    return configs[status as keyof typeof configs] || configs.PLANNED;
   };
 
   const statusConfig = getStatusConfig(batch.status);
@@ -156,15 +149,15 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900">
-                    <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="rounded-lg bg-gray-200 p-2 dark:bg-gray-700">
+                    <Package className="h-5 w-5 text-gray-700 dark:text-gray-300" />
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm">
                       {t("management.productionHistory.quantity")}
                     </p>
                     <p className="text-xl font-bold">
-                      {batch.quantityProduced}/{batch.quantityPlanned}
+                      {batch.actualQuantity || 0}/{batch.plannedQuantity} {batch.unit}
                     </p>
                   </div>
                 </div>
@@ -175,8 +168,8 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900">
-                      <Star className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                    <div className="rounded-lg bg-gray-200 p-2 dark:bg-gray-700">
+                      <Star className="h-5 w-5 text-gray-700 dark:text-gray-300" />
                     </div>
                     <div>
                       <p className="text-muted-foreground text-sm">
@@ -194,8 +187,8 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900">
-                    <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="rounded-lg bg-gray-200 p-2 dark:bg-gray-700">
+                    <DollarSign className="h-5 w-5 text-gray-700 dark:text-gray-300" />
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm">
@@ -211,8 +204,8 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900">
-                      <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <div className="rounded-lg bg-gray-200 p-2 dark:bg-gray-700">
+                      <Clock className="h-5 w-5 text-gray-700 dark:text-gray-300" />
                     </div>
                     <div>
                       <p className="text-muted-foreground text-sm">
@@ -319,27 +312,27 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                   <Calendar className="text-muted-foreground h-5 w-5" />
                   <div>
                     <p className="text-muted-foreground text-sm">
-                      {t("management.productionHistory.startedAt")}
+                      {t("management.productionHistory.scheduledDate") || "Scheduled"}
                     </p>
                     <p className="font-medium">
-                      {batch.startedAt
+                      {batch.scheduledDate
                         ? format(
-                            new Date(batch.startedAt as string | Date),
+                            new Date(batch.scheduledDate),
                             "MMMM d, yyyy 'at' HH:mm"
                           )
                         : t("common.notAvailable")}
                     </p>
                   </div>
                 </div>
-                {batch.completedAt && (
+                {batch.completedDate && (
                   <div className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CheckCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                     <div>
                       <p className="text-muted-foreground text-sm">
                         {t("management.productionHistory.completedAt")}
                       </p>
                       <p className="font-medium">
-                        {format(new Date(batch.completedAt), "MMMM d, yyyy 'at' HH:mm")}
+                        {format(new Date(batch.completedDate), "MMMM d, yyyy 'at' HH:mm")}
                       </p>
                     </div>
                   </div>
@@ -354,7 +347,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                       <p className="font-medium">
                         {duration.hours > 0 ? `${duration.hours} ${t("common.time.hours")} ` : ""}
                         {duration.remainingMinutes} {t("common.time.minutes")}
-                        {recipe.productionTimeMinutes && (
+                        {recipe?.productionTimeMinutes && (
                           <span className="text-muted-foreground ml-2 text-sm">
                             ({t("management.productionHistory.expected")}:{" "}
                             {recipe.productionTimeMinutes} {t("common.time.minutesShort")})
@@ -427,7 +420,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
               <Download className="mr-2 h-4 w-4" />
               {t("common.actions.export")}
             </Button>
-            {batch.status !== "completed" && batch.status !== "failed" && (
+            {batch.status !== "COMPLETED" && batch.status !== "CANCELLED" && (
               <Button>
                 <Edit className="mr-2 h-4 w-4" />
                 {t("common.actions.update")}

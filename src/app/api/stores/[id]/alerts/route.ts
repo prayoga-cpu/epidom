@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const storeId = params.id;
+    const storeId = (await params).id;
 
     // Verify user has access to this store
     const store = await prisma.store.findFirst({

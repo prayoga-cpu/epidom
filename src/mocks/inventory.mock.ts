@@ -669,7 +669,7 @@ export const MOCK_PRODUCTION_BATCHES: ProductionBatch[] = [
     quantityPlanned: 4,
     quantityProduced: 0,
     unit: "loaves",
-    status: ProductionStatus.PENDING,
+    status: ProductionStatus.PLANNED,
     storeId: "STORE-001",
     createdAt: new Date("2024-10-28T08:00:00"),
     updatedAt: new Date("2024-10-28T08:00:00"),

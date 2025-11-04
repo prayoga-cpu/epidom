@@ -1,112 +1,129 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  MOCK_RECIPES,
-  MOCK_PRODUCTION_BATCHES,
-  MOCK_MATERIALS,
-  MOCK_RECIPE_INGREDIENTS,
-} from "@/mocks";
-import {
   Search,
   PlayCircle,
   Clock,
   Package,
   AlertCircle,
-  CheckCircle,
-  XCircle,
+  Loader2,
   ChefHat,
 } from "lucide-react";
-import { ProductionBatch, Recipe } from "@/types/entities";
 import { StartProductionDialog } from "./start-production-dialog";
 import { ProductionBatchCard } from "./production-batch-card";
 import { MaterialAvailabilityCheck } from "./material-availability-check";
 import { formatCurrency } from "@/lib/utils/formatting";
+import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes";
+import { useProductionBatches } from "./hooks/use-production-batches";
 
 export function RecipeProductionCard() {
   const { t } = useI18n();
+  const params = useParams();
+  const storeId = params?.storeId as string;
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<any | null>(null);
   const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
+
+  // Fetch recipes from API
+  const { data: recipesData, isLoading: recipesLoading } = useRecipes(storeId, {
+    sortBy: "name",
+    sortOrder: "asc",
+    skip: 0,
+    take: 100,
+  });
+
+  // Fetch active production batches for selected recipe
+  const { data: batchesData, isLoading: batchesLoading } = useProductionBatches(storeId, {
+    status: ["IN_PROGRESS", "PLANNED"],
+    recipeId: selectedRecipe?.id,
+    sortBy: "scheduledDate",
+    sortOrder: "asc",
+    skip: 0,
+    take: 50,
+  });
 
   // Filter recipes based on search
   const filteredRecipes = useMemo(() => {
+    if (!recipesData?.recipes) return [];
     const query = searchQuery.toLowerCase();
-    return MOCK_RECIPES.filter(
-      (recipe: Recipe) =>
+    return recipesData.recipes.filter(
+      (recipe) =>
         recipe.name.toLowerCase().includes(query) ||
-        recipe.description.toLowerCase().includes(query) ||
-        recipe.category.toLowerCase().includes(query)
+        (recipe.description && recipe.description.toLowerCase().includes(query)) ||
+        (recipe.category && recipe.category.toLowerCase().includes(query))
     );
-  }, [searchQuery]);
+  }, [recipesData?.recipes, searchQuery]);
 
   // Get active batches for selected recipe
   const activeBatches = useMemo(() => {
-    if (!selectedRecipe) return [];
-    return MOCK_PRODUCTION_BATCHES.filter(
-      (batch) =>
-        batch.recipeId === selectedRecipe.id &&
-        (batch.status === "pending" ||
-          batch.status === "in_progress" ||
-          batch.status === "quality_check")
-    );
-  }, [selectedRecipe]);
+    if (!selectedRecipe || !batchesData?.batches) return [];
+    return batchesData.batches;
+  }, [selectedRecipe, batchesData?.batches]);
 
   // Get recipe ingredients with current stock availability
   const recipeIngredients = useMemo(() => {
-    if (!selectedRecipe) return [];
+    if (!selectedRecipe?.ingredients) return [];
 
-    const ingredients = MOCK_RECIPE_INGREDIENTS.filter((ri) => ri.recipeId === selectedRecipe.id);
+    return selectedRecipe.ingredients.map((ingredient: any) => {
+      const required = Number(ingredient.quantity);
+      const available = Number(ingredient.material.currentStock);
+      let status: "sufficient" | "low" | "insufficient";
 
-    return ingredients
-      .map((ingredient) => {
-        const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
-        if (!material) return null;
+      if (available >= required) {
+        status = "sufficient";
+      } else if (available >= required * 0.5) {
+        status = "low";
+      } else {
+        status = "insufficient";
+      }
 
-        const required = ingredient.quantity;
-        const available = material.currentStock;
-        const status: "sufficient" | "low" | "insufficient" =
-          available >= required
-            ? "sufficient"
-            : available >= required * 0.5
-              ? "low"
-              : "insufficient";
-
-        return {
-          materialId: material.id,
-          materialName: material.name,
-          required,
-          available,
-          unit: material.unit,
-          status,
-        };
-      })
-      .filter(Boolean);
+      return {
+        materialId: ingredient.materialId,
+        materialName: ingredient.material.name,
+        required,
+        available,
+        unit: ingredient.unit,
+        status,
+      };
+    });
   }, [selectedRecipe]);
 
   // Check if production can start (all materials sufficient)
   const canStartProduction = useMemo(() => {
     if (!selectedRecipe || recipeIngredients.length === 0) return false;
-    return recipeIngredients.every((ing) => ing!.status !== "insufficient");
+    return recipeIngredients.every((ing) => ing.status !== "insufficient");
   }, [selectedRecipe, recipeIngredients]);
 
-  // Get category color
+  // Get category color - neutral gray
   const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      Bread: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
-      Pastry: "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-100",
-      Cake: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
-      default: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
-    };
-    return colors[category] || colors.default;
+    return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100";
   };
+
+  // Loading state
+  if (recipesLoading) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            {t("tabs.recipeProduction")}
+          </h2>
+          <p className="text-muted-foreground">{t("management.recipeProduction.description")}</p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -237,7 +254,9 @@ export function RecipeProductionCard() {
                       {t("management.recipeProduction.costPerUnit")}
                     </p>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(selectedRecipe.costPerUnit)}
+                      {formatCurrency(
+                        Number(selectedRecipe.costPerBatch) / Number(selectedRecipe.yieldQuantity)
+                      )}
                     </p>
                   </div>
                 </div>

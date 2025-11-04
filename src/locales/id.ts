@@ -2117,11 +2117,10 @@ export const id = {
 
       // Batch Statuses
       statuses: {
-        pending: "Menunggu",
+        planned: "Direncanakan",
         inProgress: "Sedang Berjalan",
-        qualityCheck: "Pemeriksaan Kualitas",
         completed: "Selesai",
-        failed: "Gagal",
+        cancelled: "Dibatalkan",
       },
 
       // Start Production Dialog
@@ -2189,11 +2188,10 @@ export const id = {
 
       // Batch Statuses
       statuses: {
-        pending: "Menunggu",
+        planned: "Direncanakan",
         inProgress: "Sedang Berjalan",
-        qualityCheck: "Pemeriksaan Kualitas",
         completed: "Selesai",
-        failed: "Gagal",
+        cancelled: "Dibatalkan",
       },
 
       // Metrics

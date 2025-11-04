@@ -2123,11 +2123,10 @@ export const en = {
 
       // Batch Statuses
       statuses: {
-        pending: "Pending",
+        planned: "Planned",
         inProgress: "In Progress",
-        qualityCheck: "Quality Check",
         completed: "Completed",
-        failed: "Failed",
+        cancelled: "Cancelled",
       },
 
       // Start Production Dialog
@@ -2195,11 +2194,10 @@ export const en = {
 
       // Batch Statuses
       statuses: {
-        pending: "Pending",
+        planned: "Planned",
         inProgress: "In Progress",
-        qualityCheck: "Quality Check",
         completed: "Completed",
-        failed: "Failed",
+        cancelled: "Cancelled",
       },
 
       // Metrics
