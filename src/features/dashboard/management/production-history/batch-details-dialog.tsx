@@ -20,7 +20,6 @@ import {
   DollarSign,
   CheckCircle,
   Loader2,
-  XCircle,
   Calendar,
   Download,
   Edit,
@@ -29,10 +28,63 @@ import {
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils/formatting";
 
+interface Material {
+  id: string;
+  name: string;
+  currentStock: number;
+  unit: string;
+  unitCost: number;
+}
+
+interface RecipeIngredient {
+  id: string;
+  materialId: string;
+  quantity: number;
+  unit: string;
+  material: Material;
+}
+
+interface Recipe {
+  id: string;
+  name: string;
+  category?: string;
+  yieldQuantity: number;
+  yieldUnit: string;
+  productionTimeMinutes: number;
+  costPerBatch: number;
+  ingredients: RecipeIngredient[];
+}
+
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  unit: string;
+}
+
+interface ProductionBatchDetails {
+  id: string;
+  batchNumber: string;
+  productId: string;
+  recipeId: string | null;
+  plannedQuantity: number;
+  actualQuantity: number | null;
+  unit: string;
+  status: "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  scheduledDate: Date | string;
+  completedDate: Date | string | null;
+  notes: string | null;
+  storeId: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  product: Product;
+  recipe: Recipe | null;
+}
+
 interface BatchDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  batch: any; // ProductionBatchWithRelations from API
+  batch: ProductionBatchDetails;
 }
 
 export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDialogProps) {
@@ -46,38 +98,50 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
   const ingredientConsumption = useMemo(() => {
     if (!recipe?.ingredients) return [];
 
-    const batchMultiplier = batch.plannedQuantity / (recipe.yieldQuantity || 1);
+    const plannedQty = Number(batch.plannedQuantity) || 0;
+    const yieldQty = Number(recipe.yieldQuantity) || 1;
+    const batchMultiplier = plannedQty / yieldQty;
 
     return recipe.ingredients
-      .map((ingredient: any) => {
+      .map((ingredient: RecipeIngredient) => {
         const material = ingredient.material;
         if (!material) return null;
 
-        const quantityUsed = ingredient.quantity * batchMultiplier;
-        const cost = quantityUsed * material.unitCost;
+        const ingredientQty = Number(ingredient.quantity) || 0;
+        const materialCost = Number(material.unitCost) || 0;
+        const quantityUsed = ingredientQty * batchMultiplier;
+        const cost = quantityUsed * materialCost;
 
         return {
           materialName: material.name,
           quantityUsed,
           unit: ingredient.unit,
-          costPerUnit: material.unitCost,
+          costPerUnit: materialCost,
           totalCost: cost,
         };
       })
-      .filter(Boolean);
+      .filter((item): item is NonNullable<typeof item> => item !== null);
   }, [recipe, batch.plannedQuantity]);
 
   // Calculate cost analysis
   const costAnalysis = useMemo(() => {
-    if (!recipe) return { estimated: 0, actual: 0, variance: 0 };
+    if (!recipe) return { estimated: 0, actual: 0, variance: 0, unitCost: 0, batchTotalCost: 0 };
 
-    const batchMultiplier = batch.plannedQuantity / (recipe.yieldQuantity || 1);
-    const estimated = Number(recipe.costPerBatch) * batchMultiplier;
-    const actual = ingredientConsumption.reduce((sum, ing) => sum + (ing?.totalCost || 0), 0);
-    const variance = actual - estimated;
+    const plannedQty = Number(batch.plannedQuantity) || 0;
+    const actualQty = Number(batch.actualQuantity) || plannedQty;
+    const yieldQty = Number(recipe.yieldQuantity) || 1;
+    const batchMultiplier = plannedQty / yieldQty;
+    const costPerBatch = Number(recipe.costPerBatch) || 0;
+    const estimated = costPerBatch * batchMultiplier;
+    const batchTotalCost = ingredientConsumption.reduce((sum, ing) => {
+      const cost = Number(ing.totalCost) || 0;
+      return sum + cost;
+    }, 0);
+    const unitCost = actualQty > 0 ? batchTotalCost / actualQty : 0;
+    const variance = batchTotalCost - estimated;
 
-    return { estimated, actual, variance };
-  }, [recipe, ingredientConsumption, batch.plannedQuantity]);
+    return { estimated, actual: batchTotalCost, variance, unitCost, batchTotalCost };
+  }, [recipe, ingredientConsumption, batch.plannedQuantity, batch.actualQuantity]);
 
   // Calculate production duration
   const duration = useMemo(() => {
@@ -127,7 +191,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] min-w-4xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] min-w-4xl overflow-y-auto [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div>
@@ -145,7 +209,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
 
         <div className="space-y-6">
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -163,26 +227,6 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                 </div>
               </CardContent>
             </Card>
-
-            {batch.qualityScore !== null && (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-gray-200 p-2 dark:bg-gray-700">
-                      <Star className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-sm">
-                        {t("management.productionHistory.qualityScore")}
-                      </p>
-                      <p className="text-xl font-bold">
-                        {batch.qualityScore?.toFixed(1) || t("common.notAvailable")}/10
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             <Card>
               <CardContent className="pt-6">
@@ -254,7 +298,9 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                   <p className="text-muted-foreground">
                     {t("management.productionHistory.expectedTime")}
                   </p>
-                  <p className="font-medium">{recipe.productionTimeMinutes} {t("common.time.minutes")}</p>
+                  <p className="font-medium">
+                    {recipe.productionTimeMinutes} {t("common.time.minutes")}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -283,15 +329,15 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                 <div className="divide-y">
                   {ingredientConsumption.map((ingredient, index) => (
                     <div key={index} className="grid grid-cols-12 gap-4 px-4 py-3 text-sm">
-                      <div className="col-span-4 font-medium">{ingredient?.materialName}</div>
+                      <div className="col-span-4 font-medium">{ingredient.materialName}</div>
                       <div className="text-muted-foreground col-span-3 text-right">
-                        {ingredient?.quantityUsed.toFixed(2)} {ingredient?.unit}
+                        {ingredient.quantityUsed.toFixed(2)} {ingredient.unit}
                       </div>
                       <div className="text-muted-foreground col-span-2 text-right">
-                        {formatCurrency(ingredient?.costPerUnit)}
+                        {formatCurrency(ingredient.costPerUnit)}
                       </div>
                       <div className="col-span-3 text-right font-medium">
-                        {formatCurrency(ingredient?.totalCost)}
+                        {formatCurrency(ingredient.totalCost)}
                       </div>
                     </div>
                   ))}
@@ -316,10 +362,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                     </p>
                     <p className="font-medium">
                       {batch.scheduledDate
-                        ? format(
-                            new Date(batch.scheduledDate),
-                            "MMMM d, yyyy 'at' HH:mm"
-                          )
+                        ? format(new Date(batch.scheduledDate), "MMMM d, yyyy 'at' HH:mm")
                         : t("common.notAvailable")}
                     </p>
                   </div>
@@ -361,20 +404,6 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
             </CardContent>
           </Card>
 
-          {/* Quality Notes */}
-          {batch.qualityScore !== null && batch.qualityNotes && (
-            <Card>
-              <CardContent className="space-y-3 pt-6">
-                <h3 className="flex items-center gap-2 text-lg font-semibold">
-                  <Star className="h-5 w-5" />
-                  {t("management.productionHistory.qualityNotes")}
-                </h3>
-                <Separator />
-                <p className="text-muted-foreground text-sm">{batch.qualityNotes}</p>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Cost Analysis */}
           <Card>
             <CardContent className="space-y-3 pt-6">
@@ -382,32 +411,24 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                 {t("management.productionHistory.costAnalysis")}
               </h3>
               <Separator />
-              <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">
-                    {t("management.productionHistory.estimatedCost")}
+                    {t("management.productionHistory.unitCost") || "Cost per Unit"}
                   </p>
-                  <p className="text-lg font-bold">{formatCurrency(costAnalysis.estimated)}</p>
+                  <p className="text-lg font-bold">{formatCurrency(costAnalysis.unitCost)}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {t("management.productionHistory.perUnit") || "Per"} {batch.unit}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">
-                    {t("management.productionHistory.actualCost")}
+                    {t("management.productionHistory.batchTotalCost") || "Batch Total Cost"}
                   </p>
-                  <p className="text-lg font-bold">{formatCurrency(costAnalysis.actual)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">
-                    {t("management.productionHistory.variance")}
-                  </p>
-                  <p
-                    className={`text-lg font-bold ${
-                      costAnalysis.variance > 0
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-green-600 dark:text-green-400"
-                    }`}
-                  >
-                    {costAnalysis.variance > 0 ? "+" : ""}
-                    {formatCurrency(Math.abs(costAnalysis.variance))}
+                  <p className="text-lg font-bold">{formatCurrency(costAnalysis.batchTotalCost)}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {t("management.productionHistory.forQuantity") || "For"}{" "}
+                    {batch.actualQuantity || batch.plannedQuantity} {batch.unit}
                   </p>
                 </div>
               </div>

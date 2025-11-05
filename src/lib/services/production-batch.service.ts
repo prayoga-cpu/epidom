@@ -87,7 +87,8 @@ export class ProductionBatchService {
       };
     });
 
-    const isAvailable = ingredients.every((ing) => ing.status !== "insufficient");
+    // Check if ALL materials have sufficient stock (available >= required)
+    const isAvailable = ingredients.every((ing) => ing.available >= ing.required);
 
     return {
       isAvailable,
@@ -130,10 +131,7 @@ export class ProductionBatchService {
     }
 
     // Generate batch number
-    const batchNumber = await productionBatchRepository.generateBatchNumber(
-      data.storeId,
-      "BATCH"
-    );
+    const batchNumber = await productionBatchRepository.generateBatchNumber(data.storeId, "BATCH");
 
     // Start transaction
     return prisma.$transaction(async (tx) => {

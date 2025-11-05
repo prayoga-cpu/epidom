@@ -57,7 +57,9 @@ export function ProductionHistoryCard() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [recipeFilter, setRecipeFilter] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [sortField, setSortField] = useState<"batchNumber" | "scheduledDate" | "status">("scheduledDate");
+  const [sortField, setSortField] = useState<"batchNumber" | "scheduledDate" | "status">(
+    "scheduledDate"
+  );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -102,7 +104,8 @@ export function ProductionHistoryCard() {
   };
 
   // Get recipe name
-  const getRecipeName = (recipeId: string) => {
+  const getRecipeName = (recipeId: string | null) => {
+    if (!recipeId) return t("common.notAvailable") || "N/A";
     const recipe = recipes.find((r) => r.id === recipeId);
     return recipe?.name || recipeId;
   };
@@ -145,7 +148,7 @@ export function ProductionHistoryCard() {
   };
 
   // Handle view batch details
-  const handleViewBatch = (batch: ProductionBatch) => {
+  const handleViewBatch = (batch: any) => {
     setSelectedBatch(batch);
     setIsBatchDetailsOpen(true);
   };
@@ -153,12 +156,15 @@ export function ProductionHistoryCard() {
   // Prepare export data
   const exportData = allBatches.map((batch) => ({
     [t("management.productionHistory.batchNumber")]: batch.batchNumber,
-    [t("management.productionHistory.recipe")]: batch.product?.name || getRecipeName(batch.recipeId),
+    [t("management.productionHistory.recipe")]:
+      batch.product?.name || getRecipeName(batch.recipeId || ""),
     [t("management.productionHistory.status")]: getStatusConfig(batch.status).label,
     [t("management.productionHistory.metrics.plannedQuantity")]: batch.plannedQuantity,
     [t("management.productionHistory.metrics.producedQuantity")]: batch.actualQuantity || 0,
-    [t("management.productionHistory.qualityScore")]: batch.qualityScore ?? t("common.notAvailable"),
-    [t("management.productionHistory.startedAt")]: batch.scheduledDate ? format(new Date(batch.scheduledDate), "yyyy-MM-dd HH:mm") : t("common.notAvailable"),
+    [t("management.productionHistory.unit")]: batch.unit,
+    [t("management.productionHistory.startedAt")]: batch.scheduledDate
+      ? format(new Date(batch.scheduledDate), "yyyy-MM-dd HH:mm")
+      : t("common.notAvailable"),
     [t("management.productionHistory.completedAt")]: batch.completedDate
       ? format(new Date(batch.completedDate), "yyyy-MM-dd HH:mm")
       : t("common.notAvailable"),
@@ -168,40 +174,31 @@ export function ProductionHistoryCard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          {t("tabs.productionHistory")}
-        </h2>
-        <p className="text-muted-foreground">
-          {t("management.productionHistory.description")}
-        </p>
+        <h2 className="text-2xl font-bold tracking-tight">{t("tabs.productionHistory")}</h2>
+        <p className="text-muted-foreground">{t("management.productionHistory.description")}</p>
       </div>
 
       {/* Metrics Cards */}
-      <ProductionMetricsCards batches={allBatches} />
+      <ProductionMetricsCards batches={allBatches as any} />
 
       {/* Filters */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">
-                {t("management.productionHistory.filters")}
-              </CardTitle>
+              <CardTitle className="text-lg">{t("management.productionHistory.filters")}</CardTitle>
               <CardDescription>
                 {t("management.productionHistory.filtersDescription")}
               </CardDescription>
             </div>
-            <ExportButton
-              data={exportData}
-              filename="production-history"
-            />
+            <ExportButton data={exportData} filename="production-history" />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid gap-2">
             {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative items-center">
+              <Search className="text-muted-foreground/80 absolute top-2 left-2.5 h-4.5 w-4.5" />
               <Input
                 placeholder={t("management.productionHistory.searchBatches")}
                 value={searchQuery}
@@ -209,44 +206,57 @@ export function ProductionHistoryCard() {
                 className="pl-9"
               />
             </div>
-
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("management.productionHistory.selectStatus")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">{t("management.productionHistory.allStatuses")}</SelectItem>
-                <SelectItem value="PLANNED">{t("management.productionHistory.statuses.planned") || "Planned"}</SelectItem>
-                <SelectItem value="IN_PROGRESS">{t("management.productionHistory.statuses.inProgress") || "In Progress"}</SelectItem>
-                <SelectItem value="COMPLETED">{t("management.productionHistory.statuses.completed") || "Completed"}</SelectItem>
-                <SelectItem value="CANCELLED">{t("management.productionHistory.statuses.cancelled") || "Cancelled"}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Recipe Filter */}
-            <Select value={recipeFilter} onValueChange={setRecipeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("management.productionHistory.selectRecipe")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">{t("management.productionHistory.allRecipes")}</SelectItem>
-                {recipes.map((recipe) => (
-                  <SelectItem key={recipe.id} value={recipe.id}>
-                    {recipe.name}
+            <div className="flex gap-2">
+              {/* Status Filter */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("management.productionHistory.selectStatus")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">
+                    {t("management.productionHistory.allStatuses")}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  <SelectItem value="PLANNED">
+                    {t("management.productionHistory.statuses.planned") || "Planned"}
+                  </SelectItem>
+                  <SelectItem value="IN_PROGRESS">
+                    {t("management.productionHistory.statuses.inProgress") || "In Progress"}
+                  </SelectItem>
+                  <SelectItem value="COMPLETED">
+                    {t("management.productionHistory.statuses.completed") || "Completed"}
+                  </SelectItem>
+                  <SelectItem value="CANCELLED">
+                    {t("management.productionHistory.statuses.cancelled") || "Cancelled"}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
-            {/* Date Range */}
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+              {/* Recipe Filter */}
+              <Select value={recipeFilter} onValueChange={setRecipeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("management.productionHistory.selectRecipe")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">
+                    {t("management.productionHistory.allRecipes")}
+                  </SelectItem>
+                  {recipes.map((recipe) => (
+                    <SelectItem key={recipe.id} value={recipe.id}>
+                      {recipe.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Date Range */}
+              <DateRangePicker value={dateRange} onChange={setDateRange} />
+            </div>
           </div>
 
           {/* Active Filters */}
           {(searchQuery || statusFilter !== "ALL" || recipeFilter !== "ALL" || dateRange?.from) && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-muted-foreground text-sm">
                 {t("management.productionHistory.activeFilters")}:
               </span>
               {searchQuery && (
@@ -265,9 +275,7 @@ export function ProductionHistoryCard() {
                 </Badge>
               )}
               {dateRange?.from && (
-                <Badge variant="secondary">
-                  {t("management.productionHistory.dateRange")}
-                </Badge>
+                <Badge variant="secondary">{t("management.productionHistory.dateRange")}</Badge>
               )}
               <Button
                 variant="ghost"
@@ -294,7 +302,7 @@ export function ProductionHistoryCard() {
               {t("management.productionHistory.batchesList")} ({totalBatches})
             </CardTitle>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-muted-foreground text-sm">
                 {t("management.productionHistory.rowsPerPage")}:
               </span>
               <Select
@@ -319,12 +327,12 @@ export function ProductionHistoryCard() {
         </CardHeader>
         <CardContent>
           {batchesLoading ? (
-            <div className="text-center py-12">
-              <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="py-12 text-center">
+              <Loader2 className="text-muted-foreground mx-auto h-8 w-8 animate-spin" />
               <p className="text-muted-foreground mt-2">{t("common.loading")}</p>
             </div>
           ) : allBatches.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-muted-foreground py-12 text-center">
               <p>{t("management.productionHistory.noBatchesFound")}</p>
             </div>
           ) : (
@@ -332,20 +340,14 @@ export function ProductionHistoryCard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => handleSort("batchNumber")}
-                    >
+                    <TableHead className="cursor-pointer" onClick={() => handleSort("batchNumber")}>
                       <div className="flex items-center">
                         {t("management.productionHistory.batchNumber")}
                         {renderSortIcon("batchNumber")}
                       </div>
                     </TableHead>
                     <TableHead>{t("management.productionHistory.recipe")}</TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => handleSort("status")}
-                    >
+                    <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
                       <div className="flex items-center">
                         {t("management.productionHistory.status")}
                         {renderSortIcon("status")}
@@ -353,9 +355,6 @@ export function ProductionHistoryCard() {
                     </TableHead>
                     <TableHead className="text-right">
                       {t("management.productionHistory.quantity")}
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {t("management.productionHistory.qualityScore")}
                     </TableHead>
                     <TableHead
                       className="cursor-pointer"
@@ -379,25 +378,28 @@ export function ProductionHistoryCard() {
                     return (
                       <TableRow
                         key={batch.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="hover:bg-muted/50 cursor-pointer"
                         onClick={() => handleViewBatch(batch)}
                       >
                         <TableCell className="font-medium">{batch.batchNumber}</TableCell>
-                        <TableCell>{batch.product?.name || getRecipeName(batch.recipeId)}</TableCell>
+                        <TableCell>
+                          {batch.product?.name || getRecipeName(batch.recipeId)}
+                        </TableCell>
                         <TableCell>
                           <Badge className={statusConfig.color}>
-                            <StatusIcon className={`mr-1 h-3 w-3 ${batch.status === "IN_PROGRESS" ? "animate-spin" : ""}`} />
+                            <StatusIcon
+                              className={`mr-1 h-3 w-3 ${batch.status === "IN_PROGRESS" ? "animate-spin" : ""}`}
+                            />
                             {statusConfig.label}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           {batch.actualQuantity || 0} / {batch.plannedQuantity} {batch.unit}
                         </TableCell>
-                        <TableCell className="text-right">
-                          {batch.qualityScore !== null && batch.qualityScore !== undefined ? batch.qualityScore.toFixed(1) : t("common.notAvailable")}
-                        </TableCell>
                         <TableCell>
-                          {batch.scheduledDate ? format(new Date(batch.scheduledDate), "MMM d, yyyy HH:mm") : t("common.notAvailable")}
+                          {batch.scheduledDate
+                            ? format(new Date(batch.scheduledDate), "MMM d, yyyy HH:mm")
+                            : t("common.notAvailable")}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -419,11 +421,10 @@ export function ProductionHistoryCard() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-muted-foreground text-sm">
                     {t("management.productionHistory.showing")} {(currentPage - 1) * pageSize + 1} -{" "}
-                    {Math.min(currentPage * pageSize, totalBatches)} {t("common.of")}{" "}
-                    {totalBatches}
+                    {Math.min(currentPage * pageSize, totalBatches)} {t("common.of")} {totalBatches}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button

@@ -44,6 +44,7 @@ export interface ProductionBatchWithRelations {
         name: string;
         currentStock: number;
         unit: string;
+        unitCost: number;
       };
     }>;
   } | null;
@@ -242,8 +243,7 @@ export function useUpdateProductionBatch(storeId: string, batchId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UpdateProductionBatchInput) =>
-      updateProductionBatch(storeId, batchId, data),
+    mutationFn: (data: UpdateProductionBatchInput) => updateProductionBatch(storeId, batchId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
       queryClient.invalidateQueries({ queryKey: ["production-batches", storeId, batchId] });

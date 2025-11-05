@@ -3,25 +3,40 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Phone, Mail, Star } from "lucide-react";
+import { Phone, Mail, Star, Loader2, Package } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { MOCK_SUPPLIERS } from "@/mocks";
+import { useSuppliers } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
 import DashboardCard from "../_components/dashboard-card";
 
 export default function SupplierCard() {
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
 
-  // Get top suppliers by rating
+  // Fetch suppliers from API
+  const { data, isLoading } = useSuppliers(storeId, {
+    sortBy: "name",
+    sortOrder: "asc",
+  });
+
+  // Get top suppliers (first 4 from the list)
   const topSuppliers = useMemo(() => {
-    return [...MOCK_SUPPLIERS].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 4);
-  }, []);
+    if (!data?.suppliers) return [];
+    return data.suppliers.slice(0, 4);
+  }, [data]);
 
   const cardContent = (
     <div className="h-full overflow-auto">
-      {topSuppliers.length === 0 ? (
+      {isLoading ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+          <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
+          <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+        </div>
+      ) : topSuppliers.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+          <div className="bg-muted mb-3 rounded-full p-3">
+            <Package className="text-muted-foreground h-6 w-6" />
+          </div>
           <p className="text-muted-foreground text-sm">
             {t("dashboard.supplierCard.noSuppliersAvailable")}
           </p>
@@ -42,12 +57,6 @@ export default function SupplierCard() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-sm font-medium">{supplier.name}</p>
-                    {supplier.rating && (
-                      <div className="flex items-center gap-1 text-xs">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="font-medium">{supplier.rating.toFixed(1)}</span>
-                      </div>
-                    )}
                   </div>
                   <p className="text-muted-foreground truncate text-xs">{supplier.contactPerson}</p>
                 </div>

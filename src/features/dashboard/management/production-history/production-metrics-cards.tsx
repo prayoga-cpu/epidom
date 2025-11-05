@@ -7,7 +7,7 @@ import { ProductionBatch } from "@/types/entities";
 import { Package, Star, TrendingUp, AlertCircle } from "lucide-react";
 
 interface ProductionMetricsCardsProps {
-  batches: ProductionBatch[];
+  batches: any[];
 }
 
 export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps) {
@@ -22,30 +22,22 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
     );
     const cancelledBatches = batches.filter((b) => b.status === "CANCELLED");
 
-    // Calculate average quality score (only for completed batches with scores)
-    const batchesWithScores = completedBatches.filter((b) => b.qualityScore !== null);
-    const avgQuality =
-      batchesWithScores.length > 0
-        ? batchesWithScores.reduce((sum, b) => sum + (b.qualityScore || 0), 0) /
-          batchesWithScores.length
-        : 0;
-
-    // Calculate production efficiency (actual vs target quantity)
+    // Calculate production efficiency (actual vs planned quantity)
     const efficiency =
       completedBatches.length > 0
-        ? (completedBatches.reduce((sum, b) => sum + (b.actualQuantity || 0), 0) /
-            completedBatches.reduce((sum, b) => sum + b.plannedQuantity, 0)) *
+        ? (completedBatches.reduce((sum, b) => sum + Number(b.actualQuantity || 0), 0) /
+            completedBatches.reduce((sum, b) => sum + Number(b.plannedQuantity), 0)) *
           100
         : 0;
 
     // Calculate total output
-    const totalOutput = batches.reduce((sum, b) => sum + (b.actualQuantity || 0), 0);
+    const totalOutput = batches.reduce((sum, b) => sum + Number(b.actualQuantity || 0), 0);
 
     return {
       totalBatches,
+      completedBatches: completedBatches.length,
       inProgressBatches: inProgressBatches.length,
       cancelledBatches: cancelledBatches.length,
-      avgQuality,
       efficiency,
       totalOutput,
     };
@@ -61,13 +53,14 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
       description: t("management.productionHistory.metrics.totalBatchesDescription"),
     },
     {
-      title: t("management.productionHistory.metrics.averageQuality"),
-      value: metrics.avgQuality.toFixed(1),
-      suffix: ` ${t("common.of")} 10`,
+      title: t("management.productionHistory.metrics.completedBatches") || "Completed Batches",
+      value: metrics.completedBatches,
       icon: Star,
       iconColor: "text-gray-700 dark:text-gray-300",
       bgColor: "bg-gray-200 dark:bg-gray-700",
-      description: t("management.productionHistory.metrics.averageQualityDescription"),
+      description:
+        t("management.productionHistory.metrics.completedBatchesDescription") ||
+        "Number of completed batches",
     },
     {
       title: t("management.productionHistory.metrics.efficiency"),
@@ -90,7 +83,7 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (
@@ -98,18 +91,14 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
             <CardContent className="pt-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">{card.title}</p>
+                  <p className="text-muted-foreground text-sm">{card.title}</p>
                   <div className="flex items-baseline gap-1">
-                    <p className="text-3xl font-bold">
-                      {card.value}
-                    </p>
-                    {card.suffix && (
-                      <p className="text-sm text-muted-foreground">{card.suffix}</p>
-                    )}
+                    <p className="text-3xl font-bold">{card.value}</p>
+                    {card.suffix && <p className="text-muted-foreground text-sm">{card.suffix}</p>}
                   </div>
-                  <p className="text-xs text-muted-foreground">{card.description}</p>
+                  <p className="text-muted-foreground text-xs">{card.description}</p>
                 </div>
-                <div className={`p-3 rounded-lg ${card.bgColor}`}>
+                <div className={`rounded-lg p-3 ${card.bgColor}`}>
                   <Icon className={`h-5 w-5 ${card.iconColor}`} />
                 </div>
               </div>

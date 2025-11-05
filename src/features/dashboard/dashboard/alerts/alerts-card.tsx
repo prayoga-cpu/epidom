@@ -4,19 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import DashboardCard from "../_components/dashboard-card";
+import { useMemo } from "react";
 
 export default function AlertsCard() {
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
 
-  const { data, isLoading } = useAlerts(storeId);
+  // Fetch materials from API
+  const { data, isLoading } = useMaterials(storeId);
 
-  // Get critical alerts (severity === "critical") and limit to 5
-  const criticalAlerts =
-    data?.alerts?.filter((alert) => alert.severity === "critical").slice(0, 5) || [];
+  // Get low stock materials (currentStock <= minStock) and limit to 5
+  const lowStockMaterials = useMemo(() => {
+    if (!data?.materials) return [];
+
+    return data.materials
+      .map((material) => {
+        const currentStock = Number(material.currentStock);
+        const minStock = Number(material.minStock);
+        const maxStock = Number(material.maxStock);
+        const stockPercentage = maxStock > 0 ? (currentStock / maxStock) * 100 : 0;
+
+        return {
+          id: material.id,
+          name: material.name,
+          currentStock,
+          minStock,
+          maxStock,
+          unit: material.unit,
+          stockPercentage,
+        };
+      })
+      .filter((material) => material.currentStock <= material.minStock) // Only low stock
+      .sort((a, b) => a.stockPercentage - b.stockPercentage) // Lowest first
+      .slice(0, 5); // Show max 5 items
+  }, [data]);
 
   const cardContent = (
     <div className="h-full overflow-auto">
@@ -25,7 +49,7 @@ export default function AlertsCard() {
           <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         </div>
-      ) : criticalAlerts.length === 0 ? (
+      ) : lowStockMaterials.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
           <div className="mb-3 rounded-full bg-green-100 p-3 dark:bg-green-900">
             <AlertCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -45,21 +69,21 @@ export default function AlertsCard() {
 
           {/* Table Body */}
           <div className="divide-border divide-y">
-            {criticalAlerts.map((alert) => {
+            {lowStockMaterials.map((material) => {
               return (
                 <div
-                  key={alert.id}
+                  key={material.id}
                   className="hover:bg-muted/30 flex items-center px-3 py-2.5 text-sm transition-colors"
                 >
-                  <div className="w-2/5 truncate font-medium">{alert.materialName}</div>
+                  <div className="w-2/5 truncate font-medium">{material.name}</div>
                   <div className="w-2/5 px-2">
                     <Progress
-                      value={Math.min(alert.stockPercentage, 100)}
+                      value={Math.min(material.stockPercentage, 100)}
                       className="bg-muted [&>div]:bg-destructive h-2"
                     />
                   </div>
                   <div className="w-1/5 text-right font-semibold text-red-600 dark:text-red-400">
-                    {Number(alert.currentStock)} {alert.unit}
+                    {material.currentStock} {material.unit}
                   </div>
                 </div>
               );

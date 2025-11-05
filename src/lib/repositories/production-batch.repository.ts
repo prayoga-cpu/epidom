@@ -30,6 +30,7 @@ export type ProductionBatchWithRelations = ProductionBatch & {
         name: string;
         currentStock: Prisma.Decimal;
         unit: string;
+        unitCost: Prisma.Decimal;
       };
     }>;
   } | null;
@@ -135,6 +136,7 @@ export class ProductionBatchRepository extends BaseRepository {
                       name: true,
                       currentStock: true,
                       unit: true,
+                      unitCost: true,
                     },
                   },
                 },

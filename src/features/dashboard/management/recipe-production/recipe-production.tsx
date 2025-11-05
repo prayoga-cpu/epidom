@@ -7,15 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Search,
-  PlayCircle,
-  Clock,
-  Package,
-  AlertCircle,
-  Loader2,
-  ChefHat,
-} from "lucide-react";
+import { Search, PlayCircle, Clock, Package, AlertCircle, Loader2, ChefHat } from "lucide-react";
 import { StartProductionDialog } from "./start-production-dialog";
 import { ProductionBatchCard } from "./production-batch-card";
 import { MaterialAvailabilityCheck } from "./material-availability-check";
@@ -97,10 +89,13 @@ export function RecipeProductionCard() {
     });
   }, [selectedRecipe]);
 
-  // Check if production can start (all materials sufficient)
+  // Check if production can start (all materials have sufficient quantity)
   const canStartProduction = useMemo(() => {
     if (!selectedRecipe || recipeIngredients.length === 0) return false;
-    return recipeIngredients.every((ing) => ing.status !== "insufficient");
+    // Only allow production if all materials have available >= required
+    return recipeIngredients.every(
+      (ing: { available: number; required: number }) => ing.available >= ing.required
+    );
   }, [selectedRecipe, recipeIngredients]);
 
   // Get category color - neutral gray
@@ -113,9 +108,7 @@ export function RecipeProductionCard() {
     return (
       <div className="space-y-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {t("tabs.recipeProduction")}
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t("tabs.recipeProduction")}</h2>
           <p className="text-muted-foreground">{t("management.recipeProduction.description")}</p>
         </div>
         <div className="flex items-center justify-center py-12">
@@ -129,9 +122,7 @@ export function RecipeProductionCard() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          {t("tabs.recipeProduction")}
-        </h2>
+        <h2 className="text-2xl font-bold tracking-tight">{t("tabs.recipeProduction")}</h2>
         <p className="text-muted-foreground">{t("management.recipeProduction.description")}</p>
       </div>
 
