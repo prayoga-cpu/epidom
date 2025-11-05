@@ -1694,6 +1694,8 @@ export const en = {
       editBusinessInfo: "Edit Business Information",
       editBusinessInfoDescription: "Update your business contact information and details",
       addBusinessInfoDescription: "Add your business information to complete your profile",
+      editAvatar: "Edit Profile Picture",
+      editAvatarDescription: "Upload a new profile picture or remove the current one.",
       namePlaceholder: "Enter your full name",
       emailPlaceholder: "your@email.com",
       phonePlaceholder: "+1 234 567 8900",
@@ -1714,6 +1716,7 @@ export const en = {
       delete: "Delete",
       invite: "Invite",
       remove: "Remove",
+      removeAvatar: "Remove Avatar",
     },
 
     // Errors
@@ -1735,6 +1738,14 @@ export const en = {
       businessCreated: {
         title: "Business Info Added",
         description: "Business information added successfully.",
+      },
+      avatarUpdated: {
+        title: "Avatar Updated",
+        description: "Your profile picture has been updated successfully.",
+      },
+      avatarRemoved: {
+        title: "Avatar Removed",
+        description: "Your profile picture has been removed.",
       },
       avatarUploaded: {
         title: "Avatar Updated",

@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,12 +12,14 @@ import { useUser } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "./hooks/use-current-store";
+import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 
 export default function NavUser() {
   const router = useRouter();
   const { user } = useUser();
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
+  const { data: profile } = useProfile();
 
   return (
     <DropdownMenu>
@@ -27,6 +29,7 @@ export default function NavUser() {
           className="text-primary-foreground flex max-w-[120px] items-center gap-2 overflow-hidden rounded-2xl hover:bg-white/10 hover:text-white"
         >
           <Avatar className="size-6">
+            {profile?.image && <AvatarImage src={profile.image} alt={user?.name ?? "User"} />}
             <AvatarFallback className="text-foreground bg-white text-xs">
               {user?.name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
             </AvatarFallback>

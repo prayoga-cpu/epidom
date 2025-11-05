@@ -32,7 +32,11 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-[calc(100vh-150px)] w-full space-y-6">
-      <ProfileHeader user={profileData} subscription={profileData.subscription} />
+      <ProfileHeader
+        user={profileData}
+        subscription={profileData.subscription}
+        onUpdate={refetch}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <PersonalInfoCard user={profileData} onUpdate={refetch} />
@@ -44,8 +48,6 @@ export default function ProfilePage() {
         userId={profileData.id}
         onUpdate={refetch}
       />
-
-      <ActivityLogCard />
     </div>
   );
 }

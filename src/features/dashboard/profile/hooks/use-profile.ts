@@ -8,6 +8,7 @@ interface UpdateProfilePayload {
   locale?: string;
   timezone?: string;
   currency?: string;
+  image?: string;
 }
 
 interface UpdateBusinessPayload {
