@@ -10,6 +10,8 @@ import {
 import { ApiSuccessResponse } from "@/types/api/responses";
 import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
+import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 
 export interface MaterialsResponse {
   materials: MaterialWithSuppliers[];
@@ -110,6 +112,10 @@ export function useCreateMaterial(storeId: string) {
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
       // Invalidate supplier lists to update material counts in supplier cards
       queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
+      // Invalidate alerts (new material may affect alerts)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Invalidate stock movements (initial stock movement may have been created)
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
     },
   });
 }
@@ -145,6 +151,10 @@ export function useUpdateMaterial(storeId: string, id: string) {
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
       // Invalidate supplier lists to update material counts in supplier cards
       queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
+      // Invalidate alerts (stock changes may affect low stock alerts)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Invalidate stock movements (new movement may have been created)
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
     },
   });
 }
@@ -174,6 +184,8 @@ export function useDeleteMaterial(storeId: string) {
       queryClient.removeQueries({ queryKey: materialKeys.detail(storeId, deletedId) });
       // Invalidate material lists to refetch
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
+      // Invalidate alerts (deleted material may affect alerts)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
     },
   });
 }
@@ -210,6 +222,8 @@ export function useBulkDeleteMaterials(storeId: string) {
       });
       // Invalidate material lists to refetch
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
+      // Invalidate alerts (deleted materials may affect alerts)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
     },
   });
 }

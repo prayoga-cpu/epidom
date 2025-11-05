@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useParams } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -15,9 +16,19 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ExportButton } from "@/components/ui/export-button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { formatDateTime } from "@/lib/utils/formatting";
-import { MovementType, type StockMovement } from "@/types/entities";
+import { MovementType } from "@prisma/client";
 import type { DateRange } from "react-day-picker";
-import { TrendingUp, TrendingDown, Package, Calendar, User, FileText, Hash } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Package,
+  Calendar,
+  User,
+  FileText,
+  Hash,
+  Loader2,
+} from "lucide-react";
+import { useStockMovements } from "./hooks/use-stock-movements";
 
 interface AdjustmentHistoryDialogProps {
   open: boolean;
@@ -40,58 +51,48 @@ export function AdjustmentHistoryDialog({
   itemType,
 }: AdjustmentHistoryDialogProps) {
   const { t } = useI18n();
+  const params = useParams();
+  const storeId = params?.storeId as string;
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
-  // TODO: Replace with TanStack Query
-  // const { data: adjustments, isLoading } = useQuery({
-  //   queryKey: ['adjustment-history', itemId, itemType, dateRange],
-  //   queryFn: () => fetchAdjustmentHistory({
-  //     itemId,
-  //     itemType,
-  //     dateFrom: dateRange?.from?.toISOString(),
-  //     dateTo: dateRange?.to?.toISOString(),
-  //   }),
-  //   enabled: !!itemId,
-  // });
+  // Fetch stock movements from API
+  const { data, isLoading } = useStockMovements(storeId, {
+    materialId: itemType === "material" ? itemId || undefined : undefined,
+    productId: itemType === "product" ? itemId || undefined : undefined,
+    itemType,
+    dateFrom: dateRange?.from?.toISOString(),
+    dateTo: dateRange?.to?.toISOString(),
+  });
 
-  // Filter adjustments only (ADJUSTMENT_IN and ADJUSTMENT_OUT types)
-  // TODO: Implement real API call for stock movements
+  const movements = data?.movements || [];
+
+  // Filter adjustments only (ADJUSTMENT types)
   const filteredAdjustments = useMemo(() => {
-    if (!itemId) return [];
-
-    // Temporarily return empty array until stock movements API is implemented
-    let filtered: StockMovement[] = [];
-
-    // Apply date range filter
-    if (dateRange?.from) {
-      filtered = filtered.filter((mov) => new Date(mov.createdAt) >= dateRange.from!);
-    }
-    if (dateRange?.to) {
-      filtered = filtered.filter((mov) => new Date(mov.createdAt) <= dateRange.to!);
-    }
-
-    // Sort by date descending (newest first)
-    return filtered.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [itemId, itemType, dateRange]);
+    return movements.filter((mov) => {
+      // Only show adjustment movements
+      return mov.type === MovementType.ADJUSTMENT;
+    });
+  }, [movements]);
 
   // Calculate running balance after adjustments
   const adjustmentsWithBalance = useMemo(() => {
+    if (filteredAdjustments.length === 0) return [];
+
     let runningBalance = 0;
     // Process in reverse to calculate from oldest to newest
     const reversed = [...filteredAdjustments].reverse();
 
     const withBalance = reversed.map((adj) => {
-      // Determine if it's an increase or decrease
-      // For adjustments, positive quantity = increase, could also check reason
-      const isIncrease = adj.quantity > 0;
-      runningBalance += isIncrease ? adj.quantity : -adj.quantity;
+      // Determine if it's an increase or decrease based on quantity
+      const quantityNum = Number(adj.quantity);
+      const isIncrease = quantityNum > 0;
+      runningBalance += quantityNum;
 
       return {
         ...adj,
         runningBalance,
         isIncrease,
+        quantity: Math.abs(quantityNum),
       };
     });
 
@@ -99,26 +100,35 @@ export function AdjustmentHistoryDialog({
     return withBalance.reverse();
   }, [filteredAdjustments]);
 
-  // Get item info
-  // TODO: Fetch actual item info from API
+  // Get item info from the first movement's material/product
   const itemInfo = useMemo<ItemInfo | null>(() => {
-    if (!itemId) return null;
-    // Temporarily return null until materials/products API is implemented
-    return null;
-  }, [itemId, itemType]);
+    if (!itemId || movements.length === 0) return null;
+
+    const firstMovement = movements[0];
+    const item = itemType === "material" ? firstMovement.material : firstMovement.product;
+
+    if (!item) return null;
+
+    return {
+      name: item.name,
+      sku: item.sku || undefined,
+      unit: item.unit,
+      currentStock: Number(firstMovement.balanceAfter),
+    };
+  }, [itemId, itemType, movements]);
 
   // Export data
   const exportData = adjustmentsWithBalance.map((adj) => ({
     [t("common.date")]: formatDateTime(adj.createdAt),
-    [t("common.type")]: adj.isIncrease
-      ? t("management.editStock.increase") + " (+)"
-      : t("management.editStock.decrease") + " (-)",
-    [t("management.editStock.quantity")]: `${adj.isIncrease ? "+" : "-"}${Math.abs(adj.quantity)}`,
+    [t("common.type")]: adj.type,
+    [t("management.editStock.quantity")]: `${adj.isIncrease ? "+" : "-"}${adj.quantity}`,
     [t("management.editStock.unit")]: adj.unit,
-    [t("management.editStock.reason")]: adj.reason,
     [t("management.editStock.runningBalance")]: adj.runningBalance,
-    [t("common.user")]: adj.userName,
-    [t("common.reference")]: adj.referenceId || "-",
+    [t("common.reference")]: adj.productionBatchId
+      ? `Batch: ${(adj as any).productionBatch?.batchNumber || adj.productionBatchId}`
+      : adj.orderId
+        ? `Order: ${(adj as any).order?.orderNumber || adj.orderId}`
+        : "-",
     [t("common.notes")]: adj.notes || "-",
   }));
 
@@ -200,7 +210,11 @@ export function AdjustmentHistoryDialog({
               {t("management.editStock.adjustmentTimeline")}
             </h3>
 
-            {adjustmentsWithBalance.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+              </div>
+            ) : adjustmentsWithBalance.length === 0 ? (
               <div className="rounded-lg border border-dashed p-12 text-center">
                 <p className="text-muted-foreground">
                   {t("management.editStock.noAdjustmentHistory")}
@@ -266,7 +280,9 @@ export function AdjustmentHistoryDialog({
                                 {Math.abs(adj.quantity)} {adj.unit}
                               </span>
                             </div>
-                            <p className="text-muted-foreground mt-1 text-sm">{adj.reason}</p>
+                            {adj.notes && (
+                              <p className="text-muted-foreground mt-1 text-sm">{adj.notes}</p>
+                            )}
                           </div>
 
                           <div className="text-right">
@@ -287,15 +303,17 @@ export function AdjustmentHistoryDialog({
                           </div>
 
                           <div className="text-muted-foreground flex items-center gap-2">
-                            <User className="h-3.5 w-3.5" />
-                            <span>{adj.userName}</span>
+                            <Badge variant="outline">{adj.type}</Badge>
                           </div>
 
-                          {adj.referenceId && (
+                          {(adj.productionBatchId || adj.orderId) && (
                             <div className="text-muted-foreground flex items-center gap-2">
                               <Hash className="h-3.5 w-3.5" />
                               <span>
-                                {t("common.reference")}: {adj.referenceId}
+                                {t("common.reference")}:{" "}
+                                {adj.productionBatchId
+                                  ? `Batch ${adj.productionBatchId}`
+                                  : `Order ${adj.orderId}`}
                               </span>
                             </div>
                           )}

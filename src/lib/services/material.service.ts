@@ -190,12 +190,12 @@ export class MaterialService {
           const newStock = input.currentStock!;
           const difference = newStock - oldStock;
 
-          // Create stock movement
+          // Create stock movement with signed quantity
           await tx.stockMovement.create({
             data: {
               materialId: materialId,
-              type: difference > 0 ? MovementType.ADJUSTMENT : MovementType.ADJUSTMENT,
-              quantity: Math.abs(difference),
+              type: MovementType.ADJUSTMENT,
+              quantity: difference, // Keep the sign: positive for increase, negative for decrease
               unit: material.unit,
               balanceAfter: newStock,
               notes: `Stock ${difference > 0 ? "increase" : "decrease"} - Manual adjustment`,

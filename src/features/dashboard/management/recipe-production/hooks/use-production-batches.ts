@@ -6,6 +6,8 @@ import {
   CompleteProductionInput,
   CancelProductionInput,
 } from "@/lib/validation/production.schemas";
+import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 
 // Types
 export interface ProductionBatchWithRelations {
@@ -232,6 +234,10 @@ export function useStartProduction(storeId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
       queryClient.invalidateQueries({ queryKey: ["materials", storeId] });
+      // Invalidate alerts (material stock may have changed)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Invalidate stock movements (materials were consumed)
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
     },
   });
 }
@@ -263,6 +269,10 @@ export function useCompleteProduction(storeId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
       queryClient.invalidateQueries({ queryKey: ["products", storeId] });
+      // Invalidate alerts (product stock increased)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Invalidate stock movements (product was added)
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
     },
   });
 }
@@ -279,6 +289,10 @@ export function useCancelProduction(storeId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
       queryClient.invalidateQueries({ queryKey: ["materials", storeId] });
+      // Invalidate alerts (material stock may have been refunded)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Invalidate stock movements (materials may have been returned)
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
     },
   });
 }

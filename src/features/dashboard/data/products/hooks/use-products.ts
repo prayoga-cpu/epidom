@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateProductInput, UpdateProductInput } from "@/lib/validation/inventory.schemas";
 import type { Product } from "@prisma/client";
+import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 
 // Re-export for convenience
 export type { Product };
@@ -185,6 +187,10 @@ export function useCreateProduct(storeId: string) {
     mutationFn: (data: CreateProductInput) => createProduct(storeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", storeId] });
+      // Invalidate alerts (new product may affect alerts)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Invalidate stock movements (initial stock movement may have been created)
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
     },
   });
 }
@@ -200,6 +206,10 @@ export function useUpdateProduct(storeId: string, productId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", storeId] });
       queryClient.invalidateQueries({ queryKey: ["products", storeId, productId] });
+      // Invalidate alerts (stock changes may affect alerts)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Invalidate stock movements (new movement may have been created)
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
     },
   });
 }
@@ -214,6 +224,8 @@ export function useDeleteProduct(storeId: string) {
     mutationFn: (productId: string) => deleteProduct(storeId, productId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", storeId] });
+      // Invalidate alerts (deleted product may affect alerts)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
     },
   });
 }
@@ -228,6 +240,8 @@ export function useBulkDeleteProducts(storeId: string) {
     mutationFn: (productIds: string[]) => bulkDeleteProducts(storeId, productIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", storeId] });
+      // Invalidate alerts (deleted products may affect alerts)
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
     },
   });
 }

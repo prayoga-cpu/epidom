@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { alertKeys } from "./use-alerts";
+import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
+import { materialKeys } from "@/features/dashboard/data/materials/hooks/use-materials";
 
 export interface SupplierOrderItem {
   id: string;
@@ -181,6 +183,14 @@ export function useUpdateSupplierOrder(storeId: string, orderId: string) {
       // Invalidate alerts since stock might have changed
       queryClient.invalidateQueries({
         queryKey: alertKeys.lists(storeId),
+      });
+      // Invalidate materials (stock may have increased on delivery)
+      queryClient.invalidateQueries({
+        queryKey: materialKeys.lists(storeId),
+      });
+      // Invalidate stock movements (new stock movements created on delivery)
+      queryClient.invalidateQueries({
+        queryKey: stockMovementKeys.all(storeId),
       });
       toast.success("Supplier order updated successfully");
     },
