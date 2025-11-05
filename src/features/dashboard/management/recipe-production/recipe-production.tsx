@@ -186,7 +186,7 @@ export function RecipeProductionCard() {
                             {recipe.productionTimeMinutes} min
                           </span>
                         </div>
-                        <Badge className={`mt-2 ${getCategoryColor(recipe.category)}`}>
+                        <Badge className={`mt-2 ${getCategoryColor(recipe.category ?? "")}`}>
                           {recipe.category}
                         </Badge>
                       </div>

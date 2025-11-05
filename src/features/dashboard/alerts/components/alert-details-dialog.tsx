@@ -15,7 +15,6 @@ import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { formatDateTime } from "@/lib/utils/formatting";
 import { AlertPriority, type Alert } from "@/types/entities";
-import { MOCK_MATERIALS, MOCK_SUPPLIERS } from "@/mocks";
 import {
   Package,
   Calendar,
@@ -44,15 +43,11 @@ export function AlertDetailsDialog({
 
   if (!alert) return null;
 
-  const material = alert.materialId
-    ? MOCK_MATERIALS.find((m) => m.id === alert.materialId)
-    : null;
+  // Alert metadata should contain all necessary information
+  const material = alert.material;
   const primarySupplier =
-    material?.materialSuppliers?.find((s) => s.isPreferred) ||
-    material?.materialSuppliers?.[0];
-  const supplier = primarySupplier
-    ? MOCK_SUPPLIERS.find((s) => s.id === primarySupplier.supplierId)
-    : null;
+    material?.materialSuppliers?.find((s) => s.isPreferred) || material?.materialSuppliers?.[0];
+  const supplier = primarySupplier?.supplier;
 
   const currentStock = alert.metadata?.currentStock ?? material?.currentStock ?? 0;
   const minStock = alert.metadata?.minStock ?? material?.minStock ?? 0;
@@ -61,12 +56,10 @@ export function AlertDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("alerts.detailsDialog.title")}</DialogTitle>
-          <DialogDescription>
-            {t("alerts.detailsDialog.description")}
-          </DialogDescription>
+          <DialogDescription>{t("alerts.detailsDialog.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -76,15 +69,13 @@ export function AlertDetailsDialog({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {t("alerts.table.currentStock")}
                     </p>
-                    <p className="text-2xl font-bold mt-1 text-red-600">
-                      {currentStock}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{unit}</p>
+                    <p className="mt-1 text-2xl font-bold text-red-600">{currentStock}</p>
+                    <p className="text-muted-foreground text-xs">{unit}</p>
                   </div>
-                  <Package className="h-8 w-8 text-muted-foreground" />
+                  <Package className="text-muted-foreground h-8 w-8" />
                 </div>
               </CardContent>
             </Card>
@@ -93,13 +84,11 @@ export function AlertDetailsDialog({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {t("alerts.detailsDialog.stockLevel")}
                     </p>
-                    <p className="text-2xl font-bold mt-1">
-                      {stockPercentage.toFixed(0)}%
-                    </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="mt-1 text-2xl font-bold">{stockPercentage.toFixed(0)}%</p>
+                    <p className="text-muted-foreground text-xs">
                       {t("alerts.detailsDialog.ofMinimum")}
                     </p>
                   </div>
@@ -111,35 +100,29 @@ export function AlertDetailsDialog({
 
           {/* Alert Information */}
           <div>
-            <h3 className="text-sm font-semibold mb-3">
-              {t("alerts.detailsDialog.alertInfo")}
-            </h3>
+            <h3 className="mb-3 text-sm font-semibold">{t("alerts.detailsDialog.alertInfo")}</h3>
             <Card>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div>
-                  <p className="text-sm font-medium mb-1">{t("alerts.detailsDialog.title")}</p>
-                  <p className="text-sm text-muted-foreground">{alert.title}</p>
+                  <p className="mb-1 text-sm font-medium">{t("alerts.detailsDialog.title")}</p>
+                  <p className="text-muted-foreground text-sm">{alert.title}</p>
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm font-medium mb-1">{t("alerts.detailsDialog.message")}</p>
-                  <p className="text-sm text-muted-foreground">{alert.message}</p>
+                  <p className="mb-1 text-sm font-medium">{t("alerts.detailsDialog.message")}</p>
+                  <p className="text-muted-foreground text-sm">{alert.message}</p>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium mb-1">
-                      {t("alerts.detailsDialog.created")}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="mb-1 text-sm font-medium">{t("alerts.detailsDialog.created")}</p>
+                    <p className="text-muted-foreground text-sm">
                       {formatDateTime(alert.createdAt)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium mb-1">
-                      {t("alerts.detailsDialog.alertId")}
-                    </p>
-                    <p className="text-sm text-muted-foreground font-mono">{alert.id}</p>
+                    <p className="mb-1 text-sm font-medium">{t("alerts.detailsDialog.alertId")}</p>
+                    <p className="text-muted-foreground font-mono text-sm">{alert.id}</p>
                   </div>
                 </div>
               </CardContent>
@@ -149,40 +132,36 @@ export function AlertDetailsDialog({
           {/* Material Information */}
           {material && (
             <div>
-              <h3 className="text-sm font-semibold mb-3">
+              <h3 className="mb-3 text-sm font-semibold">
                 {t("alerts.detailsDialog.materialInfo")}
               </h3>
               <Card>
-                <CardContent className="pt-6 space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   <div>
-                    <p className="text-sm font-medium mb-1">
-                      {t("alerts.table.material")}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{material.name}</p>
+                    <p className="mb-1 text-sm font-medium">{t("alerts.table.material")}</p>
+                    <p className="text-muted-foreground text-sm">{material.name}</p>
                   </div>
                   <Separator />
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <p className="text-sm font-medium mb-1">
+                      <p className="mb-1 text-sm font-medium">
                         {t("alerts.detailsDialog.current")}
                       </p>
-                      <p className="text-sm text-red-600 font-semibold">
+                      <p className="text-sm font-semibold text-red-600">
                         {currentStock} {unit}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium mb-1">
+                      <p className="mb-1 text-sm font-medium">
                         {t("alerts.detailsDialog.minimum")}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         {minStock} {unit}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium mb-1">
-                        {t("alerts.detailsDialog.needed")}
-                      </p>
-                      <p className="text-sm text-orange-600 font-semibold">
+                      <p className="mb-1 text-sm font-medium">{t("alerts.detailsDialog.needed")}</p>
+                      <p className="text-sm font-semibold text-orange-600">
                         {minStock - currentStock} {unit}
                       </p>
                     </div>
@@ -195,61 +174,56 @@ export function AlertDetailsDialog({
           {/* Supplier Information */}
           {supplier && (
             <div>
-              <h3 className="text-sm font-semibold mb-3">
+              <h3 className="mb-3 text-sm font-semibold">
                 {t("alerts.detailsDialog.supplierInfo")}
               </h3>
               <Card>
-                <CardContent className="pt-6 space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   <div className="flex items-start gap-3">
-                    <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <User className="text-muted-foreground mt-0.5 h-5 w-5" />
                     <div>
-                      <p className="text-sm font-medium mb-1">
-                        {t("alerts.table.supplier")}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{supplier.name}</p>
+                      <p className="mb-1 text-sm font-medium">{t("alerts.table.supplier")}</p>
+                      <p className="text-muted-foreground text-sm">{supplier.name}</p>
                     </div>
                   </div>
                   <Separator />
                   <div className="flex items-start gap-3">
-                    <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <Phone className="text-muted-foreground mt-0.5 h-5 w-5" />
                     <div>
-                      <p className="text-sm font-medium mb-1">
-                        {t("alerts.detailsDialog.phone")}
-                      </p>
+                      <p className="mb-1 text-sm font-medium">{t("alerts.detailsDialog.phone")}</p>
                       <a
-                        href={`tel:${supplier.phone}`}
-                        className="text-sm text-primary hover:underline"
+                        href={`tel:${(supplier as any)?.phone || ""}`}
+                        className="text-primary text-sm hover:underline"
                       >
-                        {supplier.phone}
+                        {(supplier as any)?.phone || t("alerts.detailsDialog.notAvailable")}
                       </a>
                     </div>
                   </div>
                   <Separator />
                   <div className="flex items-start gap-3">
-                    <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <Mail className="text-muted-foreground mt-0.5 h-5 w-5" />
                     <div>
-                      <p className="text-sm font-medium mb-1">
-                        {t("alerts.detailsDialog.email")}
-                      </p>
+                      <p className="mb-1 text-sm font-medium">{t("alerts.detailsDialog.email")}</p>
                       <a
-                        href={`mailto:${supplier.email}`}
-                        className="text-sm text-primary hover:underline"
+                        href={`mailto:${(supplier as any)?.email || ""}`}
+                        className="text-primary text-sm hover:underline"
                       >
-                        {supplier.email}
+                        {(supplier as any)?.email || t("alerts.detailsDialog.notAvailable")}
                       </a>
                     </div>
                   </div>
-                  {supplier.address && (
+                  {(supplier as any)?.address && (
                     <>
                       <Separator />
                       <div className="flex items-start gap-3">
-                        <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <MapPin className="text-muted-foreground mt-0.5 h-5 w-5" />
                         <div>
-                          <p className="text-sm font-medium mb-1">
+                          <p className="mb-1 text-sm font-medium">
                             {t("alerts.detailsDialog.address")}
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            {supplier.address}, {supplier.city}, {supplier.country}
+                          <p className="text-muted-foreground text-sm">
+                            {(supplier as any)?.address}, {(supplier as any)?.city},{" "}
+                            {(supplier as any)?.country}
                           </p>
                         </div>
                       </div>
@@ -267,7 +241,7 @@ export function AlertDetailsDialog({
           </Button>
           {onCreateOrder && (
             <Button onClick={onCreateOrder}>
-              <ShoppingCart className="h-4 w-4 mr-2" />
+              <ShoppingCart className="mr-2 h-4 w-4" />
               {t("alerts.actions.createOrder")}
             </Button>
           )}

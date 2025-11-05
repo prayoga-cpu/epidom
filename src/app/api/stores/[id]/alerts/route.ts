@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
  * GET /api/stores/[id]/alerts
  * Get low stock materials for a store
  */
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {

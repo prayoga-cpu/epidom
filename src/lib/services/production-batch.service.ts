@@ -1,4 +1,4 @@
-import { ProductionBatch, ProductionStatus, MovementType } from "@prisma/client";
+import { ProductionBatch, ProductionStatus, MovementType, Prisma } from "@prisma/client";
 import {
   productionBatchRepository,
   ProductionBatchWithRelations,
@@ -399,7 +399,19 @@ export class ProductionBatchService {
       throw new Error("Production batch not found or does not belong to this store");
     }
 
-    return productionBatchRepository.update(batchId, data);
+    // Convert number to Decimal if plannedQuantity is provided
+    const updateData: any = {};
+    if (data.plannedQuantity !== undefined) {
+      updateData.plannedQuantity = new Prisma.Decimal(data.plannedQuantity);
+    }
+    if (data.scheduledDate !== undefined) {
+      updateData.scheduledDate = data.scheduledDate;
+    }
+    if (data.notes !== undefined) {
+      updateData.notes = data.notes;
+    }
+
+    return productionBatchRepository.update(batchId, updateData);
   }
 
   /**

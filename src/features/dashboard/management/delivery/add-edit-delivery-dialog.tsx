@@ -24,12 +24,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useI18n } from "@/components/lang/i18n-provider";
-import {
-  SupplierDelivery,
-  SupplierDeliveryStatus,
-  SupplierDeliveryItem,
-} from "@/types/entities";
-import { MOCK_SUPPLIERS, MOCK_MATERIALS } from "@/mocks";
+import { SupplierDelivery, SupplierDeliveryStatus, SupplierDeliveryItem } from "@/types/entities";
+import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
+import { useSuppliers } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { formatDate } from "@/lib/utils/formatting";
@@ -68,6 +65,13 @@ export default function AddEditDeliveryDialog({
   const { toast } = useToast();
   const params = useParams();
   const storeId = params?.storeId as string;
+
+  // Fetch suppliers and materials
+  const { data: suppliersData } = useSuppliers(storeId, {});
+  const { data: materialsData } = useMaterials(storeId);
+
+  const suppliers = suppliersData?.suppliers ?? [];
+  const materials = materialsData?.materials ?? [];
 
   // Form state
   const [deliveryReference, setDeliveryReference] = useState("");
@@ -284,7 +288,7 @@ export default function AddEditDeliveryDialog({
                 />
               </SelectTrigger>
               <SelectContent>
-                {MOCK_SUPPLIERS.map((supplier) => (
+                {suppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id}>
                     {supplier.name}
                   </SelectItem>
@@ -403,15 +407,18 @@ export default function AddEditDeliveryDialog({
                   <TableBody>
                     {items.map((item, index) => {
                       // Get material name for display in edit mode
-                      // In edit mode, get from delivery object; in add mode, get from MOCK_MATERIALS
-                      const material = mode === "edit" && delivery
-                        ? delivery.items.find((i) => i.materialId === item.materialId)?.material
-                        : MOCK_MATERIALS.find((m) => m.id === item.materialId);
+                      // In edit mode, get from delivery object; in add mode, get from materials
+                      const material =
+                        mode === "edit" && delivery
+                          ? delivery.items.find((i) => i.materialId === item.materialId)?.material
+                          : materials.find((m) => m.id === item.materialId);
                       return (
                         <TableRow key={index}>
                           <TableCell>
                             {mode === "edit" ? (
-                              <span className="text-sm">{material?.name || "Unknown Material"}</span>
+                              <span className="text-sm">
+                                {material?.name || "Unknown Material"}
+                              </span>
                             ) : (
                               <Select
                                 value={item.materialId}
@@ -427,7 +434,7 @@ export default function AddEditDeliveryDialog({
                                   />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {MOCK_MATERIALS.map((material) => (
+                                  {materials.map((material) => (
                                     <SelectItem key={material.id} value={material.id}>
                                       {material.name}
                                     </SelectItem>
@@ -450,11 +457,7 @@ export default function AddEditDeliveryDialog({
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              value={item.unit}
-                              className="h-9"
-                              disabled={mode === "edit"}
-                            />
+                            <Input value={item.unit} className="h-9" disabled={mode === "edit"} />
                           </TableCell>
                           <TableCell>
                             <Input

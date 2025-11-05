@@ -10,7 +10,7 @@ import { Prisma } from "@prisma/client";
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string; orderId: string } }
+  { params }: { params: Promise<{ id: string; orderId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +18,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: storeId, orderId } = params;
+    const { id: storeId, orderId } = await params;
 
     // Verify user has access to this store
     const store = await prisma.store.findFirst({
@@ -66,7 +66,7 @@ export async function GET(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string; orderId: string } }
+  { params }: { params: Promise<{ id: string; orderId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -74,7 +74,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: storeId, orderId } = params;
+    const { id: storeId, orderId } = await params;
 
     // Verify user has access to this store
     const store = await prisma.store.findFirst({
@@ -190,7 +190,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string; orderId: string } }
+  { params }: { params: Promise<{ id: string; orderId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -198,7 +198,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: storeId, orderId } = params;
+    const { id: storeId, orderId } = await params;
 
     // Verify user has access to this store
     const store = await prisma.store.findFirst({

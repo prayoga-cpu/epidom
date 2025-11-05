@@ -8,7 +8,7 @@ import { Prisma } from "@prisma/client";
  * GET /api/stores/[id]/supplier-orders
  * Get all supplier orders for a store
  */
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -59,7 +59,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
  * POST /api/stores/[id]/supplier-orders
  * Create a new supplier order
  */
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {

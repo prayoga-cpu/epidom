@@ -18,7 +18,10 @@ export const orderStatusSchema = z.enum([
 // Create order schema
 export const createOrderSchema = z.object({
   storeId: cuidSchema,
-  customerName: z.string().min(1, "Customer name is required").max(200, "Customer name is too long"),
+  customerName: z
+    .string()
+    .min(1, "Customer name is required")
+    .max(200, "Customer name is too long"),
   customerEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
   customerPhone: z
     .string()
@@ -46,7 +49,11 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
 // Update order schema
 export const updateOrderSchema = z.object({
-  customerName: z.string().min(1, "Customer name is required").max(200, "Customer name is too long").optional(),
+  customerName: z
+    .string()
+    .min(1, "Customer name is required")
+    .max(200, "Customer name is too long")
+    .optional(),
   customerEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
   customerPhone: z
     .string()
@@ -61,33 +68,3 @@ export const updateOrderSchema = z.object({
 });
 
 export type UpdateOrderInput = z.infer<typeof updateOrderSchema>;
-
-// Production batch schemas
-export const productionStatusSchema = z.enum([
-  "PLANNED",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "CANCELLED",
-]);
-
-export const createProductionBatchSchema = z.object({
-  storeId: cuidSchema,
-  productId: cuidSchema,
-  recipeId: cuidSchema.optional(),
-  plannedQuantity: decimalSchema.positive("Planned quantity must be positive"),
-  unit: z.string().min(1, "Unit is required").max(20, "Unit is too long"),
-  scheduledDate: z.date(),
-  notes: z.string().max(1000, "Notes are too long").optional(),
-});
-
-export type CreateProductionBatchInput = z.infer<typeof createProductionBatchSchema>;
-
-export const updateProductionBatchSchema = z.object({
-  actualQuantity: decimalSchema.positive("Actual quantity must be positive").optional(),
-  status: productionStatusSchema.optional(),
-  scheduledDate: z.date().optional(),
-  completedDate: z.date().optional(),
-  notes: z.string().max(1000, "Notes are too long").optional(),
-});
-
-export type UpdateProductionBatchInput = z.infer<typeof updateProductionBatchSchema>;

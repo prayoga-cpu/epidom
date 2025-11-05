@@ -16,17 +16,8 @@ import { ExportButton } from "@/components/ui/export-button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { formatDateTime } from "@/lib/utils/formatting";
 import { MovementType, type StockMovement } from "@/types/entities";
-import { MOCK_STOCK_MOVEMENTS, MOCK_MATERIALS, MOCK_PRODUCTS } from "@/mocks";
 import type { DateRange } from "react-day-picker";
-import {
-  TrendingUp,
-  TrendingDown,
-  Package,
-  Calendar,
-  User,
-  FileText,
-  Hash,
-} from "lucide-react";
+import { TrendingUp, TrendingDown, Package, Calendar, User, FileText, Hash } from "lucide-react";
 
 interface AdjustmentHistoryDialogProps {
   open: boolean;
@@ -34,6 +25,13 @@ interface AdjustmentHistoryDialogProps {
   itemId: string | null;
   itemType: "material" | "product";
 }
+
+type ItemInfo = {
+  name: string;
+  sku?: string;
+  unit: string;
+  currentStock?: number;
+};
 
 export function AdjustmentHistoryDialog({
   open,
@@ -57,21 +55,12 @@ export function AdjustmentHistoryDialog({
   // });
 
   // Filter adjustments only (ADJUSTMENT_IN and ADJUSTMENT_OUT types)
+  // TODO: Implement real API call for stock movements
   const filteredAdjustments = useMemo(() => {
     if (!itemId) return [];
 
-    let filtered = MOCK_STOCK_MOVEMENTS.filter((mov) => {
-      const matchesItem =
-        itemType === "material" ? mov.materialId === itemId : mov.productId === itemId;
-
-      // Only include adjustment movements
-      const isAdjustment =
-        mov.type === MovementType.ADJUSTMENT ||
-        mov.reason?.includes("correction") ||
-        mov.reason?.includes("adjustment");
-
-      return matchesItem && isAdjustment;
-    });
+    // Temporarily return empty array until stock movements API is implemented
+    let filtered: StockMovement[] = [];
 
     // Apply date range filter
     if (dateRange?.from) {
@@ -111,19 +100,19 @@ export function AdjustmentHistoryDialog({
   }, [filteredAdjustments]);
 
   // Get item info
-  const itemInfo = useMemo(() => {
+  // TODO: Fetch actual item info from API
+  const itemInfo = useMemo<ItemInfo | null>(() => {
     if (!itemId) return null;
-    if (itemType === "material") {
-      return MOCK_MATERIALS.find((m) => m.id === itemId);
-    } else {
-      return MOCK_PRODUCTS.find((p) => p.id === itemId);
-    }
+    // Temporarily return null until materials/products API is implemented
+    return null;
   }, [itemId, itemType]);
 
   // Export data
   const exportData = adjustmentsWithBalance.map((adj) => ({
     [t("common.date")]: formatDateTime(adj.createdAt),
-    [t("common.type")]: adj.isIncrease ? t("management.editStock.increase") + " (+)" : t("management.editStock.decrease") + " (-)",
+    [t("common.type")]: adj.isIncrease
+      ? t("management.editStock.increase") + " (+)"
+      : t("management.editStock.decrease") + " (-)",
     [t("management.editStock.quantity")]: `${adj.isIncrease ? "+" : "-"}${Math.abs(adj.quantity)}`,
     [t("management.editStock.unit")]: adj.unit,
     [t("management.editStock.reason")]: adj.reason,
@@ -147,14 +136,15 @@ export function AdjustmentHistoryDialog({
 
         <div className="space-y-4">
           {/* Item Info */}
-          {itemInfo && (
+          {itemInfo && itemInfo !== null && (
             <div className="bg-muted/50 rounded-lg p-4">
               <div className="flex items-center gap-2">
                 <Package className="text-muted-foreground h-5 w-5" />
                 <div>
                   <p className="font-medium">{itemInfo.name}</p>
                   <p className="text-muted-foreground text-sm">
-                    {itemInfo.sku && `${t("common.sku")}: ${itemInfo.sku} • `}{t("management.editStock.unit")}: {itemInfo.unit}
+                    {itemInfo.sku && `${t("common.sku")}: ${itemInfo.sku} • `}
+                    {t("management.editStock.unit")}: {itemInfo.unit}
                     {itemInfo.currentStock !== undefined &&
                       ` • ${t("management.editStock.currentStock")}: ${itemInfo.currentStock} ${itemInfo.unit}`}
                   </p>
@@ -231,11 +221,11 @@ export function AdjustmentHistoryDialog({
                 {adjustmentsWithBalance.map((adj, index) => (
                   <div
                     key={`${adj.id}-${index}`}
-                    className="group relative rounded-lg border p-4 transition-colors hover:border-primary/50"
+                    className="group hover:border-primary/50 relative rounded-lg border p-4 transition-colors"
                   >
                     {/* Timeline connector */}
                     {index < adjustmentsWithBalance.length - 1 && (
-                      <div className="absolute left-8 top-full h-3 w-px bg-border" />
+                      <div className="bg-border absolute top-full left-8 h-3 w-px" />
                     )}
 
                     <div className="flex items-start gap-4">
@@ -291,25 +281,27 @@ export function AdjustmentHistoryDialog({
 
                         {/* Details */}
                         <div className="grid gap-2 text-sm sm:grid-cols-2">
-                          <div className="flex items-center gap-2 text-muted-foreground">
+                          <div className="text-muted-foreground flex items-center gap-2">
                             <Calendar className="h-3.5 w-3.5" />
                             <span>{formatDateTime(adj.createdAt)}</span>
                           </div>
 
-                          <div className="flex items-center gap-2 text-muted-foreground">
+                          <div className="text-muted-foreground flex items-center gap-2">
                             <User className="h-3.5 w-3.5" />
                             <span>{adj.userName}</span>
                           </div>
 
                           {adj.referenceId && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="text-muted-foreground flex items-center gap-2">
                               <Hash className="h-3.5 w-3.5" />
-                              <span>{t("common.reference")}: {adj.referenceId}</span>
+                              <span>
+                                {t("common.reference")}: {adj.referenceId}
+                              </span>
                             </div>
                           )}
 
                           {adj.notes && (
-                            <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
+                            <div className="text-muted-foreground flex items-center gap-2 sm:col-span-2">
                               <FileText className="h-3.5 w-3.5" />
                               <span>{adj.notes}</span>
                             </div>

@@ -36,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { useCreateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
-import { MOCK_MATERIALS } from "@/mocks";
+import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { ShoppingCart, Loader2, Package } from "lucide-react";
 import { useParams } from "next/navigation";
 
@@ -65,6 +65,10 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
   const { toast } = useToast();
   const params = useParams();
   const storeId = params?.storeId as string;
+
+  // Fetch materials
+  const { data: materialsData } = useMaterials(storeId);
+  const materials = materialsData?.materials ?? [];
 
   // Create supplier order mutation
   const createOrder = useCreateSupplierOrder(storeId);
@@ -234,12 +238,12 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {MOCK_MATERIALS.map((mat) => (
+                        {materials.map((mat) => (
                           <SelectItem key={mat.id} value={mat.id}>
                             <div className="flex items-center justify-between gap-2">
                               <span>{mat.name}</span>
                               <span className="text-muted-foreground text-xs">
-                                ({mat.currentStock}/{mat.minStock} {mat.unit})
+                                ({Number(mat.currentStock)}/{Number(mat.minStock)} {mat.unit})
                               </span>
                             </div>
                           </SelectItem>
