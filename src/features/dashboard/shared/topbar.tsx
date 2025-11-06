@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Search, Menu } from "lucide-react";
 import { Sidebar } from "./sidebar";
@@ -11,9 +10,12 @@ import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import NavUser from "./nav-user";
 import { useState } from "react";
+import { GlobalSearchDialog } from "./global-search-dialog";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 
 export function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { t } = useI18n();
 
   return (
@@ -60,18 +62,33 @@ export function Topbar() {
 
           {/* Center: Search (hidden on mobile, centered on md+) */}
           <div className="hidden w-full items-center justify-end md:flex">
-            <div className="relative w-80 max-w-xl sm:max-w-2xl">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-black" />
-              <Input
-                placeholder={t("actions.searchPlaceholder")}
-                aria-label={t("actions.searchPlaceholder")}
-                className="text-foreground placeholder:text-muted-foreground h-9 w-full rounded-full bg-white pl-9"
-              />
-            </div>
+            <Button
+              variant="outline"
+              className="text-muted-foreground relative h-9 w-80 max-w-xl justify-start rounded-full bg-white text-sm font-normal sm:max-w-2xl"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="mr-2 size-4 shrink-0" />
+              <span>{t("actions.searchPlaceholder")}</span>
+              <KbdGroup className="absolute right-3 hidden md:flex">
+                <Kbd>⌘</Kbd>
+                <Kbd>k</Kbd>
+              </KbdGroup>
+            </Button>
           </div>
 
           {/* Right: store switcher, language, profile, logout */}
           <div className="ml-auto flex items-center justify-end gap-2">
+            {/* Mobile search button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-white/10 md:hidden"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="size-5" />
+              <span className="sr-only">Search</span>
+            </Button>
+
             {/* Store switcher - hidden on mobile */}
             <div className="hidden sm:block">
               <StoreSwitcher />
@@ -93,6 +110,9 @@ export function Topbar() {
           </div>
         </div>
       </div>
+
+      {/* Global Search Dialog */}
+      <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 }

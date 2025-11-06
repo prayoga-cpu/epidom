@@ -83,6 +83,20 @@ export const id = {
       exportAsCsv: "Ekspor sebagai CSV",
       exportAsExcel: "Ekspor sebagai Excel",
       exportAsPdf: "Ekspor sebagai PDF",
+      logout: "Keluar",
+      searchPlaceholder: "Cari...",
+    },
+  },
+  search: {
+    title: "Pencarian Global",
+    description: "Cari halaman, fitur, dan lainnya...",
+    placeholder: "Ketik untuk mencari atau tekan '/' untuk fokus...",
+    noResults: "Tidak ada hasil yang ditemukan.",
+    categories: {
+      navigation: "Navigasi",
+      data: "Pengelolaan Data",
+      management: "Manajemen",
+      tracking: "Pelacakan",
     },
   },
   hero: {

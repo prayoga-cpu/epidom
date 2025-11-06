@@ -83,6 +83,20 @@ export const fr = {
       exportAsCsv: "Exporter en CSV",
       exportAsExcel: "Exporter en Excel",
       exportAsPdf: "Exporter en PDF",
+      logout: "Déconnexion",
+      searchPlaceholder: "Rechercher...",
+    },
+  },
+  search: {
+    title: "Recherche Globale",
+    description: "Rechercher des pages, fonctionnalités et plus...",
+    placeholder: "Tapez pour rechercher ou appuyez sur '/' pour focus...",
+    noResults: "Aucun résultat trouvé.",
+    categories: {
+      navigation: "Navigation",
+      data: "Gestion des Données",
+      management: "Gestion",
+      tracking: "Suivi",
     },
   },
   hero: {

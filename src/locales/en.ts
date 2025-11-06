@@ -59,6 +59,8 @@ export const en = {
       exportAsExcel: "Export as Excel",
       exportAsPdf: "Export as PDF",
       update: "Update",
+      logout: "Logout",
+      searchPlaceholder: "Search...",
     },
     pagination: {
       rowsPerPage: "Rows per page",
@@ -88,6 +90,18 @@ export const en = {
     metrics: {
       plannedQuantity: "Planned Quantity",
       producedQuantity: "Produced Quantity",
+    },
+  },
+  search: {
+    title: "Global Search",
+    description: "Search for pages, features, and more...",
+    placeholder: "Type to search or press '/' to focus...",
+    noResults: "No results found.",
+    categories: {
+      navigation: "Navigation",
+      data: "Data Management",
+      management: "Management",
+      tracking: "Tracking",
     },
   },
   hero: {
