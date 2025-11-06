@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { MOCK_ALERTS } from "@/mocks";
+import { useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { useParams } from "next/navigation";
 
 /**
  * Custom hook to get alerts count
@@ -10,26 +10,24 @@ import { MOCK_ALERTS } from "@/mocks";
  * @example
  * const alertsCount = useAlertsCount();
  * // alertsCount = 3
- *
- * TODO: Replace mock data with API call
- * const { data } = await fetch('/api/alerts/count')
  */
 export function useAlertsCount(): number {
-  const count = useMemo(() => {
-    // TODO: Replace with API call or zustand store
-    return MOCK_ALERTS.length;
-  }, []);
+  const params = useParams();
+  const storeId = params?.storeId as string;
 
-  return count;
+  const { data } = useAlerts(storeId);
+
+  return data?.alerts?.length || 0;
 }
 
 /**
  * Get alerts count synchronously (for server components)
+ * Note: This is a placeholder for server-side usage
  *
- * @returns {number} Total count of alerts
- *
- * TODO: Replace with API call or database query
+ * @returns {number} Total count of alerts (0 for now, should be fetched server-side)
  */
 export function getAlertsCount(): number {
-  return MOCK_ALERTS.length;
+  // For server components, this would need to be an async function
+  // that fetches from the API or database directly
+  return 0;
 }

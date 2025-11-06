@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { Toaster } from "sonner";
 
 import "@/app/globals.css";
 import { Metadata } from "next";
@@ -40,6 +41,7 @@ export default function RootLayout({
             </SessionProvider>
           </QueryProvider>
         </ErrorBoundary>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

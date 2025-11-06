@@ -51,7 +51,6 @@ export function CreateStoreButton() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Implement API call to create store
-    console.log("Creating store:", { storeName, city });
 
     setStoreName("");
     setCity("");

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { useI18n } from "@/components/lang/i18n-provider";
 import type { SupplierDelivery } from "@/types/entities";
-import { DeliveryType, SupplierDeliveryStatus } from "@/types/entities";
+import { SupplierDeliveryStatus } from "@/types/entities";
 import { formatDate, formatDateTime } from "@/lib/utils/formatting";
 import {
   User,
@@ -27,11 +27,11 @@ import {
   XCircle,
   AlertCircle,
   Edit,
-  Truck,
   FileText,
   Printer,
   TrendingUp,
   Building2,
+  Truck,
 } from "lucide-react";
 
 interface SupplierDeliveryDetailsProps {
@@ -75,14 +75,17 @@ export function SupplierDeliveryDetails({
     // Map of English system notes to translation keys
     const systemNoteMap: Record<string, string> = {
       "Delivery scheduled": "management.delivery.details.systemNotes.deliveryScheduled",
-      "Shipment departed from supplier warehouse": "management.delivery.details.systemNotes.shipmentDeparted",
-      "All items received in good condition": "management.delivery.details.systemNotes.itemsReceived",
+      "Shipment departed from supplier warehouse":
+        "management.delivery.details.systemNotes.shipmentDeparted",
+      "All items received in good condition":
+        "management.delivery.details.systemNotes.itemsReceived",
       "Out for delivery": "management.delivery.details.systemNotes.outForDelivery",
       "Order placed, awaiting confirmation": "management.delivery.details.systemNotes.orderPlaced",
       "Weekly bulk order scheduled": "management.delivery.details.systemNotes.weeklyBulkOrder",
       "Special order for specialty items": "management.delivery.details.systemNotes.specialOrder",
       "Regular dairy delivery": "management.delivery.details.systemNotes.regularDairyDelivery",
-      "Regular weekly delivery - all items inspected and stored properly": "management.delivery.details.systemNotes.regularWeeklyDelivery",
+      "Regular weekly delivery - all items inspected and stored properly":
+        "management.delivery.details.systemNotes.regularWeeklyDelivery",
     };
 
     // Check if note matches a system message
@@ -96,18 +99,20 @@ export function SupplierDeliveryDetails({
   };
 
   // Get status styling
-  const getStatusVariant = (status: SupplierDeliveryStatus) => {
+  const getStatusVariant = (
+    status: SupplierDeliveryStatus
+  ): React.ComponentProps<typeof Badge>["variant"] => {
     switch (status) {
       case SupplierDeliveryStatus.PENDING:
-        return "secondary";
+        return "outline";
       case SupplierDeliveryStatus.IN_TRANSIT:
-        return "default";
+        return "outline";
       case SupplierDeliveryStatus.RECEIVED:
-        return "default";
+        return "outline";
       case SupplierDeliveryStatus.CANCELLED:
-        return "destructive";
+        return "outline";
       default:
-        return "secondary";
+        return "outline";
     }
   };
 
@@ -126,14 +131,6 @@ export function SupplierDeliveryDetails({
     }
   };
 
-  const getTypeVariant = (type: DeliveryType) => {
-    return type === DeliveryType.INCOMING ? "default" : "secondary";
-  };
-
-  const getTypeIcon = (type: DeliveryType) => {
-    return type === DeliveryType.INCOMING ? Package : Truck;
-  };
-
   // Get status label
   const getStatusLabel = (status: SupplierDeliveryStatus) => {
     switch (status) {
@@ -150,50 +147,43 @@ export function SupplierDeliveryDetails({
     }
   };
 
-  // Get delivery type label
-  const getTypeLabel = (type: DeliveryType) => {
-    switch (type) {
-      case DeliveryType.INCOMING:
-        return t("management.delivery.type.incoming") || "Incoming";
-      case DeliveryType.OUTGOING:
-        return t("management.delivery.type.outgoing") || "Outgoing";
-      default:
-        return type;
-    }
-  };
-
   const StatusIcon = getStatusIcon(delivery.status);
-  const TypeIcon = getTypeIcon(delivery.deliveryType);
 
   return (
     <Card className="shadow-md transition-shadow hover:shadow-lg">
-      <CardHeader className="border-b pb-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{delivery.deliveryReference}</CardTitle>
-            <p className="text-muted-foreground mt-1 text-xs">{t("management.delivery.details.deliveryId") || "Delivery ID"}: {delivery.id}</p>
+      <CardHeader className="border-b">
+        <div className="flex flex-col items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <CardTitle className="truncate text-lg" title={delivery.deliveryReference}>
+              {delivery.deliveryReference}
+            </CardTitle>
+            <p className="text-muted-foreground mt-1 truncate text-xs" title={delivery.id}>
+              <span className="inline-block">
+                {t("management.delivery.details.deliveryId") || "Delivery ID"}:{" "}
+              </span>
+              <span className="inline-block">{delivery.id}</span>
+            </p>
           </div>
-          <div className="flex flex-col gap-1">
-            <Badge variant={getStatusVariant(delivery.status)} className="gap-1">
+          <div className="flex shrink-0">
+            <Badge
+              variant={getStatusVariant(delivery.status) || "default"}
+              className="gap-1 whitespace-nowrap"
+            >
               <StatusIcon className="h-3 w-3" />
               {getStatusLabel(delivery.status)}
-            </Badge>
-            <Badge variant={getTypeVariant(delivery.deliveryType)} className="gap-1">
-              <TypeIcon className="h-3 w-3" />
-              {getTypeLabel(delivery.deliveryType)}
             </Badge>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 p-4">
+      <CardContent className="space-y-4 px-4">
         {/* Supplier Information */}
         <div className="space-y-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <Building2 className="h-4 w-4" />
             {t("management.delivery.details.supplier") || "Supplier"}
           </h3>
-          <div className="bg-muted/30 space-y-1.5 rounded-lg p-3 text-sm">
+          <div className="bg-muted/90 space-y-1.5 rounded-lg p-3 text-sm">
             <p className="font-medium">{delivery.supplier?.name}</p>
             {delivery.supplier?.contactPerson && (
               <div className="text-muted-foreground flex items-center gap-2 text-xs">
@@ -222,15 +212,20 @@ export function SupplierDeliveryDetails({
             <Truck className="h-4 w-4" />
             {t("management.delivery.details.deliveryDetails") || "Delivery Details"}
           </h3>
-          <div className="bg-muted/30 space-y-1.5 rounded-lg p-3 text-sm">
+          <div className="bg-muted/90 space-y-1.5 rounded-lg p-3 text-sm">
             <div className="text-muted-foreground flex items-center gap-2 text-xs">
               <Calendar className="h-3 w-3" />
-              <span className="font-medium">{t("management.delivery.details.expected") || "Expected"}:</span> {formatDateTime(delivery.expectedDate)}
+              <span className="font-medium">
+                {t("management.delivery.details.expected") || "Expected"}:
+              </span>{" "}
+              {formatDateTime(delivery.expectedDate)}
             </div>
             {delivery.receivedDate && (
               <div className="text-muted-foreground flex items-center gap-2 text-xs">
                 <CheckCircle2 className="h-3 w-3" />
-                <span className="font-medium">{t("management.delivery.details.received") || "Received"}:</span>{" "}
+                <span className="font-medium">
+                  {t("management.delivery.details.received") || "Received"}:
+                </span>{" "}
                 {formatDateTime(delivery.receivedDate)}
               </div>
             )}
@@ -249,10 +244,18 @@ export function SupplierDeliveryDetails({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">{t("management.delivery.details.material") || "Material"}</TableHead>
-                  <TableHead className="text-right text-xs">{t("management.delivery.details.quantity") || "Quantity"}</TableHead>
-                  <TableHead className="text-xs">{t("management.delivery.details.unit") || "Unit"}</TableHead>
-                  <TableHead className="text-xs">{t("management.delivery.details.notes") || "Notes"}</TableHead>
+                  <TableHead className="text-xs">
+                    {t("management.delivery.details.material") || "Material"}
+                  </TableHead>
+                  <TableHead className="text-right text-xs">
+                    {t("management.delivery.details.quantity") || "Quantity"}
+                  </TableHead>
+                  <TableHead className="text-xs">
+                    {t("management.delivery.details.unit") || "Unit"}
+                  </TableHead>
+                  <TableHead className="text-xs">
+                    {t("management.delivery.details.notes") || "Notes"}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -261,9 +264,14 @@ export function SupplierDeliveryDetails({
                     <TableRow key={index}>
                       <TableCell className="text-xs">
                         <div>
-                          <div className="font-medium">{item.material?.name || t("management.delivery.details.unknownMaterial")}</div>
+                          <div className="font-medium">
+                            {item.material?.name ||
+                              t("management.delivery.details.unknownMaterial")}
+                          </div>
                           {item.material?.sku && (
-                            <div className="text-muted-foreground text-xs">{t("common.sku")}: {item.material.sku}</div>
+                            <div className="text-muted-foreground text-xs">
+                              {t("common.sku")}: {item.material.sku}
+                            </div>
                           )}
                         </div>
                       </TableCell>
@@ -309,14 +317,16 @@ export function SupplierDeliveryDetails({
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-sm font-medium">{getStatusLabel(history.status)}</p>
-                          <p className="text-muted-foreground text-xs">{translateSystemNote(history.notes)}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {translateSystemNote(history.notes)}
+                          </p>
                           {history.userName && (
                             <p className="text-muted-foreground mt-0.5 text-xs">
                               {t("management.delivery.details.by") || "by"} {history.userName}
                             </p>
                           )}
                         </div>
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-muted-foreground mr-2 text-end text-xs">
                           {formatDate(history.createdAt)}
                         </p>
                       </div>
@@ -335,7 +345,7 @@ export function SupplierDeliveryDetails({
               <FileText className="h-4 w-4" />
               {t("management.delivery.details.notes") || "Notes"}
             </h3>
-            <div className="bg-muted/30 rounded-lg p-3">
+            <div className="bg-muted/90 rounded-lg p-3">
               <p className="text-muted-foreground text-xs">{translateSystemNote(delivery.notes)}</p>
             </div>
           </div>
@@ -385,8 +395,14 @@ export function SupplierDeliveryDetails({
 
         {/* Metadata */}
         <div className="text-muted-foreground space-y-1 text-xs">
-          <p>{t("management.delivery.details.created") || "Created"}: {formatDateTime(delivery.createdAt)}</p>
-          <p>{t("management.delivery.details.updated") || "Updated"}: {formatDateTime(delivery.updatedAt)}</p>
+          <p>
+            {t("management.delivery.details.created") || "Created"}:{" "}
+            {formatDateTime(delivery.createdAt)}
+          </p>
+          <p>
+            {t("management.delivery.details.updated") || "Updated"}:{" "}
+            {formatDateTime(delivery.updatedAt)}
+          </p>
         </div>
       </CardContent>
     </Card>

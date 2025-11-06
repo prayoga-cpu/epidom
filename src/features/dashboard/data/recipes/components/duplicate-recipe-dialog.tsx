@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useParams } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +33,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
 import {
   Loader2,
   ChevronRight,
@@ -44,25 +43,21 @@ import {
   DollarSign,
   Clock,
 } from "lucide-react";
-import { MOCK_MATERIALS } from "@/mocks";
 import { Separator } from "@/components/ui/separator";
-import type { Recipe } from "@/types/entities";
+import { toast } from "sonner";
 import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useDuplicateRecipe, type RecipeWithIngredients } from "../hooks/use-recipes";
+import { useMaterials } from "../../materials/hooks/use-materials";
+import { duplicateRecipeSchema } from "@/lib/validation/inventory.schemas";
+import type { DuplicateRecipeInput } from "@/lib/validation/inventory.schemas";
 
-// Simple schema for duplication (only editable fields)
-const duplicateRecipeSchema = z.object({
-  name: z.string().min(2, "Recipe name must be at least 2 characters"),
-  description: z.string().optional(),
-  category: z.string().min(1, "Category is required"),
-});
-
-type DuplicateRecipeFormValues = z.infer<typeof duplicateRecipeSchema>;
+type DuplicateRecipeFormValues = DuplicateRecipeInput;
 
 interface DuplicateRecipeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  recipe: Recipe;
+  recipe: RecipeWithIngredients;
 }
 
 const RECIPE_CATEGORIES = [
@@ -75,17 +70,21 @@ const RECIPE_CATEGORIES = [
   "Other",
 ];
 
-// Steps will be translated in the component itself using t() function
-
 export default function DuplicateRecipeDialog({
   open,
   onOpenChange,
   recipe,
 }: DuplicateRecipeDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const { toast } = useToast();
   const { t } = useI18n();
+  const params = useParams();
+  const storeId = params.storeId as string;
+
+  // Fetch materials for displaying ingredient details
+  const { data: materialsData } = useMaterials(storeId);
+  const materials = materialsData?.materials || [];
+
+  const duplicateRecipe = useDuplicateRecipe(storeId);
 
   const STEPS = [
     { id: 1, name: t("data.recipes.duplicateDialog.steps.basicInfo") || "Basic Info" },
@@ -95,9 +94,7 @@ export default function DuplicateRecipeDialog({
   const form = useForm<DuplicateRecipeFormValues>({
     resolver: zodResolver(duplicateRecipeSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      category: "",
+      newName: "",
     },
   });
 
@@ -105,73 +102,31 @@ export default function DuplicateRecipeDialog({
   useEffect(() => {
     if (recipe && open) {
       form.reset({
-        name: `${recipe.name} (Copy)`,
-        description: recipe.description || "",
-        category: recipe.category || "",
+        newName: `${recipe.name} (Copy)`,
       });
       setCurrentStep(1);
     }
   }, [recipe, open, form]);
 
   const onSubmit = async (data: DuplicateRecipeFormValues) => {
-    setIsSubmitting(true);
-
     try {
-      // TODO: API call to duplicate recipe
-      // Generate new IDs for recipe and ingredients
-      // const newRecipeId = `REC-${Date.now()}`;
-      // const newIngredients = recipe.ingredients.map((ing, idx) => ({
-      //   ...ing,
-      //   id: `RI-${Date.now()}-${idx}`,
-      //   recipeId: newRecipeId,
-      // }));
-      //
-      // const duplicatedRecipe = {
-      //   ...recipe,
-      //   id: newRecipeId,
-      //   name: data.name,
-      //   description: data.description,
-      //   category: data.category,
-      //   ingredients: newIngredients,
-      //   createdAt: new Date(),
-      //   updatedAt: new Date(),
-      // };
-      //
-      // const response = await fetch("/api/recipes", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(duplicatedRecipe),
-      // });
-      //
-      // if (!response.ok) throw new Error("Failed to duplicate recipe");
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      toast({
-        title: t("data.recipes.toasts.duplicated.title") || "Recipe Duplicated",
-        description:
-          t("data.recipes.toasts.duplicated.description")?.replace("{name}", data.name) ||
-          `${data.name} has been created successfully.`,
+      await duplicateRecipe.mutateAsync({
+        recipeId: recipe.id,
+        newName: data.newName,
       });
-
-      form.reset();
-      setCurrentStep(1);
+      toast.success(t("Recipe duplicated successfully") || "Recipe duplicated successfully");
       onOpenChange(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to duplicate recipe. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      toast.error(
+        t("Failed to duplicate recipe. Please try again.") ||
+          "Failed to duplicate recipe. Please try again."
+      );
     }
   };
 
   const handleNext = async () => {
     // Validate current step
-    const fieldsToValidate: Array<keyof DuplicateRecipeFormValues> = ["name", "category"];
+    const fieldsToValidate: Array<keyof DuplicateRecipeFormValues> = ["newName"];
     const isValid = await form.trigger(fieldsToValidate);
 
     if (isValid) {
@@ -187,9 +142,9 @@ export default function DuplicateRecipeDialog({
   const calculateTotalCost = () => {
     let total = 0;
     recipe.ingredients.forEach((ingredient) => {
-      const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+      const material = materials.find((m) => m.id === ingredient.materialId);
       if (material) {
-        total += material.costPerUnit * ingredient.quantity;
+        total += Number(material.unitCost) * ingredient.quantity;
       }
     });
     return total;
@@ -259,69 +214,22 @@ export default function DuplicateRecipeDialog({
 
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="newName"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
                         {t("data.recipes.duplicateDialog.nameLabel") || "New Recipe Name"} *
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.recipes.namePlaceholder") || "Recipe name"} {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        {t("data.recipes.duplicateDialog.nameDescription") ||
-                          "Enter a unique name for the duplicated recipe"}
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.recipes.form.description") || "Description"}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder={
-                            t("data.recipes.form.descriptionPlaceholder") ||
-                            "Brief description of the recipe..."
-                          }
-                          className="min-h-[80px]"
+                        <Input
+                          placeholder={t("data.recipes.namePlaceholder") || "Recipe name"}
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.recipes.form.category") || "Category"} *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={
-                                t("data.recipes.form.selectCategory") || "Select a category"
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {RECIPE_CATEGORIES.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormDescription>
+                        {t("data.recipes.duplicateDialog.nameDescription") ||
+                          "Enter a unique name for the duplicated recipe. All other details will be copied from the original recipe."}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -357,7 +265,7 @@ export default function DuplicateRecipeDialog({
                         <p className="text-muted-foreground text-xs">
                           {t("data.recipes.duplicateDialog.newName") || "New Name"}
                         </p>
-                        <p className="text-primary font-medium">{form.watch("name")}</p>
+                        <p className="text-primary font-medium">{form.watch("newName")}</p>
                       </div>
                     </div>
                     <Separator />
@@ -365,8 +273,8 @@ export default function DuplicateRecipeDialog({
                       <p className="text-muted-foreground text-xs">
                         {t("data.recipes.form.category") || "Category"}
                       </p>
-                      <Badge variant="secondary" className="mt-1">
-                        {form.watch("category")}
+                      <Badge variant="outline" className="mt-1">
+                        {recipe.category}
                       </Badge>
                     </div>
                   </CardContent>
@@ -427,9 +335,7 @@ export default function DuplicateRecipeDialog({
                       </p>
                       <div className="space-y-2">
                         {recipe.ingredients.slice(0, 5).map((ingredient, index) => {
-                          const material = MOCK_MATERIALS.find(
-                            (m) => m.id === ingredient.materialId
-                          );
+                          const material = materials.find((m) => m.id === ingredient.materialId);
                           return (
                             <div
                               key={index}
@@ -475,7 +381,7 @@ export default function DuplicateRecipeDialog({
                   type="button"
                   variant="outline"
                   onClick={handleBack}
-                  disabled={isSubmitting}
+                  disabled={duplicateRecipe.isPending}
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   {t("actions.previous") || "Back"}
@@ -488,8 +394,8 @@ export default function DuplicateRecipeDialog({
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" disabled={duplicateRecipe.isPending}>
+                  {duplicateRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {t("data.recipes.duplicate") || "Duplicate Recipe"}
                 </Button>
               )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -21,42 +22,31 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { PaymentTerms } from "@/types/entities";
-import type { Supplier } from "@/types/entities";
+import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useUpdateSupplier } from "../hooks/use-suppliers";
 
 // Zod validation schema
 const supplierSchema = z.object({
   name: z.string().min(2, "Supplier name must be at least 2 characters"),
-  contactPerson: z.string().optional(),
+  contactPerson: z.string().optional().or(z.literal("")),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-  paymentTerms: z.nativeEnum(PaymentTerms).optional(),
-  deliverySchedule: z.string().optional(),
-  rating: z.coerce.number().min(0).max(5).optional().or(z.literal(0)),
-  notes: z.string().optional(),
-  onTimeDeliveryRate: z.coerce.number().min(0).max(100).optional().or(z.literal(0)),
+  phone: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
 
 interface EditSupplierDialogProps {
-  supplier: Supplier;
+  supplier: SupplierWithRelations | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -66,9 +56,11 @@ export default function EditSupplierDialog({
   open,
   onOpenChange,
 }: EditSupplierDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
   const { t } = useI18n();
+  const params = useParams();
+  const storeId = params.storeId as string;
+
+  const updateSupplier = useUpdateSupplier(storeId, supplier?.id || "");
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
@@ -80,11 +72,7 @@ export default function EditSupplierDialog({
       address: "",
       city: "",
       country: "",
-      paymentTerms: undefined,
-      deliverySchedule: "",
-      rating: 0,
       notes: "",
-      onTimeDeliveryRate: 0,
     },
   });
 
@@ -99,41 +87,20 @@ export default function EditSupplierDialog({
         address: supplier.address || "",
         city: supplier.city || "",
         country: supplier.country || "",
-        paymentTerms: supplier.paymentTerms || undefined,
-        deliverySchedule: supplier.deliverySchedule || "",
-        rating: supplier.rating || 0,
         notes: supplier.notes || "",
-        onTimeDeliveryRate: supplier.onTimeDeliveryRate || 0,
       });
     }
   }, [supplier, form]);
 
   const onSubmit = async (data: SupplierFormValues) => {
-    setIsSubmitting(true);
+    try {
+      await updateSupplier.mutateAsync(data);
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // TODO: Replace with actual API call
-    // const response = await fetch(`/api/suppliers/${supplier.id}`, {
-    //   method: "PATCH",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(data),
-    // });
-
-    console.log("Supplier data to update:", { id: supplier.id, ...data });
-
-    setIsSubmitting(false);
-    const updatedDesc = t("data.suppliers.toasts.updated.description") || "{name} has been updated successfully.";
-    toast({
-      title: t("data.suppliers.toasts.updated.title"),
-      description: updatedDesc.replace(
-        "{name}",
-        data.name
-      ),
-    });
-
-    onOpenChange(false);
+      toast.success(`${data.name} has been updated successfully.`);
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update supplier");
+    }
   };
 
   return (
@@ -170,14 +137,17 @@ export default function EditSupplierDialog({
                   control={form.control}
                   name="contactPerson"
                   render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Person</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("data.suppliers.form.contactPersonPlaceholder")} {...field} />
-                    </FormControl>
-                    <FormDescription>Primary contact name</FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    <FormItem>
+                      <FormLabel>Contact Person</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("data.suppliers.form.contactPersonPlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>Primary contact name</FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -256,105 +226,11 @@ export default function EditSupplierDialog({
                     <FormItem>
                       <FormLabel>Country</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.suppliers.form.countryPlaceholder")} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Business Terms */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Business Terms</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="paymentTerms"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Terms</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("data.suppliers.form.selectPaymentTerms")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={PaymentTerms.COD}>Cash on Delivery</SelectItem>
-                          <SelectItem value={PaymentTerms.NET15}>Net 15 Days</SelectItem>
-                          <SelectItem value={PaymentTerms.NET30}>Net 30 Days</SelectItem>
-                          <SelectItem value={PaymentTerms.NET60}>Net 60 Days</SelectItem>
-                          <SelectItem value={PaymentTerms.NET90}>Net 90 Days</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>Payment deadline</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="deliverySchedule"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Delivery Schedule</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t("data.suppliers.form.deliverySchedulePlaceholder")} {...field} />
-                      </FormControl>
-                      <FormDescription>Regular delivery days</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Performance Metrics */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Performance Metrics</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="rating"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quality Rating</FormLabel>
-                      <FormControl>
                         <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="5"
-                          placeholder={t("data.suppliers.form.ratingPlaceholder")}
+                          placeholder={t("data.suppliers.form.countryPlaceholder")}
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Rating out of 5.0</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="onTimeDeliveryRate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>On-Time Delivery Rate</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="1"
-                          min="0"
-                          max="100"
-                          placeholder={t("data.suppliers.form.onTimeDeliveryRatePlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>Percentage (0-100)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -392,12 +268,12 @@ export default function EditSupplierDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={updateSupplier.isPending}
               >
                 {t("actions.cancel") || "Cancel"}
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={updateSupplier.isPending}>
+                {updateSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t("data.suppliers.update") || "Update Supplier"}
               </Button>
             </DialogFooter>

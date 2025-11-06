@@ -6,7 +6,6 @@ import { RecipesSection } from "../recipes/components/recipes-section";
 import { ProductsSection } from "../products/components/products-section";
 import { SuppliersSection } from "../suppliers/components/suppliers-section";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { MOCK_MATERIALS, MOCK_RECIPES, MOCK_PRODUCTS, MOCK_SUPPLIERS } from "@/mocks";
 
 export function DataView() {
   const { t } = useI18n();
@@ -41,16 +40,16 @@ export function DataView() {
       </TabsList>
 
       <TabsContent value="materials">
-        <MaterialsSection materials={MOCK_MATERIALS} />
+        <MaterialsSection />
       </TabsContent>
       <TabsContent value="recipes">
-        <RecipesSection recipes={MOCK_RECIPES} />
+        <RecipesSection />
       </TabsContent>
       <TabsContent value="products">
-        <ProductsSection products={MOCK_PRODUCTS} />
+        <ProductsSection />
       </TabsContent>
       <TabsContent value="suppliers">
-        <SuppliersSection suppliers={MOCK_SUPPLIERS} />
+        <SuppliersSection />
       </TabsContent>
     </Tabs>
   );

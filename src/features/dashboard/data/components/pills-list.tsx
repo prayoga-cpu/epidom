@@ -4,7 +4,13 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/lang/i18n-provider";
-import type { Item } from "@/mocks";
+
+// Generic item type for display components
+type Item = {
+  id: string;
+  name: string;
+  [key: string]: any;
+};
 
 interface PillsListProps {
   items: Item[];

@@ -59,6 +59,8 @@ export const en = {
       exportAsExcel: "Export as Excel",
       exportAsPdf: "Export as PDF",
       update: "Update",
+      logout: "Logout",
+      searchPlaceholder: "Search...",
     },
     pagination: {
       rowsPerPage: "Rows per page",
@@ -88,6 +90,18 @@ export const en = {
     metrics: {
       plannedQuantity: "Planned Quantity",
       producedQuantity: "Produced Quantity",
+    },
+  },
+  search: {
+    title: "Global Search",
+    description: "Search for pages, features, and more...",
+    placeholder: "Type to search or press '/' to focus...",
+    noResults: "No results found.",
+    categories: {
+      navigation: "Navigation",
+      data: "Data Management",
+      management: "Management",
+      tracking: "Tracking",
     },
   },
   hero: {
@@ -784,6 +798,15 @@ export const en = {
     title: "Dashboard",
     description:
       "Welcome to the dashboard. Here you can see the current status of your orders, recipes, and stock.",
+    storeSelector: {
+      label: "Select store",
+      select: "Select store",
+      createFirst: "Create Store",
+      createNew: "Create new store",
+      searchPlaceholder: "Search store...",
+      noStores: "No stores found",
+      yourStores: "Your Stores",
+    },
     alertsCard: {
       title: "Critical Alerts",
       description: "Stock alerts requiring immediate attention",
@@ -1463,7 +1486,11 @@ export const en = {
       createOrder: "Create Order",
       callSupplier: "Call",
       emailSupplier: "Email",
+      noSupplier: "No Supplier",
     },
+
+    // Supplier info
+    noSupplierAssigned: "No Supplier Assigned",
 
     // Details Dialog
     detailsDialog: {
@@ -1512,8 +1539,18 @@ export const en = {
     current: "Current",
     required: "Required",
     toOrder: "To Order",
+    quantity: "Quantity",
+    price: "Price",
+    total: "Total",
+    orderTotal: "Order Total",
+    expectedDelivery: "Expected Delivery",
+    markAsPlaced: "Mark as Placed",
+    placing: "Placing...",
+    orderPlaced: "Order marked as placed",
+    orderPlacedError: "Failed to mark order as placed",
     noOrdersToPlace: "No Orders to Place",
     noOrdersDescription: "You don't have any pending orders at the moment",
+    errorLoadingOrders: "Failed to load orders",
 
     // Toasts
     toasts: {
@@ -1671,6 +1708,8 @@ export const en = {
       editBusinessInfo: "Edit Business Information",
       editBusinessInfoDescription: "Update your business contact information and details",
       addBusinessInfoDescription: "Add your business information to complete your profile",
+      editAvatar: "Edit Profile Picture",
+      editAvatarDescription: "Upload a new profile picture or remove the current one.",
       namePlaceholder: "Enter your full name",
       emailPlaceholder: "your@email.com",
       phonePlaceholder: "+1 234 567 8900",
@@ -1691,6 +1730,7 @@ export const en = {
       delete: "Delete",
       invite: "Invite",
       remove: "Remove",
+      removeAvatar: "Remove Avatar",
     },
 
     // Errors
@@ -1712,6 +1752,14 @@ export const en = {
       businessCreated: {
         title: "Business Info Added",
         description: "Business information added successfully.",
+      },
+      avatarUpdated: {
+        title: "Avatar Updated",
+        description: "Your profile picture has been updated successfully.",
+      },
+      avatarRemoved: {
+        title: "Avatar Removed",
+        description: "Your profile picture has been removed.",
       },
       avatarUploaded: {
         title: "Avatar Updated",
@@ -2100,11 +2148,10 @@ export const en = {
 
       // Batch Statuses
       statuses: {
-        pending: "Pending",
+        planned: "Planned",
         inProgress: "In Progress",
-        qualityCheck: "Quality Check",
         completed: "Completed",
-        failed: "Failed",
+        cancelled: "Cancelled",
       },
 
       // Start Production Dialog
@@ -2172,11 +2219,10 @@ export const en = {
 
       // Batch Statuses
       statuses: {
-        pending: "Pending",
+        planned: "Planned",
         inProgress: "In Progress",
-        qualityCheck: "Quality Check",
         completed: "Completed",
-        failed: "Failed",
+        cancelled: "Cancelled",
       },
 
       // Metrics

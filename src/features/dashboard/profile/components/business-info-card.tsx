@@ -19,7 +19,7 @@ interface BusinessInfoCardProps {
     website?: string | null;
   } | null;
   userId: string;
-  onUpdate: () => void;
+  onUpdate?: () => void;
 }
 
 export function BusinessInfoCard({ business, userId, onUpdate }: BusinessInfoCardProps) {

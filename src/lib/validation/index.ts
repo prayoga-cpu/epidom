@@ -17,8 +17,11 @@ export * from "./business.schemas";
 // Inventory schemas (products, ingredients, recipes, suppliers)
 export * from "./inventory.schemas";
 
-// Orders and production schemas
+// Orders schemas
 export * from "./orders.schemas";
+
+// Production batch schemas
+export * from "./production.schemas";
 
 // Re-export Zod for convenience
 export { z } from "zod";

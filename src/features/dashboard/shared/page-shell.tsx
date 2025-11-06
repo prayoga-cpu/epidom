@@ -16,7 +16,7 @@ export default function PageShell({ children }: { children: React.ReactNode }) {
     <div className="page-transition-container w-full">
       <Topbar />
       <div className="mx-auto max-w-[1600px] p-3 md:p-6 lg:px-8">
-        <div className="grid items-start gap-4 md:grid-cols-[280px_1fr] md:gap-6">
+        <div className="grid items-start gap-4 md:grid-cols-[230px_1fr] md:gap-6">
           {/* Sidebar column (desktop only) */}
           <Sidebar mode="desktop" />
 

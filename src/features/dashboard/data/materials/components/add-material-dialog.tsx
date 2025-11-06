@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -21,10 +22,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { toast } from "sonner";
+import { Plus, Loader2, X, Star } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCreateMaterial } from "../hooks/use-materials";
+import { useSuppliers } from "../../suppliers/hooks/use-suppliers";
+import { useParams } from "next/navigation";
+import {
+  createIngredientFormSchema,
+  type CreateIngredientFormInput,
+} from "@/lib/validation/inventory.schemas";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useCurrency } from "@/components/providers/currency-provider";
+
+// Use the form schema (without storeId)
+const formSchema = createIngredientFormSchema;
 
 interface AddMaterialDialogProps {
   trigger?: React.ReactNode;
@@ -32,41 +54,78 @@ interface AddMaterialDialogProps {
 
 export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   const [open, setOpen] = useState(false);
-  const { toast } = useToast();
   const { t } = useI18n();
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "",
-    quantity: "",
-    unit: "",
-    supplier: "",
-    cost: "",
-    minStock: "",
-    notes: "",
+  const { currency, convertToBase } = useCurrency();
+  const params = useParams();
+  const storeId = params.storeId as string;
+
+  const createMaterial = useCreateMaterial(storeId);
+
+  // Fetch suppliers for dropdown
+  const { data: suppliersData } = useSuppliers(storeId, {
+    sortBy: "name",
+    sortOrder: "asc",
+    skip: 0,
+    take: 100,
+  });
+  const suppliers = suppliersData?.suppliers || [];
+
+  const form = useForm({
+    resolver: zodResolver(formSchema) as any,
+    defaultValues: {
+      sku: "",
+      name: "",
+      description: "",
+      category: "",
+      unit: "kg",
+      unitCost: 0,
+      currentStock: 0,
+      minStock: 0,
+      maxStock: 1000,
+      suppliers: [],
+      isActive: true,
+    },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const { fields, append, remove } = useFieldArray({
+    control: form.control as any,
+    name: "suppliers" as any,
+  });
 
-    // Simulate API call
-    toast({
-      title: t("data.materials.toasts.added.title") || "Material Added Successfully",
-      description: t("data.materials.toasts.added.description")?.replace("{name}", formData.name) || `${formData.name} has been added to your inventory.`,
-    });
+  async function onSubmit(data: any) {
+    try {
+      // Filter out invalid suppliers (those with "none" or empty supplierId)
+      const validSuppliers =
+        data.suppliers?.filter((s: any) => s.supplierId && s.supplierId !== "none") || [];
 
-    // Reset form
-    setFormData({
-      name: "",
-      category: "",
-      quantity: "",
-      unit: "",
-      supplier: "",
-      cost: "",
-      minStock: "",
-      notes: "",
-    });
-    setOpen(false);
-  };
+      // Ensure we have default values for required fields
+      const payload = {
+        ...data,
+        unit: data.unit || "kg",
+        unitCost: convertToBase(data.unitCost), // Convert from user's currency to EUR
+        currentStock: data.currentStock || 0,
+        minStock: data.minStock || 0,
+        maxStock: data.maxStock || 1000,
+        isActive: data.isActive ?? true,
+        suppliers:
+          validSuppliers.length > 0
+            ? validSuppliers.map((s: any) => ({
+                ...s,
+                price: convertToBase(s.price), // Convert supplier prices to EUR
+              }))
+            : undefined,
+      };
+
+      await createMaterial.mutateAsync(payload);
+
+      toast.success(`${data.name} has been added to your inventory.`);
+
+      form.reset();
+      setOpen(false);
+    } catch (error) {
+      toast.error(`${error instanceof Error ? error.message : "Failed to add material"}`);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -74,152 +133,343 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         {trigger || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            {t("common.actions.add") || "Add Material"}
+            Add Material
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px] [&>button]:hidden">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>{t("data.materials.addTitle") || "Add New Material"}</DialogTitle>
+          <DialogTitle>Add New Material</DialogTitle>
           <DialogDescription>
-            {t("data.materials.addDescription") ||
-              "Add a new material to your inventory. Fill in all required fields."}
+            Add a new material to your inventory. Fill in all required fields.
           </DialogDescription>
         </DialogHeader>
         <Separator />
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">{t("data.materials.form.name") || "Material Name"} *</Label>
-              <Input
-                id="name"
-                placeholder={t("data.materials.form.namePlaceholder") || "e.g., Flour, Sugar, Butter"}
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="category">{t("data.materials.form.category") || "Category"} *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                  required
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder={t("data.materials.form.selectCategory") || "Select category"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="raw">{t("data.materials.categories.raw") || "Raw Materials"}</SelectItem>
-                    <SelectItem value="packaging">{t("data.materials.categories.packaging") || "Packaging"}</SelectItem>
-                    <SelectItem value="dairy">{t("data.materials.categories.dairy") || "Dairy Products"}</SelectItem>
-                    <SelectItem value="grains">{t("data.materials.categories.grains") || "Grains & Flour"}</SelectItem>
-                    <SelectItem value="spices">{t("data.materials.categories.spices") || "Spices & Seasonings"}</SelectItem>
-                    <SelectItem value="other">{t("data.materials.categories.other") || "Other"}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Basic Information</h3>
 
-              <div className="grid gap-2">
-                <Label htmlFor="supplier">{t("data.materials.form.supplier") || "Supplier"} *</Label>
-                <Select
-                  value={formData.supplier}
-                  onValueChange={(value) => setFormData({ ...formData, supplier: value })}
-                  required
-                >
-                  <SelectTrigger id="supplier">
-                    <SelectValue placeholder={t("data.materials.form.selectSupplier") || "Select supplier"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="supplier1">ABC Supplies Inc.</SelectItem>
-                    <SelectItem value="supplier2">Global Food Distributors</SelectItem>
-                    <SelectItem value="supplier3">Fresh Ingredients Co.</SelectItem>
-                    <SelectItem value="supplier4">Premium Materials Ltd.</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Material Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Flour, Sugar, Butter" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="quantity">{t("data.materials.form.quantity") || "Quantity"} *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  placeholder="100"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                  required
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., FLR-T55-25KG" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="unit">{t("data.materials.form.unit") || "Unit"} *</Label>
-                <Select
-                  value={formData.unit}
-                  onValueChange={(value) => setFormData({ ...formData, unit: value })}
-                  required
-                >
-                  <SelectTrigger id="unit">
-                    <SelectValue placeholder={t("data.materials.form.selectUnit") || "Unit"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kg">{t("data.materials.units.kg") || "Kilograms (kg)"}</SelectItem>
-                    <SelectItem value="g">{t("data.materials.units.g") || "Grams (g)"}</SelectItem>
-                    <SelectItem value="l">{t("data.materials.units.l") || "Liters (L)"}</SelectItem>
-                    <SelectItem value="ml">{t("data.materials.units.ml") || "Milliliters (mL)"}</SelectItem>
-                    <SelectItem value="pcs">{t("data.materials.units.pcs") || "Pieces"}</SelectItem>
-                    <SelectItem value="box">{t("data.materials.units.box") || "Box"}</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Grains, Dairy" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                          <SelectItem value="g">Grams (g)</SelectItem>
+                          <SelectItem value="l">Liters (L)</SelectItem>
+                          <SelectItem value="ml">Milliliters (mL)</SelectItem>
+                          <SelectItem value="pcs">Pieces</SelectItem>
+                          <SelectItem value="box">Box</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="minStock">{t("data.materials.form.minStock") || "Min. Stock"} *</Label>
-                <Input
-                  id="minStock"
-                  type="number"
-                  placeholder="20"
-                  value={formData.minStock}
-                  onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
-                  required
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Additional information about this material..."
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Pricing & Stock */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Pricing & Stock</h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="unitCost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit Cost ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="25.00"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="currentStock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Stock</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="100"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="minStock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Min Stock Level</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="20"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormDescription>Alert when stock falls below this level</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="maxStock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Stock Level</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="500"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormDescription>Alert when stock exceeds this level</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="cost">{t("data.materials.form.cost") || "Cost per Unit ($)"} *</Label>
-              <Input
-                id="cost"
-                type="number"
-                step="0.01"
-                placeholder={t("data.materials.form.costPlaceholder") || "25.00"}
-                value={formData.cost}
-                onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                required
-              />
+            <Separator />
+
+            {/* Suppliers */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium">Suppliers (Optional)</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => append({ supplierId: "", price: 0, isPreferred: false })}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Supplier
+                </Button>
+              </div>
+
+              {fields.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  No suppliers added yet. Click "Add Supplier" to link suppliers to this material.
+                </p>
+              )}
+
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex gap-4 rounded-lg border p-4">
+                  <div className="flex-1 space-y-4">
+                    <FormField
+                      control={form.control}
+                      name={`suppliers.${index}.supplierId` as any}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Supplier *</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={(field.value as string) || "none"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a supplier..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none" disabled>
+                                Select a supplier...
+                              </SelectItem>
+                              {suppliers.map((supplier) => (
+                                <SelectItem key={supplier.id} value={supplier.id}>
+                                  {supplier.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription className="text-xs">
+                            Choose a supplier for this material
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`suppliers.${index}.price` as any}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="25.00"
+                                {...field}
+                                value={field.value as number}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`suppliers.${index}.isPreferred` as any}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-y-0 space-x-2 pt-8">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value as boolean}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel className="flex items-center gap-1">
+                                <Star className="h-3 w-3" />
+                                Preferred
+                              </FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => remove(index)}
+                    className="h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="notes">{t("data.materials.form.notes") || "Notes (Optional)"}</Label>
-              <Textarea
-                id="notes"
-                placeholder={t("data.materials.form.notesPlaceholder") || "Additional information about this material..."}
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {t("actions.cancel") || "Cancel"}
-            </Button>
-            <Button type="submit">{t("common.actions.add") || "Add Material"}</Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={createMaterial.isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createMaterial.isPending}>
+                {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Add Material
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

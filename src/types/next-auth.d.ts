@@ -7,13 +7,22 @@ declare module "next-auth" {
       email: string;
       name?: string | null;
       image?: string | null;
+      currency?: string;
+      locale?: string;
+      timezone?: string;
+      phone?: string | null;
     };
+    currency?: string; // For session updates
   }
   interface User {
     id: string;
     email: string;
     name?: string | null;
     image?: string | null;
+    currency?: string;
+    locale?: string;
+    timezone?: string;
+    phone?: string | null;
   }
 }
 
@@ -23,5 +32,9 @@ declare module "next-auth/jwt" {
     email: string;
     name?: string | null;
     image?: string | null;
+    currency?: string;
+    locale?: string;
+    timezone?: string;
+    phone?: string | null;
   }
 }

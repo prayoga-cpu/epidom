@@ -1,36 +1,22 @@
-"use client";
-
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Search, Menu } from "lucide-react";
 import { Sidebar } from "./sidebar";
+import { StoreSwitcher } from "./store-switcher";
 import { useI18n } from "../../../components/lang/i18n-provider";
 import LangSwitcher from "../../../components/lang/lang-switcher";
 import { LogOut } from "lucide-react";
-import { useUser } from "@/lib/auth-client";
 import { signOut } from "next-auth/react";
+import NavUser from "./nav-user";
+import { useState } from "react";
+import { GlobalSearchDialog } from "./global-search-dialog";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 
 export function Topbar() {
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { t } = useI18n();
-
-  const { user, loading } = useUser();
-
-  if (loading) return null;
 
   return (
     <header
@@ -62,12 +48,12 @@ export function Topbar() {
                 <Sidebar mode="mobile" />
               </SheetContent>
             </Sheet>
-            <div className="flex w-auto items-center justify-center rounded-md bg-transparent">
+            <div className="flex w-[100px] items-center justify-center rounded-md bg-transparent">
               <Image
                 src="/images/logo-white.png"
                 alt="EPIDOM logo"
-                width={90}
-                height={24}
+                width={100}
+                height={30}
                 className="w-auto object-contain"
                 priority
               />
@@ -75,54 +61,47 @@ export function Topbar() {
           </div>
 
           {/* Center: Search (hidden on mobile, centered on md+) */}
-          <div className="hidden w-full items-center justify-center md:flex">
-            <div className="relative w-80 max-w-xl sm:max-w-2xl">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-black" />
-              <Input
-                placeholder={t("actions.searchPlaceholder")}
-                aria-label={t("actions.searchPlaceholder")}
-                className="text-foreground placeholder:text-muted-foreground h-9 w-full rounded-full bg-white pl-9"
-              />
-            </div>
+          <div className="hidden w-full items-center justify-end md:flex">
+            <Button
+              variant="outline"
+              className="text-muted-foreground relative h-9 w-80 max-w-xl justify-start rounded-full bg-white text-sm font-normal sm:max-w-2xl"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="mr-2 size-4 shrink-0" />
+              <span>{t("actions.searchPlaceholder")}</span>
+              <KbdGroup className="absolute right-3 hidden md:flex">
+                <Kbd>⌘</Kbd>
+                <Kbd>k</Kbd>
+              </KbdGroup>
+            </Button>
           </div>
 
-          {/* Right: language, profile, logout */}
+          {/* Right: store switcher, language, profile, logout */}
           <div className="ml-auto flex items-center justify-end gap-2">
+            {/* Mobile search button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-white/10 md:hidden"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="size-5" />
+              <span className="sr-only">Search</span>
+            </Button>
+
+            {/* Store switcher - hidden on mobile */}
+            <div className="hidden sm:block">
+              <StoreSwitcher />
+            </div>
             {/* Language switcher */}
             <LangSwitcher className="text-foreground hidden border bg-white sm:inline-block" />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="text-primary-foreground flex items-center gap-2 rounded-2xl hover:bg-white/10 hover:text-white"
-                >
-                  <Avatar className="size-6">
-                    <AvatarFallback className="text-foreground bg-white text-xs">
-                      {user?.name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden sm:inline">{user?.name ?? user?.email}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel className="max-w-[220px] truncate">
-                  {user?.name ?? user?.email}
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/profile")}>
-                  {t("nav.profile")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/dashboard")}>
-                  {t("nav.dashboard")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <NavUser />
             <Button
               size="sm"
               variant="ghost"
               className="rounded-xl hover:bg-red-500"
               onClick={() => {
-                signOut();
+                signOut({ callbackUrl: "/login" });
               }}
             >
               <LogOut className="mr-1 size-4" />
@@ -131,6 +110,9 @@ export function Topbar() {
           </div>
         </div>
       </div>
+
+      {/* Global Search Dialog */}
+      <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 }

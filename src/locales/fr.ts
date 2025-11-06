@@ -60,6 +60,9 @@ export const fr = {
       error: "Erreur de Validation",
     },
     error: "Erreur",
+    notes: "Notes",
+    page: "Page",
+    other: "Autre",
     actions: {
       cancel: "Annuler",
       save: "Enregistrer",
@@ -80,6 +83,20 @@ export const fr = {
       exportAsCsv: "Exporter en CSV",
       exportAsExcel: "Exporter en Excel",
       exportAsPdf: "Exporter en PDF",
+      logout: "Déconnexion",
+      searchPlaceholder: "Rechercher...",
+    },
+  },
+  search: {
+    title: "Recherche Globale",
+    description: "Rechercher des pages, fonctionnalités et plus...",
+    placeholder: "Tapez pour rechercher ou appuyez sur '/' pour focus...",
+    noResults: "Aucun résultat trouvé.",
+    categories: {
+      navigation: "Navigation",
+      data: "Gestion des Données",
+      management: "Gestion",
+      tracking: "Suivi",
     },
   },
   hero: {
@@ -790,6 +807,15 @@ export const fr = {
     title: "Tableau de Bord",
     description:
       "Bienvenue sur le tableau de bord. Ici, vous pouvez voir l'état actuel de vos commandes, recettes et stocks.",
+    storeSelector: {
+      label: "Sélectionner un magasin",
+      select: "Sélectionner un magasin",
+      createFirst: "Créer un Magasin",
+      createNew: "Créer un nouveau magasin",
+      searchPlaceholder: "Rechercher un magasin...",
+      noStores: "Aucun magasin trouvé",
+      yourStores: "Vos Magasins",
+    },
     alertsCard: {
       title: "Alertes Critiques",
       description: "Alertes de stock nécessitant une attention immédiate",
@@ -1470,7 +1496,11 @@ export const fr = {
       createOrder: "Créer Commande",
       callSupplier: "Appeler",
       emailSupplier: "Email",
+      noSupplier: "Aucun Fournisseur",
     },
+
+    // Supplier info
+    noSupplierAssigned: "Aucun Fournisseur Assigné",
 
     // Details Dialog
     detailsDialog: {
@@ -1519,8 +1549,18 @@ export const fr = {
     current: "Actuel",
     required: "Requis",
     toOrder: "À Commander",
+    quantity: "Quantité",
+    price: "Prix",
+    total: "Total",
+    orderTotal: "Total de la Commande",
+    expectedDelivery: "Livraison Prévue",
+    markAsPlaced: "Marquer comme Passée",
+    placing: "En cours...",
+    orderPlaced: "Commande marquée comme passée",
+    orderPlacedError: "Échec de la mise à jour de la commande",
     noOrdersToPlace: "Aucune Commande à Passer",
     noOrdersDescription: "Vous n'avez aucune commande en attente pour le moment",
+    errorLoadingOrders: "Échec du chargement des commandes",
 
     // Toasts
     toasts: {
@@ -1851,7 +1891,7 @@ export const fr = {
       dialogs: {
         updateStatus: {
           title: "Mettre à Jour le Statut de la Livraison",
-          description: "Mettre à jour le statut de cette livraison",
+          description: "Changer le statut de la livraison {reference}",
           currentStatus: "Statut Actuel",
           newStatus: "Nouveau Statut",
           receivedDate: "Date de Réception",
@@ -1860,6 +1900,18 @@ export const fr = {
           notesPlaceholder: "Ajoutez des notes sur ce changement de statut...",
           updateButton: "Mettre à Jour le Statut",
           success: "Statut mis à jour avec succès",
+          selectNewStatus: "Veuillez sélectionner un nouveau statut",
+          selectReceivedDate: "Veuillez sélectionner une date de réception",
+          selectNewStatusPlaceholder: "Sélectionner un nouveau statut",
+          selectReceivedDatePlaceholder: "Sélectionner la date de réception",
+          updating: "Mise à jour...",
+          updateStatus: "Mettre à Jour le Statut",
+          toasts: {
+            updated: {
+              title: "Statut Mis à Jour",
+              description: "Le statut de la livraison a été mis à jour à {status}",
+            },
+          },
         },
         printDelivery: {
           title: "Imprimer la Livraison",
@@ -2099,11 +2151,10 @@ export const fr = {
 
       // Batch Statuses
       statuses: {
-        pending: "En Attente",
+        planned: "Planifié",
         inProgress: "En Cours",
-        qualityCheck: "Contrôle Qualité",
         completed: "Terminé",
-        failed: "Échoué",
+        cancelled: "Annulé",
       },
 
       // Start Production Dialog
@@ -2172,11 +2223,10 @@ export const fr = {
 
       // Batch Statuses
       statuses: {
-        pending: "En Attente",
+        planned: "Planifié",
         inProgress: "En Cours",
-        qualityCheck: "Contrôle Qualité",
         completed: "Terminé",
-        failed: "Échoué",
+        cancelled: "Annulé",
       },
 
       // Metrics

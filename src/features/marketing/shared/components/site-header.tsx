@@ -26,7 +26,7 @@ import LangSwitcher from "@/components/lang/lang-switcher";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ChevronRight } from "lucide-react";
 import { LogoWithSkeleton } from "./logo-with-skeleton";
-
+import { signOut } from "next-auth/react";
 /**
  * Props for SiteHeader component
  */
@@ -48,8 +48,7 @@ export const SiteHeader = memo(function SiteHeader({
    * Handle logout action (TODO: implement NextAuth signOut)
    */
   const handleLogout = () => {
-    // TODO: Implement logout logic using NextAuth
-    console.log("Logout clicked");
+    signOut({ callbackUrl: "/login" });
   };
 
   return (
@@ -148,7 +147,7 @@ export const SiteHeader = memo(function SiteHeader({
                 <Button
                   onClick={handleLogout}
                   variant="outline"
-                  className="rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
+                  className="cursor-pointer rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
                 >
                   {t("actions.logout")}
                 </Button>

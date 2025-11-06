@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,16 +15,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 import ProductDetailsDialog from "./product-details-dialog";
 import EditProductDialog from "./edit-product-dialog";
 import AddProductDialog from "./add-product-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { ExportButton } from "@/components/ui/export-button";
-import type { Product } from "@/types/entities";
-import { MOCK_RECIPES } from "@/mocks";
 import {
   Search,
-  Filter,
   ArrowUpDown,
   Eye,
   Pencil,
@@ -31,30 +29,42 @@ import {
   X,
   CheckSquare,
   PackageOpen,
+  Loader2,
+  Download,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { formatCurrency, formatNumber } from "@/lib/utils/formatting";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  useProducts,
+  useDeleteProduct,
+  useBulkDeleteProducts,
+  useExportProducts,
+  type Product,
+} from "../hooks/use-products";
 
-interface ProductsSectionProps {
-  products: Product[];
-}
-
-type SortField = "name" | "stock" | "price" | "category" | "profit";
-type SortOrder = "asc" | "desc";
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
-export function ProductsSection({ products }: ProductsSectionProps) {
+export function ProductsSection() {
   const { t } = useI18n();
-  const { toast } = useToast();
+  const { formatPrice } = useCurrency();
+  const params = useParams();
+  const storeId = params.storeId as string;
 
-  // State
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  // Filters and pagination state
+  const [filters, setFilters] = useState({
+    search: "",
+    category: "",
+    sortBy: "createdAt" as const,
+    sortOrder: "desc" as const,
+    skip: 0,
+    take: 20,
+  });
+
+  // UI state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -62,14 +72,24 @@ export function ProductsSection({ products }: ProductsSectionProps) {
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // API hooks
+  const { data, isLoading, error } = useProducts(storeId, filters);
+  const deleteProduct = useDeleteProduct(storeId);
+  const bulkDeleteProducts = useBulkDeleteProducts(storeId);
+  const exportProducts = useExportProducts();
+
+  const products = data?.products || [];
+  const totalProducts = data?.total || 0;
+  const currentPage = Math.floor(filters.skip / filters.take) + 1;
+  const totalPages = Math.ceil(totalProducts / filters.take);
+
   // Helper function to determine stock status
   const getStockStatus = (product: Product): StockFilter => {
-    if (!product.currentStock && product.currentStock !== 0) return "in_stock";
-    const { currentStock, minStock, maxStock } = product;
+    const currentStock = Number(product.currentStock) || 0;
+    const minStockLevel = Number(product.minStock) || 0;
     if (currentStock === 0) return "critical";
-    if (minStock && currentStock < minStock * 0.5) return "critical";
-    if (minStock && currentStock <= minStock) return "low_stock";
-    if (maxStock && currentStock >= maxStock) return "overstocked";
+    if (minStockLevel && currentStock < minStockLevel * 0.5) return "critical";
+    if (minStockLevel && currentStock <= minStockLevel) return "low_stock";
     return "in_stock";
   };
 
@@ -87,69 +107,11 @@ export function ProductsSection({ products }: ProductsSectionProps) {
 
   // Helper function to calculate profit margin
   const getProfitMargin = (product: Product): number => {
-    if (!product.retailPrice || !product.costPrice) return 0;
-    return ((product.retailPrice - product.costPrice) / product.retailPrice) * 100;
+    const selling = Number(product.sellingPrice) || 0;
+    const cost = Number(product.costPrice) || 0;
+    if (selling === 0) return 0;
+    return ((selling - cost) / selling) * 100;
   };
-
-  // Get unique categories
-  const categories = useMemo(() => {
-    const cats = new Set(products.map((p) => p.category).filter(Boolean));
-    return Array.from(cats).sort();
-  }, [products]);
-
-  // Filtered and sorted products
-  const processedProducts = useMemo(() => {
-    let filtered = [...products];
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.sku?.toLowerCase().includes(query) ||
-          p.description?.toLowerCase().includes(query) ||
-          p.category?.toLowerCase().includes(query)
-      );
-    }
-
-    // Category filter
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((p) => p.category === categoryFilter);
-    }
-
-    // Stock filter
-    if (stockFilter !== "all") {
-      filtered = filtered.filter((p) => getStockStatus(p) === stockFilter);
-    }
-
-    // Sort
-    filtered = [...filtered].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortField) {
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "stock":
-          comparison = (a.currentStock || 0) - (b.currentStock || 0);
-          break;
-        case "price":
-          comparison = (a.retailPrice || 0) - (b.retailPrice || 0);
-          break;
-        case "category":
-          comparison = (a.category || "").localeCompare(b.category || "");
-          break;
-        case "profit":
-          comparison = getProfitMargin(a) - getProfitMargin(b);
-          break;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-
-    return filtered;
-  }, [products, searchQuery, categoryFilter, stockFilter, sortField, sortOrder]);
 
   // Bulk selection handlers
   const toggleBulkSelect = () => {
@@ -158,10 +120,10 @@ export function ProductsSection({ products }: ProductsSectionProps) {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === processedProducts.length) {
+    if (selectedIds.size === products.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(processedProducts.map((p) => p.id)));
+      setSelectedIds(new Set(products.map((p) => p.id)));
     }
   };
 
@@ -191,55 +153,95 @@ export function ProductsSection({ products }: ProductsSectionProps) {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    // TODO: API call to delete product
-    const deletedDesc = t("data.products.toasts.deleted.description") || "{name} has been deleted successfully.";
-    toast({
-      title: t("data.products.toasts.deleted.title"),
-      description: deletedDesc.replace(
-        "{name}",
-        selectedProduct?.name || ""
-      ),
-    });
-    setDeleteDialogOpen(false);
-    setSelectedProduct(null);
+  const handleDeleteConfirm = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      await deleteProduct.mutateAsync(selectedProduct.id);
+      toast.success(t("data.products.toasts.deleted.title") || "Product deleted successfully");
+      setDeleteDialogOpen(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete product");
+    }
   };
 
-  const handleBulkDelete = () => {
-    // TODO: API call to bulk delete products
-    const bulkDeletedDesc = t("data.products.toasts.bulkDeleted.description") || "{count} products have been deleted successfully.";
-    toast({
-      title: t("data.products.toasts.bulkDeleted.title"),
-      description: bulkDeletedDesc.replace(
-        "{count}",
-        selectedIds.size.toString()
-      ),
-    });
-    setSelectedIds(new Set());
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      await bulkDeleteProducts.mutateAsync(Array.from(selectedIds));
+      toast.success(
+        `${selectedIds.size} ${t("data.products.pageTitle") || "products"} deleted successfully`
+      );
+      setSelectedIds(new Set());
+      setBulkSelectMode(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete products");
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportProducts.mutateAsync({ storeId, filters });
+      toast.success("Products exported successfully");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export products");
+    }
+  };
+
+  // Pagination handlers
+  const handlePageChange = (newPage: number) => {
+    setFilters((prev) => ({
+      ...prev,
+      skip: (newPage - 1) * prev.take,
+    }));
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setFilters((prev) => ({
+      ...prev,
+      take: newSize,
+      skip: 0,
+    }));
   };
 
   // Clear all filters
   const clearFilters = () => {
-    setSearchQuery("");
-    setCategoryFilter("all");
-    setStockFilter("all");
-    setSortField("name");
-    setSortOrder("asc");
+    setFilters({
+      search: "",
+      category: "",
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      skip: 0,
+      take: 20,
+    });
   };
 
-  const hasActiveFilters = searchQuery || categoryFilter !== "all" || stockFilter !== "all";
+  const hasActiveFilters = filters.search || filters.category;
 
-  // Export columns configuration
-  const exportColumns = [
-    { key: "name" as const, header: "Name" },
-    { key: "sku" as const, header: "SKU" },
-    { key: "category" as const, header: "Category" },
-    { key: "retailPrice" as const, header: "Retail Price" },
-    { key: "wholesalePrice" as const, header: "Wholesale Price" },
-    { key: "costPrice" as const, header: "Cost Price" },
-    { key: "currentStock" as const, header: "Current Stock" },
-    { key: "unit" as const, header: "Unit" },
-  ];
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
+          <p className="text-destructive">Error loading products</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -248,13 +250,20 @@ export function ProductsSection({ products }: ProductsSectionProps) {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg">{t("data.products.pageTitle") || "Products"}</CardTitle>
             <div className="flex items-center gap-2">
-              <ExportButton
-                data={processedProducts}
-                filename="products"
-                columns={exportColumns}
-                title="Products"
-              />
-              <AddProductDialog />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={exportProducts.isPending}
+              >
+                {exportProducts.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {t("actions.export") || "Export"}
+              </Button>
+              <AddProductDialog storeId={storeId} />
               {bulkSelectMode && selectedIds.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -290,56 +299,25 @@ export function ProductsSection({ products }: ProductsSectionProps) {
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder={t("actions.searchPlaceholder") || "Search..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={filters.search}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
+                }
                 className="pl-9"
               />
             </div>
 
             {/* Filters Row */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Category Filter */}
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderCategory")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    {t("filters.allCategories") || "All Categories"}
-                  </SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category ?? "none"}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Stock Status Filter */}
-              <Select value={stockFilter} onValueChange={(v) => setStockFilter(v as StockFilter)}>
-                <SelectTrigger>
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderStockStatus")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("filters.allStock") || "All Stock"}</SelectItem>
-                  <SelectItem value="in_stock">{t("filters.inStock") || "In Stock"}</SelectItem>
-                  <SelectItem value="low_stock">{t("filters.lowStock") || "Low Stock"}</SelectItem>
-                  <SelectItem value="critical">{t("filters.critical") || "Critical"}</SelectItem>
-                  <SelectItem value="overstocked">
-                    {t("filters.overstocked") || "Overstocked"}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
               {/* Sort */}
               <Select
-                value={`${sortField}-${sortOrder}`}
+                value={`${filters.sortBy}-${filters.sortOrder}`}
                 onValueChange={(v) => {
-                  const [field, order] = v.split("-") as [SortField, SortOrder];
-                  setSortField(field);
-                  setSortOrder(order);
+                  const [sortBy, sortOrder] = v.split("-") as [
+                    typeof filters.sortBy,
+                    typeof filters.sortOrder,
+                  ];
+                  setFilters((prev) => ({ ...prev, sortBy, sortOrder }));
                 }}
               >
                 <SelectTrigger>
@@ -349,29 +327,23 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                 <SelectContent>
                   <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
                   <SelectItem value="name-desc">{t("sort.nameZA") || "Name (Z-A)"}</SelectItem>
-                  <SelectItem value="stock-asc">
+                  <SelectItem value="currentStock-asc">
                     {t("sort.stockLowHigh") || "Stock (Low-High)"}
                   </SelectItem>
-                  <SelectItem value="stock-desc">
+                  <SelectItem value="currentStock-desc">
                     {t("sort.stockHighLow") || "Stock (High-Low)"}
                   </SelectItem>
-                  <SelectItem value="price-asc">
+                  <SelectItem value="sellingPrice-asc">
                     {t("sort.priceLowHigh") || "Price (Low-High)"}
                   </SelectItem>
-                  <SelectItem value="price-desc">
+                  <SelectItem value="sellingPrice-desc">
                     {t("sort.priceHighLow") || "Price (High-Low)"}
                   </SelectItem>
-                  <SelectItem value="profit-asc">
-                    {t("sort.profitLowHigh") || "Profit (Low-High)"}
+                  <SelectItem value="createdAt-desc">
+                    {t("sort.newest") || "Newest First"}
                   </SelectItem>
-                  <SelectItem value="profit-desc">
-                    {t("sort.profitHighLow") || "Profit (High-Low)"}
-                  </SelectItem>
-                  <SelectItem value="category-asc">
-                    {t("sort.categoryAZ") || "Category (A-Z)"}
-                  </SelectItem>
-                  <SelectItem value="category-desc">
-                    {t("sort.categoryZA") || "Category (Z-A)"}
+                  <SelectItem value="createdAt-asc">
+                    {t("sort.oldest") || "Oldest First"}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -389,15 +361,12 @@ export function ProductsSection({ products }: ProductsSectionProps) {
             {bulkSelectMode && (
               <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
                 <Checkbox
-                  checked={
-                    selectedIds.size === processedProducts.length && processedProducts.length > 0
-                  }
+                  checked={selectedIds.size === products.length && products.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
                   {t("common.selectAll") || "Select All"} ({selectedIds.size}{" "}
-                  {t("common.of") || "of"} {processedProducts.length}{" "}
-                  {t("common.selected") || "selected"})
+                  {t("common.of") || "of"} {products.length} {t("common.selected") || "selected"})
                 </span>
               </div>
             )}
@@ -406,18 +375,17 @@ export function ProductsSection({ products }: ProductsSectionProps) {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing") || "Showing"} {processedProducts.length} {t("common.of") || "of"}{" "}
-              {products.length} {t("data.products.pageTitle") || "products"}
+              {t("common.showing") || "Showing"} {products.length} {t("common.of") || "of"}{" "}
+              {totalProducts} {t("data.products.pageTitle") || "products"}
             </p>
           </div>
 
           {/* Products Grid */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {processedProducts.map((product) => {
+            {products.map((product) => {
               const stockStatus = getStockStatus(product);
               const profitMargin = getProfitMargin(product);
               const isSelected = selectedIds.has(product.id);
-              const recipe = MOCK_RECIPES.find((r) => r.id === product.recipeId);
 
               return (
                 <Card
@@ -439,12 +407,14 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                   {/* Product Content */}
                   <CardContent className={`${bulkSelectMode ? "pl-6" : ""}`}>
                     <div className="mb-2 flex items-start justify-between">
-                      <div className="flex-1">
+                      <div className="w-1 flex-1">
                         <h3 className="w-[85px] truncate text-sm leading-tight font-semibold">
                           {product.name}
                         </h3>
                         {product.sku && (
-                          <p className="text-muted-foreground text-xs">{t("common.sku")}: {product.sku}</p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            {t("common.sku")}: {product.sku}
+                          </p>
                         )}
                       </div>
 
@@ -475,22 +445,16 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                           <span className="text-foreground font-medium">{product.category}</span>
                         </div>
                       )}
-                      {recipe && (
-                        <div className="flex justify-between">
-                          <span>{t("common.recipe")}:</span>
-                          <span className="text-foreground font-medium">{recipe.name}</span>
-                        </div>
-                      )}
                       <div className="flex justify-between">
                         <span>{t("common.stock")}:</span>
                         <span className="text-foreground font-medium">
-                          {formatNumber(product.currentStock || 0)} {product.unit}
+                          {formatNumber(Number(product.currentStock) || 0)} {product.unit}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>{t("common.price")}:</span>
                         <span className="text-foreground font-medium">
-                          {formatCurrency(product.retailPrice || 0)}
+                          {formatPrice(Number(product.sellingPrice) || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -511,7 +475,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
 
                     {/* Hover Actions */}
                     {!bulkSelectMode && (
-                      <div className="mt-2 grid grid-cols-3 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -564,7 +528,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
               );
             })}
             {/* Empty State */}
-            {processedProducts.length === 0 && (
+            {products.length === 0 && (
               <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
                 <h3 className="mb-2 text-lg font-semibold">
@@ -581,11 +545,60 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                     {t("common.actions.clearFilters") || "Clear Filters"}
                   </Button>
                 ) : (
-                  <AddProductDialog />
+                  <AddProductDialog storeId={storeId} />
                 )}
               </div>
             )}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t pt-4">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {t("pagination.rowsPerPage") || "Rows per page"}:
+                </span>
+                <Select
+                  value={filters.take.toString()}
+                  onValueChange={(value) => handlePageSizeChange(Number(value))}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {t("pagination.page") || "Page"} {currentPage} {t("pagination.of") || "of"}{" "}
+                  {totalPages}
+                </span>
+                <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -606,13 +619,17 @@ export function ProductsSection({ products }: ProductsSectionProps) {
             }}
           />
           <EditProductDialog
+            storeId={storeId}
             product={selectedProduct}
             open={editDialogOpen}
             onOpenChange={setEditDialogOpen}
           />
           <ConfirmationDialog
             title={t("data.products.toasts.deleted.title") || "Delete Product"}
-            description={(t("data.products.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedProduct.name)}
+            description={(
+              t("data.products.toasts.deleted.description") ||
+              "{name} has been deleted successfully."
+            ).replace("{name}", selectedProduct.name)}
             confirmText={t("common.actions.delete") || "Delete"}
             onConfirm={handleDeleteConfirm}
             variant="destructive"

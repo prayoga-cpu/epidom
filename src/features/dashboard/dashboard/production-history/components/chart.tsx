@@ -19,14 +19,13 @@ interface Chart {
 }
 
 function getMaxYValue(data: ProductionHistoryData[]): number {
-  return Math.max(...data.map((d) => d.quantity));
+  if (!data || data.length === 0) return 10; // Default minimum for empty data
+  const max = Math.max(...data.map((d) => d.quantity));
+  return max > 0 ? max : 10; // Ensure at least 10 for the scale
 }
 
 // Custom Tooltip component with i18n support
-function CustomTooltip({
-  active,
-  payload,
-}: TooltipProps<ValueType, NameType>) {
+function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
   const { t } = useI18n();
 
   if (active && payload && payload.length) {

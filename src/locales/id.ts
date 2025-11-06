@@ -60,6 +60,9 @@ export const id = {
       error: "Kesalahan Validasi",
     },
     error: "Kesalahan",
+    notes: "Catatan",
+    page: "Halaman",
+    other: "Lainnya",
     actions: {
       cancel: "Batalkan",
       save: "Simpan",
@@ -80,6 +83,20 @@ export const id = {
       exportAsCsv: "Ekspor sebagai CSV",
       exportAsExcel: "Ekspor sebagai Excel",
       exportAsPdf: "Ekspor sebagai PDF",
+      logout: "Keluar",
+      searchPlaceholder: "Cari...",
+    },
+  },
+  search: {
+    title: "Pencarian Global",
+    description: "Cari halaman, fitur, dan lainnya...",
+    placeholder: "Ketik untuk mencari atau tekan '/' untuk fokus...",
+    noResults: "Tidak ada hasil yang ditemukan.",
+    categories: {
+      navigation: "Navigasi",
+      data: "Pengelolaan Data",
+      management: "Manajemen",
+      tracking: "Pelacakan",
     },
   },
   hero: {
@@ -787,6 +804,15 @@ export const id = {
     title: "Dasbor",
     description:
       "Selamat datang di dasbor. Di sini Anda dapat melihat status terkini pesanan, resep, dan stok Anda.",
+    storeSelector: {
+      label: "Pilih toko",
+      select: "Pilih toko",
+      createFirst: "Buat Toko",
+      createNew: "Buat toko baru",
+      searchPlaceholder: "Cari toko...",
+      noStores: "Tidak ada toko ditemukan",
+      yourStores: "Toko Anda",
+    },
     alertsCard: {
       title: "Peringatan Kritis",
       description: "Peringatan stok yang memerlukan perhatian segera",
@@ -1462,7 +1488,11 @@ export const id = {
       createOrder: "Buat Pesanan",
       callSupplier: "Telepon",
       emailSupplier: "Email",
+      noSupplier: "Tidak Ada Pemasok",
     },
+
+    // Supplier info
+    noSupplierAssigned: "Tidak Ada Pemasok",
 
     // Details Dialog
     detailsDialog: {
@@ -1511,8 +1541,18 @@ export const id = {
     current: "Saat Ini",
     required: "Diperlukan",
     toOrder: "Perlu Dipesan",
+    quantity: "Kuantitas",
+    price: "Harga",
+    total: "Total",
+    orderTotal: "Total Pesanan",
+    expectedDelivery: "Pengiriman Diharapkan",
+    markAsPlaced: "Tandai Sudah Dipesan",
+    placing: "Memproses...",
+    orderPlaced: "Pesanan ditandai sudah dipesan",
+    orderPlacedError: "Gagal menandai pesanan",
     noOrdersToPlace: "Tidak Ada Pesanan yang Perlu Dibuat",
     noOrdersDescription: "Anda tidak memiliki pesanan yang tertunda saat ini",
+    errorLoadingOrders: "Gagal memuat pesanan",
 
     // Toasts
     toasts: {
@@ -1837,7 +1877,7 @@ export const id = {
       dialogs: {
         updateStatus: {
           title: "Perbarui Status Pengiriman",
-          description: "Perbarui status pengiriman ini",
+          description: "Ubah status pengiriman {reference}",
           currentStatus: "Status Saat Ini",
           newStatus: "Status Baru",
           receivedDate: "Tanggal Diterima",
@@ -1846,6 +1886,18 @@ export const id = {
           notesPlaceholder: "Tambahkan catatan tentang perubahan status ini...",
           updateButton: "Perbarui Status",
           success: "Status berhasil diperbarui",
+          selectNewStatus: "Harap pilih status baru",
+          selectReceivedDate: "Harap pilih tanggal diterima",
+          selectNewStatusPlaceholder: "Pilih status baru",
+          selectReceivedDatePlaceholder: "Pilih tanggal diterima",
+          updating: "Memperbarui...",
+          updateStatus: "Perbarui Status",
+          toasts: {
+            updated: {
+              title: "Status Diperbarui",
+              description: "Status pengiriman telah diperbarui menjadi {status}",
+            },
+          },
         },
         printDelivery: {
           title: "Cetak Pengiriman",
@@ -2079,11 +2131,10 @@ export const id = {
 
       // Batch Statuses
       statuses: {
-        pending: "Menunggu",
+        planned: "Direncanakan",
         inProgress: "Sedang Berjalan",
-        qualityCheck: "Pemeriksaan Kualitas",
         completed: "Selesai",
-        failed: "Gagal",
+        cancelled: "Dibatalkan",
       },
 
       // Start Production Dialog
@@ -2151,11 +2202,10 @@ export const id = {
 
       // Batch Statuses
       statuses: {
-        pending: "Menunggu",
+        planned: "Direncanakan",
         inProgress: "Sedang Berjalan",
-        qualityCheck: "Pemeriksaan Kualitas",
         completed: "Selesai",
-        failed: "Gagal",
+        cancelled: "Dibatalkan",
       },
 
       // Metrics

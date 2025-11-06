@@ -80,7 +80,7 @@ export interface RecipeWithIngredientsDto extends RecipeDto {
 export interface RecipeIngredientDto {
   id: string;
   recipeId: string;
-  ingredientId: string;
+  materialId: string;
   ingredient: IngredientDto;
   quantity: Decimal;
   unit: string;
@@ -109,7 +109,7 @@ export interface SupplierDto {
 export interface StockMovementDto {
   id: string;
   productId: string | null;
-  ingredientId: string | null;
+  materialId: string | null;
   type: "PURCHASE" | "PRODUCTION_IN" | "PRODUCTION_OUT" | "SALE" | "ADJUSTMENT" | "WASTE";
   quantity: Decimal;
   unit: string;

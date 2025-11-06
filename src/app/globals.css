@@ -6,11 +6,6 @@
    SCROLLBAR STYLES
    ======================================== */
 
-/* Hide scrollbar for Chrome, Safari, and Opera */
-::-webkit-scrollbar {
-  display: none;
-}
-
 /* Hide scrollbar for IE, Edge and Firefox */
 html,
 body {
@@ -144,11 +139,11 @@ body.dialog-open {
    ======================================== */
 
 .text-section-title {
-  @apply mb-5 text-2xl leading-tight font-bold sm:mb-5 sm:mb-10 sm:text-3xl lg:text-4xl;
+  @apply mb-5 text-2xl leading-tight font-bold sm:mb-10 sm:text-3xl lg:text-4xl;
 }
 
 .text-subtitle {
-  @apply mb-5 text-lg leading-relaxed font-normal sm:mb-5 sm:mb-10 sm:text-xl lg:text-2xl;
+  @apply mb-5 text-lg leading-relaxed font-normal sm:mb-10 sm:text-xl lg:text-2xl;
 }
 
 .text-description {

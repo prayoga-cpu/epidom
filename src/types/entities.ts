@@ -17,11 +17,10 @@ export enum MaterialCategory {
 }
 
 export enum ProductionStatus {
-  PENDING = "pending",
-  IN_PROGRESS = "in_progress",
-  QUALITY_CHECK = "quality_check",
-  COMPLETED = "completed",
-  FAILED = "failed",
+  PLANNED = "PLANNED",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
 }
 
 export enum OrderStatus {
@@ -104,25 +103,36 @@ export enum SupplierDeliveryStatus {
 // CORE ENTITIES
 // ============================================================================
 
+export interface MaterialSupplier {
+  id: string;
+  materialId: string;
+  supplierId: string;
+  price: number;
+  isPreferred: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  supplier: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface Material {
   id: string;
   name: string;
-  sku?: string;
-  category: MaterialCategory;
-  description?: string;
-  supplierId: string;
-  supplier?: Supplier;
+  sku: string;
+  category?: string | null;
+  description?: string | null;
   unit: string;
-  costPerUnit: number;
+  unitCost: number;
   currentStock: number;
   minStock: number;
   maxStock: number;
-  location?: string;
-  barcode?: string;
-  imageUrl?: string;
+  isActive: boolean;
   storeId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  materialSuppliers?: MaterialSupplier[];
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface Recipe {
@@ -154,42 +164,29 @@ export interface RecipeIngredient {
 
 export interface Product {
   id: string;
+  storeId: string;
+  sku: string;
   name: string;
-  sku?: string;
-  description?: string;
-  recipeId?: string;
-  recipe?: Recipe;
-  category?: string;
+  description?: string | null;
+  category?: string | null;
+  costPrice: number;
+  sellingPrice: number;
   currentStock: number;
+  unit: string;
   minStock: number;
   maxStock: number;
-  retailPrice: number;
-  wholesalePrice?: number;
-  costPrice: number;
-  unit: string;
-  imageUrl?: string;
-  barcode?: string;
-  storeId: string;
-  variants?: ProductVariant[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface ProductVariant {
-  id: string;
-  productId: string;
-  name: string;
-  sku?: string;
-  retailPrice: number;
-  wholesalePrice?: number;
-  attributes: Record<string, string>; // e.g., { size: "large", flavor: "chocolate" }
-  priceAdjustment?: number;
+  recipeId?: string | null;
+  productionTime?: number | null;
+  shelfLife?: number | null;
+  isActive: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface Supplier {
   id: string;
   name: string;
-  contactPerson?: string;
+  contactPerson?: string | null;
   email?: string;
   phone?: string;
   address?: string;
@@ -298,20 +295,17 @@ export interface OrderStatusHistory {
 export interface ProductionBatch {
   id: string;
   batchNumber: string;
-  recipeId: string;
-  recipe?: Recipe;
-  quantityPlanned: number;
-  quantityProduced: number;
+  productId: string;
+  product?: Partial<Product> | null;
+  recipeId: string | null;
+  recipe?: Partial<Recipe> | null;
+  plannedQuantity: number;
+  actualQuantity: number | null;
   unit: string;
   status: ProductionStatus;
-  operatorId?: string;
-  operatorName?: string;
-  startedAt?: Date;
-  completedAt?: Date;
-  qualityScore?: number;
-  qualityNotes?: string;
-  costActual?: number;
-  costEstimated?: number;
+  scheduledDate: Date;
+  completedDate: Date | null;
+  notes: string | null;
   storeId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -375,19 +369,6 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
 }
-
-export interface TeamMember {
-  id: string;
-  userId: string;
-  user?: User;
-  storeId: string;
-  role: UserRole;
-  permissions?: string[];
-  invitedBy?: string;
-  invitedAt?: Date;
-  acceptedAt?: Date;
-}
-
 // ============================================================================
 // API REQUEST/RESPONSE DTOs
 // ============================================================================
@@ -422,28 +403,28 @@ export interface ApiResponse<T> {
 // Material DTOs
 export interface CreateMaterialDto {
   name: string;
-  sku?: string;
-  category: MaterialCategory;
+  sku: string;
+  category?: string;
   description?: string;
-  supplierId: string;
   unit: string;
-  costPerUnit: number;
-  minStock: number;
-  maxStock: number;
-  location?: string;
-  barcode?: string;
-  imageUrl?: string;
+  unitCost: number;
+  currentStock?: number;
+  minStock?: number;
+  maxStock?: number;
+  suppliers?: Array<{
+    supplierId: string;
+    price: number;
+    isPreferred?: boolean;
+  }>;
 }
 
-export interface UpdateMaterialDto extends Partial<CreateMaterialDto> {
-  currentStock?: number;
-}
+export interface UpdateMaterialDto extends Partial<CreateMaterialDto> {}
 
 export interface MaterialFilters extends PaginationParams {
   search?: string;
-  category?: MaterialCategory | MaterialCategory[];
+  category?: string;
   supplierId?: string;
-  stockStatus?: "critical" | "low" | "ok" | "excess";
+  stockStatus?: "in_stock" | "low_stock" | "out_of_stock" | "overstocked";
 }
 
 // Recipe DTOs
@@ -473,16 +454,16 @@ export interface RecipeFilters extends PaginationParams {
 // Product DTOs
 export interface CreateProductDto {
   name: string;
-  sku?: string;
+  sku: string;
   description?: string;
-  recipeId?: string;
   category?: string;
-  retailPrice: number;
-  wholesalePrice?: number;
+  sellingPrice: number;
   costPrice: number;
   unit: string;
-  imageUrl?: string;
-  variants?: Omit<ProductVariant, "id" | "productId">[];
+  minStockLevel?: number;
+  criticalLevel?: number;
+  productionTime?: number;
+  shelfLife?: number;
 }
 
 export interface UpdateProductDto extends Partial<CreateProductDto> {}

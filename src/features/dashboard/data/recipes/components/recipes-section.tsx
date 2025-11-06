@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,7 @@ import RecipeDetailsDialog from "./recipe-details-dialog";
 import EditRecipeDialog from "./edit-recipe-dialog";
 import DuplicateRecipeDialog from "./duplicate-recipe-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { ExportButton } from "@/components/ui/export-button";
 import AddRecipeDialog from "./add-recipe-dialog";
-import type { Recipe } from "@/types/entities";
 import {
   Search,
   Filter,
@@ -34,17 +33,31 @@ import {
   Clock,
   DollarSign,
   Copy,
+  Download,
+  Loader2,
+  Package,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { useCurrency } from "@/components/providers/currency-provider";
+import {
+  useRecipes,
+  useDeleteRecipe,
+  useBulkDeleteRecipes,
+  useExportRecipes,
+  type RecipeWithIngredients,
+} from "../hooks/use-recipes";
+import LoadingPage from "@/features/loading/loading-page";
 
-interface RecipesSectionProps {
-  recipes: Recipe[];
-}
-
-type SortField = "name" | "time" | "cost" | "yield" | "category";
+type SortField =
+  | "name"
+  | "category"
+  | "productionTimeMinutes"
+  | "costPerBatch"
+  | "createdAt"
+  | "updatedAt";
 type SortOrder = "asc" | "desc";
 
 const RECIPE_CATEGORIES = [
@@ -57,16 +70,18 @@ const RECIPE_CATEGORIES = [
   "Other",
 ];
 
-export function RecipesSection({ recipes }: RecipesSectionProps) {
+export function RecipesSection() {
   const { t } = useI18n();
-  const { toast } = useToast();
+  const { formatPrice } = useCurrency();
+  const params = useParams();
+  const storeId = params.storeId as string;
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeWithIngredients | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
@@ -74,53 +89,26 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Filtered and sorted recipes
-  const processedRecipes = useMemo(() => {
-    let filtered = recipes;
+  // API hooks
+  const {
+    data: recipesData,
+    isLoading,
+    error,
+  } = useRecipes(storeId, {
+    search: searchQuery || undefined,
+    category: categoryFilter,
+    sortBy: sortField,
+    sortOrder: sortOrder,
+    skip: 0,
+    take: 100,
+  });
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (r) =>
-          r.name.toLowerCase().includes(query) ||
-          r.description?.toLowerCase().includes(query) ||
-          r.category?.toLowerCase().includes(query)
-      );
-    }
+  const deleteRecipe = useDeleteRecipe(storeId);
+  const bulkDeleteRecipes = useBulkDeleteRecipes(storeId);
+  const exportRecipes = useExportRecipes();
 
-    // Category filter
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((r) => r.category === categoryFilter);
-    }
-
-    // Sort
-    filtered = [...filtered].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortField) {
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "time":
-          comparison = a.productionTimeMinutes - b.productionTimeMinutes;
-          break;
-        case "cost":
-          comparison = a.costPerBatch - b.costPerBatch;
-          break;
-        case "yield":
-          comparison = a.yieldQuantity - b.yieldQuantity;
-          break;
-        case "category":
-          comparison = (a.category || "").localeCompare(b.category || "");
-          break;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-
-    return filtered;
-  }, [recipes, searchQuery, categoryFilter, sortField, sortOrder]);
+  const recipes = recipesData?.recipes || [];
+  const total = recipesData?.total || 0;
 
   // Bulk selection handlers
   const toggleBulkSelect = () => {
@@ -129,10 +117,10 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === processedRecipes.length) {
+    if (selectedIds.size === recipes.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(processedRecipes.map((r) => r.id)));
+      setSelectedIds(new Set(recipes.map((r) => r.id)));
     }
   };
 
@@ -147,90 +135,154 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
   };
 
   // Action handlers
-  const handleView = (recipe: Recipe) => {
+  const handleView = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
     setViewDialogOpen(true);
   };
 
-  const handleEdit = (recipe: Recipe) => {
+  const handleEdit = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
     setEditDialogOpen(true);
   };
 
-  const handleDuplicate = (recipe: Recipe) => {
+  const handleDuplicate = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
     setDuplicateDialogOpen(true);
   };
 
-  const handleDeleteClick = (recipe: Recipe) => {
+  const handleDeleteClick = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    // TODO: API call to delete recipe
-    const deletedDesc = t("data.recipes.toasts.deleted.description") || "{name} has been deleted successfully.";
-    toast({
-      title: t("data.recipes.toasts.deleted.title"),
-      description: deletedDesc.replace(
-        "{name}",
-        selectedRecipe?.name || ""
-      ),
-    });
-    setDeleteDialogOpen(false);
-    setSelectedRecipe(null);
+  const handleDeleteConfirm = async () => {
+    if (!selectedRecipe) return;
+
+    try {
+      await deleteRecipe.mutateAsync(selectedRecipe.id);
+      toast.success(t("data.recipes.toasts.deleted.title") || "Recipe deleted", {
+        description:
+          t("data.recipes.toasts.deleted.description")?.replace("{name}", selectedRecipe.name) ||
+          `${selectedRecipe.name} has been deleted successfully.`,
+      });
+      setDeleteDialogOpen(false);
+      setSelectedRecipe(null);
+    } catch (error) {
+      toast.error(t("common.error") || "Error", {
+        description: error instanceof Error ? error.message : "Failed to delete recipe",
+      });
+    }
   };
 
-  const handleBulkDelete = () => {
-    // TODO: API call to bulk delete recipes
-    const bulkDeletedDesc = t("data.recipes.toasts.bulkDeleted.description") || "{count} recipes have been deleted successfully.";
-    toast({
-      title: t("data.recipes.toasts.bulkDeleted.title"),
-      description: bulkDeletedDesc.replace(
-        "{count}",
-        selectedIds.size.toString()
-      ),
-    });
-    setSelectedIds(new Set());
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      await bulkDeleteRecipes.mutateAsync(Array.from(selectedIds));
+      toast.success(t("data.recipes.toasts.bulkDeleted.title") || "Recipes deleted", {
+        description:
+          t("data.recipes.toasts.bulkDeleted.description")?.replace(
+            "{count}",
+            selectedIds.size.toString()
+          ) || `${selectedIds.size} recipes have been deleted successfully.`,
+      });
+      setSelectedIds(new Set());
+      setBulkSelectMode(false);
+    } catch (error) {
+      toast.error(t("common.error") || "Error", {
+        description: error instanceof Error ? error.message : "Failed to delete recipes",
+      });
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportRecipes.mutateAsync({
+        storeId,
+        filters: {
+          search: searchQuery || undefined,
+          category: categoryFilter,
+          sortBy: sortField,
+          sortOrder: sortOrder,
+          skip: 0,
+          take: 100,
+        },
+      });
+      toast.success("Export started", {
+        description: "Your recipes export will download shortly.",
+      });
+    } catch (error) {
+      toast.error("Export failed", {
+        description: error instanceof Error ? error.message : "Failed to export recipes",
+      });
+    }
   };
 
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
-    setCategoryFilter("all");
-    setSortField("name");
-    setSortOrder("asc");
+    setCategoryFilter(undefined);
+    setSortField("createdAt");
+    setSortOrder("desc");
   };
 
-  const hasActiveFilters = searchQuery || categoryFilter !== "all";
+  const hasActiveFilters = searchQuery || categoryFilter !== undefined;
 
-  // Export columns configuration
-  const exportColumns = [
-    { key: "name" as const, header: "Name" },
-    { key: "category" as const, header: "Category" },
-    { key: "yieldQuantity" as const, header: "Yield Quantity" },
-    { key: "yieldUnit" as const, header: "Yield Unit" },
-    { key: "productionTimeMinutes" as const, header: "Production Time (min)" },
-    { key: "costPerBatch" as const, header: "Cost Per Batch" },
-  ];
+  // Loading and error states
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="overflow-hidden shadow-md">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <p className="text-destructive font-semibold">Error loading recipes</p>
+          <p className="text-muted-foreground text-sm">
+            {error instanceof Error ? error.message : "An unexpected error occurred"}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
-      <Card className="overflow-hidden shadow-md">
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b pb-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg">{t("data.recipes.pageTitle") || "Recipes"}</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
-              <ExportButton
-                data={processedRecipes}
-                filename="recipes"
-                columns={exportColumns}
-                title="Recipes"
-              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={exportRecipes.isPending || recipes.length === 0}
+              >
+                {exportRecipes.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {t("actions.export") || "Export"}
+              </Button>
               <AddRecipeDialog />
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleteRecipes.isPending}
+                >
+                  {bulkDeleteRecipes.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
                   {t("actions.delete") || "Delete"} ({selectedIds.size})
                 </Button>
               )}
@@ -272,7 +324,10 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
             {/* Filters Row */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Category Filter */}
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Select
+                value={categoryFilter || "all"}
+                onValueChange={(value) => setCategoryFilter(value === "all" ? undefined : value)}
+              >
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t("filters.placeholderCategory")} />
@@ -305,29 +360,29 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                 <SelectContent>
                   <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
                   <SelectItem value="name-desc">{t("sort.nameZA") || "Name (Z-A)"}</SelectItem>
-                  <SelectItem value="time-asc">
+                  <SelectItem value="productionTimeMinutes-asc">
                     {t("sort.timeShortest") || "Time (Shortest)"}
                   </SelectItem>
-                  <SelectItem value="time-desc">
+                  <SelectItem value="productionTimeMinutes-desc">
                     {t("sort.timeLongest") || "Time (Longest)"}
                   </SelectItem>
-                  <SelectItem value="cost-asc">
+                  <SelectItem value="costPerBatch-asc">
                     {t("sort.costLowHigh") || "Cost (Low-High)"}
                   </SelectItem>
-                  <SelectItem value="cost-desc">
+                  <SelectItem value="costPerBatch-desc">
                     {t("sort.costHighLow") || "Cost (High-Low)"}
-                  </SelectItem>
-                  <SelectItem value="yield-asc">
-                    {t("sort.yieldLowHigh") || "Yield (Low-High)"}
-                  </SelectItem>
-                  <SelectItem value="yield-desc">
-                    {t("sort.yieldHighLow") || "Yield (High-Low)"}
                   </SelectItem>
                   <SelectItem value="category-asc">
                     {t("sort.categoryAZ") || "Category (A-Z)"}
                   </SelectItem>
                   <SelectItem value="category-desc">
                     {t("sort.categoryZA") || "Category (Z-A)"}
+                  </SelectItem>
+                  <SelectItem value="createdAt-asc">
+                    {t("sort.oldestFirst") || "Oldest First"}
+                  </SelectItem>
+                  <SelectItem value="createdAt-desc">
+                    {t("sort.newestFirst") || "Newest First"}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -345,15 +400,12 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
             {bulkSelectMode && (
               <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
                 <Checkbox
-                  checked={
-                    selectedIds.size === processedRecipes.length && processedRecipes.length > 0
-                  }
+                  checked={selectedIds.size === recipes.length && recipes.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
                   {t("common.selectAll") || "Select All"} ({selectedIds.size}{" "}
-                  {t("common.of") || "of"} {processedRecipes.length}{" "}
-                  {t("common.selected") || "selected"})
+                  {t("common.of") || "of"} {recipes.length} {t("common.selected") || "selected"})
                 </span>
               </div>
             )}
@@ -362,22 +414,21 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing") || "Showing"} {processedRecipes.length}{" "}
-              {t("common.of") || "of"} {recipes.length}{" "}
+              {t("common.showing") || "Showing"} {recipes.length} {t("common.of") || "of"} {total}{" "}
               {t("data.recipes.pageTitle") || "recipes"}
             </p>
           </div>
 
           {/* Recipes Grid */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {processedRecipes.map((recipe) => {
+            {recipes.map((recipe) => {
               const isSelected = selectedIds.has(recipe.id);
               const costPerUnit = recipe.costPerBatch / recipe.yieldQuantity;
 
               return (
                 <div
                   key={recipe.id}
-                  className={`group bg-card relative rounded-lg border p-4 px-6 shadow-sm transition-all hover:shadow-md ${
+                  className={`group bg-card relative rounded-lg border p-4 shadow-sm transition-all hover:shadow-md px-6${
                     isSelected ? "ring-primary ring-2" : ""
                   }`}
                 >
@@ -435,27 +486,44 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                         <DollarSign className="h-3 w-3 text-green-600" />
                         <div className="flex-1">
                           <span className="text-foreground font-medium">
-                            {formatCurrency(recipe.costPerBatch)}
+                            {formatPrice(recipe.costPerBatch)}
                           </span>
-                          <span className="text-muted-foreground"> {t("data.recipes.cards.perBatch")}</span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            {t("data.recipes.cards.perBatch")}
+                          </span>
                         </div>
                       </div>
                       <div className="bg-muted rounded px-2 py-1 text-xs">
-                        <span className="text-muted-foreground">{t("data.recipes.cards.perUnit")}: </span>
+                        <span className="text-muted-foreground">
+                          {t("data.recipes.cards.perUnit")}:{" "}
+                        </span>
                         <span className="text-foreground font-semibold">
-                          {formatCurrency(costPerUnit)}
+                          {formatPrice(costPerUnit)}
                         </span>
                       </div>
                     </div>
 
                     {/* Ingredients Count */}
-                    <div className="text-muted-foreground mt-3 text-xs">
-                      {recipe.ingredients.length} {recipe.ingredients.length !== 1 ? t("data.recipes.cards.ingredients") : t("data.recipes.cards.ingredient")}
+                    <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
+                      <span>
+                        {recipe.ingredients.length}{" "}
+                        {recipe.ingredients.length !== 1
+                          ? t("data.recipes.cards.ingredients")
+                          : t("data.recipes.cards.ingredient")}
+                      </span>
+                      {recipe.products && recipe.products.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          <Package className="mr-1 h-3 w-3" />
+                          {recipe.products.length}{" "}
+                          {recipe.products.length === 1 ? "product" : "products"}
+                        </Badge>
+                      )}
                     </div>
 
                     {/* Hover Actions */}
                     {!bulkSelectMode && (
-                      <div className="mt-3 grid grid-cols-4 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="mt-3 grid grid-cols-4 gap-1 transition-opacity">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -524,7 +592,7 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
             })}
 
             {/* Empty State */}
-            {processedRecipes.length === 0 && (
+            {recipes.length === 0 && (
               <div className="col-span-full py-12 text-center">
                 <ChefHat className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
                 <p className="text-muted-foreground">
@@ -577,7 +645,9 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
         title={t("data.recipes.toasts.deleted.title") || "Delete Recipe"}
-        description={(t("data.recipes.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedRecipe?.name || "")}
+        description={(
+          t("data.recipes.toasts.deleted.description") || "{name} has been deleted successfully."
+        ).replace("{name}", selectedRecipe?.name || "")}
         confirmText={t("common.actions.delete") || "Delete"}
         variant="destructive"
       />

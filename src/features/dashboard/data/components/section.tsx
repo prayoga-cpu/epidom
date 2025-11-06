@@ -4,7 +4,13 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PillsList } from "./pills-list";
 import { DetailsPanel } from "./details-panel";
-import type { Item } from "@/mocks";
+
+// Generic item type for display components
+type Item = {
+  id: string;
+  name: string;
+  [key: string]: any;
+};
 
 interface SectionProps {
   items: Item[];
