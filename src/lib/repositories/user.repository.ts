@@ -54,11 +54,7 @@ export class UserRepository extends BaseRepository {
   /**
    * Create a new user
    */
-  async create(data: {
-    email: string;
-    password: string;
-    name?: string;
-  }): Promise<User> {
+  async create(data: { email: string; password: string; name?: string }): Promise<User> {
     return this.db.user.create({
       data: {
         email: data.email.toLowerCase(),
@@ -75,9 +71,22 @@ export class UserRepository extends BaseRepository {
     userId: string,
     data: Partial<Omit<User, "id" | "email" | "password" | "createdAt">>
   ): Promise<User> {
+    // Filter out null, undefined, and empty string values to avoid overwriting existing data
+    const filteredData = Object.entries(data).reduce(
+      (acc, [key, value]) => {
+        if (value !== null && value !== undefined && value !== "") {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, any>
+    );
+
+    console.log("[UserRepository] Updating user with filtered data:", filteredData);
+
     return this.db.user.update({
       where: { id: userId },
-      data,
+      data: filteredData,
     });
   }
 

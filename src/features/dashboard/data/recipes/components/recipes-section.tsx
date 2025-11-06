@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { useCurrency } from "@/components/providers/currency-provider";
 import {
   useRecipes,
   useDeleteRecipe,
@@ -71,6 +72,7 @@ const RECIPE_CATEGORIES = [
 
 export function RecipesSection() {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
 
@@ -484,7 +486,7 @@ export function RecipesSection() {
                         <DollarSign className="h-3 w-3 text-green-600" />
                         <div className="flex-1">
                           <span className="text-foreground font-medium">
-                            {formatCurrency(recipe.costPerBatch)}
+                            {formatPrice(recipe.costPerBatch)}
                           </span>
                           <span className="text-muted-foreground">
                             {" "}
@@ -497,7 +499,7 @@ export function RecipesSection() {
                           {t("data.recipes.cards.perUnit")}:{" "}
                         </span>
                         <span className="text-foreground font-semibold">
-                          {formatCurrency(costPerUnit)}
+                          {formatPrice(costPerUnit)}
                         </span>
                       </div>
                     </div>

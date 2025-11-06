@@ -42,6 +42,7 @@ import {
   updateIngredientFormSchema,
   type UpdateIngredientFormInput,
 } from "@/lib/validation/inventory.schemas";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 interface EditMaterialDialogProps {
   open: boolean;
@@ -55,6 +56,7 @@ export default function EditMaterialDialog({
   material,
 }: EditMaterialDialogProps) {
   const { t } = useI18n();
+  const { currency, convertPrice, convertToBase } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
   const materialId = material?.id || "";
@@ -100,19 +102,19 @@ export default function EditMaterialDialog({
         category: material.category || "",
         description: material.description || "",
         unit: material.unit,
-        unitCost: Number(material.unitCost),
+        unitCost: convertPrice(Number(material.unitCost)), // Convert EUR to user's currency for display
         currentStock: Number(material.currentStock),
         minStock: Number(material.minStock),
         maxStock: Number(material.maxStock),
         suppliers:
           material.materialSuppliers?.map((s) => ({
             supplierId: s.supplierId,
-            price: Number(s.price),
+            price: convertPrice(Number(s.price)), // Convert EUR to user's currency for display
             isPreferred: s.isPreferred,
           })) || [],
       });
     }
-  }, [material, form]);
+  }, [material, form, convertPrice]);
 
   const onSubmit = async (data: UpdateIngredientFormInput) => {
     if (!material) return;
@@ -124,8 +126,12 @@ export default function EditMaterialDialog({
 
       const payload = {
         ...data,
+        unitCost: convertToBase(data.unitCost || 0), // Convert back to EUR before saving
         // Always send suppliers array, even if empty, to allow removing all suppliers
-        suppliers: validSuppliers,
+        suppliers: validSuppliers.map((s: any) => ({
+          ...s,
+          price: convertToBase(s.price || 0), // Convert supplier prices back to EUR
+        })),
       };
 
       await updateMaterial.mutateAsync(payload);
@@ -235,7 +241,7 @@ export default function EditMaterialDialog({
                 name="unitCost"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Unit Cost ($) *</FormLabel>
+                    <FormLabel>Unit Cost ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -403,7 +409,7 @@ export default function EditMaterialDialog({
                         name={`suppliers.${index}.price` as any}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Price ($) *</FormLabel>
+                            <FormLabel>Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"

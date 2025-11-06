@@ -36,6 +36,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Plus, X, Package } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { useUpdateRecipe, type RecipeWithIngredients } from "../hooks/use-recipes";
 import { useMaterials } from "../../materials/hooks/use-materials";
 import { updateRecipeFormSchema } from "@/lib/validation/inventory.schemas";
@@ -63,6 +64,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
   const { t } = useI18n();
   const params = useParams();
   const storeId = params.storeId as string;
+  const { currency, convertPrice, formatPrice } = useCurrency();
 
   // Fetch real materials for dropdown
   const { data: materialsData } = useMaterials(storeId);
@@ -414,11 +416,11 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
 
                         {selectedMaterial && (
                           <div className="bg-muted rounded-md p-2 text-xs">
-                            Cost: $
-                            {(
+                            Cost:{" "}
+                            {formatPrice(
                               Number(selectedMaterial.unitCost) *
-                              (form.watch(`ingredients.${index}.quantity`) || 0)
-                            ).toFixed(2)}
+                                (form.watch(`ingredients.${index}.quantity`) || 0)
+                            )}
                           </div>
                         )}
 

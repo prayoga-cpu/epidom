@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 
 export function OrdersView() {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params?.storeId as string;
   const [placingOrder, setPlacingOrder] = useState<string | null>(null);
@@ -69,13 +71,9 @@ export function OrdersView() {
     return Array.from(grouped.entries()).map(([supplierId, orders]) => {
       const supplier = orders[0].supplier;
 
-      // Flatten all items from all orders for this supplier
-      const allItems = orders.flatMap((order) => order.items);
-
       return {
         supplier,
         orders,
-        items: allItems,
       };
     });
   }, [data]);
@@ -116,7 +114,8 @@ export function OrdersView() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
           {ordersBySupplier.map((supplierGroup, idx) => {
-            const { supplier, items, orders } = supplierGroup;
+            const { supplier, orders } = supplierGroup;
+            const totalItems = orders.reduce((sum, order) => sum + order.items.length, 0);
 
             return (
               <Card key={idx} className="transition-shadow hover:shadow-lg">
@@ -129,9 +128,14 @@ export function OrdersView() {
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <CardTitle className="truncate text-lg">{supplier.name}</CardTitle>
-                      <Badge variant="outline" className="mt-1">
-                        {items.length} {items.length === 1 ? t("alerts.item") : t("alerts.items")}
-                      </Badge>
+                      <div className="mt-1 flex gap-2">
+                        <Badge variant="outline">
+                          {orders.length} {orders.length === 1 ? "Order" : "Orders"}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {totalItems} {totalItems === 1 ? t("alerts.item") : t("alerts.items")}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
@@ -182,92 +186,104 @@ export function OrdersView() {
 
                   <Separator />
 
-                  {/* Materials to Order */}
-                  <div className="space-y-2">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold">
-                      <Package className="h-4 w-4" />
-                      {t("alerts.materialsToOrder")}
-                    </h3>
-
-                    <div className="space-y-2">
-                      {items.map((item, itemIdx) => (
-                        <div key={itemIdx} className="bg-muted/50 space-y-1 rounded-md p-3">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">{item.material.name}</p>
-                            <Badge variant="secondary" className="text-xs">
-                              {item.material.sku}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-muted-foreground">{t("alerts.quantity")}:</span>
-                              <span className="ml-1 font-semibold text-blue-600">
-                                {item.quantity} {item.unit}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">{t("alerts.price")}:</span>
-                              <span className="ml-1 font-semibold text-green-600">
-                                ${Number(item.unitPrice).toFixed(2)} / {item.unit}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="pt-1 text-xs font-semibold">
-                            <span className="text-muted-foreground">{t("alerts.total")}:</span>
-                            <span className="ml-1 text-orange-600">
-                              ${Number(item.total).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Order Summary */}
-                    {orders.length > 0 && (
-                      <>
-                        <div className="bg-primary/5 mt-3 rounded-md p-3">
-                          <div className="flex items-center justify-between text-sm font-semibold">
-                            <span>{t("alerts.orderTotal")}:</span>
-                            <span className="text-primary">
-                              $
-                              {orders
-                                .reduce((sum, order) => sum + Number(order.total), 0)
-                                .toFixed(2)}
-                            </span>
-                          </div>
-                          {orders[0].expectedDate && (
-                            <div className="text-muted-foreground mt-1 text-xs">
-                              {t("alerts.expectedDelivery")}:{" "}
-                              {new Date(orders[0].expectedDate).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="mt-3 flex gap-2">
-                          {orders.map((order) => (
-                            <Button
-                              key={order.id}
-                              onClick={() => handleMarkAsPlaced(order.id)}
-                              disabled={placingOrder === order.id}
-                              className="flex-1"
-                            >
-                              {placingOrder === order.id ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  {t("alerts.placing")}
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  {t("alerts.markAsPlaced")}
-                                </>
+                  {/* Orders List */}
+                  <div className="space-y-4">
+                    {orders.map((order) => (
+                      <div key={order.id} className="space-y-3 rounded-lg border p-3">
+                        {/* Order Header */}
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Package className="h-4 w-4" />
+                              <h3 className="text-sm font-semibold">
+                                Order #{order.id.slice(0, 8)}
+                              </h3>
+                              {order.items.length > 1 && (
+                                <Badge variant="default" className="text-xs">
+                                  Bulk Order
+                                </Badge>
                               )}
-                            </Button>
+                            </div>
+                            {order.expectedDate && (
+                              <p className="text-muted-foreground text-xs">
+                                Expected: {new Date(order.expectedDate).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-green-600">
+                              {formatPrice(Number(order.total))}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Order Notes */}
+                        {order.notes && (
+                          <div className="bg-muted/30 rounded-md p-2">
+                            <p className="text-muted-foreground text-xs italic">{order.notes}</p>
+                          </div>
+                        )}
+
+                        {/* Items List */}
+                        <div className="space-y-2">
+                          {order.items.map((item, itemIdx) => (
+                            <div key={itemIdx} className="bg-muted/50 space-y-1 rounded-md p-2.5">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium">{item.material.name}</p>
+                                <Badge variant="secondary" className="text-xs">
+                                  {item.material.sku}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex gap-3">
+                                  <div>
+                                    <span className="text-muted-foreground">Qty:</span>
+                                    <span className="ml-1 font-semibold text-blue-600">
+                                      {item.quantity} {item.unit}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Price:</span>
+                                    <span className="ml-1 font-semibold text-green-600">
+                                      {formatPrice(Number(item.unitPrice))}/{item.unit}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Total:</span>
+                                  <span className="ml-1 font-semibold text-orange-600">
+                                    {formatPrice(Number(item.total))}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
                           ))}
                         </div>
-                      </>
-                    )}
+
+                        {/* Order Action Button */}
+                        <Button
+                          onClick={() => handleMarkAsPlaced(order.id)}
+                          disabled={placingOrder === order.id}
+                          className="w-full"
+                          size="sm"
+                        >
+                          {placingOrder === order.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              {t("alerts.placing")}
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              {t("alerts.markAsPlaced")}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

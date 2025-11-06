@@ -14,9 +14,11 @@ import { MaterialAvailabilityCheck } from "./material-availability-check";
 import { formatCurrency } from "@/lib/utils/formatting";
 import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import { useProductionBatches } from "./hooks/use-production-batches";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 export function RecipeProductionCard() {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params?.storeId as string;
 
@@ -236,16 +238,14 @@ export function RecipeProductionCard() {
                     <p className="text-muted-foreground text-sm">
                       {t("management.recipeProduction.costPerBatch")}
                     </p>
-                    <p className="text-2xl font-bold">
-                      {formatCurrency(selectedRecipe.costPerBatch)}
-                    </p>
+                    <p className="text-2xl font-bold">{formatPrice(selectedRecipe.costPerBatch)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm">
                       {t("management.recipeProduction.costPerUnit")}
                     </p>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(
+                      {formatPrice(
                         Number(selectedRecipe.costPerBatch) / Number(selectedRecipe.yieldQuantity)
                       )}
                     </p>

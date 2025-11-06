@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils/formatting";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 interface Material {
   id: string;
@@ -89,6 +90,7 @@ interface BatchDetailsDialogProps {
 
 export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDialogProps) {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
 
   // Use recipe from batch relations
   const recipe = batch.recipe;
@@ -238,7 +240,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                     <p className="text-muted-foreground text-sm">
                       {t("management.productionHistory.actualCost")}
                     </p>
-                    <p className="text-xl font-bold">{formatCurrency(costAnalysis.actual)}</p>
+                    <p className="text-xl font-bold">{formatPrice(costAnalysis.actual)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -334,10 +336,10 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                         {ingredient.quantityUsed.toFixed(2)} {ingredient.unit}
                       </div>
                       <div className="text-muted-foreground col-span-2 text-right">
-                        {formatCurrency(ingredient.costPerUnit)}
+                        {formatPrice(ingredient.costPerUnit)}
                       </div>
                       <div className="col-span-3 text-right font-medium">
-                        {formatCurrency(ingredient.totalCost)}
+                        {formatPrice(ingredient.totalCost)}
                       </div>
                     </div>
                   ))}
@@ -416,7 +418,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                   <p className="text-muted-foreground">
                     {t("management.productionHistory.unitCost") || "Cost per Unit"}
                   </p>
-                  <p className="text-lg font-bold">{formatCurrency(costAnalysis.unitCost)}</p>
+                  <p className="text-lg font-bold">{formatPrice(costAnalysis.unitCost)}</p>
                   <p className="text-muted-foreground mt-1 text-xs">
                     {t("management.productionHistory.perUnit") || "Per"} {batch.unit}
                   </p>
@@ -425,7 +427,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                   <p className="text-muted-foreground">
                     {t("management.productionHistory.batchTotalCost") || "Batch Total Cost"}
                   </p>
-                  <p className="text-lg font-bold">{formatCurrency(costAnalysis.batchTotalCost)}</p>
+                  <p className="text-lg font-bold">{formatPrice(costAnalysis.batchTotalCost)}</p>
                   <p className="text-muted-foreground mt-1 text-xs">
                     {t("management.productionHistory.forQuantity") || "For"}{" "}
                     {batch.actualQuantity || batch.plannedQuantity} {batch.unit}

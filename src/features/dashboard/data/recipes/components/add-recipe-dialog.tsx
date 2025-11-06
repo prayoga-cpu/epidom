@@ -51,6 +51,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useParams } from "next/navigation";
 import { useCreateRecipe } from "../hooks/use-recipes";
 import { useMaterials } from "../../materials/hooks/use-materials";
+import { useCurrency } from "@/components/providers/currency-provider";
 import {
   createRecipeFormSchema,
   type CreateRecipeFormInput,
@@ -83,6 +84,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const { t } = useI18n();
+  const { currency, convertPrice, formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
 
@@ -543,15 +545,14 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                             <div className="bg-muted rounded-md p-3 text-sm">
                               <p className="font-medium">Cost Estimate</p>
                               <p className="text-muted-foreground">
-                                ${Number(selectedMaterial.unitCost).toFixed(2)} per{" "}
+                                {formatPrice(Number(selectedMaterial.unitCost))} per{" "}
                                 {selectedMaterial.unit} ×{" "}
                                 {form.watch(`ingredients.${index}.quantity`) || 0} ={" "}
                                 <span className="text-foreground font-semibold">
-                                  $
-                                  {(
+                                  {formatPrice(
                                     Number(selectedMaterial.unitCost) *
-                                    (form.watch(`ingredients.${index}.quantity`) || 0)
-                                  ).toFixed(2)}
+                                      (form.watch(`ingredients.${index}.quantity`) || 0)
+                                  )}
                                 </span>
                               </p>
                             </div>
@@ -691,10 +692,9 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                               {material?.name} - {ingredient.quantity} {ingredient.unit}
                             </span>
                             <span className="text-muted-foreground">
-                              $
                               {material
-                                ? (Number(material.unitCost) * ingredient.quantity).toFixed(2)
-                                : "0.00"}
+                                ? formatPrice(Number(material.unitCost) * ingredient.quantity)
+                                : formatPrice(0)}
                             </span>
                           </div>
                         );
@@ -711,14 +711,14 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Total Cost per Batch</span>
                         <span className="font-semibold">
-                          ${calculateEstimatedCost().toFixed(2)}
+                          {formatPrice(calculateEstimatedCost())}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">
                           Cost per {form.watch("yieldUnit")}
                         </span>
-                        <span className="font-semibold">${calculateCostPerUnit().toFixed(2)}</span>
+                        <span className="font-semibold">{formatPrice(calculateCostPerUnit())}</span>
                       </div>
                     </div>
                   </CardContent>

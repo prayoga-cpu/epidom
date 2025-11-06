@@ -345,6 +345,21 @@ Table alerts {
   user users [not null]
 }
 
+Table exchange_rates {
+  id String [pk]
+  fromCurrency String [not null]
+  toCurrency String [not null]
+  rate Decimal [not null]
+  fetchedAt DateTime [default: `now()`, not null]
+  expiresAt DateTime [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+
+  indexes {
+    (fromCurrency, toCurrency) [unique]
+  }
+}
+
 Enum SubscriptionPlan {
   STARTER
   PRO

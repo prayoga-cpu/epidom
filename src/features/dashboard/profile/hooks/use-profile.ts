@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/lib/auth-client";
+import { useSession } from "next-auth/react";
 import type { ProfileData } from "../types";
 
 interface UpdateProfilePayload {
@@ -109,12 +110,35 @@ export const useProfile = () => {
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   const { user } = useUser();
+  const { update: updateSession } = useSession();
 
   return useMutation({
     mutationFn: updateProfile,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      console.log("[useUpdateProfile] Profile updated successfully:", data);
+      console.log("[useUpdateProfile] Profile image:", data.image);
+      console.log("[useUpdateProfile] Updating session with currency:", data.currency);
+
       // Update the cached profile data
       queryClient.setQueryData(["profile", user?.id], data);
+
+      // Update the NextAuth session to reflect new currency/locale
+      // Only include fields that have values to avoid overwriting with null
+      const sessionUpdate: Record<string, any> = {};
+
+      if (data.currency) sessionUpdate.currency = data.currency;
+      if (data.locale) sessionUpdate.locale = data.locale;
+      if (data.timezone) sessionUpdate.timezone = data.timezone;
+      if (data.name) sessionUpdate.name = data.name;
+      if (data.phone) sessionUpdate.phone = data.phone;
+      if (data.image) sessionUpdate.image = data.image; // Only update if image exists
+
+      console.log("[useUpdateProfile] Session update payload:", sessionUpdate);
+      await updateSession(sessionUpdate);
+      console.log("[useUpdateProfile] Session updated successfully");
+
+      // Force a small delay to ensure session propagates
+      await new Promise((resolve) => setTimeout(resolve, 100));
     },
   });
 };

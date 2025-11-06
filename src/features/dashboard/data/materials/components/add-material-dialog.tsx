@@ -43,6 +43,7 @@ import {
   type CreateIngredientFormInput,
 } from "@/lib/validation/inventory.schemas";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 // Use the form schema (without storeId)
 const formSchema = createIngredientFormSchema;
@@ -54,6 +55,7 @@ interface AddMaterialDialogProps {
 export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
+  const { currency, convertToBase } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
 
@@ -100,11 +102,18 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
       const payload = {
         ...data,
         unit: data.unit || "kg",
+        unitCost: convertToBase(data.unitCost), // Convert from user's currency to EUR
         currentStock: data.currentStock || 0,
         minStock: data.minStock || 0,
         maxStock: data.maxStock || 1000,
         isActive: data.isActive ?? true,
-        suppliers: validSuppliers.length > 0 ? validSuppliers : undefined,
+        suppliers:
+          validSuppliers.length > 0
+            ? validSuppliers.map((s: any) => ({
+                ...s,
+                price: convertToBase(s.price), // Convert supplier prices to EUR
+              }))
+            : undefined,
       };
 
       await createMaterial.mutateAsync(payload);
@@ -246,7 +255,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   name="unitCost"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit Cost ($) *</FormLabel>
+                      <FormLabel>Unit Cost ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -393,7 +402,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                         name={`suppliers.${index}.price` as any}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Price ($) *</FormLabel>
+                            <FormLabel>Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"

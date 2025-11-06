@@ -41,8 +41,9 @@ export const defaultLocale: Locale = "en";
 
 /**
  * Supported currencies
+ * Note: All prices are stored in EUR (base currency) and converted for display
  */
-export const currencies = ["EUR", "USD", "IDR", "GBP"] as const;
+export const currencies = ["EUR", "USD"] as const;
 export type Currency = (typeof currencies)[number];
 
 /**

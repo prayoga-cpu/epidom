@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 import MaterialDetailsDialog from "./material-details-dialog";
 import EditMaterialDialog from "./edit-material-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -65,6 +66,7 @@ function getStockStatusVariant(
 
 export function MaterialsSection() {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
 
@@ -475,7 +477,7 @@ export function MaterialsSection() {
                       <div className="flex justify-between">
                         <span>Unit Cost:</span>
                         <span className="text-foreground font-medium">
-                          ${Number(material.unitCost).toFixed(2)}
+                          {formatPrice(Number(material.unitCost))}
                         </span>
                       </div>
 

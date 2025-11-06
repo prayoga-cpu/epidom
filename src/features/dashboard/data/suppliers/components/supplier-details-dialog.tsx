@@ -27,6 +27,7 @@ import { formatDate, formatCurrency, formatNumber } from "@/lib/utils/formatting
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 interface SupplierDetailsDialogProps {
   open: boolean;
@@ -45,6 +46,7 @@ export default function SupplierDetailsDialog({
 }: SupplierDetailsDialogProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -177,10 +179,10 @@ export default function SupplierDetailsDialog({
                                 Stock: {formatNumber(Number(material.currentStock))} {material.unit}
                               </span>
                               <span className="text-muted-foreground">
-                                Unit Cost: {formatCurrency(Number(material.unitCost))}
+                                Unit Cost: {formatPrice(Number(material.unitCost))}
                               </span>
                               <span className="font-medium text-green-600">
-                                Supplier Price: {formatCurrency(Number(ms.price))}
+                                Supplier Price: {formatPrice(Number(ms.price))}
                               </span>
                             </div>
                           </div>

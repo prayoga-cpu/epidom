@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 import ProductDetailsDialog from "./product-details-dialog";
 import EditProductDialog from "./edit-product-dialog";
 import AddProductDialog from "./add-product-dialog";
@@ -49,6 +50,7 @@ type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked"
 
 export function ProductsSection() {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
 
@@ -452,7 +454,7 @@ export function ProductsSection() {
                       <div className="flex justify-between">
                         <span>{t("common.price")}:</span>
                         <span className="text-foreground font-medium">
-                          {formatCurrency(Number(product.sellingPrice) || 0)}
+                          {formatPrice(Number(product.sellingPrice) || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between">

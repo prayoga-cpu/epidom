@@ -420,6 +420,21 @@ model Alert {
   @@map("alerts")
 }
 
+model ExchangeRate {
+  id           String   @id @default(cuid())
+  fromCurrency String   // Base currency (EUR)
+  toCurrency   String   // Target currency (USD)
+  rate         Decimal  @db.Decimal(10, 6) // Exchange rate with 6 decimal precision
+  fetchedAt    DateTime @default(now()) // When the rate was fetched
+  expiresAt    DateTime // When the cached rate expires
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([fromCurrency, toCurrency])
+  @@index([expiresAt])
+  @@map("exchange_rates")
+}
+
 enum SubscriptionPlan {
   STARTER
   PRO

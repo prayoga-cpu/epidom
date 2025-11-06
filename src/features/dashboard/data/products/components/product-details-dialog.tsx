@@ -26,6 +26,7 @@ import { formatCurrency, formatDate, formatNumber } from "@/lib/utils/formatting
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 interface ProductDetailsDialogProps {
   open: boolean;
@@ -44,6 +45,8 @@ export default function ProductDetailsDialog({
 }: ProductDetailsDialogProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
+
   // Calculate profit margins
   const calculateMargins = () => {
     const sellingPrice = Number(product.sellingPrice) || 0;
@@ -168,7 +171,7 @@ export default function ProductDetailsDialog({
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(Number(product.sellingPrice) || 0)}
+                  {formatPrice(Number(product.sellingPrice) || 0)}
                 </div>
                 <p className="text-muted-foreground text-xs">per {product.unit}</p>
               </CardContent>
@@ -201,7 +204,7 @@ export default function ProductDetailsDialog({
                 <BarChart3 className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stockValue)}</div>
+                <div className="text-2xl font-bold">{formatPrice(stockValue)}</div>
                 <p className="text-muted-foreground text-xs">at cost price</p>
               </CardContent>
             </Card>
@@ -390,7 +393,7 @@ export default function ProductDetailsDialog({
                   </CardHeader>
                   <CardContent>
                     <p className="text-xl font-bold">
-                      {formatCurrency(Number(product.costPrice) || 0)}
+                      {formatPrice(Number(product.costPrice) || 0)}
                     </p>
                     <p className="text-muted-foreground text-xs">per {product.unit}</p>
                   </CardContent>
@@ -401,7 +404,7 @@ export default function ProductDetailsDialog({
                   </CardHeader>
                   <CardContent>
                     <p className="text-xl font-bold">
-                      {formatCurrency(Number(product.sellingPrice) || 0)}
+                      {formatPrice(Number(product.sellingPrice) || 0)}
                     </p>
                     <p className="text-muted-foreground text-xs">per {product.unit}</p>
                     <p className="mt-1 text-xs font-medium text-green-600">
@@ -419,25 +422,25 @@ export default function ProductDetailsDialog({
                 <CardContent className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">Stock Value (at cost):</span>
-                    <span className="font-semibold">{formatCurrency(stockValue)}</span>
+                    <span className="font-semibold">{formatPrice(stockValue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">
                       Potential Revenue (retail):
                     </span>
-                    <span className="font-semibold">{formatCurrency(potentialRevenue)}</span>
+                    <span className="font-semibold">{formatPrice(potentialRevenue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">Potential Profit:</span>
                     <span className="font-semibold text-green-600">
-                      {formatCurrency(potentialRevenue - stockValue)}
+                      {formatPrice(potentialRevenue - stockValue)}
                     </span>
                   </div>
                   {product.sellingPrice && product.costPrice && (
                     <div className="flex items-center justify-between border-t pt-2">
                       <span className="text-muted-foreground text-sm">Profit per unit:</span>
                       <span className="font-semibold">
-                        {formatCurrency(
+                        {formatPrice(
                           (Number(product.sellingPrice) || 0) - (Number(product.costPrice) || 0)
                         )}
                       </span>

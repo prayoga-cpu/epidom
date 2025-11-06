@@ -11,6 +11,7 @@ import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 interface MaterialDetailsDialogProps {
   open: boolean;
@@ -50,6 +51,7 @@ export default function MaterialDetailsDialog({
 }: MaterialDetailsDialogProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
 
   if (!material) return null;
 
@@ -159,7 +161,7 @@ export default function MaterialDetailsDialog({
                           <span className="font-medium">{supplierLink.supplier.name}</span>
                         </div>
                         <span className="text-muted-foreground text-sm">
-                          ${Number(supplierLink.price).toFixed(2)}
+                          {formatPrice(Number(supplierLink.price))}
                         </span>
                       </div>
                     ))}
@@ -180,12 +182,12 @@ export default function MaterialDetailsDialog({
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground text-sm">Unit Cost</span>
-                    <span className="font-medium">${Number(material.unitCost).toFixed(2)}</span>
+                    <span className="font-medium">{formatPrice(Number(material.unitCost))}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground text-sm">Total Value</span>
                     <span className="font-medium">
-                      ${(Number(material.unitCost) * currentStock).toFixed(2)}
+                      {formatPrice(Number(material.unitCost) * currentStock)}
                     </span>
                   </div>
                 </div>

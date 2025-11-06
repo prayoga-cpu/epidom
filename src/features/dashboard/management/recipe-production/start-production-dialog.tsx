@@ -45,7 +45,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils/formatting";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useStartProduction } from "./hooks/use-production-batches";
@@ -86,6 +86,7 @@ export function StartProductionDialog({
   availableIngredients,
 }: StartProductionDialogProps) {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params?.storeId as string;
   const startProduction = useStartProduction(storeId);
@@ -141,16 +142,13 @@ export function StartProductionDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to start production:", error);
-      sonnerToast.error(
-        t("management.recipeProduction.toasts.productionFailed.title") || "Error",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : t("management.recipeProduction.toasts.productionFailed.description") ||
-                "Failed to start production",
-        }
-      );
+      sonnerToast.error(t("management.recipeProduction.toasts.productionFailed.title") || "Error", {
+        description:
+          error instanceof Error
+            ? error.message
+            : t("management.recipeProduction.toasts.productionFailed.description") ||
+              "Failed to start production",
+      });
     }
   };
 
@@ -199,7 +197,7 @@ export function StartProductionDialog({
                       <p className="text-muted-foreground">
                         {t("management.recipeProduction.costPerBatch")}
                       </p>
-                      <p className="font-medium">{formatCurrency(recipe.costPerBatch)}</p>
+                      <p className="font-medium">{formatPrice(recipe.costPerBatch)}</p>
                     </div>
                   </div>
                 </div>
@@ -210,12 +208,12 @@ export function StartProductionDialog({
             {hasInsufficientMaterials && (
               <div className="rounded-lg border border-gray-300 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="text-gray-600 dark:text-gray-400 mt-0.5 h-5 w-5" />
+                  <AlertTriangle className="mt-0.5 h-5 w-5 text-gray-600 dark:text-gray-400" />
                   <div className="space-y-1">
-                    <p className="text-gray-800 dark:text-gray-200 text-sm font-medium">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {t("management.recipeProduction.insufficientMaterialsWarning")}
                     </p>
-                    <p className="text-gray-700 dark:text-gray-300 text-sm">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
                       {t("management.recipeProduction.insufficientMaterialsHint")}
                     </p>
                   </div>
@@ -234,7 +232,11 @@ export function StartProductionDialog({
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={t("management.recipeProduction.selectProduct") || "Select product"} />
+                          <SelectValue
+                            placeholder={
+                              t("management.recipeProduction.selectProduct") || "Select product"
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -246,7 +248,8 @@ export function StartProductionDialog({
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      {t("management.recipeProduction.productHint") || "Select the product to produce"}
+                      {t("management.recipeProduction.productHint") ||
+                        "Select the product to produce"}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -275,7 +278,8 @@ export function StartProductionDialog({
                     </div>
                   </FormControl>
                   <FormDescription>
-                    {t("management.recipeProduction.plannedQuantityHint") || "Enter the quantity to produce"}
+                    {t("management.recipeProduction.plannedQuantityHint") ||
+                      "Enter the quantity to produce"}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -311,7 +315,7 @@ export function StartProductionDialog({
                       <p className="text-muted-foreground">
                         {t("management.recipeProduction.estimatedCost") || "Estimated Cost"}
                       </p>
-                      <p className="text-lg font-bold">{formatCurrency(totalCost)}</p>
+                      <p className="text-lg font-bold">{formatPrice(totalCost)}</p>
                     </div>
                   </div>
                 </div>
@@ -328,7 +332,9 @@ export function StartProductionDialog({
 
                 return (
                   <FormItem className="flex flex-col">
-                    <FormLabel>{t("management.recipeProduction.scheduledDate") || "Scheduled Date"}</FormLabel>
+                    <FormLabel>
+                      {t("management.recipeProduction.scheduledDate") || "Scheduled Date"}
+                    </FormLabel>
                     <div className="flex gap-2">
                       <Popover>
                         <PopoverTrigger asChild>
@@ -418,7 +424,11 @@ export function StartProductionDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={startProduction.isPending || hasInsufficientMaterials || linkedProducts.length === 0}
+                disabled={
+                  startProduction.isPending ||
+                  hasInsufficientMaterials ||
+                  linkedProducts.length === 0
+                }
               >
                 {startProduction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t("management.recipeProduction.startProduction") || "Start Production"}

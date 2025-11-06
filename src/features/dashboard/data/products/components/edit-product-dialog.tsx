@@ -39,6 +39,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useUpdateProduct } from "../hooks/use-products";
 import { useRecipes } from "../../recipes/hooks/use-recipes";
 import { toast as sonnerToast } from "sonner";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 // Zod validation schema
 const productSchema = z.object({
@@ -72,6 +73,7 @@ export default function EditProductDialog({
 }: EditProductDialogProps) {
   const { toast } = useToast();
   const { t } = useI18n();
+  const { currency, convertPrice, convertToBase } = useCurrency();
   const updateProduct = useUpdateProduct(storeId, product.id);
 
   // Fetch recipes for selection
@@ -108,8 +110,8 @@ export default function EditProductDialog({
         sku: product.sku || "",
         description: product.description || "",
         category: product.category || "",
-        retailPrice: Number(product.sellingPrice) || 0,
-        costPrice: Number(product.costPrice) || 0,
+        retailPrice: convertPrice(Number(product.sellingPrice) || 0), // Convert to user's currency
+        costPrice: convertPrice(Number(product.costPrice) || 0), // Convert to user's currency
         unit: product.unit || "piece",
         currentStock: Number(product.currentStock) || 0,
         minStock: Number(product.minStock) || 0,
@@ -117,7 +119,7 @@ export default function EditProductDialog({
         recipeId: product.recipeId || "none",
       });
     }
-  }, [product, form]);
+  }, [product, form, convertPrice]);
 
   // Watch cost price for pricing suggestions
   const costPrice = form.watch("costPrice");
@@ -133,8 +135,8 @@ export default function EditProductDialog({
         name: data.name,
         description: data.description,
         category: data.category,
-        costPrice: data.costPrice,
-        sellingPrice: data.retailPrice,
+        costPrice: convertToBase(data.costPrice), // Convert back to EUR
+        sellingPrice: convertToBase(data.retailPrice), // Convert back to EUR
         currentStock: data.currentStock,
         unit: data.unit,
         minStock: data.minStock,
@@ -178,7 +180,7 @@ export default function EditProductDialog({
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold">Basic Information</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
@@ -283,7 +285,7 @@ export default function EditProductDialog({
                   name="costPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cost Price *</FormLabel>
+                      <FormLabel>Cost Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" placeholder="0.00" {...field} />
                       </FormControl>
@@ -298,7 +300,7 @@ export default function EditProductDialog({
                   name="retailPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Selling Price *</FormLabel>
+                      <FormLabel>Selling Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -326,7 +328,7 @@ export default function EditProductDialog({
             {/* Stock Management */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold">Stock Management</h3>
-              <div className="grid gap-4 sm:grid-cols-4">
+              <div className="grid items-start gap-4 sm:grid-cols-4">
                 <FormField
                   control={form.control}
                   name="unit"

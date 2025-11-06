@@ -27,7 +27,7 @@ import {
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
 import { BulkAdjustmentDialog } from "./bulk-adjustment-dialog";
 import { AdjustmentHistoryDialog } from "./adjustment-history-dialog";
-import { formatCurrency } from "@/lib/utils/formatting";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 type ItemType = "material" | "product";
 
@@ -46,6 +46,7 @@ interface StockItem {
 export function EditStockCard() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params?.storeId as string;
 
@@ -370,7 +371,7 @@ export function EditStockCard() {
                         {t("management.editStock.stockValue")}
                       </p>
                       <p className="text-2xl font-bold">
-                        {formatCurrency(selectedItem.currentStock * selectedItem.costPerUnit)}
+                        {formatPrice(selectedItem.currentStock * selectedItem.costPerUnit)}
                       </p>
                     </div>
 

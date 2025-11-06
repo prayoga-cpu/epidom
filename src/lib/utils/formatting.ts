@@ -177,8 +177,42 @@ export function formatCompactNumber(
 // CURRENCY FORMATTING
 // ============================================================================
 
+export type Currency = "EUR" | "USD";
+
 /**
- * Format a number as currency
+ * Map currency to appropriate locale
+ */
+export function getCurrencyLocale(currency: Currency): string {
+  switch (currency) {
+    case "EUR":
+      return "fr-FR";
+    case "USD":
+      return "en-US";
+    default:
+      return "en-US";
+  }
+}
+
+/**
+ * Convert price from EUR to target currency
+ * @param priceInEur - Price in EUR (base currency)
+ * @param targetCurrency - Target currency (EUR or USD)
+ * @param exchangeRate - EUR to USD exchange rate (ignored if targetCurrency is EUR)
+ */
+export function convertCurrency(
+  priceInEur: number,
+  targetCurrency: Currency,
+  exchangeRate: number = 1.1
+): number {
+  if (targetCurrency === "EUR") {
+    return priceInEur;
+  }
+  return priceInEur * exchangeRate;
+}
+
+/**
+ * Format a number as currency (legacy function - kept for backward compatibility)
+ * For new components, prefer using useCurrency().formatPrice() from CurrencyProvider
  */
 export function formatCurrency(
   value: number | null | undefined,
@@ -191,6 +225,32 @@ export function formatCurrency(
     style: "currency",
     currency: currency,
   }).format(value);
+}
+
+/**
+ * Format price with automatic conversion and currency formatting
+ * @param priceInEur - Price in EUR (base currency in database)
+ * @param targetCurrency - Target currency for display
+ * @param exchangeRate - Exchange rate for conversion (only used if targetCurrency is USD)
+ */
+export function formatPriceWithConversion(
+  priceInEur: number | null | undefined,
+  targetCurrency: Currency = "EUR",
+  exchangeRate: number = 1.1
+): string {
+  if (priceInEur === null || priceInEur === undefined) {
+    return targetCurrency === "EUR" ? "€0.00" : "$0.00";
+  }
+
+  const convertedPrice = convertCurrency(priceInEur, targetCurrency, exchangeRate);
+  const locale = getCurrencyLocale(targetCurrency);
+
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: targetCurrency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(convertedPrice);
 }
 
 /**

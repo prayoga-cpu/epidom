@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { useCreateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
@@ -62,6 +63,7 @@ interface PlaceOrderDialogProps {
 
 export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialogProps) {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const { toast } = useToast();
   const params = useParams();
   const storeId = params?.storeId as string;
@@ -200,7 +202,7 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
                               )}
                             </span>
                             <span className="text-muted-foreground text-xs">
-                              {supplier.price} per {alert.unit}
+                              {formatPrice(supplier.price)} per {alert.unit}
                             </span>
                           </div>
                         </SelectItem>

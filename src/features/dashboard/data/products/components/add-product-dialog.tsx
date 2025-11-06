@@ -39,6 +39,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateProduct } from "../hooks/use-products";
 import { useRecipes } from "../../recipes/hooks/use-recipes";
 import { toast as sonnerToast } from "sonner";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 // Zod validation schema
 const productSchema = z.object({
@@ -66,6 +67,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useI18n();
+  const { currency, convertToBase } = useCurrency();
   const createProduct = useCreateProduct(storeId);
 
   // Fetch recipes for selection
@@ -110,8 +112,8 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
         name: data.name,
         description: data.description,
         category: data.category,
-        costPrice: data.costPrice,
-        sellingPrice: data.retailPrice,
+        costPrice: convertToBase(data.costPrice), // Convert to EUR
+        sellingPrice: convertToBase(data.retailPrice), // Convert to EUR
         currentStock: data.currentStock,
         unit: data.unit,
         minStock: data.minStock,
@@ -272,7 +274,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="costPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cost Price *</FormLabel>
+                      <FormLabel>Cost Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" placeholder="0.00" {...field} />
                       </FormControl>
@@ -287,7 +289,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="retailPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Selling Price *</FormLabel>
+                      <FormLabel>Selling Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"

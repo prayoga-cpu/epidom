@@ -33,6 +33,7 @@ import { formatCurrency, formatDate, formatDuration, formatNumber } from "@/lib/
 import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { useMaterials } from "../../materials/hooks/use-materials";
 import type { RecipeWithIngredients } from "../hooks/use-recipes";
 
@@ -53,6 +54,7 @@ export default function RecipeDetailsDialog({
 }: RecipeDetailsDialogProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
 
@@ -161,7 +163,7 @@ export default function RecipeDetailsDialog({
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Cost per Batch</p>
-                    <p className="font-semibold">{formatCurrency(totalCost)}</p>
+                    <p className="font-semibold">{formatPrice(totalCost)}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -205,13 +207,13 @@ export default function RecipeDetailsDialog({
                             </p>
                             {material && (
                               <p className="text-muted-foreground text-xs">
-                                {formatCurrency(Number(material.unitCost))}/{material.unit} ×{" "}
+                                {formatPrice(Number(material.unitCost))}/{material.unit} ×{" "}
                                 {ingredient.quantity} {ingredient.unit}
                               </p>
                             )}
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">{formatCurrency(ingredientCost)}</p>
+                            <p className="font-semibold">{formatPrice(ingredientCost)}</p>
                             <p className="text-muted-foreground text-xs">
                               {totalCost > 0
                                 ? ((ingredientCost / totalCost) * 100).toFixed(1)
@@ -230,7 +232,7 @@ export default function RecipeDetailsDialog({
 
                 <div className="flex justify-between font-semibold">
                   <span>Total Materials Cost</span>
-                  <span>{formatCurrency(totalCost)}</span>
+                  <span>{formatPrice(totalCost)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -264,7 +266,7 @@ export default function RecipeDetailsDialog({
                                 Stock: {formatNumber(Number(product.currentStock))} {product.unit}
                               </span>
                               <span className="text-muted-foreground">
-                                Price: {formatCurrency(Number(product.sellingPrice))}
+                                Price: {formatPrice(Number(product.sellingPrice))}
                               </span>
                             </div>
                           </div>
@@ -310,12 +312,12 @@ export default function RecipeDetailsDialog({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <p className="text-muted-foreground text-sm">Cost per {recipe.yieldUnit}</p>
-                    <p className="text-2xl font-bold">{formatCurrency(costPerUnit)}</p>
+                    <p className="text-2xl font-bold">{formatPrice(costPerUnit)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm">Suggested Price (2.5x markup)</p>
                     <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {formatCurrency(suggestedPrice)}
+                      {formatPrice(suggestedPrice)}
                     </p>
                   </div>
                 </div>
@@ -326,7 +328,7 @@ export default function RecipeDetailsDialog({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Profit per {recipe.yieldUnit}</span>
                     <span className="font-semibold text-green-600 dark:text-green-400">
-                      {formatCurrency(profit)}
+                      {formatPrice(profit)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -349,9 +351,9 @@ export default function RecipeDetailsDialog({
                     Pricing Recommendations
                   </div>
                   <div className="text-muted-foreground space-y-1 text-sm">
-                    <p>• Wholesale (30% margin): {formatCurrency(costPerUnit * 1.43)}</p>
-                    <p>• Retail (60% margin): {formatCurrency(costPerUnit * 2.5)}</p>
-                    <p>• Premium (70% margin): {formatCurrency(costPerUnit * 3.33)}</p>
+                    <p>• Wholesale (30% margin): {formatPrice(costPerUnit * 1.43)}</p>
+                    <p>• Retail (60% margin): {formatPrice(costPerUnit * 2.5)}</p>
+                    <p>• Premium (70% margin): {formatPrice(costPerUnit * 3.33)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -385,7 +387,7 @@ export default function RecipeDetailsDialog({
                   <div>
                     <p className="text-muted-foreground text-sm">Cost per Minute</p>
                     <p className="font-semibold">
-                      {formatCurrency(totalCost / recipe.productionTimeMinutes)}
+                      {formatPrice(totalCost / recipe.productionTimeMinutes)}
                     </p>
                   </div>
                   <div>
@@ -398,10 +400,10 @@ export default function RecipeDetailsDialog({
                   <div>
                     <p className="text-muted-foreground text-sm">Labor Cost (estimate)</p>
                     <p className="text-muted-foreground text-xs">
-                      @ $15/hr: {formatCurrency((15 / 60) * recipe.productionTimeMinutes)}
+                      @ $15/hr: {formatPrice((15 / 60) * recipe.productionTimeMinutes)}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      @ $20/hr: {formatCurrency((20 / 60) * recipe.productionTimeMinutes)}
+                      @ $20/hr: {formatPrice((20 / 60) * recipe.productionTimeMinutes)}
                     </p>
                   </div>
                   <div>

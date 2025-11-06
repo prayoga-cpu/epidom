@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlerts, type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, ShoppingCart, Package2 } from "lucide-react";
 import { useParams } from "next/navigation";
+import BulkOrderDialog from "./bulk-order-dialog";
 
 interface AlertsTableProps {
   onViewDetails?: (alert: Alert) => void;
@@ -20,6 +21,19 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
   const storeId = params?.storeId as string;
 
   const { data, isLoading, error } = useAlerts(storeId);
+
+  // Bulk order dialog state
+  const [isBulkOrderOpen, setIsBulkOrderOpen] = useState(false);
+  const [selectedSupplierGroup, setSelectedSupplierGroup] = useState<{
+    supplier: { id: string; name: string };
+    items: Alert[];
+  } | null>(null);
+
+  // Handle bulk order
+  const handleBulkOrder = (supplierGroup: { supplier: { id: string; name: string }; items: Alert[] }) => {
+    setSelectedSupplierGroup(supplierGroup);
+    setIsBulkOrderOpen(true);
+  };
 
   // Group alerts by supplier
   const alertsBySupplier = useMemo(() => {
@@ -111,8 +125,9 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
   }
 
   return (
-    <section className="space-y-6">
-      {alertsBySupplier.map((supplierGroup, idx) => (
+    <>
+      <section className="space-y-6">
+        {alertsBySupplier.map((supplierGroup, idx) => (
         <div
           key={idx}
           className="bg-card relative z-0 rounded-xl border p-4 shadow-md transition-shadow hover:z-10 hover:shadow-lg sm:p-5"
@@ -169,19 +184,32 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-4 flex justify-end gap-2">
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
             {supplierGroup.supplier.id === "no-supplier" ? (
               <Button variant="outline" size="sm" disabled>
                 {t("alerts.actions.noSupplier")}
               </Button>
             ) : (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => onCreateOrder(supplierGroup.items[0])}
-              >
-                {t("alerts.actions.createOrder")}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkOrder(supplierGroup)}
+                  className="gap-2"
+                >
+                  <Package2 className="h-4 w-4" />
+                  Bulk Order
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => onCreateOrder(supplierGroup.items[0])}
+                  className="gap-2"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {t("alerts.actions.createOrder")}
+                </Button>
+              </>
             )}
           </div>
 
@@ -192,7 +220,19 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
             </span>
           </div>
         </div>
-      ))}
-    </section>
+        ))}
+      </section>
+
+      {/* Bulk Order Dialog */}
+      {selectedSupplierGroup && (
+        <BulkOrderDialog
+          open={isBulkOrderOpen}
+          onOpenChange={setIsBulkOrderOpen}
+          alerts={selectedSupplierGroup.items}
+          supplierName={selectedSupplierGroup.supplier.name}
+          supplierId={selectedSupplierGroup.supplier.id}
+        />
+      )}
+    </>
   );
 }
