@@ -26,19 +26,21 @@ export default function NavUser() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="text-primary-foreground flex max-w-[120px] items-center gap-2 overflow-hidden rounded-2xl hover:bg-white/10 hover:text-white"
+          className="text-primary-foreground flex h-9 items-center gap-2 overflow-hidden rounded-2xl px-2 hover:bg-white/10 hover:text-white sm:max-w-[160px] sm:px-2.5 lg:max-w-[180px]"
         >
-          <Avatar className="size-6">
+          <Avatar className="size-7 shrink-0">
             {profile?.image && <AvatarImage src={profile.image} alt={user?.name ?? "User"} />}
             <AvatarFallback className="text-foreground bg-white text-xs">
               {user?.name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden truncate sm:inline">{user?.name ?? user?.email}</span>
+          <span className="hidden truncate text-sm font-medium sm:inline">
+            {user?.name ?? user?.email}
+          </span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel className="max-w-[220px] truncate">
+      <DropdownMenuContent align="end" className="w-[200px]">
+        <DropdownMenuLabel className="truncate">
           {user?.name ?? user?.email}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

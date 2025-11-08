@@ -54,15 +54,21 @@ export function StoreSwitcher() {
 
   // Loading state
   if (isLoading) {
-    return <Skeleton className="h-9 w-[180px]" />;
+    return <Skeleton className="h-9 w-[140px] sm:w-[160px] lg:w-[180px]" />;
   }
 
   // No stores available
   if (!stores || stores.length === 0) {
     return (
-      <Button variant="outline" size="sm" onClick={handleCreateStore} className="h-9 text-sm">
-        <Store className="mr-2 h-4 w-4" />
-        {t("dashboard.storeSelector.createFirst")}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleCreateStore}
+        className="h-9 w-[140px] text-xs sm:w-[160px] sm:text-sm lg:h-9 lg:w-auto lg:text-sm"
+      >
+        <Store className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4 lg:mr-2 lg:h-4 lg:w-4" />
+        <span className="hidden sm:inline lg:inline">{t("dashboard.storeSelector.createFirst")}</span>
+        <span className="sm:hidden">Store</span>
       </Button>
     );
   }
@@ -75,15 +81,15 @@ export function StoreSwitcher() {
           role="combobox"
           aria-expanded={open}
           aria-label={t("dashboard.storeSelector.label")}
-          className="h-9 w-[180px] justify-between rounded-2xl text-sm text-black"
+          className="h-9 w-[140px] justify-between rounded-2xl text-xs text-black sm:w-[160px] sm:text-sm lg:w-[180px] lg:text-sm"
         >
-          <div className="flex items-center gap-2 truncate">
-            <Store className="text-muted-foreground h-4 w-4 shrink-0" />
+          <div className="flex min-w-0 items-center gap-1.5 truncate sm:gap-2">
+            <Store className="text-muted-foreground h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
             <span className="truncate">
               {currentStore?.name || t("dashboard.storeSelector.select")}
             </span>
           </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50 sm:ml-2 sm:h-4 sm:w-4" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[220px] p-0" align="end">

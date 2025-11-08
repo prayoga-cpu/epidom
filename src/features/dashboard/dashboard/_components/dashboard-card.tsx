@@ -17,17 +17,21 @@ export default function DashboardCard({
   cardClassName,
 }: DashboardCardProps) {
   return (
-    <Card className={cardClassName}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
+    <Card className={`flex h-full w-full max-w-full flex-col gap-0 overflow-hidden py-0 ${cardClassName || ""}`}>
+      <CardHeader className="shrink-0 border-b px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1 space-y-0.5">
             <CardTitle className="text-lg">{cardTitle}</CardTitle>
+            {cardDescription && (
             <CardDescription className="text-xs">{cardDescription}</CardDescription>
+            )}
           </div>
-          {cardOther}
+          {cardOther && <div className="shrink-0">{cardOther}</div>}
         </div>
       </CardHeader>
-      <CardContent className="-mx-2 h-64 sm:mx-0 sm:h-72">{cardContent}</CardContent>
+      <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:px-6 sm:py-4">
+        {cardContent}
+      </CardContent>
     </Card>
   );
 }

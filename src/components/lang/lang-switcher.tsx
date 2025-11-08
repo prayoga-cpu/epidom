@@ -22,8 +22,14 @@ export default function LangSwitcher({ className = "" }: { className?: string })
 
   return (
     <Select value={locale} onValueChange={setLocale}>
-      <SelectTrigger className="bg-background text-foreground rounded-full font-semibold">
-        <Languages className="h-4 w-4" />
+      <SelectTrigger
+        size="default"
+        className={cn(
+          "bg-background text-foreground h-9 rounded-full px-3 font-semibold",
+          className
+        )}
+      >
+        <Languages className="h-4 w-4 shrink-0" />
         <SelectValue>{currentLang?.short || "EN"}</SelectValue>
       </SelectTrigger>
       <SelectContent align="center">

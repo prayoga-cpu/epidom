@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { CheckCircle2, AlertCircle, XCircle, Search, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, XCircle, Search, Loader2, Package } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { ExportButton } from "@/components/ui/export-button";
@@ -157,19 +157,19 @@ export function StockLevelsTab() {
     <div className="space-y-4">
       {/* Stock Table Card */}
       <div className="bg-card rounded-xl border shadow-sm">
-        <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <h2 className="text-foreground text-lg font-medium text-pretty">
             {t("tracking.stockLevels")}
           </h2>
-          <div className="flex items-center gap-2">
-            <div className="relative w-full sm:w-64">
+          <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:items-center">
+            <div className="relative w-full lg:w-64">
               <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 type="text"
                 placeholder={t("actions.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="w-full pl-9"
               />
             </div>
             <ExportButton
@@ -177,14 +177,15 @@ export function StockLevelsTab() {
               filename="stock-levels"
               variant="outline"
               size="sm"
+              className="w-full lg:w-auto"
             />
           </div>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+        <div className="flex flex-wrap items-center justify-center gap-2 border-b px-4 py-3 lg:justify-start">
           <Select value={itemType} onValueChange={(v: any) => setItemType(v)}>
-            <SelectTrigger className="w-full sm:w-[140px]">
+            <SelectTrigger className="w-full lg:w-[140px]">
               <SelectValue placeholder={t("tracking.filters.allItemsPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -195,7 +196,7 @@ export function StockLevelsTab() {
           </Select>
 
           <Select value={stockFilter} onValueChange={setStockFilter}>
-            <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectTrigger className="w-full lg:w-[160px]">
               <SelectValue placeholder={t("tracking.filters.allStatusPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -207,48 +208,119 @@ export function StockLevelsTab() {
             </SelectContent>
           </Select>
 
-          <span className="text-muted-foreground ml-auto text-sm">
+          <span className="text-muted-foreground w-full text-center text-sm lg:w-auto lg:ml-auto lg:text-left">
             {finalFilteredItems.length}{" "}
             {finalFilteredItems.length === 1 ? t("tracking.item") : t("tracking.items")}
           </span>
         </div>
 
-        <div className="overflow-x-auto p-4">
+        <div className="p-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
             </div>
+          ) : finalFilteredItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Package className="text-muted-foreground mb-4 h-12 w-12" />
+              <p className="text-muted-foreground text-sm">{t("messages.noResults")}</p>
+            </div>
           ) : (
-            <div className="min-w-[640px]">
-              <Table className="w-full text-sm">
+            <>
+              {/* Mobile: Card Layout */}
+              <div className="space-y-3 lg:hidden">
+                {finalFilteredItems.map((item) => {
+                  const stockStatus = getStockStatus(
+                    item.currentStock,
+                    item.minStock,
+                    item.maxStock
+                  );
+                  const StatusIcon =
+                    stockStatus.status === "ok"
+                      ? CheckCircle2
+                      : stockStatus.status === "warning"
+                        ? AlertCircle
+                        : XCircle;
+                  return (
+                    <div
+                      key={`${item.type}-${item.id}`}
+                      className="bg-muted/50 rounded-lg border p-4 space-y-3"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                          <span className="bg-muted text-muted-foreground mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
+                            {item.type === "material"
+                              ? t("tracking.materialType")
+                              : t("tracking.productType")}
+                          </span>
+                        </div>
+                        <StatusIcon
+                          className={`size-5 shrink-0 ${
+                            stockStatus.status === "ok"
+                              ? "text-primary"
+                              : stockStatus.status === "warning"
+                                ? "text-foreground/70"
+                                : "text-destructive"
+                          }`}
+                          aria-label={
+                            stockStatus.status === "ok"
+                              ? "OK"
+                              : stockStatus.status === "warning"
+                                ? "Warning"
+                                : "Critical"
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <Progress
+                            value={stockStatus.percentage}
+                            className={
+                              stockStatus.color === "dark"
+                                ? "bg-muted [&>div]:bg-foreground/80"
+                                : stockStatus.color === "muted"
+                                  ? "bg-muted [&>div]:bg-foreground/40"
+                                  : "bg-muted [&>div]:bg-destructive"
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">{t("tracking.stockLevel")}</span>
+                          <span className="font-medium">
+                            {item.currentStock.toFixed(2)} {item.unit}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop: Table Layout */}
+              <div className="hidden lg:block overflow-x-auto">
+                <div className="min-w-[640px]">
+            <Table className="w-full text-sm">
               <TableHeader>
                 <TableRow className="text-foreground/80">
-                  <TableHead className="min-w-[150px] py-2 pr-3 text-left font-medium">
+                        <TableHead className="min-w-[150px] py-2 pr-3 text-left font-medium">
                     {t("tables.products")}
                   </TableHead>
-                  <TableHead className="min-w-[100px] py-2 pr-3 text-left font-medium">
+                        <TableHead className="min-w-[100px] py-2 pr-3 text-left font-medium">
                     {t("tracking.type")}
                   </TableHead>
-                  <TableHead className="min-w-[200px] w-1/2 py-2 pr-3 text-left font-medium">
+                        <TableHead className="min-w-[200px] w-1/2 py-2 pr-3 text-left font-medium">
                     {t("tracking.stockLevel")}
                   </TableHead>
-                  <TableHead className="min-w-[120px] py-2 pr-3 text-right font-medium whitespace-nowrap">
+                        <TableHead className="min-w-[120px] py-2 pr-3 text-right font-medium whitespace-nowrap">
                     {t("tables.currentUnits")}
                   </TableHead>
-                  <TableHead className="min-w-[80px] py-2 pl-3 text-right font-medium">
+                        <TableHead className="min-w-[80px] py-2 pl-3 text-right font-medium">
                     {t("tables.status")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {finalFilteredItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
-                      {t("messages.noResults")}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  finalFilteredItems.map((item) => {
+                      {finalFilteredItems.map((item) => {
                     const stockStatus = getStockStatus(
                       item.currentStock,
                       item.minStock,
@@ -256,15 +328,15 @@ export function StockLevelsTab() {
                     );
                     return (
                       <TableRow key={`${item.type}-${item.id}`} className="border-t">
-                        <TableCell className="min-w-[150px] py-3 pr-3">{item.name}</TableCell>
-                        <TableCell className="min-w-[100px] py-3 pr-3">
+                            <TableCell className="min-w-[150px] py-3 pr-3">{item.name}</TableCell>
+                            <TableCell className="min-w-[100px] py-3 pr-3">
                           <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2 py-1 text-xs font-medium">
                             {item.type === "material"
                               ? t("tracking.materialType")
                               : t("tracking.productType")}
                           </span>
                         </TableCell>
-                        <TableCell className="min-w-[200px] py-3 pr-3">
+                            <TableCell className="min-w-[200px] py-3 pr-3">
                           <Progress
                             value={stockStatus.percentage}
                             className={
@@ -276,10 +348,10 @@ export function StockLevelsTab() {
                             }
                           />
                         </TableCell>
-                        <TableCell className="min-w-[120px] py-3 pr-3 text-right whitespace-nowrap">
+                            <TableCell className="min-w-[120px] py-3 pr-3 text-right whitespace-nowrap">
                           {item.currentStock.toFixed(2)} {item.unit}
                         </TableCell>
-                        <TableCell className="min-w-[80px] py-3 pl-3 text-right">
+                            <TableCell className="min-w-[80px] py-3 pl-3 text-right">
                           {stockStatus.status === "ok" && (
                             <CheckCircle2 className="text-primary inline size-5" aria-label="OK" />
                           )}
@@ -298,11 +370,12 @@ export function StockLevelsTab() {
                         </TableCell>
                       </TableRow>
                     );
-                  })
-                )}
+                      })}
               </TableBody>
             </Table>
-            </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

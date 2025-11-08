@@ -51,13 +51,13 @@ export function SupplierDeliveryDetails({
 
   if (!selectedDelivery) {
     return (
-      <Card className="shadow-md transition-shadow hover:shadow-lg">
-        <CardHeader className="pb-4">
+      <Card className="flex h-full w-full min-h-[450px] flex-col shadow-sm transition-shadow hover:shadow-md lg:min-h-[472px]">
+        <CardHeader className="shrink-0 border-b pb-4">
           <CardTitle className="text-lg">
             {t("pages.deliveryDetails")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex min-h-[400px] items-center justify-center">
+        <CardContent className="flex flex-1 items-center justify-center">
           <p className="text-muted-foreground text-center text-sm">
             {t("messages.selectDelivery")}
           </p>
@@ -150,8 +150,8 @@ export function SupplierDeliveryDetails({
   const StatusIcon = getStatusIcon(delivery.status);
 
   return (
-    <Card className="shadow-md transition-shadow hover:shadow-lg">
-      <CardHeader className="border-b">
+    <Card className="flex h-full w-full min-h-[600px] flex-col shadow-sm transition-shadow hover:shadow-md lg:min-h-[650px]">
+      <CardHeader className="shrink-0 border-b">
         <div className="flex flex-col items-start justify-between gap-2">
           <div className="min-w-0 flex-1 overflow-hidden">
             <CardTitle className="truncate text-lg" title={delivery.deliveryReference}>
@@ -176,7 +176,7 @@ export function SupplierDeliveryDetails({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 px-4">
+      <CardContent className="scrollbar-thin flex min-h-0 flex-1 flex-col space-y-4 overflow-y-auto px-4">
         {/* Supplier Information */}
         <div className="space-y-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold">

@@ -171,11 +171,11 @@ export function ProductionHistoryCard() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Header */}
-      <div>
+      <div className="text-left">
         <h2 className="text-2xl font-bold tracking-tight">{t("tabs.productionHistory")}</h2>
-        <p className="text-muted-foreground">{t("management.productionHistory.description")}</p>
+        <p className="text-muted-foreground text-sm">{t("management.productionHistory.description")}</p>
       </div>
 
       {/* Metrics Cards */}
@@ -183,33 +183,35 @@ export function ProductionHistoryCard() {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 sm:pb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-lg">{t("management.productionHistory.filters")}</CardTitle>
               <CardDescription>
                 {t("management.productionHistory.filtersDescription")}
               </CardDescription>
             </div>
-            <ExportButton data={exportData} filename="production-history" />
+            <div className="flex w-full justify-start sm:w-auto sm:justify-end">
+              <ExportButton data={exportData} filename="production-history" size="sm" className="w-full sm:w-auto" />
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-2">
+        <CardContent className="space-y-3 sm:space-y-4">
+          <div className="space-y-2 sm:space-y-3">
             {/* Search */}
-            <div className="relative items-center">
+            <div className="relative w-full">
               <Search className="text-muted-foreground/80 absolute top-2 left-2.5 h-4.5 w-4.5" />
               <Input
                 placeholder={t("management.productionHistory.searchBatches")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="w-full pl-9"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:flex-row">
               {/* Status Filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[160px]">
                   <SelectValue placeholder={t("management.productionHistory.selectStatus")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -233,7 +235,7 @@ export function ProductionHistoryCard() {
 
               {/* Recipe Filter */}
               <Select value={recipeFilter} onValueChange={setRecipeFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder={t("management.productionHistory.selectRecipe")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -249,37 +251,40 @@ export function ProductionHistoryCard() {
               </Select>
 
               {/* Date Range */}
+              <div className="w-full sm:w-auto">
               <DateRangePicker value={dateRange} onChange={setDateRange} />
+              </div>
             </div>
           </div>
 
           {/* Active Filters */}
           {(searchQuery || statusFilter !== "ALL" || recipeFilter !== "ALL" || dateRange?.from) && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-muted-foreground text-sm">
                 {t("management.productionHistory.activeFilters")}:
               </span>
               {searchQuery && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {t("management.productionHistory.search")}: {searchQuery}
                 </Badge>
               )}
               {statusFilter !== "ALL" && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {t("management.productionHistory.status")}: {getStatusConfig(statusFilter).label}
                 </Badge>
               )}
               {recipeFilter !== "ALL" && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {t("management.productionHistory.recipe")}: {getRecipeName(recipeFilter)}
                 </Badge>
               )}
               {dateRange?.from && (
-                <Badge variant="secondary">{t("management.productionHistory.dateRange")}</Badge>
+                <Badge variant="secondary" className="text-xs">{t("management.productionHistory.dateRange")}</Badge>
               )}
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-7 text-xs"
                 onClick={() => {
                   setSearchQuery("");
                   setStatusFilter("ALL");
@@ -296,8 +301,8 @@ export function ProductionHistoryCard() {
 
       {/* Table */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 sm:pb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg">
               {t("management.productionHistory.batchesList")} ({totalBatches})
             </CardTitle>
@@ -312,7 +317,7 @@ export function ProductionHistoryCard() {
                   setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="w-20">
+                <SelectTrigger className="h-9 w-20 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -325,18 +330,20 @@ export function ProductionHistoryCard() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {batchesLoading ? (
             <div className="py-12 text-center">
               <Loader2 className="text-muted-foreground mx-auto h-8 w-8 animate-spin" />
-              <p className="text-muted-foreground mt-2">{t("common.loading")}</p>
+              <p className="text-muted-foreground mt-2 text-sm">{t("common.loading")}</p>
             </div>
           ) : allBatches.length === 0 ? (
             <div className="text-muted-foreground py-12 text-center">
-              <p>{t("management.productionHistory.noBatchesFound")}</p>
+              <p className="text-sm">{t("management.productionHistory.noBatchesFound")}</p>
             </div>
           ) : (
             <>
+              <div className="overflow-x-auto">
+                <div className="min-w-[640px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -418,10 +425,12 @@ export function ProductionHistoryCard() {
                   })}
                 </TableBody>
               </Table>
+                </div>
+              </div>
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between">
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-muted-foreground text-sm">
                     {t("management.productionHistory.showing")} {(currentPage - 1) * pageSize + 1} -{" "}
                     {Math.min(currentPage * pageSize, totalBatches)} {t("common.of")} {totalBatches}
@@ -432,9 +441,10 @@ export function ProductionHistoryCard() {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage - 1)}
                       disabled={currentPage === 1}
+                      className="h-9 text-sm"
                     >
                       <ChevronLeft className="h-4 w-4" />
-                      {t("common.actions.previous")}
+                      <span className="hidden sm:inline">{t("common.actions.previous")}</span>
                     </Button>
                     <span className="text-sm">
                       {t("common.page")} {currentPage} {t("common.of")} {totalPages}
@@ -444,8 +454,9 @@ export function ProductionHistoryCard() {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage + 1)}
                       disabled={currentPage === totalPages}
+                      className="h-9 text-sm"
                     >
-                      {t("common.actions.next")}
+                      <span className="hidden sm:inline">{t("common.actions.next")}</span>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>

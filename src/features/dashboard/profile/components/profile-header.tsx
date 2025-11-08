@@ -92,7 +92,7 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
     <>
       <Card className="border-2">
         <CardContent className="p-6">
-          <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
+          <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
             <div className="relative">
               <Avatar className="ring-primary/10 h-24 w-24 ring-4">
                 <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
@@ -110,8 +110,8 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
               </Button>
             </div>
 
-            <div className="flex-1 space-y-2">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex-1 space-y-2 text-center sm:text-left">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center">
                 <h1 className="text-2xl font-bold">{user.name || t("profile.user")}</h1>
                 {subscription && (
                   <div className="flex gap-2">

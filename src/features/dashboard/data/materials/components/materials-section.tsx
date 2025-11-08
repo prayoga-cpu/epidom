@@ -33,6 +33,7 @@ import {
   AlertCircle,
   CheckSquare,
   PackageOpen,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -258,12 +259,33 @@ export function MaterialsSection() {
 
   const hasActiveFilters = !!(filters.search || filters.category || filters.stockStatus);
 
-  // Loading state
+  // Loading state - keep card structure for consistent layout
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+        <CardHeader className="border-b">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-lg font-bold">{t("data.materials.title")}</CardTitle>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
+              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                <Download className="mr-2 h-4 w-4" />
+                {t("common.actions.export")}
+              </Button>
+              <Button size="sm" disabled className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                {t("data.materials.addButton")}
+              </Button>
+              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                <CheckSquare className="mr-2 h-4 w-4" />
+                {t("common.actions.select")}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        </CardContent>
+      </Card>
     );
   }
 
@@ -288,14 +310,15 @@ export function MaterialsSection() {
     <>
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg font-bold">{t("data.materials.title")}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
                 disabled={exportMaterials.isPending}
+                className="w-full sm:w-auto"
               >
                 {exportMaterials.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -304,9 +327,14 @@ export function MaterialsSection() {
                 )}
                 {t("common.actions.export")}
               </Button>
-              <AddMaterialDialog />
+              <AddMaterialDialog trigger={
+                <Button size="sm" className="w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("data.materials.addButton")}
+                </Button>
+              } />
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t("actions.delete")} ({selectedIds.size})
                 </Button>
@@ -315,6 +343,7 @@ export function MaterialsSection() {
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
+                className="w-full sm:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -336,21 +365,21 @@ export function MaterialsSection() {
           {/* Search and Filters */}
           <div className="flex flex-col gap-3">
             {/* Search */}
-            <div className="relative">
+            <div className="relative w-full">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder={t("actions.searchPlaceholder")}
                 value={filters.search}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-9"
+                className="w-full pl-9"
               />
             </div>
 
             {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2">
               {/* Category Filter */}
               <Select value={filters.category || "all"} onValueChange={handleCategoryFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t("filters.allCategories")} />
                 </SelectTrigger>
@@ -366,7 +395,7 @@ export function MaterialsSection() {
 
               {/* Stock Status Filter */}
               <Select value={filters.stockStatus ?? "all"} onValueChange={handleStockStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t("filters.allStockLevels")} />
                 </SelectTrigger>
@@ -381,7 +410,7 @@ export function MaterialsSection() {
 
               {/* Clear Filters */}
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
                   <X className="mr-2 h-4 w-4" />
                   {t("common.actions.clearFilters")}
                 </Button>
@@ -390,7 +419,7 @@ export function MaterialsSection() {
 
             {/* Bulk Select All */}
             {bulkSelectMode && (
-              <div className="bg-muted/50 mr-2 flex items-center gap-2 rounded-lg border p-3">
+              <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
                 <Checkbox
                   checked={
                     selectedIds.size === processedMaterials.length && processedMaterials.length > 0
@@ -406,7 +435,7 @@ export function MaterialsSection() {
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center justify-between border-b pb-2">
+          <div className="flex items-center border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {processedMaterials.length} {t("common.of")} {total}{" "}
               {t("data.materials.title")}

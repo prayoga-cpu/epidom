@@ -36,6 +36,7 @@ import {
   Download,
   Loader2,
   Package,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
@@ -226,12 +227,33 @@ export function RecipesSection() {
 
   const hasActiveFilters = searchQuery || categoryFilter !== undefined;
 
-  // Loading and error states
+  // Loading and error states - keep card structure for consistent layout
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+        <CardHeader className="border-b">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-lg font-bold">{t("data.recipes.pageTitle")}</CardTitle>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
+              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                <Download className="mr-2 h-4 w-4" />
+                {t("common.actions.export")}
+              </Button>
+              <Button size="sm" disabled className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                {t("data.recipes.addButton")}
+              </Button>
+              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                <CheckSquare className="mr-2 h-4 w-4" />
+                {t("common.actions.view")}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        </CardContent>
+      </Card>
     );
   }
 
@@ -251,15 +273,16 @@ export function RecipesSection() {
   return (
     <>
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b pb-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">{t("data.recipes.pageTitle")}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
+        <CardHeader className="border-b">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-lg font-bold">{t("data.recipes.pageTitle")}</CardTitle>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
                 disabled={exportRecipes.isPending || recipes.length === 0}
+                className="w-full sm:w-auto"
               >
                 {exportRecipes.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -268,13 +291,19 @@ export function RecipesSection() {
                 )}
                 {t("common.actions.export")}
               </Button>
-              <AddRecipeDialog />
+              <AddRecipeDialog trigger={
+                <Button size="sm" className="w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("data.recipes.addButton")}
+                </Button>
+              } />
               {bulkSelectMode && selectedIds.size > 0 && (
                 <Button
                   variant="destructive"
                   size="sm"
                   onClick={handleBulkDelete}
                   disabled={bulkDeleteRecipes.isPending}
+                  className="w-full sm:w-auto"
                 >
                   {bulkDeleteRecipes.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -288,6 +317,7 @@ export function RecipesSection() {
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
+                className="w-full sm:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -309,24 +339,24 @@ export function RecipesSection() {
           {/* Search and Filters */}
           <div className="flex flex-col gap-3">
             {/* Search */}
-            <div className="relative">
+            <div className="relative w-full">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder={t("actions.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="w-full pl-9"
               />
             </div>
 
             {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2">
               {/* Category Filter */}
               <Select
                 value={categoryFilter || "all"}
                 onValueChange={(value) => setCategoryFilter(value === "all" ? undefined : value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t("filters.placeholderCategory")} />
                 </SelectTrigger>
@@ -351,7 +381,7 @@ export function RecipesSection() {
                   setSortOrder(order);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <ArrowUpDown className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
@@ -387,7 +417,7 @@ export function RecipesSection() {
 
               {/* Clear Filters */}
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
                   <X className="mr-2 h-4 w-4" />
                   {t("common.actions.clearFilters")}
                 </Button>
@@ -410,7 +440,7 @@ export function RecipesSection() {
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center justify-between border-b pb-2">
+          <div className="flex items-center border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {recipes.length} {t("common.of")} {total}{" "}
               {t("data.recipes.pageTitle")}

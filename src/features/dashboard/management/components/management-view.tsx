@@ -129,53 +129,53 @@ export function ManagementView() {
   return (
     <section className="min-h-[calc(100vh-150px)]">
       <Tabs defaultValue="delivery" className="grid w-full gap-6">
-        <TabsList className="bg-muted/50 -mx-4 w-full justify-start overflow-x-auto rounded-lg p-1.5 px-4 whitespace-nowrap shadow-sm backdrop-blur-sm sm:mx-0 sm:px-1.5">
+        <TabsList className="bg-muted/50 grid h-auto w-full max-w-full grid-cols-2 gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm sm:inline-flex sm:h-9 sm:max-w-none sm:grid-cols-none sm:justify-start sm:gap-0 sm:p-1.5">
           <TabsTrigger
-            className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md sm:h-[calc(100%-1px)] sm:w-auto sm:min-w-fit sm:px-2 sm:text-sm"
             value="delivery"
           >
             {t("tabs.supplierDeliveries")}
           </TabsTrigger>
           <TabsTrigger
-            className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md sm:h-[calc(100%-1px)] sm:w-auto sm:min-w-fit sm:px-2 sm:text-sm"
             value="recipe"
           >
             {t("tabs.recipeProduction")}
           </TabsTrigger>
           <TabsTrigger
-            className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md sm:h-[calc(100%-1px)] sm:w-auto sm:min-w-fit sm:px-2 sm:text-sm"
             value="history"
           >
             {t("tabs.productionHistory")}
           </TabsTrigger>
           <TabsTrigger
-            className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md sm:h-[calc(100%-1px)] sm:w-auto sm:min-w-fit sm:px-2 sm:text-sm"
             value="stock"
           >
             {t("tabs.editStock")}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="delivery" className="grid w-full gap-4 md:grid-cols-1 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <SupplierDeliveriesTable
-              deliveries={deliveries}
-              selectedDelivery={selectedDelivery}
-              onDeliverySelect={setSelectedDelivery}
-              onEditDelivery={handleEditDelivery}
-              onUpdateStatus={handleUpdateStatus}
-              onPrintDelivery={handlePrintDelivery}
-              onDeleteDelivery={handleDeleteDelivery}
-              isLoading={isLoading}
-            />
+        <TabsContent value="delivery" className="grid w-full gap-4 md:grid-cols-1 lg:grid-cols-3 lg:items-stretch">
+          <div className="flex lg:col-span-2">
+          <SupplierDeliveriesTable
+            deliveries={deliveries}
+            selectedDelivery={selectedDelivery}
+            onDeliverySelect={setSelectedDelivery}
+            onEditDelivery={handleEditDelivery}
+            onUpdateStatus={handleUpdateStatus}
+            onPrintDelivery={handlePrintDelivery}
+            onDeleteDelivery={handleDeleteDelivery}
+            isLoading={isLoading}
+          />
           </div>
-          <div className="lg:col-span-1">
-            <SupplierDeliveryDetails
-              selectedDelivery={selectedDelivery}
-              onEdit={handleEditDelivery}
-              onUpdateStatus={handleUpdateStatus}
-              onPrintDelivery={handlePrintDelivery}
-            />
+          <div className="flex lg:col-span-1">
+          <SupplierDeliveryDetails
+            selectedDelivery={selectedDelivery}
+            onEdit={handleEditDelivery}
+            onUpdateStatus={handleUpdateStatus}
+            onPrintDelivery={handlePrintDelivery}
+          />
           </div>
         </TabsContent>
 

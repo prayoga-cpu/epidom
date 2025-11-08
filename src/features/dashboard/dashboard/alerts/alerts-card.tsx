@@ -43,14 +43,14 @@ export default function AlertsCard() {
   }, [data]);
 
   const cardContent = (
-    <div className="h-full overflow-auto">
+    <div className="flex min-h-[300px] flex-1 flex-col">
       {isLoading ? (
-        <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
           <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         </div>
       ) : lowStockMaterials.length === 0 ? (
-        <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
           <div className="mb-3 rounded-full bg-green-100 p-3 dark:bg-green-900">
             <AlertCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
           </div>
@@ -59,16 +59,16 @@ export default function AlertsCard() {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="flex flex-1 flex-col overflow-hidden rounded-lg border">
           {/* Table Header */}
-          <div className="from-foreground/90 to-foreground/80 text-background flex bg-gradient-to-r px-3 py-2 text-xs font-bold">
+          <div className="from-foreground/90 to-foreground/80 text-background flex shrink-0 bg-gradient-to-r px-3 py-2 text-xs font-bold">
             <div className="w-2/5">{t("dashboard.alertsCard.material")}</div>
             <div className="w-2/5 text-center">{t("dashboard.alertsCard.stockLevel")}</div>
             <div className="w-1/5 text-right">{t("dashboard.alertsCard.current")}</div>
           </div>
 
           {/* Table Body */}
-          <div className="divide-border divide-y">
+          <div className="divide-border flex-1 divide-y overflow-y-auto">
             {lowStockMaterials.map((material) => {
               return (
                 <div
@@ -105,7 +105,6 @@ export default function AlertsCard() {
 
   return (
     <DashboardCard
-      cardClassName="col-span-3"
       cardTitle={t("dashboard.alertsCard.title")}
       cardDescription={t("dashboard.alertsCard.description")}
       cardOther={cardOther}
