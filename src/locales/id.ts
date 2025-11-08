@@ -107,6 +107,7 @@ export const id = {
       searchPlaceholder: "Cari...",
       retry: "Coba Lagi",
       select: "Pilih",
+      apply: "Terapkan",
     },
   },
   search: {
@@ -1757,6 +1758,14 @@ export const id = {
       editBusinessInfo: "Edit Informasi Bisnis",
       editBusinessInfoDescription: "Perbarui informasi kontak dan detail bisnis Anda",
       addBusinessInfoDescription: "Tambahkan informasi bisnis Anda untuk melengkapi profil",
+      editAvatar: "Edit Foto Profil",
+      editAvatarDescription: "Unggah foto profil baru atau hapus foto yang ada.",
+      cropAvatarDescription: "Potong dan sesuaikan foto profil Anda.",
+      previewAvatarDescription: "Pratinjau foto profil baru Anda.",
+      uploadAvatar: "Klik untuk mengunggah",
+      fileTypesInfo: "JPEG, PNG, WebP, atau GIF (maks 5MB)",
+      loadImageFailed: "Gagal memuat gambar",
+      uploadFailed: "Gagal mengunggah",
       namePlaceholder: "Masukkan nama lengkap Anda",
       emailPlaceholder: "email@anda.com",
       phonePlaceholder: "+62 812 3456 7890",
@@ -1775,12 +1784,18 @@ export const id = {
       cancel: "Batal",
       update: "Perbarui Profil",
       delete: "Hapus",
+      remove: "Hapus",
+      removeAvatar: "Hapus Avatar",
+      uploadAvatar: "Unggah",
+      apply: "Terapkan",
     },
 
     // Kesalahan
     errors: {
       updateFailed: "Gagal memperbarui profil. Silakan coba lagi.",
       businessUpdateFailed: "Gagal memperbarui informasi bisnis. Silakan coba lagi.",
+      loadImageFailed: "Gagal memuat gambar",
+      uploadFailed: "Gagal mengunggah",
     },
 
     // Pesan toast
@@ -1796,6 +1811,14 @@ export const id = {
       businessCreated: {
         title: "Info Bisnis Ditambahkan",
         description: "Informasi bisnis berhasil ditambahkan.",
+      },
+      avatarUpdated: {
+        title: "Avatar Diperbarui",
+        description: "Foto profil Anda telah berhasil diperbarui.",
+      },
+      avatarRemoved: {
+        title: "Avatar Dihapus",
+        description: "Foto profil Anda telah dihapus.",
       },
       avatarUploaded: {
         title: "Avatar Diperbarui",
@@ -1819,6 +1842,13 @@ export const id = {
       phoneInvalid: "Nomor telepon tidak valid",
       websiteInvalid: "URL website tidak valid",
       businessNameRequired: "Nama bisnis diperlukan",
+    },
+
+    // Cropper
+    cropper: {
+      zoom: "Zoom",
+      rotation: "Rotasi",
+      processing: "Memproses...",
     },
 
     // Kunci warisan (menjaga kompatibilitas mundur)
@@ -2541,8 +2571,8 @@ export const id = {
   footer: {
     tagline: "SOLUSI UNTUK MANAJEMEN STOK MAKANAN ANDA",
     contact: "Hubungi kami",
-    addressHeading: "Prancis, Massy",
-    addressLines: ["1 Av. Marcel Ramolfo Garnier", "Massy, 91300", "Tel (+33) 7 81 73 23 86"],
+    addressHeading: "Alamat",
+    address: "France, Paris",
     rights: (year: number) => `© ${year} Epidom. Hak cipta dilindungi.`,
   },
   cookie: {

@@ -37,11 +37,9 @@ export const SiteFooter = memo(function SiteFooter() {
             <h4 className="text-base font-semibold text-pretty sm:text-lg">
               {t("footer.addressHeading")}
             </h4>
-            <div className="space-y-2 text-sm text-white/80 sm:text-base">
-              <div>{t("contact.info.address.line1")}</div>
-              <div>{t("contact.info.address.line2")}</div>
-              <div>{t("contact.info.phone.number")}</div>
-            </div>
+            <p className="text-sm text-white/80 sm:text-base">
+              {t("footer.address")}
+            </p>
           </div>
 
           {/* Right: contact */}

@@ -73,6 +73,7 @@ export const en = {
       searchPlaceholder: "Search...",
       retry: "Retry",
       select: "Select",
+      apply: "Apply",
     },
     pagination: {
       rowsPerPage: "Rows per page",
@@ -1756,6 +1757,12 @@ export const en = {
       addBusinessInfoDescription: "Add your business information to complete your profile",
       editAvatar: "Edit Profile Picture",
       editAvatarDescription: "Upload a new profile picture or remove the current one.",
+      cropAvatarDescription: "Crop and adjust your profile picture.",
+      previewAvatarDescription: "Preview your new profile picture.",
+      uploadAvatar: "Click to upload",
+      fileTypesInfo: "JPEG, PNG, WebP, or GIF (max 5MB)",
+      loadImageFailed: "Failed to load image",
+      uploadFailed: "Upload failed",
       namePlaceholder: "Enter your full name",
       emailPlaceholder: "your@email.com",
       phonePlaceholder: "+1 234 567 8900",
@@ -1777,12 +1784,16 @@ export const en = {
       invite: "Invite",
       remove: "Remove",
       removeAvatar: "Remove Avatar",
+      uploadAvatar: "Upload",
+      apply: "Apply",
     },
 
     // Errors
     errors: {
       updateFailed: "Failed to update profile. Please try again.",
       businessUpdateFailed: "Failed to update business information. Please try again.",
+      loadImageFailed: "Failed to load image",
+      uploadFailed: "Upload failed",
     },
 
     // Toast messages
@@ -1829,6 +1840,13 @@ export const en = {
       phoneInvalid: "Invalid phone number",
       websiteInvalid: "Invalid website URL",
       businessNameRequired: "Business name is required",
+    },
+
+    // Cropper
+    cropper: {
+      zoom: "Zoom",
+      rotation: "Rotation",
+      processing: "Processing...",
     },
 
     // Legacy keys (maintain backward compatibility)
@@ -2557,8 +2575,8 @@ export const en = {
   footer: {
     tagline: "A SOLUTION FOR YOUR FOOD STOCK MANAGEMENT",
     contact: "Contact us",
-    addressHeading: "France, Massy",
-    addressLines: ["1 Av. Marcel Ramolfo Garnier", "Massy, 91300", "Tel (+33) 7 81 73 23 86"],
+    addressHeading: "Address",
+    address: "France, Paris",
     rights: (year: number) => `© ${year} Epidom. All rights reserved.`,
   },
   cookie: {

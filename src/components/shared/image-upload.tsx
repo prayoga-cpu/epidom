@@ -26,6 +26,7 @@ import {
   isValidImageSize,
   createImagePreview,
   revokeImagePreview,
+  deleteBlobImage,
 } from "@/lib/utils/image-compression";
 import { cn } from "@/lib/utils";
 
@@ -97,20 +98,13 @@ export function ImageUpload({
       try {
         setIsUploading(true);
 
-        // Delete old image if exists (and it's a blob storage URL)
-        if (oldImageUrl && oldImageUrl.includes("blob.vercel-storage.com")) {
+        // Delete old image if exists
+        if (oldImageUrl) {
           try {
-            await fetch("/api/upload", {
-              method: "DELETE",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ url: oldImageUrl }),
-            });
-            console.log("Old image deleted:", oldImageUrl);
+            await deleteBlobImage(oldImageUrl);
           } catch (error) {
-            console.warn("Failed to delete old image:", error);
             // Continue with upload even if delete fails
+            console.warn("Failed to delete old image:", error);
           }
         }
 
@@ -257,19 +251,12 @@ export function ImageUpload({
     const currentUrl = previewUrl || value;
 
     // Delete from blob storage if it's a blob storage URL
-    if (currentUrl && currentUrl.includes("blob.vercel-storage.com")) {
+    if (currentUrl) {
       try {
-        await fetch("/api/upload", {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ url: currentUrl }),
-        });
-        console.log("Image deleted from storage:", currentUrl);
+        await deleteBlobImage(currentUrl);
       } catch (error) {
-        console.warn("Failed to delete image from storage:", error);
         // Continue with removal even if delete fails
+        console.warn("Failed to delete image from storage:", error);
       }
     }
 

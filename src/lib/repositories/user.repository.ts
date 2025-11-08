@@ -71,22 +71,36 @@ export class UserRepository extends BaseRepository {
     userId: string,
     data: Partial<Omit<User, "id" | "email" | "password" | "createdAt">>
   ): Promise<User> {
-    // Filter out null, undefined, and empty string values to avoid overwriting existing data
-    const filteredData = Object.entries(data).reduce(
+    // Process data: convert empty strings to null for nullable fields (like image)
+    // and filter out undefined values
+    const processedData = Object.entries(data).reduce(
       (acc, [key, value]) => {
-        if (value !== null && value !== undefined && value !== "") {
+        // Skip undefined values
+        if (value === undefined) {
+          return acc;
+        }
+
+        // For image field, empty string means remove (set to null)
+        if (key === "image" && value === "") {
+          acc[key] = null;
+          return acc;
+        }
+
+        // For other fields, skip null and empty strings (preserve existing values)
+        if (value !== null && value !== "") {
           acc[key] = value;
         }
+
         return acc;
       },
       {} as Record<string, any>
     );
 
-    console.log("[UserRepository] Updating user with filtered data:", filteredData);
+    console.log("[UserRepository] Updating user with processed data:", processedData);
 
     return this.db.user.update({
       where: { id: userId },
-      data: filteredData,
+      data: processedData,
     });
   }
 

@@ -107,6 +107,7 @@ export const fr = {
       searchPlaceholder: "Rechercher...",
       retry: "Réessayer",
       select: "Sélectionner",
+      apply: "Appliquer",
     },
   },
   search: {
@@ -793,7 +794,7 @@ export const fr = {
     ordersToPrepare: "Commandes à Préparer",
     alertsTitle: "Alertes",
     ordersTitle: "Commandes à Passer",
-    materialsList: "Liste des Matériaux",
+    materialsList: "Liste des matières premières",
     recipesList: "Liste des Recettes",
     productsList: "Liste des Produits",
     suppliersList: "Liste des Fournisseurs",
@@ -1770,6 +1771,14 @@ export const fr = {
         "Mettez à jour les informations de contact et les détails de votre entreprise",
       addBusinessInfoDescription:
         "Ajoutez les informations de votre entreprise pour compléter votre profil",
+      editAvatar: "Modifier la Photo de Profil",
+      editAvatarDescription: "Téléchargez une nouvelle photo de profil ou supprimez celle en cours.",
+      cropAvatarDescription: "Recadrez et ajustez votre photo de profil.",
+      previewAvatarDescription: "Aperçu de votre nouvelle photo de profil.",
+      uploadAvatar: "Cliquez pour télécharger",
+      fileTypesInfo: "JPEG, PNG, WebP ou GIF (max 5 Mo)",
+      loadImageFailed: "Échec du chargement de l'image",
+      uploadFailed: "Échec du téléchargement",
       namePlaceholder: "Entrez votre nom complet",
       emailPlaceholder: "votre@email.com",
       phonePlaceholder: "+33 1 23 45 67 89",
@@ -1788,6 +1797,10 @@ export const fr = {
       cancel: "Annuler",
       update: "Mettre à Jour le Profil",
       delete: "Supprimer",
+      remove: "Supprimer",
+      removeAvatar: "Supprimer l'Avatar",
+      uploadAvatar: "Télécharger",
+      apply: "Appliquer",
     },
 
     // Erreurs
@@ -1795,6 +1808,8 @@ export const fr = {
       updateFailed: "Échec de la mise à jour du profil. Veuillez réessayer.",
       businessUpdateFailed:
         "Échec de la mise à jour des informations d'entreprise. Veuillez réessayer.",
+      loadImageFailed: "Échec du chargement de l'image",
+      uploadFailed: "Échec du téléchargement",
     },
 
     // Messages toast
@@ -1810,6 +1825,14 @@ export const fr = {
       businessCreated: {
         title: "Infos Entreprise Ajoutées",
         description: "Les informations d'entreprise ont été ajoutées avec succès.",
+      },
+      avatarUpdated: {
+        title: "Avatar Mis à Jour",
+        description: "Votre photo de profil a été mise à jour avec succès.",
+      },
+      avatarRemoved: {
+        title: "Avatar Supprimé",
+        description: "Votre photo de profil a été supprimée.",
       },
       avatarUploaded: {
         title: "Avatar Mis à Jour",
@@ -1833,6 +1856,13 @@ export const fr = {
       phoneInvalid: "Numéro de téléphone invalide",
       websiteInvalid: "URL de site web invalide",
       businessNameRequired: "Le nom de l'entreprise est requis",
+    },
+
+    // Cropper
+    cropper: {
+      zoom: "Zoom",
+      rotation: "Rotation",
+      processing: "Traitement...",
     },
 
     // Clés héritées (maintenir la compatibilité ascendante)
@@ -2565,8 +2595,8 @@ export const fr = {
   footer: {
     tagline: "UNE SOLUTION POUR LA GESTION DE VOTRE STOCK ALIMENTAIRE",
     contact: "Nous contacter",
-    addressHeading: "France, Massy",
-    addressLines: ["1 Av. Marcel Ramolfo Garnier", "Massy, 91300", "Tél (+33) 7 81 73 23 86"],
+    addressHeading: "Adresse",
+    address: "France, Paris",
     rights: (year: number) => `© ${year} Epidom. Tous droits réservés.`,
   },
   cookie: {
