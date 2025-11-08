@@ -3,15 +3,7 @@
 import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -22,17 +14,27 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import AddMaterialDialog from "./add-material-dialog";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import {
-  Search,
-  Filter,
+  SectionHeader,
+  ActionButtons,
+  ActionButton,
+  SectionLoadingState,
+  FilterSection,
+  type FilterField,
+  ItemCardGrid,
+  BaseItemCard,
+} from "../../components";
+import { responsive, responsiveText } from "@/lib/utils/responsive";
+import {
   Eye,
   Pencil,
   Trash2,
-  X,
-  Loader2,
-  Download,
   AlertCircle,
-  CheckSquare,
   PackageOpen,
+  Plus,
+  Download,
+  CheckSquare,
+  Loader2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -261,9 +263,12 @@ export function MaterialsSection() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
+      <SectionLoadingState
+        title={t("data.materials.title")}
+        exportLabel={t("common.actions.export")}
+        addLabel={t("data.materials.addButton")}
+        selectLabel={t("common.actions.select")}
+      />
     );
   }
 
@@ -288,14 +293,15 @@ export function MaterialsSection() {
     <>
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg font-bold">{t("data.materials.title")}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
                 disabled={exportMaterials.isPending}
+                className="w-full md:w-auto"
               >
                 {exportMaterials.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -304,9 +310,14 @@ export function MaterialsSection() {
                 )}
                 {t("common.actions.export")}
               </Button>
-              <AddMaterialDialog />
+              <AddMaterialDialog trigger={
+                <Button size="sm" className="w-full md:w-auto">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("data.materials.addButton")}
+                </Button>
+              } />
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full md:w-auto">
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t("actions.delete")} ({selectedIds.size})
                 </Button>
@@ -315,6 +326,7 @@ export function MaterialsSection() {
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
+                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -334,79 +346,63 @@ export function MaterialsSection() {
 
         <CardContent className="space-y-4 pb-6">
           {/* Search and Filters */}
-          <div className="flex flex-col gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <Input
-                placeholder={t("actions.searchPlaceholder")}
-                value={filters.search}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-9"
+          <FilterSection
+            searchValue={filters.search}
+            onSearchChange={handleSearch}
+            searchPlaceholder={t("actions.searchPlaceholder")}
+            filters={[
+              {
+                key: "category",
+                label: t("filters.allCategories"),
+                placeholder: t("filters.allCategories"),
+                value: filters.category || "all",
+                onChange: handleCategoryFilter,
+                options: [
+                  { value: "all", label: t("filters.allCategories") },
+                  ...categories.map((category) => ({
+                    value: category ?? "none",
+                    label: category ?? t("common.notAvailable"),
+                  })),
+                ],
+              },
+              {
+                key: "stockStatus",
+                label: t("filters.allStockLevels"),
+                placeholder: t("filters.allStockLevels"),
+                value: filters.stockStatus ?? "all",
+                onChange: handleStockStatusFilter,
+                options: [
+                  { value: "all", label: t("filters.allStockLevels") },
+                  { value: "in_stock", label: t("filters.inStock") },
+                  { value: "low_stock", label: t("filters.lowStock") },
+                  { value: "out_of_stock", label: t("filters.outOfStock") },
+                  { value: "overstocked", label: t("filters.overstocked") },
+                ],
+              },
+            ]}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearFilters}
+            clearFiltersLabel={t("common.actions.clearFilters")}
+          />
+
+          {/* Bulk Select All */}
+          {bulkSelectMode && (
+            <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
+              <Checkbox
+                checked={
+                  selectedIds.size === processedMaterials.length && processedMaterials.length > 0
+                }
+                onCheckedChange={toggleSelectAll}
               />
+              <span className="text-sm font-medium">
+                {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {processedMaterials.length}{" "}
+                {t("common.selected")})
+              </span>
             </div>
-
-            {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Category Filter */}
-              <Select value={filters.category || "all"} onValueChange={handleCategoryFilter}>
-                <SelectTrigger>
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.allCategories")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("filters.allCategories")}</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category ?? "none"}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Stock Status Filter */}
-              <Select value={filters.stockStatus ?? "all"} onValueChange={handleStockStatusFilter}>
-                <SelectTrigger>
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.allStockLevels")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("filters.allStockLevels")}</SelectItem>
-                  <SelectItem value="in_stock">{t("filters.inStock")}</SelectItem>
-                  <SelectItem value="low_stock">{t("filters.lowStock")}</SelectItem>
-                  <SelectItem value="out_of_stock">{t("filters.outOfStock")}</SelectItem>
-                  <SelectItem value="overstocked">{t("filters.overstocked")}</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Clear Filters */}
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  <X className="mr-2 h-4 w-4" />
-                  {t("common.actions.clearFilters")}
-                </Button>
-              )}
-            </div>
-
-            {/* Bulk Select All */}
-            {bulkSelectMode && (
-              <div className="bg-muted/50 mr-2 flex items-center gap-2 rounded-lg border p-3">
-                <Checkbox
-                  checked={
-                    selectedIds.size === processedMaterials.length && processedMaterials.length > 0
-                  }
-                  onCheckedChange={toggleSelectAll}
-                />
-                <span className="text-sm font-medium">
-                  {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {processedMaterials.length}{" "}
-                  {t("common.selected")})
-                </span>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Results Count */}
-          <div className="flex items-center justify-between border-b pb-2">
+          <div className="flex items-center border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {processedMaterials.length} {t("common.of")} {total}{" "}
               {t("data.materials.title")}
@@ -414,7 +410,7 @@ export function MaterialsSection() {
           </div>
 
           {/* Materials Grid */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
             {processedMaterials.map((material) => {
               const currentStock = Number(material.currentStock);
               const minStock = Number(material.minStock);
@@ -426,24 +422,22 @@ export function MaterialsSection() {
                 material.materialSuppliers?.[0];
 
               return (
-                <Card
+                <BaseItemCard
                   key={material.id}
-                  className={`group bg-card relative rounded-lg border px-0 py-4 shadow-sm transition-all hover:shadow-md ${
-                    isSelected ? "ring-primary ring-2" : ""
-                  }`}
+                  isSelected={isSelected}
+                  bulkSelectMode={bulkSelectMode}
+                  onSelect={(checked) => {
+                    if (checked) {
+                      setSelectedIds((prev) => new Set(prev).add(material.id));
+                    } else {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(material.id);
+                        return next;
+                      });
+                    }
+                  }}
                 >
-                  {/* Bulk Select Checkbox */}
-                  {bulkSelectMode && (
-                    <div className="absolute top-4 left-2">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelectItem(material.id)}
-                      />
-                    </div>
-                  )}
-
-                  {/* Material Content */}
-                  <CardContent className={`${bulkSelectMode ? "pl-8" : ""}`}>
                     <div className="mb-2 flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="w-[85px] truncate text-sm leading-tight font-semibold">
@@ -544,8 +538,7 @@ export function MaterialsSection() {
                         </Tooltip>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                </BaseItemCard>
               );
             })}
             {/* Empty State */}
@@ -569,7 +562,7 @@ export function MaterialsSection() {
                 )}
               </div>
             )}
-          </div>
+          </ItemCardGrid>
         </CardContent>
       </Card>
 

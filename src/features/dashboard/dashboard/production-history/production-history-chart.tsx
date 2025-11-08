@@ -75,7 +75,6 @@ export default function ProductionHistoryChart() {
 
   return (
     <DashboardCard
-      cardClassName="col-span-4"
       cardTitle={t("pages.prodHistory")}
       cardDescription={t("pages.prodHistoryDesc")}
       cardOther={
@@ -88,12 +87,14 @@ export default function ProductionHistoryChart() {
       }
       cardContent={
         isLoading ? (
-          <div className="flex h-[300px] flex-col items-center justify-center">
+          <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center">
             <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
             <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
           </div>
         ) : (
+          <div className="flex min-h-[300px] flex-1">
           <Chart chartData={chartData} />
+          </div>
         )
       }
     />

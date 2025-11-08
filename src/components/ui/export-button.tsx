@@ -21,6 +21,7 @@ interface ExportButtonProps<T extends Record<string, any>> {
   disabled?: boolean;
   variant?: "default" | "outline" | "secondary" | "ghost";
   size?: "default" | "sm" | "lg" | "icon";
+  className?: string;
 }
 
 export function ExportButton<T extends Record<string, any>>({
@@ -31,6 +32,7 @@ export function ExportButton<T extends Record<string, any>>({
   disabled = false,
   variant = "outline",
   size = "sm",
+  className,
 }: ExportButtonProps<T>) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -68,7 +70,7 @@ export function ExportButton<T extends Record<string, any>>({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant} size={size} disabled={disabled || loading}>
+        <Button variant={variant} size={size} disabled={disabled || loading} className={className}>
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

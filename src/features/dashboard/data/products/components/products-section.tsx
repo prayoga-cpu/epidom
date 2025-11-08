@@ -33,6 +33,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatNumber } from "@/lib/utils/formatting";
@@ -220,12 +221,33 @@ export function ProductsSection() {
 
   const hasActiveFilters = filters.search || filters.category;
 
-  // Show loading state
+  // Show loading state - keep card structure for consistent layout
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+        <CardHeader className="border-b">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
+              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                <Download className="mr-2 h-4 w-4" />
+                {t("common.actions.export")}
+              </Button>
+              <Button size="sm" disabled className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                {t("data.products.addButton")}
+              </Button>
+              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                <CheckSquare className="mr-2 h-4 w-4" />
+                {t("common.actions.view")}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        </CardContent>
+      </Card>
     );
   }
 
@@ -247,14 +269,15 @@ export function ProductsSection() {
     <>
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">{t("data.products.pageTitle")}</CardTitle>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
                 disabled={exportProducts.isPending}
+                className="w-full md:w-auto"
               >
                 {exportProducts.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -263,9 +286,14 @@ export function ProductsSection() {
                 )}
                 {t("common.actions.export")}
               </Button>
-              <AddProductDialog storeId={storeId} />
+              <AddProductDialog storeId={storeId}>
+                <Button size="sm" className="w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("data.products.addButton")}
+                </Button>
+              </AddProductDialog>
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t("actions.delete")} ({selectedIds.size})
                 </Button>
@@ -274,6 +302,7 @@ export function ProductsSection() {
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
+                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -295,7 +324,7 @@ export function ProductsSection() {
           {/* Search and Filters */}
           <div className="flex flex-col gap-3">
             {/* Search */}
-            <div className="relative">
+            <div className="relative w-full">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder={t("actions.searchPlaceholder")}
@@ -303,12 +332,12 @@ export function ProductsSection() {
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
                 }
-                className="pl-9"
+                className="w-full pl-9"
               />
             </div>
 
             {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2">
               {/* Sort */}
               <Select
                 value={`${filters.sortBy}-${filters.sortOrder}`}
@@ -320,7 +349,7 @@ export function ProductsSection() {
                   setFilters((prev) => ({ ...prev, sortBy, sortOrder }));
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full md:w-[180px]">
                   <ArrowUpDown className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
@@ -350,7 +379,7 @@ export function ProductsSection() {
 
               {/* Clear Filters */}
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
                   <X className="mr-2 h-4 w-4" />
                   {t("common.actions.clearFilters")}
                 </Button>
@@ -373,7 +402,7 @@ export function ProductsSection() {
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center justify-between border-b pb-2">
+          <div className="flex items-center border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {products.length} {t("common.of")} {totalProducts}{" "}
               {t("data.products.pageTitle")}
@@ -381,7 +410,7 @@ export function ProductsSection() {
           </div>
 
           {/* Products Grid */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => {
               const stockStatus = getStockStatus(product);
               const profitMargin = getProfitMargin(product);
@@ -552,7 +581,7 @@ export function ProductsSection() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t pt-4">
+            <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">
                   {t("pagination.rowsPerPage")}:
@@ -572,7 +601,7 @@ export function ProductsSection() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:justify-end">
                 <span className="text-muted-foreground text-sm">
                   {t("pagination.page")} {currentPage} {t("pagination.of")} {totalPages}
                 </span>

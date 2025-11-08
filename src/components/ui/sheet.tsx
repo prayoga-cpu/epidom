@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
-import { XIcon } from "lucide-react";
+import { XIcon, ChevronLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -65,9 +65,27 @@ function SheetContent({
         )}
         {...props}
       >
+        {/* Visually hidden title and description for accessibility */}
+        <SheetPrimitive.Title className="sr-only">
+          {side === "left" ? "Navigation Menu" : "Sheet"}
+        </SheetPrimitive.Title>
+        <SheetPrimitive.Description className="sr-only">
+          {side === "left"
+            ? "Navigation menu for accessing dashboard pages and features"
+            : "Sheet content"}
+        </SheetPrimitive.Description>
         {children}
-        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
-          <XIcon className="size-4" />
+        <SheetPrimitive.Close
+          className={cn(
+            "ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none",
+            side === "left" ? "left-4" : "right-4"
+          )}
+        >
+          {side === "left" ? (
+            <ChevronLeft className="size-5" />
+          ) : (
+            <XIcon className="size-4" />
+          )}
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>

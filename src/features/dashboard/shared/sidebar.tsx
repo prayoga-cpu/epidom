@@ -8,6 +8,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlertsCount } from "@/features/dashboard/alerts/hooks/use-alerts-count";
 import { useCurrentStore } from "./hooks/use-current-store";
 import { dashboardNavigation, type NavSection } from "@/config/navigation.config";
+import LangSwitcher from "@/components/lang/lang-switcher";
+import { StoreSwitcher } from "./store-switcher";
 
 /**
  * Get badge count for a navigation item
@@ -111,6 +113,26 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
             </div>
           ))}
         </nav>
+        {mode === "mobile" && (
+          <div className="border-t space-y-3 p-3">
+            {/* Store Switcher */}
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs font-medium">
+                {t("dashboard.storeSelector.label")}
+              </span>
+              <div className="[&_button]:w-full [&_button]:min-w-0 [&_button]:max-w-none">
+                <StoreSwitcher />
+              </div>
+            </div>
+            {/* Language Switcher */}
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs font-medium">
+                {t("language.label")}
+              </span>
+              <LangSwitcher className="w-full" />
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

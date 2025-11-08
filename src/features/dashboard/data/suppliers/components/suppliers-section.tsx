@@ -33,6 +33,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Package,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -184,12 +185,35 @@ export function SuppliersSection() {
 
   const hasActiveFilters = filters.search;
 
-  // Show loading state
+  // Show loading state - keep card structure for consistent layout
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+        <CardHeader className="border-b">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="text-lg font-bold">
+              {t("data.suppliers.pageTitle")}
+            </CardTitle>
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
+              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                <Download className="mr-2 h-4 w-4" />
+                {t("common.actions.export")}
+              </Button>
+              <Button size="sm" disabled className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                {t("data.suppliers.addButton")}
+              </Button>
+              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                <CheckSquare className="mr-2 h-4 w-4" />
+                {t("common.actions.select")}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        </CardContent>
+      </Card>
     );
   }
 
@@ -209,18 +233,19 @@ export function SuppliersSection() {
 
   return (
     <>
-      <Card className="overflow-hidden shadow-md">
-        <CardHeader className="border-b pb-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+        <CardHeader className="border-b">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="text-lg font-bold">
               {t("data.suppliers.pageTitle")}
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
                 disabled={exportSuppliers.isPending}
+                className="w-full md:w-auto"
               >
                 {exportSuppliers.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -229,9 +254,14 @@ export function SuppliersSection() {
                 )}
                 {t("common.actions.export")}
               </Button>
-              <AddSupplierDialog />
+              <AddSupplierDialog>
+                <Button size="sm" className="w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("data.suppliers.addButton")}
+                </Button>
+              </AddSupplierDialog>
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t("common.actions.delete")} ({selectedIds.size})
                 </Button>
@@ -240,6 +270,7 @@ export function SuppliersSection() {
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
+                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -261,7 +292,7 @@ export function SuppliersSection() {
           {/* Search and Filters */}
           <div className="flex flex-col gap-3">
             {/* Search */}
-            <div className="relative">
+            <div className="relative w-full">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder={t("common.search")}
@@ -269,12 +300,12 @@ export function SuppliersSection() {
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
                 }
-                className="pl-9"
+                className="w-full pl-9"
               />
             </div>
 
             {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2">
               {/* Sort */}
               <Select
                 value={`${filters.sortBy}-${filters.sortOrder}`}
@@ -286,7 +317,7 @@ export function SuppliersSection() {
                   setFilters((prev) => ({ ...prev, sortBy, sortOrder }));
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full md:w-[180px]">
                   <ArrowUpDown className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
@@ -310,7 +341,7 @@ export function SuppliersSection() {
 
               {/* Clear Filters */}
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
                   <X className="mr-2 h-4 w-4" />
                   {t("common.actions.clearFilters")}
                 </Button>
@@ -333,7 +364,7 @@ export function SuppliersSection() {
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center justify-between border-b pb-2">
+          <div className="flex items-center border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {suppliers.length} {t("common.of")} {totalSuppliers}{" "}
               {t("data.suppliers.pageTitle")}
@@ -341,7 +372,7 @@ export function SuppliersSection() {
           </div>
 
           {/* Suppliers Grid */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
             {suppliers.map((supplier) => {
               const isSelected = selectedIds.has(supplier.id);
 
@@ -491,7 +522,7 @@ export function SuppliersSection() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t pt-4">
+            <div className="flex flex-col gap-3 border-t pt-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">
                   {t("pagination.rowsPerPage")}:
@@ -500,7 +531,7 @@ export function SuppliersSection() {
                   value={filters.take.toString()}
                   onValueChange={(value) => handlePageSizeChange(Number(value))}
                 >
-                  <SelectTrigger className="h-8 w-[70px]">
+                  <SelectTrigger className="h-8 w-20">
                     <SelectValue placeholder={filters.take.toString()} />
                   </SelectTrigger>
                   <SelectContent side="top">
@@ -513,7 +544,7 @@ export function SuppliersSection() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 md:justify-end">
                 <span className="text-muted-foreground text-sm">
                   {t("pagination.page")} {currentPage} {t("pagination.of")} {totalPages}
                 </span>

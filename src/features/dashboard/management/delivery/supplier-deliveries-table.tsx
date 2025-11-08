@@ -239,20 +239,18 @@ export function SupplierDeliveriesTable({
 
   return (
     <TooltipProvider>
-      <Card className="overflow-hidden shadow-md transition-shadow hover:shadow-lg lg:col-span-2">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">
+      <Card className="flex h-full w-full min-h-[450px] flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-md lg:min-h-[472px]">
+        <CardHeader className="shrink-0 border-b pb-4">
+          <CardTitle className="text-lg font-bold">
               {t("pages.supplierDeliveriesSectionTitle") || "Supplier Deliveries"} (
               {processedDeliveries.length})
             </CardTitle>
-          </div>
         </CardHeader>
 
-        <CardContent className="space-y-4 pb-6">
+        <CardContent className="flex min-h-0 flex-1 flex-col space-y-4 pb-6 pt-6">
           {/* Loading State */}
           {isLoading && (
-            <div className="flex flex-col items-center justify-center py-12">
+            <div className="flex flex-1 flex-col items-center justify-center py-12">
               <Loader2 className="text-muted-foreground mb-4 h-8 w-8 animate-spin" />
               <p className="text-muted-foreground text-sm">{t("common.loading") || "Loading..."}</p>
             </div>
@@ -260,8 +258,10 @@ export function SupplierDeliveriesTable({
 
           {/* Empty State */}
           {!isLoading && processedDeliveries.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Package className="text-muted-foreground mb-4 h-12 w-12" />
+            <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
+              <div className="bg-muted/50 mb-6 rounded-full p-4">
+                <Package className="text-muted-foreground h-12 w-12" />
+              </div>
               <h3 className="mb-2 text-lg font-semibold">
                 {t("management.delivery.noDeliveries")}
               </h3>
@@ -273,9 +273,9 @@ export function SupplierDeliveriesTable({
 
           {/* Filters and Table */}
           {!isLoading && processedDeliveries.length > 0 && (
-            <>
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
               {/* Filters */}
-              <div className="flex flex-col gap-3">
+              <div className="flex shrink-0 flex-col gap-3">
                 {/* Search */}
                 <div className="relative">
                   <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -356,9 +356,10 @@ export function SupplierDeliveriesTable({
               </div>
 
               {/* Deliveries Table */}
-              <div className="-mx-4 overflow-x-auto rounded-md border sm:mx-0">
-                <div className="min-w-[800px]">
-                  <Table>
+              <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-hidden -mx-4 rounded-md border sm:mx-0">
+                <div className="scrollbar-thin min-h-0 flex-1 overflow-auto">
+                  <div className="min-w-[800px]">
+                <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead
@@ -512,12 +513,13 @@ export function SupplierDeliveriesTable({
                     )}
                   </TableBody>
                 </Table>
+                  </div>
                 </div>
               </div>
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <div className="flex shrink-0 flex-col items-center justify-between gap-3 sm:flex-row">
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground text-sm">
                       {t("common.pagination.rowsPerPage")}:
@@ -566,7 +568,7 @@ export function SupplierDeliveriesTable({
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </CardContent>
       </Card>

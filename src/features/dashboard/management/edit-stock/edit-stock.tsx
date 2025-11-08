@@ -200,19 +200,19 @@ export function EditStockCard() {
             <p className="text-muted-foreground text-sm">{t("management.editStock.description")}</p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={handleCSVImport}>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+            <Button variant="outline" size="sm" onClick={handleCSVImport} className="w-full md:w-auto">
               <Upload className="mr-2 h-4 w-4" />
               {t("management.editStock.importCSV")}
             </Button>
-            <ExportButton data={exportData} filename="stock-inventory" size="sm" />
+            <ExportButton data={exportData} filename="stock-inventory" size="sm" className="w-full md:w-auto" />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_1fr]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_1fr] lg:items-stretch">
           {/* Items List */}
-          <Card className="p-4">
-            <div>
+          <Card className="flex min-h-[450px] flex-col p-4 lg:min-h-[400px]">
+            <div className="shrink-0">
               <Label htmlFor="search" className="sr-only">
                 {t("management.editStock.searchItems")}
               </Label>
@@ -228,8 +228,8 @@ export function EditStockCard() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="mb-2 flex items-center justify-between">
+            <div className="flex min-h-0 flex-1 flex-col space-y-2">
+              <div className="mb-2 flex shrink-0 items-center justify-between">
                 <span className="text-muted-foreground text-sm">
                   {filteredItems.length} {t("management.editStock.items")}
                 </span>
@@ -247,7 +247,7 @@ export function EditStockCard() {
                 )}
               </div>
 
-              <div className="max-h-[600px] space-y-2 overflow-y-auto">
+              <div className="scrollbar-thin flex-1 space-y-2 overflow-y-auto">
                 {isLoading ? (
                   <div className="flex items-center justify-center p-8">
                     <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
@@ -322,9 +322,9 @@ export function EditStockCard() {
           </Card>
 
           {/* Item Details & Editor */}
-          <Card className="p-6">
+          <Card className="flex min-h-[450px] flex-col p-6 lg:min-h-[400px]">
             {selectedItem ? (
-              <div className="space-y-6">
+              <div className="flex flex-1 flex-col space-y-6">
                 {/* Item Header */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex gap-4">
@@ -424,7 +424,7 @@ export function EditStockCard() {
                 </div>
               </div>
             ) : (
-              <div className="flex min-h-[400px] items-center justify-center">
+              <div className="flex flex-1 items-center justify-center">
                 <div className="text-center">
                   <Package className="text-muted-foreground mx-auto h-16 w-16" />
                   <h3 className="mt-4 text-lg font-semibold">
