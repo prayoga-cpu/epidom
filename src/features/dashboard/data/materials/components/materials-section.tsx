@@ -186,7 +186,7 @@ export function MaterialsSection() {
 
     try {
       await deleteMaterial.mutateAsync(selectedMaterial.id);
-      toast.success(t("data.materials.toasts.deleted.title") || "Material deleted successfully");
+      toast.success(t("data.materials.toasts.deleted.title"));
       setDeleteDialogOpen(false);
       setSelectedMaterial(null);
     } catch (error) {
@@ -272,7 +272,7 @@ export function MaterialsSection() {
         <div className="flex items-center gap-2">
           <AlertCircle className="text-destructive h-5 w-5" />
           <p className="text-destructive text-sm">
-            {t("messages.errorLoadingMaterials") || "Error loading materials"}: {error.message}
+            {t("messages.errorLoadingMaterials")}: {error.message}
           </p>
         </div>
         <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-2">
@@ -287,7 +287,7 @@ export function MaterialsSection() {
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">{t("data.materials.title") || "Materials"}</CardTitle>
+            <CardTitle className="text-lg">{t("data.materials.title")}</CardTitle>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -306,7 +306,7 @@ export function MaterialsSection() {
               {bulkSelectMode && selectedIds.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete") || "Delete"} ({selectedIds.size})
+                  {t("actions.delete")} ({selectedIds.size})
                 </Button>
               )}
               <Button
@@ -317,7 +317,7 @@ export function MaterialsSection() {
                 {bulkSelectMode ? (
                   <>
                     <X className="mr-2 h-4 w-4" />
-                    {t("actions.cancel") || "Cancel"}
+                    {t("actions.cancel")}
                   </>
                 ) : (
                   <>
@@ -337,7 +337,7 @@ export function MaterialsSection() {
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("common.search") || "Search..."}
+                placeholder={t("actions.searchPlaceholder")}
                 value={filters.search}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-9"
@@ -381,7 +381,7 @@ export function MaterialsSection() {
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
-                  {t("common.actions.clearFilters") || "Clear Filters"}
+                  {t("common.actions.clearFilters")}
                 </Button>
               )}
             </div>
@@ -396,9 +396,8 @@ export function MaterialsSection() {
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll") || "Select All"} ({selectedIds.size}{" "}
-                  {t("common.of") || "of"} {processedMaterials.length}{" "}
-                  {t("common.selected") || "selected"})
+                  {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {processedMaterials.length}{" "}
+                  {t("common.selected")})
                 </span>
               </div>
             )}
@@ -407,8 +406,8 @@ export function MaterialsSection() {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing") || "Showing"} {processedMaterials.length}{" "}
-              {t("common.of") || "of"} {total} {t("data.materials.title") || "materials"}
+              {t("common.showing")} {processedMaterials.length} {t("common.of")} {total}{" "}
+              {t("data.materials.title")}
             </p>
           </div>
 
@@ -552,18 +551,16 @@ export function MaterialsSection() {
               <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
                 <h3 className="mb-2 text-lg font-semibold">
-                  {t("messages.noMaterialsFound") || "No materials found"}
+                  {t("messages.noMaterialsFound")}
                 </h3>
                 <p className="text-muted-foreground mb-4 text-sm">
                   {hasActiveFilters
-                    ? t("messages.noMatchingFilters") ||
-                      "Try adjusting your filters or search query"
-                    : t("messages.getStartedMaterial") ||
-                      "Get started by adding your first material"}
+                    ? t("messages.noMatchingFilters")
+                    : t("messages.getStartedMaterial")}
                 </p>
                 {hasActiveFilters ? (
                   <Button variant="outline" onClick={clearFilters}>
-                    {t("common.actions.clearFilters") || "Clear Filters"}
+                    {t("common.actions.clearFilters")}
                   </Button>
                 ) : (
                   <AddMaterialDialog />
@@ -596,13 +593,13 @@ export function MaterialsSection() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title={t("data.materials.deleteConfirm.title") || "Delete Material"}
-        description={
-          t("data.materials.deleteConfirm.description") ||
-          `Are you sure you want to delete "${selectedMaterial?.name}"? This action cannot be undone.`
-        }
-        confirmText={t("actions.delete") || "Delete"}
-        cancelText={t("actions.cancel") || "Cancel"}
+        title={t("data.materials.deleteConfirm.title")}
+        description={t("data.materials.deleteConfirm.description")?.replace(
+          "{name}",
+          selectedMaterial?.name || ""
+        ) || ""}
+        confirmText={t("common.actions.delete")}
+        cancelText={t("common.actions.cancel")}
         variant="destructive"
       />
 

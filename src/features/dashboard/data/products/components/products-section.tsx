@@ -96,11 +96,11 @@ export function ProductsSection() {
   // Helper function to get stock status label
   const getStockStatusLabel = (status: StockFilter): string => {
     const labels: Record<StockFilter, string> = {
-      all: t("filters.allStock") || "All Stock",
-      in_stock: t("filters.inStock") || "In Stock",
-      low_stock: t("filters.lowStock") || "Low Stock",
-      critical: t("filters.critical") || "Critical",
-      overstocked: t("filters.overstocked") || "Overstocked",
+      all: t("filters.allStock"),
+      in_stock: t("filters.inStock"),
+      low_stock: t("filters.lowStock"),
+      critical: t("filters.critical"),
+      overstocked: t("filters.overstocked"),
     };
     return labels[status];
   };
@@ -158,7 +158,7 @@ export function ProductsSection() {
 
     try {
       await deleteProduct.mutateAsync(selectedProduct.id);
-      toast.success(t("data.products.toasts.deleted.title") || "Product deleted successfully");
+      toast.success(t("data.products.toasts.deleted.title"));
       setDeleteDialogOpen(false);
       setSelectedProduct(null);
     } catch (error) {
@@ -172,7 +172,7 @@ export function ProductsSection() {
     try {
       await bulkDeleteProducts.mutateAsync(Array.from(selectedIds));
       toast.success(
-        `${selectedIds.size} ${t("data.products.pageTitle") || "products"} deleted successfully`
+        t("data.products.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
       );
       setSelectedIds(new Set());
       setBulkSelectMode(false);
@@ -248,7 +248,7 @@ export function ProductsSection() {
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">{t("data.products.pageTitle") || "Products"}</CardTitle>
+            <CardTitle className="text-lg">{t("data.products.pageTitle")}</CardTitle>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -267,7 +267,7 @@ export function ProductsSection() {
               {bulkSelectMode && selectedIds.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete") || "Delete"} ({selectedIds.size})
+                  {t("actions.delete")} ({selectedIds.size})
                 </Button>
               )}
               <Button
@@ -278,12 +278,12 @@ export function ProductsSection() {
                 {bulkSelectMode ? (
                   <>
                     <X className="mr-2 h-4 w-4" />
-                    {t("actions.cancel") || "Cancel"}
+                    {t("actions.cancel")}
                   </>
                 ) : (
                   <>
                     <CheckSquare className="mr-2 h-4 w-4" />
-                    {t("common.actions.view") || "Select"}
+                    {t("common.actions.view")}
                   </>
                 )}
               </Button>
@@ -298,7 +298,7 @@ export function ProductsSection() {
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("actions.searchPlaceholder") || "Search..."}
+                placeholder={t("actions.searchPlaceholder")}
                 value={filters.search}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
@@ -325,19 +325,19 @@ export function ProductsSection() {
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
-                  <SelectItem value="name-desc">{t("sort.nameZA") || "Name (Z-A)"}</SelectItem>
+                  <SelectItem value="name-asc">{t("sort.nameAZ")}</SelectItem>
+                  <SelectItem value="name-desc">{t("sort.nameZA")}</SelectItem>
                   <SelectItem value="currentStock-asc">
-                    {t("sort.stockLowHigh") || "Stock (Low-High)"}
+                    {t("sort.stockLowHigh")}
                   </SelectItem>
                   <SelectItem value="currentStock-desc">
-                    {t("sort.stockHighLow") || "Stock (High-Low)"}
+                    {t("sort.stockHighLow")}
                   </SelectItem>
                   <SelectItem value="sellingPrice-asc">
-                    {t("sort.priceLowHigh") || "Price (Low-High)"}
+                    {t("sort.priceLowHigh")}
                   </SelectItem>
                   <SelectItem value="sellingPrice-desc">
-                    {t("sort.priceHighLow") || "Price (High-Low)"}
+                    {t("sort.priceHighLow")}
                   </SelectItem>
                   <SelectItem value="createdAt-desc">
                     {t("sort.newest")}
@@ -352,7 +352,7 @@ export function ProductsSection() {
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
-                  {t("common.actions.clearFilters") || "Clear Filters"}
+                  {t("common.actions.clearFilters")}
                 </Button>
               )}
             </div>
@@ -365,8 +365,8 @@ export function ProductsSection() {
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll") || "Select All"} ({selectedIds.size}{" "}
-                  {t("common.of") || "of"} {products.length} {t("common.selected") || "selected"})
+                  {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {products.length}{" "}
+                  {t("common.selected")})
                 </span>
               </div>
             )}
@@ -375,8 +375,8 @@ export function ProductsSection() {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing") || "Showing"} {products.length} {t("common.of") || "of"}{" "}
-              {totalProducts} {t("data.products.pageTitle") || "products"}
+              {t("common.showing")} {products.length} {t("common.of")} {totalProducts}{" "}
+              {t("data.products.pageTitle")}
             </p>
           </div>
 
@@ -532,17 +532,16 @@ export function ProductsSection() {
               <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
                 <h3 className="mb-2 text-lg font-semibold">
-                  {t("messages.noProductsFound") || "No products found"}
+                  {t("messages.noProductsFound")}
                 </h3>
                 <p className="text-muted-foreground mb-4 text-sm">
                   {hasActiveFilters
-                    ? t("messages.noMatchingFilters") ||
-                      "Try adjusting your filters or search query"
-                    : t("messages.getStartedProduct") || "Get started by adding your first product"}
+                    ? t("messages.noMatchingFilters")
+                    : t("messages.getStartedProduct")}
                 </p>
                 {hasActiveFilters ? (
                   <Button variant="outline" onClick={clearFilters}>
-                    {t("common.actions.clearFilters") || "Clear Filters"}
+                    {t("common.actions.clearFilters")}
                   </Button>
                 ) : (
                   <AddProductDialog storeId={storeId} />
@@ -556,7 +555,7 @@ export function ProductsSection() {
             <div className="flex items-center justify-between border-t pt-4">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">
-                  {t("pagination.rowsPerPage") || "Rows per page"}:
+                  {t("pagination.rowsPerPage")}:
                 </span>
                 <Select
                   value={filters.take.toString()}
@@ -575,8 +574,7 @@ export function ProductsSection() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">
-                  {t("pagination.page") || "Page"} {currentPage} {t("pagination.of") || "of"}{" "}
-                  {totalPages}
+                  {t("pagination.page")} {currentPage} {t("pagination.of")} {totalPages}
                 </span>
                 <div className="flex gap-1">
                   <Button
@@ -625,12 +623,12 @@ export function ProductsSection() {
             onOpenChange={setEditDialogOpen}
           />
           <ConfirmationDialog
-            title={t("data.products.toasts.deleted.title") || "Delete Product"}
-            description={(
-              t("data.products.toasts.deleted.description") ||
-              "{name} has been deleted successfully."
-            ).replace("{name}", selectedProduct.name)}
-            confirmText={t("common.actions.delete") || "Delete"}
+            title={t("data.products.toasts.deleted.title")}
+            description={t("data.products.toasts.deleted.description")?.replace(
+              "{name}",
+              selectedProduct.name
+            ) || ""}
+            confirmText={t("common.actions.delete")}
             onConfirm={handleDeleteConfirm}
             variant="destructive"
             open={deleteDialogOpen}

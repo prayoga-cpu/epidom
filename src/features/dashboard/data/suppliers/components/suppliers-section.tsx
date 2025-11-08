@@ -137,7 +137,7 @@ export function SuppliersSection() {
     try {
       await bulkDeleteSuppliers.mutateAsync(Array.from(selectedIds));
       toast.success(
-        `${selectedIds.size} ${t("data.suppliers.pageTitle") || "suppliers"} deleted successfully`
+        t("data.suppliers.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
       );
       setSelectedIds(new Set());
       setBulkSelectMode(false);
@@ -312,7 +312,7 @@ export function SuppliersSection() {
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
-                  {t("common.actions.clearFilters") || "Clear Filters"}
+                  {t("common.actions.clearFilters")}
                 </Button>
               )}
             </div>
@@ -335,8 +335,8 @@ export function SuppliersSection() {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing") || "Showing"} {suppliers.length} {t("common.of") || "of"}{" "}
-              {totalSuppliers} {t("data.suppliers.pageTitle") || "suppliers"}
+              {t("common.showing")} {suppliers.length} {t("common.of")} {totalSuppliers}{" "}
+              {t("data.suppliers.pageTitle")}
             </p>
           </div>
 
@@ -407,9 +407,7 @@ export function SuppliersSection() {
                       <Badge variant="outline" className="text-xs">
                         <Package className="mr-1 h-3 w-3" />
                         {supplier.materialSuppliers?.length ?? 0}{" "}
-                        {(supplier.materialSuppliers?.length ?? 0) === 1
-                          ? t("data.materials.single") || "material"
-                          : t("data.materials.pageTitle") || "materials"}
+                        {t("data.materials.pageTitle")}
                       </Badge>
                     </div>
 
@@ -473,18 +471,16 @@ export function SuppliersSection() {
               <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <Store className="text-muted-foreground/50 mb-4 h-12 w-12" />
                 <h3 className="mb-2 text-lg font-semibold">
-                  {t("messages.noSuppliersFound") || "No suppliers found"}
+                  {t("messages.noSuppliersFound")}
                 </h3>
                 <p className="text-muted-foreground mb-4 text-sm">
                   {hasActiveFilters
-                    ? t("messages.noMatchingFilters") ||
-                      "Try adjusting your filters or search query"
-                    : t("messages.getStartedSupplier") ||
-                      "Get started by adding your first supplier"}
+                    ? t("messages.noMatchingFilters")
+                    : t("messages.getStartedSupplier")}
                 </p>
                 {hasActiveFilters ? (
                   <Button variant="outline" onClick={clearFilters}>
-                    {t("common.actions.clearFilters") || "Clear Filters"}
+                    {t("common.actions.clearFilters")}
                   </Button>
                 ) : (
                   <AddSupplierDialog />
@@ -498,7 +494,7 @@ export function SuppliersSection() {
             <div className="flex items-center justify-between border-t pt-4">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">
-                  {t("pagination.rowsPerPage") || "Rows per page"}:
+                  {t("pagination.rowsPerPage")}:
                 </span>
                 <Select
                   value={filters.take.toString()}
@@ -519,8 +515,7 @@ export function SuppliersSection() {
 
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">
-                  {t("pagination.page") || "Page"} {currentPage} {t("pagination.of") || "of"}{" "}
-                  {totalPages}
+                  {t("pagination.page")} {currentPage} {t("pagination.of")} {totalPages}
                 </span>
                 <div className="flex items-center gap-1">
                   <Button
@@ -568,12 +563,12 @@ export function SuppliersSection() {
             onOpenChange={setEditDialogOpen}
           />
           <ConfirmationDialog
-            title={t("data.suppliers.toasts.deleted.title") || "Delete Supplier"}
-            description={(
-              t("data.suppliers.toasts.deleted.description") ||
-              "{name} has been deleted successfully."
-            ).replace("{name}", selectedSupplier.name)}
-            confirmText={t("common.actions.delete") || "Delete"}
+            title={t("data.suppliers.toasts.deleted.title")}
+            description={t("data.suppliers.toasts.deleted.description")?.replace(
+              "{name}",
+              selectedSupplier.name
+            ) || ""}
+            confirmText={t("common.actions.delete")}
             onConfirm={handleDeleteConfirm}
             variant="destructive"
             open={deleteDialogOpen}

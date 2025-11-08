@@ -34,6 +34,7 @@ export const fr = {
     selectAll: "Tout Sélectionner",
     of: "sur",
     selected: "sélectionné(s)",
+    per: "par",
     showing: "Affichage",
     sku: "SKU",
     stock: "Stock",
@@ -942,6 +943,25 @@ export const fr = {
         costPlaceholder: "25.00",
         notes: "Notes (Optionnel)",
         notesPlaceholder: "Informations supplémentaires sur ce matériau...",
+        description: "Description",
+        descriptionPlaceholder: "Informations supplémentaires sur ce matériau...",
+        categoryPlaceholder: "ex: Céréales, Produits Laitiers",
+        selectSupplierPlaceholder: "Sélectionner un fournisseur...",
+        unitCost: "Coût Unitaire",
+        currentStock: "Stock Actuel",
+        minStockLevel: "Niveau de Stock Minimum",
+        maxStockLevel: "Niveau de Stock Maximum",
+        supplierPrice: "Prix",
+        preferred: "Préféré",
+        chooseSupplier: "Choisir un fournisseur pour ce matériau",
+        alertMinStock: "Alerte lorsque le stock tombe en dessous de ce niveau",
+        alertMaxStock: "Alerte lorsque le stock dépasse ce niveau",
+      },
+      // Form sections
+      sections: {
+        basicInfo: "Informations de Base",
+        pricingStock: "Tarification et Stock",
+        suppliers: "Fournisseurs (Optionnel)",
       },
 
       // Categories
@@ -989,6 +1009,25 @@ export const fr = {
           title: "Matériaux Supprimés",
           description: "{count} matériaux ont été supprimés avec succès.",
         },
+      },
+      details: {
+        stockInfo: "Informations sur le Stock",
+        suppliers: "Fournisseurs",
+        pricing: "Tarification",
+        description: "Description",
+        metadata: "Informations",
+        currentStock: "Stock Actuel",
+        minStock: "Min",
+        maxStock: "Max",
+        unitCost: "Coût Unitaire",
+        totalValue: "Valeur Totale",
+        category: "Catégorie",
+        unit: "Unité",
+        noSuppliersLinked: "Aucun fournisseur lié",
+      },
+      deleteConfirm: {
+        title: "Supprimer le Matériau",
+        description: "Êtes-vous sûr de vouloir supprimer \"{name}\" ? Cette action ne peut pas être annulée.",
       },
     },
 
@@ -2060,6 +2099,7 @@ export const fr = {
             atLeastOneItem: "Veuillez ajouter au moins un article",
             itemsMustHaveMaterial:
               "Tous les articles doivent avoir une matière et une quantité supérieure à 0",
+            addModeNotImplemented: "Le mode d'ajout n'est pas encore implémenté. Les commandes doivent être créées à partir des alertes.",
           },
           toasts: {
             created: {

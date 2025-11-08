@@ -328,7 +328,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
                   disabled={updateProfile.isPending}
                   className="flex-1"
                 >
-                  {t("common.actions.back") || "Back"}
+                  {t("common.actions.back")}
                 </Button>
                 <Button
                   onClick={handleSave}

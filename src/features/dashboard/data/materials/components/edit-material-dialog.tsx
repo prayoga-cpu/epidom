@@ -139,7 +139,7 @@ export default function EditMaterialDialog({
         t("data.materials.toasts.updated.description")?.replace(
           "{name}",
           data.name || material.name
-        ) || "Material updated successfully"
+        ) || ""
       );
       onOpenChange(false);
     } catch (error) {

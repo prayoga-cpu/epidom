@@ -34,6 +34,7 @@ export const id = {
     selectAll: "Pilih Semua",
     of: "dari",
     selected: "dipilih",
+    per: "per",
     showing: "Menampilkan",
     sku: "SKU",
     stock: "Stok",
@@ -938,6 +939,25 @@ export const id = {
         costPlaceholder: "25.00",
         notes: "Catatan (Opsional)",
         notesPlaceholder: "Informasi tambahan tentang bahan ini...",
+        description: "Deskripsi",
+        descriptionPlaceholder: "Informasi tambahan tentang bahan ini...",
+        categoryPlaceholder: "contoh: Biji-bijian, Produk Susu",
+        selectSupplierPlaceholder: "Pilih pemasok...",
+        unitCost: "Biaya per Satuan",
+        currentStock: "Stok Saat Ini",
+        minStockLevel: "Tingkat Stok Minimum",
+        maxStockLevel: "Tingkat Stok Maksimum",
+        supplierPrice: "Harga",
+        preferred: "Disukai",
+        chooseSupplier: "Pilih pemasok untuk bahan ini",
+        alertMinStock: "Peringatan ketika stok turun di bawah level ini",
+        alertMaxStock: "Peringatan ketika stok melebihi level ini",
+      },
+      // Form sections
+      sections: {
+        basicInfo: "Informasi Dasar",
+        pricingStock: "Harga & Stok",
+        suppliers: "Pemasok (Opsional)",
       },
 
       // Categories
@@ -985,6 +1005,25 @@ export const id = {
           title: "Bahan Berhasil Dihapus",
           description: "{count} bahan telah berhasil dihapus.",
         },
+      },
+      details: {
+        stockInfo: "Informasi Stok",
+        suppliers: "Pemasok",
+        pricing: "Harga",
+        description: "Deskripsi",
+        metadata: "Informasi",
+        currentStock: "Stok Saat Ini",
+        minStock: "Min",
+        maxStock: "Max",
+        unitCost: "Biaya per Satuan",
+        totalValue: "Total Nilai",
+        category: "Kategori",
+        unit: "Satuan",
+        noSuppliersLinked: "Tidak ada pemasok yang ditautkan",
+      },
+      deleteConfirm: {
+        title: "Hapus Bahan",
+        description: "Apakah Anda yakin ingin menghapus \"{name}\"? Tindakan ini tidak dapat dibatalkan.",
       },
     },
 
@@ -2043,6 +2082,7 @@ export const id = {
             expectedDateRequired: "Tanggal yang diharapkan wajib diisi",
             atLeastOneItem: "Harap tambahkan setidaknya satu item",
             itemsMustHaveMaterial: "Semua item harus memiliki bahan dan jumlah lebih besar dari 0",
+            addModeNotImplemented: "Mode tambah belum diimplementasikan. Pesanan harus dibuat dari peringatan.",
           },
           toasts: {
             created: {
