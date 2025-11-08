@@ -35,14 +35,14 @@ export function OrdersView() {
         body: JSON.stringify({ status: "PLACED" }),
       });
 
-      if (!response.ok) throw new Error("Failed to update order");
+      if (!response.ok) throw new Error(t("messages.failedToUpdateOrder"));
 
-      toast.success(t("alerts.orderPlaced") || "Order marked as placed!");
+      toast.success(t("messages.orderPlaced"));
 
       // Refresh the data
       window.location.reload();
     } catch (error) {
-      toast.error(t("alerts.orderPlacedError") || "Failed to mark order as placed");
+      toast.error(t("messages.orderPlacedError"));
     } finally {
       setPlacingOrder(null);
     }

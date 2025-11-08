@@ -138,7 +138,6 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
 
   const onSubmit = async (data: RecipeFormValues) => {
     try {
-      console.log("Recipe form data being submitted:", data);
       await createRecipe.mutateAsync(data);
 
       toast.success(t("data.recipes.toasts.created.title"));
@@ -146,7 +145,6 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
       setCurrentStep(1);
       setOpen(false);
     } catch (error) {
-      console.error("Recipe creation error:", error);
       toast.error(error instanceof Error ? error.message : t("common.error"));
     }
   };

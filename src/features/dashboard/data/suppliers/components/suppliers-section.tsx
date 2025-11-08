@@ -127,7 +127,7 @@ export function SuppliersSection() {
       setDeleteDialogOpen(false);
       setSelectedSupplier(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete supplier");
+      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteSupplier"));
     }
   };
 
@@ -142,7 +142,7 @@ export function SuppliersSection() {
       setSelectedIds(new Set());
       setBulkSelectMode(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete suppliers");
+      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteSuppliers"));
     }
   };
 
@@ -198,9 +198,9 @@ export function SuppliersSection() {
     return (
       <Card className="overflow-hidden shadow-md">
         <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
-          <p className="text-destructive">Error loading suppliers</p>
+          <p className="text-destructive">{t("messages.errorLoadingSuppliers")}</p>
           <Button variant="outline" onClick={() => window.location.reload()}>
-            Retry
+            {t("common.actions.retry")}
           </Button>
         </CardContent>
       </Card>

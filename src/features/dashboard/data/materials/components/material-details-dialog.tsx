@@ -22,19 +22,25 @@ interface MaterialDetailsDialogProps {
 }
 
 // Helper functions
-function getStockStatus(current: number, min: number, max: number): string {
-  if (current <= 0) return "Out of Stock";
-  if (current <= min) return "Low Stock";
-  if (current > max) return "Overstocked";
-  return "In Stock";
+function getStockStatus(
+  current: number,
+  min: number,
+  max: number,
+  t: (key: string) => string
+): string {
+  if (current <= 0) return t("common.stockStatus.outOfStock");
+  if (current <= min) return t("common.stockStatus.lowStock");
+  if (current > max) return t("common.stockStatus.overstocked");
+  return t("common.stockStatus.inStock");
 }
 
 function getStockStatusVariant(
-  status: string
+  status: string,
+  t: (key: string) => string
 ): "default" | "destructive" | "secondary" | "outline" {
-  if (status === "Out of Stock") return "destructive";
-  if (status === "Low Stock") return "outline";
-  if (status === "Overstocked") return "secondary";
+  if (status === t("common.stockStatus.outOfStock")) return "destructive";
+  if (status === t("common.stockStatus.lowStock")) return "outline";
+  if (status === t("common.stockStatus.overstocked")) return "secondary";
   return "default";
 }
 
@@ -58,10 +64,8 @@ export default function MaterialDetailsDialog({
   const currentStock = Number(material.currentStock);
   const minStock = Number(material.minStock);
   const maxStock = Number(material.maxStock);
-  const stockStatus = getStockStatus(currentStock, minStock, maxStock);
+  const stockStatus = getStockStatus(currentStock, minStock, maxStock, t);
   const stockPercentage = calculateStockPercentage(currentStock, maxStock);
-
-  console.log(material);
 
   const handleDelete = () => {
     if (onDelete) {
@@ -89,7 +93,7 @@ export default function MaterialDetailsDialog({
                   <p className="text-muted-foreground mt-1 text-sm">SKU: {material.sku}</p>
                 )}
               </div>
-              <Badge variant={getStockStatusVariant(stockStatus)}>{stockStatus}</Badge>
+              <Badge variant={getStockStatusVariant(stockStatus, t)}>{stockStatus}</Badge>
             </div>
           </DialogHeader>
 
@@ -219,11 +223,11 @@ export default function MaterialDetailsDialog({
               <CardContent>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Created</span>
+                    <span className="text-muted-foreground">{t("data.materials.details.created")}</span>
                     <span>{new Date(material.createdAt).toLocaleDateString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Last Updated</span>
+                    <span className="text-muted-foreground">{t("data.materials.details.lastUpdated")}</span>
                     <span>{new Date(material.updatedAt).toLocaleDateString()}</span>
                   </div>
                 </div>

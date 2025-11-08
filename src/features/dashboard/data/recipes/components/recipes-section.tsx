@@ -239,9 +239,9 @@ export function RecipesSection() {
     return (
       <Card className="overflow-hidden shadow-md">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-destructive font-semibold">Error loading recipes</p>
+          <p className="text-destructive font-semibold">{t("messages.errorLoadingRecipes")}</p>
           <p className="text-muted-foreground text-sm">
-            {error instanceof Error ? error.message : "An unexpected error occurred"}
+            {error instanceof Error ? error.message : t("common.validation.unexpectedError")}
           </p>
         </CardContent>
       </Card>

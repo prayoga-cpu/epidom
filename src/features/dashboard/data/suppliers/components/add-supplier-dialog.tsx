@@ -32,19 +32,21 @@ import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateSupplier } from "../hooks/use-suppliers";
 
-// Zod validation schema
-const supplierSchema = z.object({
-  name: z.string().min(2, "Supplier name must be at least 2 characters"),
-  contactPerson: z.string().optional().or(z.literal("")),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
-  country: z.string().optional().or(z.literal("")),
-  notes: z.string().optional().or(z.literal("")),
-});
+// Helper function to create supplier schema with translated messages
+function createSupplierSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t("common.validation.supplierNameMin")),
+    contactPerson: z.string().optional().or(z.literal("")),
+    email: z.string().email(t("common.validation.email")).optional().or(z.literal("")),
+    phone: z.string().optional().or(z.literal("")),
+    address: z.string().optional().or(z.literal("")),
+    city: z.string().optional().or(z.literal("")),
+    country: z.string().optional().or(z.literal("")),
+    notes: z.string().optional().or(z.literal("")),
+  });
+}
 
-type SupplierFormValues = z.infer<typeof supplierSchema>;
+type SupplierFormValues = z.infer<ReturnType<typeof createSupplierSchema>>;
 
 interface AddSupplierDialogProps {
   children?: React.ReactNode;
@@ -57,6 +59,8 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
   const storeId = params.storeId as string;
 
   const createSupplier = useCreateSupplier(storeId);
+
+  const supplierSchema = createSupplierSchema(t);
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),

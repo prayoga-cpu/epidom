@@ -41,22 +41,24 @@ import { useRecipes } from "../../recipes/hooks/use-recipes";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 
-// Zod validation schema
-const productSchema = z.object({
-  name: z.string().min(2, "Product name must be at least 2 characters"),
-  sku: z.string().optional(),
-  description: z.string().optional(),
-  category: z.string().min(1, "Please enter a category"),
-  retailPrice: z.coerce.number().positive("Retail price must be greater than 0"),
-  costPrice: z.coerce.number().positive("Cost price must be greater than 0"),
-  unit: z.string().min(1, "Please enter a unit"),
-  currentStock: z.coerce.number().min(0, "Stock cannot be negative"),
-  minStock: z.coerce.number().min(0, "Minimum stock cannot be negative"),
-  maxStock: z.coerce.number().positive("Maximum stock must be greater than 0"),
-  recipeId: z.string().optional(),
-});
+// Helper function to create product schema with translated messages
+function createProductSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t("common.validation.productNameMin")),
+    sku: z.string().optional(),
+    description: z.string().optional(),
+    category: z.string().min(1, t("common.validation.categoryRequired")),
+    retailPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    costPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    unit: z.string().min(1, t("common.validation.unitRequired")),
+    currentStock: z.coerce.number().min(0, t("common.validation.stockNonNegative")),
+    minStock: z.coerce.number().min(0, t("common.validation.minStockNonNegative")),
+    maxStock: z.coerce.number().positive(t("common.validation.maxStockPositive")),
+    recipeId: z.string().optional(),
+  });
+}
 
-type ProductFormValues = z.infer<typeof productSchema>;
+type ProductFormValues = z.infer<ReturnType<typeof createProductSchema>>;
 
 interface EditProductDialogProps {
   storeId: string;
@@ -84,6 +86,8 @@ export default function EditProductDialog({
     take: 100,
   });
   const recipes = recipesData?.recipes || [];
+
+  const productSchema = createProductSchema(t);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -154,7 +158,6 @@ export default function EditProductDialog({
 
       onOpenChange(false);
     } catch (error) {
-      console.error("Error updating product:", error);
       sonnerToast.error(t("data.products.toasts.updateError.title") || "Failed to update product", {
         description:
           error instanceof Error

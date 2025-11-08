@@ -143,7 +143,7 @@ export default function EditMaterialDialog({
       );
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update material");
+      toast.error(error instanceof Error ? error.message : t("messages.failedToUpdateMaterial"));
     }
   };
 

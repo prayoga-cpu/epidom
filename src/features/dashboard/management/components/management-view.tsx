@@ -134,25 +134,25 @@ export function ManagementView() {
             className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
             value="delivery"
           >
-            {t("tabs.supplierDeliveries") || "Supplier Deliveries"}
+            {t("tabs.supplierDeliveries")}
           </TabsTrigger>
           <TabsTrigger
             className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
             value="recipe"
           >
-            {t("tabs.recipeProduction") || "Recipe Production"}
+            {t("tabs.recipeProduction")}
           </TabsTrigger>
           <TabsTrigger
             className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
             value="history"
           >
-            {t("tabs.productionHistory") || "Production History"}
+            {t("tabs.productionHistory")}
           </TabsTrigger>
           <TabsTrigger
             className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
             value="stock"
           >
-            {t("tabs.editStock") || "Edit Stock"}
+            {t("tabs.editStock")}
           </TabsTrigger>
         </TabsList>
 

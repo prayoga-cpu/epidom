@@ -190,7 +190,7 @@ export function MaterialsSection() {
       setDeleteDialogOpen(false);
       setSelectedMaterial(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete material");
+      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteMaterial"));
     }
   };
 
@@ -199,11 +199,13 @@ export function MaterialsSection() {
 
     try {
       await bulkDelete.mutateAsync({ ids: Array.from(selectedIds) });
-      toast.success(`Deleted ${selectedIds.size} material(s) successfully`);
+      toast.success(
+        t("data.materials.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
+      );
       setSelectedIds(new Set());
       setBulkSelectMode(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete materials");
+      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteMaterials"));
     }
   };
 
