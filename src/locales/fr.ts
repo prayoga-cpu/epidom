@@ -1,6 +1,15 @@
 export const fr = {
-  common: {
-    brand: "EPIDOM",
+    common: {
+      brand: "EPIDOM",
+      item: "Article",
+      ingredient: "Ingrédient",
+      uncategorized: "Non Catégorisé",
+      stockStatus: {
+      outOfStock: "Rupture de Stock",
+      lowStock: "Stock Faible",
+      inStock: "En Stock",
+      overstocked: "Surstocké",
+    },
     nav: {
       home: "Accueil",
       services: "Services",
@@ -12,6 +21,7 @@ export const fr = {
       openMenu: "Ouvrir le menu",
       closeMenu: "Fermer le menu",
       homepage: "Page d'accueil",
+      searchAriaLabel: "Rechercher",
     },
     language: {
       label: "Langue",
@@ -51,6 +61,16 @@ export const fr = {
     },
     datePicker: {
       pickDate: "Choisir une date",
+      pickDateRange: "Choisir une plage de dates",
+      selectPreset: "Sélectionner un préréglage",
+      presets: {
+        today: "Aujourd'hui",
+        last7Days: "7 derniers jours",
+        last30Days: "30 derniers jours",
+        last90Days: "90 derniers jours",
+        thisYear: "Cette année",
+        custom: "Personnalisé",
+      },
     },
     metrics: {
       plannedQuantity: "Quantité Planifiée",
@@ -85,6 +105,8 @@ export const fr = {
       exportAsPdf: "Exporter en PDF",
       logout: "Déconnexion",
       searchPlaceholder: "Rechercher...",
+      retry: "Réessayer",
+      select: "Sélectionner",
     },
   },
   search: {
@@ -890,12 +912,16 @@ export const fr = {
     materials: {
       pageTitle: "Matières premières",
       addTitle: "Ajouter un Nouveau Matériau",
+      addButton: "Ajouter un Matériau",
       addDescription:
         "Ajoutez un nouveau matériau à votre inventaire. Remplissez tous les champs obligatoires.",
       editTitle: "Modifier le Matériau",
       editDescription: "Mettre à jour les informations du matériau",
       detailsTitle: "Détails du Matériau",
       detailsDescription: "Voir les informations complètes sur ce matériau",
+      title: "Matériaux",
+      unknownMaterial: "Matériau Inconnu",
+      noDescription: "Aucune description fournie",
 
       // Form fields
       form: {
@@ -905,6 +931,8 @@ export const fr = {
         selectCategory: "Sélectionner une catégorie",
         supplier: "Fournisseur",
         selectSupplier: "Sélectionner un fournisseur",
+        addSupplier: "Ajouter un Fournisseur",
+        noSuppliersYet: "Aucun fournisseur ajouté pour le moment. Cliquez sur \"Ajouter un Fournisseur\" pour lier des fournisseurs à ce matériau.",
         quantity: "Quantité",
         unit: "Unité",
         selectUnit: "Unité",
@@ -967,6 +995,7 @@ export const fr = {
     recipes: {
       pageTitle: "Recettes",
       addTitle: "Créer une Nouvelle Recette",
+      addButton: "Ajouter une Recette",
       editTitle: "Modifier la Recette",
       detailsTitle: "Détails de la Recette",
       duplicateTitle: "Dupliquer la Recette",
@@ -1154,6 +1183,7 @@ export const fr = {
     products: {
       pageTitle: "Produits",
       addTitle: "Ajouter un Nouveau Produit",
+      addButton: "Ajouter un Produit",
       editTitle: "Modifier le Produit",
       detailsTitle: "Détails du Produit",
       addDescription:
@@ -1250,6 +1280,7 @@ export const fr = {
     suppliers: {
       pageTitle: "Fournisseurs",
       addTitle: "Ajouter un Nouveau Fournisseur",
+      addButton: "Ajouter un Fournisseur",
       editTitle: "Modifier le Fournisseur",
       detailsTitle: "Détails du Fournisseur",
       addDescription:
@@ -1342,8 +1373,10 @@ export const fr = {
   filters: {
     allSuppliers: "Tous les Fournisseurs",
     allStock: "Tout le Stock",
+    allStockLevels: "Tous les Niveaux de Stock",
     inStock: "En Stock",
     lowStock: "Stock Faible",
+    outOfStock: "Rupture de Stock",
     critical: "Critique",
     overstocked: "Surstock",
     allCategories: "Toutes les Catégories",
@@ -1386,6 +1419,14 @@ export const fr = {
     difficultyHighLow: "Difficulté (Haut-Bas)",
     prepTimeLowHigh: "Temps Prépa (Bas-Haut)",
     prepTimeHighLow: "Temps Prépa (Haut-Bas)",
+    timeShortest: "Temps (Plus Court)",
+    timeLongest: "Temps (Plus Long)",
+    contactAZ: "Contact (A-Z)",
+    contactZA: "Contact (Z-A)",
+    newest: "Plus Récent",
+    newestFirst: "Plus Récent",
+    oldest: "Plus Ancien",
+    oldestFirst: "Plus Ancien",
   },
   tables: {
     order: "Commande",
@@ -1451,8 +1492,14 @@ export const fr = {
     getStartedRecipe: "Commencez par créer votre première recette",
     getStartedProduct: "Commencez par ajouter votre premier produit",
     getStartedSupplier: "Commencez par ajouter votre premier fournisseur",
+    errorLoadingMaterials: "Erreur lors du chargement des matériaux",
+    errorLoadingRecipes: "Erreur lors du chargement des recettes",
+    errorLoadingProducts: "Erreur lors du chargement des produits",
+    errorLoadingSuppliers: "Erreur lors du chargement des fournisseurs",
     noDataToExport: "Aucune donnée à exporter",
     noDataToExportDesc: "Il n'y a aucune donnée disponible à exporter.",
+    exportStarted: "Exportation démarrée",
+    exportStartedDescription: "Votre exportation sera téléchargée sous peu.",
     exportSuccessful: "Exportation réussie",
     exportFailed: "L'exportation a échoué",
     exportFailedDesc: "Une erreur s'est produite lors de l'exportation des données.",
@@ -1796,10 +1843,26 @@ export const fr = {
   stores: {
     title: "Vos boutiques",
     createStore: "Créer une boutique",
+    editStore: "Modifier la boutique",
+    updateStore: "Mettre à jour la boutique",
+    editDescription: "Mettez à jour les informations de votre boutique. Tous les champs sauf le nom sont optionnels.",
     storeName: "Nom de la Boutique",
+    storeNamePlaceholder: "ex. Boulangerie Artisanale Paris",
     city: "Ville",
+    cityPlaceholder: "ex. Paris",
+    country: "Pays",
+    countryPlaceholder: "ex. France",
+    addressPlaceholder: "ex. 123 Rue de la Paix",
+    phonePlaceholder: "ex. +33 1 23 45 67 89",
+    emailPlaceholder: "ex. contact@boutique.com",
+    storeImage: "Image de la Boutique",
     noStores: "Aucune boutique pour le moment",
     createFirst: "Créez votre première boutique pour commencer",
+    searchPlaceholder: "Rechercher des boutiques par nom, ville ou adresse...",
+    createSuccess: "Boutique créée avec succès",
+    createError: "Échec de la création de la boutique",
+    editSuccess: "Boutique mise à jour avec succès",
+    editError: "Échec de la mise à jour de la boutique",
   },
   tabs: {
     delivery: "Livraison",
@@ -1847,6 +1910,7 @@ export const fr = {
       },
       noMatches: "Aucune livraison ne correspond à vos filtres",
       noDeliveries: "Aucune livraison pour le moment",
+      noDeliveriesDescription: "Aucune livraison fournisseur trouvée",
       actions: {
         edit: "Modifier",
         updateStatus: "Mettre à Jour le Statut",
@@ -1991,6 +2055,7 @@ export const fr = {
       selectItemDescription:
         "Choisissez un article dans la liste pour voir les détails et effectuer des ajustements",
       noItemsFound: "Aucun article trouvé",
+      noStockItemsYet: "Aucun article en stock pour le moment",
       selectAll: "Tout Sélectionner",
       deselectAll: "Tout Désélectionner",
 
@@ -2233,6 +2298,8 @@ export const fr = {
       metrics: {
         totalBatches: "Total des Lots",
         totalBatchesDescription: "Tous les lots de production",
+        completedBatches: "Lots Terminés",
+        completedBatchesDescription: "Nombre de lots terminés",
         averageQuality: "Qualité Moy.",
         averageQualityDescription: "Score de qualité moyen",
         efficiency: "Efficacité",
@@ -2373,6 +2440,20 @@ export const fr = {
     reorderLevel: "Niveau de Réapprovisionnement",
     lastMovement: "Dernier Mouvement",
     recentActivity: "Activité Récente",
+
+    // Filters for stock levels
+    filters: {
+      allItems: "Tous les Articles",
+      allItemsPlaceholder: "Tous les Articles",
+      allStatus: "Tous les Statuts",
+      allStatusPlaceholder: "Tous les Statuts de Stock",
+      outOfStock: "Rupture de Stock",
+      lowStock: "Stock Faible",
+      inStock: "En Stock",
+      overstocked: "Surstocké",
+    },
+    item: "article",
+    items: "articles",
 
     // Stock History
     stockHistory: "Historique du Stock",

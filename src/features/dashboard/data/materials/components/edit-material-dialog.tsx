@@ -153,7 +153,7 @@ export default function EditMaterialDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{t("data.materials.editTitle") || "Edit Material"}</DialogTitle>
+          <DialogTitle>{t("data.materials.editTitle")}</DialogTitle>
           <DialogDescription>
             {t("data.materials.editDescription") ||
               "Update material information. Fields marked with * are required."}
@@ -219,7 +219,7 @@ export default function EditMaterialDialog({
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select unit" />
+                          <SelectValue placeholder={t("data.materials.form.selectUnit")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -356,13 +356,13 @@ export default function EditMaterialDialog({
                   onClick={() => append({ supplierId: "", price: 0, isPreferred: false })}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Supplier
+                  {t("data.materials.form.addSupplier")}
                 </Button>
               </div>
 
               {fields.length === 0 && (
                 <p className="text-muted-foreground text-sm">
-                  No suppliers added yet. Click "Add Supplier" to link suppliers to this material.
+                  {t("data.materials.form.noSuppliersYet")}
                 </p>
               )}
 
@@ -468,13 +468,13 @@ export default function EditMaterialDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={updateMaterial.isPending}
               >
-                {t("actions.cancel") || "Cancel"}
+                {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={updateMaterial.isPending}>
                 {updateMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {updateMaterial.isPending
-                  ? t("common.actions.saving") || "Saving..."
-                  : t("common.actions.saveChanges") || "Save Changes"}
+                  ? t("common.actions.saving")
+                  : t("common.actions.saveChanges")}
               </Button>
             </div>
           </form>

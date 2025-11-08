@@ -151,13 +151,13 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
         {children || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            {t("common.actions.add") || "Add Product"}
+            {t("data.products.addButton")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>button]:hidden">
         <DialogHeader>
-          <DialogTitle>{t("data.products.addTitle") || "Add New Product"}</DialogTitle>
+          <DialogTitle>{t("data.products.addTitle")}</DialogTitle>
           <DialogDescription>
             Add a new product to your inventory. Link it to a recipe for automatic cost calculation.
           </DialogDescription>
@@ -398,11 +398,11 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                 onClick={() => setOpen(false)}
                 disabled={isSubmitting}
               >
-                {t("actions.cancel") || "Cancel"}
+                {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("common.actions.add") || "Add Product"}
+                {t("data.products.addButton")}
               </Button>
             </DialogFooter>
           </form>

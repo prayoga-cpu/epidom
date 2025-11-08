@@ -97,13 +97,13 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
         {children || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            {t("common.actions.add") || "Add Supplier"}
+            {t("data.suppliers.addButton")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>button]:hidden">
         <DialogHeader>
-          <DialogTitle>{t("data.suppliers.addTitle") || "Add New Supplier"}</DialogTitle>
+          <DialogTitle>{t("data.suppliers.addTitle")}</DialogTitle>
           <DialogDescription>
             Add a new supplier to your contact list. Fill in as much information as possible.
           </DialogDescription>
@@ -268,11 +268,11 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                 onClick={() => setOpen(false)}
                 disabled={createSupplier.isPending}
               >
-                {t("actions.cancel") || "Cancel"}
+                {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={createSupplier.isPending}>
                 {createSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("data.suppliers.addButton") || "Add Supplier"}
+                {t("data.suppliers.addButton")}
               </Button>
             </DialogFooter>
           </form>

@@ -166,7 +166,7 @@ export function StockLevelsTab() {
               <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 type="text"
-                placeholder={t("actions.searchPlaceholder") || "Search..."}
+                placeholder={t("actions.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -185,30 +185,31 @@ export function StockLevelsTab() {
         <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
           <Select value={itemType} onValueChange={(v: any) => setItemType(v)}>
             <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="All Items" />
+              <SelectValue placeholder={t("tracking.filters.allItemsPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Items</SelectItem>
-              <SelectItem value="material">Materials</SelectItem>
-              <SelectItem value="product">Products</SelectItem>
+              <SelectItem value="all">{t("tracking.filters.allItems")}</SelectItem>
+              <SelectItem value="material">{t("tracking.materialType")}</SelectItem>
+              <SelectItem value="product">{t("tracking.productType")}</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={stockFilter} onValueChange={setStockFilter}>
             <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Stock Status" />
+              <SelectValue placeholder={t("tracking.filters.allStatusPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-              <SelectItem value="low_stock">Low Stock</SelectItem>
-              <SelectItem value="in_stock">In Stock</SelectItem>
-              <SelectItem value="overstocked">Overstocked</SelectItem>
+              <SelectItem value="all">{t("tracking.filters.allStatus")}</SelectItem>
+              <SelectItem value="out_of_stock">{t("tracking.filters.outOfStock")}</SelectItem>
+              <SelectItem value="low_stock">{t("tracking.filters.lowStock")}</SelectItem>
+              <SelectItem value="in_stock">{t("tracking.filters.inStock")}</SelectItem>
+              <SelectItem value="overstocked">{t("tracking.filters.overstocked")}</SelectItem>
             </SelectContent>
           </Select>
 
           <span className="text-muted-foreground ml-auto text-sm">
-            {finalFilteredItems.length} {finalFilteredItems.length === 1 ? "item" : "items"}
+            {finalFilteredItems.length}{" "}
+            {finalFilteredItems.length === 1 ? t("tracking.item") : t("tracking.items")}
           </span>
         </div>
 
@@ -222,17 +223,19 @@ export function StockLevelsTab() {
               <TableHeader>
                 <TableRow className="text-foreground/80">
                   <TableHead className="py-2 pr-3 text-left font-medium">
-                    {t("tables.products") || "Name"}
+                    {t("tables.products")}
                   </TableHead>
-                  <TableHead className="py-2 pr-3 text-left font-medium">Type</TableHead>
+                  <TableHead className="py-2 pr-3 text-left font-medium">
+                    {t("tracking.type")}
+                  </TableHead>
                   <TableHead className="w-1/2 py-2 pr-3 text-left font-medium">
-                    {t("tracking.stockLevel") || "Stock Level"}
+                    {t("tracking.stockLevel")}
                   </TableHead>
                   <TableHead className="py-2 pr-3 text-right font-medium whitespace-nowrap">
-                    {t("tables.currentUnits") || "Current"}
+                    {t("tables.currentUnits")}
                   </TableHead>
                   <TableHead className="py-2 pl-3 text-right font-medium">
-                    {t("tables.status") || "Status"}
+                    {t("tables.status")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -240,7 +243,7 @@ export function StockLevelsTab() {
                 {finalFilteredItems.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
-                      {t("messages.noResults") || "No items found"}
+                      {t("messages.noResults")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -255,7 +258,9 @@ export function StockLevelsTab() {
                         <TableCell className="py-3 pr-3">{item.name}</TableCell>
                         <TableCell className="py-3 pr-3">
                           <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2 py-1 text-xs font-medium">
-                            {item.type === "material" ? "Material" : "Product"}
+                            {item.type === "material"
+                              ? t("tracking.materialType")
+                              : t("tracking.productType")}
                           </span>
                         </TableCell>
                         <TableCell className="py-3 pr-3">

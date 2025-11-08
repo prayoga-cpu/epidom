@@ -13,7 +13,7 @@ export function DataManageView() {
             key={i}
             className="bg-background hover:bg-muted rounded-full border px-3 py-2 text-left text-sm"
           >
-            Item
+            {t("common.item")}
           </button>
         ))}
       </div>
@@ -65,7 +65,7 @@ export function DataManageView() {
             <ul className="divide-y">
               {Array.from({ length: 8 }).map((_, i) => (
                 <li key={i} className="flex items-center gap-2 px-3 py-2 text-sm">
-                  <span className="flex-1">Ingredient</span>
+                  <span className="flex-1">{t("common.ingredient")}</span>
                   <input
                     className="bg-background w-24 rounded-md border px-2 py-1 text-right"
                     defaultValue={0.0}

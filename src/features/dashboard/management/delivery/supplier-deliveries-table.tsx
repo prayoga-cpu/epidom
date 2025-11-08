@@ -263,10 +263,10 @@ export function SupplierDeliveriesTable({
             <div className="flex flex-col items-center justify-center py-12">
               <Package className="text-muted-foreground mb-4 h-12 w-12" />
               <h3 className="mb-2 text-lg font-semibold">
-                {t("management.delivery.noDeliveries") || "No Deliveries"}
+                {t("management.delivery.noDeliveries")}
               </h3>
               <p className="text-muted-foreground text-sm">
-                {t("management.delivery.noDeliveriesDescription") || "No supplier deliveries found"}
+                {t("management.delivery.noDeliveriesDescription")}
               </p>
             </div>
           )}

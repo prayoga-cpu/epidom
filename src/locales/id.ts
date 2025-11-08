@@ -1,6 +1,15 @@
 export const id = {
-  common: {
-    brand: "EPIDOM",
+    common: {
+      brand: "EPIDOM",
+      item: "Item",
+      ingredient: "Bahan",
+      uncategorized: "Tidak Dikategorikan",
+      stockStatus: {
+      outOfStock: "Habis",
+      lowStock: "Stok Rendah",
+      inStock: "Tersedia",
+      overstocked: "Stok Berlebih",
+    },
     nav: {
       home: "Beranda",
       services: "Layanan",
@@ -12,6 +21,7 @@ export const id = {
       openMenu: "Buka menu",
       closeMenu: "Tutup menu",
       homepage: "Halaman utama",
+      searchAriaLabel: "Cari",
     },
     language: {
       label: "Bahasa",
@@ -51,6 +61,16 @@ export const id = {
     },
     datePicker: {
       pickDate: "Pilih tanggal",
+      pickDateRange: "Pilih rentang tanggal",
+      selectPreset: "Pilih preset",
+      presets: {
+        today: "Hari ini",
+        last7Days: "7 hari terakhir",
+        last30Days: "30 hari terakhir",
+        last90Days: "90 hari terakhir",
+        thisYear: "Tahun ini",
+        custom: "Kustom",
+      },
     },
     metrics: {
       plannedQuantity: "Jumlah yang Direncanakan",
@@ -85,6 +105,8 @@ export const id = {
       exportAsPdf: "Ekspor sebagai PDF",
       logout: "Keluar",
       searchPlaceholder: "Cari...",
+      retry: "Coba Lagi",
+      select: "Pilih",
     },
   },
   search: {
@@ -887,11 +909,15 @@ export const id = {
     materials: {
       pageTitle: "Bahan",
       addTitle: "Tambah Bahan Baru",
+      addButton: "Tambah Bahan",
       addDescription: "Tambahkan bahan baru ke inventaris Anda. Isi semua kolom yang wajib diisi.",
       editTitle: "Edit Bahan",
       editDescription: "Perbarui informasi bahan",
       detailsTitle: "Detail Bahan",
       detailsDescription: "Lihat informasi lengkap tentang bahan ini",
+      title: "Bahan",
+      unknownMaterial: "Bahan Tidak Dikenal",
+      noDescription: "Tidak ada deskripsi yang disediakan",
 
       // Form fields
       form: {
@@ -901,6 +927,8 @@ export const id = {
         selectCategory: "Pilih kategori",
         supplier: "Pemasok",
         selectSupplier: "Pilih pemasok",
+        addSupplier: "Tambah Pemasok",
+        noSuppliersYet: "Belum ada pemasok yang ditambahkan. Klik \"Tambah Pemasok\" untuk menghubungkan pemasok ke bahan ini.",
         quantity: "Jumlah",
         unit: "Satuan",
         selectUnit: "Satuan",
@@ -963,6 +991,7 @@ export const id = {
     recipes: {
       pageTitle: "Resep",
       addTitle: "Buat Resep Baru",
+      addButton: "Tambah Resep",
       editTitle: "Edit Resep",
       detailsTitle: "Detail Resep",
       duplicateTitle: "Duplikasi Resep",
@@ -1148,6 +1177,7 @@ export const id = {
     products: {
       pageTitle: "Produk",
       addTitle: "Tambah Produk Baru",
+      addButton: "Tambah Produk",
       editTitle: "Edit Produk",
       detailsTitle: "Detail Produk",
       addDescription:
@@ -1244,6 +1274,7 @@ export const id = {
     suppliers: {
       pageTitle: "Pemasok",
       addTitle: "Tambah Pemasok Baru",
+      addButton: "Tambah Pemasok",
       editTitle: "Edit Pemasok",
       detailsTitle: "Detail Pemasok",
       addDescription:
@@ -1336,8 +1367,10 @@ export const id = {
   filters: {
     allSuppliers: "Semua Pemasok",
     allStock: "Semua Stok",
+    allStockLevels: "Semua Level Stok",
     inStock: "Tersedia",
     lowStock: "Stok Rendah",
+    outOfStock: "Habis",
     critical: "Kritis",
     overstocked: "Stok Berlebih",
     allCategories: "Semua Kategori",
@@ -1380,6 +1413,14 @@ export const id = {
     difficultyHighLow: "Kesulitan (Tinggi-Rendah)",
     prepTimeLowHigh: "Waktu Persiapan (Rendah-Tinggi)",
     prepTimeHighLow: "Waktu Persiapan (Tinggi-Rendah)",
+    timeShortest: "Waktu (Terpendek)",
+    timeLongest: "Waktu (Terpanjang)",
+    contactAZ: "Kontak (A-Z)",
+    contactZA: "Kontak (Z-A)",
+    newest: "Terbaru",
+    newestFirst: "Terbaru",
+    oldest: "Terlama",
+    oldestFirst: "Terlama",
   },
   tables: {
     order: "Pesanan",
@@ -1444,8 +1485,14 @@ export const id = {
     getStartedRecipe: "Mulai dengan membuat resep pertama Anda",
     getStartedProduct: "Mulai dengan menambahkan produk pertama Anda",
     getStartedSupplier: "Mulai dengan menambahkan pemasok pertama Anda",
+    errorLoadingMaterials: "Kesalahan memuat bahan",
+    errorLoadingRecipes: "Kesalahan memuat resep",
+    errorLoadingProducts: "Kesalahan memuat produk",
+    errorLoadingSuppliers: "Kesalahan memuat pemasok",
     noDataToExport: "Tidak ada data untuk diekspor",
     noDataToExportDesc: "Tidak ada data yang tersedia untuk diekspor.",
+    exportStarted: "Ekspor dimulai",
+    exportStartedDescription: "Ekspor Anda akan segera diunduh.",
     exportSuccessful: "Ekspor berhasil",
     exportFailed: "Ekspor gagal",
     exportFailedDesc: "Terjadi kesalahan saat mengekspor data.",
@@ -1782,10 +1829,26 @@ export const id = {
   stores: {
     title: "Toko Anda",
     createStore: "Buat toko",
+    editStore: "Edit Toko",
+    updateStore: "Perbarui Toko",
+    editDescription: "Perbarui informasi toko Anda. Semua field kecuali nama bersifat opsional.",
     storeName: "Nama Toko",
+    storeNamePlaceholder: "contoh: Toko Roti Artisan Jakarta",
     city: "Kota",
+    cityPlaceholder: "contoh: Jakarta",
+    country: "Negara",
+    countryPlaceholder: "contoh: Indonesia",
+    addressPlaceholder: "contoh: Jl. Sudirman No. 123",
+    phonePlaceholder: "contoh: +62 812 3456 7890",
+    emailPlaceholder: "contoh: kontak@toko.com",
+    storeImage: "Gambar Toko",
     noStores: "Belum ada toko",
     createFirst: "Buat toko pertama Anda untuk memulai",
+    searchPlaceholder: "Cari toko berdasarkan nama, kota, atau alamat...",
+    createSuccess: "Toko berhasil dibuat",
+    createError: "Gagal membuat toko",
+    editSuccess: "Toko berhasil diperbarui",
+    editError: "Gagal memperbarui toko",
   },
   tabs: {
     delivery: "Pengiriman",
@@ -1833,6 +1896,7 @@ export const id = {
       },
       noMatches: "Tidak ada pengiriman yang sesuai dengan filter Anda",
       noDeliveries: "Belum ada pengiriman",
+      noDeliveriesDescription: "Tidak ada pengiriman supplier ditemukan",
       actions: {
         edit: "Edit",
         updateStatus: "Perbarui Status",
@@ -1974,6 +2038,7 @@ export const id = {
       selectItemDescription:
         "Pilih item dari daftar untuk melihat detail dan melakukan penyesuaian",
       noItemsFound: "Tidak ada item ditemukan",
+      noStockItemsYet: "Belum ada item stok",
       selectAll: "Pilih Semua",
       deselectAll: "Batalkan Semua",
 
@@ -2212,6 +2277,8 @@ export const id = {
       metrics: {
         totalBatches: "Total Batch",
         totalBatchesDescription: "Semua batch produksi",
+        completedBatches: "Batch Selesai",
+        completedBatchesDescription: "Jumlah batch yang selesai",
         averageQuality: "Rata-rata Kualitas",
         averageQualityDescription: "Skor kualitas rata-rata",
         efficiency: "Efisiensi",
@@ -2352,6 +2419,20 @@ export const id = {
     reorderLevel: "Level Pesan Ulang",
     lastMovement: "Pergerakan Terakhir",
     recentActivity: "Aktivitas Terakhir",
+
+    // Filters for stock levels
+    filters: {
+      allItems: "Semua Item",
+      allItemsPlaceholder: "Semua Item",
+      allStatus: "Semua Status",
+      allStatusPlaceholder: "Semua Status Stok",
+      outOfStock: "Habis",
+      lowStock: "Stok Rendah",
+      inStock: "Tersedia",
+      overstocked: "Stok Berlebih",
+    },
+    item: "item",
+    items: "item",
 
     // Stock History
     stockHistory: "Riwayat Stok",

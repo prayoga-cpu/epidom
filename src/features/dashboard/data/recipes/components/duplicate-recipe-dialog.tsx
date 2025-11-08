@@ -87,8 +87,8 @@ export default function DuplicateRecipeDialog({
   const duplicateRecipe = useDuplicateRecipe(storeId);
 
   const STEPS = [
-    { id: 1, name: t("data.recipes.duplicateDialog.steps.basicInfo") || "Basic Info" },
-    { id: 2, name: t("data.recipes.duplicateDialog.steps.review") || "Review & Confirm" },
+    { id: 1, name: t("data.recipes.duplicateDialog.steps.basicInfo") },
+    { id: 2, name: t("data.recipes.duplicateDialog.steps.review") },
   ];
 
   const form = useForm<DuplicateRecipeFormValues>({
@@ -114,12 +114,11 @@ export default function DuplicateRecipeDialog({
         recipeId: recipe.id,
         newName: data.newName,
       });
-      toast.success(t("Recipe duplicated successfully") || "Recipe duplicated successfully");
+      toast.success(t("data.recipes.toasts.duplicated.title"));
       onOpenChange(false);
     } catch (error) {
       toast.error(
-        t("Failed to duplicate recipe. Please try again.") ||
-          "Failed to duplicate recipe. Please try again."
+        t("messages.errorLoadingRecipes")
       );
     }
   };
@@ -159,11 +158,10 @@ export default function DuplicateRecipeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5" />
-            {t("data.recipes.duplicateTitle") || "Duplicate Recipe"}
+            {t("data.recipes.duplicateTitle")}
           </DialogTitle>
           <DialogDescription>
-            {t("data.recipes.duplicateDescription") ||
-              "Create a copy of this recipe with a new name. All ingredients and instructions will be copied."}
+            {t("data.recipes.duplicateDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -206,7 +204,7 @@ export default function DuplicateRecipeDialog({
                 <div className="bg-muted/50 rounded-lg border p-4">
                   <p className="text-muted-foreground text-sm">
                     <strong>
-                      {t("data.recipes.duplicateDialog.originalRecipe") || "Original Recipe"}:
+                      {t("data.recipes.duplicateDialog.originalRecipe")}:
                     </strong>{" "}
                     {recipe.name}
                   </p>
@@ -218,11 +216,11 @@ export default function DuplicateRecipeDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("data.recipes.duplicateDialog.nameLabel") || "New Recipe Name"} *
+                        {t("data.recipes.duplicateDialog.nameLabel")} *
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t("data.recipes.namePlaceholder") || "Recipe name"}
+                          placeholder={t("data.recipes.form.namePlaceholder")}
                           {...field}
                         />
                       </FormControl>
@@ -250,20 +248,20 @@ export default function DuplicateRecipeDialog({
                 <Card className="border-primary/50 bg-primary/5">
                   <CardHeader>
                     <CardTitle className="text-lg">
-                      {t("data.recipes.duplicateDialog.comparison") || "Recipe Comparison"}
+                      {t("data.recipes.duplicateDialog.comparison")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
                         <p className="text-muted-foreground text-xs">
-                          {t("data.recipes.duplicateDialog.originalName") || "Original Name"}
+                          {t("data.recipes.duplicateDialog.originalName")}
                         </p>
                         <p className="font-medium">{recipe.name}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs">
-                          {t("data.recipes.duplicateDialog.newName") || "New Name"}
+                          {t("data.recipes.duplicateDialog.newName")}
                         </p>
                         <p className="text-primary font-medium">{form.watch("newName")}</p>
                       </div>
@@ -271,7 +269,7 @@ export default function DuplicateRecipeDialog({
                     <Separator />
                     <div>
                       <p className="text-muted-foreground text-xs">
-                        {t("data.recipes.form.category") || "Category"}
+                        {t("data.recipes.form.category")}
                       </p>
                       <Badge variant="outline" className="mt-1">
                         {recipe.category}
@@ -284,7 +282,7 @@ export default function DuplicateRecipeDialog({
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">
-                      {t("data.recipes.duplicateDialog.recipeDetails") || "Recipe Details (Copied)"}
+                      {t("data.recipes.duplicateDialog.recipeDetails")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -294,7 +292,7 @@ export default function DuplicateRecipeDialog({
                         <Package className="text-primary h-4 w-4" />
                         <div>
                           <p className="text-muted-foreground text-xs">
-                            {t("data.recipes.review.yield") || "Yield"}
+                            {t("data.recipes.review.yield")}
                           </p>
                           <p className="text-sm font-medium">
                             {recipe.yieldQuantity} {recipe.yieldUnit}
@@ -305,7 +303,7 @@ export default function DuplicateRecipeDialog({
                         <Clock className="h-4 w-4 text-amber-600" />
                         <div>
                           <p className="text-muted-foreground text-xs">
-                            {t("data.recipes.review.productionTime") || "Production Time"}
+                            {t("data.recipes.review.productionTime")}
                           </p>
                           <p className="text-sm font-medium">
                             {formatDuration(recipe.productionTimeMinutes)}
@@ -316,7 +314,7 @@ export default function DuplicateRecipeDialog({
                         <DollarSign className="h-4 w-4 text-green-600" />
                         <div>
                           <p className="text-muted-foreground text-xs">
-                            {t("data.recipes.duplicateDialog.costSummary") || "Cost"}
+                            {t("data.recipes.duplicateDialog.costSummary")}
                           </p>
                           <p className="text-sm font-medium">{formatCurrency(totalCost)}</p>
                         </div>
@@ -341,7 +339,7 @@ export default function DuplicateRecipeDialog({
                               key={index}
                               className="text-muted-foreground flex justify-between text-sm"
                             >
-                              <span>{material?.name || "Unknown"}</span>
+                              <span>{material?.name || t("data.materials.unknownMaterial")}</span>
                               <span>
                                 {ingredient.quantity} {ingredient.unit}
                               </span>
@@ -384,19 +382,19 @@ export default function DuplicateRecipeDialog({
                   disabled={duplicateRecipe.isPending}
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
-                  {t("actions.previous") || "Back"}
+                  {t("common.actions.previous")}
                 </Button>
               )}
 
               {currentStep < 2 ? (
                 <Button type="button" onClick={handleNext}>
-                  {t("actions.next") || "Next"}
+                  {t("common.actions.next")}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
                 <Button type="submit" disabled={duplicateRecipe.isPending}>
                   {duplicateRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t("data.recipes.duplicate") || "Duplicate Recipe"}
+                  {t("data.recipes.duplicate")}
                 </Button>
               )}
             </DialogFooter>

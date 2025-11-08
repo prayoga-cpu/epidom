@@ -28,15 +28,13 @@ export function CreateStoreDialog() {
   const { mutate: createStore, isPending } = useCreateStore();
 
   const handleSubmit = (data: CreateStoreInput) => {
-    console.log("Creating store with data:", data);
     createStore(data, {
-      onSuccess: (store) => {
-        console.log("Store created successfully:", store);
+      onSuccess: () => {
         toast.success(t("stores.createSuccess") || "Store created successfully");
         setOpen(false);
+        // Form will be reset when dialog closes and reopens
       },
       onError: (error) => {
-        console.error("Store creation failed:", error);
         toast.error(error.message || t("stores.createError") || "Failed to create store");
       },
     });
@@ -53,8 +51,9 @@ export function CreateStoreDialog() {
           {t("stores.createStore")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="mx-4 max-h-[90vh] overflow-y-auto sm:mx-0 sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="mx-4 flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:mx-0 sm:max-w-[500px]">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
           <DialogTitle className="text-xl font-bold sm:text-2xl">
             {t("stores.createStore")}
           </DialogTitle>
@@ -62,12 +61,41 @@ export function CreateStoreDialog() {
             {t("stores.createFirst") || "Create your first store to start managing inventory"}
           </DialogDescription>
         </DialogHeader>
-        <StoreForm
-          onSubmit={handleSubmit}
-          isLoading={isPending}
-          submitText={t("actions.save") || "Save"}
-          onCancel={() => setOpen(false)}
-        />
+
+        {/* Scrollable Form Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {open && (
+            <StoreForm
+              key="create-store-form"
+              onSubmit={handleSubmit}
+              isLoading={isPending}
+              submitText={t("actions.save") || "Save"}
+              onCancel={() => setOpen(false)}
+              showActions={false}
+            />
+          )}
+        </div>
+
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
+              {t("actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="create-store-form"
+              disabled={isPending}
+            >
+              {isPending ? t("actions.saving") || "Saving..." : t("actions.save") || "Save"}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

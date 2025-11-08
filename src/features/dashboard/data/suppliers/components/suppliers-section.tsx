@@ -123,7 +123,7 @@ export function SuppliersSection() {
 
     try {
       await deleteSupplier.mutateAsync(selectedSupplier.id);
-      toast.success(t("data.suppliers.toasts.deleted.title") || "Supplier deleted successfully");
+      toast.success(t("data.suppliers.toasts.deleted.title"));
       setDeleteDialogOpen(false);
       setSelectedSupplier(null);
     } catch (error) {
@@ -149,9 +149,9 @@ export function SuppliersSection() {
   const handleExport = async () => {
     try {
       await exportSuppliers.mutateAsync({ storeId, filters });
-      toast.success("Suppliers exported successfully");
+      toast.success(t("messages.exportSuccessful"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to export suppliers");
+      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingSuppliers"));
     }
   };
 
@@ -213,7 +213,7 @@ export function SuppliersSection() {
         <CardHeader className="border-b pb-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg">
-              {t("data.suppliers.pageTitle") || "Suppliers"}
+              {t("data.suppliers.pageTitle")}
             </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -227,13 +227,13 @@ export function SuppliersSection() {
                 ) : (
                   <Download className="mr-2 h-4 w-4" />
                 )}
-                {t("actions.export") || "Export"}
+                {t("common.actions.export")}
               </Button>
               <AddSupplierDialog />
               {bulkSelectMode && selectedIds.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete") || "Delete"} ({selectedIds.size})
+                  {t("common.actions.delete")} ({selectedIds.size})
                 </Button>
               )}
               <Button
@@ -244,12 +244,12 @@ export function SuppliersSection() {
                 {bulkSelectMode ? (
                   <>
                     <X className="mr-2 h-4 w-4" />
-                    {t("actions.cancel") || "Cancel"}
+                    {t("common.actions.cancel")}
                   </>
                 ) : (
                   <>
                     <CheckSquare className="mr-2 h-4 w-4" />
-                    {t("common.actions.view") || "Select"}
+                    {t("common.actions.select")}
                   </>
                 )}
               </Button>
@@ -264,7 +264,7 @@ export function SuppliersSection() {
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("actions.searchPlaceholder") || "Search..."}
+                placeholder={t("common.search")}
                 value={filters.search}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
@@ -291,19 +291,19 @@ export function SuppliersSection() {
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
-                  <SelectItem value="name-desc">{t("sort.nameZA") || "Name (Z-A)"}</SelectItem>
+                  <SelectItem value="name-asc">{t("sort.nameAZ")}</SelectItem>
+                  <SelectItem value="name-desc">{t("sort.nameZA")}</SelectItem>
                   <SelectItem value="contactPerson-asc">
-                    {t("sort.contactAZ") || "Contact (A-Z)"}
+                    {t("sort.contactAZ")}
                   </SelectItem>
                   <SelectItem value="contactPerson-desc">
-                    {t("sort.contactZA") || "Contact (Z-A)"}
+                    {t("sort.contactZA")}
                   </SelectItem>
                   <SelectItem value="createdAt-desc">
-                    {t("sort.newest") || "Newest First"}
+                    {t("sort.newest")}
                   </SelectItem>
                   <SelectItem value="createdAt-asc">
-                    {t("sort.oldest") || "Oldest First"}
+                    {t("sort.oldest")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -325,8 +325,8 @@ export function SuppliersSection() {
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll") || "Select All"} ({selectedIds.size}{" "}
-                  {t("common.of") || "of"} {suppliers.length} {t("common.selected") || "selected"})
+                  {t("common.selectAll")} ({selectedIds.size}{" "}
+                  {t("common.of")} {suppliers.length} {t("common.selected")})
                 </span>
               </div>
             )}

@@ -63,12 +63,7 @@ interface AddRecipeDialogProps {
   trigger?: React.ReactNode;
 }
 
-const STEPS = [
-  { id: 1, name: "Basic Info", icon: ClipboardList },
-  { id: 2, name: "Ingredients", icon: Package },
-  { id: 3, name: "Instructions", icon: FileText },
-  { id: 4, name: "Review", icon: Calculator },
-];
+// STEPS will be created inside component to use translation
 
 const RECIPE_CATEGORIES = [
   "Bread & Pastries",
@@ -87,6 +82,14 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   const { currency, convertPrice, formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
+
+  // STEPS with translation
+  const STEPS = [
+    { id: 1, name: t("data.recipes.steps.basicInfo"), icon: ClipboardList },
+    { id: 2, name: t("data.recipes.steps.ingredients"), icon: Package },
+    { id: 3, name: t("data.recipes.steps.instructions"), icon: FileText },
+    { id: 4, name: t("data.recipes.steps.review"), icon: Calculator },
+  ];
 
   // Fetch real materials for dropdown
   const { data: materialsData } = useMaterials(storeId);
@@ -139,7 +142,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
       console.log("Recipe form data being submitted:", data);
       await createRecipe.mutateAsync(data);
 
-      toast.success(t("Recipe created successfully"));
+      toast.success(t("data.recipes.toasts.created.title"));
       form.reset();
       setCurrentStep(1);
       setOpen(false);
@@ -226,16 +229,15 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
         {trigger || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            {t("common.actions.add") || "Add Recipe"}
+            {t("data.recipes.addButton")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px] [&>button]:hidden">
         <DialogHeader>
-          <DialogTitle>{t("data.recipes.addTitle") || "Create New Recipe"}</DialogTitle>
+          <DialogTitle>{t("data.recipes.addTitle")}</DialogTitle>
           <DialogDescription>
-            Create a new recipe with ingredients and instructions. Step {currentStep} of{" "}
-            {STEPS.length}
+            {t("data.recipes.addDescription", { step: currentStep, total: STEPS.length })}
           </DialogDescription>
         </DialogHeader>
 
@@ -444,7 +446,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                     <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                       <Package className="text-muted-foreground mb-2 h-12 w-12" />
                       <p className="text-muted-foreground text-sm">
-                        No ingredients added yet. Click "Add Ingredient" to start.
+                        {t("data.recipes.ingredients.noIngredients")}
                       </p>
                     </CardContent>
                   </Card>
@@ -491,7 +493,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                     {materials.map((material) => (
                                       <SelectItem key={material.id} value={material.id}>
                                         {material.name} (
-                                        {material.category?.replace("_", " ") || "Uncategorized"})
+                                        {material.category?.replace("_", " ") || t("common.uncategorized")})
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -759,18 +761,18 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
               {currentStep > 1 && (
                 <Button type="button" variant="outline" onClick={prevStep}>
                   <ChevronLeft className="mr-2 h-4 w-4" />
-                  {t("actions.previous") || "Previous"}
+                  {t("common.actions.previous")}
                 </Button>
               )}
               {currentStep < 4 ? (
                 <Button type="button" onClick={nextStep}>
-                  {t("actions.next") || "Next"}
+                  {t("common.actions.next")}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
                 <Button type="submit" disabled={createRecipe.isPending}>
                   {createRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t("data.recipes.create") || "Create Recipe"}
+                  {t("data.recipes.create") || t("data.recipes.addButton")}
                 </Button>
               )}
             </DialogFooter>

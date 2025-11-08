@@ -123,7 +123,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
       form.reset();
       setOpen(false);
     } catch (error) {
-      toast.error(`${error instanceof Error ? error.message : "Failed to add material"}`);
+      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingMaterials"));
     }
   }
 
@@ -133,15 +133,15 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         {trigger || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            Add Material
+            {t("data.materials.addButton")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>Add New Material</DialogTitle>
+          <DialogTitle>{t("data.materials.addTitle")}</DialogTitle>
           <DialogDescription>
-            Add a new material to your inventory. Fill in all required fields.
+            {t("data.materials.addDescription")}
           </DialogDescription>
         </DialogHeader>
         <Separator />
@@ -206,7 +206,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select unit" />
+                            <SelectValue placeholder={t("data.materials.form.selectUnit")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -349,13 +349,13 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   onClick={() => append({ supplierId: "", price: 0, isPreferred: false })}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Supplier
+                  {t("data.materials.form.addSupplier")}
                 </Button>
               </div>
 
               {fields.length === 0 && (
                 <p className="text-muted-foreground text-sm">
-                  No suppliers added yet. Click "Add Supplier" to link suppliers to this material.
+                  {t("data.materials.form.noSuppliersYet")}
                 </p>
               )}
 
@@ -461,11 +461,11 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 onClick={() => setOpen(false)}
                 disabled={createMaterial.isPending}
               >
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={createMaterial.isPending}>
                 {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Material
+                {t("data.materials.addButton")}
               </Button>
             </DialogFooter>
           </form>

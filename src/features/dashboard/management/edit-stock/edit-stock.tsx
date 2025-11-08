@@ -256,8 +256,8 @@ export function EditStockCard() {
                   <div className="rounded-lg border border-dashed p-8 text-center">
                     <p className="text-muted-foreground text-sm">
                       {searchQuery
-                        ? t("management.editStock.noItemsFound") || "No items found"
-                        : "No stock items yet"}
+                        ? t("management.editStock.noItemsFound")
+                        : t("management.editStock.noStockItemsYet")}
                     </p>
                   </div>
                 ) : (

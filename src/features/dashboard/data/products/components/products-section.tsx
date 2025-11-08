@@ -184,9 +184,9 @@ export function ProductsSection() {
   const handleExport = async () => {
     try {
       await exportProducts.mutateAsync({ storeId, filters });
-      toast.success("Products exported successfully");
+      toast.success(t("messages.exportSuccessful"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to export products");
+      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingProducts"));
     }
   };
 
@@ -261,7 +261,7 @@ export function ProductsSection() {
                 ) : (
                   <Download className="mr-2 h-4 w-4" />
                 )}
-                {t("actions.export") || "Export"}
+                {t("common.actions.export")}
               </Button>
               <AddProductDialog storeId={storeId} />
               {bulkSelectMode && selectedIds.size > 0 && (
@@ -340,10 +340,10 @@ export function ProductsSection() {
                     {t("sort.priceHighLow") || "Price (High-Low)"}
                   </SelectItem>
                   <SelectItem value="createdAt-desc">
-                    {t("sort.newest") || "Newest First"}
+                    {t("sort.newest")}
                   </SelectItem>
                   <SelectItem value="createdAt-asc">
-                    {t("sort.oldest") || "Oldest First"}
+                    {t("sort.oldest")}
                   </SelectItem>
                 </SelectContent>
               </Select>

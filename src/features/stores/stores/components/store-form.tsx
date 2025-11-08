@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createStoreSchema, CreateStoreInput } from "@/lib/validation/business.schemas";
@@ -15,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/shared/image-upload";
 import { Store } from "../hooks/use-stores";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface StoreFormProps {
   /**
@@ -37,6 +39,10 @@ interface StoreFormProps {
    * Cancel handler
    */
   onCancel?: () => void;
+  /**
+   * Whether to show action buttons (if false, buttons are handled externally)
+   */
+  showActions?: boolean;
 }
 
 /**
@@ -49,7 +55,11 @@ export function StoreForm({
   isLoading = false,
   submitText = "Save",
   onCancel,
+  showActions = true,
 }: StoreFormProps) {
+  const { t } = useI18n();
+  const firstInputRef = useRef<HTMLInputElement>(null);
+
   const form = useForm<CreateStoreInput>({
     resolver: zodResolver(createStoreSchema),
     defaultValues: {
@@ -63,37 +73,39 @@ export function StoreForm({
     },
   });
 
+  // Auto-focus first field when form mounts (for create mode)
+  useEffect(() => {
+    if (!defaultValues && firstInputRef.current) {
+      const timer = setTimeout(() => firstInputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [defaultValues]);
+
+  const formId = !showActions && !defaultValues ? "create-store-form" : !showActions ? "edit-store-form" : undefined;
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form
+        id={formId}
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-4"
+      >
         {/* Store Name - Required */}
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Store Name *</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="e.g., Artisan Bakery Paris" disabled={isLoading} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* City - Optional */}
-        <FormField
-          control={form.control}
-          name="city"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>City</FormLabel>
+              <FormLabel>
+                {t("stores.storeName")} <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <Input
                   {...field}
-                  value={field.value || ""}
-                  placeholder="e.g., Paris"
+                  ref={firstInputRef}
+                  placeholder={t("stores.storeNamePlaceholder") || "e.g., Artisan Bakery Paris"}
                   disabled={isLoading}
+                  autoFocus={!defaultValues}
                 />
               </FormControl>
               <FormMessage />
@@ -107,12 +119,32 @@ export function StoreForm({
           name="address"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Address</FormLabel>
+              <FormLabel>{t("common.address") || "Address"}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   value={field.value || ""}
-                  placeholder="e.g., 123 Rue de la Paix"
+                  placeholder={t("stores.addressPlaceholder") || "e.g., 123 Rue de la Paix"}
+                  disabled={isLoading}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* City - Optional */}
+        <FormField
+          control={form.control}
+          name="city"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("stores.city")}</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  value={field.value || ""}
+                  placeholder={t("stores.cityPlaceholder") || "e.g., Paris"}
                   disabled={isLoading}
                 />
               </FormControl>
@@ -127,12 +159,12 @@ export function StoreForm({
           name="country"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Country</FormLabel>
+              <FormLabel>{t("stores.country") || "Country"}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   value={field.value || ""}
-                  placeholder="e.g., France"
+                  placeholder={t("stores.countryPlaceholder") || "e.g., France"}
                   disabled={isLoading}
                 />
               </FormControl>
@@ -147,13 +179,13 @@ export function StoreForm({
           name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone</FormLabel>
+              <FormLabel>{t("common.phone")}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   value={field.value || ""}
                   type="tel"
-                  placeholder="e.g., +33 1 23 45 67 89"
+                  placeholder={t("stores.phonePlaceholder") || "e.g., +33 1 23 45 67 89"}
                   disabled={isLoading}
                 />
               </FormControl>
@@ -168,13 +200,13 @@ export function StoreForm({
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t("common.email")}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   value={field.value || ""}
                   type="email"
-                  placeholder="e.g., contact@store.com"
+                  placeholder={t("stores.emailPlaceholder") || "e.g., contact@store.com"}
                   disabled={isLoading}
                 />
               </FormControl>
@@ -189,7 +221,7 @@ export function StoreForm({
           name="image"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Store Image</FormLabel>
+              <FormLabel>{t("stores.storeImage") || "Store Image"}</FormLabel>
               <FormControl>
                 <ImageUpload
                   value={field.value || undefined}
@@ -204,17 +236,19 @@ export function StoreForm({
           )}
         />
 
-        {/* Form Actions */}
-        <div className="flex justify-end gap-3 pt-4">
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-              Cancel
+        {/* Form Actions - Only show if showActions is true */}
+        {showActions && (
+          <div className="flex justify-end gap-3 pt-4">
+            {onCancel && (
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+                {t("actions.cancel")}
+              </Button>
+            )}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? t("actions.saving") || "Saving..." : submitText}
             </Button>
-          )}
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Saving..." : submitText}
-          </Button>
-        </div>
+          </div>
+        )}
       </form>
     </Form>
   );

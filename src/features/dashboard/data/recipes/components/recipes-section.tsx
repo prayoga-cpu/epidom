@@ -60,14 +60,15 @@ type SortField =
   | "updatedAt";
 type SortOrder = "asc" | "desc";
 
-const RECIPE_CATEGORIES = [
-  "Bread & Pastries",
-  "Cakes & Desserts",
-  "Confectionery",
-  "Dairy Products",
-  "Beverages",
-  "Sauces & Condiments",
-  "Other",
+// Recipe categories - use translation keys
+const getRecipeCategories = (t: (key: string) => string) => [
+  t("data.recipes.categories.breadPastries"),
+  t("data.recipes.categories.cakesDesserts"),
+  t("data.recipes.categories.confectionery"),
+  t("data.recipes.categories.dairyProducts"),
+  t("data.recipes.categories.beverages"),
+  t("data.recipes.categories.saucesCondiments"),
+  t("data.recipes.categories.other"),
 ];
 
 export function RecipesSection() {
@@ -208,12 +209,12 @@ export function RecipesSection() {
           take: 100,
         },
       });
-      toast.success("Export started", {
-        description: "Your recipes export will download shortly.",
+      toast.success(t("messages.exportStarted"), {
+        description: t("messages.exportStartedDescription"),
       });
     } catch (error) {
-      toast.error("Export failed", {
-        description: error instanceof Error ? error.message : "Failed to export recipes",
+      toast.error(t("messages.exportFailed"), {
+        description: error instanceof Error ? error.message : t("messages.errorLoadingRecipes"),
       });
     }
   };
@@ -268,7 +269,7 @@ export function RecipesSection() {
                 ) : (
                   <Download className="mr-2 h-4 w-4" />
                 )}
-                {t("actions.export") || "Export"}
+                {t("common.actions.export")}
               </Button>
               <AddRecipeDialog />
               {bulkSelectMode && selectedIds.size > 0 && (
@@ -336,7 +337,7 @@ export function RecipesSection() {
                   <SelectItem value="all">
                     {t("filters.allCategories") || "All Categories"}
                   </SelectItem>
-                  {RECIPE_CATEGORIES.map((category) => (
+                  {getRecipeCategories(t).map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>
@@ -379,10 +380,10 @@ export function RecipesSection() {
                     {t("sort.categoryZA") || "Category (Z-A)"}
                   </SelectItem>
                   <SelectItem value="createdAt-asc">
-                    {t("sort.oldestFirst") || "Oldest First"}
+                    {t("sort.oldestFirst")}
                   </SelectItem>
                   <SelectItem value="createdAt-desc">
-                    {t("sort.newestFirst") || "Newest First"}
+                    {t("sort.newestFirst")}
                   </SelectItem>
                 </SelectContent>
               </Select>

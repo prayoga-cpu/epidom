@@ -126,7 +126,7 @@ export default function MaterialDetailsDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-muted-foreground text-xs">Category</p>
-                    <p className="text-sm font-medium">{material.category || "Uncategorized"}</p>
+                    <p className="text-sm font-medium">{material.category || t("common.uncategorized")}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Unit</p>

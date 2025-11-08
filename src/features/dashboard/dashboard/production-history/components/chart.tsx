@@ -69,9 +69,12 @@ function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
       }
 
       // Check if it's a week format (Week 1, Week 2, etc.)
-      if (dateValue.startsWith("Week ")) {
-        const weekNum = dateValue.replace("Week ", "");
-        return `${t("chart.week")} ${weekNum}`;
+      // Support both English "Week " and translated week prefix
+      const weekPrefix = t("chart.week");
+      const weekPrefixEn = "Week "; // English fallback for parsing legacy data
+      if (dateValue.startsWith(weekPrefixEn) || dateValue.startsWith(weekPrefix)) {
+        const weekNum = dateValue.replace(weekPrefixEn, "").replace(weekPrefix, "").trim();
+        return `${weekPrefix} ${weekNum}`;
       }
 
       // Return as is if no translation found
@@ -141,9 +144,12 @@ export default function Chart({ chartData }: Chart) {
     }
 
     // Check if it's a week format (Week 1, Week 2, etc.)
-    if (value.startsWith("Week ")) {
-      const weekNum = value.replace("Week ", "");
-      return `${t("chart.week")} ${weekNum}`;
+    // Support both English "Week " and translated week prefix
+    const weekPrefix = t("chart.week");
+    const weekPrefixEn = "Week "; // English fallback for parsing legacy data
+    if (value.startsWith(weekPrefixEn) || value.startsWith(weekPrefix)) {
+      const weekNum = value.replace(weekPrefixEn, "").replace(weekPrefix, "").trim();
+      return `${weekPrefix} ${weekNum}`;
     }
 
     // Return as is if no translation found

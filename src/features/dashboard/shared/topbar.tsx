@@ -41,7 +41,7 @@ export function Topbar() {
                   className="text-primary-foreground hover:bg-white/10 md:hidden"
                 >
                   <Menu className="size-5" />
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t("common.nav.openMenu")}</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="h-[100dvh] w-[280px] p-0">
@@ -86,7 +86,7 @@ export function Topbar() {
               onClick={() => setSearchOpen(true)}
             >
               <Search className="size-5" />
-              <span className="sr-only">Search</span>
+              <span className="sr-only">{t("common.nav.searchAriaLabel")}</span>
             </Button>
 
             {/* Store switcher - hidden on mobile */}

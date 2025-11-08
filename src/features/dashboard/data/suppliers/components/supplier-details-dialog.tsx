@@ -197,10 +197,10 @@ export default function SupplierDetailsDialog({
                               }
                             >
                               {stockStatus === "low"
-                                ? "Low Stock"
+                                ? t("common.stockStatus.lowStock")
                                 : stockStatus === "high"
-                                  ? "Overstocked"
-                                  : "In Stock"}
+                                  ? t("common.stockStatus.overstocked")
+                                  : t("common.stockStatus.inStock")}
                             </Badge>
                           </div>
                         </div>

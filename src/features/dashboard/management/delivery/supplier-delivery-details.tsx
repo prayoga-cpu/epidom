@@ -54,12 +54,12 @@ export function SupplierDeliveryDetails({
       <Card className="shadow-md transition-shadow hover:shadow-lg">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg">
-            {t("pages.deliveryDetails") || "Delivery Details"}
+            {t("pages.deliveryDetails")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex min-h-[400px] items-center justify-center">
           <p className="text-muted-foreground text-center text-sm">
-            {t("messages.selectDelivery") || "Select a delivery to view details"}
+            {t("messages.selectDelivery")}
           </p>
         </CardContent>
       </Card>
@@ -135,13 +135,13 @@ export function SupplierDeliveryDetails({
   const getStatusLabel = (status: SupplierDeliveryStatus) => {
     switch (status) {
       case SupplierDeliveryStatus.PENDING:
-        return t("management.delivery.status.pending") || "Pending";
+        return t("management.delivery.status.pending");
       case SupplierDeliveryStatus.IN_TRANSIT:
-        return t("management.delivery.status.inTransit") || "In Transit";
+        return t("management.delivery.status.inTransit");
       case SupplierDeliveryStatus.RECEIVED:
-        return t("management.delivery.status.received") || "Received";
+        return t("management.delivery.status.received");
       case SupplierDeliveryStatus.CANCELLED:
-        return t("management.delivery.status.cancelled") || "Cancelled";
+        return t("management.delivery.status.cancelled");
       default:
         return status;
     }
@@ -159,7 +159,7 @@ export function SupplierDeliveryDetails({
             </CardTitle>
             <p className="text-muted-foreground mt-1 truncate text-xs" title={delivery.id}>
               <span className="inline-block">
-                {t("management.delivery.details.deliveryId") || "Delivery ID"}:{" "}
+                {t("management.delivery.details.deliveryId")}:{" "}
               </span>
               <span className="inline-block">{delivery.id}</span>
             </p>
@@ -181,7 +181,7 @@ export function SupplierDeliveryDetails({
         <div className="space-y-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <Building2 className="h-4 w-4" />
-            {t("management.delivery.details.supplier") || "Supplier"}
+            {t("management.delivery.details.supplier")}
           </h3>
           <div className="bg-muted/90 space-y-1.5 rounded-lg p-3 text-sm">
             <p className="font-medium">{delivery.supplier?.name}</p>
@@ -210,13 +210,13 @@ export function SupplierDeliveryDetails({
         <div className="space-y-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <Truck className="h-4 w-4" />
-            {t("management.delivery.details.deliveryDetails") || "Delivery Details"}
+            {t("management.delivery.details.deliveryDetails")}
           </h3>
           <div className="bg-muted/90 space-y-1.5 rounded-lg p-3 text-sm">
             <div className="text-muted-foreground flex items-center gap-2 text-xs">
               <Calendar className="h-3 w-3" />
               <span className="font-medium">
-                {t("management.delivery.details.expected") || "Expected"}:
+                {t("management.delivery.details.expected")}:
               </span>{" "}
               {formatDateTime(delivery.expectedDate)}
             </div>
@@ -224,7 +224,7 @@ export function SupplierDeliveryDetails({
               <div className="text-muted-foreground flex items-center gap-2 text-xs">
                 <CheckCircle2 className="h-3 w-3" />
                 <span className="font-medium">
-                  {t("management.delivery.details.received") || "Received"}:
+                  {t("management.delivery.details.received")}:
                 </span>{" "}
                 {formatDateTime(delivery.receivedDate)}
               </div>
@@ -238,23 +238,23 @@ export function SupplierDeliveryDetails({
         <div className="space-y-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <Package className="h-4 w-4" />
-            {t("management.delivery.details.items") || "Items"} ({delivery.items.length})
+            {t("management.delivery.details.items")} ({delivery.items.length})
           </h3>
           <div className="rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">
-                    {t("management.delivery.details.material") || "Material"}
+                    {t("management.delivery.details.material")}
                   </TableHead>
                   <TableHead className="text-right text-xs">
-                    {t("management.delivery.details.quantity") || "Quantity"}
+                    {t("management.delivery.details.quantity")}
                   </TableHead>
                   <TableHead className="text-xs">
-                    {t("management.delivery.details.unit") || "Unit"}
+                    {t("management.delivery.details.unit")}
                   </TableHead>
                   <TableHead className="text-xs">
-                    {t("management.delivery.details.notes") || "Notes"}
+                    {t("management.delivery.details.notes")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -295,7 +295,7 @@ export function SupplierDeliveryDetails({
           <div className="space-y-2">
             <h3 className="flex items-center gap-2 text-sm font-semibold">
               <Clock className="h-4 w-4" />
-              {t("management.delivery.details.timeline") || "Timeline"}
+              {t("management.delivery.details.timeline")}
             </h3>
             <div className="space-y-2">
               {delivery.statusHistory?.map((history, index) => {
@@ -343,7 +343,7 @@ export function SupplierDeliveryDetails({
           <div className="space-y-2">
             <h3 className="flex items-center gap-2 text-sm font-semibold">
               <FileText className="h-4 w-4" />
-              {t("management.delivery.details.notes") || "Notes"}
+              {t("management.delivery.details.notes")}
             </h3>
             <div className="bg-muted/90 rounded-lg p-3">
               <p className="text-muted-foreground text-xs">{translateSystemNote(delivery.notes)}</p>
@@ -364,7 +364,7 @@ export function SupplierDeliveryDetails({
                 className="w-full justify-start gap-2"
               >
                 <TrendingUp className="h-4 w-4" />
-                {t("management.delivery.details.updateStatus") || "Update Status"}
+                {t("management.delivery.details.updateStatus")}
               </Button>
             )}
           {onEdit &&
@@ -377,7 +377,7 @@ export function SupplierDeliveryDetails({
                 className="w-full justify-start gap-2"
               >
                 <Edit className="h-4 w-4" />
-                {t("management.delivery.details.editDelivery") || "Edit Delivery"}
+                {t("management.delivery.details.editDelivery")}
               </Button>
             )}
           {onPrintDelivery && (
@@ -388,7 +388,7 @@ export function SupplierDeliveryDetails({
               className="w-full justify-start gap-2"
             >
               <Printer className="h-4 w-4" />
-              {t("management.delivery.details.printDelivery") || "Print Delivery"}
+              {t("management.delivery.details.printDelivery")}
             </Button>
           )}
         </div>
@@ -396,11 +396,11 @@ export function SupplierDeliveryDetails({
         {/* Metadata */}
         <div className="text-muted-foreground space-y-1 text-xs">
           <p>
-            {t("management.delivery.details.created") || "Created"}:{" "}
+            {t("management.delivery.details.created")}:{" "}
             {formatDateTime(delivery.createdAt)}
           </p>
           <p>
-            {t("management.delivery.details.updated") || "Updated"}:{" "}
+            {t("management.delivery.details.updated")}:{" "}
             {formatDateTime(delivery.updatedAt)}
           </p>
         </div>
