@@ -152,8 +152,6 @@ export const authOptions: NextAuthOptions = {
         session.user.timezone = token.timezone as string;
         session.user.phone = token.phone as string;
       }
-
-      console.log("[NextAuth Session] Returning session with currency:", session.user?.currency);
       return session;
     },
   },

@@ -104,15 +104,8 @@ export function StoreCard({ store }: StoreCardProps) {
               </div>
 
               {/* Store Icon with Gradient Background */}
-              <div className="relative z-10 mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-brand-primary)]/20 via-[var(--color-brand-primary)]/15 to-[var(--color-brand-primary)]/10 backdrop-blur-sm shadow-sm sm:h-20 sm:w-20">
-                <Store className="h-8 w-8 text-[var(--color-brand-primary)]/80 sm:h-10 sm:w-10" />
-              </div>
-
-              {/* Store Name Initial - Large and Bold */}
-              <div className="relative z-10">
-                <span className="text-3xl font-bold text-[var(--color-brand-primary)]/70 sm:text-4xl">
-                  {store.name.charAt(0).toUpperCase()}
-                </span>
+              <div className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-brand-primary)]/20 via-[var(--color-brand-primary)]/15 to-[var(--color-brand-primary)]/10 backdrop-blur-sm shadow-sm sm:h-24 sm:w-24">
+                <Store className="h-10 w-10 text-[var(--color-brand-primary)]/80 sm:h-12 sm:w-12" />
               </div>
             </div>
           )}

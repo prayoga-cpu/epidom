@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createStoreSchema, CreateStoreInput } from "@/lib/validation/business.schemas";
@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ImageUpload } from "@/components/shared/image-upload";
 import { Store } from "../hooks/use-stores";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { compressImage } from "@/lib/utils/image-compression";
+import { toast } from "sonner";
+import { X } from "lucide-react";
 
 interface StoreFormProps {
   /**
@@ -59,6 +61,12 @@ export function StoreForm({
 }: StoreFormProps) {
   const { t } = useI18n();
   const firstInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImageUploading, setIsImageUploading] = useState(false);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | undefined>(
+    defaultValues?.image || undefined
+  );
 
   const form = useForm<CreateStoreInput>({
     resolver: zodResolver(createStoreSchema),
@@ -81,13 +89,59 @@ export function StoreForm({
     }
   }, [defaultValues]);
 
-  const formId = !showActions && !defaultValues ? "create-store-form" : !showActions ? "edit-store-form" : undefined;
+  const formId =
+    !showActions && !defaultValues
+      ? "create-store-form"
+      : !showActions
+        ? "edit-store-form"
+        : undefined;
+
+  // Handle form submission with image upload
+  const handleFormSubmit = async (data: CreateStoreInput) => {
+    try {
+      // If there's a pending image file, upload it first
+      if (pendingImageFile) {
+        setIsImageUploading(true);
+
+        // Compress image
+        const compressedFile = await compressImage(pendingImageFile);
+
+        // Upload to server
+        const formData = new FormData();
+        formData.append("file", compressedFile);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || "Upload failed");
+        }
+
+        const uploadData = await response.json();
+
+        // Update form data with uploaded URL
+        data.image = uploadData.url;
+        setIsImageUploading(false);
+      }
+
+      // Submit form with image URL
+      onSubmit(data);
+    } catch (error) {
+      setIsImageUploading(false);
+      toast.error("Failed to upload image", {
+        description: error instanceof Error ? error.message : "Please try again",
+      });
+    }
+  };
 
   return (
     <Form {...form}>
       <form
         id={formId}
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(handleFormSubmit)}
         className="space-y-4"
       >
         {/* Store Name - Required */}
@@ -215,7 +269,7 @@ export function StoreForm({
           )}
         />
 
-        {/* Store Image - Optional with Upload */}
+        {/* Store Image - Optional with Manual Upload */}
         <FormField
           control={form.control}
           name="image"
@@ -223,13 +277,64 @@ export function StoreForm({
             <FormItem>
               <FormLabel>{t("stores.storeImage") || "Store Image"}</FormLabel>
               <FormControl>
-                <ImageUpload
-                  value={field.value || undefined}
-                  onChange={(url) => field.onChange(url || "")}
-                  disabled={isLoading}
-                  maxSize={5}
-                  aspectRatio="16/9"
-                />
+                <div className="space-y-2">
+                  {imagePreviewUrl ? (
+                    <div className="relative overflow-hidden rounded-lg border">
+                      <img
+                        src={imagePreviewUrl}
+                        alt="Preview"
+                        className="h-48 w-full object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => {
+                          if (imagePreviewUrl.startsWith("blob:")) {
+                            URL.revokeObjectURL(imagePreviewUrl);
+                          }
+                          setImagePreviewUrl(undefined);
+                          setPendingImageFile(null);
+                          field.onChange("");
+                        }}
+                        disabled={isLoading || isImageUploading}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <p className="text-sm text-muted-foreground">
+                        Click to upload store image (max 5MB)
+                      </p>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // Create preview
+                        const preview = URL.createObjectURL(file);
+                        setImagePreviewUrl(preview);
+                        // Store file for upload on submit
+                        setPendingImageFile(file);
+                        // Clear the form field value (will be set after upload)
+                        field.onChange("");
+                      }
+                      // Reset input
+                      e.target.value = "";
+                    }}
+                    disabled={isLoading || isImageUploading}
+                    className="hidden"
+                  />
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -240,12 +345,21 @@ export function StoreForm({
         {showActions && (
           <div className="flex justify-end gap-3 pt-4">
             {onCancel && (
-              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isLoading || isImageUploading}
+              >
                 {t("actions.cancel")}
               </Button>
             )}
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? t("actions.saving") || "Saving..." : submitText}
+            <Button type="submit" disabled={isLoading || isImageUploading}>
+              {isImageUploading
+                ? "Uploading image..."
+                : isLoading
+                  ? t("actions.saving") || "Saving..."
+                  : submitText}
             </Button>
           </div>
         )}

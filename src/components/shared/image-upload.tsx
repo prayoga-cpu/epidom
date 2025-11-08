@@ -43,6 +43,8 @@ export interface ImageUploadProps {
   className?: string;
   /** Aspect ratio for preview (e.g., '16/9', '1/1') */
   aspectRatio?: string;
+  /** Callback when upload state changes */
+  onUploadStateChange?: (isUploading: boolean) => void;
 }
 
 export function ImageUpload({
@@ -52,6 +54,7 @@ export function ImageUpload({
   maxSize = 5,
   className,
   aspectRatio,
+  onUploadStateChange,
 }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -67,6 +70,11 @@ export function ImageUpload({
       previousValueRef.current = value;
     }
   }, [value]);
+
+  // Notify parent about upload state changes
+  useEffect(() => {
+    onUploadStateChange?.(isUploading);
+  }, [isUploading, onUploadStateChange]);
 
   /**
    * Validate file before upload
@@ -145,7 +153,6 @@ export function ImageUpload({
         revokeImagePreview(preview);
 
         // Update with final URL
-        console.log("Image uploaded successfully. URL:", data.url);
         setPreviewUrl(data.url);
         previousValueRef.current = data.url;
         onChange(data.url);

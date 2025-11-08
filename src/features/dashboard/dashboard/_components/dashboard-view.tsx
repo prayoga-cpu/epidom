@@ -11,18 +11,15 @@ export function DashboardView() {
 
   return (
     <div className="grid min-h-[calc(100vh-120px)] w-full gap-6">
-      <PageHeader
-        pageTitle={t("dashboard.title")}
-        pageDescription={t("dashboard.description")}
-      />
+      <PageHeader pageTitle={t("dashboard.title")} pageDescription={t("dashboard.description")} />
 
       {/* Top Stats */}
       <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7 lg:items-stretch">
-        <div className="w-full md:col-span-2 lg:col-span-5">
-        <ProductionHistoryChart />
+        <div className="w-full md:col-span-2 lg:col-span-4">
+          <ProductionHistoryChart />
         </div>
-        <div className="w-full md:col-span-2 lg:col-span-2">
-        <AlertsCard />
+        <div className="w-full md:col-span-2 lg:col-span-3">
+          <AlertsCard />
         </div>
       </div>
 

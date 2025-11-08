@@ -120,8 +120,10 @@ export const useUpdateProfile = () => {
       console.log("[useUpdateProfile] Profile updated successfully:", data);
       console.log("[useUpdateProfile] Profile image:", data.image);
 
-      // Update the cached profile data immediately
-      queryClient.setQueryData(["profile", user?.id], data);
+      // Invalidate the profile query to trigger refetch
+      await queryClient.invalidateQueries({
+        queryKey: ["profile", user?.id],
+      });
 
       // Update the NextAuth session to reflect new currency/locale/image
       const sessionUpdate: Record<string, any> = {};
@@ -156,9 +158,11 @@ export const useUpdateBusiness = () => {
 
   return useMutation({
     mutationFn: updateBusiness,
-    onSuccess: (data) => {
-      // Update the cached profile data
-      queryClient.setQueryData(["profile", user?.id], data);
+    onSuccess: async (data) => {
+      // Invalidate the profile query to trigger refetch
+      await queryClient.invalidateQueries({
+        queryKey: ["profile", user?.id],
+      });
     },
   });
 };

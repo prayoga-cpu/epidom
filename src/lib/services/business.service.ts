@@ -5,6 +5,7 @@ import {
   CreateBusinessInput,
   UpdateBusinessInput,
   CreateStoreInput,
+  UpdateStoreInput,
 } from "@/lib/validation/business.schemas";
 import { BusinessDto, BusinessWithStoresDto, StoreDto } from "@/types/dto";
 import { getStorageAdapter } from "@/lib/storage";
@@ -175,7 +176,7 @@ export class BusinessService {
     storeId: string,
     businessId: string,
     userId: string,
-    input: UpdateBusinessInput
+    input: UpdateStoreInput
   ): Promise<StoreDto> {
     // Verify store belongs to business
     const belongsToBusiness = await this.storeRepo.belongsToBusiness(storeId, businessId);
@@ -201,33 +202,93 @@ export class BusinessService {
       }
     }
 
+    // Sanitize input: convert empty strings to undefined so Prisma doesn't send them
+    const sanitizedInput = Object.fromEntries(
+      Object.entries(input)
+        .filter(([_, value]) => value !== "")
+        .map(([key, value]) => [key, value || undefined])
+    );
+
     // Update store
-    return this.storeRepo.update(storeId, input) as unknown as StoreDto;
+    return this.storeRepo.update(storeId, sanitizedInput) as unknown as StoreDto;
   }
 
   /**
    * Delete store (hard delete) and its associated image from Blob storage
+   * Uses transaction to reduce connection pool usage
+   * WARNING: This will cascade delete all related data (products, materials, recipes, orders, etc.)
    */
   async deleteStore(storeId: string, businessId: string, userId: string): Promise<void> {
-    // Verify ownership
-    const belongsToBusiness = await this.storeRepo.belongsToBusiness(storeId, businessId);
-    if (!belongsToBusiness) {
-      throw new Error("Store does not belong to this business");
-    }
+    // Perform all database operations in a single transaction
+    // This reduces connection pool usage from 4+ queries to 1 connection
+    const store = await this.storeRepo.transaction(async (tx) => {
+      // Get store and verify it belongs to business, also fetch counts of related data
+      const store = await tx.store.findUnique({
+        where: { id: storeId },
+        select: {
+          id: true,
+          businessId: true,
+          image: true,
+          business: {
+            select: {
+              userId: true,
+            },
+          },
+          _count: {
+            select: {
+              products: true,
+              ingredients: true,
+              recipes: true,
+              suppliers: true,
+              orders: true,
+              productionBatches: true,
+            },
+          },
+        },
+      });
 
-    const business = await this.businessRepo.findById(businessId);
-    if (!business || business.userId !== userId) {
-      throw new Error("Unauthorized to delete this store");
-    }
+      if (!store) {
+        throw new Error("Store not found");
+      }
 
-    // Get store to access image URL before deletion
-    const store = await this.storeRepo.findById(storeId);
+      if (store.businessId !== businessId) {
+        throw new Error("Store does not belong to this business");
+      }
 
-    // Delete from database (hard delete)
-    await this.storeRepo.delete(storeId);
+      if (store.business.userId !== userId) {
+        throw new Error("Unauthorized to delete this store");
+      }
 
-    // Delete image from Blob storage if exists
-    if (store?.image && store.image.includes("blob.vercel-storage.com")) {
+      // Log warning if store has related data (for debugging)
+      const totalRelatedRecords =
+        store._count.products +
+        store._count.ingredients +
+        store._count.recipes +
+        store._count.suppliers +
+        store._count.orders +
+        store._count.productionBatches;
+
+      if (totalRelatedRecords > 0) {
+        console.warn(`⚠️ Deleting store "${storeId}" will cascade delete ${totalRelatedRecords} related records:`, {
+          products: store._count.products,
+          materials: store._count.ingredients,
+          recipes: store._count.recipes,
+          suppliers: store._count.suppliers,
+          orders: store._count.orders,
+          productionBatches: store._count.productionBatches,
+        });
+      }
+
+      // Delete the store (cascade will handle related data)
+      await tx.store.delete({
+        where: { id: storeId },
+      });
+
+      return store;
+    });
+
+    // Delete image from Blob storage if exists (outside transaction)
+    if (store.image && store.image.includes("blob.vercel-storage.com")) {
       try {
         const storage = getStorageAdapter();
         await storage.delete(store.image);

@@ -50,9 +50,9 @@ export default function AlertsCard() {
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         </div>
       ) : lowStockMaterials.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <div className="mb-3 rounded-full bg-green-100 p-3 dark:bg-green-900">
-            <AlertCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+        <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+          <div className="bg-muted mb-3 rounded-full p-3">
+            <AlertCircle className="text-muted-foreground h-6 w-6" />
           </div>
           <p className="text-muted-foreground text-sm">
             {t("dashboard.alertsCard.noCriticalAlerts")}

@@ -69,7 +69,6 @@ export function EditPersonalInfoDialog({
       locale: user.locale,
       timezone: user.timezone,
       currency: user.currency,
-      image: "",
     },
   });
 
@@ -82,7 +81,6 @@ export function EditPersonalInfoDialog({
         locale: user.locale,
         timezone: user.timezone,
         currency: user.currency,
-        image: "",
       });
     }
   }, [open, user, form]);

@@ -5,6 +5,7 @@ import { businessService } from "@/lib/services";
 import { createStoreSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
+import { Prisma } from "@prisma/client";
 
 /**
  * GET /api/stores/[id]
@@ -133,6 +134,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
     }
 
+    // Handle Prisma-specific errors
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2024: Connection pool timeout
+      if (error.code === "P2024") {
+        return NextResponse.json(
+          createErrorResponse(
+            ApiErrorCode.INTERNAL_ERROR,
+            "Database connection timeout. Please try again in a moment."
+          ),
+          { status: 503 }
+        );
+      }
+      // P2025: Record not found
+      if (error.code === "P2025") {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.STORE_NOT_FOUND, "Store not found"),
+          { status: 404 }
+        );
+      }
+    }
+
     console.error("Error updating store:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
@@ -193,6 +215,39 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json(createSuccessResponse({ message: "Store deleted successfully" }));
   } catch (error) {
     console.error("Error deleting store:", error);
+
+    // Handle Prisma-specific errors
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2024: Connection pool timeout
+      if (error.code === "P2024") {
+        return NextResponse.json(
+          createErrorResponse(
+            ApiErrorCode.INTERNAL_ERROR,
+            "Database connection timeout. Please try again in a moment."
+          ),
+          { status: 503 }
+        );
+      }
+      // P2025: Record not found
+      if (error.code === "P2025") {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.STORE_NOT_FOUND, "Store not found"),
+          { status: 404 }
+        );
+      }
+    }
+
+    // Handle connection errors
+    if (error instanceof Prisma.PrismaClientInitializationError) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.INTERNAL_ERROR,
+          "Database connection error. Please try again later."
+        ),
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

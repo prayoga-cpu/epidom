@@ -77,15 +77,11 @@ export async function POST(request: Request) {
 
     // Parse and validate request body
     const body = await request.json();
-    console.log("📥 Store creation request body:", body);
 
     const input = createStoreSchema.parse(body);
-    console.log("✅ Validated store input:", input);
 
     // Create store via service
     const store = await businessService.createStore(business.id, session.user.id, input);
-
-    console.log("✅ Store created successfully:", store);
 
     return NextResponse.json(createSuccessResponse(store), { status: 201 });
   } catch (error) {
