@@ -226,9 +226,9 @@ export function ProductsSection() {
     return (
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />
                 {t("common.actions.export")}
@@ -269,15 +269,15 @@ export function ProductsSection() {
     <>
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
                 disabled={exportProducts.isPending}
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
               >
                 {exportProducts.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -302,7 +302,7 @@ export function ProductsSection() {
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -349,7 +349,7 @@ export function ProductsSection() {
                   setFilters((prev) => ({ ...prev, sortBy, sortOrder }));
                 }}
               >
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full md:w-[180px]">
                   <ArrowUpDown className="mr-2 h-4 w-4" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
@@ -410,7 +410,7 @@ export function ProductsSection() {
           </div>
 
           {/* Products Grid */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => {
               const stockStatus = getStockStatus(product);
               const profitMargin = getProfitMargin(product);

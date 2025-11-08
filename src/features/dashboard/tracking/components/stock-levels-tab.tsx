@@ -157,12 +157,12 @@ export function StockLevelsTab() {
     <div className="space-y-4">
       {/* Stock Table Card */}
       <div className="bg-card rounded-xl border shadow-sm">
-        <div className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
           <h2 className="text-foreground text-lg font-medium text-pretty">
             {t("tracking.stockLevels")}
           </h2>
-          <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:items-center">
-            <div className="relative w-full lg:w-64">
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-64">
               <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 type="text"
@@ -177,15 +177,15 @@ export function StockLevelsTab() {
               filename="stock-levels"
               variant="outline"
               size="sm"
-              className="w-full lg:w-auto"
+              className="w-full md:w-auto"
             />
           </div>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center justify-center gap-2 border-b px-4 py-3 lg:justify-start">
+        <div className="flex flex-wrap items-center justify-center gap-2 border-b px-4 py-3 md:justify-start">
           <Select value={itemType} onValueChange={(v: any) => setItemType(v)}>
-            <SelectTrigger className="w-full lg:w-[140px]">
+            <SelectTrigger className="w-full md:w-[140px]">
               <SelectValue placeholder={t("tracking.filters.allItemsPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -226,8 +226,8 @@ export function StockLevelsTab() {
             </div>
           ) : (
             <>
-              {/* Mobile: Card Layout */}
-              <div className="space-y-3 lg:hidden">
+    {/* Mobile/Tablet: Card Layout */}
+    <div className="space-y-3 lg:hidden">
                 {finalFilteredItems.map((item) => {
                   const stockStatus = getStockStatus(
                     item.currentStock,

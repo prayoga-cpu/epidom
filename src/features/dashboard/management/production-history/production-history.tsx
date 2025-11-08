@@ -183,21 +183,21 @@ export function ProductionHistoryCard() {
 
       {/* Filters */}
       <Card>
-        <CardHeader className="pb-3 sm:pb-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader className="pb-3 md:pb-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle className="text-lg">{t("management.productionHistory.filters")}</CardTitle>
               <CardDescription>
                 {t("management.productionHistory.filtersDescription")}
               </CardDescription>
             </div>
-            <div className="flex w-full justify-start sm:w-auto sm:justify-end">
-              <ExportButton data={exportData} filename="production-history" size="sm" className="w-full sm:w-auto" />
+            <div className="flex w-full justify-start md:w-auto md:justify-end">
+              <ExportButton data={exportData} filename="production-history" size="sm" className="w-full md:w-auto" />
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4">
-          <div className="space-y-2 sm:space-y-3">
+        <CardContent className="space-y-3 md:space-y-4">
+          <div className="space-y-2 md:space-y-3">
             {/* Search */}
             <div className="relative w-full">
               <Search className="text-muted-foreground/80 absolute top-2 left-2.5 h-4.5 w-4.5" />
@@ -208,10 +208,10 @@ export function ProductionHistoryCard() {
                 className="w-full pl-9"
               />
             </div>
-            <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:flex-row">
+            <div className="flex w-full flex-wrap gap-2">
               {/* Status Filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectTrigger className="w-full md:w-[160px]">
                   <SelectValue placeholder={t("management.productionHistory.selectStatus")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -235,7 +235,7 @@ export function ProductionHistoryCard() {
 
               {/* Recipe Filter */}
               <Select value={recipeFilter} onValueChange={setRecipeFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full md:w-[180px]">
                   <SelectValue placeholder={t("management.productionHistory.selectRecipe")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -251,7 +251,7 @@ export function ProductionHistoryCard() {
               </Select>
 
               {/* Date Range */}
-              <div className="w-full sm:w-auto">
+              <div className="w-full md:w-auto">
               <DateRangePicker value={dateRange} onChange={setDateRange} />
               </div>
             </div>
@@ -301,8 +301,8 @@ export function ProductionHistoryCard() {
 
       {/* Table */}
       <Card>
-        <CardHeader className="pb-3 sm:pb-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader className="pb-3 md:pb-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg">
               {t("management.productionHistory.batchesList")} ({totalBatches})
             </CardTitle>
@@ -430,7 +430,7 @@ export function ProductionHistoryCard() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <p className="text-muted-foreground text-sm">
                     {t("management.productionHistory.showing")} {(currentPage - 1) * pageSize + 1} -{" "}
                     {Math.min(currentPage * pageSize, totalBatches)} {t("common.of")} {totalBatches}

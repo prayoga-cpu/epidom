@@ -3,15 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -21,22 +13,20 @@ import DuplicateRecipeDialog from "./duplicate-recipe-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import AddRecipeDialog from "./add-recipe-dialog";
 import {
-  Search,
-  Filter,
   ArrowUpDown,
   Eye,
   Pencil,
   Trash2,
-  X,
   CheckSquare,
   ChefHat,
   Clock,
   DollarSign,
   Copy,
   Download,
-  Loader2,
   Package,
   Plus,
+  Loader2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
@@ -50,6 +40,13 @@ import {
   useExportRecipes,
   type RecipeWithIngredients,
 } from "../hooks/use-recipes";
+import {
+  SectionLoadingState,
+  FilterSection,
+  ItemCardGrid,
+  BaseItemCard,
+  type FilterField,
+} from "../../components";
 import LoadingPage from "@/features/loading/loading-page";
 
 type SortField =
@@ -227,33 +224,15 @@ export function RecipesSection() {
 
   const hasActiveFilters = searchQuery || categoryFilter !== undefined;
 
-  // Loading and error states - keep card structure for consistent layout
+  // Loading state
   if (isLoading) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg font-bold">{t("data.recipes.pageTitle")}</CardTitle>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <Download className="mr-2 h-4 w-4" />
-                {t("common.actions.export")}
-              </Button>
-              <Button size="sm" disabled className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                {t("data.recipes.addButton")}
-              </Button>
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {t("common.actions.view")}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-        </CardContent>
-      </Card>
+      <SectionLoadingState
+        title={t("data.recipes.pageTitle")}
+        exportLabel={t("common.actions.export")}
+        addLabel={t("data.recipes.addButton")}
+        selectLabel={t("common.actions.view")}
+      />
     );
   }
 
@@ -274,15 +253,15 @@ export function RecipesSection() {
     <>
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg font-bold">{t("data.recipes.pageTitle")}</CardTitle>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
                 disabled={exportRecipes.isPending || recipes.length === 0}
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
               >
                 {exportRecipes.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -292,7 +271,7 @@ export function RecipesSection() {
                 {t("common.actions.export")}
               </Button>
               <AddRecipeDialog trigger={
-                <Button size="sm" className="w-full sm:w-auto">
+                <Button size="sm" className="w-full md:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
                   {t("data.recipes.addButton")}
                 </Button>
@@ -303,7 +282,7 @@ export function RecipesSection() {
                   size="sm"
                   onClick={handleBulkDelete}
                   disabled={bulkDeleteRecipes.isPending}
-                  className="w-full sm:w-auto"
+                  className="w-full md:w-auto"
                 >
                   {bulkDeleteRecipes.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -317,7 +296,7 @@ export function RecipesSection() {
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -337,107 +316,67 @@ export function RecipesSection() {
 
         <CardContent className="space-y-4">
           {/* Search and Filters */}
-          <div className="flex flex-col gap-3">
-            {/* Search */}
-            <div className="relative w-full">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <Input
-                placeholder={t("actions.searchPlaceholder")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9"
-              />
-            </div>
-
-            {/* Filters Row */}
-            <div className="flex w-full flex-wrap items-center gap-2">
-              {/* Category Filter */}
-              <Select
-                value={categoryFilter || "all"}
-                onValueChange={(value) => setCategoryFilter(value === "all" ? undefined : value)}
-              >
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderCategory")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    {t("filters.allCategories")}
-                  </SelectItem>
-                  {getRecipeCategories(t).map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Sort */}
-              <Select
-                value={`${sortField}-${sortOrder}`}
-                onValueChange={(v) => {
+          <FilterSection
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder={t("actions.searchPlaceholder")}
+            filters={[
+              {
+                key: "category",
+                label: t("filters.placeholderCategory"),
+                placeholder: t("filters.placeholderCategory"),
+                value: categoryFilter || "all",
+                onChange: (value) => setCategoryFilter(value === "all" ? undefined : value),
+                options: [
+                  { value: "all", label: t("filters.allCategories") },
+                  ...getRecipeCategories(t).map((category) => ({
+                    value: category,
+                    label: category,
+                  })),
+                ],
+              },
+              {
+                key: "sort",
+                label: t("filters.placeholderSortBy"),
+                placeholder: t("filters.placeholderSortBy"),
+                value: `${sortField}-${sortOrder}`,
+                onChange: (v) => {
                   const [field, order] = v.split("-") as [SortField, SortOrder];
                   setSortField(field);
                   setSortOrder(order);
-                }}
-              >
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderSortBy")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name-asc">{t("sort.nameAZ")}</SelectItem>
-                  <SelectItem value="name-desc">{t("sort.nameZA")}</SelectItem>
-                  <SelectItem value="productionTimeMinutes-asc">
-                    {t("sort.timeShortest")}
-                  </SelectItem>
-                  <SelectItem value="productionTimeMinutes-desc">
-                    {t("sort.timeLongest")}
-                  </SelectItem>
-                  <SelectItem value="costPerBatch-asc">
-                    {t("sort.costLowHigh")}
-                  </SelectItem>
-                  <SelectItem value="costPerBatch-desc">
-                    {t("sort.costHighLow")}
-                  </SelectItem>
-                  <SelectItem value="category-asc">
-                    {t("sort.categoryAZ")}
-                  </SelectItem>
-                  <SelectItem value="category-desc">
-                    {t("sort.categoryZA")}
-                  </SelectItem>
-                  <SelectItem value="createdAt-asc">
-                    {t("sort.oldestFirst")}
-                  </SelectItem>
-                  <SelectItem value="createdAt-desc">
-                    {t("sort.newestFirst")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                },
+                options: [
+                  { value: "name-asc", label: t("sort.nameAZ") },
+                  { value: "name-desc", label: t("sort.nameZA") },
+                  { value: "productionTimeMinutes-asc", label: t("sort.timeShortest") },
+                  { value: "productionTimeMinutes-desc", label: t("sort.timeLongest") },
+                  { value: "costPerBatch-asc", label: t("sort.costLowHigh") },
+                  { value: "costPerBatch-desc", label: t("sort.costHighLow") },
+                  { value: "category-asc", label: t("sort.categoryAZ") },
+                  { value: "category-desc", label: t("sort.categoryZA") },
+                  { value: "createdAt-asc", label: t("sort.oldestFirst") },
+                  { value: "createdAt-desc", label: t("sort.newestFirst") },
+                ],
+              },
+            ]}
+            hasActiveFilters={!!hasActiveFilters}
+            onClearFilters={clearFilters}
+            clearFiltersLabel={t("common.actions.clearFilters")}
+          />
 
-              {/* Clear Filters */}
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
-                  <X className="mr-2 h-4 w-4" />
-                  {t("common.actions.clearFilters")}
-                </Button>
-              )}
+          {/* Bulk Select All */}
+          {bulkSelectMode && (
+            <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
+              <Checkbox
+                checked={selectedIds.size === recipes.length && recipes.length > 0}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span className="text-sm font-medium">
+                {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {recipes.length}{" "}
+                {t("common.selected")})
+              </span>
             </div>
-
-            {/* Bulk Select All */}
-            {bulkSelectMode && (
-              <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
-                <Checkbox
-                  checked={selectedIds.size === recipes.length && recipes.length > 0}
-                  onCheckedChange={toggleSelectAll}
-                />
-                <span className="text-sm font-medium">
-                  {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {recipes.length}{" "}
-                  {t("common.selected")})
-                </span>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Results Count */}
           <div className="flex items-center border-b pb-2">
@@ -448,30 +387,30 @@ export function RecipesSection() {
           </div>
 
           {/* Recipes Grid */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }}>
             {recipes.map((recipe) => {
               const isSelected = selectedIds.has(recipe.id);
               const costPerUnit = recipe.costPerBatch / recipe.yieldQuantity;
 
               return (
-                <div
+                <BaseItemCard
                   key={recipe.id}
-                  className={`group bg-card relative rounded-lg border p-4 shadow-sm transition-all hover:shadow-md px-6${
-                    isSelected ? "ring-primary ring-2" : ""
-                  }`}
+                  isSelected={isSelected}
+                  bulkSelectMode={bulkSelectMode}
+                  onSelect={(checked) => {
+                    if (checked) {
+                      setSelectedIds((prev) => new Set(prev).add(recipe.id));
+                    } else {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(recipe.id);
+                        return next;
+                      });
+                    }
+                  }}
+                  className="p-4"
+                  contentClassName="!px-6"
                 >
-                  {/* Bulk Select Checkbox */}
-                  {bulkSelectMode && (
-                    <div className="absolute top-2 left-2">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelectItem(recipe.id)}
-                      />
-                    </div>
-                  )}
-
-                  {/* Recipe Content */}
-                  <div className={bulkSelectMode ? "pl-6" : ""}>
                     <div className="mb-3 flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
@@ -614,11 +553,9 @@ export function RecipesSection() {
                         </Tooltip>
                       </div>
                     )}
-                  </div>
-                </div>
+                </BaseItemCard>
               );
             })}
-
             {/* Empty State */}
             {recipes.length === 0 && (
               <div className="col-span-full py-12 text-center">
@@ -635,7 +572,7 @@ export function RecipesSection() {
                 )}
               </div>
             )}
-          </div>
+          </ItemCardGrid>
         </CardContent>
       </Card>
 

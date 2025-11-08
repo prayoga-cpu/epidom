@@ -200,12 +200,12 @@ export function EditStockCard() {
             <p className="text-muted-foreground text-sm">{t("management.editStock.description")}</p>
           </div>
 
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button variant="outline" size="sm" onClick={handleCSVImport} className="w-full sm:w-auto">
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+            <Button variant="outline" size="sm" onClick={handleCSVImport} className="w-full md:w-auto">
               <Upload className="mr-2 h-4 w-4" />
               {t("management.editStock.importCSV")}
             </Button>
-            <ExportButton data={exportData} filename="stock-inventory" size="sm" className="w-full sm:w-auto" />
+            <ExportButton data={exportData} filename="stock-inventory" size="sm" className="w-full md:w-auto" />
           </div>
         </div>
 

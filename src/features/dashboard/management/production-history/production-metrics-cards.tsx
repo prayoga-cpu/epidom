@@ -81,14 +81,14 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-4">
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (
           <Card key={index} className="shadow-sm">
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-4 md:p-6">
               {/* Mobile: Center-aligned with icon below */}
-              <div className="flex flex-col items-center text-center space-y-3 sm:hidden">
+              <div className="flex flex-col items-center text-center space-y-3 md:hidden">
                 <div className="w-full space-y-2">
                   <p className="text-muted-foreground text-xs font-medium">{card.title}</p>
                   <div className="flex items-baseline justify-center gap-1">
@@ -102,8 +102,8 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
                 </div>
               </div>
 
-              {/* Desktop: Left-aligned with icon on the right */}
-              <div className="hidden sm:flex sm:items-start sm:justify-between sm:gap-3">
+              {/* Tablet/Desktop: Left-aligned with icon on the right */}
+              <div className="hidden md:flex md:items-start md:justify-between md:gap-3">
                 <div className="flex-1 space-y-1.5 min-w-0">
                   <p className="text-muted-foreground text-sm font-medium">{card.title}</p>
                   <div className="flex items-baseline gap-1">
