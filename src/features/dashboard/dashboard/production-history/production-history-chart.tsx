@@ -10,7 +10,7 @@ import { exportData } from "@/features/dashboard/dashboard/production-history/ut
 import { Loader2 } from "lucide-react";
 
 export default function ProductionHistoryChart() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { storeId } = useCurrentStore();
 
   const { data, isLoading } = useProductionBatches(storeId, {
@@ -56,14 +56,22 @@ export default function ProductionHistoryChart() {
     });
 
     // Convert to chart format
+    // Map locale to browser locale format
+    const localeMap: Record<string, string> = {
+      en: "en-US",
+      fr: "fr-FR",
+      id: "id-ID",
+    };
+    const browserLocale = localeMap[locale] || "en-US";
+
     return Array.from(dailyData.entries()).map(([dateKey, quantity]) => {
       const date = new Date(dateKey);
       return {
-        date: date.toLocaleDateString("en-US", { weekday: "short" }),
+        date: date.toLocaleDateString(browserLocale, { weekday: "short" }),
         quantity,
       };
     });
-  }, [data]);
+  }, [data, locale]);
 
   return (
     <DashboardCard

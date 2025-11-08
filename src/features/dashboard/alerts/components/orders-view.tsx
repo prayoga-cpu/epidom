@@ -35,14 +35,14 @@ export function OrdersView() {
         body: JSON.stringify({ status: "PLACED" }),
       });
 
-      if (!response.ok) throw new Error("Failed to update order");
+      if (!response.ok) throw new Error(t("messages.failedToUpdateOrder"));
 
-      toast.success(t("alerts.orderPlaced") || "Order marked as placed!");
+      toast.success(t("messages.orderPlaced"));
 
       // Refresh the data
       window.location.reload();
     } catch (error) {
-      toast.error(t("alerts.orderPlacedError") || "Failed to mark order as placed");
+      toast.error(t("messages.orderPlacedError"));
     } finally {
       setPlacingOrder(null);
     }
@@ -89,15 +89,17 @@ export function OrdersView() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="bg-destructive/10 mb-4 rounded-full p-3">
-          <AlertCircle className="text-destructive h-6 w-6" />
-        </div>
-        <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
-        <p className="text-muted-foreground text-sm">
-          {error.message || t("alerts.errorLoadingOrders")}
-        </p>
-      </div>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="bg-destructive/10 mb-4 rounded-full p-3">
+            <AlertCircle className="text-destructive h-6 w-6" />
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
+          <p className="text-muted-foreground text-sm">
+            {error.message || t("alerts.errorLoadingOrders")}
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -105,8 +107,10 @@ export function OrdersView() {
     <section className="space-y-6">
       {ordersBySupplier.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="text-muted-foreground mb-4 h-12 w-12" />
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="bg-primary/10 mb-4 rounded-full p-3">
+              <Package className="text-primary h-6 w-6" />
+            </div>
             <h3 className="mb-2 text-lg font-semibold">{t("alerts.noOrdersToPlace")}</h3>
             <p className="text-muted-foreground text-sm">{t("alerts.noOrdersDescription")}</p>
           </CardContent>
@@ -149,7 +153,7 @@ export function OrdersView() {
 
                     {/* Phone */}
                     {supplier.phone && (
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           <Phone className="text-muted-foreground h-4 w-4 flex-shrink-0" />
                           <span className="truncate text-sm">{supplier.phone}</span>
@@ -157,7 +161,7 @@ export function OrdersView() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="ml-2"
+                          className="w-full sm:ml-2 sm:w-auto"
                           onClick={() => window.open(`tel:${supplier.phone}`, "_self")}
                         >
                           {t("alerts.actions.callSupplier")}
@@ -167,7 +171,7 @@ export function OrdersView() {
 
                     {/* Email */}
                     {supplier.email && (
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           <Mail className="text-muted-foreground h-4 w-4 flex-shrink-0" />
                           <span className="truncate text-sm">{supplier.email}</span>
@@ -175,7 +179,7 @@ export function OrdersView() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="ml-2"
+                          className="w-full sm:ml-2 sm:w-auto"
                           onClick={() => window.open(`mailto:${supplier.email}`, "_blank")}
                         >
                           {t("alerts.actions.emailSupplier")}

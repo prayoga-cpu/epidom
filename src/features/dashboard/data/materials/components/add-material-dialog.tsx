@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -118,12 +117,14 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
       await createMaterial.mutateAsync(payload);
 
-      toast.success(`${data.name} has been added to your inventory.`);
+      toast.success(t("data.materials.toasts.added.title"), {
+        description: t("data.materials.toasts.added.description")?.replace("{name}", data.name) || "",
+      });
 
       form.reset();
       setOpen(false);
     } catch (error) {
-      toast.error(`${error instanceof Error ? error.message : "Failed to add material"}`);
+      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingMaterials"));
     }
   }
 
@@ -133,24 +134,28 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         {trigger || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            Add Material
+            {t("data.materials.addButton")}
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle>Add New Material</DialogTitle>
-          <DialogDescription>
-            Add a new material to your inventory. Fill in all required fields.
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px]">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.materials.addTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            {t("data.materials.addDescription")}
           </DialogDescription>
         </DialogHeader>
-        <Separator />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="add-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium">Basic Information</h3>
+              <h3 className="text-sm font-medium">{t("data.materials.sections.basicInfo")}</h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -158,9 +163,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Material Name *</FormLabel>
+                      <FormLabel>{t("data.materials.form.name")} *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Flour, Sugar, Butter" {...field} />
+                        <Input placeholder={t("data.materials.form.namePlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -172,9 +177,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   name="sku"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>SKU *</FormLabel>
+                      <FormLabel>{t("data.materials.form.sku")} *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., FLR-T55-25KG" {...field} />
+                        <Input placeholder={t("data.materials.form.skuPlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -188,9 +193,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>{t("data.materials.form.category")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Grains, Dairy" {...field} />
+                        <Input placeholder={t("data.materials.form.categoryPlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -202,20 +207,20 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   name="unit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit *</FormLabel>
+                      <FormLabel>{t("data.materials.form.unit")} *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select unit" />
+                            <SelectValue placeholder={t("data.materials.form.selectUnit")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                          <SelectItem value="g">Grams (g)</SelectItem>
-                          <SelectItem value="l">Liters (L)</SelectItem>
-                          <SelectItem value="ml">Milliliters (mL)</SelectItem>
-                          <SelectItem value="pcs">Pieces</SelectItem>
-                          <SelectItem value="box">Box</SelectItem>
+                          <SelectItem value="kg">{t("data.materials.units.kg")}</SelectItem>
+                          <SelectItem value="g">{t("data.materials.units.g")}</SelectItem>
+                          <SelectItem value="l">{t("data.materials.units.l")}</SelectItem>
+                          <SelectItem value="ml">{t("data.materials.units.ml")}</SelectItem>
+                          <SelectItem value="pcs">{t("data.materials.units.pcs")}</SelectItem>
+                          <SelectItem value="box">{t("data.materials.units.box")}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -229,10 +234,10 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t("data.materials.form.description")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Additional information about this material..."
+                        placeholder={t("data.materials.form.descriptionPlaceholder")}
                         rows={3}
                         {...field}
                       />
@@ -247,7 +252,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
             {/* Pricing & Stock */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium">Pricing & Stock</h3>
+              <h3 className="text-sm font-medium">{t("data.materials.sections.pricingStock")}</h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -255,12 +260,12 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   name="unitCost"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit Cost ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                      <FormLabel>{t("data.materials.form.unitCost")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           step="0.01"
-                          placeholder="25.00"
+                          placeholder={t("data.materials.form.costPlaceholder")}
                           {...field}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                         />
@@ -275,7 +280,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   name="currentStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Stock</FormLabel>
+                      <FormLabel>{t("data.materials.form.currentStock")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -297,7 +302,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   name="minStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Min Stock Level</FormLabel>
+                      <FormLabel>{t("data.materials.form.minStockLevel")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -307,7 +312,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
-                      <FormDescription>Alert when stock falls below this level</FormDescription>
+                      <FormDescription>{t("data.materials.form.alertMinStock")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -318,7 +323,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   name="maxStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Stock Level</FormLabel>
+                      <FormLabel>{t("data.materials.form.maxStockLevel")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -328,7 +333,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                           onChange={(e) => field.onChange(parseFloat(e.target.value))}
                         />
                       </FormControl>
-                      <FormDescription>Alert when stock exceeds this level</FormDescription>
+                      <FormDescription>{t("data.materials.form.alertMaxStock")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -341,7 +346,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
             {/* Suppliers */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Suppliers (Optional)</h3>
+                <h3 className="text-sm font-medium">{t("data.materials.sections.suppliers")}</h3>
                 <Button
                   type="button"
                   variant="outline"
@@ -349,13 +354,13 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   onClick={() => append({ supplierId: "", price: 0, isPreferred: false })}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Supplier
+                  {t("data.materials.form.addSupplier")}
                 </Button>
               </div>
 
               {fields.length === 0 && (
                 <p className="text-muted-foreground text-sm">
-                  No suppliers added yet. Click "Add Supplier" to link suppliers to this material.
+                  {t("data.materials.form.noSuppliersYet")}
                 </p>
               )}
 
@@ -367,19 +372,19 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                       name={`suppliers.${index}.supplierId` as any}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Supplier *</FormLabel>
+                          <FormLabel>{t("data.materials.form.supplier")} *</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={(field.value as string) || "none"}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a supplier..." />
+                                <SelectValue placeholder={t("data.materials.form.selectSupplierPlaceholder")} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="none" disabled>
-                                Select a supplier...
+                                {t("data.materials.form.selectSupplierPlaceholder")}
                               </SelectItem>
                               {suppliers.map((supplier) => (
                                 <SelectItem key={supplier.id} value={supplier.id}>
@@ -389,7 +394,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                             </SelectContent>
                           </Select>
                           <FormDescription className="text-xs">
-                            Choose a supplier for this material
+                            {t("data.materials.form.chooseSupplier")}
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -402,7 +407,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                         name={`suppliers.${index}.price` as any}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                            <FormLabel>{t("data.materials.form.supplierPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -432,7 +437,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                             <div className="space-y-1 leading-none">
                               <FormLabel className="flex items-center gap-1">
                                 <Star className="h-3 w-3" />
-                                Preferred
+                                {t("data.materials.form.preferred")}
                               </FormLabel>
                             </div>
                           </FormItem>
@@ -453,23 +458,31 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 </div>
               ))}
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={createMaterial.isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={createMaterial.isPending}>
-                {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Material
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createMaterial.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-material-form"
+              disabled={createMaterial.isPending}
+            >
+              {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.materials.addButton")}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

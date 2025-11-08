@@ -47,20 +47,22 @@ import {
 type StockFilter = "in_stock" | "low_stock" | "out_of_stock" | "overstocked" | undefined;
 
 // Helper function to get stock status
-function getStockStatus(current: number, min: number, max: number): string {
-  if (current <= 0) return "Out of Stock";
-  if (current <= min) return "Low Stock";
-  if (current > max) return "Overstocked";
-  return "In Stock";
+// Note: This function returns a translation key, not the translated string
+// The translated string should be obtained using t() where this function is called
+function getStockStatusKey(current: number, min: number, max: number): string {
+  if (current <= 0) return "outOfStock";
+  if (current <= min) return "lowStock";
+  if (current > max) return "overstocked";
+  return "inStock";
 }
 
 // Helper function to get stock status variant
 function getStockStatusVariant(
-  status: string
+  statusKey: string
 ): "default" | "destructive" | "secondary" | "outline" {
-  if (status === "Out of Stock") return "destructive";
-  if (status === "Low Stock") return "outline";
-  if (status === "Overstocked") return "secondary";
+  if (statusKey === "outOfStock") return "destructive";
+  if (statusKey === "lowStock") return "outline";
+  if (statusKey === "overstocked") return "secondary";
   return "default";
 }
 
@@ -128,18 +130,18 @@ export function MaterialsSection() {
     // Stock status filter
     if (filters.stockStatus) {
       filtered = filtered.filter((m) => {
-        const status = getStockStatus(
+        const statusKey = getStockStatusKey(
           Number(m.currentStock),
           Number(m.minStock),
           Number(m.maxStock)
         );
         const statusMap: Record<string, StockFilter> = {
-          "Out of Stock": "out_of_stock",
-          "Low Stock": "low_stock",
-          Overstocked: "overstocked",
-          "In Stock": "in_stock",
+          outOfStock: "out_of_stock",
+          lowStock: "low_stock",
+          overstocked: "overstocked",
+          inStock: "in_stock",
         };
-        return statusMap[status] === filters.stockStatus;
+        return statusMap[statusKey] === filters.stockStatus;
       });
     }
 
@@ -184,11 +186,11 @@ export function MaterialsSection() {
 
     try {
       await deleteMaterial.mutateAsync(selectedMaterial.id);
-      toast.success(t("data.materials.toasts.deleted.title") || "Material deleted successfully");
+      toast.success(t("data.materials.toasts.deleted.title"));
       setDeleteDialogOpen(false);
       setSelectedMaterial(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete material");
+      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteMaterial"));
     }
   };
 
@@ -197,11 +199,13 @@ export function MaterialsSection() {
 
     try {
       await bulkDelete.mutateAsync({ ids: Array.from(selectedIds) });
-      toast.success(`Deleted ${selectedIds.size} material(s) successfully`);
+      toast.success(
+        t("data.materials.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
+      );
       setSelectedIds(new Set());
       setBulkSelectMode(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete materials");
+      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteMaterials"));
     }
   };
 
@@ -210,7 +214,7 @@ export function MaterialsSection() {
       await exportMaterials.mutateAsync(filters);
       // Download handled automatically in the hook
     } catch (error) {
-      toast.error("Failed to export materials");
+      toast.error(t("messages.errorLoadingMaterials"));
     }
   };
 
@@ -269,10 +273,12 @@ export function MaterialsSection() {
       <div className="border-destructive rounded-lg border p-4">
         <div className="flex items-center gap-2">
           <AlertCircle className="text-destructive h-5 w-5" />
-          <p className="text-destructive text-sm">Error loading materials: {error.message}</p>
+          <p className="text-destructive text-sm">
+            {t("messages.errorLoadingMaterials")}: {error.message}
+          </p>
         </div>
         <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-2">
-          Retry
+          {t("common.actions.retry")}
         </Button>
       </div>
     );
@@ -282,9 +288,9 @@ export function MaterialsSection() {
     <>
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">{t("data.materials.title") || "Materials"}</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-lg font-bold">{t("data.materials.title")}</CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -296,13 +302,13 @@ export function MaterialsSection() {
                 ) : (
                   <Download className="mr-2 h-4 w-4" />
                 )}
-                Export
+                {t("common.actions.export")}
               </Button>
               <AddMaterialDialog />
               {bulkSelectMode && selectedIds.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete") || "Delete"} ({selectedIds.size})
+                  {t("actions.delete")} ({selectedIds.size})
                 </Button>
               )}
               <Button
@@ -313,12 +319,12 @@ export function MaterialsSection() {
                 {bulkSelectMode ? (
                   <>
                     <X className="mr-2 h-4 w-4" />
-                    {t("actions.cancel") || "Cancel"}
+                    {t("actions.cancel")}
                   </>
                 ) : (
                   <>
                     <CheckSquare className="mr-2 h-4 w-4" />
-                    Select
+                    {t("common.actions.select")}
                   </>
                 )}
               </Button>
@@ -333,7 +339,7 @@ export function MaterialsSection() {
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("common.search") || "Search..."}
+                placeholder={t("actions.searchPlaceholder")}
                 value={filters.search}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-9"
@@ -346,10 +352,10 @@ export function MaterialsSection() {
               <Select value={filters.category || "all"} onValueChange={handleCategoryFilter}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="All Categories" />
+                  <SelectValue placeholder={t("filters.allCategories")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="all">{t("filters.allCategories")}</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category} value={category ?? "none"}>
                       {category}
@@ -362,14 +368,14 @@ export function MaterialsSection() {
               <Select value={filters.stockStatus ?? "all"} onValueChange={handleStockStatusFilter}>
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="All Stock Levels" />
+                  <SelectValue placeholder={t("filters.allStockLevels")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Stock Levels</SelectItem>
-                  <SelectItem value="in_stock">In Stock</SelectItem>
-                  <SelectItem value="low_stock">Low Stock</SelectItem>
-                  <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                  <SelectItem value="overstocked">Overstocked</SelectItem>
+                  <SelectItem value="all">{t("filters.allStockLevels")}</SelectItem>
+                  <SelectItem value="in_stock">{t("filters.inStock")}</SelectItem>
+                  <SelectItem value="low_stock">{t("filters.lowStock")}</SelectItem>
+                  <SelectItem value="out_of_stock">{t("filters.outOfStock")}</SelectItem>
+                  <SelectItem value="overstocked">{t("filters.overstocked")}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -377,7 +383,7 @@ export function MaterialsSection() {
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
-                  {t("common.actions.clearFilters") || "Clear Filters"}
+                  {t("common.actions.clearFilters")}
                 </Button>
               )}
             </div>
@@ -392,9 +398,8 @@ export function MaterialsSection() {
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll") || "Select All"} ({selectedIds.size}{" "}
-                  {t("common.of") || "of"} {processedMaterials.length}{" "}
-                  {t("common.selected") || "selected"})
+                  {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {processedMaterials.length}{" "}
+                  {t("common.selected")})
                 </span>
               </div>
             )}
@@ -403,18 +408,18 @@ export function MaterialsSection() {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing") || "Showing"} {processedMaterials.length}{" "}
-              {t("common.of") || "of"} {total} {t("data.materials.title") || "materials"}
+              {t("common.showing")} {processedMaterials.length} {t("common.of")} {total}{" "}
+              {t("data.materials.title")}
             </p>
           </div>
 
           {/* Materials Grid */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {processedMaterials.map((material) => {
               const currentStock = Number(material.currentStock);
               const minStock = Number(material.minStock);
               const maxStock = Number(material.maxStock);
-              const stockStatus = getStockStatus(currentStock, minStock, maxStock);
+              const stockStatusKey = getStockStatusKey(currentStock, minStock, maxStock);
               const isSelected = selectedIds.has(material.id);
               const primarySupplier =
                 material.materialSuppliers?.find((s) => s.isPreferred) ||
@@ -451,10 +456,10 @@ export function MaterialsSection() {
 
                       {/* Stock Status Badge */}
                       <Badge
-                        variant={getStockStatusVariant(stockStatus)}
+                        variant={getStockStatusVariant(stockStatusKey)}
                         className="ml-auto text-xs"
                       >
-                        {stockStatus}
+                        {t(`common.stockStatus.${stockStatusKey}`)}
                       </Badge>
                     </div>
 
@@ -475,16 +480,16 @@ export function MaterialsSection() {
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Unit Cost:</span>
+                        <span>{t("common.cost")}:</span>
                         <span className="text-foreground font-medium">
                           {formatPrice(Number(material.unitCost))}
                         </span>
                       </div>
 
                       <div className="flex justify-between">
-                        <span>Supplier:</span>
+                        <span>{t("tables.supplier")}:</span>
                         <span className="text-foreground font-medium">
-                          {primarySupplier ? primarySupplier.supplier.name : "N/A"}
+                          {primarySupplier ? primarySupplier.supplier.name : t("common.notAvailable")}
                         </span>
                       </div>
                     </div>
@@ -504,7 +509,7 @@ export function MaterialsSection() {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>View Details</p>
+                            <p>{t("data.materials.tooltips.view")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -519,7 +524,7 @@ export function MaterialsSection() {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Edit</p>
+                            <p>{t("data.materials.tooltips.edit")}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -534,7 +539,7 @@ export function MaterialsSection() {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Delete</p>
+                            <p>{t("data.materials.tooltips.delete")}</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -548,18 +553,16 @@ export function MaterialsSection() {
               <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
                 <h3 className="mb-2 text-lg font-semibold">
-                  {t("messages.noMaterialsFound") || "No materials found"}
+                  {t("messages.noMaterialsFound")}
                 </h3>
                 <p className="text-muted-foreground mb-4 text-sm">
                   {hasActiveFilters
-                    ? t("messages.noMatchingFilters") ||
-                      "Try adjusting your filters or search query"
-                    : t("messages.getStartedMaterial") ||
-                      "Get started by adding your first material"}
+                    ? t("messages.noMatchingFilters")
+                    : t("messages.getStartedMaterial")}
                 </p>
                 {hasActiveFilters ? (
                   <Button variant="outline" onClick={clearFilters}>
-                    {t("common.actions.clearFilters") || "Clear Filters"}
+                    {t("common.actions.clearFilters")}
                   </Button>
                 ) : (
                   <AddMaterialDialog />
@@ -592,13 +595,13 @@ export function MaterialsSection() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title={t("data.materials.deleteConfirm.title") || "Delete Material"}
-        description={
-          t("data.materials.deleteConfirm.description") ||
-          `Are you sure you want to delete "${selectedMaterial?.name}"? This action cannot be undone.`
-        }
-        confirmText={t("actions.delete") || "Delete"}
-        cancelText={t("actions.cancel") || "Cancel"}
+        title={t("data.materials.deleteConfirm.title")}
+        description={t("data.materials.deleteConfirm.description")?.replace(
+          "{name}",
+          selectedMaterial?.name || ""
+        ) || ""}
+        confirmText={t("common.actions.delete")}
+        cancelText={t("common.actions.cancel")}
         variant="destructive"
       />
 

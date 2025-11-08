@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -32,19 +31,21 @@ import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateSupplier } from "../hooks/use-suppliers";
 
-// Zod validation schema
-const supplierSchema = z.object({
-  name: z.string().min(2, "Supplier name must be at least 2 characters"),
-  contactPerson: z.string().optional().or(z.literal("")),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
-  country: z.string().optional().or(z.literal("")),
-  notes: z.string().optional().or(z.literal("")),
-});
+// Helper function to create supplier schema with translated messages
+function createSupplierSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t("common.validation.supplierNameMin")),
+    contactPerson: z.string().optional().or(z.literal("")),
+    email: z.string().email(t("common.validation.email")).optional().or(z.literal("")),
+    phone: z.string().optional().or(z.literal("")),
+    address: z.string().optional().or(z.literal("")),
+    city: z.string().optional().or(z.literal("")),
+    country: z.string().optional().or(z.literal("")),
+    notes: z.string().optional().or(z.literal("")),
+  });
+}
 
-type SupplierFormValues = z.infer<typeof supplierSchema>;
+type SupplierFormValues = z.infer<ReturnType<typeof createSupplierSchema>>;
 
 interface AddSupplierDialogProps {
   children?: React.ReactNode;
@@ -57,6 +58,8 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
   const storeId = params.storeId as string;
 
   const createSupplier = useCreateSupplier(storeId);
+
+  const supplierSchema = createSupplierSchema(t);
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
@@ -82,12 +85,14 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
 
       await createSupplier.mutateAsync(payload);
 
-      toast.success(`${data.name} has been added to your suppliers list.`);
+      toast.success(t("data.suppliers.toasts.added.title"), {
+        description: t("data.suppliers.toasts.added.description")?.replace("{name}", data.name) || "",
+      });
 
       form.reset();
       setOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add supplier");
+      toast.error(error instanceof Error ? error.message : t("common.error"));
     }
   }
 
@@ -97,31 +102,34 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
         {children || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            {t("common.actions.add") || "Add Supplier"}
+            {t("data.suppliers.addButton")}
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>button]:hidden">
-        <DialogHeader>
-          <DialogTitle>{t("data.suppliers.addTitle") || "Add New Supplier"}</DialogTitle>
-          <DialogDescription>
-            Add a new supplier to your contact list. Fill in as much information as possible.
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl [&>button]:hidden">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.suppliers.addTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            {t("data.suppliers.addDescription")}
           </DialogDescription>
         </DialogHeader>
 
-        <Separator />
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="add-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Basic Information</h3>
+              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.basicInfo")}</h3>
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Supplier Name *</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.name")} *</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.suppliers.form.namePlaceholder")} {...field} />
                     </FormControl>
@@ -136,14 +144,14 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   name="contactPerson"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.contactPerson")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("data.suppliers.form.contactPersonPlaceholder")}
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Primary contact name</FormDescription>
+                      <FormDescription>{t("data.suppliers.form.contactPersonHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -154,7 +162,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.email")}</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -162,7 +170,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Business email</FormDescription>
+                      <FormDescription>{t("data.suppliers.form.emailHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -174,11 +182,11 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.phone")}</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.suppliers.form.phonePlaceholder")} {...field} />
                     </FormControl>
-                    <FormDescription>Business phone number</FormDescription>
+                    <FormDescription>{t("data.suppliers.form.phoneHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -187,13 +195,13 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
 
             {/* Address Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Address</h3>
+              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.address")}</h3>
               <FormField
                 control={form.control}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Street Address</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.address")}</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.suppliers.form.addressPlaceholder")} {...field} />
                     </FormControl>
@@ -208,7 +216,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>City</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.city")}</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.suppliers.form.cityPlaceholder")} {...field} />
                       </FormControl>
@@ -222,7 +230,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   name="country"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Country</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.country")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("data.suppliers.form.countryPlaceholder")}
@@ -238,13 +246,13 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
 
             {/* Notes */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Additional Notes</h3>
+              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.additionalNotes")}</h3>
               <FormField
                 control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.notes")}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder={t("data.suppliers.form.notesPlaceholder")}
@@ -253,30 +261,38 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                       />
                     </FormControl>
                     <FormDescription>
-                      Special requirements, preferences, or important details
+                      {t("data.suppliers.form.notesHint")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={createSupplier.isPending}
-              >
-                {t("actions.cancel") || "Cancel"}
-              </Button>
-              <Button type="submit" disabled={createSupplier.isPending}>
-                {createSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("data.suppliers.addButton") || "Add Supplier"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createSupplier.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-supplier-form"
+              disabled={createSupplier.isPending}
+            >
+              {createSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.suppliers.addButton")}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -63,13 +63,13 @@ export default function SupplierDetailsDialog({
               {onEdit && (
                 <Button variant="outline" size="sm" onClick={onEdit}>
                   <Edit className="mr-2 h-4 w-4" />
-                  {t("actions.edit") || "Edit"}
+                  {t("common.actions.edit")}
                 </Button>
               )}
               {onDelete && (
                 <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete") || "Delete"}
+                  {t("common.actions.delete")}
                 </Button>
               )}
             </div>
@@ -197,10 +197,10 @@ export default function SupplierDetailsDialog({
                               }
                             >
                               {stockStatus === "low"
-                                ? "Low Stock"
+                                ? t("common.stockStatus.lowStock")
                                 : stockStatus === "high"
-                                  ? "Overstocked"
-                                  : "In Stock"}
+                                  ? t("common.stockStatus.overstocked")
+                                  : t("common.stockStatus.inStock")}
                             </Badge>
                           </div>
                         </div>
@@ -259,9 +259,9 @@ export default function SupplierDetailsDialog({
         <ConfirmationDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
-          title={t("data.suppliers.toasts.deleted.title") || "Delete Supplier"}
-          description={`Are you sure you want to delete "${supplier.name}"? This action cannot be undone.`}
-          confirmText={t("common.actions.delete") || "Delete Supplier"}
+          title={t("data.suppliers.toasts.deleted.title")}
+          description={t("data.suppliers.toasts.deleted.description")?.replace("{name}", supplier.name) || ""}
+          confirmText={t("common.actions.delete")}
           onConfirm={() => {
             onDelete();
             setDeleteDialogOpen(false);

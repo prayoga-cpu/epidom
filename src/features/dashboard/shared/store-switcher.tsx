@@ -62,7 +62,7 @@ export function StoreSwitcher() {
     return (
       <Button variant="outline" size="sm" onClick={handleCreateStore} className="h-9 text-sm">
         <Store className="mr-2 h-4 w-4" />
-        {t("dashboard.storeSelector.createFirst") || "Create Store"}
+        {t("dashboard.storeSelector.createFirst")}
       </Button>
     );
   }
@@ -74,13 +74,13 @@ export function StoreSwitcher() {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          aria-label={t("dashboard.storeSelector.label") || "Select store"}
+          aria-label={t("dashboard.storeSelector.label")}
           className="h-9 w-[180px] justify-between rounded-2xl text-sm text-black"
         >
           <div className="flex items-center gap-2 truncate">
             <Store className="text-muted-foreground h-4 w-4 shrink-0" />
             <span className="truncate">
-              {currentStore?.name || t("dashboard.storeSelector.select") || "Select store"}
+              {currentStore?.name || t("dashboard.storeSelector.select")}
             </span>
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -89,13 +89,13 @@ export function StoreSwitcher() {
       <PopoverContent className="w-[220px] p-0" align="end">
         <Command>
           <CommandInput
-            placeholder={t("dashboard.storeSelector.searchPlaceholder") || "Search store..."}
+            placeholder={t("dashboard.storeSelector.searchPlaceholder")}
           />
           <CommandList>
             <CommandEmpty>
-              {t("dashboard.storeSelector.noStores") || "No stores found"}
+              {t("dashboard.storeSelector.noStores")}
             </CommandEmpty>
-            <CommandGroup heading={t("dashboard.storeSelector.yourStores") || "Your Stores"}>
+            <CommandGroup heading={t("dashboard.storeSelector.yourStores")}>
               {stores.map((store) => (
                 <CommandItem
                   key={store.id}
@@ -127,7 +127,7 @@ export function StoreSwitcher() {
             <CommandGroup>
               <CommandItem onSelect={handleCreateStore} className="cursor-pointer">
                 <Plus className="mr-2 h-4 w-4" />
-                {t("dashboard.storeSelector.createNew") || "Create new store"}
+                {t("dashboard.storeSelector.createNew")}
               </CommandItem>
             </CommandGroup>
           </CommandList>

@@ -51,7 +51,8 @@ export default function PrintDeliveryDialog({
     // Check if note matches a system message
     const translationKey = systemNoteMap[note];
     if (translationKey) {
-      return t(translationKey) || note;
+      const translated = t(translationKey);
+      return translated || note; // Keep note as fallback if translation key doesn't exist
     }
 
     // If not a system message, return as-is (could be user input)
@@ -62,7 +63,7 @@ export default function PrintDeliveryDialog({
     if (printRef.current) {
       const printWindow = window.open("", "_blank");
       if (printWindow) {
-        const printTitle = t("management.delivery.dialogs.printDelivery.title") || "Print Delivery";
+        const printTitle = t("management.delivery.dialogs.printDelivery.title");
         printWindow.document.write(`
           <html>
             <head>
@@ -131,7 +132,7 @@ export default function PrintDeliveryDialog({
 
   const handleExportPDF = () => {
     // TODO: Implement PDF export functionality
-    alert(t("management.delivery.dialogs.printDelivery.pdfNotImplemented") || "PDF export functionality will be implemented with a PDF library");
+    alert(t("management.delivery.dialogs.printDelivery.pdfNotImplemented"));
   };
 
   // Helper functions for translations
@@ -153,7 +154,7 @@ export default function PrintDeliveryDialog({
         <DialogHeader>
           <DialogTitle>{t("management.delivery.dialogs.printDelivery.title")}</DialogTitle>
           <DialogDescription>
-            {(t("management.delivery.dialogs.printDelivery.previewDescription") || "Preview and print delivery {reference}").replace("{reference}", delivery.deliveryReference)}
+            {t("management.delivery.dialogs.printDelivery.previewDescription").replace("{reference}", delivery.deliveryReference)}
           </DialogDescription>
         </DialogHeader>
 

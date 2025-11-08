@@ -123,11 +123,11 @@ export function SuppliersSection() {
 
     try {
       await deleteSupplier.mutateAsync(selectedSupplier.id);
-      toast.success(t("data.suppliers.toasts.deleted.title") || "Supplier deleted successfully");
+      toast.success(t("data.suppliers.toasts.deleted.title"));
       setDeleteDialogOpen(false);
       setSelectedSupplier(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete supplier");
+      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteSupplier"));
     }
   };
 
@@ -137,21 +137,21 @@ export function SuppliersSection() {
     try {
       await bulkDeleteSuppliers.mutateAsync(Array.from(selectedIds));
       toast.success(
-        `${selectedIds.size} ${t("data.suppliers.pageTitle") || "suppliers"} deleted successfully`
+        t("data.suppliers.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
       );
       setSelectedIds(new Set());
       setBulkSelectMode(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete suppliers");
+      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteSuppliers"));
     }
   };
 
   const handleExport = async () => {
     try {
       await exportSuppliers.mutateAsync({ storeId, filters });
-      toast.success("Suppliers exported successfully");
+      toast.success(t("messages.exportSuccessful"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to export suppliers");
+      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingSuppliers"));
     }
   };
 
@@ -198,9 +198,9 @@ export function SuppliersSection() {
     return (
       <Card className="overflow-hidden shadow-md">
         <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
-          <p className="text-destructive">Error loading suppliers</p>
+          <p className="text-destructive">{t("messages.errorLoadingSuppliers")}</p>
           <Button variant="outline" onClick={() => window.location.reload()}>
-            Retry
+            {t("common.actions.retry")}
           </Button>
         </CardContent>
       </Card>
@@ -213,7 +213,7 @@ export function SuppliersSection() {
         <CardHeader className="border-b pb-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg">
-              {t("data.suppliers.pageTitle") || "Suppliers"}
+              {t("data.suppliers.pageTitle")}
             </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -227,13 +227,13 @@ export function SuppliersSection() {
                 ) : (
                   <Download className="mr-2 h-4 w-4" />
                 )}
-                {t("actions.export") || "Export"}
+                {t("common.actions.export")}
               </Button>
               <AddSupplierDialog />
               {bulkSelectMode && selectedIds.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete") || "Delete"} ({selectedIds.size})
+                  {t("common.actions.delete")} ({selectedIds.size})
                 </Button>
               )}
               <Button
@@ -244,12 +244,12 @@ export function SuppliersSection() {
                 {bulkSelectMode ? (
                   <>
                     <X className="mr-2 h-4 w-4" />
-                    {t("actions.cancel") || "Cancel"}
+                    {t("common.actions.cancel")}
                   </>
                 ) : (
                   <>
                     <CheckSquare className="mr-2 h-4 w-4" />
-                    {t("common.actions.view") || "Select"}
+                    {t("common.actions.select")}
                   </>
                 )}
               </Button>
@@ -264,7 +264,7 @@ export function SuppliersSection() {
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("actions.searchPlaceholder") || "Search..."}
+                placeholder={t("common.search")}
                 value={filters.search}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
@@ -291,19 +291,19 @@ export function SuppliersSection() {
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
-                  <SelectItem value="name-desc">{t("sort.nameZA") || "Name (Z-A)"}</SelectItem>
+                  <SelectItem value="name-asc">{t("sort.nameAZ")}</SelectItem>
+                  <SelectItem value="name-desc">{t("sort.nameZA")}</SelectItem>
                   <SelectItem value="contactPerson-asc">
-                    {t("sort.contactAZ") || "Contact (A-Z)"}
+                    {t("sort.contactAZ")}
                   </SelectItem>
                   <SelectItem value="contactPerson-desc">
-                    {t("sort.contactZA") || "Contact (Z-A)"}
+                    {t("sort.contactZA")}
                   </SelectItem>
                   <SelectItem value="createdAt-desc">
-                    {t("sort.newest") || "Newest First"}
+                    {t("sort.newest")}
                   </SelectItem>
                   <SelectItem value="createdAt-asc">
-                    {t("sort.oldest") || "Oldest First"}
+                    {t("sort.oldest")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -312,7 +312,7 @@ export function SuppliersSection() {
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
-                  {t("common.actions.clearFilters") || "Clear Filters"}
+                  {t("common.actions.clearFilters")}
                 </Button>
               )}
             </div>
@@ -325,8 +325,8 @@ export function SuppliersSection() {
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll") || "Select All"} ({selectedIds.size}{" "}
-                  {t("common.of") || "of"} {suppliers.length} {t("common.selected") || "selected"})
+                  {t("common.selectAll")} ({selectedIds.size}{" "}
+                  {t("common.of")} {suppliers.length} {t("common.selected")})
                 </span>
               </div>
             )}
@@ -335,8 +335,8 @@ export function SuppliersSection() {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing") || "Showing"} {suppliers.length} {t("common.of") || "of"}{" "}
-              {totalSuppliers} {t("data.suppliers.pageTitle") || "suppliers"}
+              {t("common.showing")} {suppliers.length} {t("common.of")} {totalSuppliers}{" "}
+              {t("data.suppliers.pageTitle")}
             </p>
           </div>
 
@@ -407,9 +407,7 @@ export function SuppliersSection() {
                       <Badge variant="outline" className="text-xs">
                         <Package className="mr-1 h-3 w-3" />
                         {supplier.materialSuppliers?.length ?? 0}{" "}
-                        {(supplier.materialSuppliers?.length ?? 0) === 1
-                          ? t("data.materials.single") || "material"
-                          : t("data.materials.pageTitle") || "materials"}
+                        {t("data.materials.pageTitle")}
                       </Badge>
                     </div>
 
@@ -473,18 +471,16 @@ export function SuppliersSection() {
               <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <Store className="text-muted-foreground/50 mb-4 h-12 w-12" />
                 <h3 className="mb-2 text-lg font-semibold">
-                  {t("messages.noSuppliersFound") || "No suppliers found"}
+                  {t("messages.noSuppliersFound")}
                 </h3>
                 <p className="text-muted-foreground mb-4 text-sm">
                   {hasActiveFilters
-                    ? t("messages.noMatchingFilters") ||
-                      "Try adjusting your filters or search query"
-                    : t("messages.getStartedSupplier") ||
-                      "Get started by adding your first supplier"}
+                    ? t("messages.noMatchingFilters")
+                    : t("messages.getStartedSupplier")}
                 </p>
                 {hasActiveFilters ? (
                   <Button variant="outline" onClick={clearFilters}>
-                    {t("common.actions.clearFilters") || "Clear Filters"}
+                    {t("common.actions.clearFilters")}
                   </Button>
                 ) : (
                   <AddSupplierDialog />
@@ -498,7 +494,7 @@ export function SuppliersSection() {
             <div className="flex items-center justify-between border-t pt-4">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">
-                  {t("pagination.rowsPerPage") || "Rows per page"}:
+                  {t("pagination.rowsPerPage")}:
                 </span>
                 <Select
                   value={filters.take.toString()}
@@ -519,8 +515,7 @@ export function SuppliersSection() {
 
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">
-                  {t("pagination.page") || "Page"} {currentPage} {t("pagination.of") || "of"}{" "}
-                  {totalPages}
+                  {t("pagination.page")} {currentPage} {t("pagination.of")} {totalPages}
                 </span>
                 <div className="flex items-center gap-1">
                   <Button
@@ -568,12 +563,12 @@ export function SuppliersSection() {
             onOpenChange={setEditDialogOpen}
           />
           <ConfirmationDialog
-            title={t("data.suppliers.toasts.deleted.title") || "Delete Supplier"}
-            description={(
-              t("data.suppliers.toasts.deleted.description") ||
-              "{name} has been deleted successfully."
-            ).replace("{name}", selectedSupplier.name)}
-            confirmText={t("common.actions.delete") || "Delete"}
+            title={t("data.suppliers.toasts.deleted.title")}
+            description={t("data.suppliers.toasts.deleted.description")?.replace(
+              "{name}",
+              selectedSupplier.name
+            ) || ""}
+            confirmText={t("common.actions.delete")}
             onConfirm={handleDeleteConfirm}
             variant="destructive"
             open={deleteDialogOpen}

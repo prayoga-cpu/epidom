@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -32,18 +31,21 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useUpdateSupplier } from "../hooks/use-suppliers";
 
 // Zod validation schema
-const supplierSchema = z.object({
-  name: z.string().min(2, "Supplier name must be at least 2 characters"),
-  contactPerson: z.string().optional().or(z.literal("")),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
-  country: z.string().optional().or(z.literal("")),
-  notes: z.string().optional().or(z.literal("")),
-});
+// Helper function to create supplier schema with translated messages
+function createSupplierSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t("common.validation.supplierNameMin")),
+    contactPerson: z.string().optional().or(z.literal("")),
+    email: z.string().email(t("common.validation.email")).optional().or(z.literal("")),
+    phone: z.string().optional().or(z.literal("")),
+    address: z.string().optional().or(z.literal("")),
+    city: z.string().optional().or(z.literal("")),
+    country: z.string().optional().or(z.literal("")),
+    notes: z.string().optional().or(z.literal("")),
+  });
+}
 
-type SupplierFormValues = z.infer<typeof supplierSchema>;
+type SupplierFormValues = z.infer<ReturnType<typeof createSupplierSchema>>;
 
 interface EditSupplierDialogProps {
   supplier: SupplierWithRelations | null;
@@ -61,6 +63,8 @@ export default function EditSupplierDialog({
   const storeId = params.storeId as string;
 
   const updateSupplier = useUpdateSupplier(storeId, supplier?.id || "");
+
+  const supplierSchema = createSupplierSchema(t);
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
@@ -105,16 +109,21 @@ export default function EditSupplierDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{t("data.suppliers.editTitle") || "Edit Supplier"}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.suppliers.editTitle") || "Edit Supplier"}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             Update supplier information. Changes will be saved to your contacts.
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="edit-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold">Basic Information</h3>
@@ -262,23 +271,31 @@ export default function EditSupplierDialog({
                 )}
               />
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={updateSupplier.isPending}
-              >
-                {t("actions.cancel") || "Cancel"}
-              </Button>
-              <Button type="submit" disabled={updateSupplier.isPending}>
-                {updateSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("data.suppliers.update") || "Update Supplier"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={updateSupplier.isPending}
+            >
+              {t("actions.cancel") || "Cancel"}
+            </Button>
+            <Button
+              type="submit"
+              form="edit-supplier-form"
+              disabled={updateSupplier.isPending}
+            >
+              {updateSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.suppliers.update") || "Update Supplier"}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

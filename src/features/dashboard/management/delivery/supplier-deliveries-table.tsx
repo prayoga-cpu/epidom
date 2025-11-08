@@ -263,10 +263,10 @@ export function SupplierDeliveriesTable({
             <div className="flex flex-col items-center justify-center py-12">
               <Package className="text-muted-foreground mb-4 h-12 w-12" />
               <h3 className="mb-2 text-lg font-semibold">
-                {t("management.delivery.noDeliveries") || "No Deliveries"}
+                {t("management.delivery.noDeliveries")}
               </h3>
               <p className="text-muted-foreground text-sm">
-                {t("management.delivery.noDeliveriesDescription") || "No supplier deliveries found"}
+                {t("management.delivery.noDeliveriesDescription")}
               </p>
             </div>
           )}
@@ -294,7 +294,7 @@ export function SupplierDeliveriesTable({
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Status Filter */}
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                       <Filter className="mr-2 h-4 w-4" />
                       <SelectValue
                         placeholder={t("management.delivery.filters.status") || "Status"}
@@ -321,7 +321,7 @@ export function SupplierDeliveriesTable({
 
                   {/* Type Filter */}
                   <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                       <Package className="mr-2 h-4 w-4" />
                       <SelectValue
                         placeholder={
@@ -357,7 +357,8 @@ export function SupplierDeliveriesTable({
 
               {/* Deliveries Table */}
               <div className="-mx-4 overflow-x-auto rounded-md border sm:mx-0">
-                <Table>
+                <div className="min-w-[800px]">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead
@@ -511,6 +512,7 @@ export function SupplierDeliveriesTable({
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </div>
 
               {/* Pagination */}

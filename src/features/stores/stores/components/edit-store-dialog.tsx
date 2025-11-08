@@ -53,24 +53,53 @@ export function EditStoreDialog({ store, trigger }: EditStoreDialogProps) {
         {trigger || (
           <Button variant="ghost" size="sm">
             <Pencil className="mr-2 h-4 w-4" />
-            Edit
+            {t("actions.edit")}
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Edit Store</DialogTitle>
-          <DialogDescription>
-            Update your store information. All fields except name are optional.
+      <DialogContent className="mx-4 flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:mx-0 sm:max-w-[500px]">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("stores.editStore") || "Edit Store"}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            {t("stores.editDescription") || "Update your store information. All fields except name are optional."}
           </DialogDescription>
         </DialogHeader>
-        <StoreForm
-          defaultValues={store}
-          onSubmit={handleSubmit}
-          isLoading={isPending}
-          submitText="Update Store"
-          onCancel={() => setOpen(false)}
-        />
+
+        {/* Scrollable Form Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <StoreForm
+            defaultValues={store}
+            onSubmit={handleSubmit}
+            isLoading={isPending}
+            submitText={t("stores.updateStore") || "Update Store"}
+            onCancel={() => setOpen(false)}
+            showActions={false}
+          />
+        </div>
+
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
+              {t("actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="edit-store-form"
+              disabled={isPending}
+            >
+              {isPending ? t("actions.saving") || "Saving..." : t("stores.updateStore") || "Update Store"}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

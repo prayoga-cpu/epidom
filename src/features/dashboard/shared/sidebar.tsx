@@ -46,11 +46,11 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
     <aside
       className={cn(
         mode === "desktop"
-          ? "sticky top-[5rem] hidden h-[calc(100vh-5.25rem-1rem)] w-full self-start md:flex"
+          ? "hidden h-full w-[230px] shrink-0 md:block"
           : "mt-12 flex h-full md:hidden"
       )}
     >
-      <div className="bg-card flex h-full w-full flex-col overflow-y-auto rounded-xl border shadow-sm">
+      <div className="scrollbar-thin bg-card flex h-full w-full flex-col overflow-y-auto rounded-xl border shadow-sm">
         {mode === "mobile" && (
           <div className="border-b p-3">
             <div className="relative">

@@ -60,14 +60,15 @@ type SortField =
   | "updatedAt";
 type SortOrder = "asc" | "desc";
 
-const RECIPE_CATEGORIES = [
-  "Bread & Pastries",
-  "Cakes & Desserts",
-  "Confectionery",
-  "Dairy Products",
-  "Beverages",
-  "Sauces & Condiments",
-  "Other",
+// Recipe categories - use translation keys
+const getRecipeCategories = (t: (key: string) => string) => [
+  t("data.recipes.categories.breadPastries"),
+  t("data.recipes.categories.cakesDesserts"),
+  t("data.recipes.categories.confectionery"),
+  t("data.recipes.categories.dairyProducts"),
+  t("data.recipes.categories.beverages"),
+  t("data.recipes.categories.saucesCondiments"),
+  t("data.recipes.categories.other"),
 ];
 
 export function RecipesSection() {
@@ -160,16 +161,14 @@ export function RecipesSection() {
 
     try {
       await deleteRecipe.mutateAsync(selectedRecipe.id);
-      toast.success(t("data.recipes.toasts.deleted.title") || "Recipe deleted", {
-        description:
-          t("data.recipes.toasts.deleted.description")?.replace("{name}", selectedRecipe.name) ||
-          `${selectedRecipe.name} has been deleted successfully.`,
+      toast.success(t("data.recipes.toasts.deleted.title"), {
+        description: t("data.recipes.toasts.deleted.description")?.replace("{name}", selectedRecipe.name) || "",
       });
       setDeleteDialogOpen(false);
       setSelectedRecipe(null);
     } catch (error) {
-      toast.error(t("common.error") || "Error", {
-        description: error instanceof Error ? error.message : "Failed to delete recipe",
+      toast.error(t("common.error"), {
+        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
       });
     }
   };
@@ -179,18 +178,17 @@ export function RecipesSection() {
 
     try {
       await bulkDeleteRecipes.mutateAsync(Array.from(selectedIds));
-      toast.success(t("data.recipes.toasts.bulkDeleted.title") || "Recipes deleted", {
-        description:
-          t("data.recipes.toasts.bulkDeleted.description")?.replace(
-            "{count}",
-            selectedIds.size.toString()
-          ) || `${selectedIds.size} recipes have been deleted successfully.`,
+      toast.success(t("data.recipes.toasts.bulkDeleted.title"), {
+        description: t("data.recipes.toasts.bulkDeleted.description")?.replace(
+          "{count}",
+          selectedIds.size.toString()
+        ) || "",
       });
       setSelectedIds(new Set());
       setBulkSelectMode(false);
     } catch (error) {
-      toast.error(t("common.error") || "Error", {
-        description: error instanceof Error ? error.message : "Failed to delete recipes",
+      toast.error(t("common.error"), {
+        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
       });
     }
   };
@@ -208,12 +206,12 @@ export function RecipesSection() {
           take: 100,
         },
       });
-      toast.success("Export started", {
-        description: "Your recipes export will download shortly.",
+      toast.success(t("messages.exportStarted"), {
+        description: t("messages.exportStartedDescription"),
       });
     } catch (error) {
-      toast.error("Export failed", {
-        description: error instanceof Error ? error.message : "Failed to export recipes",
+      toast.error(t("messages.exportFailed"), {
+        description: error instanceof Error ? error.message : t("messages.errorLoadingRecipes"),
       });
     }
   };
@@ -241,9 +239,9 @@ export function RecipesSection() {
     return (
       <Card className="overflow-hidden shadow-md">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-destructive font-semibold">Error loading recipes</p>
+          <p className="text-destructive font-semibold">{t("messages.errorLoadingRecipes")}</p>
           <p className="text-muted-foreground text-sm">
-            {error instanceof Error ? error.message : "An unexpected error occurred"}
+            {error instanceof Error ? error.message : t("common.validation.unexpectedError")}
           </p>
         </CardContent>
       </Card>
@@ -255,7 +253,7 @@ export function RecipesSection() {
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b pb-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">{t("data.recipes.pageTitle") || "Recipes"}</CardTitle>
+            <CardTitle className="text-lg">{t("data.recipes.pageTitle")}</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
@@ -268,7 +266,7 @@ export function RecipesSection() {
                 ) : (
                   <Download className="mr-2 h-4 w-4" />
                 )}
-                {t("actions.export") || "Export"}
+                {t("common.actions.export")}
               </Button>
               <AddRecipeDialog />
               {bulkSelectMode && selectedIds.size > 0 && (
@@ -283,7 +281,7 @@ export function RecipesSection() {
                   ) : (
                     <Trash2 className="mr-2 h-4 w-4" />
                   )}
-                  {t("actions.delete") || "Delete"} ({selectedIds.size})
+                  {t("actions.delete")} ({selectedIds.size})
                 </Button>
               )}
               <Button
@@ -294,12 +292,12 @@ export function RecipesSection() {
                 {bulkSelectMode ? (
                   <>
                     <X className="mr-2 h-4 w-4" />
-                    {t("actions.cancel") || "Cancel"}
+                    {t("actions.cancel")}
                   </>
                 ) : (
                   <>
                     <CheckSquare className="mr-2 h-4 w-4" />
-                    {t("common.actions.view") || "Select"}
+                    {t("common.actions.view")}
                   </>
                 )}
               </Button>
@@ -314,7 +312,7 @@ export function RecipesSection() {
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("actions.searchPlaceholder") || "Search..."}
+                placeholder={t("actions.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -334,9 +332,9 @@ export function RecipesSection() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">
-                    {t("filters.allCategories") || "All Categories"}
+                    {t("filters.allCategories")}
                   </SelectItem>
-                  {RECIPE_CATEGORIES.map((category) => (
+                  {getRecipeCategories(t).map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>
@@ -358,31 +356,31 @@ export function RecipesSection() {
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
-                  <SelectItem value="name-desc">{t("sort.nameZA") || "Name (Z-A)"}</SelectItem>
+                  <SelectItem value="name-asc">{t("sort.nameAZ")}</SelectItem>
+                  <SelectItem value="name-desc">{t("sort.nameZA")}</SelectItem>
                   <SelectItem value="productionTimeMinutes-asc">
-                    {t("sort.timeShortest") || "Time (Shortest)"}
+                    {t("sort.timeShortest")}
                   </SelectItem>
                   <SelectItem value="productionTimeMinutes-desc">
-                    {t("sort.timeLongest") || "Time (Longest)"}
+                    {t("sort.timeLongest")}
                   </SelectItem>
                   <SelectItem value="costPerBatch-asc">
-                    {t("sort.costLowHigh") || "Cost (Low-High)"}
+                    {t("sort.costLowHigh")}
                   </SelectItem>
                   <SelectItem value="costPerBatch-desc">
-                    {t("sort.costHighLow") || "Cost (High-Low)"}
+                    {t("sort.costHighLow")}
                   </SelectItem>
                   <SelectItem value="category-asc">
-                    {t("sort.categoryAZ") || "Category (A-Z)"}
+                    {t("sort.categoryAZ")}
                   </SelectItem>
                   <SelectItem value="category-desc">
-                    {t("sort.categoryZA") || "Category (Z-A)"}
+                    {t("sort.categoryZA")}
                   </SelectItem>
                   <SelectItem value="createdAt-asc">
-                    {t("sort.oldestFirst") || "Oldest First"}
+                    {t("sort.oldestFirst")}
                   </SelectItem>
                   <SelectItem value="createdAt-desc">
-                    {t("sort.newestFirst") || "Newest First"}
+                    {t("sort.newestFirst")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -391,7 +389,7 @@ export function RecipesSection() {
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
-                  {t("common.actions.clearFilters") || "Clear Filters"}
+                  {t("common.actions.clearFilters")}
                 </Button>
               )}
             </div>
@@ -404,8 +402,8 @@ export function RecipesSection() {
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll") || "Select All"} ({selectedIds.size}{" "}
-                  {t("common.of") || "of"} {recipes.length} {t("common.selected") || "selected"})
+                  {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {recipes.length}{" "}
+                  {t("common.selected")})
                 </span>
               </div>
             )}
@@ -414,8 +412,8 @@ export function RecipesSection() {
           {/* Results Count */}
           <div className="flex items-center justify-between border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing") || "Showing"} {recipes.length} {t("common.of") || "of"} {total}{" "}
-              {t("data.recipes.pageTitle") || "recipes"}
+              {t("common.showing")} {recipes.length} {t("common.of")} {total}{" "}
+              {t("data.recipes.pageTitle")}
             </p>
           </div>
 
@@ -597,12 +595,12 @@ export function RecipesSection() {
                 <ChefHat className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
                 <p className="text-muted-foreground">
                   {hasActiveFilters
-                    ? t("messages.noMatchingFilters") || "No recipes match your filters"
-                    : t("messages.noRecipesFound") || "No recipes found"}
+                    ? t("messages.noMatchingFilters")
+                    : t("messages.noRecipesFound")}
                 </p>
                 {hasActiveFilters && (
                   <Button variant="link" onClick={clearFilters} className="mt-2">
-                    {t("common.actions.clearAllFilters") || "Clear all filters"}
+                    {t("common.actions.clearFilters")}
                   </Button>
                 )}
               </div>
@@ -644,11 +642,12 @@ export function RecipesSection() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title={t("data.recipes.toasts.deleted.title") || "Delete Recipe"}
-        description={(
-          t("data.recipes.toasts.deleted.description") || "{name} has been deleted successfully."
-        ).replace("{name}", selectedRecipe?.name || "")}
-        confirmText={t("common.actions.delete") || "Delete"}
+        title={t("data.recipes.toasts.deleted.title")}
+        description={t("data.recipes.toasts.deleted.description")?.replace(
+          "{name}",
+          selectedRecipe?.name || ""
+        ) || ""}
+        confirmText={t("common.actions.delete")}
         variant="destructive"
       />
     </>

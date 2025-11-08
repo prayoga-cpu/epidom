@@ -149,3 +149,38 @@ export function createImagePreview(file: File): string {
 export function revokeImagePreview(url: string): void {
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Delete an image from blob storage
+ *
+ * @param url - Image URL to delete (must be a blob storage URL)
+ * @returns Promise that resolves when deletion is complete
+ * @throws Error if deletion fails
+ */
+export async function deleteBlobImage(url: string): Promise<void> {
+  // Only delete if it's a blob storage URL
+  if (!url || !url.includes("blob.vercel-storage.com")) {
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/upload", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to delete image");
+    }
+
+    console.log("Image deleted from storage:", url);
+  } catch (error) {
+    console.warn("Failed to delete image from storage:", error);
+    // Re-throw to allow caller to handle the error
+    throw error;
+  }
+}

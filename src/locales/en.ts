@@ -1,6 +1,15 @@
 export const en = {
-  common: {
-    brand: "EPIDOM",
+    common: {
+      brand: "EPIDOM",
+      item: "Item",
+      ingredient: "Ingredient",
+      uncategorized: "Uncategorized",
+      stockStatus: {
+        outOfStock: "Out of Stock",
+        lowStock: "Low Stock",
+        inStock: "In Stock",
+        overstocked: "Overstocked",
+      },
     nav: {
       home: "Home",
       services: "Services",
@@ -12,6 +21,7 @@ export const en = {
       openMenu: "Open menu",
       closeMenu: "Close menu",
       homepage: "Homepage",
+      searchAriaLabel: "Search",
     },
     language: {
       label: "Language",
@@ -24,6 +34,7 @@ export const en = {
     selectAll: "Select All",
     of: "of",
     selected: "selected",
+    per: "per",
     showing: "Showing",
     sku: "SKU",
     stock: "Stock",
@@ -61,6 +72,9 @@ export const en = {
       update: "Update",
       logout: "Logout",
       searchPlaceholder: "Search...",
+      retry: "Retry",
+      select: "Select",
+      apply: "Apply",
     },
     pagination: {
       rowsPerPage: "Rows per page",
@@ -68,6 +82,24 @@ export const en = {
     },
     validation: {
       error: "Validation Error",
+      required: "This field is required",
+      minLength: "Must be at least {min} characters",
+      maxLength: "Must be at most {max} characters",
+      min: "Must be at least {min}",
+      max: "Must be at most {max}",
+      positive: "Must be greater than 0",
+      nonNegative: "Cannot be negative",
+      email: "Invalid email address",
+      invalidFormat: "Invalid format",
+      unexpectedError: "An unexpected error occurred",
+      productNameMin: "Product name must be at least 2 characters",
+      supplierNameMin: "Supplier name must be at least 2 characters",
+      categoryRequired: "Please enter a category",
+      unitRequired: "Please enter a unit",
+      pricePositive: "Price must be greater than 0",
+      stockNonNegative: "Stock cannot be negative",
+      minStockNonNegative: "Minimum stock cannot be negative",
+      maxStockPositive: "Maximum stock must be greater than 0",
     },
     error: "Error",
     notes: "Notes",
@@ -86,6 +118,16 @@ export const en = {
     },
     datePicker: {
       pickDate: "Pick a date",
+      pickDateRange: "Pick a date range",
+      selectPreset: "Select preset",
+      presets: {
+        today: "Today",
+        last7Days: "Last 7 days",
+        last30Days: "Last 30 days",
+        last90Days: "Last 90 days",
+        thisYear: "This year",
+        custom: "Custom",
+      },
     },
     metrics: {
       plannedQuantity: "Planned Quantity",
@@ -881,11 +923,15 @@ export const en = {
     materials: {
       pageTitle: "Materials",
       addTitle: "Add New Material",
+      addButton: "Add Material",
       addDescription: "Add a new material to your inventory. Fill in all required fields.",
       editTitle: "Edit Material",
       editDescription: "Update material information",
       detailsTitle: "Material Details",
       detailsDescription: "View complete information about this material",
+      title: "Materials",
+      unknownMaterial: "Unknown Material",
+      noDescription: "No description provided",
 
       // Form fields
       form: {
@@ -894,14 +940,22 @@ export const en = {
         sku: "SKU",
         skuPlaceholder: "e.g., FLR-T55-25KG",
         category: "Category",
+        categoryPlaceholder: "e.g., Grains, Dairy",
         selectCategory: "Select category",
         supplier: "Supplier",
         selectSupplier: "Select supplier",
+        selectSupplierPlaceholder: "Select a supplier...",
+        addSupplier: "Add Supplier",
+        noSuppliersYet: "No suppliers added yet. Click \"Add Supplier\" to link suppliers to this material.",
         quantity: "Quantity",
         unit: "Unit",
         selectUnit: "Unit",
         minStock: "Min. Stock",
+        minStockLevel: "Min Stock Level",
+        maxStockLevel: "Max Stock Level",
         cost: "Cost per Unit ($)",
+        unitCost: "Unit Cost",
+        currentStock: "Current Stock",
         costPlaceholder: "25.00",
         location: "Storage Location",
         locationPlaceholder: "Location",
@@ -909,6 +963,19 @@ export const en = {
         barcodePlaceholder: "Barcode",
         notes: "Notes (Optional)",
         notesPlaceholder: "Additional information about this material...",
+        description: "Description",
+        descriptionPlaceholder: "Additional information about this material...",
+        supplierPrice: "Price",
+        preferred: "Preferred",
+        chooseSupplier: "Choose a supplier for this material",
+        alertMinStock: "Alert when stock falls below this level",
+        alertMaxStock: "Alert when stock exceeds this level",
+      },
+      // Form sections
+      sections: {
+        basicInfo: "Basic Information",
+        pricingStock: "Pricing & Stock",
+        suppliers: "Suppliers (Optional)",
       },
 
       // Categories
@@ -957,12 +1024,34 @@ export const en = {
           description: "{count} materials have been deleted successfully.",
         },
       },
+      details: {
+        stockInfo: "Stock Information",
+        suppliers: "Suppliers",
+        pricing: "Pricing",
+        description: "Description",
+        metadata: "Information",
+        currentStock: "Current Stock",
+        minStock: "Min",
+        maxStock: "Max",
+        unitCost: "Unit Cost",
+        totalValue: "Total Value",
+        category: "Category",
+        unit: "Unit",
+        noSuppliersLinked: "No suppliers linked",
+        created: "Created",
+        lastUpdated: "Last Updated",
+      },
+      deleteConfirm: {
+        title: "Delete Material",
+        description: "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+      },
     },
 
     // Recipes section
     recipes: {
       pageTitle: "Recipes",
       addTitle: "Create New Recipe",
+      addButton: "Add Recipe",
       editTitle: "Edit Recipe",
       detailsTitle: "Recipe Details",
       duplicateTitle: "Duplicate Recipe",
@@ -1140,6 +1229,7 @@ export const en = {
     products: {
       pageTitle: "Products",
       addTitle: "Add New Product",
+      addButton: "Add Product",
       editTitle: "Edit Product",
       detailsTitle: "Product Details",
       addDescription:
@@ -1328,8 +1418,10 @@ export const en = {
   filters: {
     allSuppliers: "All Suppliers",
     allStock: "All Stock",
+    allStockLevels: "All Stock Levels",
     inStock: "In Stock",
     lowStock: "Low Stock",
+    outOfStock: "Out of Stock",
     critical: "Critical",
     overstocked: "Overstocked",
     allCategories: "All Categories",
@@ -1378,6 +1470,14 @@ export const en = {
     difficultyHighLow: "Difficulty (High-Low)",
     prepTimeLowHigh: "Prep Time (Low-High)",
     prepTimeHighLow: "Prep Time (High-Low)",
+    timeShortest: "Time (Shortest)",
+    timeLongest: "Time (Longest)",
+    contactAZ: "Contact (A-Z)",
+    contactZA: "Contact (Z-A)",
+    newest: "Newest First",
+    newestFirst: "Newest First",
+    oldest: "Oldest First",
+    oldestFirst: "Oldest First",
   },
   tables: {
     order: "Order",
@@ -1442,11 +1542,25 @@ export const en = {
     getStartedRecipe: "Get started by creating your first recipe",
     getStartedProduct: "Get started by adding your first product",
     getStartedSupplier: "Get started by adding your first supplier",
+    errorLoadingMaterials: "Error loading materials",
+    errorLoadingRecipes: "Error loading recipes",
+    errorLoadingProducts: "Error loading products",
+    errorLoadingSuppliers: "Error loading suppliers",
     noDataToExport: "No data to export",
     noDataToExportDesc: "There is no data available to export.",
+    exportStarted: "Export started",
+    exportStartedDescription: "Your export will download shortly.",
     exportSuccessful: "Export successful",
     exportFailed: "Export failed",
     exportFailedDesc: "An error occurred while exporting the data.",
+    failedToDeleteMaterial: "Failed to delete material",
+    failedToDeleteMaterials: "Failed to delete materials",
+    failedToDeleteSupplier: "Failed to delete supplier",
+    failedToDeleteSuppliers: "Failed to delete suppliers",
+    failedToUpdateMaterial: "Failed to update material",
+    failedToUpdateOrder: "Failed to update order",
+    orderPlaced: "Order marked as placed",
+    orderPlacedError: "Failed to mark order as placed",
   },
   alerts: {
     // Page titles
@@ -1710,6 +1824,12 @@ export const en = {
       addBusinessInfoDescription: "Add your business information to complete your profile",
       editAvatar: "Edit Profile Picture",
       editAvatarDescription: "Upload a new profile picture or remove the current one.",
+      cropAvatarDescription: "Crop and adjust your profile picture.",
+      previewAvatarDescription: "Preview your new profile picture.",
+      uploadAvatar: "Click to upload",
+      fileTypesInfo: "JPEG, PNG, WebP, or GIF (max 5MB)",
+      loadImageFailed: "Failed to load image",
+      uploadFailed: "Upload failed",
       namePlaceholder: "Enter your full name",
       emailPlaceholder: "your@email.com",
       phonePlaceholder: "+1 234 567 8900",
@@ -1731,12 +1851,16 @@ export const en = {
       invite: "Invite",
       remove: "Remove",
       removeAvatar: "Remove Avatar",
+      uploadAvatar: "Upload",
+      apply: "Apply",
     },
 
     // Errors
     errors: {
       updateFailed: "Failed to update profile. Please try again.",
       businessUpdateFailed: "Failed to update business information. Please try again.",
+      loadImageFailed: "Failed to load image",
+      uploadFailed: "Upload failed",
     },
 
     // Toast messages
@@ -1785,6 +1909,13 @@ export const en = {
       businessNameRequired: "Business name is required",
     },
 
+    // Cropper
+    cropper: {
+      zoom: "Zoom",
+      rotation: "Rotation",
+      processing: "Processing...",
+    },
+
     // Legacy keys (maintain backward compatibility)
     address: "Address",
     businessName: "Business Name",
@@ -1793,10 +1924,26 @@ export const en = {
   stores: {
     title: "Your Stores",
     createStore: "Create a store",
+    editStore: "Edit Store",
+    updateStore: "Update Store",
+    editDescription: "Update your store information. All fields except name are optional.",
     storeName: "Store Name",
+    storeNamePlaceholder: "e.g., Artisan Bakery Paris",
     city: "City",
+    cityPlaceholder: "e.g., Paris",
+    country: "Country",
+    countryPlaceholder: "e.g., France",
+    addressPlaceholder: "e.g., 123 Rue de la Paix",
+    phonePlaceholder: "e.g., +33 1 23 45 67 89",
+    emailPlaceholder: "e.g., contact@store.com",
+    storeImage: "Store Image",
     noStores: "No stores yet",
     createFirst: "Create your first store to get started",
+    searchPlaceholder: "Search stores by name, city, or address...",
+    createSuccess: "Store created successfully",
+    createError: "Failed to create store",
+    editSuccess: "Store updated successfully",
+    editError: "Failed to update store",
   },
   tabs: {
     delivery: "Delivery",
@@ -1846,6 +1993,7 @@ export const en = {
       items: "items",
       noMatches: "No deliveries match your filters",
       noDeliveries: "No deliveries yet",
+      noDeliveriesDescription: "No supplier deliveries found",
       actions: {
         edit: "Edit",
         updateStatus: "Update Status",
@@ -1965,6 +2113,7 @@ export const en = {
             expectedDateRequired: "Expected date is required",
             atLeastOneItem: "Please add at least one item",
             itemsMustHaveMaterial: "All items must have a material and quantity greater than 0",
+            addModeNotImplemented: "Add mode is not implemented yet. Orders should be created from alerts.",
           },
           toasts: {
             created: {
@@ -1989,6 +2138,7 @@ export const en = {
       selectItem: "Select an Item",
       selectItemDescription: "Choose an item from the list to view details and make adjustments",
       noItemsFound: "No items found",
+      noStockItemsYet: "No stock items yet",
       selectAll: "Select All",
       deselectAll: "Deselect All",
 
@@ -2229,6 +2379,8 @@ export const en = {
       metrics: {
         totalBatches: "Total Batches",
         totalBatchesDescription: "All production batches",
+        completedBatches: "Completed Batches",
+        completedBatchesDescription: "Number of completed batches",
         averageQuality: "Avg. Quality",
         averageQualityDescription: "Average quality score",
         efficiency: "Efficiency",
@@ -2324,6 +2476,7 @@ export const en = {
     selectAll: "Select All",
     deselectAll: "Deselect All",
     selected: "selected",
+    per: "per",
     bulkActions: "Bulk Actions",
 
     // Status
@@ -2369,6 +2522,20 @@ export const en = {
     reorderLevel: "Reorder Level",
     lastMovement: "Last Movement",
     recentActivity: "Recent Activity",
+
+    // Filters for stock levels
+    filters: {
+      allItems: "All Items",
+      allItemsPlaceholder: "All Items",
+      allStatus: "All Status",
+      allStatusPlaceholder: "All Stock Status",
+      outOfStock: "Out of Stock",
+      lowStock: "Low Stock",
+      inStock: "In Stock",
+      overstocked: "Overstocked",
+    },
+    item: "item",
+    items: "items",
 
     // Stock History
     stockHistory: "Stock History",
@@ -2477,8 +2644,8 @@ export const en = {
   footer: {
     tagline: "A SOLUTION FOR YOUR FOOD STOCK MANAGEMENT",
     contact: "Contact us",
-    addressHeading: "France, Massy",
-    addressLines: ["1 Av. Marcel Ramolfo Garnier", "Massy, 91300", "Tel (+33) 7 81 73 23 86"],
+    addressHeading: "Address",
+    address: "France, Paris",
     rights: (year: number) => `© ${year} Epidom. All rights reserved.`,
   },
   cookie: {

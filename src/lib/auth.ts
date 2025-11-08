@@ -103,7 +103,8 @@ export const authOptions: NextAuthOptions = {
           token.phone = session.phone;
         }
         if (session.image !== undefined) {
-          token.image = session.image;
+          // Allow null to remove image
+          token.image = session.image === "" ? null : session.image;
           console.log("[NextAuth JWT] Updated token.image to:", token.image);
         }
       }

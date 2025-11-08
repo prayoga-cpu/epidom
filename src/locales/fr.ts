@@ -1,6 +1,15 @@
 export const fr = {
-  common: {
-    brand: "EPIDOM",
+    common: {
+      brand: "EPIDOM",
+      item: "Article",
+      ingredient: "Ingrédient",
+      uncategorized: "Non Catégorisé",
+      stockStatus: {
+      outOfStock: "Rupture de Stock",
+      lowStock: "Stock Faible",
+      inStock: "En Stock",
+      overstocked: "Surstocké",
+    },
     nav: {
       home: "Accueil",
       services: "Services",
@@ -12,6 +21,7 @@ export const fr = {
       openMenu: "Ouvrir le menu",
       closeMenu: "Fermer le menu",
       homepage: "Page d'accueil",
+      searchAriaLabel: "Rechercher",
     },
     language: {
       label: "Langue",
@@ -24,6 +34,7 @@ export const fr = {
     selectAll: "Tout Sélectionner",
     of: "sur",
     selected: "sélectionné(s)",
+    per: "par",
     showing: "Affichage",
     sku: "SKU",
     stock: "Stock",
@@ -51,6 +62,16 @@ export const fr = {
     },
     datePicker: {
       pickDate: "Choisir une date",
+      pickDateRange: "Choisir une plage de dates",
+      selectPreset: "Sélectionner un préréglage",
+      presets: {
+        today: "Aujourd'hui",
+        last7Days: "7 derniers jours",
+        last30Days: "30 derniers jours",
+        last90Days: "90 derniers jours",
+        thisYear: "Cette année",
+        custom: "Personnalisé",
+      },
     },
     metrics: {
       plannedQuantity: "Quantité Planifiée",
@@ -58,6 +79,24 @@ export const fr = {
     },
     validation: {
       error: "Erreur de Validation",
+      required: "Ce champ est requis",
+      minLength: "Doit contenir au moins {min} caractères",
+      maxLength: "Ne doit pas dépasser {max} caractères",
+      min: "Doit être au moins {min}",
+      max: "Ne doit pas dépasser {max}",
+      positive: "Doit être supérieur à 0",
+      nonNegative: "Ne peut pas être négatif",
+      email: "Adresse e-mail invalide",
+      invalidFormat: "Format invalide",
+      unexpectedError: "Une erreur inattendue s'est produite",
+      productNameMin: "Le nom du produit doit contenir au moins 2 caractères",
+      supplierNameMin: "Le nom du fournisseur doit contenir au moins 2 caractères",
+      categoryRequired: "Veuillez entrer une catégorie",
+      unitRequired: "Veuillez entrer une unité",
+      pricePositive: "Le prix doit être supérieur à 0",
+      stockNonNegative: "Le stock ne peut pas être négatif",
+      minStockNonNegative: "Le stock minimum ne peut pas être négatif",
+      maxStockPositive: "Le stock maximum doit être supérieur à 0",
     },
     error: "Erreur",
     notes: "Notes",
@@ -85,6 +124,9 @@ export const fr = {
       exportAsPdf: "Exporter en PDF",
       logout: "Déconnexion",
       searchPlaceholder: "Rechercher...",
+      retry: "Réessayer",
+      select: "Sélectionner",
+      apply: "Appliquer",
     },
   },
   search: {
@@ -771,7 +813,7 @@ export const fr = {
     ordersToPrepare: "Commandes à Préparer",
     alertsTitle: "Alertes",
     ordersTitle: "Commandes à Passer",
-    materialsList: "Liste des Matériaux",
+    materialsList: "Liste des matières premières",
     recipesList: "Liste des Recettes",
     productsList: "Liste des Produits",
     suppliersList: "Liste des Fournisseurs",
@@ -890,12 +932,16 @@ export const fr = {
     materials: {
       pageTitle: "Matières premières",
       addTitle: "Ajouter un Nouveau Matériau",
+      addButton: "Ajouter un Matériau",
       addDescription:
         "Ajoutez un nouveau matériau à votre inventaire. Remplissez tous les champs obligatoires.",
       editTitle: "Modifier le Matériau",
       editDescription: "Mettre à jour les informations du matériau",
       detailsTitle: "Détails du Matériau",
       detailsDescription: "Voir les informations complètes sur ce matériau",
+      title: "Matériaux",
+      unknownMaterial: "Matériau Inconnu",
+      noDescription: "Aucune description fournie",
 
       // Form fields
       form: {
@@ -905,6 +951,8 @@ export const fr = {
         selectCategory: "Sélectionner une catégorie",
         supplier: "Fournisseur",
         selectSupplier: "Sélectionner un fournisseur",
+        addSupplier: "Ajouter un Fournisseur",
+        noSuppliersYet: "Aucun fournisseur ajouté pour le moment. Cliquez sur \"Ajouter un Fournisseur\" pour lier des fournisseurs à ce matériau.",
         quantity: "Quantité",
         unit: "Unité",
         selectUnit: "Unité",
@@ -913,6 +961,25 @@ export const fr = {
         costPlaceholder: "25.00",
         notes: "Notes (Optionnel)",
         notesPlaceholder: "Informations supplémentaires sur ce matériau...",
+        description: "Description",
+        descriptionPlaceholder: "Informations supplémentaires sur ce matériau...",
+        categoryPlaceholder: "ex: Céréales, Produits Laitiers",
+        selectSupplierPlaceholder: "Sélectionner un fournisseur...",
+        unitCost: "Coût Unitaire",
+        currentStock: "Stock Actuel",
+        minStockLevel: "Niveau de Stock Minimum",
+        maxStockLevel: "Niveau de Stock Maximum",
+        supplierPrice: "Prix",
+        preferred: "Préféré",
+        chooseSupplier: "Choisir un fournisseur pour ce matériau",
+        alertMinStock: "Alerte lorsque le stock tombe en dessous de ce niveau",
+        alertMaxStock: "Alerte lorsque le stock dépasse ce niveau",
+      },
+      // Form sections
+      sections: {
+        basicInfo: "Informations de Base",
+        pricingStock: "Tarification et Stock",
+        suppliers: "Fournisseurs (Optionnel)",
       },
 
       // Categories
@@ -961,12 +1028,34 @@ export const fr = {
           description: "{count} matériaux ont été supprimés avec succès.",
         },
       },
+      details: {
+        stockInfo: "Informations sur le Stock",
+        suppliers: "Fournisseurs",
+        pricing: "Tarification",
+        description: "Description",
+        metadata: "Informations",
+        currentStock: "Stock Actuel",
+        minStock: "Min",
+        maxStock: "Max",
+        unitCost: "Coût Unitaire",
+        totalValue: "Valeur Totale",
+        category: "Catégorie",
+        unit: "Unité",
+        noSuppliersLinked: "Aucun fournisseur lié",
+        created: "Créé",
+        lastUpdated: "Dernière Mise à Jour",
+      },
+      deleteConfirm: {
+        title: "Supprimer le Matériau",
+        description: "Êtes-vous sûr de vouloir supprimer \"{name}\" ? Cette action ne peut pas être annulée.",
+      },
     },
 
     // Recipes section
     recipes: {
       pageTitle: "Recettes",
       addTitle: "Créer une Nouvelle Recette",
+      addButton: "Ajouter une Recette",
       editTitle: "Modifier la Recette",
       detailsTitle: "Détails de la Recette",
       duplicateTitle: "Dupliquer la Recette",
@@ -1154,6 +1243,7 @@ export const fr = {
     products: {
       pageTitle: "Produits",
       addTitle: "Ajouter un Nouveau Produit",
+      addButton: "Ajouter un Produit",
       editTitle: "Modifier le Produit",
       detailsTitle: "Détails du Produit",
       addDescription:
@@ -1250,6 +1340,7 @@ export const fr = {
     suppliers: {
       pageTitle: "Fournisseurs",
       addTitle: "Ajouter un Nouveau Fournisseur",
+      addButton: "Ajouter un Fournisseur",
       editTitle: "Modifier le Fournisseur",
       detailsTitle: "Détails du Fournisseur",
       addDescription:
@@ -1342,8 +1433,10 @@ export const fr = {
   filters: {
     allSuppliers: "Tous les Fournisseurs",
     allStock: "Tout le Stock",
+    allStockLevels: "Tous les Niveaux de Stock",
     inStock: "En Stock",
     lowStock: "Stock Faible",
+    outOfStock: "Rupture de Stock",
     critical: "Critique",
     overstocked: "Surstock",
     allCategories: "Toutes les Catégories",
@@ -1386,6 +1479,14 @@ export const fr = {
     difficultyHighLow: "Difficulté (Haut-Bas)",
     prepTimeLowHigh: "Temps Prépa (Bas-Haut)",
     prepTimeHighLow: "Temps Prépa (Haut-Bas)",
+    timeShortest: "Temps (Plus Court)",
+    timeLongest: "Temps (Plus Long)",
+    contactAZ: "Contact (A-Z)",
+    contactZA: "Contact (Z-A)",
+    newest: "Plus Récent",
+    newestFirst: "Plus Récent",
+    oldest: "Plus Ancien",
+    oldestFirst: "Plus Ancien",
   },
   tables: {
     order: "Commande",
@@ -1451,11 +1552,25 @@ export const fr = {
     getStartedRecipe: "Commencez par créer votre première recette",
     getStartedProduct: "Commencez par ajouter votre premier produit",
     getStartedSupplier: "Commencez par ajouter votre premier fournisseur",
+    errorLoadingMaterials: "Erreur lors du chargement des matériaux",
+    errorLoadingRecipes: "Erreur lors du chargement des recettes",
+    errorLoadingProducts: "Erreur lors du chargement des produits",
+    errorLoadingSuppliers: "Erreur lors du chargement des fournisseurs",
     noDataToExport: "Aucune donnée à exporter",
     noDataToExportDesc: "Il n'y a aucune donnée disponible à exporter.",
+    exportStarted: "Exportation démarrée",
+    exportStartedDescription: "Votre exportation sera téléchargée sous peu.",
     exportSuccessful: "Exportation réussie",
     exportFailed: "L'exportation a échoué",
     exportFailedDesc: "Une erreur s'est produite lors de l'exportation des données.",
+    failedToDeleteMaterial: "Échec de la suppression du matériau",
+    failedToDeleteMaterials: "Échec de la suppression des matériaux",
+    failedToDeleteSupplier: "Échec de la suppression du fournisseur",
+    failedToDeleteSuppliers: "Échec de la suppression des fournisseurs",
+    failedToUpdateMaterial: "Échec de la mise à jour du matériau",
+    failedToUpdateOrder: "Échec de la mise à jour de la commande",
+    orderPlaced: "Commande marquée comme passée",
+    orderPlacedError: "Échec du marquage de la commande comme passée",
   },
   alerts: {
     // Page titles
@@ -1723,6 +1838,14 @@ export const fr = {
         "Mettez à jour les informations de contact et les détails de votre entreprise",
       addBusinessInfoDescription:
         "Ajoutez les informations de votre entreprise pour compléter votre profil",
+      editAvatar: "Modifier la Photo de Profil",
+      editAvatarDescription: "Téléchargez une nouvelle photo de profil ou supprimez celle en cours.",
+      cropAvatarDescription: "Recadrez et ajustez votre photo de profil.",
+      previewAvatarDescription: "Aperçu de votre nouvelle photo de profil.",
+      uploadAvatar: "Cliquez pour télécharger",
+      fileTypesInfo: "JPEG, PNG, WebP ou GIF (max 5 Mo)",
+      loadImageFailed: "Échec du chargement de l'image",
+      uploadFailed: "Échec du téléchargement",
       namePlaceholder: "Entrez votre nom complet",
       emailPlaceholder: "votre@email.com",
       phonePlaceholder: "+33 1 23 45 67 89",
@@ -1741,6 +1864,10 @@ export const fr = {
       cancel: "Annuler",
       update: "Mettre à Jour le Profil",
       delete: "Supprimer",
+      remove: "Supprimer",
+      removeAvatar: "Supprimer l'Avatar",
+      uploadAvatar: "Télécharger",
+      apply: "Appliquer",
     },
 
     // Erreurs
@@ -1748,6 +1875,8 @@ export const fr = {
       updateFailed: "Échec de la mise à jour du profil. Veuillez réessayer.",
       businessUpdateFailed:
         "Échec de la mise à jour des informations d'entreprise. Veuillez réessayer.",
+      loadImageFailed: "Échec du chargement de l'image",
+      uploadFailed: "Échec du téléchargement",
     },
 
     // Messages toast
@@ -1763,6 +1892,14 @@ export const fr = {
       businessCreated: {
         title: "Infos Entreprise Ajoutées",
         description: "Les informations d'entreprise ont été ajoutées avec succès.",
+      },
+      avatarUpdated: {
+        title: "Avatar Mis à Jour",
+        description: "Votre photo de profil a été mise à jour avec succès.",
+      },
+      avatarRemoved: {
+        title: "Avatar Supprimé",
+        description: "Votre photo de profil a été supprimée.",
       },
       avatarUploaded: {
         title: "Avatar Mis à Jour",
@@ -1788,6 +1925,13 @@ export const fr = {
       businessNameRequired: "Le nom de l'entreprise est requis",
     },
 
+    // Cropper
+    cropper: {
+      zoom: "Zoom",
+      rotation: "Rotation",
+      processing: "Traitement...",
+    },
+
     // Clés héritées (maintenir la compatibilité ascendante)
     address: "Adresse",
     businessName: "Nom de l'Entreprise",
@@ -1796,10 +1940,26 @@ export const fr = {
   stores: {
     title: "Vos boutiques",
     createStore: "Créer une boutique",
+    editStore: "Modifier la boutique",
+    updateStore: "Mettre à jour la boutique",
+    editDescription: "Mettez à jour les informations de votre boutique. Tous les champs sauf le nom sont optionnels.",
     storeName: "Nom de la Boutique",
+    storeNamePlaceholder: "ex. Boulangerie Artisanale Paris",
     city: "Ville",
+    cityPlaceholder: "ex. Paris",
+    country: "Pays",
+    countryPlaceholder: "ex. France",
+    addressPlaceholder: "ex. 123 Rue de la Paix",
+    phonePlaceholder: "ex. +33 1 23 45 67 89",
+    emailPlaceholder: "ex. contact@boutique.com",
+    storeImage: "Image de la Boutique",
     noStores: "Aucune boutique pour le moment",
     createFirst: "Créez votre première boutique pour commencer",
+    searchPlaceholder: "Rechercher des boutiques par nom, ville ou adresse...",
+    createSuccess: "Boutique créée avec succès",
+    createError: "Échec de la création de la boutique",
+    editSuccess: "Boutique mise à jour avec succès",
+    editError: "Échec de la mise à jour de la boutique",
   },
   tabs: {
     delivery: "Livraison",
@@ -1847,6 +2007,7 @@ export const fr = {
       },
       noMatches: "Aucune livraison ne correspond à vos filtres",
       noDeliveries: "Aucune livraison pour le moment",
+      noDeliveriesDescription: "Aucune livraison fournisseur trouvée",
       actions: {
         edit: "Modifier",
         updateStatus: "Mettre à Jour le Statut",
@@ -1966,6 +2127,7 @@ export const fr = {
             atLeastOneItem: "Veuillez ajouter au moins un article",
             itemsMustHaveMaterial:
               "Tous les articles doivent avoir une matière et une quantité supérieure à 0",
+            addModeNotImplemented: "Le mode d'ajout n'est pas encore implémenté. Les commandes doivent être créées à partir des alertes.",
           },
           toasts: {
             created: {
@@ -1991,6 +2153,7 @@ export const fr = {
       selectItemDescription:
         "Choisissez un article dans la liste pour voir les détails et effectuer des ajustements",
       noItemsFound: "Aucun article trouvé",
+      noStockItemsYet: "Aucun article en stock pour le moment",
       selectAll: "Tout Sélectionner",
       deselectAll: "Tout Désélectionner",
 
@@ -2233,6 +2396,8 @@ export const fr = {
       metrics: {
         totalBatches: "Total des Lots",
         totalBatchesDescription: "Tous les lots de production",
+        completedBatches: "Lots Terminés",
+        completedBatchesDescription: "Nombre de lots terminés",
         averageQuality: "Qualité Moy.",
         averageQualityDescription: "Score de qualité moyen",
         efficiency: "Efficacité",
@@ -2374,6 +2539,20 @@ export const fr = {
     lastMovement: "Dernier Mouvement",
     recentActivity: "Activité Récente",
 
+    // Filters for stock levels
+    filters: {
+      allItems: "Tous les Articles",
+      allItemsPlaceholder: "Tous les Articles",
+      allStatus: "Tous les Statuts",
+      allStatusPlaceholder: "Tous les Statuts de Stock",
+      outOfStock: "Rupture de Stock",
+      lowStock: "Stock Faible",
+      inStock: "En Stock",
+      overstocked: "Surstocké",
+    },
+    item: "article",
+    items: "articles",
+
     // Stock History
     stockHistory: "Historique du Stock",
     runningBalance: "Solde Courant",
@@ -2484,8 +2663,8 @@ export const fr = {
   footer: {
     tagline: "UNE SOLUTION POUR LA GESTION DE VOTRE STOCK ALIMENTAIRE",
     contact: "Nous contacter",
-    addressHeading: "France, Massy",
-    addressLines: ["1 Av. Marcel Ramolfo Garnier", "Massy, 91300", "Tél (+33) 7 81 73 23 86"],
+    addressHeading: "Adresse",
+    address: "France, Paris",
     rights: (year: number) => `© ${year} Epidom. Tous droits réservés.`,
   },
   cookie: {

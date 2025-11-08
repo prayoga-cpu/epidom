@@ -27,13 +27,13 @@ export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
   const getLanguageLabel = (locale?: string) => {
     switch (locale) {
       case "en":
-        return t("common.language.en") || "English";
+        return t("common.language.en");
       case "fr":
-        return t("common.language.fr") || "Français";
+        return t("common.language.fr");
       case "id":
-        return t("common.language.id") || "Bahasa";
+        return t("common.language.id");
       default:
-        return locale || "—";
+        return locale || t("common.notAvailable");
     }
   };
 

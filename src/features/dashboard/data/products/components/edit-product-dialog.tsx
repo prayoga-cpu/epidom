@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -41,22 +40,24 @@ import { useRecipes } from "../../recipes/hooks/use-recipes";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 
-// Zod validation schema
-const productSchema = z.object({
-  name: z.string().min(2, "Product name must be at least 2 characters"),
-  sku: z.string().optional(),
-  description: z.string().optional(),
-  category: z.string().min(1, "Please enter a category"),
-  retailPrice: z.coerce.number().positive("Retail price must be greater than 0"),
-  costPrice: z.coerce.number().positive("Cost price must be greater than 0"),
-  unit: z.string().min(1, "Please enter a unit"),
-  currentStock: z.coerce.number().min(0, "Stock cannot be negative"),
-  minStock: z.coerce.number().min(0, "Minimum stock cannot be negative"),
-  maxStock: z.coerce.number().positive("Maximum stock must be greater than 0"),
-  recipeId: z.string().optional(),
-});
+// Helper function to create product schema with translated messages
+function createProductSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t("common.validation.productNameMin")),
+    sku: z.string().optional(),
+    description: z.string().optional(),
+    category: z.string().min(1, t("common.validation.categoryRequired")),
+    retailPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    costPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    unit: z.string().min(1, t("common.validation.unitRequired")),
+    currentStock: z.coerce.number().min(0, t("common.validation.stockNonNegative")),
+    minStock: z.coerce.number().min(0, t("common.validation.minStockNonNegative")),
+    maxStock: z.coerce.number().positive(t("common.validation.maxStockPositive")),
+    recipeId: z.string().optional(),
+  });
+}
 
-type ProductFormValues = z.infer<typeof productSchema>;
+type ProductFormValues = z.infer<ReturnType<typeof createProductSchema>>;
 
 interface EditProductDialogProps {
   storeId: string;
@@ -84,6 +85,8 @@ export default function EditProductDialog({
     take: 100,
   });
   const recipes = recipesData?.recipes || [];
+
+  const productSchema = createProductSchema(t);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -154,7 +157,6 @@ export default function EditProductDialog({
 
       onOpenChange(false);
     } catch (error) {
-      console.error("Error updating product:", error);
       sonnerToast.error(t("data.products.toasts.updateError.title") || "Failed to update product", {
         description:
           error instanceof Error
@@ -167,16 +169,21 @@ export default function EditProductDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{t("data.products.editTitle") || "Edit Product"}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.products.editTitle") || "Edit Product"}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             Update product information. Changes will be saved to your inventory.
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="edit-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold">Basic Information</h3>
@@ -401,23 +408,31 @@ export default function EditProductDialog({
                 />
               </div>
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                {t("actions.cancel") || "Cancel"}
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("data.products.update") || "Update Product"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              {t("actions.cancel") || "Cancel"}
+            </Button>
+            <Button
+              type="submit"
+              form="edit-product-form"
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.products.update") || "Update Product"}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

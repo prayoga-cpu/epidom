@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -41,22 +40,24 @@ import { useRecipes } from "../../recipes/hooks/use-recipes";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 
-// Zod validation schema
-const productSchema = z.object({
-  name: z.string().min(2, "Product name must be at least 2 characters"),
-  sku: z.string().optional(),
-  description: z.string().optional(),
-  category: z.string().min(1, "Please enter a category"),
-  retailPrice: z.coerce.number().positive("Retail price must be greater than 0"),
-  costPrice: z.coerce.number().positive("Cost price must be greater than 0"),
-  unit: z.string().min(1, "Please enter a unit"),
-  currentStock: z.coerce.number().min(0, "Stock cannot be negative"),
-  minStock: z.coerce.number().min(0, "Minimum stock cannot be negative"),
-  maxStock: z.coerce.number().positive("Maximum stock must be greater than 0"),
-  recipeId: z.string().optional(),
-});
+// Helper function to create product schema with translated messages
+function createProductSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t("common.validation.productNameMin")),
+    sku: z.string().optional(),
+    description: z.string().optional(),
+    category: z.string().min(1, t("common.validation.categoryRequired")),
+    retailPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    costPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    unit: z.string().min(1, t("common.validation.unitRequired")),
+    currentStock: z.coerce.number().min(0, t("common.validation.stockNonNegative")),
+    minStock: z.coerce.number().min(0, t("common.validation.minStockNonNegative")),
+    maxStock: z.coerce.number().positive(t("common.validation.maxStockPositive")),
+    recipeId: z.string().optional(),
+  });
+}
 
-type ProductFormValues = z.infer<typeof productSchema>;
+type ProductFormValues = z.infer<ReturnType<typeof createProductSchema>>;
 
 interface AddProductDialogProps {
   storeId: string;
@@ -78,6 +79,8 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
     take: 100,
   });
   const recipes = recipesData?.recipes || [];
+
+  const productSchema = createProductSchema(t);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -125,22 +128,15 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
 
       await createProduct.mutateAsync(apiData);
 
-      sonnerToast.success(t("data.products.toasts.created.title") || "Product created", {
-        description:
-          t("data.products.toasts.created.description")?.replace("{name}", data.name) ||
-          `${data.name} has been added to your products.`,
+      sonnerToast.success(t("data.products.toasts.added.title"), {
+        description: t("data.products.toasts.added.description")?.replace("{name}", data.name) || "",
       });
 
       form.reset();
       setOpen(false);
     } catch (error) {
-      console.error("Error creating product:", error);
-      sonnerToast.error(t("data.products.toasts.createError.title") || "Failed to create product", {
-        description:
-          error instanceof Error
-            ? error.message
-            : t("data.products.toasts.createError.description") ||
-              "An error occurred while creating the product.",
+      sonnerToast.error(t("common.error"), {
+        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
       });
     }
   };
@@ -151,31 +147,35 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
         {children || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            {t("common.actions.add") || "Add Product"}
+            {t("data.products.addButton")}
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>button]:hidden">
-        <DialogHeader>
-          <DialogTitle>{t("data.products.addTitle") || "Add New Product"}</DialogTitle>
-          <DialogDescription>
-            Add a new product to your inventory. Link it to a recipe for automatic cost calculation.
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl [&>button]:hidden">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.products.addTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            {t("data.products.addDescription")}
           </DialogDescription>
         </DialogHeader>
-        <Separator />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="add-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Basic Information</h3>
+              <h3 className="text-sm font-semibold">{t("data.products.sections.basicInfo")}</h3>
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Product Name *</FormLabel>
+                      <FormLabel>{t("data.products.form.name")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.namePlaceholder")} {...field} />
                       </FormControl>
@@ -189,11 +189,11 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="sku"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>SKU</FormLabel>
+                      <FormLabel>{t("data.products.form.sku")}</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.skuPlaceholder")} {...field} />
                       </FormControl>
-                      <FormDescription>Stock Keeping Unit (optional)</FormDescription>
+                      <FormDescription>{t("data.products.form.skuHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -205,7 +205,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t("data.products.form.description")}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder={t("data.products.form.descriptionPlaceholder")}
@@ -223,7 +223,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category *</FormLabel>
+                    <FormLabel>{t("data.products.form.category")} *</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
                     </FormControl>
@@ -237,7 +237,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                 name="recipeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Recipe (Optional)</FormLabel>
+                    <FormLabel>{t("data.products.form.linkedRecipe")}</FormLabel>
                     <Select
                       onValueChange={(value) =>
                         field.onChange(value === "none" ? undefined : value)
@@ -246,11 +246,11 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a recipe..." />
+                          <SelectValue placeholder={t("data.products.form.selectRecipe")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="none">{t("data.products.form.noRecipe")}</SelectItem>
                         {recipes.map((recipe) => (
                           <SelectItem key={recipe.id} value={recipe.id}>
                             {recipe.name}
@@ -258,7 +258,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>Link this product to a production recipe</FormDescription>
+                    <FormDescription>{t("data.products.form.recipeHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -267,18 +267,18 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
 
             {/* Pricing */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Pricing</h3>
+              <h3 className="text-sm font-semibold">{t("data.products.sections.pricing")}</h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="costPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cost Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                      <FormLabel>{t("data.products.form.costPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" placeholder="0.00" {...field} />
                       </FormControl>
-                      <FormDescription>Production cost</FormDescription>
+                      <FormDescription>{t("data.products.form.costPriceHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -289,7 +289,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="retailPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Selling Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                      <FormLabel>{t("data.products.form.retailPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -298,7 +298,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Customer price</FormDescription>
+                      <FormDescription>{t("data.products.form.retailPriceHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -306,9 +306,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
               </div>
               {costPrice > 0 && (
                 <div className="bg-muted rounded-lg p-3 text-sm">
-                  <p className="font-medium">Suggested Selling Price:</p>
+                  <p className="font-medium">{t("data.products.pricingSuggestions.title")}</p>
                   <p className="text-muted-foreground mt-1">
-                    ${suggestedRetailPrice} (2.5x markup)
+                    {currency === "EUR" ? "€" : "$"}{suggestedRetailPrice} (2.5x markup)
                   </p>
                 </div>
               )}
@@ -316,14 +316,14 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
 
             {/* Stock Management */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Stock Management</h3>
+              <h3 className="text-sm font-semibold">{t("data.products.sections.stockManagement")}</h3>
               <div className="grid items-start gap-4 sm:grid-cols-4">
                 <FormField
                   control={form.control}
                   name="unit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit *</FormLabel>
+                      <FormLabel>{t("data.products.form.unit")} *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -331,13 +331,13 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="unit">Unit</SelectItem>
-                          <SelectItem value="loaf">Loaf</SelectItem>
-                          <SelectItem value="piece">Piece</SelectItem>
-                          <SelectItem value="dozen">Dozen</SelectItem>
-                          <SelectItem value="box">Box</SelectItem>
-                          <SelectItem value="kg">Kilogram</SelectItem>
-                          <SelectItem value="g">Gram</SelectItem>
+                          <SelectItem value="unit">{t("data.products.units.unit")}</SelectItem>
+                          <SelectItem value="loaf">{t("data.products.units.loaf")}</SelectItem>
+                          <SelectItem value="piece">{t("data.products.units.piece")}</SelectItem>
+                          <SelectItem value="dozen">{t("data.products.units.dozen")}</SelectItem>
+                          <SelectItem value="box">{t("data.products.units.box")}</SelectItem>
+                          <SelectItem value="kg">{t("data.products.units.kg")}</SelectItem>
+                          <SelectItem value="g">{t("data.products.units.g")}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -350,7 +350,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="currentStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Stock *</FormLabel>
+                      <FormLabel>{t("data.products.form.currentStock")} *</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="0" {...field} />
                       </FormControl>
@@ -364,11 +364,11 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="minStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Min Stock *</FormLabel>
+                      <FormLabel>{t("data.products.form.minStock")} *</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="0" {...field} />
                       </FormControl>
-                      <FormDescription>Reorder point</FormDescription>
+                      <FormDescription>{t("data.products.form.minStockHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -379,34 +379,42 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="maxStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Stock *</FormLabel>
+                      <FormLabel>{t("data.products.form.maxStock")} *</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="1000" {...field} />
                       </FormControl>
-                      <FormDescription>Maximum stock level</FormDescription>
+                      <FormDescription>{t("data.products.form.maxStockHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
-                {t("actions.cancel") || "Cancel"}
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("common.actions.add") || "Add Product"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isSubmitting}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-product-form"
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.products.addButton")}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

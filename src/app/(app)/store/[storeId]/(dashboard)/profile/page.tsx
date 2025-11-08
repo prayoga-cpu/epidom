@@ -12,7 +12,7 @@ import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 export default function ProfilePage() {
   const { t } = useI18n();
   const { user: sessionUser, loading: sessionLoading } = useUser();
-  const { data: profileData, isLoading, isError, refetch } = useProfile();
+  const { data: profileData, isLoading, isError } = useProfile();
 
   if (sessionLoading || isLoading) {
     return (
@@ -35,18 +35,18 @@ export default function ProfilePage() {
       <ProfileHeader
         user={profileData}
         subscription={profileData.subscription}
-        onUpdate={refetch}
+        onUpdate={undefined}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <PersonalInfoCard user={profileData} onUpdate={refetch} />
+      <div className="grid gap-6 md:grid-cols-2">
+        <PersonalInfoCard user={profileData} onUpdate={undefined} />
         <SubscriptionInfoCard subscription={profileData.subscription} />
       </div>
 
       <BusinessInfoCard
         business={profileData.business}
         userId={profileData.id}
-        onUpdate={refetch}
+        onUpdate={undefined}
       />
     </div>
   );

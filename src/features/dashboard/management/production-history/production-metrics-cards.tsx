@@ -53,14 +53,12 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
       description: t("management.productionHistory.metrics.totalBatchesDescription"),
     },
     {
-      title: t("management.productionHistory.metrics.completedBatches") || "Completed Batches",
+      title: t("management.productionHistory.metrics.completedBatches"),
       value: metrics.completedBatches,
       icon: Star,
       iconColor: "text-gray-700 dark:text-gray-300",
       bgColor: "bg-gray-200 dark:bg-gray-700",
-      description:
-        t("management.productionHistory.metrics.completedBatchesDescription") ||
-        "Number of completed batches",
+      description: t("management.productionHistory.metrics.completedBatchesDescription"),
     },
     {
       title: t("management.productionHistory.metrics.efficiency"),

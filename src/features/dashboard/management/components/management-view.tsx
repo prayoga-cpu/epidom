@@ -134,45 +134,49 @@ export function ManagementView() {
             className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
             value="delivery"
           >
-            {t("tabs.supplierDeliveries") || "Supplier Deliveries"}
+            {t("tabs.supplierDeliveries")}
           </TabsTrigger>
           <TabsTrigger
             className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
             value="recipe"
           >
-            {t("tabs.recipeProduction") || "Recipe Production"}
+            {t("tabs.recipeProduction")}
           </TabsTrigger>
           <TabsTrigger
             className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
             value="history"
           >
-            {t("tabs.productionHistory") || "Production History"}
+            {t("tabs.productionHistory")}
           </TabsTrigger>
           <TabsTrigger
             className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
             value="stock"
           >
-            {t("tabs.editStock") || "Edit Stock"}
+            {t("tabs.editStock")}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="delivery" className="grid w-full gap-4 lg:grid-cols-3">
-          <SupplierDeliveriesTable
-            deliveries={deliveries}
-            selectedDelivery={selectedDelivery}
-            onDeliverySelect={setSelectedDelivery}
-            onEditDelivery={handleEditDelivery}
-            onUpdateStatus={handleUpdateStatus}
-            onPrintDelivery={handlePrintDelivery}
-            onDeleteDelivery={handleDeleteDelivery}
-            isLoading={isLoading}
-          />
-          <SupplierDeliveryDetails
-            selectedDelivery={selectedDelivery}
-            onEdit={handleEditDelivery}
-            onUpdateStatus={handleUpdateStatus}
-            onPrintDelivery={handlePrintDelivery}
-          />
+        <TabsContent value="delivery" className="grid w-full gap-4 md:grid-cols-1 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <SupplierDeliveriesTable
+              deliveries={deliveries}
+              selectedDelivery={selectedDelivery}
+              onDeliverySelect={setSelectedDelivery}
+              onEditDelivery={handleEditDelivery}
+              onUpdateStatus={handleUpdateStatus}
+              onPrintDelivery={handlePrintDelivery}
+              onDeleteDelivery={handleDeleteDelivery}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className="lg:col-span-1">
+            <SupplierDeliveryDetails
+              selectedDelivery={selectedDelivery}
+              onEdit={handleEditDelivery}
+              onUpdateStatus={handleUpdateStatus}
+              onPrintDelivery={handlePrintDelivery}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="recipe">

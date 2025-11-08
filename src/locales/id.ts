@@ -1,6 +1,15 @@
 export const id = {
-  common: {
-    brand: "EPIDOM",
+    common: {
+      brand: "EPIDOM",
+      item: "Item",
+      ingredient: "Bahan",
+      uncategorized: "Tidak Dikategorikan",
+      stockStatus: {
+      outOfStock: "Habis",
+      lowStock: "Stok Rendah",
+      inStock: "Tersedia",
+      overstocked: "Stok Berlebih",
+    },
     nav: {
       home: "Beranda",
       services: "Layanan",
@@ -12,6 +21,7 @@ export const id = {
       openMenu: "Buka menu",
       closeMenu: "Tutup menu",
       homepage: "Halaman utama",
+      searchAriaLabel: "Cari",
     },
     language: {
       label: "Bahasa",
@@ -24,6 +34,7 @@ export const id = {
     selectAll: "Pilih Semua",
     of: "dari",
     selected: "dipilih",
+    per: "per",
     showing: "Menampilkan",
     sku: "SKU",
     stock: "Stok",
@@ -51,6 +62,16 @@ export const id = {
     },
     datePicker: {
       pickDate: "Pilih tanggal",
+      pickDateRange: "Pilih rentang tanggal",
+      selectPreset: "Pilih preset",
+      presets: {
+        today: "Hari ini",
+        last7Days: "7 hari terakhir",
+        last30Days: "30 hari terakhir",
+        last90Days: "90 hari terakhir",
+        thisYear: "Tahun ini",
+        custom: "Kustom",
+      },
     },
     metrics: {
       plannedQuantity: "Jumlah yang Direncanakan",
@@ -58,6 +79,24 @@ export const id = {
     },
     validation: {
       error: "Kesalahan Validasi",
+      required: "Field ini wajib diisi",
+      minLength: "Harus minimal {min} karakter",
+      maxLength: "Maksimal {max} karakter",
+      min: "Harus minimal {min}",
+      max: "Maksimal {max}",
+      positive: "Harus lebih besar dari 0",
+      nonNegative: "Tidak boleh negatif",
+      email: "Alamat email tidak valid",
+      invalidFormat: "Format tidak valid",
+      unexpectedError: "Terjadi kesalahan yang tidak terduga",
+      productNameMin: "Nama produk harus minimal 2 karakter",
+      supplierNameMin: "Nama supplier harus minimal 2 karakter",
+      categoryRequired: "Mohon masukkan kategori",
+      unitRequired: "Mohon masukkan unit",
+      pricePositive: "Harga harus lebih besar dari 0",
+      stockNonNegative: "Stok tidak boleh negatif",
+      minStockNonNegative: "Stok minimum tidak boleh negatif",
+      maxStockPositive: "Stok maksimum harus lebih besar dari 0",
     },
     error: "Kesalahan",
     notes: "Catatan",
@@ -85,6 +124,9 @@ export const id = {
       exportAsPdf: "Ekspor sebagai PDF",
       logout: "Keluar",
       searchPlaceholder: "Cari...",
+      retry: "Coba Lagi",
+      select: "Pilih",
+      apply: "Terapkan",
     },
   },
   search: {
@@ -887,11 +929,15 @@ export const id = {
     materials: {
       pageTitle: "Bahan",
       addTitle: "Tambah Bahan Baru",
+      addButton: "Tambah Bahan",
       addDescription: "Tambahkan bahan baru ke inventaris Anda. Isi semua kolom yang wajib diisi.",
       editTitle: "Edit Bahan",
       editDescription: "Perbarui informasi bahan",
       detailsTitle: "Detail Bahan",
       detailsDescription: "Lihat informasi lengkap tentang bahan ini",
+      title: "Bahan",
+      unknownMaterial: "Bahan Tidak Dikenal",
+      noDescription: "Tidak ada deskripsi yang disediakan",
 
       // Form fields
       form: {
@@ -901,6 +947,8 @@ export const id = {
         selectCategory: "Pilih kategori",
         supplier: "Pemasok",
         selectSupplier: "Pilih pemasok",
+        addSupplier: "Tambah Pemasok",
+        noSuppliersYet: "Belum ada pemasok yang ditambahkan. Klik \"Tambah Pemasok\" untuk menghubungkan pemasok ke bahan ini.",
         quantity: "Jumlah",
         unit: "Satuan",
         selectUnit: "Satuan",
@@ -909,6 +957,25 @@ export const id = {
         costPlaceholder: "25.00",
         notes: "Catatan (Opsional)",
         notesPlaceholder: "Informasi tambahan tentang bahan ini...",
+        description: "Deskripsi",
+        descriptionPlaceholder: "Informasi tambahan tentang bahan ini...",
+        categoryPlaceholder: "contoh: Biji-bijian, Produk Susu",
+        selectSupplierPlaceholder: "Pilih pemasok...",
+        unitCost: "Biaya per Satuan",
+        currentStock: "Stok Saat Ini",
+        minStockLevel: "Tingkat Stok Minimum",
+        maxStockLevel: "Tingkat Stok Maksimum",
+        supplierPrice: "Harga",
+        preferred: "Disukai",
+        chooseSupplier: "Pilih pemasok untuk bahan ini",
+        alertMinStock: "Peringatan ketika stok turun di bawah level ini",
+        alertMaxStock: "Peringatan ketika stok melebihi level ini",
+      },
+      // Form sections
+      sections: {
+        basicInfo: "Informasi Dasar",
+        pricingStock: "Harga & Stok",
+        suppliers: "Pemasok (Opsional)",
       },
 
       // Categories
@@ -957,12 +1024,34 @@ export const id = {
           description: "{count} bahan telah berhasil dihapus.",
         },
       },
+      details: {
+        stockInfo: "Informasi Stok",
+        suppliers: "Pemasok",
+        pricing: "Harga",
+        description: "Deskripsi",
+        metadata: "Informasi",
+        currentStock: "Stok Saat Ini",
+        minStock: "Min",
+        maxStock: "Max",
+        unitCost: "Biaya per Satuan",
+        totalValue: "Total Nilai",
+        category: "Kategori",
+        unit: "Satuan",
+        noSuppliersLinked: "Tidak ada pemasok yang ditautkan",
+        created: "Dibuat",
+        lastUpdated: "Terakhir Diperbarui",
+      },
+      deleteConfirm: {
+        title: "Hapus Bahan",
+        description: "Apakah Anda yakin ingin menghapus \"{name}\"? Tindakan ini tidak dapat dibatalkan.",
+      },
     },
 
     // Recipes section
     recipes: {
       pageTitle: "Resep",
       addTitle: "Buat Resep Baru",
+      addButton: "Tambah Resep",
       editTitle: "Edit Resep",
       detailsTitle: "Detail Resep",
       duplicateTitle: "Duplikasi Resep",
@@ -1148,6 +1237,7 @@ export const id = {
     products: {
       pageTitle: "Produk",
       addTitle: "Tambah Produk Baru",
+      addButton: "Tambah Produk",
       editTitle: "Edit Produk",
       detailsTitle: "Detail Produk",
       addDescription:
@@ -1244,6 +1334,7 @@ export const id = {
     suppliers: {
       pageTitle: "Pemasok",
       addTitle: "Tambah Pemasok Baru",
+      addButton: "Tambah Pemasok",
       editTitle: "Edit Pemasok",
       detailsTitle: "Detail Pemasok",
       addDescription:
@@ -1336,8 +1427,10 @@ export const id = {
   filters: {
     allSuppliers: "Semua Pemasok",
     allStock: "Semua Stok",
+    allStockLevels: "Semua Level Stok",
     inStock: "Tersedia",
     lowStock: "Stok Rendah",
+    outOfStock: "Habis",
     critical: "Kritis",
     overstocked: "Stok Berlebih",
     allCategories: "Semua Kategori",
@@ -1380,6 +1473,14 @@ export const id = {
     difficultyHighLow: "Kesulitan (Tinggi-Rendah)",
     prepTimeLowHigh: "Waktu Persiapan (Rendah-Tinggi)",
     prepTimeHighLow: "Waktu Persiapan (Tinggi-Rendah)",
+    timeShortest: "Waktu (Terpendek)",
+    timeLongest: "Waktu (Terpanjang)",
+    contactAZ: "Kontak (A-Z)",
+    contactZA: "Kontak (Z-A)",
+    newest: "Terbaru",
+    newestFirst: "Terbaru",
+    oldest: "Terlama",
+    oldestFirst: "Terlama",
   },
   tables: {
     order: "Pesanan",
@@ -1444,11 +1545,25 @@ export const id = {
     getStartedRecipe: "Mulai dengan membuat resep pertama Anda",
     getStartedProduct: "Mulai dengan menambahkan produk pertama Anda",
     getStartedSupplier: "Mulai dengan menambahkan pemasok pertama Anda",
+    errorLoadingMaterials: "Kesalahan memuat bahan",
+    errorLoadingRecipes: "Kesalahan memuat resep",
+    errorLoadingProducts: "Kesalahan memuat produk",
+    errorLoadingSuppliers: "Kesalahan memuat pemasok",
     noDataToExport: "Tidak ada data untuk diekspor",
     noDataToExportDesc: "Tidak ada data yang tersedia untuk diekspor.",
+    exportStarted: "Ekspor dimulai",
+    exportStartedDescription: "Ekspor Anda akan segera diunduh.",
     exportSuccessful: "Ekspor berhasil",
     exportFailed: "Ekspor gagal",
     exportFailedDesc: "Terjadi kesalahan saat mengekspor data.",
+    failedToDeleteMaterial: "Gagal menghapus bahan",
+    failedToDeleteMaterials: "Gagal menghapus bahan",
+    failedToDeleteSupplier: "Gagal menghapus pemasok",
+    failedToDeleteSuppliers: "Gagal menghapus pemasok",
+    failedToUpdateMaterial: "Gagal memperbarui bahan",
+    failedToUpdateOrder: "Gagal memperbarui pesanan",
+    orderPlaced: "Pesanan ditandai sebagai ditempatkan",
+    orderPlacedError: "Gagal menandai pesanan sebagai ditempatkan",
   },
   alerts: {
     // Page titles
@@ -1710,6 +1825,14 @@ export const id = {
       editBusinessInfo: "Edit Informasi Bisnis",
       editBusinessInfoDescription: "Perbarui informasi kontak dan detail bisnis Anda",
       addBusinessInfoDescription: "Tambahkan informasi bisnis Anda untuk melengkapi profil",
+      editAvatar: "Edit Foto Profil",
+      editAvatarDescription: "Unggah foto profil baru atau hapus foto yang ada.",
+      cropAvatarDescription: "Potong dan sesuaikan foto profil Anda.",
+      previewAvatarDescription: "Pratinjau foto profil baru Anda.",
+      uploadAvatar: "Klik untuk mengunggah",
+      fileTypesInfo: "JPEG, PNG, WebP, atau GIF (maks 5MB)",
+      loadImageFailed: "Gagal memuat gambar",
+      uploadFailed: "Gagal mengunggah",
       namePlaceholder: "Masukkan nama lengkap Anda",
       emailPlaceholder: "email@anda.com",
       phonePlaceholder: "+62 812 3456 7890",
@@ -1728,12 +1851,18 @@ export const id = {
       cancel: "Batal",
       update: "Perbarui Profil",
       delete: "Hapus",
+      remove: "Hapus",
+      removeAvatar: "Hapus Avatar",
+      uploadAvatar: "Unggah",
+      apply: "Terapkan",
     },
 
     // Kesalahan
     errors: {
       updateFailed: "Gagal memperbarui profil. Silakan coba lagi.",
       businessUpdateFailed: "Gagal memperbarui informasi bisnis. Silakan coba lagi.",
+      loadImageFailed: "Gagal memuat gambar",
+      uploadFailed: "Gagal mengunggah",
     },
 
     // Pesan toast
@@ -1749,6 +1878,14 @@ export const id = {
       businessCreated: {
         title: "Info Bisnis Ditambahkan",
         description: "Informasi bisnis berhasil ditambahkan.",
+      },
+      avatarUpdated: {
+        title: "Avatar Diperbarui",
+        description: "Foto profil Anda telah berhasil diperbarui.",
+      },
+      avatarRemoved: {
+        title: "Avatar Dihapus",
+        description: "Foto profil Anda telah dihapus.",
       },
       avatarUploaded: {
         title: "Avatar Diperbarui",
@@ -1774,6 +1911,13 @@ export const id = {
       businessNameRequired: "Nama bisnis diperlukan",
     },
 
+    // Cropper
+    cropper: {
+      zoom: "Zoom",
+      rotation: "Rotasi",
+      processing: "Memproses...",
+    },
+
     // Kunci warisan (menjaga kompatibilitas mundur)
     address: "Alamat",
     businessName: "Nama Bisnis",
@@ -1782,10 +1926,26 @@ export const id = {
   stores: {
     title: "Toko Anda",
     createStore: "Buat toko",
+    editStore: "Edit Toko",
+    updateStore: "Perbarui Toko",
+    editDescription: "Perbarui informasi toko Anda. Semua field kecuali nama bersifat opsional.",
     storeName: "Nama Toko",
+    storeNamePlaceholder: "contoh: Toko Roti Artisan Jakarta",
     city: "Kota",
+    cityPlaceholder: "contoh: Jakarta",
+    country: "Negara",
+    countryPlaceholder: "contoh: Indonesia",
+    addressPlaceholder: "contoh: Jl. Sudirman No. 123",
+    phonePlaceholder: "contoh: +62 812 3456 7890",
+    emailPlaceholder: "contoh: kontak@toko.com",
+    storeImage: "Gambar Toko",
     noStores: "Belum ada toko",
     createFirst: "Buat toko pertama Anda untuk memulai",
+    searchPlaceholder: "Cari toko berdasarkan nama, kota, atau alamat...",
+    createSuccess: "Toko berhasil dibuat",
+    createError: "Gagal membuat toko",
+    editSuccess: "Toko berhasil diperbarui",
+    editError: "Gagal memperbarui toko",
   },
   tabs: {
     delivery: "Pengiriman",
@@ -1833,6 +1993,7 @@ export const id = {
       },
       noMatches: "Tidak ada pengiriman yang sesuai dengan filter Anda",
       noDeliveries: "Belum ada pengiriman",
+      noDeliveriesDescription: "Tidak ada pengiriman supplier ditemukan",
       actions: {
         edit: "Edit",
         updateStatus: "Perbarui Status",
@@ -1949,6 +2110,7 @@ export const id = {
             expectedDateRequired: "Tanggal yang diharapkan wajib diisi",
             atLeastOneItem: "Harap tambahkan setidaknya satu item",
             itemsMustHaveMaterial: "Semua item harus memiliki bahan dan jumlah lebih besar dari 0",
+            addModeNotImplemented: "Mode tambah belum diimplementasikan. Pesanan harus dibuat dari peringatan.",
           },
           toasts: {
             created: {
@@ -1974,6 +2136,7 @@ export const id = {
       selectItemDescription:
         "Pilih item dari daftar untuk melihat detail dan melakukan penyesuaian",
       noItemsFound: "Tidak ada item ditemukan",
+      noStockItemsYet: "Belum ada item stok",
       selectAll: "Pilih Semua",
       deselectAll: "Batalkan Semua",
 
@@ -2212,6 +2375,8 @@ export const id = {
       metrics: {
         totalBatches: "Total Batch",
         totalBatchesDescription: "Semua batch produksi",
+        completedBatches: "Batch Selesai",
+        completedBatchesDescription: "Jumlah batch yang selesai",
         averageQuality: "Rata-rata Kualitas",
         averageQualityDescription: "Skor kualitas rata-rata",
         efficiency: "Efisiensi",
@@ -2353,6 +2518,20 @@ export const id = {
     lastMovement: "Pergerakan Terakhir",
     recentActivity: "Aktivitas Terakhir",
 
+    // Filters for stock levels
+    filters: {
+      allItems: "Semua Item",
+      allItemsPlaceholder: "Semua Item",
+      allStatus: "Semua Status",
+      allStatusPlaceholder: "Semua Status Stok",
+      outOfStock: "Habis",
+      lowStock: "Stok Rendah",
+      inStock: "Tersedia",
+      overstocked: "Stok Berlebih",
+    },
+    item: "item",
+    items: "item",
+
     // Stock History
     stockHistory: "Riwayat Stok",
     runningBalance: "Saldo Berjalan",
@@ -2460,8 +2639,8 @@ export const id = {
   footer: {
     tagline: "SOLUSI UNTUK MANAJEMEN STOK MAKANAN ANDA",
     contact: "Hubungi kami",
-    addressHeading: "Prancis, Massy",
-    addressLines: ["1 Av. Marcel Ramolfo Garnier", "Massy, 91300", "Tel (+33) 7 81 73 23 86"],
+    addressHeading: "Alamat",
+    address: "France, Paris",
     rights: (year: number) => `© ${year} Epidom. Hak cipta dilindungi.`,
   },
   cookie: {

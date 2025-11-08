@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -111,12 +110,11 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
   const onSubmit = async (data: RecipeFormValues) => {
     try {
       await updateRecipe.mutateAsync(data);
-      toast.success(t("Recipe updated successfully") || "Recipe updated successfully");
+      toast.success(t("data.recipes.toasts.updated.title"));
       onOpenChange(false);
     } catch (error) {
       toast.error(
-        t("Failed to update recipe. Please try again.") ||
-          "Failed to update recipe. Please try again."
+        t("messages.errorLoadingRecipes")
       );
     }
   };
@@ -141,21 +139,25 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle>{t("data.recipes.editTitle") || "Edit Recipe"}</DialogTitle>
-          <DialogDescription>
-            {t("data.recipes.editDescription") ||
-              "Update the recipe details, ingredients, and instructions."}
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px]">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.recipes.editTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            {t("data.recipes.editDescription")}
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="edit-recipe-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="font-semibold">
-                {t("data.recipes.sections.basicInfo") || "Basic Information"}
+                {t("data.recipes.sections.basicInfo")}
               </h3>
 
               <FormField
@@ -163,12 +165,10 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("data.recipes.form.name") || "Recipe Name"} *</FormLabel>
+                    <FormLabel>{t("data.recipes.form.name")} *</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder={
-                          t("data.recipes.form.namePlaceholder") || "Artisan Sourdough Bread"
-                        }
+                        placeholder={t("data.recipes.form.namePlaceholder")}
                         {...field}
                       />
                     </FormControl>
@@ -182,13 +182,10 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("data.recipes.form.description") || "Description"}</FormLabel>
+                    <FormLabel>{t("data.recipes.form.description")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder={
-                          t("data.recipes.form.descriptionPlaceholder") ||
-                          "Traditional sourdough bread with a crispy crust..."
-                        }
+                        placeholder={t("data.recipes.form.descriptionPlaceholder")}
                         rows={2}
                         {...field}
                       />
@@ -203,12 +200,12 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("data.recipes.form.category") || "Category"} *</FormLabel>
+                    <FormLabel>{t("data.recipes.form.category")} *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue
-                            placeholder={t("data.recipes.form.selectCategory") || "Select category"}
+                            placeholder={t("data.recipes.form.selectCategory")}
                           />
                         </SelectTrigger>
                       </FormControl>
@@ -232,7 +229,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("data.recipes.form.yieldQuantity") || "Yield Quantity"} *
+                        {t("data.recipes.form.yieldQuantity")} *
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -253,12 +250,12 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                   name="yieldUnit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("data.recipes.form.yieldUnit") || "Yield Unit"} *</FormLabel>
+                      <FormLabel>{t("data.recipes.form.yieldUnit")} *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue
-                              placeholder={t("data.recipes.form.selectUnit") || "Unit"}
+                              placeholder={t("data.recipes.form.selectUnit")}
                             />
                           </SelectTrigger>
                         </FormControl>
@@ -283,7 +280,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("data.recipes.form.productionTime") || "Time (min)"} *
+                        {t("data.recipes.form.productionTime")} *
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -305,11 +302,11 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">
-                  {t("data.recipes.ingredients.title") || "Ingredients"}
+                  {t("data.recipes.ingredients.title")}
                 </h3>
                 <Button type="button" variant="outline" size="sm" onClick={addIngredient}>
                   <Plus className="mr-2 h-4 w-4" />
-                  {t("data.recipes.ingredients.addIngredient") || "Add"}
+                  {t("data.recipes.ingredients.addIngredient")}
                 </Button>
               </div>
 
@@ -453,7 +450,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
             {/* Instructions */}
             <div className="space-y-4">
               <h3 className="font-semibold">
-                {t("data.recipes.steps.instructions") || "Instructions"}
+                {t("data.recipes.steps.instructions")}
               </h3>
               <FormField
                 control={form.control}
@@ -461,14 +458,11 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("data.recipes.form.instructions") || "Cooking Instructions"} *
+                      {t("data.recipes.form.instructions")} *
                     </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder={
-                          t("data.recipes.form.instructionsPlaceholder") ||
-                          "Step-by-step instructions..."
-                        }
+                        placeholder={t("data.recipes.form.instructionsPlaceholder")}
                         rows={8}
                         className="font-mono text-sm"
                         {...field}
@@ -479,18 +473,26 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 )}
               />
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                {t("actions.cancel") || "Cancel"}
-              </Button>
-              <Button type="submit" disabled={updateRecipe.isPending}>
-                {updateRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("data.recipes.update") || "Update Recipe"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="edit-recipe-form"
+              disabled={updateRecipe.isPending}
+            >
+              {updateRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.recipes.update")}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -236,7 +236,7 @@ export default function AddEditDeliveryDialog({
     // TODO: Implement add mode API call when needed
     toast({
       title: t("common.validation.error"),
-      description: "Add mode is not implemented yet. Orders should be created from alerts.",
+      description: t("management.delivery.dialogs.addEditDelivery.validation.addModeNotImplemented"),
       variant: "destructive",
     });
   };
@@ -253,10 +253,10 @@ export default function AddEditDeliveryDialog({
           <DialogDescription>
             {mode === "add"
               ? t("management.delivery.dialogs.addEditDelivery.addDescription")
-              : (
-                  t("management.delivery.dialogs.addEditDelivery.editDescription") ||
-                  "Update delivery {reference}"
-                ).replace("{reference}", delivery?.deliveryReference || "")}
+              : t("management.delivery.dialogs.addEditDelivery.editDescription")?.replace(
+                  "{reference}",
+                  delivery?.deliveryReference || ""
+                ) || ""}
           </DialogDescription>
         </DialogHeader>
 
@@ -417,7 +417,7 @@ export default function AddEditDeliveryDialog({
                           <TableCell>
                             {mode === "edit" ? (
                               <span className="text-sm">
-                                {material?.name || "Unknown Material"}
+                                {material?.name || t("data.materials.unknownMaterial")}
                               </span>
                             ) : (
                               <Select

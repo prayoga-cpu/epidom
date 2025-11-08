@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDateRange, getLastNDays } from "@/lib/utils/filters";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface DateRangePickerProps {
   value?: DateRange;
@@ -31,6 +32,7 @@ export function DateRangePicker({
   className,
   align = "start",
 }: DateRangePickerProps) {
+  const { t } = useI18n();
   const [selectedPreset, setSelectedPreset] = React.useState<string>("custom");
 
   const handlePresetChange = (preset: string) => {
@@ -87,7 +89,7 @@ export function DateRangePicker({
                 format(value.from, "LLL dd, y")
               )
             ) : (
-              <span>Pick a date range</span>
+              <span>{t("common.datePicker.pickDateRange")}</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -95,15 +97,15 @@ export function DateRangePicker({
           <div className="border-b p-3">
             <Select value={selectedPreset} onValueChange={handlePresetChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Select preset" />
+                <SelectValue placeholder={t("common.datePicker.selectPreset")} />
               </SelectTrigger>
               <SelectContent position="popper">
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="year">This year</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
+                <SelectItem value="today">{t("common.datePicker.presets.today")}</SelectItem>
+                <SelectItem value="7d">{t("common.datePicker.presets.last7Days")}</SelectItem>
+                <SelectItem value="30d">{t("common.datePicker.presets.last30Days")}</SelectItem>
+                <SelectItem value="90d">{t("common.datePicker.presets.last90Days")}</SelectItem>
+                <SelectItem value="year">{t("common.datePicker.presets.thisYear")}</SelectItem>
+                <SelectItem value="custom">{t("common.datePicker.presets.custom")}</SelectItem>
               </SelectContent>
             </Select>
           </div>

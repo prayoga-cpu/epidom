@@ -5,7 +5,7 @@ import { StoreCard } from "./store-card";
 import { CreateStoreDialog } from "./create-store-dialog";
 import { useStores } from "../hooks/use-stores";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function StoresContainer() {
@@ -13,12 +13,13 @@ export function StoresContainer() {
   const { data: stores, isLoading, error, refetch } = useStores();
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      {/* Header Section - Fixed height */}
-      <div className="shrink-0 border-b border-neutral-200 bg-neutral-50 px-4 py-4 sm:px-6 md:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-4 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-2xl font-bold text-[var(--color-brand-primary)] sm:text-3xl md:text-4xl">
+    <div className="flex h-full flex-col overflow-hidden bg-white">
+      {/* Header Section - Enhanced with subtle gradient */}
+      <div className="shrink-0 border-b border-neutral-200/60 bg-gradient-to-b from-white via-neutral-50/50 to-neutral-50">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6">
+          {/* Title and Create Button */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-3xl font-bold tracking-tight text-[var(--color-brand-primary)] sm:text-4xl md:text-5xl">
               {t("stores.title")}
             </h1>
             <div className="shrink-0">
@@ -62,16 +63,25 @@ export function StoresContainer() {
             </div>
           )}
 
-          {/* Empty State */}
+          {/* Empty State - Enhanced with visual and CTA */}
           {!isLoading && !error && stores?.length === 0 && (
             <div className="flex min-h-[calc(100vh-200px)] items-center justify-center py-12 text-center sm:py-16">
-              <div>
-                <p className="mb-2 text-base text-neutral-600 sm:text-lg md:text-xl">
+              <div className="mx-auto max-w-md px-4">
+                {/* Visual Icon */}
+                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100 sm:h-24 sm:w-24">
+                  <Store className="h-10 w-10 text-[var(--color-brand-primary)] sm:h-12 sm:w-12" />
+                </div>
+
+                {/* Text Content */}
+                <h3 className="mb-3 text-xl font-semibold text-[var(--color-brand-primary)] sm:text-2xl">
                   {t("stores.noStores")}
-                </p>
-                <p className="text-sm text-neutral-500 sm:text-base md:text-lg">
+                </h3>
+                <p className="mb-6 text-base leading-relaxed text-neutral-600 sm:text-lg">
                   {t("stores.createFirst")}
                 </p>
+
+                {/* CTA Button */}
+                <CreateStoreDialog />
               </div>
             </div>
           )}

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlerts, type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { AlertCircle, Loader2, ShoppingCart, Package2 } from "lucide-react";
@@ -102,25 +103,29 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="bg-destructive/10 mb-4 rounded-full p-3">
-          <AlertCircle className="text-destructive h-6 w-6" />
-        </div>
-        <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
-        <p className="text-muted-foreground text-sm">{error.message || t("alerts.errorLoading")}</p>
-      </div>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="bg-destructive/10 mb-4 rounded-full p-3">
+            <AlertCircle className="text-destructive h-6 w-6" />
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
+          <p className="text-muted-foreground text-sm">{error.message || t("alerts.errorLoading")}</p>
+        </CardContent>
+      </Card>
     );
   }
 
   if (alertsBySupplier.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="bg-primary/10 mb-4 rounded-full p-3">
-          <AlertCircle className="text-primary h-6 w-6" />
-        </div>
-        <h3 className="mb-2 text-lg font-semibold">{t("alerts.noActiveAlerts")}</h3>
-        <p className="text-muted-foreground text-sm">{t("alerts.noActiveAlertsDescription")}</p>
-      </div>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="bg-primary/10 mb-4 rounded-full p-3">
+            <AlertCircle className="text-primary h-6 w-6" />
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">{t("alerts.noActiveAlerts")}</h3>
+          <p className="text-muted-foreground text-sm">{t("alerts.noActiveAlertsDescription")}</p>
+        </CardContent>
+      </Card>
     );
   }
 

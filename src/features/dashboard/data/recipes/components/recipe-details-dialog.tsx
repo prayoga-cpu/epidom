@@ -109,7 +109,7 @@ export default function RecipeDetailsDialog({
               <div className="flex-1">
                 <DialogTitle className="text-2xl">{recipe.name}</DialogTitle>
                 <DialogDescription className="mt-2">
-                  {recipe.description || "No description provided"}
+                  {recipe.description || t("data.materials.noDescription")}
                 </DialogDescription>
               </div>
               <div className="flex gap-2">
@@ -200,7 +200,9 @@ export default function RecipeDetailsDialog({
                       <div key={index}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <p className="font-medium">{material?.name || "Unknown Material"}</p>
+                            <p className="font-medium">
+                              {material?.name || t("data.materials.unknownMaterial")}
+                            </p>
                             <p className="text-muted-foreground text-sm">
                               {ingredient.quantity} {ingredient.unit}
                               {ingredient.notes && ` • ${ingredient.notes}`}
@@ -279,8 +281,8 @@ export default function RecipeDetailsDialog({
                               }
                             >
                               {Number(product.currentStock) > Number(product.minStock)
-                                ? "In Stock"
-                                : "Low Stock"}
+                                ? t("common.stockStatus.inStock")
+                                : t("common.stockStatus.lowStock")}
                             </Badge>
                           </div>
                         </div>

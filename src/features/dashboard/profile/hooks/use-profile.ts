@@ -101,6 +101,8 @@ export const useProfile = () => {
     enabled: !sessionLoading && !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    refetchOnMount: false, // Prevent refetch on mount if data exists
   });
 };
 
@@ -117,13 +119,11 @@ export const useUpdateProfile = () => {
     onSuccess: async (data) => {
       console.log("[useUpdateProfile] Profile updated successfully:", data);
       console.log("[useUpdateProfile] Profile image:", data.image);
-      console.log("[useUpdateProfile] Updating session with currency:", data.currency);
 
-      // Update the cached profile data
+      // Update the cached profile data immediately
       queryClient.setQueryData(["profile", user?.id], data);
 
-      // Update the NextAuth session to reflect new currency/locale
-      // Only include fields that have values to avoid overwriting with null
+      // Update the NextAuth session to reflect new currency/locale/image
       const sessionUpdate: Record<string, any> = {};
 
       if (data.currency) sessionUpdate.currency = data.currency;
@@ -131,14 +131,18 @@ export const useUpdateProfile = () => {
       if (data.timezone) sessionUpdate.timezone = data.timezone;
       if (data.name) sessionUpdate.name = data.name;
       if (data.phone) sessionUpdate.phone = data.phone;
-      if (data.image) sessionUpdate.image = data.image; // Only update if image exists
 
-      console.log("[useUpdateProfile] Session update payload:", sessionUpdate);
-      await updateSession(sessionUpdate);
-      console.log("[useUpdateProfile] Session updated successfully");
+      // Handle image: include null or empty string to remove image from session
+      if (data.image !== undefined) {
+        sessionUpdate.image = data.image || null; // Convert empty string to null
+      }
 
-      // Force a small delay to ensure session propagates
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Only update session if there are changes
+      if (Object.keys(sessionUpdate).length > 0) {
+        console.log("[useUpdateProfile] Session update payload:", sessionUpdate);
+        await updateSession(sessionUpdate);
+        console.log("[useUpdateProfile] Session updated successfully");
+      }
     },
   });
 };
