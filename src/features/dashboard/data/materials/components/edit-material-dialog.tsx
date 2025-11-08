@@ -151,17 +151,22 @@ export default function EditMaterialDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>{t("data.materials.editTitle")}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[600px]">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.materials.editTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             {t("data.materials.editDescription") ||
               "Update material information. Fields marked with * are required."}
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="edit-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Material Name & SKU */}
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField
@@ -460,25 +465,33 @@ export default function EditMaterialDialog({
                 </div>
               ))}
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={updateMaterial.isPending}
-              >
-                {t("common.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={updateMaterial.isPending}>
-                {updateMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {updateMaterial.isPending
-                  ? t("common.actions.saving")
-                  : t("common.actions.saveChanges")}
-              </Button>
-            </div>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={updateMaterial.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="edit-material-form"
+              disabled={updateMaterial.isPending}
+            >
+              {updateMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {updateMaterial.isPending
+                ? t("common.actions.saving")
+                : t("common.actions.saveChanges")}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

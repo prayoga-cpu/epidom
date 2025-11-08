@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -139,17 +138,21 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle>{t("data.materials.addTitle")}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px]">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.materials.addTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             {t("data.materials.addDescription")}
           </DialogDescription>
         </DialogHeader>
-        <Separator />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="add-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium">{t("data.materials.sections.basicInfo")}</h3>
@@ -455,23 +458,31 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 </div>
               ))}
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={createMaterial.isPending}
-              >
-                {t("common.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={createMaterial.isPending}>
-                {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("data.materials.addButton")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createMaterial.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-material-form"
+              disabled={createMaterial.isPending}
+            >
+              {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.materials.addButton")}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

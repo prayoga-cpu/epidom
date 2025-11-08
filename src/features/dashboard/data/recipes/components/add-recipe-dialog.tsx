@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -230,16 +229,18 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px] [&>button]:hidden">
-        <DialogHeader>
-          <DialogTitle>{t("data.recipes.addTitle")}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px] [&>button]:hidden">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.recipes.addTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             {t("data.recipes.addDescription", { step: currentStep, total: STEPS.length })}
           </DialogDescription>
-        </DialogHeader>
 
-        {/* Step Indicator */}
-        <div className="flex w-full items-center justify-between border-b pb-4">
+          {/* Step Indicator */}
+          <div className="mt-4 flex w-full items-center justify-between">
           {STEPS.map((step, index) => {
             const Icon = step.icon;
             const isActive = currentStep === step.id;
@@ -280,14 +281,18 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
               </React.Fragment>
             );
           })}
-        </div>
+          </div>
+        </DialogHeader>
 
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            onKeyDown={handleKeyDown}
-            className="space-y-6"
-          >
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form
+              id="add-recipe-form"
+              onSubmit={form.handleSubmit(onSubmit)}
+              onKeyDown={handleKeyDown}
+              className="space-y-6"
+            >
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <div className="space-y-4">
@@ -741,17 +746,22 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                 </Card>
               </div>
             )}
+            </form>
+          </Form>
+        </div>
 
-            {/* Navigation Buttons */}
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={createRecipe.isPending}
-              >
-                {t("actions.cancel")}
-              </Button>
+        {/* Fixed Footer with Navigation Buttons */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-between gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createRecipe.isPending}
+            >
+              {t("actions.cancel")}
+            </Button>
+            <div className="flex gap-2">
               {currentStep > 1 && (
                 <Button type="button" variant="outline" onClick={prevStep}>
                   <ChevronLeft className="mr-2 h-4 w-4" />
@@ -764,14 +774,18 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={createRecipe.isPending}>
+                <Button
+                  type="submit"
+                  form="add-recipe-form"
+                  disabled={createRecipe.isPending}
+                >
                   {createRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {t("data.recipes.create")}
                 </Button>
               )}
-            </DialogFooter>
-          </form>
-        </Form>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

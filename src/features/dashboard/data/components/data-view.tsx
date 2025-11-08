@@ -12,7 +12,7 @@ export function DataView() {
 
   return (
     <Tabs defaultValue="materials" className="grid min-h-[calc(100vh-150px)] w-full gap-6">
-      <TabsList className="bg-muted/50 -mx-4 w-full justify-start overflow-x-auto rounded-lg p-1.5 px-4 whitespace-nowrap shadow-sm backdrop-blur-sm sm:mx-0 sm:px-1.5">
+      <TabsList className="bg-muted/50 w-full justify-start overflow-x-auto rounded-lg p-1.5 px-1.5 whitespace-nowrap shadow-sm backdrop-blur-sm">
         <TabsTrigger
           className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
           value="materials"

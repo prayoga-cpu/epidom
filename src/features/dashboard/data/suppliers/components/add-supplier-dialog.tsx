@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -107,18 +106,21 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>button]:hidden">
-        <DialogHeader>
-          <DialogTitle>{t("data.suppliers.addTitle")}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl [&>button]:hidden">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.suppliers.addTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             {t("data.suppliers.addDescription")}
           </DialogDescription>
         </DialogHeader>
 
-        <Separator />
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="add-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold">{t("data.suppliers.sections.basicInfo")}</h3>
@@ -266,23 +268,31 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                 )}
               />
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={createSupplier.isPending}
-              >
-                {t("common.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={createSupplier.isPending}>
-                {createSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("data.suppliers.addButton")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createSupplier.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-supplier-form"
+              disabled={createSupplier.isPending}
+            >
+              {createSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.suppliers.addButton")}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

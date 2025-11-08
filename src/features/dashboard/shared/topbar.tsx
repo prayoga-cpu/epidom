@@ -21,7 +21,7 @@ export function Topbar() {
   return (
     <header
       role="banner"
-      className="bg-primary text-primary-foreground navbar-no-transition navbar-static sticky top-0 z-10 w-full rounded-none shadow"
+      className="bg-primary text-primary-foreground navbar-no-transition navbar-static fixed top-0 z-10 w-full rounded-none shadow"
       style={{
         animation: "none !important",
         transition: "none !important",

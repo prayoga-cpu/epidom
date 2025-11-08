@@ -23,6 +23,32 @@ body {
   scrollbar-width: none; /* Firefox */
 }
 
+/* Thin and minimal scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: oklch(0.556 0 0 / 0.3);
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.556 0 0 / 0.5);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: oklch(0.556 0 0 / 0.3) transparent; /* Firefox */
+}
+
 /* Fix for dialog scrollbar issue - prevent navbar shift when modal opens */
 html {
   scroll-behavior: smooth;

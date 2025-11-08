@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -154,19 +153,19 @@ export default function DuplicateRecipeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px] [&>button]:hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px] [&>button]:hidden">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
             <Copy className="h-5 w-5" />
             {t("data.recipes.duplicateTitle")}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm sm:text-base">
             {t("data.recipes.duplicateDescription")}
           </DialogDescription>
-        </DialogHeader>
 
-        {/* Progress Indicator */}
-        <div className="flex items-center justify-center gap-2 py-4">
+          {/* Progress Indicator */}
+          <div className="mt-4 flex items-center justify-center gap-2">
           {STEPS.map((step, index) => (
             <div key={step.id} className="flex items-center gap-2">
               <div
@@ -192,12 +191,13 @@ export default function DuplicateRecipeDialog({
               )}
             </div>
           ))}
-        </div>
+          </div>
+        </DialogHeader>
 
-        <Separator />
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="duplicate-recipe-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Step 1: Basic Info */}
             {currentStep === 1 && (
               <div className="space-y-4">
@@ -371,9 +371,14 @@ export default function DuplicateRecipeDialog({
                 </Card>
               </div>
             )}
+            </form>
+          </Form>
+        </div>
 
-            {/* Navigation Buttons */}
-            <DialogFooter className="gap-2">
+        {/* Fixed Footer with Navigation Buttons */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-between gap-2">
+            <div>
               {currentStep > 1 && (
                 <Button
                   type="button"
@@ -385,21 +390,26 @@ export default function DuplicateRecipeDialog({
                   {t("common.actions.previous")}
                 </Button>
               )}
-
+            </div>
+            <div className="flex gap-2">
               {currentStep < 2 ? (
                 <Button type="button" onClick={handleNext}>
                   {t("common.actions.next")}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={duplicateRecipe.isPending}>
+                <Button
+                  type="submit"
+                  form="duplicate-recipe-form"
+                  disabled={duplicateRecipe.isPending}
+                >
                   {duplicateRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {t("data.recipes.duplicate")}
                 </Button>
               )}
-            </DialogFooter>
-          </form>
-        </Form>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

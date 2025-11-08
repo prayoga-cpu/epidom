@@ -89,15 +89,17 @@ export function OrdersView() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="bg-destructive/10 mb-4 rounded-full p-3">
-          <AlertCircle className="text-destructive h-6 w-6" />
-        </div>
-        <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
-        <p className="text-muted-foreground text-sm">
-          {error.message || t("alerts.errorLoadingOrders")}
-        </p>
-      </div>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="bg-destructive/10 mb-4 rounded-full p-3">
+            <AlertCircle className="text-destructive h-6 w-6" />
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
+          <p className="text-muted-foreground text-sm">
+            {error.message || t("alerts.errorLoadingOrders")}
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -105,8 +107,10 @@ export function OrdersView() {
     <section className="space-y-6">
       {ordersBySupplier.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="text-muted-foreground mb-4 h-12 w-12" />
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="bg-primary/10 mb-4 rounded-full p-3">
+              <Package className="text-primary h-6 w-6" />
+            </div>
             <h3 className="mb-2 text-lg font-semibold">{t("alerts.noOrdersToPlace")}</h3>
             <p className="text-muted-foreground text-sm">{t("alerts.noOrdersDescription")}</p>
           </CardContent>
