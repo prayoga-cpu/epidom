@@ -288,9 +288,9 @@ export function MaterialsSection() {
     <>
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">{t("data.materials.title")}</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-lg font-bold">{t("data.materials.title")}</CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -414,7 +414,7 @@ export function MaterialsSection() {
           </div>
 
           {/* Materials Grid */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {processedMaterials.map((material) => {
               const currentStock = Number(material.currentStock);
               const minStock = Number(material.minStock);

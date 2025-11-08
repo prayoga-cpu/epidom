@@ -156,23 +156,27 @@ export function ManagementView() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="delivery" className="grid w-full gap-4 lg:grid-cols-3">
-          <SupplierDeliveriesTable
-            deliveries={deliveries}
-            selectedDelivery={selectedDelivery}
-            onDeliverySelect={setSelectedDelivery}
-            onEditDelivery={handleEditDelivery}
-            onUpdateStatus={handleUpdateStatus}
-            onPrintDelivery={handlePrintDelivery}
-            onDeleteDelivery={handleDeleteDelivery}
-            isLoading={isLoading}
-          />
-          <SupplierDeliveryDetails
-            selectedDelivery={selectedDelivery}
-            onEdit={handleEditDelivery}
-            onUpdateStatus={handleUpdateStatus}
-            onPrintDelivery={handlePrintDelivery}
-          />
+        <TabsContent value="delivery" className="grid w-full gap-4 md:grid-cols-1 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <SupplierDeliveriesTable
+              deliveries={deliveries}
+              selectedDelivery={selectedDelivery}
+              onDeliverySelect={setSelectedDelivery}
+              onEditDelivery={handleEditDelivery}
+              onUpdateStatus={handleUpdateStatus}
+              onPrintDelivery={handlePrintDelivery}
+              onDeleteDelivery={handleDeleteDelivery}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className="lg:col-span-1">
+            <SupplierDeliveryDetails
+              selectedDelivery={selectedDelivery}
+              onEdit={handleEditDelivery}
+              onUpdateStatus={handleUpdateStatus}
+              onPrintDelivery={handlePrintDelivery}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="recipe">

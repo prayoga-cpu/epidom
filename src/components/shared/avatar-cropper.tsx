@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Cropper from "react-easy-crop";
-import { Area } from "react-easy-crop/types";
+import Cropper, { Area } from "react-easy-crop";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useI18n } from "@/components/lang/i18n-provider";

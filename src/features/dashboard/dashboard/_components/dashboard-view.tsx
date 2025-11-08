@@ -17,13 +17,17 @@ export function DashboardView() {
       />
 
       {/* Top Stats */}
-      <div className="grid w-full gap-4 lg:grid-cols-7">
-        <ProductionHistoryChart />
-        <AlertsCard />
+      <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="md:col-span-2 lg:col-span-5">
+          <ProductionHistoryChart />
+        </div>
+        <div className="md:col-span-2 lg:col-span-2">
+          <AlertsCard />
+        </div>
       </div>
 
       {/* Bottom Stats */}
-      <div className="grid w-full gap-4 lg:grid-cols-2">
+      <div className="grid w-full gap-4 md:grid-cols-2">
         <TrackingCard />
         <SupplierCard />
       </div>

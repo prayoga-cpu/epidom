@@ -184,7 +184,7 @@ export function StockLevelsTab() {
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
           <Select value={itemType} onValueChange={(v: any) => setItemType(v)}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-full sm:w-[140px]">
               <SelectValue placeholder={t("tracking.filters.allItemsPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -195,7 +195,7 @@ export function StockLevelsTab() {
           </Select>
 
           <Select value={stockFilter} onValueChange={setStockFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px]">
               <SelectValue placeholder={t("tracking.filters.allStatusPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -213,28 +213,29 @@ export function StockLevelsTab() {
           </span>
         </div>
 
-        <div className="p-4">
+        <div className="overflow-x-auto p-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
             </div>
           ) : (
-            <Table className="w-full text-sm">
+            <div className="min-w-[640px]">
+              <Table className="w-full text-sm">
               <TableHeader>
                 <TableRow className="text-foreground/80">
-                  <TableHead className="py-2 pr-3 text-left font-medium">
+                  <TableHead className="min-w-[150px] py-2 pr-3 text-left font-medium">
                     {t("tables.products")}
                   </TableHead>
-                  <TableHead className="py-2 pr-3 text-left font-medium">
+                  <TableHead className="min-w-[100px] py-2 pr-3 text-left font-medium">
                     {t("tracking.type")}
                   </TableHead>
-                  <TableHead className="w-1/2 py-2 pr-3 text-left font-medium">
+                  <TableHead className="min-w-[200px] w-1/2 py-2 pr-3 text-left font-medium">
                     {t("tracking.stockLevel")}
                   </TableHead>
-                  <TableHead className="py-2 pr-3 text-right font-medium whitespace-nowrap">
+                  <TableHead className="min-w-[120px] py-2 pr-3 text-right font-medium whitespace-nowrap">
                     {t("tables.currentUnits")}
                   </TableHead>
-                  <TableHead className="py-2 pl-3 text-right font-medium">
+                  <TableHead className="min-w-[80px] py-2 pl-3 text-right font-medium">
                     {t("tables.status")}
                   </TableHead>
                 </TableRow>
@@ -255,15 +256,15 @@ export function StockLevelsTab() {
                     );
                     return (
                       <TableRow key={`${item.type}-${item.id}`} className="border-t">
-                        <TableCell className="py-3 pr-3">{item.name}</TableCell>
-                        <TableCell className="py-3 pr-3">
+                        <TableCell className="min-w-[150px] py-3 pr-3">{item.name}</TableCell>
+                        <TableCell className="min-w-[100px] py-3 pr-3">
                           <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2 py-1 text-xs font-medium">
                             {item.type === "material"
                               ? t("tracking.materialType")
                               : t("tracking.productType")}
                           </span>
                         </TableCell>
-                        <TableCell className="py-3 pr-3">
+                        <TableCell className="min-w-[200px] py-3 pr-3">
                           <Progress
                             value={stockStatus.percentage}
                             className={
@@ -275,10 +276,10 @@ export function StockLevelsTab() {
                             }
                           />
                         </TableCell>
-                        <TableCell className="py-3 pr-3 text-right">
+                        <TableCell className="min-w-[120px] py-3 pr-3 text-right whitespace-nowrap">
                           {item.currentStock.toFixed(2)} {item.unit}
                         </TableCell>
-                        <TableCell className="py-3 pl-3 text-right">
+                        <TableCell className="min-w-[80px] py-3 pl-3 text-right">
                           {stockStatus.status === "ok" && (
                             <CheckCircle2 className="text-primary inline size-5" aria-label="OK" />
                           )}
@@ -301,6 +302,7 @@ export function StockLevelsTab() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
       </div>

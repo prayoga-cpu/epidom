@@ -29,8 +29,8 @@ export function Topbar() {
         opacity: "1 !important",
       }}
     >
-      <div className="mx-auto max-w-7xl px-3">
-        <div className="grid h-14 grid-cols-[1fr_minmax(220px,720px)_1fr] items-center gap-3">
+      <div className="mx-auto max-w-7xl px-3 sm:px-4">
+        <div className="flex h-14 items-center justify-between gap-2 sm:grid sm:grid-cols-[1fr_minmax(220px,720px)_1fr] sm:gap-3">
           {/* Left: Mobile menu + Logo */}
           <div className="flex items-center gap-2">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -48,28 +48,28 @@ export function Topbar() {
                 <Sidebar mode="mobile" />
               </SheetContent>
             </Sheet>
-            <div className="flex w-[100px] items-center justify-center rounded-md bg-transparent">
+            <div className="flex w-[80px] items-center justify-center rounded-md bg-transparent sm:w-[100px]">
               <Image
                 src="/images/logo-white.png"
                 alt="EPIDOM logo"
                 width={100}
                 height={30}
-                className="w-auto object-contain"
+                className="h-auto w-full max-w-[80px] object-contain sm:max-w-[100px]"
                 priority
               />
             </div>
           </div>
 
           {/* Center: Search (hidden on mobile, centered on md+) */}
-          <div className="hidden w-full items-center justify-end md:flex">
+          <div className="hidden w-full items-center justify-center sm:flex sm:justify-end">
             <Button
               variant="outline"
-              className="text-muted-foreground relative h-9 w-80 max-w-xl justify-start rounded-full bg-white text-sm font-normal sm:max-w-2xl"
+              className="text-muted-foreground relative h-9 w-full max-w-xl justify-start rounded-full bg-white text-sm font-normal sm:w-80 lg:max-w-2xl"
               onClick={() => setSearchOpen(true)}
             >
               <Search className="mr-2 size-4 shrink-0" />
-              <span>{t("actions.searchPlaceholder")}</span>
-              <KbdGroup className="absolute right-3 hidden md:flex">
+              <span className="hidden sm:inline">{t("actions.searchPlaceholder")}</span>
+              <KbdGroup className="absolute right-3 hidden lg:flex">
                 <Kbd>⌘</Kbd>
                 <Kbd>k</Kbd>
               </KbdGroup>
@@ -77,7 +77,7 @@ export function Topbar() {
           </div>
 
           {/* Right: store switcher, language, profile, logout */}
-          <div className="ml-auto flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2">
             {/* Mobile search button */}
             <Button
               variant="ghost"
@@ -90,11 +90,11 @@ export function Topbar() {
             </Button>
 
             {/* Store switcher - hidden on mobile */}
-            <div className="hidden sm:block">
+            <div className="hidden md:block">
               <StoreSwitcher />
             </div>
             {/* Language switcher */}
-            <LangSwitcher className="text-foreground hidden border bg-white sm:inline-block" />
+            <LangSwitcher className="text-foreground hidden border bg-white md:inline-block" />
             <NavUser />
             <Button
               size="sm"

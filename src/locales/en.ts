@@ -836,12 +836,6 @@ export const en = {
     supplierDeliveriesSectionTitle: "Supplier Deliveries",
     deliveryDetails: "Delivery Details",
   },
-  tabs: {
-    supplierDeliveries: "Supplier Deliveries",
-    recipeProduction: "Recipe Production",
-    productionHistory: "Production History",
-    editStock: "Edit Stock",
-  },
   dashboard: {
     title: "Dashboard",
     description:

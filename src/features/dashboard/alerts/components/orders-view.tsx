@@ -153,7 +153,7 @@ export function OrdersView() {
 
                     {/* Phone */}
                     {supplier.phone && (
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           <Phone className="text-muted-foreground h-4 w-4 flex-shrink-0" />
                           <span className="truncate text-sm">{supplier.phone}</span>
@@ -161,7 +161,7 @@ export function OrdersView() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="ml-2"
+                          className="w-full sm:ml-2 sm:w-auto"
                           onClick={() => window.open(`tel:${supplier.phone}`, "_self")}
                         >
                           {t("alerts.actions.callSupplier")}
@@ -171,7 +171,7 @@ export function OrdersView() {
 
                     {/* Email */}
                     {supplier.email && (
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           <Mail className="text-muted-foreground h-4 w-4 flex-shrink-0" />
                           <span className="truncate text-sm">{supplier.email}</span>
@@ -179,7 +179,7 @@ export function OrdersView() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="ml-2"
+                          className="w-full sm:ml-2 sm:w-auto"
                           onClick={() => window.open(`mailto:${supplier.email}`, "_blank")}
                         >
                           {t("alerts.actions.emailSupplier")}

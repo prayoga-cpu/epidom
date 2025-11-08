@@ -38,7 +38,7 @@ export default function ProfilePage() {
         onUpdate={undefined}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <PersonalInfoCard user={profileData} onUpdate={undefined} />
         <SubscriptionInfoCard subscription={profileData.subscription} />
       </div>

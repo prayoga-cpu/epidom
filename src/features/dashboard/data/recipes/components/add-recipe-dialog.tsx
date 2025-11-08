@@ -236,7 +236,9 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
             {t("data.recipes.addTitle")}
           </DialogTitle>
           <DialogDescription className="text-sm sm:text-base">
-            {t("data.recipes.addDescription", { step: currentStep, total: STEPS.length })}
+            {t("data.recipes.addDescription")
+              .replace("{step}", currentStep.toString())
+              .replace("{total}", STEPS.length.toString())}
           </DialogDescription>
 
           {/* Step Indicator */}

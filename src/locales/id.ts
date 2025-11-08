@@ -842,12 +842,6 @@ export const id = {
     supplierDeliveriesSectionTitle: "Pengiriman Supplier",
     deliveryDetails: "Detail Pengiriman",
   },
-  tabs: {
-    supplierDeliveries: "Pengiriman Supplier",
-    recipeProduction: "Produksi Resep",
-    productionHistory: "Riwayat Produksi",
-    editStock: "Edit Stok",
-  },
   dashboard: {
     title: "Dasbor",
     description:
