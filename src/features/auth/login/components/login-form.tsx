@@ -13,17 +13,31 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, LoginInput } from "../../validation/auth.schemas";
 import { useLogin } from "../../hooks/use-auth";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export function LoginForm() {
   const { t } = useI18n();
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get("next") || searchParams.get("callbackUrl");
+  const registered = searchParams.get("registered");
+  const router = useRouter();
+
   const { mutate: login, isPending, error } = useLogin();
+
+  // Show success toast for new registrations
+  useEffect(() => {
+    if (registered === "true") {
+      toast.success("Account created successfully! Please log in to continue.");
+    }
+  }, [registered]);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -33,15 +47,16 @@ export function LoginForm() {
     },
   });
 
-  // Show toast on error
-  useEffect(() => {
-    if (error) {
-      toast.error(error.message || t("messages.invalidCredentials"));
-    }
-  }, [error, t]);
-
   const onSubmit = (data: LoginInput) => {
-    login(data);
+    login(data, {
+      onSuccess: () => {
+        toast.success(t("messages.loginSuccess") || "Logged in successfully!");
+        router.push("/profile");
+      },
+      onError: (err) => {
+        toast.error(err.message || t("messages.invalidCredentials"));
+      },
+    });
   };
 
   return (
@@ -88,12 +103,6 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-
-            <div className="flex items-center justify-between">
-              <Link className="text-primary text-sm underline underline-offset-4" href="#">
-                {t("auth.forgotPassword")}
-              </Link>
-            </div>
 
             <Button
               type="submit"

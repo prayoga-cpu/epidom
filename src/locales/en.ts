@@ -1,15 +1,15 @@
 export const en = {
-    common: {
-      brand: "EPIDOM",
-      item: "Item",
-      ingredient: "Ingredient",
-      uncategorized: "Uncategorized",
-      stockStatus: {
-        outOfStock: "Out of Stock",
-        lowStock: "Low Stock",
-        inStock: "In Stock",
-        overstocked: "Overstocked",
-      },
+  common: {
+    brand: "EPIDOM",
+    item: "Item",
+    ingredient: "Ingredient",
+    uncategorized: "Uncategorized",
+    stockStatus: {
+      outOfStock: "Out of Stock",
+      lowStock: "Low Stock",
+      inStock: "In Stock",
+      overstocked: "Overstocked",
+    },
     nav: {
       home: "Home",
       services: "Services",
@@ -133,6 +133,10 @@ export const en = {
       plannedQuantity: "Planned Quantity",
       producedQuantity: "Produced Quantity",
     },
+    loading: "Loading...",
+    goHome: "Go to Homepage",
+    needHelp: "Need help?",
+    contactSupport: "Contact Support",
   },
   search: {
     title: "Global Search",
@@ -946,7 +950,8 @@ export const en = {
         selectSupplier: "Select supplier",
         selectSupplierPlaceholder: "Select a supplier...",
         addSupplier: "Add Supplier",
-        noSuppliersYet: "No suppliers added yet. Click \"Add Supplier\" to link suppliers to this material.",
+        noSuppliersYet:
+          'No suppliers added yet. Click "Add Supplier" to link suppliers to this material.',
         quantity: "Quantity",
         unit: "Unit",
         selectUnit: "Unit",
@@ -1043,7 +1048,7 @@ export const en = {
       },
       deleteConfirm: {
         title: "Delete Material",
-        description: "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+        description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
       },
     },
 
@@ -2113,7 +2118,8 @@ export const en = {
             expectedDateRequired: "Expected date is required",
             atLeastOneItem: "Please add at least one item",
             itemsMustHaveMaterial: "All items must have a material and quantity greater than 0",
-            addModeNotImplemented: "Add mode is not implemented yet. Orders should be created from alerts.",
+            addModeNotImplemented:
+              "Add mode is not implemented yet. Orders should be created from alerts.",
           },
           toasts: {
             created: {
@@ -2655,5 +2661,93 @@ export const en = {
     accept: "Accept",
     reject: "Reject",
     close: "Close cookie notice",
+  },
+  billing: {
+    title: "Billing & Subscription",
+    currentPlan: "Current Plan",
+    planStatus: "Plan Status",
+    nextBilling: "Next billing date",
+    storeUsage: "Store usage",
+    stores: "stores",
+    unlimited: "Unlimited",
+    limitReached: "Limit reached",
+    managePayment: "Manage Payment Methods",
+    cancelSubscription: "Cancel Subscription",
+    upgradeNow: "Upgrade Now",
+    upgradeToPro: "Upgrade to Pro",
+    viewPlans: "View Plans & Pricing",
+    noSubscription: "No Active Subscription",
+    noSubscriptionDesc: "Subscribe to a plan to start managing your business with Epidom.",
+    currentPlanLabel: "Current Plan",
+    availablePlans: "Available Plans",
+    comparePlans: "Compare features and upgrade anytime",
+    subscriptionWillCancel:
+      "Your subscription will be canceled on {date}. You'll retain access until then.",
+    confirmCancel:
+      "Are you sure you want to cancel your subscription? You'll retain access until the end of your billing period.",
+    subscriptionActivated: "Subscription activated successfully! Welcome to {plan} plan.",
+    subscriptionRequired: "An active subscription is required to access the dashboard.",
+    upgradePro: "Upgrade to Pro to add more stores.",
+    storeLimitReached: "You have reached your plan's store limit ({current}/{limit}).",
+    status: {
+      active: "Active",
+      canceled: "Canceled",
+      pastDue: "Past Due",
+      incomplete: "Incomplete",
+    },
+  },
+  stripeConnect: {
+    title: "Payment Setup",
+    description: "Receive 80% of subscription revenue via Stripe Connect",
+    connected: "Connected",
+    setupComplete: "Payment setup complete",
+    setupCompleteDesc:
+      "You're all set to receive payments. 80% of all subscription revenue will be automatically transferred to your Stripe account.",
+    accountStatus: "Account Status",
+    charges: "Charges",
+    payouts: "Payouts",
+    accountId: "Account ID",
+    enabled: "Enabled",
+    disabled: "Disabled",
+    viewEarnings: "View Earnings in Stripe Dashboard",
+    completeOnboarding:
+      "Complete Stripe Connect onboarding to start receiving 80% of subscription payments. This is required for the payment system to work.",
+    whatYouNeed: "What you'll need:",
+    needBusiness: "Business information (name, address, tax ID)",
+    needBank: "Bank account details for payouts",
+    needIdentity: "Identity verification (may require documents)",
+    processTime: "This process is handled securely by Stripe and typically takes 5-10 minutes.",
+    completeSetup: "Complete Payment Setup",
+    redirectingToStripe: "Redirecting to Stripe...",
+    secureOnboarding: "You'll be redirected to Stripe's secure onboarding page",
+  },
+  checkout: {
+    success: {
+      title: "Payment Successful! 🎉",
+      subtitle: "Your subscription is now active",
+      plan: "Plan",
+      orderId: "Order ID",
+      status: "Status",
+      active: "Active",
+      message:
+        "Thank you for your purchase! Your subscription is now active and you can start using all the features immediately.",
+      continueToProfile: "Continue to Profile",
+      viewDashboard: "View Dashboard",
+      confirmationEmail:
+        "A confirmation email has been sent to your registered email address with receipt and subscription details.",
+    },
+    failed: {
+      title: "Payment Failed",
+      subtitle: "We couldn't process your payment",
+      reason: "Reason",
+      paymentFailed:
+        "Your payment method was declined. Please check your card details and try again.",
+      canceled: "You canceled the payment process. No charges have been applied.",
+      sessionExpired: "Your payment session has expired. Please try again.",
+      unknownError: "An unexpected error occurred during payment processing.",
+      tryAgain:
+        "Your card hasn't been charged. Please review the error above and try again. If you continue to have issues, please contact support.",
+      chargeNotApplied: "No charges have been applied to your account.",
+    },
   },
 };

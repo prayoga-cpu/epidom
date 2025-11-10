@@ -63,6 +63,18 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 
+  cookies: {
+    sessionToken: {
+      name: `${process.env.NEXTAUTH_URL?.startsWith("https") ? "__Secure-" : ""}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NEXTAUTH_URL?.startsWith("https") ?? false,
+      },
+    },
+  },
+
   pages: {
     signIn: "/login",
     error: "/login",

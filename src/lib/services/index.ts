@@ -16,3 +16,5 @@
 export * from "./auth.service";
 export * from "./user.service";
 export * from "./business.service";
+export * from "./subscription.service";
+export * from "./stripe-connect.service";

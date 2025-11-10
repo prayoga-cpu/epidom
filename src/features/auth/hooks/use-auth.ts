@@ -7,8 +7,6 @@ import { LoginInput, RegisterInput } from "../validation/auth.schemas";
  * Login mutation hook
  */
 export function useLogin() {
-  const router = useRouter();
-
   return useMutation({
     mutationFn: async (data: LoginInput) => {
       const result = await signIn("credentials", {
@@ -26,10 +24,6 @@ export function useLogin() {
       }
 
       return result;
-    },
-    onSuccess: () => {
-      router.push("/stores");
-      router.refresh();
     },
   });
 }
@@ -77,7 +71,9 @@ export function useRegister() {
       return result;
     },
     onSuccess: () => {
-      router.push("/login?registered=true");
+      // After successful registration, redirect to pricing page
+      // The user will need to log in first, then select a plan
+      router.push("/login?registered=true&next=/pricing");
     },
   });
 }

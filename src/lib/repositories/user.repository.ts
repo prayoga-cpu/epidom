@@ -170,6 +170,50 @@ export class UserRepository extends BaseRepository {
   }): Promise<User[]> {
     return this.db.user.findMany(params);
   }
+
+  /**
+   * Update Stripe Connect account ID
+   */
+  async updateStripeConnectAccount(
+    userId: string,
+    stripeConnectAccountId: string,
+    onboarded: boolean = false
+  ): Promise<User> {
+    return this.db.user.update({
+      where: { id: userId },
+      data: {
+        stripeConnectAccountId,
+        stripeConnectOnboarded: onboarded,
+      },
+    });
+  }
+
+  /**
+   * Mark Stripe Connect onboarding as complete
+   */
+  async completeStripeConnectOnboarding(userId: string): Promise<User> {
+    return this.db.user.update({
+      where: { id: userId },
+      data: { stripeConnectOnboarded: true },
+    });
+  }
+
+  /**
+   * Find user by Stripe Connect account ID
+   */
+  async findByStripeConnectAccountId(accountId: string): Promise<User | null> {
+    return this.db.user.findUnique({
+      where: { stripeConnectAccountId: accountId },
+    });
+  }
+
+  /**
+   * Check if user has completed Stripe Connect onboarding
+   */
+  async isStripeConnectOnboarded(userId: string): Promise<boolean> {
+    const user = await this.findById(userId);
+    return user?.stripeConnectOnboarded ?? false;
+  }
 }
 
 // Export singleton instance
