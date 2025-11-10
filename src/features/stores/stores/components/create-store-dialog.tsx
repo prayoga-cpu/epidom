@@ -51,19 +51,19 @@ export function CreateStoreDialog() {
           {t("stores.createStore")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="mx-4 flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:mx-0 sm:max-w-[500px]">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[500px] sm:h-[90vh]">
         {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-          <DialogTitle className="text-xl font-bold sm:text-2xl">
+        <DialogHeader className="shrink-0 border-b border-border px-4 pr-10 py-3 sm:px-6 sm:pr-6 sm:py-4">
+          <DialogTitle className="text-lg font-bold sm:text-xl md:text-2xl">
             {t("stores.createStore")}
           </DialogTitle>
-          <DialogDescription className="text-sm sm:text-base">
+          <DialogDescription className="text-xs sm:text-sm md:text-base">
             {t("stores.createFirst") || "Create your first store to start managing inventory"}
           </DialogDescription>
         </DialogHeader>
 
         {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
           {open && (
             <StoreForm
               key="create-store-form"
@@ -77,13 +77,14 @@ export function CreateStoreDialog() {
         </div>
 
         {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-4">
-          <div className="flex justify-end gap-3">
+        <div className="shrink-0 border-t border-border px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isPending}
+              className="w-full sm:w-auto"
             >
               {t("actions.cancel")}
             </Button>
@@ -91,6 +92,7 @@ export function CreateStoreDialog() {
               type="submit"
               form="create-store-form"
               disabled={isPending}
+              className="w-full sm:w-auto"
             >
               {isPending ? t("actions.saving") || "Saving..." : t("actions.save") || "Save"}
             </Button>
