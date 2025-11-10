@@ -4,13 +4,65 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { StoreCard } from "./store-card";
 import { CreateStoreDialog } from "./create-store-dialog";
 import { useStores } from "../hooks/use-stores";
+import { useSubscriptionStatus } from "../hooks/use-subscription-status";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 
 export function StoresContainer() {
   const { t } = useI18n();
+  const router = useRouter();
   const { data: stores, isLoading, error, refetch } = useStores();
+  const { data: subscriptionStatus, isLoading: isLoadingSubscription } = useSubscriptionStatus();
+
+  /**
+   * Render create store button based on subscription status
+   */
+  const renderCreateStoreButton = () => {
+    // Loading state - show skeleton button
+    if (isLoadingSubscription) {
+      return (
+        <Skeleton className="h-10 w-full rounded-full sm:w-auto sm:px-8" />
+      );
+    }
+
+    const hasSubscription = subscriptionStatus?.hasSubscription ?? false;
+    const canCreateMore = subscriptionStatus?.storeUsage?.canCreateMore ?? false;
+    const subscription = subscriptionStatus?.subscription;
+
+    // No subscription - show "Subscribe to Create Store" button
+    if (!hasSubscription || subscription?.status !== "ACTIVE") {
+      return (
+        <Button
+          size="lg"
+          onClick={() => router.push("/pricing")}
+          className="w-full rounded-full bg-[var(--color-brand-primary)] px-4 py-2.5 text-xs font-medium text-white shadow-md transition-all hover:opacity-90 hover:shadow-lg sm:w-auto sm:px-6 sm:py-3 sm:text-sm md:px-8 md:py-3.5 md:text-base"
+        >
+          {t("stores.subscribeToCreateStore")}
+          <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:ml-2 sm:h-4 sm:w-4" />
+        </Button>
+      );
+    }
+
+    // Has subscription but limit reached - show "Upgrade Plan" button
+    if (!canCreateMore) {
+      return (
+        <Button
+          size="lg"
+          onClick={() => router.push("/pricing")}
+          className="w-full rounded-full bg-[var(--color-brand-primary)] px-4 py-2.5 text-xs font-medium text-white shadow-md transition-all hover:opacity-90 hover:shadow-lg sm:w-auto sm:px-6 sm:py-3 sm:text-sm md:px-8 md:py-3.5 md:text-base"
+        >
+          {t("stores.upgradePlan")}
+          <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:ml-2 sm:h-4 sm:w-4" />
+        </Button>
+      );
+    }
+
+    // Has subscription and can create more - show CreateStoreDialog
+    return <CreateStoreDialog />;
+  };
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
@@ -23,7 +75,7 @@ export function StoresContainer() {
               {t("stores.title")}
             </h1>
             <div className="shrink-0">
-              <CreateStoreDialog />
+              {renderCreateStoreButton()}
             </div>
           </div>
         </div>
@@ -81,7 +133,7 @@ export function StoresContainer() {
                 </p>
 
                 {/* CTA Button */}
-                <CreateStoreDialog />
+                {renderCreateStoreButton()}
               </div>
             </div>
           )}

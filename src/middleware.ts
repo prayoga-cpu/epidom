@@ -8,7 +8,7 @@ import type { NextRequest } from "next/server";
  * Protects routes defined in matcher configuration.
  * - Redirects unauthenticated users to /login
  * - Checks subscription status for dashboard access
- * - Redirects users with inactive subscriptions to /billing
+ * - Redirects users with inactive subscriptions to /pricing
  *
  * Protected routes are configured below in the matcher array.
  */
@@ -17,7 +17,7 @@ export default withAuth(
     const token = req.nextauth?.token;
     const path = req.nextUrl.pathname;
 
-    // Allow access to billing page, pricing, and payment pages without subscription check
+    // Allow access to billing pages (store-specific), pricing, payment, and profile pages without subscription check
     const allowedPaths = ["/billing", "/pricing", "/payments", "/profile"];
     const isAllowedPath = allowedPaths.some((allowedPath) => path.includes(allowedPath));
 
@@ -26,13 +26,15 @@ export default withAuth(
     }
 
     // Check if accessing dashboard routes (requires active subscription)
+    // Note: /stores page is accessible without subscription, but creating stores requires subscription
+    // Only dashboard routes for individual stores require subscription
     const isDashboardRoute =
       path.includes("/dashboard") ||
       path.includes("/tracking") ||
       path.includes("/data") ||
       path.includes("/management") ||
-      path.includes("/alerts") ||
-      path.includes("/stores");
+      path.includes("/alerts");
+    // /stores is removed from here to allow access without subscription
 
     if (isDashboardRoute && token?.sub) {
       try {
@@ -49,8 +51,8 @@ export default withAuth(
 
           // Check if user has an active subscription
           if (!data.hasSubscription || data.subscription?.status !== "ACTIVE") {
-            // Redirect to subscribe required page
-            const url = new URL("/subscribe-required", req.url);
+            // Redirect to pricing page
+            const url = new URL("/pricing", req.url);
             return NextResponse.redirect(url);
           }
         }

@@ -10,7 +10,7 @@ import { subscriptionService } from "@/lib/services";
  * Allows users to manage subscription, payment methods, and invoices
  *
  * Body:
- * - returnUrl?: string (optional, defaults to /billing)
+ * - returnUrl?: string (optional, defaults to /profile)
  *
  * Returns:
  * - url: Redirect URL to Stripe Customer Portal
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Build return URL
     const finalReturnUrl = returnUrl
       ? `${origin}${returnUrl}`
-      : `${origin}/billing`;
+      : `${origin}/profile`;
 
     // Create portal session
     const portalSession = await subscriptionService.createPortalSession(userId, finalReturnUrl);

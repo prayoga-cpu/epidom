@@ -30,7 +30,7 @@ export default function CheckoutFailedPage() {
 
   const handleRetry = () => {
     setIsLoading(true);
-    router.push("/your-plan");
+    router.push("/pricing");
   };
 
   const handleGoHome = () => {

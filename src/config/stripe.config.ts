@@ -58,9 +58,9 @@ export const STRIPE_CONFIG = {
    * Success and cancel URLs for Stripe Checkout
    */
   URLS: {
-    SUCCESS: "/billing?success=true",
+    SUCCESS: "/profile?success=true",
     CANCEL: "/pricing?canceled=true",
-    RETURN: "/billing", // For Stripe Customer Portal
+    RETURN: "/profile", // For Stripe Customer Portal
   },
 
   /**

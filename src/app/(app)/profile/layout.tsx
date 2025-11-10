@@ -17,7 +17,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
   return (
     <I18nProvider>
       <div className="flex min-h-screen flex-col bg-neutral-50">
-        <SiteHeader variant="authenticated" showNav={true} />
+        <SiteHeader variant="authenticated" showNav={true} showLogout={true} />
         <ProfileNav />
         <main className="flex flex-1 flex-col overflow-y-auto">{children}</main>
       </div>

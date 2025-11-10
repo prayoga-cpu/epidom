@@ -22,6 +22,8 @@ export const en = {
       closeMenu: "Close menu",
       homepage: "Homepage",
       searchAriaLabel: "Search",
+      stores: "My Stores",
+      profile: "Profile",
     },
     language: {
       label: "Language",
@@ -71,6 +73,7 @@ export const en = {
       exportAsPdf: "Export as PDF",
       update: "Update",
       logout: "Logout",
+      login: "Login",
       searchPlaceholder: "Search...",
       retry: "Retry",
       select: "Select",
@@ -1929,6 +1932,8 @@ export const en = {
   stores: {
     title: "Your Stores",
     createStore: "Create a store",
+    subscribeToCreateStore: "Subscribe to Create Store",
+    upgradePlan: "Upgrade Plan",
     editStore: "Edit Store",
     updateStore: "Update Store",
     editDescription: "Update your store information. All fields except name are optional.",

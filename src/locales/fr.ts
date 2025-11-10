@@ -22,6 +22,8 @@ export const fr = {
       closeMenu: "Fermer le menu",
       homepage: "Page d'accueil",
       searchAriaLabel: "Rechercher",
+      stores: "Mes Magasins",
+      profile: "Profil",
     },
     language: {
       label: "Langue",
@@ -123,6 +125,7 @@ export const fr = {
       exportAsExcel: "Exporter en Excel",
       exportAsPdf: "Exporter en PDF",
       logout: "Déconnexion",
+      login: "Connexion",
       searchPlaceholder: "Rechercher...",
       retry: "Réessayer",
       select: "Sélectionner",
@@ -1940,6 +1943,8 @@ export const fr = {
   stores: {
     title: "Vos boutiques",
     createStore: "Créer une boutique",
+    subscribeToCreateStore: "S'abonner pour créer une boutique",
+    upgradePlan: "Passer à un plan supérieur",
     editStore: "Modifier la boutique",
     updateStore: "Mettre à jour la boutique",
     editDescription: "Mettez à jour les informations de votre boutique. Tous les champs sauf le nom sont optionnels.",
