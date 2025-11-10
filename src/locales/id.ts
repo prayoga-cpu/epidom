@@ -22,6 +22,8 @@ export const id = {
       closeMenu: "Tutup menu",
       homepage: "Halaman utama",
       searchAriaLabel: "Cari",
+      stores: "Toko Saya",
+      profile: "Profil",
     },
     language: {
       label: "Bahasa",
@@ -123,6 +125,7 @@ export const id = {
       exportAsExcel: "Ekspor sebagai Excel",
       exportAsPdf: "Ekspor sebagai PDF",
       logout: "Keluar",
+      login: "Masuk",
       searchPlaceholder: "Cari...",
       retry: "Coba Lagi",
       select: "Pilih",
@@ -1926,6 +1929,8 @@ export const id = {
   stores: {
     title: "Toko Anda",
     createStore: "Buat toko",
+    subscribeToCreateStore: "Berlangganan untuk Membuat Toko",
+    upgradePlan: "Tingkatkan Paket",
     editStore: "Edit Toko",
     updateStore: "Perbarui Toko",
     editDescription: "Perbarui informasi toko Anda. Semua field kecuali nama bersifat opsional.",

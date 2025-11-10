@@ -10,7 +10,7 @@
  * 1. User must be logged in
  * 2. Click "Subscribe" button
  * 3. Redirect to Stripe Checkout (hosted)
- * 4. After payment, redirect back to /billing?success=true
+ * 4. After payment, redirect back to /profile?success=true
  *
  * @component
  */

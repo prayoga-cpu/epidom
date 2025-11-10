@@ -5,50 +5,192 @@
  *
  * Reusable navigation header used across all marketing pages.
  * Features:
+ * - Config-based navigation (uses navigation.config.ts)
  * - Responsive design (desktop navigation + mobile sheet menu)
- * - Two variants: landing (shows waitlist CTA) or authenticated (shows logout)
+ * - Two button modes: Waitlist CTA or Login/My Stores (based on session)
+ * - Navigation always shows landing navigation for marketing pages
+ * - Navigation only changes when variant prop is explicitly set (for authenticated pages)
  * - Internationalization support with language switcher
  * - Active page highlighting with visual feedback
  * - Accessible navigation with ARIA labels
  * - Sticky/fixed positioning controlled by CSS classes
  *
+ * Navigation items are defined in src/config/navigation.config.ts:
+ * - landingNavigation: for public/marketing pages (Home, Services, Pricing, Contact)
+ * - authenticatedNavigation: for authenticated pages (My Stores, Profile, Pricing)
+ *
+ * NAVIGATION BEHAVIOR:
+ * ========================================
+ * - Marketing pages (default): Always shows landing navigation (Home, Services, Pricing, Contact)
+ *   regardless of login status
+ * - Authenticated pages: Shows authenticated navigation (My Stores, Profile, Pricing)
+ *   when variant="authenticated" is explicitly passed via props
+ *
+ * BUTTON BEHAVIOR:
+ * ========================================
+ * - Marketing pages (not logged in): Shows "Login" button
+ * - Marketing pages (logged in): Shows "My Stores" button (redirects to /stores)
+ * - Authenticated pages: Shows "Logout" button (when showLogout={true})
+ * - Waitlist mode: Shows "Join Waitlist" button (when BUTTON_MODE = "waitlist")
+ *
+ * NOTE: Marketing pages allow users to browse even when logged in, so navigation
+ * stays consistent (landing navigation) while button changes based on session.
+ * Logout button is only available in authenticated pages (stores/profile).
+ *
+ * BUTTON MODE SELECTION:
+ * ========================================
+ * CONTROL BUTTON MODE WITH COMMENT BELOW
+ * ========================================
+ *
+ * To enable WAITLIST mode (show "Join Waitlist" button):
+ *   1. Set BUTTON_MODE to "waitlist"
+ *
+ * To enable LOGIN/MY STORES mode (show Login/My Stores based on session):
+ *   1. Set BUTTON_MODE to "login-my-stores"
+ *
+ * AI/ROBOT INSTRUCTIONS:
+ *   - Prompt: "enable waitlist mode" -> set BUTTON_MODE = "waitlist"
+ *   - Prompt: "enable login my stores mode" -> set BUTTON_MODE = "login-my-stores"
+ * ========================================
+ *
  * @component
  */
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { WaitlistDialog } from "@/features/marketing/shared/components/waitlist-dialog";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ChevronRight } from "lucide-react";
 import { LogoWithSkeleton } from "./logo-with-skeleton";
-import { signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
+import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
 /**
  * Props for SiteHeader component
  */
 interface SiteHeaderProps {
-  /** Header variant: "landing" shows waitlist CTA, "authenticated" shows logout button */
-  variant?: "landing" | "authenticated";
   /** Whether to show main navigation links (Home, Services, Pricing, Contact) */
   showNav?: boolean;
+  /**
+   * Navigation variant override
+   * - If provided, forces navigation to use this variant (for authenticated pages)
+   * - If not provided, defaults to "landing" navigation (for marketing pages)
+   * - Marketing pages always show landing navigation regardless of login status
+   * - "authenticated" variant in authenticated pages will show logout button when showLogout={true}
+   */
+  variant?: "landing" | "authenticated";
+  /**
+   * Whether to show logout button instead of My Stores button
+   * - If true, shows logout button (for authenticated pages)
+   * - If false or undefined, shows Login/My Stores based on session (for marketing pages)
+   */
+  showLogout?: boolean;
+  // Note: Button mode (waitlist vs login/my-stores) is controlled by BUTTON_MODE constant inside component
 }
 
 export const SiteHeader = memo(function SiteHeader({
-  variant = "landing",
   showNav = true,
+  variant: variantOverride,
+  showLogout = false,
 }: SiteHeaderProps = {}) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useI18n();
+  const { data: session, status } = useSession();
 
   /**
-   * Handle logout action (TODO: implement NextAuth signOut)
+   * BUTTON MODE SELECTION
+   * ========================================
+   * Change the value below to switch between modes:
+   * - "waitlist": Always show "Join Waitlist" button
+   * - "login-my-stores": Show Login (if not logged in) or My Stores (if logged in)
+   * ========================================
+   */
+  // CURRENT MODE: login-my-stores (shows Login/My Stores based on session)
+  // To switch to waitlist mode, change below to: "waitlist"
+  const BUTTON_MODE = "login-my-stores" as "waitlist" | "login-my-stores";
+
+  // Determine which navigation to show based on override or default to landing
+  const variant = useMemo(() => {
+    // If variant is explicitly provided, use it (for authenticated pages)
+    if (variantOverride) return variantOverride;
+    // Marketing pages: Always use landing navigation, regardless of session
+    // Button will change based on session, but navigation stays consistent
+    return "landing";
+  }, [variantOverride]);
+
+  // Get navigation items from config
+  const navigationItems = useMemo(() => getNavigationByVariant(variant), [variant]);
+
+  /**
+   * Handle login action - redirect to login page
+   */
+  const handleLogin = () => {
+    router.push("/login");
+  };
+
+  /**
+   * Handle go to stores action - redirect to stores page (authenticated area)
+   */
+  const handleGoToStores = () => {
+    router.push("/stores");
+  };
+
+  /**
+   * Handle logout action - only used in authenticated pages
    */
   const handleLogout = () => {
-    signOut({ callbackUrl: "/login" });
+    signOut({ callbackUrl: "/" });
+  };
+
+  /**
+   * Render desktop navigation link
+   */
+  const renderDesktopNavLink = (item: NavItem) => {
+    const isActive = pathname === item.href;
+    return (
+      <li key={item.href}>
+        <Link
+          href={item.href}
+          aria-current={isActive ? "page" : undefined}
+          className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
+            isActive ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]" : ""
+          }`}
+        >
+          {t(item.labelKey)}
+        </Link>
+      </li>
+    );
+  };
+
+  /**
+   * Render mobile navigation link
+   */
+  const renderMobileNavLink = (item: NavItem) => {
+    const isActive = pathname === item.href;
+    const Icon = item.icon;
+    return (
+      <li key={item.href}>
+        <SheetClose asChild>
+          <Link
+            href={item.href}
+            aria-current={isActive ? "page" : undefined}
+            className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+              isActive
+                ? "text-foreground bg-muted/30 font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Icon className="mr-3 h-5 w-5" />
+            {t(item.labelKey)}
+          </Link>
+        </SheetClose>
+      </li>
+    );
   };
 
   return (
@@ -76,109 +218,10 @@ export const SiteHeader = memo(function SiteHeader({
             />
           </Link>
 
-          {/* Desktop navigation */}
+          {/* Desktop navigation - Config-based */}
           {showNav && (
             <ul className="hidden items-center gap-4 md:flex md:gap-5 lg:gap-6">
-              {variant === "authenticated" ? (
-                // Authenticated nav: Stores, Profile, Pricing
-                <>
-                  <li>
-                    <Link
-                      href="/stores"
-                      aria-current={pathname === "/stores" ? "page" : undefined}
-                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                        pathname === "/stores"
-                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                          : ""
-                      }`}
-                    >
-                      My Stores
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/your-plan"
-                      aria-current={pathname === "/your-plan" ? "page" : undefined}
-                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                        pathname === "/your-plan"
-                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                          : ""
-                      }`}
-                    >
-                      Plans
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/profile"
-                      aria-current={pathname === "/profile" ? "page" : undefined}
-                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                        pathname === "/profile"
-                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                          : ""
-                      }`}
-                    >
-                      {t("common.nav.profile") || "Profile"}
-                    </Link>
-                  </li>
-                </>
-              ) : (
-                // Landing nav: Home, Services, Pricing, Contact
-                <>
-                  <li>
-                    <Link
-                      href="/"
-                      aria-current={pathname === "/" ? "page" : undefined}
-                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                        pathname === "/"
-                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                          : ""
-                      }`}
-                    >
-                      {t("common.nav.home")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/services"
-                      aria-current={pathname === "/services" ? "page" : undefined}
-                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                        pathname === "/services"
-                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                          : ""
-                      }`}
-                    >
-                      {t("common.nav.services")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/pricing"
-                      aria-current={pathname === "/pricing" ? "page" : undefined}
-                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                        pathname === "/pricing"
-                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                          : ""
-                      }`}
-                    >
-                      {t("common.nav.pricing")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/contact"
-                      aria-current={pathname === "/contact" ? "page" : undefined}
-                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                        pathname === "/contact"
-                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                          : ""
-                      }`}
-                    >
-                      {t("common.nav.contact")}
-                    </Link>
-                  </li>
-                </>
-              )}
+              {navigationItems.map(renderDesktopNavLink)}
             </ul>
           )}
         </div>
@@ -189,15 +232,36 @@ export const SiteHeader = memo(function SiteHeader({
               <LangSwitcher />
             </div>
             <div className="flex-shrink-0">
-              {variant === "landing" ? (
+              {/* Desktop Button - Mode: Waitlist, Login/My Stores, or Logout */}
+              {BUTTON_MODE === "waitlist" ? (
+                // WAITLIST MODE: Always show waitlist button
                 <WaitlistDialog />
-              ) : (
+              ) : showLogout && session?.user ? (
+                // LOGOUT MODE: Show logout button (for authenticated pages like stores/profile)
                 <Button
                   onClick={handleLogout}
                   variant="outline"
                   className="cursor-pointer rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
                 >
                   {t("actions.logout")}
+                </Button>
+              ) : session?.user ? (
+                // MY STORES MODE: Show My Stores button (for marketing pages when logged in)
+                <Button
+                  onClick={handleGoToStores}
+                  variant="outline"
+                  className="cursor-pointer rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
+                >
+                  {t("common.nav.stores")}
+                </Button>
+              ) : (
+                // LOGIN MODE: Show Login button (for marketing pages when not logged in)
+                <Button
+                  onClick={handleLogin}
+                  variant="outline"
+                  className="cursor-pointer rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
+                >
+                  {t("actions.login")}
                 </Button>
               )}
             </div>
@@ -268,211 +332,8 @@ export const SiteHeader = memo(function SiteHeader({
                     </div>
 
                     <ul className="space-y-1">
-                      {variant === "authenticated" ? (
-                        // Authenticated mobile nav: Stores, Profile, Pricing
-                        <>
-                          <li>
-                            <SheetClose asChild>
-                              <Link
-                                href="/stores"
-                                aria-current={pathname === "/stores" ? "page" : undefined}
-                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                                  pathname === "/stores"
-                                    ? "text-foreground bg-muted/30 font-bold"
-                                    : "text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <svg
-                                  className="mr-3 h-5 w-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
-                                  />
-                                </svg>
-                                My Stores
-                              </Link>
-                            </SheetClose>
-                          </li>
-                          <li>
-                            <SheetClose asChild>
-                              <Link
-                                href="/profile"
-                                aria-current={pathname === "/profile" ? "page" : undefined}
-                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                                  pathname === "/profile"
-                                    ? "text-foreground bg-muted/30 font-bold"
-                                    : "text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <svg
-                                  className="mr-3 h-5 w-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                  />
-                                </svg>
-                                {t("common.nav.profile") || "Profile"}
-                              </Link>
-                            </SheetClose>
-                          </li>
-                          <li>
-                            <SheetClose asChild>
-                              <Link
-                                href="/pricing"
-                                aria-current={pathname === "/pricing" ? "page" : undefined}
-                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                                  pathname === "/pricing"
-                                    ? "text-foreground bg-muted/30 font-bold"
-                                    : "text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <svg
-                                  className="mr-3 h-5 w-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                                  />
-                                </svg>
-                                {t("common.nav.pricing")}
-                              </Link>
-                            </SheetClose>
-                          </li>
-                        </>
-                      ) : (
-                        // Landing mobile nav: Home, Services, Pricing, Contact
-                        <>
-                          <li>
-                            <SheetClose asChild>
-                              <Link
-                                href="/"
-                                aria-current={pathname === "/" ? "page" : undefined}
-                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                                  pathname === "/"
-                                    ? "text-foreground bg-muted/30 font-bold"
-                                    : "text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <svg
-                                  className="mr-3 h-5 w-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                                  />
-                                </svg>
-                                {t("common.nav.home")}
-                              </Link>
-                            </SheetClose>
-                          </li>
-                          <li>
-                            <SheetClose asChild>
-                              <Link
-                                href="/services"
-                                aria-current={pathname === "/services" ? "page" : undefined}
-                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                                  pathname === "/services"
-                                    ? "text-foreground bg-muted/30 font-bold"
-                                    : "text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <svg
-                                  className="mr-3 h-5 w-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                                  />
-                                </svg>
-                                {t("common.nav.services")}
-                              </Link>
-                            </SheetClose>
-                          </li>
-                          <li>
-                            <SheetClose asChild>
-                              <Link
-                                href="/pricing"
-                                aria-current={pathname === "/pricing" ? "page" : undefined}
-                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                                  pathname === "/pricing"
-                                    ? "text-foreground bg-muted/30 font-bold"
-                                    : "text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <svg
-                                  className="mr-3 h-5 w-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                                  />
-                                </svg>
-                                {t("common.nav.pricing")}
-                              </Link>
-                            </SheetClose>
-                          </li>
-                          <li>
-                            <SheetClose asChild>
-                              <Link
-                                href="/contact"
-                                aria-current={pathname === "/contact" ? "page" : undefined}
-                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                                  pathname === "/contact"
-                                    ? "text-foreground bg-muted/30 font-bold"
-                                    : "text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <svg
-                                  className="mr-3 h-5 w-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                  />
-                                </svg>
-                                {t("common.nav.contact")}
-                              </Link>
-                            </SheetClose>
-                          </li>
-                        </>
-                      )}
+                      {/* Mobile navigation - Config-based */}
+                      {navigationItems.map(renderMobileNavLink)}
                     </ul>
                   </div>
                 )}
@@ -482,13 +343,16 @@ export const SiteHeader = memo(function SiteHeader({
               <div className="border-border/20 border-t p-4">
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
-                    {variant === "landing" ? (
+                    {/* Mobile Button - Mode: Waitlist, Login/My Stores, or Logout */}
+                    {BUTTON_MODE === "waitlist" ? (
+                      // WAITLIST MODE: Always show waitlist button
                       <SheetClose asChild>
                         <div>
                           <WaitlistDialog variant="sidebar" />
                         </div>
                       </SheetClose>
-                    ) : (
+                    ) : showLogout && session?.user ? (
+                      // LOGOUT MODE: Show logout button (for authenticated pages like stores/profile)
                       <Button
                         onClick={handleLogout}
                         variant="outline"
@@ -496,6 +360,28 @@ export const SiteHeader = memo(function SiteHeader({
                       >
                         {t("actions.logout")}
                       </Button>
+                    ) : session?.user ? (
+                      // MY STORES MODE: Show My Stores button (for marketing pages when logged in)
+                      <SheetClose asChild>
+                        <Button
+                          onClick={handleGoToStores}
+                          variant="outline"
+                          className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
+                        >
+                          {t("common.nav.stores")}
+                        </Button>
+                      </SheetClose>
+                    ) : (
+                      // LOGIN MODE: Show Login button (for marketing pages when not logged in)
+                      <SheetClose asChild>
+                        <Button
+                          onClick={handleLogin}
+                          variant="outline"
+                          className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
+                        >
+                          {t("actions.login")}
+                        </Button>
+                      </SheetClose>
                     )}
                   </div>
                   <div className="flex-shrink-0">

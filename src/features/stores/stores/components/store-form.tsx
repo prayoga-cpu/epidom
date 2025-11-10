@@ -142,7 +142,7 @@ export function StoreForm({
       <form
         id={formId}
         onSubmit={form.handleSubmit(handleFormSubmit)}
-        className="space-y-4"
+        className="space-y-3 sm:space-y-4"
       >
         {/* Store Name - Required */}
         <FormField
@@ -283,13 +283,13 @@ export function StoreForm({
                       <img
                         src={imagePreviewUrl}
                         alt="Preview"
-                        className="h-48 w-full object-cover"
+                        className="h-40 w-full object-cover sm:h-48"
                       />
                       <Button
                         type="button"
                         variant="destructive"
                         size="icon"
-                        className="absolute top-2 right-2"
+                        className="absolute top-1.5 right-1.5 h-7 w-7 sm:top-2 sm:right-2 sm:h-8 sm:w-8"
                         onClick={() => {
                           if (imagePreviewUrl.startsWith("blob:")) {
                             URL.revokeObjectURL(imagePreviewUrl);
@@ -300,15 +300,15 @@ export function StoreForm({
                         }}
                         disabled={isLoading || isImageUploading}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   ) : (
                     <div
-                      className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                      className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors sm:p-6 md:p-8"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground sm:text-sm">
                         Click to upload store image (max 5MB)
                       </p>
                     </div>

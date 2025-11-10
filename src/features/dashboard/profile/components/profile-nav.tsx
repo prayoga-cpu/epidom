@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { User, Store, CreditCard } from "lucide-react";
+import { User, Store } from "lucide-react";
 
 /**
  * Profile Navigation Component
  *
- * Navigation for profile, your plan, and stores pages
+ * Navigation for profile and stores pages
  * Allows quick navigation between profile management sections
  */
 export function ProfileNav() {
@@ -16,30 +16,17 @@ export function ProfileNav() {
 
   return (
     <div className="sticky top-0 z-10 border-b bg-white">
-      <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-4">
+      <div className="mx-auto flex w-full max-w-7xl items-center gap-1 overflow-x-auto px-4 py-3 sm:gap-2 sm:px-6 sm:py-4 md:px-8">
         {/* Profile Link */}
         <Button
           variant={pathname === "/profile" ? "default" : "ghost"}
           size="sm"
-          className="gap-2"
+          className="gap-1.5 shrink-0 sm:gap-2"
           asChild
         >
-          <Link href="/profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Profile
-          </Link>
-        </Button>
-
-        {/* Your Plan Link */}
-        <Button
-          variant={pathname === "/your-plan" ? "default" : "ghost"}
-          size="sm"
-          className="gap-2"
-          asChild
-        >
-          <Link href="/your-plan" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            Your Plan
+          <Link href="/profile" className="flex items-center gap-1.5 sm:gap-2">
+            <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm">Profile</span>
           </Link>
         </Button>
 
@@ -47,12 +34,12 @@ export function ProfileNav() {
         <Button
           variant={pathname === "/stores" ? "default" : "ghost"}
           size="sm"
-          className="gap-2"
+          className="gap-1.5 shrink-0 sm:gap-2"
           asChild
         >
-          <Link href="/stores" className="flex items-center gap-2">
-            <Store className="h-4 w-4" />
-            My Stores
+          <Link href="/stores" className="flex items-center gap-1.5 sm:gap-2">
+            <Store className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm">My Stores</span>
           </Link>
         </Button>
       </div>

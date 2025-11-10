@@ -7,6 +7,7 @@ import { Calendar, CreditCard, AlertCircle, Loader2, ExternalLink } from "lucide
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useState } from "react";
+import { getStatusColor, getStatusLabel, getPlanDetails } from "@/lib/utils/subscription-helpers";
 
 interface SubscriptionInfoCardProps {
   subscription?: {
@@ -28,7 +29,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
       setIsLoadingPortal(true);
       setPortalError(null);
 
-      const response = await fetch("/api/billing/portal", {
+      const response = await fetch("/api/subscriptions/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -56,54 +57,6 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
     }
   };
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "CANCELED":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      case "PAST_DUE":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-    }
-  };
-
-  const getStatusLabel = (status?: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return t("profile.subscription.status.active") || status;
-      case "CANCELED":
-        return t("profile.subscription.status.canceled") || status;
-      case "PAST_DUE":
-        return t("profile.subscription.status.pastDue") || status;
-      default:
-        return status || "";
-    }
-  };
-
-  const getPlanDetails = (plan?: string) => {
-    switch (plan) {
-      case "PRO":
-        return {
-          name: t("profile.subscription.plans.pro") || "Pro",
-          price: t("profile.subscription.pricing.pro") || "€79/month",
-          color: "text-purple-600",
-        };
-      case "ENTERPRISE":
-        return {
-          name: t("profile.subscription.plans.enterprise") || "Enterprise",
-          price: t("profile.subscription.pricing.enterprise") || "Custom",
-          color: "text-blue-600",
-        };
-      default:
-        return {
-          name: t("profile.subscription.plans.starter") || "Starter",
-          price: t("profile.subscription.pricing.starter") || "€29/month",
-          color: "text-gray-600",
-        };
-    }
-  };
 
   if (!subscription) {
     return (
@@ -118,7 +71,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
               {t("profile.subscription.noActiveSubscription")}
             </p>
             <Button asChild>
-              <Link href="/your-plan">{t("profile.subscription.viewPlans")}</Link>
+              <Link href="/pricing">{t("profile.subscription.viewPlans")}</Link>
             </Button>
           </div>
         </CardContent>
@@ -126,7 +79,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
     );
   }
 
-  const planDetails = getPlanDetails(subscription.plan);
+  const planDetails = getPlanDetails(subscription.plan, t);
   const isActive = subscription.status === "ACTIVE";
   const isPastDue = subscription.status === "PAST_DUE";
 
@@ -135,7 +88,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl font-bold">{t("profile.subscription.title")}</CardTitle>
         <Badge className={getStatusColor(subscription.status)}>
-          {getStatusLabel(subscription.status)}
+          {getStatusLabel(subscription.status, t)}
         </Badge>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -232,21 +185,22 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
         )}
 
         {/* Actions */}
-        <div className="flex gap-2 pt-2">
-          <Button variant="outline" asChild className="flex-1">
-            <Link href="/your-plan">{t("profile.subscription.changePlan")}</Link>
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+          <Button variant="outline" asChild className="w-full sm:flex-1">
+            <Link href="/pricing">{t("profile.subscription.changePlan")}</Link>
           </Button>
           {isActive && !subscription.cancelAtPeriodEnd && (
             <Button
               variant="outline"
-              className="flex-1 gap-2"
+              className="w-full gap-2 sm:flex-1"
               onClick={handleManageBilling}
               disabled={isLoadingPortal}
             >
               {isLoadingPortal ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading...
+                  <span className="hidden sm:inline">Loading...</span>
+                  <span className="sm:hidden">Loading</span>
                 </>
               ) : (
                 t("profile.subscription.manageBilling")
