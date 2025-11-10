@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { businessService } from "@/lib/services";
+import { businessService, subscriptionService } from "@/lib/services";
 import { createStoreSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
@@ -72,6 +72,24 @@ export async function POST(request: Request) {
           "Business not found. Please create a business first."
         ),
         { status: 404 }
+      );
+    }
+
+    // Check subscription plan limits (Starter = 1 store, Pro/Enterprise = unlimited)
+    const storeCheck = await subscriptionService.canCreateStore(session.user.id);
+
+    if (!storeCheck.allowed) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.SUBSCRIPTION_LIMIT_EXCEEDED,
+          `You have reached your plan's store limit (${storeCheck.current}/${storeCheck.limit}). Upgrade to Pro to add more stores.`,
+          {
+            current: storeCheck.current,
+            limit: storeCheck.limit,
+            upgradeRequired: true,
+          }
+        ),
+        { status: 403 }
       );
     }
 

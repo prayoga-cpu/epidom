@@ -13,22 +13,24 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  name          String?
-  email         String        @unique
-  password      String
-  emailVerified DateTime?
-  image         String?
-  phone         String?
-  locale        String        @default("en")
-  timezone      String        @default("UTC")
-  currency      String        @default("EUR")
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  accounts      Account[]
-  alerts        Alert[]
-  business      Business?
-  subscription  Subscription?
+  id                      String        @id @default(cuid())
+  name                    String?
+  email                   String        @unique
+  password                String
+  emailVerified           DateTime?
+  image                   String?
+  phone                   String?
+  locale                  String        @default("en")
+  timezone                String        @default("UTC")
+  currency                String        @default("EUR")
+  stripeConnectAccountId  String?       @unique // Stripe Connect account for receiving 80% of subscription revenue
+  stripeConnectOnboarded  Boolean       @default(false) // Track if Connect onboarding is complete
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  accounts                Account[]
+  alerts                  Alert[]
+  business                Business?
+  subscription            Subscription?
 
   @@map("users")
 }

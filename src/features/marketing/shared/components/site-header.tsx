@@ -79,58 +79,106 @@ export const SiteHeader = memo(function SiteHeader({
           {/* Desktop navigation */}
           {showNav && (
             <ul className="hidden items-center gap-4 md:flex md:gap-5 lg:gap-6">
-              <li>
-                <Link
-                  href="/"
-                  aria-current={pathname === "/" ? "page" : undefined}
-                  className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                    pathname === "/"
-                      ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                      : ""
-                  }`}
-                >
-                  {t("common.nav.home")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/services"
-                  aria-current={pathname === "/services" ? "page" : undefined}
-                  className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                    pathname === "/services"
-                      ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                      : ""
-                  }`}
-                >
-                  {t("common.nav.services")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/pricing"
-                  aria-current={pathname === "/pricing" ? "page" : undefined}
-                  className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                    pathname === "/pricing"
-                      ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                      : ""
-                  }`}
-                >
-                  {t("common.nav.pricing")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contact"
-                  aria-current={pathname === "/contact" ? "page" : undefined}
-                  className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
-                    pathname === "/contact"
-                      ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                      : ""
-                  }`}
-                >
-                  {t("common.nav.contact")}
-                </Link>
-              </li>
+              {variant === "authenticated" ? (
+                // Authenticated nav: Stores, Profile, Pricing
+                <>
+                  <li>
+                    <Link
+                      href="/stores"
+                      aria-current={pathname === "/stores" ? "page" : undefined}
+                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
+                        pathname === "/stores"
+                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                          : ""
+                      }`}
+                    >
+                      My Stores
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/your-plan"
+                      aria-current={pathname === "/your-plan" ? "page" : undefined}
+                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
+                        pathname === "/your-plan"
+                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                          : ""
+                      }`}
+                    >
+                      Plans
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/profile"
+                      aria-current={pathname === "/profile" ? "page" : undefined}
+                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
+                        pathname === "/profile"
+                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                          : ""
+                      }`}
+                    >
+                      {t("common.nav.profile") || "Profile"}
+                    </Link>
+                  </li>
+                </>
+              ) : (
+                // Landing nav: Home, Services, Pricing, Contact
+                <>
+                  <li>
+                    <Link
+                      href="/"
+                      aria-current={pathname === "/" ? "page" : undefined}
+                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
+                        pathname === "/"
+                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                          : ""
+                      }`}
+                    >
+                      {t("common.nav.home")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/services"
+                      aria-current={pathname === "/services" ? "page" : undefined}
+                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
+                        pathname === "/services"
+                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                          : ""
+                      }`}
+                    >
+                      {t("common.nav.services")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/pricing"
+                      aria-current={pathname === "/pricing" ? "page" : undefined}
+                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
+                        pathname === "/pricing"
+                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                          : ""
+                      }`}
+                    >
+                      {t("common.nav.pricing")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/contact"
+                      aria-current={pathname === "/contact" ? "page" : undefined}
+                      className={`text-sm font-medium transition-colors hover:text-white/80 md:text-sm lg:text-base ${
+                        pathname === "/contact"
+                          ? "font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                          : ""
+                      }`}
+                    >
+                      {t("common.nav.contact")}
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           )}
         </div>
@@ -220,118 +268,211 @@ export const SiteHeader = memo(function SiteHeader({
                     </div>
 
                     <ul className="space-y-1">
-                      <li>
-                        <SheetClose asChild>
-                          <Link
-                            href="/"
-                            aria-current={pathname === "/" ? "page" : undefined}
-                            className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                              pathname === "/"
-                                ? "text-foreground bg-muted/30 font-bold"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            <svg
-                              className="mr-3 h-5 w-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                              />
-                            </svg>
-                            {t("common.nav.home")}
-                          </Link>
-                        </SheetClose>
-                      </li>
-                      <li>
-                        <SheetClose asChild>
-                          <Link
-                            href="/services"
-                            aria-current={pathname === "/services" ? "page" : undefined}
-                            className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                              pathname === "/services"
-                                ? "text-foreground bg-muted/30 font-bold"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            <svg
-                              className="mr-3 h-5 w-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                              />
-                            </svg>
-                            {t("common.nav.services")}
-                          </Link>
-                        </SheetClose>
-                      </li>
-                      <li>
-                        <SheetClose asChild>
-                          <Link
-                            href="/pricing"
-                            aria-current={pathname === "/pricing" ? "page" : undefined}
-                            className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                              pathname === "/pricing"
-                                ? "text-foreground bg-muted/30 font-bold"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            <svg
-                              className="mr-3 h-5 w-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                              />
-                            </svg>
-                            {t("common.nav.pricing")}
-                          </Link>
-                        </SheetClose>
-                      </li>
-                      <li>
-                        <SheetClose asChild>
-                          <Link
-                            href="/contact"
-                            aria-current={pathname === "/contact" ? "page" : undefined}
-                            className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                              pathname === "/contact"
-                                ? "text-foreground bg-muted/30 font-bold"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            <svg
-                              className="mr-3 h-5 w-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                              />
-                            </svg>
-                            {t("common.nav.contact")}
-                          </Link>
-                        </SheetClose>
-                      </li>
+                      {variant === "authenticated" ? (
+                        // Authenticated mobile nav: Stores, Profile, Pricing
+                        <>
+                          <li>
+                            <SheetClose asChild>
+                              <Link
+                                href="/stores"
+                                aria-current={pathname === "/stores" ? "page" : undefined}
+                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                                  pathname === "/stores"
+                                    ? "text-foreground bg-muted/30 font-bold"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                <svg
+                                  className="mr-3 h-5 w-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                                  />
+                                </svg>
+                                My Stores
+                              </Link>
+                            </SheetClose>
+                          </li>
+                          <li>
+                            <SheetClose asChild>
+                              <Link
+                                href="/profile"
+                                aria-current={pathname === "/profile" ? "page" : undefined}
+                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                                  pathname === "/profile"
+                                    ? "text-foreground bg-muted/30 font-bold"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                <svg
+                                  className="mr-3 h-5 w-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                  />
+                                </svg>
+                                {t("common.nav.profile") || "Profile"}
+                              </Link>
+                            </SheetClose>
+                          </li>
+                          <li>
+                            <SheetClose asChild>
+                              <Link
+                                href="/pricing"
+                                aria-current={pathname === "/pricing" ? "page" : undefined}
+                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                                  pathname === "/pricing"
+                                    ? "text-foreground bg-muted/30 font-bold"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                <svg
+                                  className="mr-3 h-5 w-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                                  />
+                                </svg>
+                                {t("common.nav.pricing")}
+                              </Link>
+                            </SheetClose>
+                          </li>
+                        </>
+                      ) : (
+                        // Landing mobile nav: Home, Services, Pricing, Contact
+                        <>
+                          <li>
+                            <SheetClose asChild>
+                              <Link
+                                href="/"
+                                aria-current={pathname === "/" ? "page" : undefined}
+                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                                  pathname === "/"
+                                    ? "text-foreground bg-muted/30 font-bold"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                <svg
+                                  className="mr-3 h-5 w-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                                  />
+                                </svg>
+                                {t("common.nav.home")}
+                              </Link>
+                            </SheetClose>
+                          </li>
+                          <li>
+                            <SheetClose asChild>
+                              <Link
+                                href="/services"
+                                aria-current={pathname === "/services" ? "page" : undefined}
+                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                                  pathname === "/services"
+                                    ? "text-foreground bg-muted/30 font-bold"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                <svg
+                                  className="mr-3 h-5 w-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                                  />
+                                </svg>
+                                {t("common.nav.services")}
+                              </Link>
+                            </SheetClose>
+                          </li>
+                          <li>
+                            <SheetClose asChild>
+                              <Link
+                                href="/pricing"
+                                aria-current={pathname === "/pricing" ? "page" : undefined}
+                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                                  pathname === "/pricing"
+                                    ? "text-foreground bg-muted/30 font-bold"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                <svg
+                                  className="mr-3 h-5 w-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                                  />
+                                </svg>
+                                {t("common.nav.pricing")}
+                              </Link>
+                            </SheetClose>
+                          </li>
+                          <li>
+                            <SheetClose asChild>
+                              <Link
+                                href="/contact"
+                                aria-current={pathname === "/contact" ? "page" : undefined}
+                                className={`hover:bg-muted/50 focus-visible:ring-primary flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                                  pathname === "/contact"
+                                    ? "text-foreground bg-muted/30 font-bold"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                <svg
+                                  className="mr-3 h-5 w-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                  />
+                                </svg>
+                                {t("common.nav.contact")}
+                              </Link>
+                            </SheetClose>
+                          </li>
+                        </>
+                      )}
                     </ul>
                   </div>
                 )}

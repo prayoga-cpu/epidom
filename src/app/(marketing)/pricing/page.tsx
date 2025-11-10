@@ -16,7 +16,7 @@ import { PricingCta } from "@/features/marketing/pricing/components/pricing-cta"
 export default function PricingPage() {
   return (
     <main
-      className="min-h-screen bg-white pt-24 md:pt-32"
+      className="min-h-screen bg-white py-24 md:py-32"
       style={{ color: "var(--color-brand-primary)" }}
     >
       <div className="animate-slide-up">

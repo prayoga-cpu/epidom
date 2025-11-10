@@ -93,12 +93,12 @@ const updateBusiness = async (payload: UpdateBusinessPayload): Promise<ProfileDa
  * Hook to fetch and cache profile data using TanStack Query
  */
 export const useProfile = () => {
-  const { user, loading: sessionLoading } = useUser();
+  const { data: session, status } = useSession();
 
   return useQuery<ProfileData>({
-    queryKey: ["profile", user?.id],
+    queryKey: ["profile", session?.user?.id],
     queryFn: fetchProfile,
-    enabled: !sessionLoading && !!user,
+    enabled: status === "authenticated" && !!session?.user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
     refetchOnWindowFocus: false, // Prevent refetch on window focus

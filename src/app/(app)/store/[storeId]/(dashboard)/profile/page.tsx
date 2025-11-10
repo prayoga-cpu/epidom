@@ -7,12 +7,18 @@ import { PersonalInfoCard } from "@/features/dashboard/profile/components/person
 import { BusinessInfoCard } from "@/features/dashboard/profile/components/business-info-card";
 import { SubscriptionInfoCard } from "@/features/dashboard/profile/components/subscription-info-card";
 import { ActivityLogCard } from "@/features/dashboard/profile/components/activity-log-card";
+import { StripeConnectCard } from "@/features/dashboard/profile/components/stripe-connect-card";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 
 export default function ProfilePage() {
   const { t } = useI18n();
   const { user: sessionUser, loading: sessionLoading } = useUser();
   const { data: profileData, isLoading, isError } = useProfile();
+
+  // Check if user is the Epidom owner
+  const epidomOwnerEmail =
+    process.env.NEXT_PUBLIC_EPIDOM_OWNER_EMAIL || process.env.EPIDOM_OWNER_EMAIL;
+  const isOwner = sessionUser?.email === epidomOwnerEmail;
 
   if (sessionLoading || isLoading) {
     return (
@@ -48,6 +54,9 @@ export default function ProfilePage() {
         userId={profileData.id}
         onUpdate={undefined}
       />
+
+      {/* Stripe Connect Card - Only for Epidom owner */}
+      {isOwner && <StripeConnectCard />}
     </div>
   );
 }
