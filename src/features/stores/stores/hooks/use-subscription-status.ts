@@ -3,14 +3,24 @@
 import { useQuery } from "@tanstack/react-query";
 
 /**
+ * Subscription plan type
+ */
+export type SubscriptionPlan = "STARTER" | "PRO" | "ENTERPRISE";
+
+/**
+ * Subscription status type
+ */
+export type SubscriptionStatus = "ACTIVE" | "CANCELED" | "PAST_DUE" | "INCOMPLETE";
+
+/**
  * Subscription status response type
  */
-interface SubscriptionStatusResponse {
+export interface SubscriptionStatusResponse {
   hasSubscription: boolean;
   subscription: {
     id: string;
-    plan: "STARTER" | "PRO" | "ENTERPRISE";
-    status: "ACTIVE" | "CANCELED" | "PAST_DUE" | "INCOMPLETE";
+    plan: SubscriptionPlan;
+    status: SubscriptionStatus;
     currentPeriodStart: string;
     currentPeriodEnd: string;
     cancelAtPeriodEnd: boolean;

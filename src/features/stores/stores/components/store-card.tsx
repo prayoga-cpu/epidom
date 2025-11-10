@@ -114,31 +114,31 @@ export function StoreCard({ store }: StoreCardProps) {
         </div>
 
         {/* Store Info Section - Enhanced */}
-        <CardContent className="flex flex-1 flex-col gap-3 bg-white p-5 sm:p-6">
+        <CardContent className="flex flex-1 flex-col gap-2.5 bg-white p-4 sm:gap-3 sm:p-5 md:p-6">
           {/* Store Name */}
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="line-clamp-2 flex-1 text-lg leading-tight font-semibold text-[var(--color-brand-primary)] transition-colors group-hover:text-[var(--color-brand-primary)]/80 sm:text-xl">
+          <div className="flex items-start justify-between gap-2 sm:gap-3">
+            <h3 className="line-clamp-2 flex-1 text-base leading-tight font-semibold text-[var(--color-brand-primary)] transition-colors group-hover:text-[var(--color-brand-primary)]/80 sm:text-lg md:text-xl">
               {store.name}
             </h3>
             {/* Arrow indicator for clickable action */}
             <ArrowRight
-              className="mt-1 h-5 w-5 flex-shrink-0 text-neutral-400 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[var(--color-brand-primary)]"
+              className="mt-0.5 h-4 w-4 flex-shrink-0 text-neutral-400 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[var(--color-brand-primary)] sm:mt-1 sm:h-5 sm:w-5"
               aria-hidden="true"
             />
           </div>
 
           {/* Location Info - Enhanced */}
           {store.city && (
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-start gap-2 sm:gap-2.5">
               <MapPin
-                className="mt-0.5 h-4 w-4 flex-shrink-0 text-neutral-500"
+                className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-neutral-500 sm:h-4 sm:w-4"
                 aria-hidden="true"
               />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase mb-0.5">
                   {t("stores.city")}
                 </p>
-                <p className="truncate text-sm font-medium text-neutral-700 sm:text-base">
+                <p className="truncate text-xs font-medium text-neutral-700 sm:text-sm md:text-base">
                   {store.city}
                 </p>
               </div>

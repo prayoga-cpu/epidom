@@ -69,26 +69,34 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-150px)] w-full space-y-6">
-      <div className="mx-auto max-w-6xl space-y-6 py-8">
-        <ProfileHeader
-          user={profileData}
-          subscription={profileData.subscription}
-          onUpdate={undefined}
-        />
+    <div className="min-h-[calc(100vh-150px)] w-full space-y-4 sm:space-y-6">
+      <div className="mx-auto w-full max-w-7xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6 md:px-8 md:py-8">
+        <div className="animate-slide-up">
+          <ProfileHeader
+            user={profileData}
+            subscription={profileData.subscription}
+            onUpdate={undefined}
+          />
+        </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="animate-slide-up-delayed grid gap-4 sm:gap-6 md:grid-cols-2">
           <PersonalInfoCard user={profileData} onUpdate={undefined} />
           <SubscriptionInfoCard subscription={profileData.subscription} />
         </div>
 
-        <BusinessInfoCard
-          business={profileData.business}
-          userId={profileData.id}
-          onUpdate={undefined}
-        />
+        <div className="animate-slide-up-delayed-2">
+          <BusinessInfoCard
+            business={profileData.business}
+            userId={profileData.id}
+            onUpdate={undefined}
+          />
+        </div>
 
-        {isOwner && <StripeConnectCard />}
+        {isOwner && (
+          <div className="animate-slide-up-delayed-3">
+            <StripeConnectCard />
+          </div>
+        )}
       </div>
     </div>
   );

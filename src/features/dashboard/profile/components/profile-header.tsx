@@ -45,30 +45,30 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
   return (
     <>
       <Card className="border-2">
-        <CardContent className="p-6">
-          <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-            <div className="relative">
-              <Avatar className="ring-primary/10 h-24 w-24 ring-4">
+        <CardContent className="p-4 sm:p-5 md:p-6">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
+            <div className="relative shrink-0">
+              <Avatar className="ring-primary/10 h-20 w-20 ring-2 sm:h-24 sm:w-24 sm:ring-4">
                 <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
-                <AvatarFallback className="from-primary to-primary/60 text-primary-foreground bg-gradient-to-br text-2xl font-bold">
+                <AvatarFallback className="from-primary to-primary/60 text-primary-foreground bg-gradient-to-br text-xl font-bold sm:text-2xl">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
               <Button
                 size="icon"
                 variant="secondary"
-                className="absolute -right-2 -bottom-2 h-8 w-8 rounded-full shadow-lg"
+                className="absolute -right-1 -bottom-1 h-7 w-7 rounded-full shadow-lg sm:-right-2 sm:-bottom-2 sm:h-8 sm:w-8"
                 onClick={() => setAvatarDialogOpen(true)}
               >
-                <Camera className="h-4 w-4" />
+                <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             </div>
 
-            <div className="flex-1 space-y-2 text-center sm:text-left">
-              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center">
-                <h1 className="text-2xl font-bold">{user.name || t("profile.user")}</h1>
+            <div className="flex-1 w-full space-y-2 text-center sm:text-left">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+                <h1 className="text-xl font-bold sm:text-2xl">{user.name || t("profile.user")}</h1>
                 {subscription && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                     <Badge className={getPlanBadgeColor(subscription.plan)}>
                       {getPlanLabel(subscription.plan, t)}
                     </Badge>
@@ -78,8 +78,8 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
                   </div>
                 )}
               </div>
-              <p className="text-muted-foreground">{user.email}</p>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground sm:text-base break-words">{user.email}</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">
                 {t("profile.memberSince")} {new Date(user.createdAt).toLocaleDateString()}
               </p>
             </div>

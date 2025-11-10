@@ -185,21 +185,22 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
         )}
 
         {/* Actions */}
-        <div className="flex gap-2 pt-2">
-          <Button variant="outline" asChild className="flex-1">
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+          <Button variant="outline" asChild className="w-full sm:flex-1">
             <Link href="/pricing">{t("profile.subscription.changePlan")}</Link>
           </Button>
           {isActive && !subscription.cancelAtPeriodEnd && (
             <Button
               variant="outline"
-              className="flex-1 gap-2"
+              className="w-full gap-2 sm:flex-1"
               onClick={handleManageBilling}
               disabled={isLoadingPortal}
             >
               {isLoadingPortal ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading...
+                  <span className="hidden sm:inline">Loading...</span>
+                  <span className="sm:hidden">Loading</span>
                 </>
               ) : (
                 t("profile.subscription.manageBilling")
