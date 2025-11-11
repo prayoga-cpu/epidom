@@ -169,7 +169,9 @@ export const authOptions: NextAuthOptions = {
   },
 
   secret: process.env.NEXTAUTH_SECRET || process.env.NEXT_AUTH_TOKEN_SECRET,
-  debug: process.env.NODE_ENV === "development",
+  // Only enable debug in development when explicitly enabled via environment variable
+  // This prevents the DEBUG_ENABLED warning in production
+  debug: process.env.NODE_ENV === "development" && process.env.NEXTAUTH_DEBUG === "true",
 };
 
 export default authOptions;
