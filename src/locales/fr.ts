@@ -2712,10 +2712,27 @@ export const fr = {
   cookie: {
     title: "Nous utilisons des cookies",
     description:
-      "Nous utilisons des cookies pour améliorer votre expérience, analyser le trafic du site et servir du contenu personnalisé. En cliquant sur 'Accepter', vous consentez à notre utilisation de cookies.",
+      "Accepter: Nous suivrons vos visites pour améliorer notre site web. Refuser: Seuls les cookies essentiels (connexion, sécurité) seront utilisés.",
     accept: "Accepter",
     reject: "Refuser",
     close: "Fermer l'avis de cookie",
+    customize: "Personnaliser",
+    back: "Retour",
+    save: "Enregistrer les préférences",
+    settingsTitle: "Préférences de cookies",
+    settingsDescription: "Choisissez les cookies que vous souhaitez autoriser. Les cookies essentiels sont toujours activés car ils sont nécessaires au fonctionnement du site web.",
+    essential: {
+      title: "Cookies essentiels",
+      description: "Nécessaires au bon fonctionnement du site web. Ces cookies ne peuvent pas être désactivés.",
+    },
+    analytics: {
+      title: "Cookies analytiques",
+      description: "Si accepté: Nous suivons les pages vues et le comportement des utilisateurs pour améliorer notre site. Si refusé: Aucune donnée de suivi n'est collectée.",
+    },
+    marketing: {
+      title: "Cookies marketing",
+      description: "Si accepté: Nous suivons les conversions et les événements à des fins marketing. Si refusé: Aucun suivi marketing n'est effectué.",
+    },
   },
   billing: {
     title: "Facturation et Abonnement",

@@ -1,6 +1,6 @@
 import type React from "react";
 
-import { Analytics } from "@vercel/analytics/next";
+import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -40,7 +40,7 @@ export default async function RootLayout({
             <SessionProvider session={session}>
               <section>
                 {children}
-                <Analytics />
+                <ConditionalAnalytics />
               </section>
             </SessionProvider>
           </QueryProvider>

@@ -155,13 +155,12 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       });
 
       // Track conversion for analytics
-      if (typeof window !== "undefined" && (window as any).gtag) {
-        (window as any).gtag("event", "waitlist_signup", {
-          event_category: "engagement",
-          event_label: "pricing_cta",
-          value: 1,
-        });
-      }
+      const { trackConversion } = await import("@/lib/analytics");
+      trackConversion("waitlist_signup", {
+        event_category: "engagement",
+        event_label: "pricing_cta",
+        value: 1,
+      });
 
       formRef.current?.reset();
       setOpen(false);

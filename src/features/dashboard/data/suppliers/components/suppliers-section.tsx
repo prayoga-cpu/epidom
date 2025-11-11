@@ -45,11 +45,18 @@ import {
   useExportSuppliers,
 } from "../hooks/use-suppliers";
 import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
+import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Lock, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export function SuppliersSection() {
   const { t } = useI18n();
+  const router = useRouter();
   const params = useParams();
   const storeId = params.storeId as string;
+  const { supplierManagementAccess, advancedReportsAccess, isLoading: isLoadingAccess } =
+    useFeatureAccess();
 
   // Filters and pagination state
   const [filters, setFilters] = useState({
@@ -231,6 +238,38 @@ export function SuppliersSection() {
     );
   }
 
+  // Show upgrade prompt if no access
+  if (!isLoadingAccess && !supplierManagementAccess) {
+    return (
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+        <CardHeader className="border-b">
+          <CardTitle className="text-lg font-bold">
+            {t("data.suppliers.pageTitle")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-4 py-12">
+          <Alert className="max-w-md border-orange-200 bg-orange-50 dark:bg-orange-950">
+            <Lock className="h-4 w-4 text-orange-600" />
+            <AlertTitle className="text-orange-900 dark:text-orange-100">
+              Supplier Management Locked
+            </AlertTitle>
+            <AlertDescription className="text-orange-800 dark:text-orange-200">
+              Supplier Management is only available in Pro and Enterprise plans. Upgrade to access
+              this feature and manage your suppliers efficiently.
+            </AlertDescription>
+          </Alert>
+          <Button
+            onClick={() => router.push("/pricing")}
+            className="bg-[var(--color-brand-primary)] hover:opacity-90"
+          >
+            Upgrade to Pro
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <>
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
@@ -244,8 +283,13 @@ export function SuppliersSection() {
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
-                disabled={exportSuppliers.isPending}
+                disabled={exportSuppliers.isPending || !advancedReportsAccess}
                 className="w-full md:w-auto"
+                title={
+                  !advancedReportsAccess
+                    ? "Advanced Reports is only available in Pro and Enterprise plans"
+                    : undefined
+                }
               >
                 {exportSuppliers.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

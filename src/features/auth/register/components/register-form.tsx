@@ -18,12 +18,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, RegisterInput } from "../../validation/auth.schemas";
 import { useRegister } from "../../hooks/use-auth";
-import { useEffect } from "react";
 import { toast } from "sonner";
 
 export function RegisterForm() {
   const { t } = useI18n();
-  const { mutate: register, isPending, error } = useRegister();
+  const { mutate: register, isPending } = useRegister();
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -37,15 +36,12 @@ export function RegisterForm() {
     },
   });
 
-  // Show toast on error
-  useEffect(() => {
-    if (error) {
-      toast.error(error.message || t("messages.registrationFailed"));
-    }
-  }, [error, t]);
-
   const onSubmit = (data: RegisterInput) => {
-    register(data);
+    register(data, {
+      onError: (err) => {
+        toast.error(err.message || t("messages.registrationFailed"));
+      },
+    });
   };
 
   return (
@@ -72,7 +68,7 @@ export function RegisterForm() {
                         <Input
                           placeholder="Jane Baker"
                           disabled={isPending}
-                          autoComplete="off"
+                          autoComplete="name"
                           {...field}
                         />
                       </FormControl>
@@ -92,7 +88,7 @@ export function RegisterForm() {
                           type="email"
                           placeholder="you@bakery.com"
                           disabled={isPending}
-                          autoComplete="off"
+                          autoComplete="email"
                           {...field}
                         />
                       </FormControl>
@@ -108,7 +104,12 @@ export function RegisterForm() {
                     <FormItem>
                       <FormLabel>{t("auth.password")}</FormLabel>
                       <FormControl>
-                        <Input type="password" disabled={isPending} {...field} />
+                        <Input
+                          type="password"
+                          disabled={isPending}
+                          autoComplete="new-password"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -122,7 +123,12 @@ export function RegisterForm() {
                     <FormItem>
                       <FormLabel>{t("auth.confirmPassword")}</FormLabel>
                       <FormControl>
-                        <Input type="password" disabled={isPending} {...field} />
+                        <Input
+                          type="password"
+                          disabled={isPending}
+                          autoComplete="new-password"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -146,7 +152,7 @@ export function RegisterForm() {
                         <Input
                           placeholder="Epidom Bakery"
                           disabled={isPending}
-                          autoComplete="off"
+                          autoComplete="organization"
                           {...field}
                         />
                       </FormControl>
@@ -165,7 +171,7 @@ export function RegisterForm() {
                         <Input
                           placeholder="123 Main St, Paris"
                           disabled={isPending}
-                          autoComplete="off"
+                          autoComplete="street-address"
                           {...field}
                         />
                       </FormControl>

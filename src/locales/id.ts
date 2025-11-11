@@ -2688,10 +2688,27 @@ export const id = {
   cookie: {
     title: "Kami menggunakan cookie",
     description:
-      "Kami menggunakan cookie untuk meningkatkan pengalaman Anda, menganalisis lalu lintas situs, dan menyajikan konten yang dipersonalisasi. Dengan mengklik 'Terima', Anda menyetujui penggunaan cookie kami.",
+      "Terima: Kami akan melacak kunjungan Anda untuk meningkatkan website kami. Tolak: Hanya cookie penting (login, keamanan) yang akan digunakan.",
     accept: "Terima",
     reject: "Tolak",
     close: "Tutup pemberitahuan cookie",
+    customize: "Sesuaikan",
+    back: "Kembali",
+    save: "Simpan Preferensi",
+    settingsTitle: "Preferensi Cookie",
+    settingsDescription: "Pilih cookie yang ingin Anda izinkan. Cookie penting selalu diaktifkan karena diperlukan agar situs web berfungsi.",
+    essential: {
+      title: "Cookie Penting",
+      description: "Diperlukan agar situs web berfungsi dengan baik. Cookie ini tidak dapat dinonaktifkan.",
+    },
+    analytics: {
+      title: "Cookie Analitik",
+      description: "Jika diterima: Kami melacak page views dan perilaku pengguna untuk meningkatkan website. Jika ditolak: Tidak ada data tracking yang dikumpulkan.",
+    },
+    marketing: {
+      title: "Cookie Pemasaran",
+      description: "Jika diterima: Kami melacak conversions dan events untuk keperluan marketing. Jika ditolak: Tidak ada tracking marketing yang dilakukan.",
+    },
   },
   billing: {
     title: "Tagihan & Langganan",

@@ -29,18 +29,30 @@ export const STRIPE_CONFIG = {
       maxProducts: 500,
       name: "Starter",
       price: 29, // EUR
+      features: {
+        supplierManagement: false,
+        advancedReports: false,
+      },
     },
     PRO: {
       maxStores: Infinity, // Unlimited
       maxProducts: Infinity, // Unlimited
       name: "Pro",
       price: 79, // EUR
+      features: {
+        supplierManagement: true,
+        advancedReports: true,
+      },
     },
     ENTERPRISE: {
       maxStores: Infinity, // Unlimited
       maxProducts: Infinity, // Unlimited
       name: "Enterprise",
       price: null, // Custom pricing
+      features: {
+        supplierManagement: true,
+        advancedReports: true,
+      },
     },
   },
 
@@ -118,4 +130,18 @@ export function canCreateProduct(
 ): boolean {
   const limit = getProductLimit(plan);
   return currentProductCount < limit;
+}
+
+/**
+ * Helper to check if a plan has access to supplier management
+ */
+export function hasSupplierManagementAccess(plan: "STARTER" | "PRO" | "ENTERPRISE"): boolean {
+  return STRIPE_CONFIG.PLAN_LIMITS[plan].features.supplierManagement;
+}
+
+/**
+ * Helper to check if a plan has access to advanced reports
+ */
+export function hasAdvancedReportsAccess(plan: "STARTER" | "PRO" | "ENTERPRISE"): boolean {
+  return STRIPE_CONFIG.PLAN_LIMITS[plan].features.advancedReports;
 }

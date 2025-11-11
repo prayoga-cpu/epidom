@@ -2700,10 +2700,27 @@ export const en = {
   cookie: {
     title: "We use cookies",
     description:
-      "We use cookies to enhance your experience, analyze site traffic, and serve personalized content. By clicking 'Accept', you consent to our use of cookies.",
+      "Accept: We'll track your visits to improve our website. Reject: Only essential cookies (login, security) will be used.",
     accept: "Accept",
     reject: "Reject",
     close: "Close cookie notice",
+    customize: "Customize",
+    back: "Back",
+    save: "Save Preferences",
+    settingsTitle: "Cookie Preferences",
+    settingsDescription: "Choose which cookies you want to allow. Essential cookies are always enabled as they are necessary for the website to function.",
+    essential: {
+      title: "Essential Cookies",
+      description: "Required for the website to function properly. These cookies cannot be disabled.",
+    },
+    analytics: {
+      title: "Analytics Cookies",
+      description: "If accepted: We track page views and user behavior to improve our website. If rejected: No tracking data is collected.",
+    },
+    marketing: {
+      title: "Marketing Cookies",
+      description: "If accepted: We track conversions and events for marketing purposes. If rejected: No marketing tracking is performed.",
+    },
   },
   billing: {
     title: "Billing & Subscription",

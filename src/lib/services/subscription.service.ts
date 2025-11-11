@@ -16,6 +16,8 @@ import {
   getStoreLimit,
   canCreateProduct as canCreateProductHelper,
   getProductLimit,
+  hasSupplierManagementAccess,
+  hasAdvancedReportsAccess,
 } from "@/config/stripe.config";
 import Stripe from "stripe";
 
@@ -277,6 +279,32 @@ export class SubscriptionService {
       limit,
       current: currentProductCount,
     };
+  }
+
+  /**
+   * Check if user has access to supplier management feature
+   */
+  async hasSupplierManagementAccess(userId: string): Promise<boolean> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+
+    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+      return false;
+    }
+
+    return hasSupplierManagementAccess(subscription.plan);
+  }
+
+  /**
+   * Check if user has access to advanced reports feature
+   */
+  async hasAdvancedReportsAccess(userId: string): Promise<boolean> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+
+    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+      return false;
+    }
+
+    return hasAdvancedReportsAccess(subscription.plan);
   }
 
   /**

@@ -84,7 +84,7 @@ export function LoginForm() {
                       type="email"
                       placeholder="you@bakery.com"
                       disabled={isPending}
-                      autoComplete="off"
+                      autoComplete="email"
                       {...field}
                     />
                   </FormControl>
@@ -100,7 +100,12 @@ export function LoginForm() {
                 <FormItem>
                   <FormLabel>{t("auth.password")}</FormLabel>
                   <FormControl>
-                    <Input type="password" disabled={isPending} {...field} />
+                    <Input
+                      type="password"
+                      disabled={isPending}
+                      autoComplete="current-password"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

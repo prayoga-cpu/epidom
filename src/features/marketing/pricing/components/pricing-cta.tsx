@@ -19,13 +19,13 @@ export function PricingCta() {
 
   const handleViewPlansClick = () => {
     // Track click for analytics
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag("event", "view_plans_click", {
+    import("@/lib/analytics").then(({ trackEvent }) => {
+      trackEvent("view_plans_click", {
         event_category: "engagement",
         event_label: "pricing_cta",
         value: 1,
       });
-    }
+    });
 
     // Smooth scroll to pricing cards section
     const pricingCardsElement = document.querySelector('[data-section="pricing-cards"]');
