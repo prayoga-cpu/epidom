@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Loader2 } from "lucide-react";
@@ -184,7 +185,12 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   <FormItem>
                     <FormLabel>{t("data.suppliers.form.phone")}</FormLabel>
                     <FormControl>
-                      <Input placeholder={t("data.suppliers.form.phonePlaceholder")} {...field} />
+                      <PhoneInput
+                        placeholder={t("data.suppliers.form.phonePlaceholder")}
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        defaultCountry="FR"
+                      />
                     </FormControl>
                     <FormDescription>{t("data.suppliers.form.phoneHint")}</FormDescription>
                     <FormMessage />

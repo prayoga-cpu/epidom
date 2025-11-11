@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -187,7 +188,12 @@ export default function EditSupplierDialog({
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder={t("data.suppliers.form.phonePlaceholder")} {...field} />
+                      <PhoneInput
+                        placeholder={t("data.suppliers.form.phonePlaceholder")}
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        defaultCountry="FR"
+                      />
                     </FormControl>
                     <FormDescription>Business phone number</FormDescription>
                     <FormMessage />
