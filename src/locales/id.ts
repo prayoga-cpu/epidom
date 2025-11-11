@@ -406,6 +406,12 @@ export const id = {
       title: "Selesaikan Langganan Anda",
       subtitle: "Pemrosesan pembayaran aman dengan enkripsi standar industri",
     },
+    steps: {
+      step1: "Pilih Paket",
+      step2: "Pembayaran",
+      step3: "Konfirmasi",
+      current: "Langkah 2 dari 3",
+    },
     billing: {
       title: "Informasi Penagihan",
       firstName: "Nama Depan",
@@ -446,20 +452,42 @@ export const id = {
       billingInfo2: "Batalkan kapan saja dari dashboard Anda",
     },
     security: {
-      title: "Pembayaran Aman",
+      title: "Pemrosesan Pembayaran Aman",
       feature1: {
-        title: "Keamanan Stripe",
-        description: "Didukung oleh keamanan terdepan industri Stripe",
-      },
-      feature2: {
-        title: "Sesuai Standar PCI DSS",
+        title: "PCI DSS Compliant",
         description: "Data kartu Anda tidak pernah disimpan di server kami",
       },
-      feature3: {
+      feature2: {
         title: "Enkripsi SSL 256-bit",
-        description: "Semua transaksi dienkripsi dari ujung ke ujung",
+        description: "Semua transaksi dienkripsi end-to-end",
+      },
+      feature3: {
+        title: "Didukung oleh Stripe",
+        description: "Keamanan terdepan industri yang dipercaya jutaan pengguna",
       },
       footer: "Informasi pembayaran Anda aman dan terenkripsi",
+    },
+    form: {
+      authRequiredPrefix: "Anda perlu",
+      authRequiredBold: "mendaftar atau masuk",
+      authRequiredSuffix: "sebelum berlangganan paket. Klik tombol di bawah untuk melanjutkan.",
+      termsAgreement: "Dengan melanjutkan, Anda menyetujui",
+      termsOfService: "Syarat Layanan",
+      and: "dan",
+      refundPolicy: "Kebijakan Pengembalian Dana",
+      agreeToTermsError: "Silakan setujui Syarat Layanan dan Kebijakan Pengembalian Dana untuk melanjutkan.",
+      redirecting: "Mengalihkan ke checkout...",
+      signUpLogin: "Daftar / Masuk untuk Melanjutkan",
+      proceedToCheckout: "Lanjutkan ke Checkout Aman",
+      checkoutSessionError: "Gagal membuat sesi checkout",
+      checkoutUrlError: "Tidak ada URL checkout yang dikembalikan",
+      checkoutError: "Gagal memulai checkout. Silakan coba lagi.",
+      taxAmount: "€0.00",
+    },
+    footer: {
+      securelyPowered: "Didukung dengan aman oleh",
+      stripe: "Stripe",
+      contactSupport: "Hubungi Dukungan",
     },
     enterprise: {
       hero: {
@@ -479,6 +507,12 @@ export const id = {
         phonePlaceholder: "+62 812-3456-7890",
         submit: "Minta Penawaran",
         submitting: "Mengirim Permintaan...",
+        success: "Terima kasih! Kami akan menghubungi Anda segera.",
+        error: "Gagal mengirim formulir. Silakan coba lagi.",
+        validation: {
+          email: "Harap masukkan alamat email yang valid.",
+          name: "Harap masukkan nama depan dan belakang Anda.",
+        },
       },
       contact: {
         title: "Lebih suka berbicara langsung?",
@@ -1760,7 +1794,10 @@ export const id = {
         active: "Aktif",
         canceled: "Dibatalkan",
         pastDue: "Tertunda",
+        incomplete: "Tidak Lengkap",
+        canceling: "Membatalkan",
       },
+      renew: "Perpanjang",
       warnings: {
         ending: {
           title: "Langganan Berakhir",
@@ -2651,10 +2688,27 @@ export const id = {
   cookie: {
     title: "Kami menggunakan cookie",
     description:
-      "Kami menggunakan cookie untuk meningkatkan pengalaman Anda, menganalisis lalu lintas situs, dan menyajikan konten yang dipersonalisasi. Dengan mengklik 'Terima', Anda menyetujui penggunaan cookie kami.",
+      "Terima: Kami akan melacak kunjungan Anda untuk meningkatkan website kami. Tolak: Hanya cookie penting (login, keamanan) yang akan digunakan.",
     accept: "Terima",
     reject: "Tolak",
     close: "Tutup pemberitahuan cookie",
+    customize: "Sesuaikan",
+    back: "Kembali",
+    save: "Simpan Preferensi",
+    settingsTitle: "Preferensi Cookie",
+    settingsDescription: "Pilih cookie yang ingin Anda izinkan. Cookie penting selalu diaktifkan karena diperlukan agar situs web berfungsi.",
+    essential: {
+      title: "Cookie Penting",
+      description: "Diperlukan agar situs web berfungsi dengan baik. Cookie ini tidak dapat dinonaktifkan.",
+    },
+    analytics: {
+      title: "Cookie Analitik",
+      description: "Jika diterima: Kami melacak page views dan perilaku pengguna untuk meningkatkan website. Jika ditolak: Tidak ada data tracking yang dikumpulkan.",
+    },
+    marketing: {
+      title: "Cookie Pemasaran",
+      description: "Jika diterima: Kami melacak conversions dan events untuk keperluan marketing. Jika ditolak: Tidak ada tracking marketing yang dilakukan.",
+    },
   },
   billing: {
     title: "Tagihan & Langganan",
@@ -2710,5 +2764,137 @@ export const id = {
     completeSetup: "Selesaikan Pengaturan Pembayaran",
     redirectingToStripe: "Mengalihkan ke Stripe...",
     secureOnboarding: "Anda akan dialihkan ke halaman onboarding aman Stripe",
+  },
+  terms: {
+    title: "Syarat dan Ketentuan",
+    lastUpdated: "Terakhir Diperbarui:",
+    lastUpdatedDate: "November 2025",
+    introduction:
+      "Selamat datang di EPIDOM. Syarat dan Ketentuan ini mengatur penggunaan platform manajemen inventaris makanan kami. Dengan mengakses atau menggunakan layanan kami, Anda setuju untuk terikat oleh ketentuan ini.",
+    section1: {
+      title: "1. Penerimaan Syarat",
+      content:
+        "Dengan mengakses dan menggunakan EPIDOM, Anda menerima dan setuju untuk terikat oleh ketentuan dan ketentuan perjanjian ini. Jika Anda tidak setuju untuk mematuhi hal di atas, harap jangan gunakan layanan ini.",
+    },
+    section2: {
+      title: "2. Deskripsi Layanan",
+      content:
+        "EPIDOM adalah platform manajemen inventaris makanan berbasis cloud yang dirancang untuk membantu bisnis melacak, mengelola, dan mengoptimalkan inventaris mereka. Kami menyediakan berbagai paket berlangganan dengan fitur dan kemampuan yang berbeda.",
+    },
+    section3: {
+      title: "3. Akun Pengguna",
+      content: "Untuk menggunakan EPIDOM, Anda harus membuat akun. Anda bertanggung jawab untuk:",
+      item1: "Mempertahankan kerahasiaan kredensial akun Anda",
+      item2: "Semua aktivitas yang terjadi di bawah akun Anda",
+      item3: "Memberikan informasi yang akurat dan lengkap saat membuat akun Anda",
+      item4: "Memberitahu kami segera tentang penggunaan akun Anda yang tidak sah",
+    },
+    section4: {
+      title: "4. Berlangganan dan Pembayaran",
+      content:
+        "EPIDOM menawarkan layanan berbasis berlangganan dengan berbagai paket harga. Dengan berlangganan, Anda setuju untuk:",
+      item1: "Membayar biaya berlangganan seperti yang ditentukan dalam paket yang Anda pilih",
+      item2: "Pembaruan otomatis berlangganan Anda kecuali dibatalkan",
+      item3: "Pemrosesan pembayaran melalui gateway pembayaran aman kami",
+      item4: "Kepatuhan terhadap kebijakan pengembalian dana kami seperti yang diuraikan secara terpisah",
+    },
+    section5: {
+      title: "5. Tanggung Jawab Pengguna",
+      content:
+        "Anda setuju untuk menggunakan EPIDOM dengan cara yang sah dan bertanggung jawab untuk:",
+      item1: "Memastikan keakuratan data yang dimasukkan ke dalam sistem",
+      item2: "Tidak menggunakan layanan untuk tujuan ilegal atau tidak sah",
+      item3: "Tidak mencoba mendapatkan akses tidak sah ke sistem",
+      item4: "Menghormati hak kekayaan intelektual dan tidak melanggar hak orang lain",
+    },
+    section6: {
+      title: "6. Kekayaan Intelektual",
+      content:
+        "Semua konten, fitur, dan fungsionalitas EPIDOM, termasuk tetapi tidak terbatas pada teks, grafik, logo, dan perangkat lunak, adalah milik EPIDOM dan dilindungi oleh undang-undang hak cipta, merek dagang, dan kekayaan intelektual internasional lainnya.",
+    },
+    section7: {
+      title: "7. Pembatasan Tanggung Jawab",
+      content:
+        "EPIDOM tidak akan bertanggung jawab atas kerugian tidak langsung, insidental, khusus, konsekuensial, atau hukuman yang diakibatkan oleh penggunaan atau ketidakmampuan Anda untuk menggunakan layanan. Total tanggung jawab kami tidak akan melebihi jumlah yang Anda bayar untuk layanan dalam 12 bulan sebelum klaim.",
+    },
+    section8: {
+      title: "8. Pengakhiran",
+      content:
+        "Kami berhak mengakhiri atau menangguhkan akun Anda dan akses ke layanan segera, tanpa pemberitahuan sebelumnya, untuk perilaku yang kami yakini melanggar Syarat ini atau merugikan pengguna lain, kami, atau pihak ketiga.",
+    },
+    section9: {
+      title: "9. Perubahan Syarat",
+      content:
+        "Kami berhak memodifikasi Syarat ini kapan saja. Kami akan memberi tahu pengguna tentang perubahan material melalui email atau melalui layanan. Penggunaan lanjutan layanan setelah modifikasi tersebut merupakan penerimaan Syarat yang diperbarui.",
+    },
+    section10: {
+      title: "10. Informasi Kontak",
+      content:
+        "Jika Anda memiliki pertanyaan tentang Syarat dan Ketentuan ini, silakan hubungi kami:",
+      email: "Email",
+    },
+    footer:
+      "Dengan menggunakan EPIDOM, Anda mengakui bahwa Anda telah membaca, memahami, dan setuju untuk terikat oleh Syarat dan Ketentuan ini.",
+  },
+  refundPolicy: {
+    title: "Kebijakan Pengembalian Dana",
+    lastUpdated: "Terakhir Diperbarui:",
+    lastUpdatedDate: "November 2025",
+    introduction:
+      "Di EPIDOM, kami berusaha memberikan layanan yang sangat baik. Kebijakan Pengembalian Dana ini menguraikan syarat dan ketentuan untuk pengembalian dana dan pembatalan layanan berlangganan kami.",
+    section1: {
+      title: "1. Kelayakan Pengembalian Dana",
+      content:
+        "Anda mungkin memenuhi syarat untuk pengembalian dana dalam keadaan berikut:",
+      item1: "Anda membatalkan berlangganan dalam 14 hari sejak pembelian awal",
+      item2: "Anda mengalami masalah teknis yang mencegah Anda menggunakan layanan, dan kami tidak dapat menyelesaikannya",
+      item3: "Anda ditagih secara tidak benar karena kesalahan penagihan dari pihak kami",
+    },
+    section2: {
+      title: "2. Proses Pengembalian Dana",
+      content: "Untuk meminta pengembalian dana, silakan ikuti langkah-langkah berikut:",
+      step1: "Hubungi tim dukungan kami di support@epidom.com dengan permintaan pengembalian dana Anda",
+      step2: "Berikan email akun dan detail berlangganan Anda",
+      step3: "Jelaskan alasan permintaan pengembalian dana Anda",
+      step4: "Kami akan meninjau permintaan Anda dan merespons dalam 5-7 hari kerja",
+    },
+    section3: {
+      title: "3. Waktu Pemrosesan",
+      content:
+        "Setelah pengembalian dana Anda disetujui, itu akan diproses dalam 5-10 hari kerja. Pengembalian dana akan dikreditkan ke metode pembayaran asli yang digunakan untuk pembelian.",
+    },
+    section4: {
+      title: "4. Item yang Tidak Dapat Dikembalikan",
+      content: "Berikut ini tidak memenuhi syarat untuk pengembalian dana:",
+      item1: "Berlangganan yang dibatalkan setelah 14 hari sejak pembelian awal",
+      item2: "Bulan parsial layanan yang sudah digunakan",
+      item3: "Berlangganan yang telah aktif selama lebih dari 30 hari",
+    },
+    section5: {
+      title: "5. Pembatalan",
+      content:
+        "Anda dapat membatalkan berlangganan kapan saja dari dasbor akun Anda. Pembatalan akan berlaku pada akhir periode penagihan saat ini. Anda akan terus memiliki akses ke layanan hingga akhir periode yang dibayar.",
+    },
+    section6: {
+      title: "6. Pengembalian Dana Sebagian",
+      content:
+        "Dalam keadaan luar biasa, kami dapat menawarkan pengembalian dana sebagian berdasarkan kasus per kasus. Ini akan ditentukan atas kebijakan kami sendiri berdasarkan keadaan spesifik permintaan Anda.",
+    },
+    section7: {
+      title: "7. Kontak untuk Pengembalian Dana",
+      content:
+        "Untuk semua permintaan pengembalian dana dan pertanyaan, silakan hubungi tim dukungan kami:",
+      email: "Email",
+    },
+    footer:
+      "Kebijakan pengembalian dana ini dapat berubah. Kami akan memberi tahu pengguna tentang perubahan material melalui email atau melalui layanan.",
+  },
+  notFound: {
+    title: "Halaman Tidak Ditemukan",
+    description: "Maaf, kami tidak dapat menemukan halaman yang Anda cari.",
+    goToDashboard: "Ke Dasbor",
+    backToHome: "Kembali ke Beranda",
+    helpText: "Jika Anda yakin ini adalah kesalahan, silakan",
+    contactSupport: "hubungi dukungan",
   },
 };

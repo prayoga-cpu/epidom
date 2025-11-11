@@ -2,7 +2,7 @@ import type React from "react";
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
-import { Analytics } from "@vercel/analytics/next";
+import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { Suspense } from "react";
 import { I18nProvider } from "@/components/lang/i18n-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -28,7 +28,7 @@ export default function LoginLayout({
           </SessionProvider>
         </Suspense>
       </ErrorBoundary>
-      <Analytics />
+      <ConditionalAnalytics />
     </div>
   );
 }

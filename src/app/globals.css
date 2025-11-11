@@ -477,6 +477,25 @@ body.dialog-open {
 }
 
 /* ========================================
+   BRAND COLOR UTILITIES
+   ======================================== */
+
+/* Text color utility for brand primary */
+.text-brand-primary {
+  color: var(--color-brand-primary);
+}
+
+/* Background color utility for brand primary */
+.bg-brand-primary {
+  background-color: var(--color-brand-primary);
+}
+
+/* Border color utility for brand primary */
+.border-brand-primary {
+  border-color: var(--color-brand-primary);
+}
+
+/* ========================================
    PERFORMANCE OPTIMIZATIONS
    ======================================== */
 

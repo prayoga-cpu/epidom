@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Container } from "@/features/marketing/shared/components/container";
 
 export const PricingCards = memo(function PricingCards() {
   const { t } = useI18n();
@@ -73,16 +74,13 @@ export const PricingCards = memo(function PricingCards() {
 
   return (
     <section className="pb-12 md:pb-20 lg:pb-24" data-section="pricing-cards">
-      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+      <Container maxWidth="7xl">
         {/* Desktop Layout */}
         <div className="hidden gap-6 lg:grid lg:grid-cols-3">
           {/* Starter Plan */}
           <Card className="flex flex-col rounded-2xl border-2">
             <CardHeader className="pb-4">
-              <CardTitle
-                className="text-2xl font-bold"
-                style={{ color: "var(--color-brand-primary)" }}
-              >
+              <CardTitle className="text-2xl font-bold text-brand-primary">
                 {t("pricing.plans.starter.title")}
               </CardTitle>
               <CardDescription className="text-sm">
@@ -91,10 +89,10 @@ export const PricingCards = memo(function PricingCards() {
             </CardHeader>
             <CardContent className="flex-1 space-y-6">
               <div>
-                <div className="text-4xl font-bold" style={{ color: "var(--color-brand-primary)" }}>
+                <div className="text-4xl font-bold text-brand-primary">
                   €29
                 </div>
-                <p className="text-sm" style={{ color: "var(--color-brand-primary)" }}>
+                <p className="text-sm text-brand-primary">
                   {t("pricing.plans.starter.billing")}
                 </p>
               </div>
@@ -127,10 +125,7 @@ export const PricingCards = memo(function PricingCards() {
               </span>
             </div>
             <CardHeader className="pt-8 pb-4">
-              <CardTitle
-                className="text-2xl font-bold"
-                style={{ color: "var(--color-brand-primary)" }}
-              >
+              <CardTitle className="text-2xl font-bold text-brand-primary">
                 {t("pricing.plans.pro.title")}
               </CardTitle>
               <CardDescription className="text-sm">
@@ -139,10 +134,10 @@ export const PricingCards = memo(function PricingCards() {
             </CardHeader>
             <CardContent className="flex-1 space-y-6">
               <div>
-                <div className="text-4xl font-bold" style={{ color: "var(--color-brand-primary)" }}>
+                <div className="text-4xl font-bold text-brand-primary">
                   €79
                 </div>
-                <p className="text-sm" style={{ color: "var(--color-brand-primary)" }}>
+                <p className="text-sm text-brand-primary">
                   {t("pricing.plans.pro.billing")}
                 </p>
               </div>
@@ -174,10 +169,7 @@ export const PricingCards = memo(function PricingCards() {
           {/* Enterprise Plan */}
           <Card className="flex flex-col rounded-2xl border-2">
             <CardHeader className="pb-4">
-              <CardTitle
-                className="text-2xl font-bold"
-                style={{ color: "var(--color-brand-primary)" }}
-              >
+              <CardTitle className="text-2xl font-bold text-brand-primary">
                 {t("pricing.plans.enterprise.title")}
               </CardTitle>
               <CardDescription className="text-sm">
@@ -186,10 +178,10 @@ export const PricingCards = memo(function PricingCards() {
             </CardHeader>
             <CardContent className="flex-1 space-y-6">
               <div>
-                <div className="text-3xl font-bold" style={{ color: "var(--color-brand-primary)" }}>
+                <div className="text-3xl font-bold text-brand-primary">
                   {t("pricing.plans.enterprise.price")}
                 </div>
-                <p className="text-sm" style={{ color: "var(--color-brand-primary)" }}>
+                <p className="text-sm text-brand-primary">
                   {t("pricing.plans.enterprise.billing")}
                 </p>
               </div>
@@ -243,10 +235,7 @@ export const PricingCards = memo(function PricingCards() {
               {/* Starter Plan */}
               <Card className="flex min-w-[78vw] flex-shrink-0 snap-start snap-always flex-col rounded-2xl border-2 sm:min-w-[360px] md:min-w-[420px]">
                 <CardHeader className="pb-4">
-                  <CardTitle
-                    className="text-2xl font-bold"
-                    style={{ color: "var(--color-brand-primary)" }}
-                  >
+                  <CardTitle className="text-2xl font-bold text-brand-primary">
                     {t("pricing.plans.starter.title")}
                   </CardTitle>
                   <CardDescription className="text-sm">
@@ -255,13 +244,10 @@ export const PricingCards = memo(function PricingCards() {
                 </CardHeader>
                 <CardContent className="flex-1 space-y-6">
                   <div>
-                    <div
-                      className="text-4xl font-bold"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    >
+                    <div className="text-4xl font-bold text-brand-primary">
                       €29
                     </div>
-                    <p className="text-sm" style={{ color: "var(--color-brand-primary)" }}>
+                    <p className="text-sm text-brand-primary">
                       {t("pricing.plans.starter.billing")}
                     </p>
                   </div>
@@ -297,10 +283,7 @@ export const PricingCards = memo(function PricingCards() {
                   </span>
                 </div>
                 <CardHeader className="pt-8 pb-4">
-                  <CardTitle
-                    className="text-2xl font-bold"
-                    style={{ color: "var(--color-brand-primary)" }}
-                  >
+                  <CardTitle className="text-2xl font-bold text-brand-primary">
                     {t("pricing.plans.pro.title")}
                   </CardTitle>
                   <CardDescription className="text-sm">
@@ -309,13 +292,10 @@ export const PricingCards = memo(function PricingCards() {
                 </CardHeader>
                 <CardContent className="flex-1 space-y-6">
                   <div>
-                    <div
-                      className="text-4xl font-bold"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    >
+                    <div className="text-4xl font-bold text-brand-primary">
                       €79
                     </div>
-                    <p className="text-sm" style={{ color: "var(--color-brand-primary)" }}>
+                    <p className="text-sm text-brand-primary">
                       {t("pricing.plans.pro.billing")}
                     </p>
                   </div>
@@ -347,10 +327,7 @@ export const PricingCards = memo(function PricingCards() {
               {/* Enterprise Plan */}
               <Card className="flex min-w-[78vw] flex-shrink-0 snap-start snap-always flex-col rounded-2xl border-2 sm:min-w-[360px] md:min-w-[420px]">
                 <CardHeader className="pb-4">
-                  <CardTitle
-                    className="text-2xl font-bold"
-                    style={{ color: "var(--color-brand-primary)" }}
-                  >
+                  <CardTitle className="text-2xl font-bold text-brand-primary">
                     {t("pricing.plans.enterprise.title")}
                   </CardTitle>
                   <CardDescription className="text-sm">
@@ -359,13 +336,10 @@ export const PricingCards = memo(function PricingCards() {
                 </CardHeader>
                 <CardContent className="flex-1 space-y-6">
                   <div>
-                    <div
-                      className="text-3xl font-bold"
-                      style={{ color: "var(--color-brand-primary)" }}
-                    >
+                    <div className="text-3xl font-bold text-brand-primary">
                       {t("pricing.plans.enterprise.price")}
                     </div>
-                    <p className="text-sm" style={{ color: "var(--color-brand-primary)" }}>
+                    <p className="text-sm text-brand-primary">
                       {t("pricing.plans.enterprise.billing")}
                     </p>
                   </div>
@@ -394,7 +368,7 @@ export const PricingCards = memo(function PricingCards() {
             </div>
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 });

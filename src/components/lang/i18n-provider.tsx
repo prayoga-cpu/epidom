@@ -3,6 +3,7 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { translations } from "@/locales";
+import { getLanguagePreference, setLanguagePreference } from "@/lib/cookie-consent";
 
 export type Locale = "en" | "fr" | "id";
 
@@ -31,24 +32,44 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
 
   useEffect(() => {
-    // Check both 'locale' and 'lang' keys for backwards compatibility
-    const saved =
-      (typeof window !== "undefined" ? window.localStorage.getItem("locale") : null) ||
-      (typeof window !== "undefined" ? window.localStorage.getItem("lang") : null);
-    if (saved === "en" || saved === "fr" || saved === "id") {
-      setLocaleState(saved);
-      if (typeof document !== "undefined") {
-        document.documentElement.lang = saved;
-      }
+    // Get language preference from cookie consent system (with fallback to legacy storage)
+    const preferredLanguage = getLanguagePreference();
+    setLocaleState(preferredLanguage);
+
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = preferredLanguage;
     }
+
+    // Listen for language changes from cookie consent
+    const handleConsentUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.language) {
+        setLocaleState(customEvent.detail.language);
+        if (typeof document !== "undefined") {
+          document.documentElement.lang = customEvent.detail.language;
+        }
+      }
+    };
+
+    window.addEventListener("cookie-consent-updated", handleConsentUpdate);
+
+    return () => {
+      window.removeEventListener("cookie-consent-updated", handleConsentUpdate);
+    };
   }, []);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
+
+    // Save to cookie consent system
+    setLanguagePreference(l);
+
+    // Also update legacy storage for backward compatibility
     try {
       window.localStorage.setItem("locale", l);
-      window.localStorage.setItem("lang", l); // Store in both for compatibility
+      window.localStorage.setItem("lang", l);
     } catch {}
+
     if (typeof document !== "undefined") {
       document.documentElement.lang = l;
     }

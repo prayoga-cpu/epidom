@@ -11,13 +11,14 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { LogoWithSkeleton } from "@/features/marketing/shared/components/logo-with-skeleton";
+import { Container } from "@/features/marketing/shared/components/container";
 
 export function PricingHero() {
   const { t } = useI18n();
 
   return (
     <section className="py-8 md:py-12 lg:py-16">
-      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+      <Container maxWidth="7xl">
         <div className="text-center">
           {/* Logo */}
           <div className="mb-6 md:mb-8">
@@ -30,22 +31,16 @@ export function PricingHero() {
           </div>
 
           {/* Title */}
-          <h1
-            className="mb-4 text-3xl leading-tight font-bold tracking-tight md:mb-6 md:text-5xl lg:text-6xl"
-            style={{ color: "var(--color-brand-primary)" }}
-          >
+          <h1 className="mb-4 text-3xl leading-tight font-bold tracking-tight md:mb-6 md:text-5xl lg:text-6xl text-brand-primary">
             {t("pricing.heroTitle")}
           </h1>
 
           {/* Description */}
-          <p
-            className="mx-auto max-w-4xl text-lg leading-relaxed md:text-2xl"
-            style={{ color: "var(--color-brand-primary)" }}
-          >
+          <p className="mx-auto max-w-4xl text-lg leading-relaxed md:text-2xl text-brand-primary">
             {t("pricing.heroDescription")}
           </p>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

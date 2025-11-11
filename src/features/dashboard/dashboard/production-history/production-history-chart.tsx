@@ -7,11 +7,13 @@ import { useMemo } from "react";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { useProductionBatches } from "@/features/dashboard/management/recipe-production/hooks/use-production-batches";
 import { exportData } from "@/features/dashboard/dashboard/production-history/utils/export";
+import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { Loader2 } from "lucide-react";
 
 export default function ProductionHistoryChart() {
   const { t, locale } = useI18n();
   const { storeId } = useCurrentStore();
+  const { advancedReportsAccess } = useFeatureAccess();
 
   const { data, isLoading } = useProductionBatches(storeId, {
     sortBy: "scheduledDate",
@@ -83,6 +85,12 @@ export default function ProductionHistoryChart() {
           filename="production-history"
           variant="outline"
           size="sm"
+          disabled={!advancedReportsAccess}
+          title={
+            !advancedReportsAccess
+              ? "Advanced Reports is only available in Pro and Enterprise plans"
+              : undefined
+          }
         />
       }
       cardContent={

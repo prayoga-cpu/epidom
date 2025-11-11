@@ -198,6 +198,13 @@ export class ProductRepository extends BaseRepository {
       where: { id: { in: productIds } },
     });
   }
+
+  /**
+   * Count products
+   */
+  async count(where?: Prisma.ProductWhereInput): Promise<number> {
+    return this.db.product.count({ where });
+  }
 }
 
 // Export singleton instance

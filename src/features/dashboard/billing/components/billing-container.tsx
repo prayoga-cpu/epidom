@@ -56,7 +56,7 @@ export function BillingContainer() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!confirm("Are you sure you want to cancel your subscription? You'll retain access until the end of your billing period.")) {
+    if (!confirm(t("billing.confirmCancel") || "Are you sure you want to cancel your subscription? You'll retain access until the end of your billing period.")) {
       return;
     }
 
@@ -113,7 +113,10 @@ export function BillingContainer() {
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
-            Subscription activated successfully! Welcome to {plan === "STARTER" ? "Starter" : "Pro"} plan.
+            {t("billing.subscriptionActivated")?.replace(
+              "{plan}",
+              plan === "STARTER" ? t("profile.subscription.plans.starter") : t("profile.subscription.plans.pro")
+            ) || `Subscription activated successfully! Welcome to ${plan === "STARTER" ? "Starter" : "Pro"} plan.`}
           </AlertDescription>
         </Alert>
       )}
@@ -123,11 +126,12 @@ export function BillingContainer() {
         <Alert variant="destructive">
           <XCircle className="h-4 w-4" />
           <AlertDescription>
-            Your subscription will be canceled on{" "}
-            {subscription.currentPeriodEnd
-              ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
-              : "the end of the billing period"}
-            . You'll retain access until then.
+            {t("billing.subscriptionWillCancel")?.replace(
+              "{date}",
+              subscription.currentPeriodEnd
+                ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+                : t("billing.nextBilling") || "the end of the billing period"
+            ) || `Your subscription will be canceled on ${subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : "the end of the billing period"}. You'll retain access until then.`}
           </AlertDescription>
         </Alert>
       )}
@@ -137,29 +141,37 @@ export function BillingContainer() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
-            Current Plan
+            {t("billing.currentPlan")}
           </CardTitle>
-          <CardDescription>Manage your subscription and billing</CardDescription>
+          <CardDescription>{t("billing.title")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Plan Info */}
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-3">
-                <h3 className="text-2xl font-bold">{subscription?.plan} Plan</h3>
+                <h3 className="text-2xl font-bold">
+                  {subscription?.plan === "STARTER"
+                    ? t("profile.subscription.plans.starter")
+                    : subscription?.plan === "PRO"
+                      ? t("profile.subscription.plans.pro")
+                      : t("profile.subscription.plans.enterprise")}
+                </h3>
                 <Badge className={getStatusColor(subscription?.status)}>
                   {getStatusLabel(subscription?.status, t)}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
                 {subscription?.plan === "STARTER"
-                  ? "€29/month - Perfect for single location"
-                  : "€79/month - For growing businesses"}
+                  ? t("profile.subscription.pricing.starter")
+                  : subscription?.plan === "PRO"
+                    ? t("profile.subscription.pricing.pro")
+                    : t("profile.subscription.pricing.enterprise")}
               </p>
             </div>
             {subscription?.plan === "STARTER" && (
               <Button onClick={handleUpgrade} variant="outline">
-                Upgrade to Pro
+                {t("billing.upgradeToPro")}
               </Button>
             )}
           </div>
@@ -169,7 +181,7 @@ export function BillingContainer() {
             <div className="flex items-center gap-2 rounded-lg border p-4">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-sm font-medium">Next billing date</p>
+                <p className="text-sm font-medium">{t("billing.nextBilling")}</p>
                 <p className="text-sm text-muted-foreground">
                   {new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", {
                     year: "numeric",
@@ -186,13 +198,14 @@ export function BillingContainer() {
             <div className="flex items-center gap-2 rounded-lg border p-4">
               <Store className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-sm font-medium">Store usage</p>
+                <p className="text-sm font-medium">{t("billing.storeUsage")}</p>
                 <p className="text-sm text-muted-foreground">
-                  {storeUsage.current} / {storeUsage.limit === Infinity ? "Unlimited" : storeUsage.limit} stores used
+                  {storeUsage.current} / {storeUsage.limit === Infinity ? t("billing.unlimited") : storeUsage.limit}{" "}
+                  {t("billing.stores")}
                 </p>
               </div>
               {!storeUsage.canCreateMore && subscription?.plan === "STARTER" && (
-                <Badge variant="secondary">Limit reached</Badge>
+                <Badge variant="secondary">{t("billing.limitReached")}</Badge>
               )}
             </div>
           )}
@@ -205,7 +218,7 @@ export function BillingContainer() {
               ) : (
                 <ExternalLink className="h-4 w-4" />
               )}
-              Manage Payment Methods
+              {t("billing.managePayment")}
             </Button>
 
             {!subscription?.cancelAtPeriodEnd && (
@@ -216,7 +229,7 @@ export function BillingContainer() {
                 className="gap-2"
               >
                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-                Cancel Subscription
+                {t("billing.cancelSubscription")}
               </Button>
             )}
           </div>
@@ -227,12 +240,12 @@ export function BillingContainer() {
       {subscription?.plan === "STARTER" && (
         <Card>
           <CardHeader>
-            <CardTitle>Want more features?</CardTitle>
-            <CardDescription>Upgrade to Pro plan for unlimited stores and advanced features</CardDescription>
+            <CardTitle>{t("billing.availablePlans")}</CardTitle>
+            <CardDescription>{t("billing.comparePlans")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={handleUpgrade} className="w-full">
-              View Plans & Pricing
+              {t("billing.viewPlans")}
             </Button>
           </CardContent>
         </Card>
@@ -261,19 +274,18 @@ function BillingLoadingSkeleton() {
 
 function NoSubscriptionState() {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <div className="container mx-auto max-w-4xl py-16">
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
           <CreditCard className="mb-4 h-16 w-16 text-muted-foreground" />
-          <h2 className="mb-2 text-2xl font-bold">No Active Subscription</h2>
-          <p className="mb-6 text-muted-foreground">
-            Subscribe to a plan to start managing your business with Epidom.
-          </p>
+          <h2 className="mb-2 text-2xl font-bold">{t("billing.noSubscription")}</h2>
+          <p className="mb-6 text-muted-foreground">{t("billing.noSubscriptionDesc")}</p>
           <Button onClick={() => router.push("/pricing")} size="lg" className="gap-2">
             <ArrowUpCircle className="h-5 w-5" />
-            View Plans & Pricing
+            {t("billing.viewPlans")}
           </Button>
         </CardContent>
       </Card>

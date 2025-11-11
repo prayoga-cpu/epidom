@@ -37,8 +37,12 @@ import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateProduct } from "../hooks/use-products";
 import { useRecipes } from "../../recipes/hooks/use-recipes";
+import { useProductUsage } from "../hooks/use-product-usage";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 
 // Helper function to create product schema with translated messages
 function createProductSchema(t: (key: string) => string) {
@@ -70,6 +74,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
   const { t } = useI18n();
   const { currency, convertToBase } = useCurrency();
   const createProduct = useCreateProduct(storeId);
+  const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
 
   // Fetch recipes for selection
   const { data: recipesData } = useRecipes(storeId, {
@@ -79,6 +84,10 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
     take: 100,
   });
   const recipes = recipesData?.recipes || [];
+
+  // Check if user can create more products
+  const canCreateMore = productUsage?.canCreateMore ?? true;
+  const productLimitReached = !isLoadingUsage && !canCreateMore;
 
   const productSchema = createProductSchema(t);
 
@@ -166,6 +175,20 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
         <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
           <Form {...form}>
             <form id="add-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Product Limit Warning */}
+            {productLimitReached && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t("data.products.limitReached.title") || "Product Limit Reached"}</AlertTitle>
+                <AlertDescription>
+                  {t("data.products.limitReached.description")?.replace("{current}", String(productUsage?.current || 0)).replace("{limit}", String(productUsage?.limit || 500)) ||
+                    `You've reached your plan's product limit (${productUsage?.current || 0}/${productUsage?.limit || 500}). Upgrade to Pro for unlimited products.`}
+                  <Link href="/pricing" className="ml-2 font-medium underline">
+                    {t("data.products.limitReached.upgrade") || "Upgrade to Pro"}
+                  </Link>
+                </AlertDescription>
+              </Alert>
+            )}
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold">{t("data.products.sections.basicInfo")}</h3>
@@ -408,7 +431,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
             <Button
               type="submit"
               form="add-product-form"
-              disabled={isSubmitting}
+              disabled={isSubmitting || productLimitReached}
             >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("data.products.addButton")}

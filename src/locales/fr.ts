@@ -402,6 +402,12 @@ export const fr = {
       title: "Finalisez Votre Abonnement",
       subtitle: "Traitement de paiement sécurisé avec chiffrement de niveau industrie",
     },
+    steps: {
+      step1: "Choisir le Forfait",
+      step2: "Paiement",
+      step3: "Confirmation",
+      current: "Étape 2 sur 3",
+    },
     billing: {
       title: "Informations de Facturation",
       firstName: "Prénom",
@@ -442,20 +448,42 @@ export const fr = {
       billingInfo2: "Annulez à tout moment depuis votre tableau de bord",
     },
     security: {
-      title: "Paiement Sécurisé",
+      title: "Traitement de Paiement Sécurisé",
       feature1: {
-        title: "Sécurité Stripe",
-        description: "Alimenté par la sécurité de pointe de Stripe",
-      },
-      feature2: {
         title: "Conforme PCI DSS",
         description: "Vos données de carte ne sont jamais stockées sur nos serveurs",
       },
-      feature3: {
+      feature2: {
         title: "Chiffrement SSL 256-bit",
         description: "Toutes les transactions sont chiffrées de bout en bout",
       },
+      feature3: {
+        title: "Alimenté par Stripe",
+        description: "Sécurité de pointe de l'industrie, approuvée par des millions",
+      },
       footer: "Vos informations de paiement sont sécurisées et chiffrées",
+    },
+    form: {
+      authRequiredPrefix: "Vous devez",
+      authRequiredBold: "vous inscrire ou vous connecter",
+      authRequiredSuffix: "avant de souscrire à un forfait. Cliquez sur le bouton ci-dessous pour continuer.",
+      termsAgreement: "En procédant, vous acceptez nos",
+      termsOfService: "Conditions d'Utilisation",
+      and: "et",
+      refundPolicy: "Politique de Remboursement",
+      agreeToTermsError: "Veuillez accepter les Conditions d'Utilisation et la Politique de Remboursement pour continuer.",
+      redirecting: "Redirection vers le checkout...",
+      signUpLogin: "S'Inscrire / Se Connecter pour Continuer",
+      proceedToCheckout: "Procéder au Checkout Sécurisé",
+      checkoutSessionError: "Échec de la création de la session de checkout",
+      checkoutUrlError: "Aucune URL de checkout retournée",
+      checkoutError: "Échec du démarrage du checkout. Veuillez réessayer.",
+      taxAmount: "€0.00",
+    },
+    footer: {
+      securelyPowered: "Alimenté en toute sécurité par",
+      stripe: "Stripe",
+      contactSupport: "Contacter le Support",
     },
     enterprise: {
       hero: {
@@ -475,6 +503,12 @@ export const fr = {
         phonePlaceholder: "+33 7 81 73 23 86",
         submit: "Demander un Devis",
         submitting: "Envoi de la Demande...",
+        success: "Merci ! Nous vous contacterons bientôt.",
+        error: "Échec de l'envoi du formulaire. Veuillez réessayer.",
+        validation: {
+          email: "Veuillez entrer une adresse e-mail valide.",
+          name: "Veuillez entrer votre prénom et votre nom.",
+        },
       },
       contact: {
         title: "Préférez-vous parler directement ?",
@@ -1769,7 +1803,10 @@ export const fr = {
         active: "Actif",
         canceled: "Annulé",
         pastDue: "En Retard",
+        incomplete: "Incomplet",
+        canceling: "Annulation",
       },
+      renew: "Renouveler",
       warnings: {
         ending: {
           title: "Abonnement se Termine",
@@ -2675,10 +2712,27 @@ export const fr = {
   cookie: {
     title: "Nous utilisons des cookies",
     description:
-      "Nous utilisons des cookies pour améliorer votre expérience, analyser le trafic du site et servir du contenu personnalisé. En cliquant sur 'Accepter', vous consentez à notre utilisation de cookies.",
+      "Accepter: Nous suivrons vos visites pour améliorer notre site web. Refuser: Seuls les cookies essentiels (connexion, sécurité) seront utilisés.",
     accept: "Accepter",
     reject: "Refuser",
     close: "Fermer l'avis de cookie",
+    customize: "Personnaliser",
+    back: "Retour",
+    save: "Enregistrer les préférences",
+    settingsTitle: "Préférences de cookies",
+    settingsDescription: "Choisissez les cookies que vous souhaitez autoriser. Les cookies essentiels sont toujours activés car ils sont nécessaires au fonctionnement du site web.",
+    essential: {
+      title: "Cookies essentiels",
+      description: "Nécessaires au bon fonctionnement du site web. Ces cookies ne peuvent pas être désactivés.",
+    },
+    analytics: {
+      title: "Cookies analytiques",
+      description: "Si accepté: Nous suivons les pages vues et le comportement des utilisateurs pour améliorer notre site. Si refusé: Aucune donnée de suivi n'est collectée.",
+    },
+    marketing: {
+      title: "Cookies marketing",
+      description: "Si accepté: Nous suivons les conversions et les événements à des fins marketing. Si refusé: Aucun suivi marketing n'est effectué.",
+    },
   },
   billing: {
     title: "Facturation et Abonnement",
@@ -2734,5 +2788,137 @@ export const fr = {
     completeSetup: "Terminer la Configuration des Paiements",
     redirectingToStripe: "Redirection vers Stripe...",
     secureOnboarding: "Vous serez redirigé vers la page d'intégration sécurisée de Stripe",
+  },
+  terms: {
+    title: "Conditions Générales",
+    lastUpdated: "Dernière mise à jour :",
+    lastUpdatedDate: "Novembre 2025",
+    introduction:
+      "Bienvenue sur EPIDOM. Ces Conditions Générales régissent votre utilisation de notre plateforme de gestion d'inventaire alimentaire. En accédant ou en utilisant notre service, vous acceptez d'être lié par ces conditions.",
+    section1: {
+      title: "1. Acceptation des Conditions",
+      content:
+        "En accédant et en utilisant EPIDOM, vous acceptez et convenez d'être lié par les termes et dispositions de cet accord. Si vous n'acceptez pas de respecter ce qui précède, veuillez ne pas utiliser ce service.",
+    },
+    section2: {
+      title: "2. Description du Service",
+      content:
+        "EPIDOM est une plateforme de gestion d'inventaire alimentaire basée sur le cloud conçue pour aider les entreprises à suivre, gérer et optimiser leur inventaire. Nous proposons divers plans d'abonnement avec différentes fonctionnalités et capacités.",
+    },
+    section3: {
+      title: "3. Comptes Utilisateurs",
+      content: "Pour utiliser EPIDOM, vous devez créer un compte. Vous êtes responsable de :",
+      item1: "Maintenir la confidentialité de vos identifiants de compte",
+      item2: "Toutes les activités qui se produisent sous votre compte",
+      item3: "Fournir des informations exactes et complètes lors de la création de votre compte",
+      item4: "Nous informer immédiatement de toute utilisation non autorisée de votre compte",
+    },
+    section4: {
+      title: "4. Abonnement et Paiement",
+      content:
+        "EPIDOM propose des services basés sur l'abonnement avec différents plans tarifaires. En vous abonnant, vous acceptez de :",
+      item1: "Payer les frais d'abonnement comme spécifié dans votre plan choisi",
+      item2: "Renouvellement automatique de votre abonnement sauf annulation",
+      item3: "Traitement des paiements via notre passerelle de paiement sécurisée",
+      item4: "Respecter notre politique de remboursement comme décrit séparément",
+    },
+    section5: {
+      title: "5. Responsabilités de l'Utilisateur",
+      content:
+        "Vous acceptez d'utiliser EPIDOM de manière légale et êtes responsable de :",
+      item1: "Assurer l'exactitude des données saisies dans le système",
+      item2: "Ne pas utiliser le service à des fins illégales ou non autorisées",
+      item3: "Ne pas tenter d'accéder non autorisé au système",
+      item4: "Respecter les droits de propriété intellectuelle et ne pas porter atteinte aux droits d'autrui",
+    },
+    section6: {
+      title: "6. Propriété Intellectuelle",
+      content:
+        "Tout le contenu, les fonctionnalités et la fonctionnalité d'EPIDOM, y compris mais sans s'y limiter le texte, les graphiques, les logos et les logiciels, sont la propriété d'EPIDOM et sont protégés par les lois internationales sur le droit d'auteur, les marques de commerce et autres lois sur la propriété intellectuelle.",
+    },
+    section7: {
+      title: "7. Limitation de Responsabilité",
+      content:
+        "EPIDOM ne sera pas responsable de tout dommage indirect, accessoire, spécial, consécutif ou punitif résultant de votre utilisation ou de votre incapacité à utiliser le service. Notre responsabilité totale ne dépassera pas le montant que vous avez payé pour le service au cours des 12 mois précédant la réclamation.",
+    },
+    section8: {
+      title: "8. Résiliation",
+      content:
+        "Nous nous réservons le droit de résilier ou de suspendre votre compte et l'accès au service immédiatement, sans préavis, pour un comportement que nous croyons violer ces Conditions ou nuire à d'autres utilisateurs, à nous ou à des tiers.",
+    },
+    section9: {
+      title: "9. Modifications des Conditions",
+      content:
+        "Nous nous réservons le droit de modifier ces Conditions à tout moment. Nous informerons les utilisateurs de tout changement important par e-mail ou via le service. Votre utilisation continue du service après de telles modifications constitue une acceptation des Conditions mises à jour.",
+    },
+    section10: {
+      title: "10. Informations de Contact",
+      content:
+        "Si vous avez des questions concernant ces Conditions Générales, veuillez nous contacter :",
+      email: "E-mail",
+    },
+    footer:
+      "En utilisant EPIDOM, vous reconnaissez avoir lu, compris et accepté d'être lié par ces Conditions Générales.",
+  },
+  refundPolicy: {
+    title: "Politique de Remboursement",
+    lastUpdated: "Dernière mise à jour :",
+    lastUpdatedDate: "Novembre 2025",
+    introduction:
+      "Chez EPIDOM, nous nous efforçons de fournir un excellent service. Cette Politique de Remboursement décrit les termes et conditions pour les remboursements et annulations de nos services d'abonnement.",
+    section1: {
+      title: "1. Admissibilité au Remboursement",
+      content:
+        "Vous pouvez être admissible à un remboursement dans les circonstances suivantes :",
+      item1: "Vous annulez votre abonnement dans les 14 jours suivant l'achat initial",
+      item2: "Vous rencontrez des problèmes techniques qui vous empêchent d'utiliser le service, et nous ne pouvons pas les résoudre",
+      item3: "Vous avez été facturé incorrectement en raison d'une erreur de facturation de notre part",
+    },
+    section2: {
+      title: "2. Processus de Remboursement",
+      content: "Pour demander un remboursement, veuillez suivre ces étapes :",
+      step1: "Contactez notre équipe de support à support@epidom.com avec votre demande de remboursement",
+      step2: "Fournissez votre e-mail de compte et les détails de l'abonnement",
+      step3: "Expliquez la raison de votre demande de remboursement",
+      step4: "Nous examinerons votre demande et répondrons dans les 5 à 7 jours ouvrables",
+    },
+    section3: {
+      title: "3. Délai de Traitement",
+      content:
+        "Une fois votre remboursement approuvé, il sera traité dans les 5 à 10 jours ouvrables. Le remboursement sera crédité sur le mode de paiement original utilisé pour l'achat.",
+    },
+    section4: {
+      title: "4. Articles Non Remboursables",
+      content: "Les éléments suivants ne sont pas admissibles aux remboursements :",
+      item1: "Abonnements annulés après 14 jours à compter de l'achat initial",
+      item2: "Mois partiels de service déjà utilisés",
+      item3: "Abonnements actifs depuis plus de 30 jours",
+    },
+    section5: {
+      title: "5. Annulation",
+      content:
+        "Vous pouvez annuler votre abonnement à tout moment depuis le tableau de bord de votre compte. L'annulation prendra effet à la fin de votre période de facturation actuelle. Vous continuerez d'avoir accès au service jusqu'à la fin de la période payée.",
+    },
+    section6: {
+      title: "6. Remboursements Partiels",
+      content:
+        "Dans des circonstances exceptionnelles, nous pouvons offrir des remboursements partiels au cas par cas. Ceci sera déterminé à notre seule discrétion en fonction des circonstances spécifiques de votre demande.",
+    },
+    section7: {
+      title: "7. Contact pour les Remboursements",
+      content:
+        "Pour toutes les demandes de remboursement et questions, veuillez contacter notre équipe de support :",
+      email: "E-mail",
+    },
+    footer:
+      "Cette politique de remboursement est sujette à modification. Nous informerons les utilisateurs de tout changement important par e-mail ou via le service.",
+  },
+  notFound: {
+    title: "Page Non Trouvée",
+    description: "Désolé, nous n'avons pas pu trouver la page que vous recherchez.",
+    goToDashboard: "Aller au Tableau de Bord",
+    backToHome: "Retour à l'Accueil",
+    helpText: "Si vous pensez qu'il s'agit d'une erreur, veuillez",
+    contactSupport: "contacter le support",
   },
 };

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { productService } from "@/lib/services/product.service";
+import { subscriptionService } from "@/lib/services";
 import { createProductSchema } from "@/lib/validation/inventory.schemas";
+import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
 
 // Validation schema for filtering products
@@ -78,6 +80,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const { id: storeId } = await params;
+
+    // Check subscription plan limits (Starter = 500 products per store, Pro/Enterprise = unlimited)
+    const productCheck = await subscriptionService.canCreateProduct(session.user.id, storeId);
+
+    if (!productCheck.allowed) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.SUBSCRIPTION_LIMIT_EXCEEDED,
+          `You have reached your plan's product limit (${productCheck.current}/${productCheck.limit}). Upgrade to Pro to add more products.`,
+          {
+            current: productCheck.current,
+            limit: productCheck.limit,
+            upgradeRequired: true,
+          }
+        ),
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
     // Validate request body

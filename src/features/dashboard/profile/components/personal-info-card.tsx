@@ -48,7 +48,7 @@ export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
 
   return (
     <>
-      <Card className="border-2">
+      <Card className="border-2 h-full">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-xl font-bold">{t("profile.personal.title")}</CardTitle>
           <Button
