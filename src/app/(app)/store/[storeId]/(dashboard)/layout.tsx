@@ -7,7 +7,6 @@ import { Suspense } from "react";
 import { I18nProvider } from "@/components/lang/i18n-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import PageShell from "@/features/dashboard/shared/page-shell";
-import { SessionProvider } from "@/components/providers/session-provider";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import LoadingPage from "@/features/loading/loading-page";
 
@@ -25,13 +24,11 @@ export default function Layout({
     <div className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
       <ErrorBoundary>
         <Suspense fallback={<LoadingPage />}>
-          <SessionProvider>
-            <CurrencyProvider>
-              <I18nProvider>
-                <PageShell>{children}</PageShell>
-              </I18nProvider>
-            </CurrencyProvider>
-          </SessionProvider>
+          <CurrencyProvider>
+            <I18nProvider>
+              <PageShell>{children}</PageShell>
+            </I18nProvider>
+          </CurrencyProvider>
         </Suspense>
       </ErrorBoundary>
       <ConditionalAnalytics />
