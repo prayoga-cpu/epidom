@@ -49,6 +49,10 @@ import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Lock, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import {
+  ItemCardGrid,
+  BaseItemCard,
+} from "../../components";
 
 export function SuppliersSection() {
   const { t } = useI18n();
@@ -100,15 +104,6 @@ export function SuppliersSection() {
     }
   };
 
-  const toggleSelectItem = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
 
   // Action handlers
   const handleView = (supplier: SupplierWithRelations) => {
@@ -339,7 +334,7 @@ export function SuppliersSection() {
             <div className="relative w-full">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("common.search")}
+                placeholder={t("data.suppliers.searchPlaceholder")}
                 value={filters.search}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
@@ -416,30 +411,29 @@ export function SuppliersSection() {
           </div>
 
           {/* Suppliers Grid */}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
             {suppliers.map((supplier) => {
               const isSelected = selectedIds.has(supplier.id);
 
               return (
-                <div
+                <BaseItemCard
                   key={supplier.id}
-                  className={`group bg-card relative rounded-lg border p-4 px-6 shadow-sm transition-all hover:shadow-md ${
-                    isSelected ? "ring-primary ring-2" : ""
-                  }`}
+                  isSelected={isSelected}
+                  bulkSelectMode={bulkSelectMode}
+                  onSelect={(checked) => {
+                    if (checked) {
+                      setSelectedIds((prev) => new Set(prev).add(supplier.id));
+                    } else {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(supplier.id);
+                        return next;
+                      });
+                    }
+                  }}
+                  contentClassName="!px-4"
                 >
-                  {/* Bulk Select Checkbox */}
-                  {bulkSelectMode && (
-                    <div className="absolute top-2 left-2">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelectItem(supplier.id)}
-                      />
-                    </div>
-                  )}
-
-                  {/* Supplier Content */}
-                  <div className={bulkSelectMode ? "pl-6" : ""}>
-                    <div className="flex items-start justify-between">
+                    <div className="mb-2 flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="text-sm leading-tight font-semibold">{supplier.name}</h3>
                         {supplier.contactPerson && (
@@ -448,10 +442,10 @@ export function SuppliersSection() {
                       </div>
                     </div>
 
-                    <Separator className="my-2" />
+                    <Separator />
 
                     {/* Supplier Info */}
-                    <div className="text-muted-foreground space-y-1 text-xs">
+                    <div className="text-muted-foreground my-2 space-y-1 text-xs">
                       {supplier.email && (
                         <div className="flex justify-between">
                           <span>{t("common.email")}:</span>
@@ -474,16 +468,12 @@ export function SuppliersSection() {
                           </span>
                         </div>
                       )}
-                    </div>
-
-                    {/* Materials Count Badge */}
-
-                    <div className="mt-3">
-                      <Badge variant="outline" className="text-xs">
-                        <Package className="mr-1 h-3 w-3" />
-                        {supplier.materialSuppliers?.length ?? 0}{" "}
-                        {t("data.materials.pageTitle")}
-                      </Badge>
+                      <div className="flex justify-between">
+                        <span>{t("data.materials.pageTitle")}:</span>
+                        <span className="text-foreground font-medium">
+                          {supplier.materialSuppliers?.length ?? 0}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Hover Actions */}
@@ -536,14 +526,14 @@ export function SuppliersSection() {
                         </Tooltip>
                       </div>
                     )}
-                  </div>
-                </div>
+                </BaseItemCard>
               );
             })}
+          </ItemCardGrid>
 
-            {/* Empty State */}
-            {suppliers.length === 0 && (
-              <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+          {/* Empty State */}
+          {suppliers.length === 0 && (
+            <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <Store className="text-muted-foreground/50 mb-4 h-12 w-12" />
                 <h3 className="mb-2 text-lg font-semibold">
                   {t("messages.noSuppliersFound")}
@@ -561,8 +551,7 @@ export function SuppliersSection() {
                   <AddSupplierDialog />
                 )}
               </div>
-            )}
-          </div>
+          )}
 
           {/* Pagination */}
           {totalPages > 1 && (

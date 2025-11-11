@@ -131,6 +131,10 @@ export const fr = {
       select: "Sélectionner",
       apply: "Appliquer",
     },
+    loading: "Chargement...",
+    goHome: "Aller à l'Accueil",
+    needHelp: "Besoin d'aide ?",
+    contactSupport: "Contacter le Support",
   },
   search: {
     title: "Recherche Globale",
@@ -160,7 +164,7 @@ export const fr = {
     hours: "Heures",
     minutes: "Minutes",
     seconds: "Secondes",
-    targetDate: "Date de Lancement: 12 Novembre 2025",
+    targetDate: "Date de Lancement: 20 Novembre 2025",
     email: "mrcaoevan@gmail.com",
     whatsapp: "WhatsApp",
     waitlistText: "Soyez le premier à savoir quand nous lançons!",
@@ -316,6 +320,8 @@ export const fr = {
     },
     map: {
       placeholder: "Carte interactive sera affichée ici",
+      error: "Carte indisponible",
+      errorDesc: "Veuillez actualiser la page pour charger la carte",
     },
   },
   pricing: {
@@ -1384,6 +1390,7 @@ export const fr = {
         "Ajoutez un nouveau fournisseur à votre liste de contacts. Remplissez autant d'informations que possible.",
       editDescription: "Mettre à jour les informations du fournisseur",
       detailsDescription: "Voir les informations complètes sur ce fournisseur",
+      searchPlaceholder: "Rechercher des fournisseurs par nom, email ou personne de contact...",
 
       // Form sections
       sections: {
@@ -2002,6 +2009,10 @@ export const fr = {
     createError: "Échec de la création de la boutique",
     editSuccess: "Boutique mise à jour avec succès",
     editError: "Échec de la mise à jour de la boutique",
+    subscriptionRequired: "Abonnement Requis",
+    renewSubscription: "Renouvelez votre abonnement pour accéder à cette boutique",
+    clickToSubscribe: "Cliquez pour S'abonner",
+    errorLoading: "Échec du chargement des boutiques",
   },
   tabs: {
     delivery: "Livraison",
@@ -2912,6 +2923,36 @@ export const fr = {
     },
     footer:
       "Cette politique de remboursement est sujette à modification. Nous informerons les utilisateurs de tout changement important par e-mail ou via le service.",
+  },
+  checkout: {
+    success: {
+      title: "Paiement Réussi ! 🎉",
+      subtitle: "Votre abonnement est maintenant actif",
+      plan: "Forfait",
+      orderId: "ID de Commande",
+      status: "Statut",
+      active: "Actif",
+      message:
+        "Merci pour votre achat ! Votre abonnement est maintenant actif et vous pouvez commencer à utiliser toutes les fonctionnalités immédiatement.",
+      continueToProfile: "Continuer vers le Profil",
+      viewDashboard: "Voir le Tableau de Bord",
+      confirmationEmail:
+        "Un email de confirmation a été envoyé à votre adresse email enregistrée avec le reçu et les détails de l'abonnement.",
+    },
+    failed: {
+      title: "Échec du Paiement",
+      subtitle: "Nous n'avons pas pu traiter votre paiement",
+      reason: "Raison",
+      paymentFailed:
+        "Votre moyen de paiement a été refusé. Veuillez vérifier les détails de votre carte et réessayer.",
+      canceled: "Vous avez annulé le processus de paiement. Aucun frais n'a été appliqué.",
+      sessionExpired: "Votre session de paiement a expiré. Veuillez réessayer.",
+      unknownError: "Une erreur inattendue s'est produite lors du traitement du paiement.",
+      helpMessage:
+        "Votre carte n'a pas été débitée. Veuillez examiner l'erreur ci-dessus et réessayer. Si vous continuez à avoir des problèmes, veuillez contacter le support.",
+      tryAgainButton: "Réessayer",
+      chargeNotApplied: "Aucun frais n'a été appliqué à votre compte.",
+    },
   },
   notFound: {
     title: "Page Non Trouvée",

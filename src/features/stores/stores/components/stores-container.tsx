@@ -147,9 +147,20 @@ export function StoresContainer() {
           {/* Stores Grid */}
           {!isLoading && !error && stores && stores.length > 0 && (
             <div className="animate-slide-up-delayed grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:gap-6 xl:gap-8">
-              {stores.map((store) => (
-                <StoreCard key={store.id} store={store} />
-              ))}
+              {stores.map((store) => {
+                // Check if subscription is not active to block store access
+                const hasActiveSubscription = subscriptionStatus?.hasSubscription &&
+                  subscriptionStatus?.subscription?.status === "ACTIVE";
+                const isBlocked = !hasActiveSubscription;
+
+                return (
+                  <StoreCard
+                    key={store.id}
+                    store={store}
+                    isBlocked={isBlocked}
+                  />
+                );
+              })}
             </div>
           )}
         </div>

@@ -43,20 +43,27 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
+import {
+  formatNumberForInput,
+  createNumberInputHandler,
+} from "@/lib/utils/number-input";
 
 // Helper function to create product schema with translated messages
+// Note: Number fields allow undefined in form state (for better UX - can clear field),
+// validation happens in onSubmit after converting undefined to defaults
 function createProductSchema(t: (key: string) => string) {
   return z.object({
     name: z.string().min(2, t("common.validation.productNameMin")),
-    sku: z.string().optional(),
+    sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
-    retailPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
-    costPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    retailPrice: z.union([z.number().positive(t("common.validation.pricePositive")), z.undefined()]),
+    costPrice: z.union([z.number().positive(t("common.validation.pricePositive")), z.undefined()]),
     unit: z.string().min(1, t("common.validation.unitRequired")),
-    currentStock: z.coerce.number().min(0, t("common.validation.stockNonNegative")),
-    minStock: z.coerce.number().min(0, t("common.validation.minStockNonNegative")),
-    maxStock: z.coerce.number().positive(t("common.validation.maxStockPositive")),
+    currentStock: z.union([z.number().min(0, t("common.validation.stockNonNegative")), z.undefined()]),
+    minStock: z.union([z.number().min(0, t("common.validation.minStockNonNegative")), z.undefined()]),
+    maxStock: z.union([z.number().positive(t("common.validation.maxStockPositive")), z.undefined()]),
     recipeId: z.string().optional(),
   });
 }
@@ -93,17 +100,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
+    mode: "onSubmit", // Validate only on submit to allow undefined values during editing
     defaultValues: {
-      name: "",
-      sku: "",
-      description: "",
-      category: "",
-      retailPrice: 0,
-      costPrice: 0,
-      unit: "piece",
-      currentStock: 0,
-      minStock: 0,
-      maxStock: 1000,
+      ...FORM_DEFAULTS.product,
       recipeId: "none",
     },
   });
@@ -111,25 +110,57 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
   const costPrice = form.watch("costPrice");
 
   // Auto-suggest retail price based on 2.5x markup
-  const suggestedRetailPrice = costPrice ? (costPrice * 2.5).toFixed(2) : "0.00";
+  const suggestedRetailPrice = costPrice && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
 
   const isSubmitting = createProduct.isPending;
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
+      // Validate required number fields (convert undefined to defaults and validate)
+      const costPrice = data.costPrice ?? 0;
+      const retailPrice = data.retailPrice ?? 0;
+      const currentStock = data.currentStock ?? 0;
+      const minStock = data.minStock ?? 0;
+      const maxStock = data.maxStock ?? 1000;
+
+      // Validate required fields
+      if (costPrice <= 0) {
+        form.setError("costPrice", {
+          type: "manual",
+          message: t("common.validation.pricePositive"),
+        });
+        return;
+      }
+
+      if (retailPrice <= 0) {
+        form.setError("retailPrice", {
+          type: "manual",
+          message: t("common.validation.pricePositive"),
+        });
+        return;
+      }
+
+      if (maxStock <= 0) {
+        form.setError("maxStock", {
+          type: "manual",
+          message: t("common.validation.maxStockPositive"),
+        });
+        return;
+      }
+
       // Map form fields to API schema
       // Note: retailPrice maps to sellingPrice
       const apiData = {
-        sku: data.sku || `PRD-${Date.now()}`, // Auto-generate SKU if not provided
+        sku: data.sku,
         name: data.name,
         description: data.description,
         category: data.category,
-        costPrice: convertToBase(data.costPrice), // Convert to EUR
-        sellingPrice: convertToBase(data.retailPrice), // Convert to EUR
-        currentStock: data.currentStock,
+        costPrice: convertToBase(costPrice), // Convert to EUR
+        sellingPrice: convertToBase(retailPrice), // Convert to EUR
+        currentStock: currentStock,
         unit: data.unit,
-        minStock: data.minStock,
-        maxStock: data.maxStock,
+        minStock: minStock,
+        maxStock: maxStock,
         recipeId: data.recipeId || undefined,
         storeId,
         isActive: true,
@@ -212,7 +243,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="sku"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("data.products.form.sku")}</FormLabel>
+                      <FormLabel>{t("data.products.form.sku")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.skuPlaceholder")} {...field} />
                       </FormControl>
@@ -299,7 +330,16 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                     <FormItem>
                       <FormLabel>{t("data.products.form.costPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormDescription>{t("data.products.form.costPriceHint")}</FormDescription>
                       <FormMessage />
@@ -318,7 +358,11 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                           type="number"
                           step="0.01"
                           placeholder={suggestedRetailPrice}
-                          {...field}
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormDescription>{t("data.products.form.retailPriceHint")}</FormDescription>
@@ -327,7 +371,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   )}
                 />
               </div>
-              {costPrice > 0 && (
+              {costPrice && costPrice > 0 && (
                 <div className="bg-muted rounded-lg p-3 text-sm">
                   <p className="font-medium">{t("data.products.pricingSuggestions.title")}</p>
                   <p className="text-muted-foreground mt-1">
@@ -375,7 +419,15 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                     <FormItem>
                       <FormLabel>{t("data.products.form.currentStock")} *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -389,7 +441,15 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                     <FormItem>
                       <FormLabel>{t("data.products.form.minStock")} *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormDescription>{t("data.products.form.minStockHint")}</FormDescription>
                       <FormMessage />
@@ -404,7 +464,15 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                     <FormItem>
                       <FormLabel>{t("data.products.form.maxStock")} *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="1000" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="1000"
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormDescription>{t("data.products.form.maxStockHint")}</FormDescription>
                       <FormMessage />

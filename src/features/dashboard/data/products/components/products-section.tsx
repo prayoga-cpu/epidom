@@ -36,7 +36,7 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency, formatNumber } from "@/lib/utils/formatting";
+import { formatNumber } from "@/lib/utils/formatting";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -47,6 +47,10 @@ import {
   type Product,
 } from "../hooks/use-products";
 import { useProductUsage } from "../hooks/use-product-usage";
+import {
+  ItemCardGrid,
+  BaseItemCard,
+} from "../../components";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
@@ -135,15 +139,6 @@ export function ProductsSection() {
     }
   };
 
-  const toggleSelectItem = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
 
   // Action handlers
   const handleView = (product: Product) => {
@@ -442,40 +437,37 @@ export function ProductsSection() {
           </div>
 
           {/* Products Grid */}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
             {products.map((product) => {
               const stockStatus = getStockStatus(product);
               const profitMargin = getProfitMargin(product);
               const isSelected = selectedIds.has(product.id);
 
               return (
-                <Card
+                <BaseItemCard
                   key={product.id}
-                  className={`group bg-card relative rounded-lg border px-0 py-4 shadow-sm transition-all hover:shadow-md ${
-                    isSelected ? "ring-primary ring-2" : ""
-                  }`}
+                  isSelected={isSelected}
+                  bulkSelectMode={bulkSelectMode}
+                  onSelect={(checked) => {
+                    if (checked) {
+                      setSelectedIds((prev) => new Set(prev).add(product.id));
+                    } else {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(product.id);
+                        return next;
+                      });
+                    }
+                  }}
+                  contentClassName="!px-4"
                 >
-                  {/* Bulk Select Checkbox */}
-                  {bulkSelectMode && (
-                    <div className="absolute top-4 left-2">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelectItem(product.id)}
-                      />
-                    </div>
-                  )}
-
-                  {/* Product Content */}
-                  <CardContent className={`${bulkSelectMode ? "pl-6" : ""}`}>
                     <div className="mb-2 flex items-start justify-between">
-                      <div className="w-1 flex-1">
-                        <h3 className="w-[85px] truncate text-sm leading-tight font-semibold">
+                      <div className="flex-1">
+                        <h3 className="text-sm leading-tight font-semibold">
                           {product.name}
                         </h3>
                         {product.sku && (
-                          <p className="text-muted-foreground truncate text-xs">
-                            {t("common.sku")}: {product.sku}
-                          </p>
+                          <p className="text-muted-foreground text-xs">SKU: {product.sku}</p>
                         )}
                       </div>
 
@@ -521,7 +513,7 @@ export function ProductsSection() {
                       <div className="flex justify-between">
                         <span>{t("common.profit")}:</span>
                         <span
-                          className={`font-medium ${
+                          className={`text-foreground font-medium ${
                             profitMargin >= 50
                               ? "text-green-600"
                               : profitMargin >= 30
@@ -584,13 +576,14 @@ export function ProductsSection() {
                         </Tooltip>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                </BaseItemCard>
               );
             })}
-            {/* Empty State */}
-            {products.length === 0 && (
-              <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+          </ItemCardGrid>
+
+          {/* Empty State */}
+          {products.length === 0 && (
+            <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
                 <h3 className="mb-2 text-lg font-semibold">
                   {t("messages.noProductsFound")}
@@ -608,8 +601,7 @@ export function ProductsSection() {
                   <AddProductDialog storeId={storeId} />
                 )}
               </div>
-            )}
-          </div>
+          )}
 
           {/* Pagination */}
           {totalPages > 1 && (

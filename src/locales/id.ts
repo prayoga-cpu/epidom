@@ -131,6 +131,10 @@ export const id = {
       select: "Pilih",
       apply: "Terapkan",
     },
+    loading: "Memuat...",
+    goHome: "Kembali ke Beranda",
+    needHelp: "Butuh bantuan?",
+    contactSupport: "Hubungi Dukungan",
   },
   search: {
     title: "Pencarian Global",
@@ -160,7 +164,7 @@ export const id = {
     hours: "Jam",
     minutes: "Menit",
     seconds: "Detik",
-    targetDate: "Tanggal Peluncuran: 12 November 2025",
+    targetDate: "Tanggal Peluncuran: 20 November 2025",
     email: "mrcaoevan@gmail.com",
     whatsapp: "WhatsApp",
     waitlistText: "Jadilah yang pertama tahu saat kami meluncur!",
@@ -320,6 +324,8 @@ export const id = {
     },
     map: {
       placeholder: "Peta interaktif akan ditampilkan di sini",
+      error: "Peta tidak tersedia",
+      errorDesc: "Silakan refresh halaman untuk memuat peta",
     },
   },
   pricing: {
@@ -1378,6 +1384,7 @@ export const id = {
         "Tambahkan pemasok baru ke daftar kontak Anda. Isi sebanyak mungkin informasi.",
       editDescription: "Perbarui informasi pemasok",
       detailsDescription: "Lihat informasi lengkap tentang pemasok ini",
+      searchPlaceholder: "Cari pemasok berdasarkan nama, email, atau kontak person...",
 
       // Form sections
       sections: {
@@ -1988,6 +1995,10 @@ export const id = {
     createError: "Gagal membuat toko",
     editSuccess: "Toko berhasil diperbarui",
     editError: "Gagal memperbarui toko",
+    subscriptionRequired: "Langganan Diperlukan",
+    renewSubscription: "Perpanjang langganan Anda untuk mengakses toko ini",
+    clickToSubscribe: "Klik untuk Berlangganan",
+    errorLoading: "Gagal memuat toko",
   },
   tabs: {
     delivery: "Pengiriman",
@@ -2888,6 +2899,36 @@ export const id = {
     },
     footer:
       "Kebijakan pengembalian dana ini dapat berubah. Kami akan memberi tahu pengguna tentang perubahan material melalui email atau melalui layanan.",
+  },
+  checkout: {
+    success: {
+      title: "Pembayaran Berhasil! 🎉",
+      subtitle: "Langganan Anda sekarang aktif",
+      plan: "Paket",
+      orderId: "ID Pesanan",
+      status: "Status",
+      active: "Aktif",
+      message:
+        "Terima kasih atas pembelian Anda! Langganan Anda sekarang aktif dan Anda dapat mulai menggunakan semua fitur segera.",
+      continueToProfile: "Lanjutkan ke Profil",
+      viewDashboard: "Lihat Dasbor",
+      confirmationEmail:
+        "Email konfirmasi telah dikirim ke alamat email terdaftar Anda dengan tanda terima dan detail langganan.",
+    },
+    failed: {
+      title: "Pembayaran Gagal",
+      subtitle: "Kami tidak dapat memproses pembayaran Anda",
+      reason: "Alasan",
+      paymentFailed:
+        "Metode pembayaran Anda ditolak. Silakan periksa detail kartu Anda dan coba lagi.",
+      canceled: "Anda membatalkan proses pembayaran. Tidak ada biaya yang dikenakan.",
+      sessionExpired: "Sesi pembayaran Anda telah kedaluwarsa. Silakan coba lagi.",
+      unknownError: "Terjadi kesalahan yang tidak terduga selama pemrosesan pembayaran.",
+      helpMessage:
+        "Kartu Anda belum dikenakan biaya. Silakan tinjau kesalahan di atas dan coba lagi. Jika Anda terus mengalami masalah, silakan hubungi dukungan.",
+      tryAgainButton: "Coba Lagi",
+      chargeNotApplied: "Tidak ada biaya yang dikenakan pada akun Anda.",
+    },
   },
   notFound: {
     title: "Halaman Tidak Ditemukan",

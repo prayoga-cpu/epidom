@@ -14,7 +14,7 @@ export default function SupplierCard() {
   const { storeId } = useCurrentStore();
 
   // Fetch suppliers from API
-  const { data, isLoading } = useSuppliers(storeId, {
+  const { data, isLoading, error } = useSuppliers(storeId || "", {
     sortBy: "name",
     sortOrder: "asc",
   });
@@ -27,10 +27,19 @@ export default function SupplierCard() {
 
   const cardContent = (
     <div className="h-full overflow-auto">
-      {isLoading ? (
+      {!storeId ? (
+        <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+          <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+        </div>
+      ) : isLoading ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
           <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+        </div>
+      ) : error ? (
+        <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+          <Package className="text-muted-foreground mb-3 h-8 w-8" />
+          <p className="text-muted-foreground text-sm">{t("messages.errorLoadingSuppliers")}</p>
         </div>
       ) : topSuppliers.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
