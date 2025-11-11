@@ -4,7 +4,13 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/lang/i18n-provider";
-import type { Item } from "@/mocks";
+
+// Generic item type for display components
+type Item = {
+  id: string;
+  name: string;
+  [key: string]: any;
+};
 
 interface PillsListProps {
   items: Item[];
@@ -22,19 +28,19 @@ export function PillsList({ items, onSelect, selectedId }: PillsListProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <Input
           placeholder={t("actions.searchByName")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full sm:w-56"
+          className="w-full md:w-56"
         />
         <div className="flex items-center gap-2">
           <Button variant="secondary">{t("actions.note")}</Button>
           <Button>{t("actions.addMaterial")}</Button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
         {filtered.map((i) => (
           <button
             key={i.id}

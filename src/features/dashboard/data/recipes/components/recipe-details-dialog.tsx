@@ -1,5 +1,6 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -26,19 +27,21 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  Box,
 } from "lucide-react";
-import type { Recipe } from "@/types/entities";
-import { formatCurrency, formatDate, formatDuration } from "@/lib/utils/formatting";
-import { MOCK_MATERIALS, MOCK_PRODUCTS } from "@/mocks";
+import { formatCurrency, formatDate, formatDuration, formatNumber } from "@/lib/utils/formatting";
 import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { useMaterials } from "../../materials/hooks/use-materials";
+import type { RecipeWithIngredients } from "../hooks/use-recipes";
 
 interface RecipeDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  recipe: Recipe;
-  onEdit?: (recipe: Recipe) => void;
+  recipe: RecipeWithIngredients;
+  onEdit?: (recipe: RecipeWithIngredients) => void;
   onDelete?: (recipeId: string) => void;
 }
 
@@ -51,14 +54,21 @@ export default function RecipeDetailsDialog({
 }: RecipeDetailsDialogProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
+  const params = useParams();
+  const storeId = params.storeId as string;
+
+  // Fetch materials for ingredient details
+  const { data: materialsData } = useMaterials(storeId);
+  const materials = materialsData?.materials || [];
 
   // Calculate total cost from ingredients
   const calculateTotalCost = () => {
     let total = 0;
     recipe.ingredients.forEach((ingredient) => {
-      const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+      const material = materials.find((m) => m.id === ingredient.materialId);
       if (material) {
-        total += material.costPerUnit * ingredient.quantity;
+        total += Number(material.unitCost) * ingredient.quantity;
       }
     });
     return total;
@@ -90,25 +100,6 @@ export default function RecipeDetailsDialog({
   const costPerUnit = calculateCostPerUnit();
   const { suggestedPrice, profit, margin } = calculateProfitMargin();
 
-  // Find products using this recipe
-  const productsUsingRecipe = MOCK_PRODUCTS.filter((p) => p.recipeId === recipe.id);
-
-  // Helper function to get stock status
-  const getStockStatus = (product: typeof MOCK_PRODUCTS[0]) => {
-    const stockPercentage = (product.currentStock / product.maxStock) * 100;
-    if (product.currentStock <= 0) {
-      return { label: "Out of Stock", variant: "destructive" as const, icon: XCircle };
-    } else if (product.currentStock < product.minStock) {
-      return { label: "Critical", variant: "destructive" as const, icon: XCircle };
-    } else if (product.currentStock <= product.minStock * 1.5) {
-      return { label: "Low Stock", variant: "secondary" as const, icon: AlertCircle };
-    } else if (stockPercentage > 100) {
-      return { label: "Overstocked", variant: "secondary" as const, icon: AlertCircle };
-    } else {
-      return { label: "In Stock", variant: "default" as const, icon: CheckCircle };
-    }
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,7 +109,7 @@ export default function RecipeDetailsDialog({
               <div className="flex-1">
                 <DialogTitle className="text-2xl">{recipe.name}</DialogTitle>
                 <DialogDescription className="mt-2">
-                  {recipe.description || "No description provided"}
+                  {recipe.description || t("data.materials.noDescription")}
                 </DialogDescription>
               </div>
               <div className="flex gap-2">
@@ -172,7 +163,7 @@ export default function RecipeDetailsDialog({
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Cost per Batch</p>
-                    <p className="font-semibold">{formatCurrency(totalCost)}</p>
+                    <p className="font-semibold">{formatPrice(totalCost)}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -200,31 +191,36 @@ export default function RecipeDetailsDialog({
               <CardContent>
                 <div className="space-y-3">
                   {recipe.ingredients.map((ingredient, index) => {
-                    const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+                    const material = materials.find((m) => m.id === ingredient.materialId);
                     const ingredientCost = material
-                      ? material.costPerUnit * ingredient.quantity
+                      ? Number(material.unitCost) * ingredient.quantity
                       : 0;
 
                     return (
                       <div key={index}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <p className="font-medium">{material?.name || "Unknown Material"}</p>
+                            <p className="font-medium">
+                              {material?.name || t("data.materials.unknownMaterial")}
+                            </p>
                             <p className="text-muted-foreground text-sm">
                               {ingredient.quantity} {ingredient.unit}
                               {ingredient.notes && ` • ${ingredient.notes}`}
                             </p>
                             {material && (
                               <p className="text-muted-foreground text-xs">
-                                {formatCurrency(material.costPerUnit)}/{material.unit} ×{" "}
+                                {formatPrice(Number(material.unitCost))}/{material.unit} ×{" "}
                                 {ingredient.quantity} {ingredient.unit}
                               </p>
                             )}
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">{formatCurrency(ingredientCost)}</p>
+                            <p className="font-semibold">{formatPrice(ingredientCost)}</p>
                             <p className="text-muted-foreground text-xs">
-                              {((ingredientCost / totalCost) * 100).toFixed(1)}%
+                              {totalCost > 0
+                                ? ((ingredientCost / totalCost) * 100).toFixed(1)
+                                : "0"}
+                              %
                             </p>
                           </div>
                         </div>
@@ -238,10 +234,73 @@ export default function RecipeDetailsDialog({
 
                 <div className="flex justify-between font-semibold">
                   <span>Total Materials Cost</span>
-                  <span>{formatCurrency(totalCost)}</span>
+                  <span>{formatPrice(totalCost)}</span>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Linked Products Section */}
+            {recipe.products && recipe.products.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Box className="h-5 w-5" />
+                    Linked Products ({recipe.products.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {recipe.products.map((product, index) => (
+                      <div key={product.id}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-muted-foreground text-sm">
+                              {product.category && (
+                                <Badge variant="secondary" className="mr-2 text-xs">
+                                  {product.category}
+                                </Badge>
+                              )}
+                              {product.sku && <span className="text-xs">SKU: {product.sku}</span>}
+                            </p>
+                            <div className="mt-1 flex items-center gap-4 text-xs">
+                              <span className="text-muted-foreground">
+                                Stock: {formatNumber(Number(product.currentStock))} {product.unit}
+                              </span>
+                              <span className="text-muted-foreground">
+                                Price: {formatPrice(Number(product.sellingPrice))}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge
+                              variant={
+                                Number(product.currentStock) > Number(product.minStock)
+                                  ? "default"
+                                  : "destructive"
+                              }
+                            >
+                              {Number(product.currentStock) > Number(product.minStock)
+                                ? t("common.stockStatus.inStock")
+                                : t("common.stockStatus.lowStock")}
+                            </Badge>
+                          </div>
+                        </div>
+                        {index < (recipe.products?.length ?? 0) - 1 && (
+                          <Separator className="mt-3" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-muted/50 mt-4 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs">
+                      💡 These products are created using this recipe. Changes to the recipe will
+                      affect the production cost of these products.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Cost Analysis */}
             <Card className="border-primary/50 bg-primary/5">
@@ -255,12 +314,12 @@ export default function RecipeDetailsDialog({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <p className="text-muted-foreground text-sm">Cost per {recipe.yieldUnit}</p>
-                    <p className="text-2xl font-bold">{formatCurrency(costPerUnit)}</p>
+                    <p className="text-2xl font-bold">{formatPrice(costPerUnit)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm">Suggested Price (2.5x markup)</p>
                     <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {formatCurrency(suggestedPrice)}
+                      {formatPrice(suggestedPrice)}
                     </p>
                   </div>
                 </div>
@@ -271,7 +330,7 @@ export default function RecipeDetailsDialog({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Profit per {recipe.yieldUnit}</span>
                     <span className="font-semibold text-green-600 dark:text-green-400">
-                      {formatCurrency(profit)}
+                      {formatPrice(profit)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -294,72 +353,11 @@ export default function RecipeDetailsDialog({
                     Pricing Recommendations
                   </div>
                   <div className="text-muted-foreground space-y-1 text-sm">
-                    <p>• Wholesale (30% margin): {formatCurrency(costPerUnit * 1.43)}</p>
-                    <p>• Retail (60% margin): {formatCurrency(costPerUnit * 2.5)}</p>
-                    <p>• Premium (70% margin): {formatCurrency(costPerUnit * 3.33)}</p>
+                    <p>• Wholesale (30% margin): {formatPrice(costPerUnit * 1.43)}</p>
+                    <p>• Retail (60% margin): {formatPrice(costPerUnit * 2.5)}</p>
+                    <p>• Premium (70% margin): {formatPrice(costPerUnit * 3.33)}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Products Using This Recipe */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <ShoppingBag className="h-5 w-5" />
-                  Products Using This Recipe ({productsUsingRecipe.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {productsUsingRecipe.length === 0 ? (
-                  <div className="text-muted-foreground py-8 text-center">
-                    <ShoppingBag className="mx-auto mb-3 h-12 w-12 opacity-20" />
-                    <p className="text-sm">No products are currently using this recipe</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {productsUsingRecipe.map((product, index) => {
-                      const status = getStockStatus(product);
-                      const StatusIcon = status.icon;
-
-                      return (
-                        <div key={product.id}>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">{product.name}</p>
-                                <Badge variant={status.variant} className="text-xs">
-                                  <StatusIcon className="mr-1 h-3 w-3" />
-                                  {status.label}
-                                </Badge>
-                              </div>
-                              {product.sku && (
-                                <p className="text-muted-foreground mt-1 text-xs">
-                                  SKU: {product.sku}
-                                </p>
-                              )}
-                              <div className="text-muted-foreground mt-2 flex gap-4 text-xs">
-                                <span>
-                                  Stock: {product.currentStock} / {product.maxStock} {product.unit}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold">{formatCurrency(product.retailPrice)}</p>
-                              <p className="text-muted-foreground text-xs">Retail Price</p>
-                              {product.wholesalePrice && (
-                                <p className="text-muted-foreground mt-1 text-xs">
-                                  Wholesale: {formatCurrency(product.wholesalePrice)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          {index < productsUsingRecipe.length - 1 && <Separator className="mt-3" />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </CardContent>
             </Card>
 
@@ -391,7 +389,7 @@ export default function RecipeDetailsDialog({
                   <div>
                     <p className="text-muted-foreground text-sm">Cost per Minute</p>
                     <p className="font-semibold">
-                      {formatCurrency(totalCost / recipe.productionTimeMinutes)}
+                      {formatPrice(totalCost / recipe.productionTimeMinutes)}
                     </p>
                   </div>
                   <div>
@@ -404,10 +402,10 @@ export default function RecipeDetailsDialog({
                   <div>
                     <p className="text-muted-foreground text-sm">Labor Cost (estimate)</p>
                     <p className="text-muted-foreground text-xs">
-                      @ $15/hr: {formatCurrency((15 / 60) * recipe.productionTimeMinutes)}
+                      @ $15/hr: {formatPrice((15 / 60) * recipe.productionTimeMinutes)}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      @ $20/hr: {formatCurrency((20 / 60) * recipe.productionTimeMinutes)}
+                      @ $20/hr: {formatPrice((20 / 60) * recipe.productionTimeMinutes)}
                     </p>
                   </div>
                   <div>

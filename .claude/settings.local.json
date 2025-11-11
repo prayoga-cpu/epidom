@@ -20,7 +20,12 @@
       "Bash(find:*)",
       "Bash(wc:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(findstr:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prisma db push:*)"
     ],
     "deny": [],
     "ask": []

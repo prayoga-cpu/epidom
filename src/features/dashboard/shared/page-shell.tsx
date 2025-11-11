@@ -13,16 +13,22 @@ import { Topbar } from "@/features/dashboard/shared/topbar";
  */
 export default function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="page-transition-container w-full">
+    <div className="page-transition-container flex h-screen w-full flex-col overflow-hidden">
+      {/* Topbar - Fixed at top */}
       <Topbar />
-      <div className="mx-auto max-w-[1600px] p-3 md:p-6 lg:px-8">
-        <div className="grid items-start gap-4 md:grid-cols-[280px_1fr] md:gap-6">
+
+      {/* Main content area - Fixed height container with padding for topbar */}
+      <div className="flex min-h-0 flex-1 overflow-hidden pt-14">
+        <div className="mx-auto flex w-full max-w-[1600px] gap-4 p-3 md:gap-6 md:p-6 lg:px-8">
           {/* Sidebar column (desktop only) */}
           <Sidebar mode="desktop" />
 
-          {/* Content */}
-          <main className="bg-card/80 page-content mt-14 w-full min-w-0 rounded-xl border p-4 shadow-lg backdrop-blur-md sm:p-6">
+          {/* Content - Fixed height box with scrollable content inside */}
+          <main className="bg-card/80 page-content flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border shadow-lg backdrop-blur-md">
+            {/* Scrollable content area */}
+            <div className="scrollbar-thin flex-1 overflow-y-auto p-4 md:p-6">
             {children}
+            </div>
           </main>
         </div>
       </div>

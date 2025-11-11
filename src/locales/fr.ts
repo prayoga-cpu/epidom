@@ -1,6 +1,15 @@
 export const fr = {
-  common: {
-    brand: "EPIDOM",
+    common: {
+      brand: "EPIDOM",
+      item: "Article",
+      ingredient: "Ingrédient",
+      uncategorized: "Non Catégorisé",
+      stockStatus: {
+      outOfStock: "Rupture de Stock",
+      lowStock: "Stock Faible",
+      inStock: "En Stock",
+      overstocked: "Surstocké",
+    },
     nav: {
       home: "Accueil",
       services: "Services",
@@ -12,6 +21,9 @@ export const fr = {
       openMenu: "Ouvrir le menu",
       closeMenu: "Fermer le menu",
       homepage: "Page d'accueil",
+      searchAriaLabel: "Rechercher",
+      stores: "Mes Magasins",
+      profile: "Profil",
     },
     language: {
       label: "Langue",
@@ -24,6 +36,7 @@ export const fr = {
     selectAll: "Tout Sélectionner",
     of: "sur",
     selected: "sélectionné(s)",
+    per: "par",
     showing: "Affichage",
     sku: "SKU",
     stock: "Stock",
@@ -51,6 +64,16 @@ export const fr = {
     },
     datePicker: {
       pickDate: "Choisir une date",
+      pickDateRange: "Choisir une plage de dates",
+      selectPreset: "Sélectionner un préréglage",
+      presets: {
+        today: "Aujourd'hui",
+        last7Days: "7 derniers jours",
+        last30Days: "30 derniers jours",
+        last90Days: "90 derniers jours",
+        thisYear: "Cette année",
+        custom: "Personnalisé",
+      },
     },
     metrics: {
       plannedQuantity: "Quantité Planifiée",
@@ -58,8 +81,29 @@ export const fr = {
     },
     validation: {
       error: "Erreur de Validation",
+      required: "Ce champ est requis",
+      minLength: "Doit contenir au moins {min} caractères",
+      maxLength: "Ne doit pas dépasser {max} caractères",
+      min: "Doit être au moins {min}",
+      max: "Ne doit pas dépasser {max}",
+      positive: "Doit être supérieur à 0",
+      nonNegative: "Ne peut pas être négatif",
+      email: "Adresse e-mail invalide",
+      invalidFormat: "Format invalide",
+      unexpectedError: "Une erreur inattendue s'est produite",
+      productNameMin: "Le nom du produit doit contenir au moins 2 caractères",
+      supplierNameMin: "Le nom du fournisseur doit contenir au moins 2 caractères",
+      categoryRequired: "Veuillez entrer une catégorie",
+      unitRequired: "Veuillez entrer une unité",
+      pricePositive: "Le prix doit être supérieur à 0",
+      stockNonNegative: "Le stock ne peut pas être négatif",
+      minStockNonNegative: "Le stock minimum ne peut pas être négatif",
+      maxStockPositive: "Le stock maximum doit être supérieur à 0",
     },
     error: "Erreur",
+    notes: "Notes",
+    page: "Page",
+    other: "Autre",
     actions: {
       cancel: "Annuler",
       save: "Enregistrer",
@@ -80,6 +124,24 @@ export const fr = {
       exportAsCsv: "Exporter en CSV",
       exportAsExcel: "Exporter en Excel",
       exportAsPdf: "Exporter en PDF",
+      logout: "Déconnexion",
+      login: "Connexion",
+      searchPlaceholder: "Rechercher...",
+      retry: "Réessayer",
+      select: "Sélectionner",
+      apply: "Appliquer",
+    },
+  },
+  search: {
+    title: "Recherche Globale",
+    description: "Rechercher des pages, fonctionnalités et plus...",
+    placeholder: "Tapez pour rechercher ou appuyez sur '/' pour focus...",
+    noResults: "Aucun résultat trouvé.",
+    categories: {
+      navigation: "Navigation",
+      data: "Gestion des Données",
+      management: "Gestion",
+      tracking: "Suivi",
     },
   },
   hero: {
@@ -340,6 +402,12 @@ export const fr = {
       title: "Finalisez Votre Abonnement",
       subtitle: "Traitement de paiement sécurisé avec chiffrement de niveau industrie",
     },
+    steps: {
+      step1: "Choisir le Forfait",
+      step2: "Paiement",
+      step3: "Confirmation",
+      current: "Étape 2 sur 3",
+    },
     billing: {
       title: "Informations de Facturation",
       firstName: "Prénom",
@@ -380,20 +448,42 @@ export const fr = {
       billingInfo2: "Annulez à tout moment depuis votre tableau de bord",
     },
     security: {
-      title: "Paiement Sécurisé",
+      title: "Traitement de Paiement Sécurisé",
       feature1: {
-        title: "Sécurité Stripe",
-        description: "Alimenté par la sécurité de pointe de Stripe",
-      },
-      feature2: {
         title: "Conforme PCI DSS",
         description: "Vos données de carte ne sont jamais stockées sur nos serveurs",
       },
-      feature3: {
+      feature2: {
         title: "Chiffrement SSL 256-bit",
         description: "Toutes les transactions sont chiffrées de bout en bout",
       },
+      feature3: {
+        title: "Alimenté par Stripe",
+        description: "Sécurité de pointe de l'industrie, approuvée par des millions",
+      },
       footer: "Vos informations de paiement sont sécurisées et chiffrées",
+    },
+    form: {
+      authRequiredPrefix: "Vous devez",
+      authRequiredBold: "vous inscrire ou vous connecter",
+      authRequiredSuffix: "avant de souscrire à un forfait. Cliquez sur le bouton ci-dessous pour continuer.",
+      termsAgreement: "En procédant, vous acceptez nos",
+      termsOfService: "Conditions d'Utilisation",
+      and: "et",
+      refundPolicy: "Politique de Remboursement",
+      agreeToTermsError: "Veuillez accepter les Conditions d'Utilisation et la Politique de Remboursement pour continuer.",
+      redirecting: "Redirection vers le checkout...",
+      signUpLogin: "S'Inscrire / Se Connecter pour Continuer",
+      proceedToCheckout: "Procéder au Checkout Sécurisé",
+      checkoutSessionError: "Échec de la création de la session de checkout",
+      checkoutUrlError: "Aucune URL de checkout retournée",
+      checkoutError: "Échec du démarrage du checkout. Veuillez réessayer.",
+      taxAmount: "€0.00",
+    },
+    footer: {
+      securelyPowered: "Alimenté en toute sécurité par",
+      stripe: "Stripe",
+      contactSupport: "Contacter le Support",
     },
     enterprise: {
       hero: {
@@ -413,6 +503,12 @@ export const fr = {
         phonePlaceholder: "+33 7 81 73 23 86",
         submit: "Demander un Devis",
         submitting: "Envoi de la Demande...",
+        success: "Merci ! Nous vous contacterons bientôt.",
+        error: "Échec de l'envoi du formulaire. Veuillez réessayer.",
+        validation: {
+          email: "Veuillez entrer une adresse e-mail valide.",
+          name: "Veuillez entrer votre prénom et votre nom.",
+        },
       },
       contact: {
         title: "Préférez-vous parler directement ?",
@@ -754,7 +850,7 @@ export const fr = {
     ordersToPrepare: "Commandes à Préparer",
     alertsTitle: "Alertes",
     ordersTitle: "Commandes à Passer",
-    materialsList: "Liste des Matériaux",
+    materialsList: "Liste des matières premières",
     recipesList: "Liste des Recettes",
     productsList: "Liste des Produits",
     suppliersList: "Liste des Fournisseurs",
@@ -790,6 +886,15 @@ export const fr = {
     title: "Tableau de Bord",
     description:
       "Bienvenue sur le tableau de bord. Ici, vous pouvez voir l'état actuel de vos commandes, recettes et stocks.",
+    storeSelector: {
+      label: "Sélectionner un magasin",
+      select: "Sélectionner un magasin",
+      createFirst: "Créer un Magasin",
+      createNew: "Créer un nouveau magasin",
+      searchPlaceholder: "Rechercher un magasin...",
+      noStores: "Aucun magasin trouvé",
+      yourStores: "Vos Magasins",
+    },
     alertsCard: {
       title: "Alertes Critiques",
       description: "Alertes de stock nécessitant une attention immédiate",
@@ -864,12 +969,16 @@ export const fr = {
     materials: {
       pageTitle: "Matières premières",
       addTitle: "Ajouter un Nouveau Matériau",
+      addButton: "Ajouter un Matériau",
       addDescription:
         "Ajoutez un nouveau matériau à votre inventaire. Remplissez tous les champs obligatoires.",
       editTitle: "Modifier le Matériau",
       editDescription: "Mettre à jour les informations du matériau",
       detailsTitle: "Détails du Matériau",
       detailsDescription: "Voir les informations complètes sur ce matériau",
+      title: "Matériaux",
+      unknownMaterial: "Matériau Inconnu",
+      noDescription: "Aucune description fournie",
 
       // Form fields
       form: {
@@ -879,6 +988,8 @@ export const fr = {
         selectCategory: "Sélectionner une catégorie",
         supplier: "Fournisseur",
         selectSupplier: "Sélectionner un fournisseur",
+        addSupplier: "Ajouter un Fournisseur",
+        noSuppliersYet: "Aucun fournisseur ajouté pour le moment. Cliquez sur \"Ajouter un Fournisseur\" pour lier des fournisseurs à ce matériau.",
         quantity: "Quantité",
         unit: "Unité",
         selectUnit: "Unité",
@@ -887,6 +998,25 @@ export const fr = {
         costPlaceholder: "25.00",
         notes: "Notes (Optionnel)",
         notesPlaceholder: "Informations supplémentaires sur ce matériau...",
+        description: "Description",
+        descriptionPlaceholder: "Informations supplémentaires sur ce matériau...",
+        categoryPlaceholder: "ex: Céréales, Produits Laitiers",
+        selectSupplierPlaceholder: "Sélectionner un fournisseur...",
+        unitCost: "Coût Unitaire",
+        currentStock: "Stock Actuel",
+        minStockLevel: "Niveau de Stock Minimum",
+        maxStockLevel: "Niveau de Stock Maximum",
+        supplierPrice: "Prix",
+        preferred: "Préféré",
+        chooseSupplier: "Choisir un fournisseur pour ce matériau",
+        alertMinStock: "Alerte lorsque le stock tombe en dessous de ce niveau",
+        alertMaxStock: "Alerte lorsque le stock dépasse ce niveau",
+      },
+      // Form sections
+      sections: {
+        basicInfo: "Informations de Base",
+        pricingStock: "Tarification et Stock",
+        suppliers: "Fournisseurs (Optionnel)",
       },
 
       // Categories
@@ -935,12 +1065,34 @@ export const fr = {
           description: "{count} matériaux ont été supprimés avec succès.",
         },
       },
+      details: {
+        stockInfo: "Informations sur le Stock",
+        suppliers: "Fournisseurs",
+        pricing: "Tarification",
+        description: "Description",
+        metadata: "Informations",
+        currentStock: "Stock Actuel",
+        minStock: "Min",
+        maxStock: "Max",
+        unitCost: "Coût Unitaire",
+        totalValue: "Valeur Totale",
+        category: "Catégorie",
+        unit: "Unité",
+        noSuppliersLinked: "Aucun fournisseur lié",
+        created: "Créé",
+        lastUpdated: "Dernière Mise à Jour",
+      },
+      deleteConfirm: {
+        title: "Supprimer le Matériau",
+        description: "Êtes-vous sûr de vouloir supprimer \"{name}\" ? Cette action ne peut pas être annulée.",
+      },
     },
 
     // Recipes section
     recipes: {
       pageTitle: "Recettes",
       addTitle: "Créer une Nouvelle Recette",
+      addButton: "Ajouter une Recette",
       editTitle: "Modifier la Recette",
       detailsTitle: "Détails de la Recette",
       duplicateTitle: "Dupliquer la Recette",
@@ -1128,6 +1280,7 @@ export const fr = {
     products: {
       pageTitle: "Produits",
       addTitle: "Ajouter un Nouveau Produit",
+      addButton: "Ajouter un Produit",
       editTitle: "Modifier le Produit",
       detailsTitle: "Détails du Produit",
       addDescription:
@@ -1224,6 +1377,7 @@ export const fr = {
     suppliers: {
       pageTitle: "Fournisseurs",
       addTitle: "Ajouter un Nouveau Fournisseur",
+      addButton: "Ajouter un Fournisseur",
       editTitle: "Modifier le Fournisseur",
       detailsTitle: "Détails du Fournisseur",
       addDescription:
@@ -1316,8 +1470,10 @@ export const fr = {
   filters: {
     allSuppliers: "Tous les Fournisseurs",
     allStock: "Tout le Stock",
+    allStockLevels: "Tous les Niveaux de Stock",
     inStock: "En Stock",
     lowStock: "Stock Faible",
+    outOfStock: "Rupture de Stock",
     critical: "Critique",
     overstocked: "Surstock",
     allCategories: "Toutes les Catégories",
@@ -1360,6 +1516,14 @@ export const fr = {
     difficultyHighLow: "Difficulté (Haut-Bas)",
     prepTimeLowHigh: "Temps Prépa (Bas-Haut)",
     prepTimeHighLow: "Temps Prépa (Haut-Bas)",
+    timeShortest: "Temps (Plus Court)",
+    timeLongest: "Temps (Plus Long)",
+    contactAZ: "Contact (A-Z)",
+    contactZA: "Contact (Z-A)",
+    newest: "Plus Récent",
+    newestFirst: "Plus Récent",
+    oldest: "Plus Ancien",
+    oldestFirst: "Plus Ancien",
   },
   tables: {
     order: "Commande",
@@ -1425,11 +1589,25 @@ export const fr = {
     getStartedRecipe: "Commencez par créer votre première recette",
     getStartedProduct: "Commencez par ajouter votre premier produit",
     getStartedSupplier: "Commencez par ajouter votre premier fournisseur",
+    errorLoadingMaterials: "Erreur lors du chargement des matériaux",
+    errorLoadingRecipes: "Erreur lors du chargement des recettes",
+    errorLoadingProducts: "Erreur lors du chargement des produits",
+    errorLoadingSuppliers: "Erreur lors du chargement des fournisseurs",
     noDataToExport: "Aucune donnée à exporter",
     noDataToExportDesc: "Il n'y a aucune donnée disponible à exporter.",
+    exportStarted: "Exportation démarrée",
+    exportStartedDescription: "Votre exportation sera téléchargée sous peu.",
     exportSuccessful: "Exportation réussie",
     exportFailed: "L'exportation a échoué",
     exportFailedDesc: "Une erreur s'est produite lors de l'exportation des données.",
+    failedToDeleteMaterial: "Échec de la suppression du matériau",
+    failedToDeleteMaterials: "Échec de la suppression des matériaux",
+    failedToDeleteSupplier: "Échec de la suppression du fournisseur",
+    failedToDeleteSuppliers: "Échec de la suppression des fournisseurs",
+    failedToUpdateMaterial: "Échec de la mise à jour du matériau",
+    failedToUpdateOrder: "Échec de la mise à jour de la commande",
+    orderPlaced: "Commande marquée comme passée",
+    orderPlacedError: "Échec du marquage de la commande comme passée",
   },
   alerts: {
     // Page titles
@@ -1470,7 +1648,11 @@ export const fr = {
       createOrder: "Créer Commande",
       callSupplier: "Appeler",
       emailSupplier: "Email",
+      noSupplier: "Aucun Fournisseur",
     },
+
+    // Supplier info
+    noSupplierAssigned: "Aucun Fournisseur Assigné",
 
     // Details Dialog
     detailsDialog: {
@@ -1519,8 +1701,18 @@ export const fr = {
     current: "Actuel",
     required: "Requis",
     toOrder: "À Commander",
+    quantity: "Quantité",
+    price: "Prix",
+    total: "Total",
+    orderTotal: "Total de la Commande",
+    expectedDelivery: "Livraison Prévue",
+    markAsPlaced: "Marquer comme Passée",
+    placing: "En cours...",
+    orderPlaced: "Commande marquée comme passée",
+    orderPlacedError: "Échec de la mise à jour de la commande",
     noOrdersToPlace: "Aucune Commande à Passer",
     noOrdersDescription: "Vous n'avez aucune commande en attente pour le moment",
+    errorLoadingOrders: "Échec du chargement des commandes",
 
     // Toasts
     toasts: {
@@ -1611,7 +1803,10 @@ export const fr = {
         active: "Actif",
         canceled: "Annulé",
         pastDue: "En Retard",
+        incomplete: "Incomplet",
+        canceling: "Annulation",
       },
+      renew: "Renouveler",
       warnings: {
         ending: {
           title: "Abonnement se Termine",
@@ -1683,6 +1878,14 @@ export const fr = {
         "Mettez à jour les informations de contact et les détails de votre entreprise",
       addBusinessInfoDescription:
         "Ajoutez les informations de votre entreprise pour compléter votre profil",
+      editAvatar: "Modifier la Photo de Profil",
+      editAvatarDescription: "Téléchargez une nouvelle photo de profil ou supprimez celle en cours.",
+      cropAvatarDescription: "Recadrez et ajustez votre photo de profil.",
+      previewAvatarDescription: "Aperçu de votre nouvelle photo de profil.",
+      uploadAvatar: "Cliquez pour télécharger",
+      fileTypesInfo: "JPEG, PNG, WebP ou GIF (max 5 Mo)",
+      loadImageFailed: "Échec du chargement de l'image",
+      uploadFailed: "Échec du téléchargement",
       namePlaceholder: "Entrez votre nom complet",
       emailPlaceholder: "votre@email.com",
       phonePlaceholder: "+33 1 23 45 67 89",
@@ -1701,6 +1904,10 @@ export const fr = {
       cancel: "Annuler",
       update: "Mettre à Jour le Profil",
       delete: "Supprimer",
+      remove: "Supprimer",
+      removeAvatar: "Supprimer l'Avatar",
+      uploadAvatar: "Télécharger",
+      apply: "Appliquer",
     },
 
     // Erreurs
@@ -1708,6 +1915,8 @@ export const fr = {
       updateFailed: "Échec de la mise à jour du profil. Veuillez réessayer.",
       businessUpdateFailed:
         "Échec de la mise à jour des informations d'entreprise. Veuillez réessayer.",
+      loadImageFailed: "Échec du chargement de l'image",
+      uploadFailed: "Échec du téléchargement",
     },
 
     // Messages toast
@@ -1723,6 +1932,14 @@ export const fr = {
       businessCreated: {
         title: "Infos Entreprise Ajoutées",
         description: "Les informations d'entreprise ont été ajoutées avec succès.",
+      },
+      avatarUpdated: {
+        title: "Avatar Mis à Jour",
+        description: "Votre photo de profil a été mise à jour avec succès.",
+      },
+      avatarRemoved: {
+        title: "Avatar Supprimé",
+        description: "Votre photo de profil a été supprimée.",
       },
       avatarUploaded: {
         title: "Avatar Mis à Jour",
@@ -1748,6 +1965,13 @@ export const fr = {
       businessNameRequired: "Le nom de l'entreprise est requis",
     },
 
+    // Cropper
+    cropper: {
+      zoom: "Zoom",
+      rotation: "Rotation",
+      processing: "Traitement...",
+    },
+
     // Clés héritées (maintenir la compatibilité ascendante)
     address: "Adresse",
     businessName: "Nom de l'Entreprise",
@@ -1756,10 +1980,28 @@ export const fr = {
   stores: {
     title: "Vos boutiques",
     createStore: "Créer une boutique",
+    subscribeToCreateStore: "S'abonner pour créer une boutique",
+    upgradePlan: "Passer à un plan supérieur",
+    editStore: "Modifier la boutique",
+    updateStore: "Mettre à jour la boutique",
+    editDescription: "Mettez à jour les informations de votre boutique. Tous les champs sauf le nom sont optionnels.",
     storeName: "Nom de la Boutique",
+    storeNamePlaceholder: "ex. Boulangerie Artisanale Paris",
     city: "Ville",
+    cityPlaceholder: "ex. Paris",
+    country: "Pays",
+    countryPlaceholder: "ex. France",
+    addressPlaceholder: "ex. 123 Rue de la Paix",
+    phonePlaceholder: "ex. +33 1 23 45 67 89",
+    emailPlaceholder: "ex. contact@boutique.com",
+    storeImage: "Image de la Boutique",
     noStores: "Aucune boutique pour le moment",
     createFirst: "Créez votre première boutique pour commencer",
+    searchPlaceholder: "Rechercher des boutiques par nom, ville ou adresse...",
+    createSuccess: "Boutique créée avec succès",
+    createError: "Échec de la création de la boutique",
+    editSuccess: "Boutique mise à jour avec succès",
+    editError: "Échec de la mise à jour de la boutique",
   },
   tabs: {
     delivery: "Livraison",
@@ -1807,6 +2049,7 @@ export const fr = {
       },
       noMatches: "Aucune livraison ne correspond à vos filtres",
       noDeliveries: "Aucune livraison pour le moment",
+      noDeliveriesDescription: "Aucune livraison fournisseur trouvée",
       actions: {
         edit: "Modifier",
         updateStatus: "Mettre à Jour le Statut",
@@ -1851,7 +2094,7 @@ export const fr = {
       dialogs: {
         updateStatus: {
           title: "Mettre à Jour le Statut de la Livraison",
-          description: "Mettre à jour le statut de cette livraison",
+          description: "Changer le statut de la livraison {reference}",
           currentStatus: "Statut Actuel",
           newStatus: "Nouveau Statut",
           receivedDate: "Date de Réception",
@@ -1860,6 +2103,18 @@ export const fr = {
           notesPlaceholder: "Ajoutez des notes sur ce changement de statut...",
           updateButton: "Mettre à Jour le Statut",
           success: "Statut mis à jour avec succès",
+          selectNewStatus: "Veuillez sélectionner un nouveau statut",
+          selectReceivedDate: "Veuillez sélectionner une date de réception",
+          selectNewStatusPlaceholder: "Sélectionner un nouveau statut",
+          selectReceivedDatePlaceholder: "Sélectionner la date de réception",
+          updating: "Mise à jour...",
+          updateStatus: "Mettre à Jour le Statut",
+          toasts: {
+            updated: {
+              title: "Statut Mis à Jour",
+              description: "Le statut de la livraison a été mis à jour à {status}",
+            },
+          },
         },
         printDelivery: {
           title: "Imprimer la Livraison",
@@ -1914,6 +2169,7 @@ export const fr = {
             atLeastOneItem: "Veuillez ajouter au moins un article",
             itemsMustHaveMaterial:
               "Tous les articles doivent avoir une matière et une quantité supérieure à 0",
+            addModeNotImplemented: "Le mode d'ajout n'est pas encore implémenté. Les commandes doivent être créées à partir des alertes.",
           },
           toasts: {
             created: {
@@ -1939,6 +2195,7 @@ export const fr = {
       selectItemDescription:
         "Choisissez un article dans la liste pour voir les détails et effectuer des ajustements",
       noItemsFound: "Aucun article trouvé",
+      noStockItemsYet: "Aucun article en stock pour le moment",
       selectAll: "Tout Sélectionner",
       deselectAll: "Tout Désélectionner",
 
@@ -2099,11 +2356,10 @@ export const fr = {
 
       // Batch Statuses
       statuses: {
-        pending: "En Attente",
+        planned: "Planifié",
         inProgress: "En Cours",
-        qualityCheck: "Contrôle Qualité",
         completed: "Terminé",
-        failed: "Échoué",
+        cancelled: "Annulé",
       },
 
       // Start Production Dialog
@@ -2172,17 +2428,18 @@ export const fr = {
 
       // Batch Statuses
       statuses: {
-        pending: "En Attente",
+        planned: "Planifié",
         inProgress: "En Cours",
-        qualityCheck: "Contrôle Qualité",
         completed: "Terminé",
-        failed: "Échoué",
+        cancelled: "Annulé",
       },
 
       // Metrics
       metrics: {
         totalBatches: "Total des Lots",
         totalBatchesDescription: "Tous les lots de production",
+        completedBatches: "Lots Terminés",
+        completedBatchesDescription: "Nombre de lots terminés",
         averageQuality: "Qualité Moy.",
         averageQualityDescription: "Score de qualité moyen",
         efficiency: "Efficacité",
@@ -2324,6 +2581,20 @@ export const fr = {
     lastMovement: "Dernier Mouvement",
     recentActivity: "Activité Récente",
 
+    // Filters for stock levels
+    filters: {
+      allItems: "Tous les Articles",
+      allItemsPlaceholder: "Tous les Articles",
+      allStatus: "Tous les Statuts",
+      allStatusPlaceholder: "Tous les Statuts de Stock",
+      outOfStock: "Rupture de Stock",
+      lowStock: "Stock Faible",
+      inStock: "En Stock",
+      overstocked: "Surstocké",
+    },
+    item: "article",
+    items: "articles",
+
     // Stock History
     stockHistory: "Historique du Stock",
     runningBalance: "Solde Courant",
@@ -2434,16 +2705,220 @@ export const fr = {
   footer: {
     tagline: "UNE SOLUTION POUR LA GESTION DE VOTRE STOCK ALIMENTAIRE",
     contact: "Nous contacter",
-    addressHeading: "France, Massy",
-    addressLines: ["1 Av. Marcel Ramolfo Garnier", "Massy, 91300", "Tél (+33) 7 81 73 23 86"],
+    addressHeading: "Adresse",
+    address: "France, Paris",
     rights: (year: number) => `© ${year} Epidom. Tous droits réservés.`,
   },
   cookie: {
     title: "Nous utilisons des cookies",
     description:
-      "Nous utilisons des cookies pour améliorer votre expérience, analyser le trafic du site et servir du contenu personnalisé. En cliquant sur 'Accepter', vous consentez à notre utilisation de cookies.",
+      "Accepter: Nous suivrons vos visites pour améliorer notre site web. Refuser: Seuls les cookies essentiels (connexion, sécurité) seront utilisés.",
     accept: "Accepter",
     reject: "Refuser",
     close: "Fermer l'avis de cookie",
+    customize: "Personnaliser",
+    back: "Retour",
+    save: "Enregistrer les préférences",
+    settingsTitle: "Préférences de cookies",
+    settingsDescription: "Choisissez les cookies que vous souhaitez autoriser. Les cookies essentiels sont toujours activés car ils sont nécessaires au fonctionnement du site web.",
+    essential: {
+      title: "Cookies essentiels",
+      description: "Nécessaires au bon fonctionnement du site web. Ces cookies ne peuvent pas être désactivés.",
+    },
+    analytics: {
+      title: "Cookies analytiques",
+      description: "Si accepté: Nous suivons les pages vues et le comportement des utilisateurs pour améliorer notre site. Si refusé: Aucune donnée de suivi n'est collectée.",
+    },
+    marketing: {
+      title: "Cookies marketing",
+      description: "Si accepté: Nous suivons les conversions et les événements à des fins marketing. Si refusé: Aucun suivi marketing n'est effectué.",
+    },
+  },
+  billing: {
+    title: "Facturation et Abonnement",
+    currentPlan: "Forfait Actuel",
+    planStatus: "Statut du Forfait",
+    nextBilling: "Prochaine date de facturation",
+    storeUsage: "Utilisation des magasins",
+    stores: "magasins",
+    unlimited: "Illimité",
+    limitReached: "Limite atteinte",
+    managePayment: "Gérer les Modes de Paiement",
+    cancelSubscription: "Annuler l'Abonnement",
+    upgradeNow: "Mettre à Niveau Maintenant",
+    upgradeToPro: "Passer au Pro",
+    viewPlans: "Voir les Forfaits et Tarifs",
+    noSubscription: "Aucun Abonnement Actif",
+    noSubscriptionDesc: "Abonnez-vous à un forfait pour commencer à gérer votre entreprise avec Epidom.",
+    currentPlanLabel: "Forfait Actuel",
+    availablePlans: "Forfaits Disponibles",
+    comparePlans: "Comparez les fonctionnalités et mettez à niveau à tout moment",
+    subscriptionWillCancel: "Votre abonnement sera annulé le {date}. Vous conserverez l'accès jusque-là.",
+    confirmCancel: "Êtes-vous sûr de vouloir annuler votre abonnement ? Vous conserverez l'accès jusqu'à la fin de votre période de facturation.",
+    subscriptionActivated: "Abonnement activé avec succès ! Bienvenue au forfait {plan}.",
+    subscriptionRequired: "Un abonnement actif est requis pour accéder au tableau de bord.",
+    upgradePro: "Passez au Pro pour ajouter plus de magasins.",
+    storeLimitReached: "Vous avez atteint la limite de magasins de votre forfait ({current}/{limit}).",
+    status: {
+      active: "Actif",
+      canceled: "Annulé",
+      pastDue: "En Retard",
+      incomplete: "Incomplet",
+    },
+  },
+  stripeConnect: {
+    title: "Configuration des Paiements",
+    description: "Recevez 80% des revenus d'abonnement via Stripe Connect",
+    connected: "Connecté",
+    setupComplete: "Configuration des paiements terminée",
+    setupCompleteDesc: "Vous êtes prêt à recevoir des paiements. 80% de tous les revenus d'abonnement seront automatiquement transférés sur votre compte Stripe.",
+    accountStatus: "Statut du Compte",
+    charges: "Charges",
+    payouts: "Paiements",
+    accountId: "ID du Compte",
+    enabled: "Activé",
+    disabled: "Désactivé",
+    viewEarnings: "Voir les Revenus dans le Tableau de Bord Stripe",
+    completeOnboarding: "Complétez l'intégration Stripe Connect pour commencer à recevoir 80% des paiements d'abonnement. Ceci est requis pour que le système de paiement fonctionne.",
+    whatYouNeed: "Ce dont vous aurez besoin :",
+    needBusiness: "Informations sur l'entreprise (nom, adresse, numéro fiscal)",
+    needBank: "Coordonnées bancaires pour les paiements",
+    needIdentity: "Vérification d'identité (peut nécessiter des documents)",
+    processTime: "Ce processus est géré de manière sécurisée par Stripe et prend généralement 5 à 10 minutes.",
+    completeSetup: "Terminer la Configuration des Paiements",
+    redirectingToStripe: "Redirection vers Stripe...",
+    secureOnboarding: "Vous serez redirigé vers la page d'intégration sécurisée de Stripe",
+  },
+  terms: {
+    title: "Conditions Générales",
+    lastUpdated: "Dernière mise à jour :",
+    lastUpdatedDate: "Novembre 2025",
+    introduction:
+      "Bienvenue sur EPIDOM. Ces Conditions Générales régissent votre utilisation de notre plateforme de gestion d'inventaire alimentaire. En accédant ou en utilisant notre service, vous acceptez d'être lié par ces conditions.",
+    section1: {
+      title: "1. Acceptation des Conditions",
+      content:
+        "En accédant et en utilisant EPIDOM, vous acceptez et convenez d'être lié par les termes et dispositions de cet accord. Si vous n'acceptez pas de respecter ce qui précède, veuillez ne pas utiliser ce service.",
+    },
+    section2: {
+      title: "2. Description du Service",
+      content:
+        "EPIDOM est une plateforme de gestion d'inventaire alimentaire basée sur le cloud conçue pour aider les entreprises à suivre, gérer et optimiser leur inventaire. Nous proposons divers plans d'abonnement avec différentes fonctionnalités et capacités.",
+    },
+    section3: {
+      title: "3. Comptes Utilisateurs",
+      content: "Pour utiliser EPIDOM, vous devez créer un compte. Vous êtes responsable de :",
+      item1: "Maintenir la confidentialité de vos identifiants de compte",
+      item2: "Toutes les activités qui se produisent sous votre compte",
+      item3: "Fournir des informations exactes et complètes lors de la création de votre compte",
+      item4: "Nous informer immédiatement de toute utilisation non autorisée de votre compte",
+    },
+    section4: {
+      title: "4. Abonnement et Paiement",
+      content:
+        "EPIDOM propose des services basés sur l'abonnement avec différents plans tarifaires. En vous abonnant, vous acceptez de :",
+      item1: "Payer les frais d'abonnement comme spécifié dans votre plan choisi",
+      item2: "Renouvellement automatique de votre abonnement sauf annulation",
+      item3: "Traitement des paiements via notre passerelle de paiement sécurisée",
+      item4: "Respecter notre politique de remboursement comme décrit séparément",
+    },
+    section5: {
+      title: "5. Responsabilités de l'Utilisateur",
+      content:
+        "Vous acceptez d'utiliser EPIDOM de manière légale et êtes responsable de :",
+      item1: "Assurer l'exactitude des données saisies dans le système",
+      item2: "Ne pas utiliser le service à des fins illégales ou non autorisées",
+      item3: "Ne pas tenter d'accéder non autorisé au système",
+      item4: "Respecter les droits de propriété intellectuelle et ne pas porter atteinte aux droits d'autrui",
+    },
+    section6: {
+      title: "6. Propriété Intellectuelle",
+      content:
+        "Tout le contenu, les fonctionnalités et la fonctionnalité d'EPIDOM, y compris mais sans s'y limiter le texte, les graphiques, les logos et les logiciels, sont la propriété d'EPIDOM et sont protégés par les lois internationales sur le droit d'auteur, les marques de commerce et autres lois sur la propriété intellectuelle.",
+    },
+    section7: {
+      title: "7. Limitation de Responsabilité",
+      content:
+        "EPIDOM ne sera pas responsable de tout dommage indirect, accessoire, spécial, consécutif ou punitif résultant de votre utilisation ou de votre incapacité à utiliser le service. Notre responsabilité totale ne dépassera pas le montant que vous avez payé pour le service au cours des 12 mois précédant la réclamation.",
+    },
+    section8: {
+      title: "8. Résiliation",
+      content:
+        "Nous nous réservons le droit de résilier ou de suspendre votre compte et l'accès au service immédiatement, sans préavis, pour un comportement que nous croyons violer ces Conditions ou nuire à d'autres utilisateurs, à nous ou à des tiers.",
+    },
+    section9: {
+      title: "9. Modifications des Conditions",
+      content:
+        "Nous nous réservons le droit de modifier ces Conditions à tout moment. Nous informerons les utilisateurs de tout changement important par e-mail ou via le service. Votre utilisation continue du service après de telles modifications constitue une acceptation des Conditions mises à jour.",
+    },
+    section10: {
+      title: "10. Informations de Contact",
+      content:
+        "Si vous avez des questions concernant ces Conditions Générales, veuillez nous contacter :",
+      email: "E-mail",
+    },
+    footer:
+      "En utilisant EPIDOM, vous reconnaissez avoir lu, compris et accepté d'être lié par ces Conditions Générales.",
+  },
+  refundPolicy: {
+    title: "Politique de Remboursement",
+    lastUpdated: "Dernière mise à jour :",
+    lastUpdatedDate: "Novembre 2025",
+    introduction:
+      "Chez EPIDOM, nous nous efforçons de fournir un excellent service. Cette Politique de Remboursement décrit les termes et conditions pour les remboursements et annulations de nos services d'abonnement.",
+    section1: {
+      title: "1. Admissibilité au Remboursement",
+      content:
+        "Vous pouvez être admissible à un remboursement dans les circonstances suivantes :",
+      item1: "Vous annulez votre abonnement dans les 14 jours suivant l'achat initial",
+      item2: "Vous rencontrez des problèmes techniques qui vous empêchent d'utiliser le service, et nous ne pouvons pas les résoudre",
+      item3: "Vous avez été facturé incorrectement en raison d'une erreur de facturation de notre part",
+    },
+    section2: {
+      title: "2. Processus de Remboursement",
+      content: "Pour demander un remboursement, veuillez suivre ces étapes :",
+      step1: "Contactez notre équipe de support à support@epidom.com avec votre demande de remboursement",
+      step2: "Fournissez votre e-mail de compte et les détails de l'abonnement",
+      step3: "Expliquez la raison de votre demande de remboursement",
+      step4: "Nous examinerons votre demande et répondrons dans les 5 à 7 jours ouvrables",
+    },
+    section3: {
+      title: "3. Délai de Traitement",
+      content:
+        "Une fois votre remboursement approuvé, il sera traité dans les 5 à 10 jours ouvrables. Le remboursement sera crédité sur le mode de paiement original utilisé pour l'achat.",
+    },
+    section4: {
+      title: "4. Articles Non Remboursables",
+      content: "Les éléments suivants ne sont pas admissibles aux remboursements :",
+      item1: "Abonnements annulés après 14 jours à compter de l'achat initial",
+      item2: "Mois partiels de service déjà utilisés",
+      item3: "Abonnements actifs depuis plus de 30 jours",
+    },
+    section5: {
+      title: "5. Annulation",
+      content:
+        "Vous pouvez annuler votre abonnement à tout moment depuis le tableau de bord de votre compte. L'annulation prendra effet à la fin de votre période de facturation actuelle. Vous continuerez d'avoir accès au service jusqu'à la fin de la période payée.",
+    },
+    section6: {
+      title: "6. Remboursements Partiels",
+      content:
+        "Dans des circonstances exceptionnelles, nous pouvons offrir des remboursements partiels au cas par cas. Ceci sera déterminé à notre seule discrétion en fonction des circonstances spécifiques de votre demande.",
+    },
+    section7: {
+      title: "7. Contact pour les Remboursements",
+      content:
+        "Pour toutes les demandes de remboursement et questions, veuillez contacter notre équipe de support :",
+      email: "E-mail",
+    },
+    footer:
+      "Cette politique de remboursement est sujette à modification. Nous informerons les utilisateurs de tout changement important par e-mail ou via le service.",
+  },
+  notFound: {
+    title: "Page Non Trouvée",
+    description: "Désolé, nous n'avons pas pu trouver la page que vous recherchez.",
+    goToDashboard: "Aller au Tableau de Bord",
+    backToHome: "Retour à l'Accueil",
+    helpText: "Si vous pensez qu'il s'agit d'une erreur, veuillez",
+    contactSupport: "contacter le support",
   },
 };

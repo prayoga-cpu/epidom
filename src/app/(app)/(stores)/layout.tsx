@@ -11,8 +11,8 @@ export default function StoresLayout({ children }: { children: React.ReactNode }
   return (
     <I18nProvider>
       <div className="flex h-screen flex-col overflow-hidden bg-neutral-50">
-        <SiteHeader variant="authenticated" showNav={false} />
-        <main className="flex flex-1 flex-col overflow-hidden pt-16 sm:pt-20 md:pt-20">
+        <SiteHeader variant="authenticated" showNav={true} showLogout={true} />
+        <main className="flex flex-1 flex-col overflow-hidden pt-20 sm:pt-24 md:pt-20">
           {children}
         </main>
       </div>

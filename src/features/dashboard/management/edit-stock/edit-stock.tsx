@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ExportButton } from "@/components/ui/export-button";
 import { useToast } from "@/hooks/use-toast";
-import { MOCK_MATERIALS, MOCK_PRODUCTS } from "@/mocks";
+import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 import {
   Search,
   Package,
@@ -21,11 +22,12 @@ import {
   CheckCircle,
   AlertCircle,
   XCircle,
+  Loader2,
 } from "lucide-react";
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
 import { BulkAdjustmentDialog } from "./bulk-adjustment-dialog";
 import { AdjustmentHistoryDialog } from "./adjustment-history-dialog";
-import { formatCurrency } from "@/lib/utils/formatting";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 type ItemType = "material" | "product";
 
@@ -44,6 +46,10 @@ interface StockItem {
 export function EditStockCard() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { formatPrice } = useCurrency();
+  const params = useParams();
+  const storeId = params?.storeId as string;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [selectedItemType, setSelectedItemType] = useState<ItemType>("material");
@@ -53,34 +59,30 @@ export function EditStockCard() {
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
   const [historyItemType, setHistoryItemType] = useState<ItemType>("material");
 
+  // Fetch materials from API
+  const { data: materialsData, isLoading } = useMaterials(storeId);
+
   // Combine materials and products into a unified list
   const allStockItems: StockItem[] = useMemo(() => {
-    const materials = MOCK_MATERIALS.map((m) => ({
+    if (!materialsData?.materials) return [];
+
+    const materials = materialsData.materials.map((m) => ({
       id: m.id,
       name: m.name,
       sku: m.sku || "",
-      currentStock: m.currentStock,
-      minStock: m.minStock,
-      maxStock: m.maxStock,
+      currentStock: Number(m.currentStock),
+      minStock: Number(m.minStock),
+      maxStock: Number(m.maxStock),
       unit: m.unit,
-      costPerUnit: m.costPerUnit,
+      costPerUnit: Number(m.unitCost),
       type: "material" as ItemType,
     }));
 
-    const products = MOCK_PRODUCTS.map((p) => ({
-      id: p.id,
-      name: p.name,
-      sku: p.sku || "",
-      currentStock: p.currentStock,
-      minStock: p.minStock,
-      maxStock: p.maxStock,
-      unit: p.unit,
-      costPerUnit: p.retailPrice || 0, // Use retailPrice for products
-      type: "product" as ItemType,
-    }));
+    // TODO: Add products when recipe/products API is available
+    // const products = ...
 
-    return [...materials, ...products];
-  }, []);
+    return materials;
+  }, [materialsData]);
 
   // Filter items by search query
   const filteredItems = useMemo(() => {
@@ -100,28 +102,22 @@ export function EditStockCard() {
 
   // Get stock status
   const getStockStatus = (item: StockItem) => {
-    if (item.currentStock <= 0) {
+    if (item.currentStock <= item.minStock) {
       return {
-        label: t("management.editStock.outOfStock"),
-        variant: "destructive" as const,
-        icon: XCircle,
-      };
-    } else if (item.currentStock <= item.minStock) {
-      return {
-        label: t("management.editStock.critical"),
-        variant: "destructive" as const,
+        label: "Low Stock",
+        variant: "outline" as const,
         icon: AlertCircle,
       };
-    } else if (item.currentStock <= item.minStock * 1.5) {
+    } else if (item.currentStock > item.maxStock) {
       return {
-        label: t("management.editStock.lowStock"),
-        variant: "secondary" as const,
+        label: "Overstock",
+        variant: "outline" as const,
         icon: AlertCircle,
       };
     } else {
       return {
-        label: t("management.editStock.inStock"),
-        variant: "default" as const,
+        label: "In Stock",
+        variant: "outline" as const,
         icon: CheckCircle,
       };
     }
@@ -174,7 +170,10 @@ export function EditStockCard() {
   const exportData = filteredItems.map((item) => ({
     [t("common.sku")]: item.sku,
     [t("common.name")]: item.name,
-    [t("common.type")]: item.type === "material" ? t("management.editStock.material") : t("management.editStock.product"),
+    [t("common.type")]:
+      item.type === "material"
+        ? t("management.editStock.material")
+        : t("management.editStock.product"),
     [t("management.editStock.currentStock")]: item.currentStock,
     [t("management.editStock.minStock")]: item.minStock,
     [t("management.editStock.maxStock")]: item.maxStock,
@@ -201,42 +200,19 @@ export function EditStockCard() {
             <p className="text-muted-foreground text-sm">{t("management.editStock.description")}</p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={handleCSVImport}>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+            <Button variant="outline" size="sm" onClick={handleCSVImport} className="w-full md:w-auto">
               <Upload className="mr-2 h-4 w-4" />
               {t("management.editStock.importCSV")}
             </Button>
-            <ExportButton data={exportData} filename="stock-inventory" size="sm" />
+            <ExportButton data={exportData} filename="stock-inventory" size="sm" className="w-full md:w-auto" />
           </div>
         </div>
 
-        {/* Bulk Actions Toolbar */}
-        {selectedItems.length > 0 && (
-          <Card className="p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Checkbox checked={true} onCheckedChange={toggleSelectAll} />
-                <span className="text-sm font-medium">
-                  {selectedItems.length} {t("management.editStock.itemsSelected")}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setBulkAdjustmentOpen(true)}>
-                  <Edit3 className="mr-2 h-4 w-4" />
-                  {t("management.editStock.bulkAdjust")}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedItems([])}>
-                  {t("common.clear")}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_1fr]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_1fr] lg:items-stretch">
           {/* Items List */}
-          <Card className="p-4">
-            <div>
+          <Card className="flex min-h-[450px] flex-col p-4 lg:min-h-[400px]">
+            <div className="shrink-0">
               <Label htmlFor="search" className="sr-only">
                 {t("management.editStock.searchItems")}
               </Label>
@@ -252,8 +228,8 @@ export function EditStockCard() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="mb-2 flex items-center justify-between">
+            <div className="flex min-h-0 flex-1 flex-col space-y-2">
+              <div className="mb-2 flex shrink-0 items-center justify-between">
                 <span className="text-muted-foreground text-sm">
                   {filteredItems.length} {t("management.editStock.items")}
                 </span>
@@ -271,11 +247,17 @@ export function EditStockCard() {
                 )}
               </div>
 
-              <div className="max-h-[600px] space-y-2 overflow-y-auto pr-2">
-                {filteredItems.length === 0 ? (
+              <div className="scrollbar-thin flex-1 space-y-2 overflow-y-auto">
+                {isLoading ? (
+                  <div className="flex items-center justify-center p-8">
+                    <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+                  </div>
+                ) : filteredItems.length === 0 ? (
                   <div className="rounded-lg border border-dashed p-8 text-center">
                     <p className="text-muted-foreground text-sm">
-                      {t("management.editStock.noItemsFound")}
+                      {searchQuery
+                        ? t("management.editStock.noItemsFound")
+                        : t("management.editStock.noStockItemsYet")}
                     </p>
                   </div>
                 ) : (
@@ -287,15 +269,10 @@ export function EditStockCard() {
                     return (
                       <div
                         key={item.id}
-                        className={`group hover:border-primary/50 flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+                        className={`group hover:border-primary/50 flex w-full items-center gap-3 rounded-lg border p-3 transition-colors ${
                           selectedItemId === item.id ? "border-primary bg-primary/5" : ""
                         } ${isSelected ? "bg-muted/50" : ""}`}
                       >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleItemSelection(item.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
                         <button
                           onClick={() => {
                             setSelectedItemId(item.id);
@@ -322,25 +299,13 @@ export function EditStockCard() {
                               <span className="text-muted-foreground">
                                 {item.currentStock} / {item.maxStock} {item.unit}
                               </span>
-                              <span
-                                className={
-                                  status.variant === "destructive"
-                                    ? "text-destructive"
-                                    : "text-muted-foreground"
-                                }
-                              >
+                              <span className="text-muted-foreground">
                                 {Math.round(getStockPercentage(item))}%
                               </span>
                             </div>
                             <div className="bg-muted mt-1 h-1.5 w-full overflow-hidden rounded-full">
                               <div
-                                className={`h-full transition-all ${
-                                  status.variant === "destructive"
-                                    ? "bg-destructive"
-                                    : status.variant === "secondary"
-                                      ? "bg-orange-500"
-                                      : "bg-primary"
-                                }`}
+                                className="h-full bg-black transition-all"
                                 style={{
                                   width: `${Math.min(getStockPercentage(item), 100)}%`,
                                 }}
@@ -357,9 +322,9 @@ export function EditStockCard() {
           </Card>
 
           {/* Item Details & Editor */}
-          <Card className="p-6">
+          <Card className="flex min-h-[450px] flex-col p-6 lg:min-h-[400px]">
             {selectedItem ? (
-              <div className="space-y-6">
+              <div className="flex flex-1 flex-col space-y-6">
                 {/* Item Header */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex gap-4">
@@ -369,7 +334,9 @@ export function EditStockCard() {
                     <div>
                       <h3 className="text-xl font-semibold">{selectedItem.name}</h3>
                       <div className="mt-1 flex items-center gap-2">
-                        <p className="text-muted-foreground text-sm">{t("common.sku")}: {selectedItem.sku}</p>
+                        <p className="text-muted-foreground text-sm">
+                          {t("common.sku")}: {selectedItem.sku}
+                        </p>
                         <Badge variant="outline">
                           {selectedItem.type === "material"
                             ? t("management.editStock.material")
@@ -381,14 +348,6 @@ export function EditStockCard() {
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => viewAdjustmentHistory(selectedItem.id, selectedItem.type)}
-                  >
-                    <History className="mr-2 h-4 w-4" />
-                    {t("management.editStock.viewHistory")}
-                  </Button>
                 </div>
 
                 <Separator />
@@ -412,7 +371,7 @@ export function EditStockCard() {
                         {t("management.editStock.stockValue")}
                       </p>
                       <p className="text-2xl font-bold">
-                        {formatCurrency(selectedItem.currentStock * selectedItem.costPerUnit)}
+                        {formatPrice(selectedItem.currentStock * selectedItem.costPerUnit)}
                       </p>
                     </div>
 
@@ -465,7 +424,7 @@ export function EditStockCard() {
                 </div>
               </div>
             ) : (
-              <div className="flex min-h-[400px] items-center justify-center">
+              <div className="flex flex-1 items-center justify-center">
                 <div className="text-center">
                   <Package className="text-muted-foreground mx-auto h-16 w-16" />
                   <h3 className="mt-4 text-lg font-semibold">
@@ -480,13 +439,6 @@ export function EditStockCard() {
           </Card>
         </div>
       </div>
-
-      {/* Bulk Adjustment Dialog */}
-      <BulkAdjustmentDialog
-        selectedItems={selectedStockItems}
-        open={bulkAdjustmentOpen}
-        onOpenChange={setBulkAdjustmentOpen}
-      />
 
       {/* Adjustment History Dialog */}
       <AdjustmentHistoryDialog

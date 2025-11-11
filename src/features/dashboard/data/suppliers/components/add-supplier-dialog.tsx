@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -8,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -22,39 +22,30 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Plus, Loader2 } from "lucide-react";
-import { PaymentTerms } from "@/types/entities";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCreateSupplier } from "../hooks/use-suppliers";
 
-// Zod validation schema
-const supplierSchema = z.object({
-  name: z.string().min(2, "Supplier name must be at least 2 characters"),
-  contactPerson: z.string().optional(),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-  paymentTerms: z.nativeEnum(PaymentTerms).optional(),
-  deliverySchedule: z.string().optional(),
-  rating: z.coerce.number().min(0).max(5).optional().or(z.literal(0)),
-  notes: z.string().optional(),
-  onTimeDeliveryRate: z.coerce.number().min(0).max(100).optional().or(z.literal(0)),
-});
+// Helper function to create supplier schema with translated messages
+function createSupplierSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t("common.validation.supplierNameMin")),
+    contactPerson: z.string().optional().or(z.literal("")),
+    email: z.string().email(t("common.validation.email")).optional().or(z.literal("")),
+    phone: z.string().optional().or(z.literal("")),
+    address: z.string().optional().or(z.literal("")),
+    city: z.string().optional().or(z.literal("")),
+    country: z.string().optional().or(z.literal("")),
+    notes: z.string().optional().or(z.literal("")),
+  });
+}
 
-type SupplierFormValues = z.infer<typeof supplierSchema>;
+type SupplierFormValues = z.infer<ReturnType<typeof createSupplierSchema>>;
 
 interface AddSupplierDialogProps {
   children?: React.ReactNode;
@@ -62,9 +53,13 @@ interface AddSupplierDialogProps {
 
 export default function AddSupplierDialog({ children }: AddSupplierDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
   const { t } = useI18n();
+  const params = useParams();
+  const storeId = params.storeId as string;
+
+  const createSupplier = useCreateSupplier(storeId);
+
+  const supplierSchema = createSupplierSchema(t);
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
@@ -76,41 +71,30 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
       address: "",
       city: "",
       country: "",
-      paymentTerms: undefined,
-      deliverySchedule: "",
-      rating: 0,
       notes: "",
-      onTimeDeliveryRate: 0,
     },
   });
 
-  const onSubmit = async (data: SupplierFormValues) => {
-    setIsSubmitting(true);
+  async function onSubmit(data: SupplierFormValues) {
+    try {
+      const payload = {
+        ...data,
+        storeId,
+        isActive: true,
+      };
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      await createSupplier.mutateAsync(payload);
 
-    // TODO: Replace with actual API call
-    // const response = await fetch("/api/suppliers", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     ...data,
-    //     storeId: "STORE-001", // Get from context/session
-    //   }),
-    // });
+      toast.success(t("data.suppliers.toasts.added.title"), {
+        description: t("data.suppliers.toasts.added.description")?.replace("{name}", data.name) || "",
+      });
 
-    console.log("Supplier data to submit:", data);
-
-    setIsSubmitting(false);
-    toast({
-      title: "Supplier Added Successfully",
-      description: `${data.name} has been added to your suppliers.`,
-    });
-
-    form.reset();
-    setOpen(false);
-  };
+      form.reset();
+      setOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("common.error"));
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -118,31 +102,34 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
         {children || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            {t("common.actions.add") || "Add Supplier"}
+            {t("data.suppliers.addButton")}
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>button]:hidden">
-        <DialogHeader>
-          <DialogTitle>{t("data.suppliers.addTitle") || "Add New Supplier"}</DialogTitle>
-          <DialogDescription>
-            Add a new supplier to your contact list. Fill in as much information as possible.
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl [&>button]:hidden">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.suppliers.addTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            {t("data.suppliers.addDescription")}
           </DialogDescription>
         </DialogHeader>
 
-        <Separator />
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="add-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Basic Information</h3>
+              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.basicInfo")}</h3>
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Supplier Name *</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.name")} *</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.suppliers.form.namePlaceholder")} {...field} />
                     </FormControl>
@@ -157,11 +144,14 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   name="contactPerson"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.contactPerson")}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.suppliers.form.contactPersonPlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("data.suppliers.form.contactPersonPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
-                      <FormDescription>Primary contact name</FormDescription>
+                      <FormDescription>{t("data.suppliers.form.contactPersonHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -172,11 +162,15 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.email")}</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder={t("data.suppliers.form.emailPlaceholder")} {...field} />
+                        <Input
+                          type="email"
+                          placeholder={t("data.suppliers.form.emailPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
-                      <FormDescription>Business email</FormDescription>
+                      <FormDescription>{t("data.suppliers.form.emailHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -188,11 +182,11 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.phone")}</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.suppliers.form.phonePlaceholder")} {...field} />
                     </FormControl>
-                    <FormDescription>Business phone number</FormDescription>
+                    <FormDescription>{t("data.suppliers.form.phoneHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -201,13 +195,13 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
 
             {/* Address Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Address</h3>
+              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.address")}</h3>
               <FormField
                 control={form.control}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Street Address</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.address")}</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.suppliers.form.addressPlaceholder")} {...field} />
                     </FormControl>
@@ -222,7 +216,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>City</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.city")}</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.suppliers.form.cityPlaceholder")} {...field} />
                       </FormControl>
@@ -236,107 +230,13 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                   name="country"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Country</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t("data.suppliers.form.countryPlaceholder")} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Business Terms */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Business Terms</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="paymentTerms"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Terms</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("data.suppliers.form.selectPaymentTerms")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={PaymentTerms.COD}>Cash on Delivery</SelectItem>
-                          <SelectItem value={PaymentTerms.NET15}>Net 15 Days</SelectItem>
-                          <SelectItem value={PaymentTerms.NET30}>Net 30 Days</SelectItem>
-                          <SelectItem value={PaymentTerms.NET60}>Net 60 Days</SelectItem>
-                          <SelectItem value={PaymentTerms.NET90}>Net 90 Days</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>Payment deadline</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="deliverySchedule"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Delivery Schedule</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t("data.suppliers.form.deliverySchedulePlaceholder")} {...field} />
-                      </FormControl>
-                      <FormDescription>Regular delivery days</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Performance Metrics */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Performance Metrics (Optional)</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="rating"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quality Rating</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.country")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="5"
-                          placeholder={t("data.suppliers.form.ratingPlaceholder")}
+                          placeholder={t("data.suppliers.form.countryPlaceholder")}
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Rating out of 5.0</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="onTimeDeliveryRate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>On-Time Delivery Rate</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="1"
-                          min="0"
-                          max="100"
-                          placeholder={t("data.suppliers.form.onTimeDeliveryRatePlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>Percentage (0-100)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -346,13 +246,13 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
 
             {/* Notes */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Additional Notes</h3>
+              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.additionalNotes")}</h3>
               <FormField
                 control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.notes")}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder={t("data.suppliers.form.notesPlaceholder")}
@@ -361,30 +261,38 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                       />
                     </FormControl>
                     <FormDescription>
-                      Special requirements, preferences, or important details
+                      {t("data.suppliers.form.notesHint")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
-                {t("actions.cancel") || "Cancel"}
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("") || "Add Supplier"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createSupplier.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-supplier-form"
+              disabled={createSupplier.isPending}
+            >
+              {createSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.suppliers.addButton")}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

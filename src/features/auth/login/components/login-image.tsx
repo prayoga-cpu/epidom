@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export function LoginImage() {
   return (
-    <div className="relative hidden md:block">
+    <div className="relative hidden h-full w-full md:block">
       <Image
         alt="Bakery illustration"
         src="/images/pantry-shelf.jpg"

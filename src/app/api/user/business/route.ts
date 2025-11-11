@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import authOptions from "@/lib/auth";
+import { authOptions } from "@/lib/auth";
 import { businessService } from "@/lib/services";
 import { createBusinessSchema, updateBusinessSchema } from "@/lib/validation/business.schemas";
-import {
-  createSuccessResponse,
-  createErrorResponse,
-  ApiErrorCode,
-} from "@/types/api";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api";
 import { ZodError } from "zod";
 
 /**
@@ -20,10 +16,9 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Parse and validate request body
@@ -65,10 +60,7 @@ export async function POST(request: Request) {
 
     console.error("Error creating business:", error);
     return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
     );
   }
@@ -84,10 +76,9 @@ export async function PATCH(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Parse and validate request body
@@ -116,10 +107,7 @@ export async function PATCH(request: Request) {
 
     console.error("Error updating business:", error);
     return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
     );
   }

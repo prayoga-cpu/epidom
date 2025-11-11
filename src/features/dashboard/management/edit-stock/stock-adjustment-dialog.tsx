@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,10 +33,15 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { MOCK_MATERIALS, MOCK_PRODUCTS } from "@/mocks";
-import { Loader2, Plus } from "lucide-react";
+import {
+  useMaterials,
+  useUpdateMaterial,
+} from "@/features/dashboard/data/materials/hooks/use-materials";
+import { Loader2, Plus, TrendingUp, TrendingDown } from "lucide-react";
 
 // Adjustment types (IN = increase stock, OUT = decrease stock)
 enum AdjustmentType {
@@ -74,8 +80,14 @@ export function StockAdjustmentDialog({
 }: StockAdjustmentDialogProps) {
   const { t } = useI18n();
   const { toast } = useToast();
+  const params = useParams();
+  const storeId = params?.storeId as string;
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch materials
+  const { data: materialsData } = useMaterials(storeId);
+  const updateMaterialMutation = useUpdateMaterial(storeId, itemId || "");
 
   const form = useForm<StockAdjustmentFormData>({
     resolver: zodResolver(stockAdjustmentSchema),
@@ -90,13 +102,20 @@ export function StockAdjustmentDialog({
     },
   });
 
+  // Reset form when dialog opens with itemId
+  useEffect(() => {
+    if (open && itemId) {
+      form.setValue("itemId", itemId);
+      form.setValue("itemType", itemType);
+    }
+  }, [open, itemId, itemType, form]);
+
   const watchItemType = form.watch("itemType");
   const watchAdjustmentType = form.watch("adjustmentType");
   const watchItemId = form.watch("itemId");
 
   // Get available items based on type
-  const availableItems =
-    watchItemType === "material" ? MOCK_MATERIALS : MOCK_PRODUCTS;
+  const availableItems = materialsData?.materials || [];
 
   // Get selected item details
   const selectedItem = availableItems.find((item) => item.id === watchItemId);
@@ -125,35 +144,42 @@ export function StockAdjustmentDialog({
   };
 
   const onSubmit = async (data: StockAdjustmentFormData) => {
+    if (!selectedItem) return;
+
     setIsSubmitting(true);
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch("/api/stock/adjustments", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     ...data,
-      //     timestamp: new Date().toISOString(),
-      //   }),
-      // });
-      // if (!response.ok) throw new Error("Failed to record adjustment");
+      const currentStock = Number(String(selectedItem.currentStock));
+      const adjustmentQuantity = data.quantity;
+      const isIncrease = data.adjustmentType === AdjustmentType.IN;
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const newStock = isIncrease
+        ? currentStock + adjustmentQuantity
+        : currentStock - adjustmentQuantity;
 
-      toast({
-        title: t("management.editStock.toasts.adjustmentRecorded.title"),
-        description: t("management.editStock.toasts.adjustmentRecorded.description"),
+      if (newStock < 0) {
+        throw new Error("Stock cannot be negative");
+      }
+
+      // Update material stock
+      await updateMaterialMutation.mutateAsync({
+        currentStock: newStock,
       });
+
+      sonnerToast.success(
+        t("management.editStock.toasts.adjustmentRecorded.title") || "Stock Adjusted",
+        {
+          description: `Stock ${isIncrease ? "increased" : "decreased"} by ${adjustmentQuantity} ${selectedItem.unit}`,
+        }
+      );
 
       form.reset();
       setOpen(false);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: t("common.error"),
-        description: t("management.editStock.toasts.adjustmentFailed.description"),
+      console.error("Error adjusting stock:", error);
+      sonnerToast.error(t("management.editStock.toasts.adjustmentError.title") || "Error", {
+        description:
+          error instanceof Error ? error.message : "Failed to adjust stock. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -198,9 +224,7 @@ export function StockAdjustmentDialog({
                         <SelectItem value="material">
                           {t("management.editStock.material")}
                         </SelectItem>
-                        <SelectItem value="product">
-                          {t("management.editStock.product")}
-                        </SelectItem>
+                        <SelectItem value="product">{t("management.editStock.product")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -242,7 +266,7 @@ export function StockAdjustmentDialog({
                           {item.name}{" "}
                           {selectedItem && (
                             <span className="text-muted-foreground text-xs">
-                              ({t("management.editStock.current")}: {item.currentStock}{" "}
+                              ({t("management.editStock.current")}: {String(item.currentStock)}{" "}
                               {item.unit})
                             </span>
                           )}
@@ -253,8 +277,8 @@ export function StockAdjustmentDialog({
                   <FormDescription>
                     {selectedItem && (
                       <span>
-                        {t("management.editStock.currentStock")}: {selectedItem.currentStock}{" "}
-                        {selectedItem.unit}
+                        {t("management.editStock.currentStock")}:{" "}
+                        {String(selectedItem.currentStock)} {selectedItem.unit}
                       </span>
                     )}
                   </FormDescription>
@@ -302,17 +326,10 @@ export function StockAdjustmentDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {t("management.editStock.quantity")}{" "}
-                    {selectedItem && `(${selectedItem.unit})`}
+                    {t("management.editStock.quantity")} {selectedItem && `(${selectedItem.unit})`}
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="0.00"
-                      {...field}
-                    />
+                    <Input type="number" step="0.01" min="0.01" placeholder="0.00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -329,9 +346,7 @@ export function StockAdjustmentDialog({
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue
-                          placeholder={t("management.editStock.selectReason")}
-                        />
+                        <SelectValue placeholder={t("management.editStock.selectReason")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

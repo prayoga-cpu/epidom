@@ -1,47 +1,51 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import {
-  Package,
-  DollarSign,
-  MapPin,
-  Barcode,
-  Calendar,
-  AlertTriangle,
-  Edit,
-  Trash2,
-} from "lucide-react";
-import { Material } from "@/types/entities";
-import {
-  formatCurrency,
-  formatDateTime,
-  getStockStatus,
-  getStockStatusColor,
-  calculateStockPercentage,
-} from "@/lib/utils/formatting";
-import { MOCK_SUPPLIERS } from "@/mocks";
+import { Package, DollarSign, Calendar, Edit, Trash2, Star } from "lucide-react";
+import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 interface MaterialDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  material: Material | null;
-  onEdit?: (material: Material) => void;
+  material: MaterialWithSuppliers | null;
+  onEdit?: (material: MaterialWithSuppliers) => void;
   onDelete?: (materialId: string) => void;
+}
+
+// Helper functions
+function getStockStatus(
+  current: number,
+  min: number,
+  max: number,
+  t: (key: string) => string
+): string {
+  if (current <= 0) return t("common.stockStatus.outOfStock");
+  if (current <= min) return t("common.stockStatus.lowStock");
+  if (current > max) return t("common.stockStatus.overstocked");
+  return t("common.stockStatus.inStock");
+}
+
+function getStockStatusVariant(
+  status: string,
+  t: (key: string) => string
+): "default" | "destructive" | "secondary" | "outline" {
+  if (status === t("common.stockStatus.outOfStock")) return "destructive";
+  if (status === t("common.stockStatus.lowStock")) return "outline";
+  if (status === t("common.stockStatus.overstocked")) return "secondary";
+  return "default";
+}
+
+function calculateStockPercentage(current: number, max: number): number {
+  return Math.min((current / max) * 100, 100);
 }
 
 export default function MaterialDetailsDialog({
@@ -53,12 +57,15 @@ export default function MaterialDetailsDialog({
 }: MaterialDetailsDialogProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
 
   if (!material) return null;
 
-  const supplier = MOCK_SUPPLIERS.find((s) => s.id === material.supplierId);
-  const stockStatus = getStockStatus(material.currentStock, material.minStock, material.maxStock);
-  const stockPercentage = calculateStockPercentage(material.currentStock, material.maxStock);
+  const currentStock = Number(material.currentStock);
+  const minStock = Number(material.minStock);
+  const maxStock = Number(material.maxStock);
+  const stockStatus = getStockStatus(currentStock, minStock, maxStock, t);
+  const stockPercentage = calculateStockPercentage(currentStock, maxStock);
 
   const handleDelete = () => {
     if (onDelete) {
@@ -80,40 +87,40 @@ export default function MaterialDetailsDialog({
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px] [&>button]:hidden">
           <DialogHeader>
             <div className="flex items-start justify-between">
-              <div>
+              <div className="flex-1">
                 <DialogTitle className="text-xl">{material.name}</DialogTitle>
-                <DialogDescription className="mt-1">
-                  {material.sku && `SKU: ${material.sku}`}
-                </DialogDescription>
+                {material.sku && (
+                  <p className="text-muted-foreground mt-1 text-sm">SKU: {material.sku}</p>
+                )}
               </div>
-              <Badge className={getStockStatusColor(stockStatus)}>{stockStatus}</Badge>
+              <Badge variant={getStockStatusVariant(stockStatus, t)}>{stockStatus}</Badge>
             </div>
           </DialogHeader>
 
           <div className="space-y-6">
             {/* Stock Information */}
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Package className="h-4 w-4" />
-                  Stock Information
+                  {t("data.materials.details.stockInfo")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Current Stock</span>
+                    <span className="text-muted-foreground">{t("data.materials.details.currentStock")}</span>
                     <span className="font-medium">
-                      {material.currentStock} {material.unit}
+                      {currentStock} {material.unit}
                     </span>
                   </div>
                   <Progress value={stockPercentage} className="h-2" />
                   <div className="text-muted-foreground flex justify-between text-xs">
                     <span>
-                      Min: {material.minStock} {material.unit}
+                      {t("data.materials.details.minStock")}: {minStock} {material.unit}
                     </span>
                     <span>
-                      Max: {material.maxStock} {material.unit}
+                      {t("data.materials.details.maxStock")}: {maxStock} {material.unit}
                     </span>
                   </div>
                 </div>
@@ -122,119 +129,82 @@ export default function MaterialDetailsDialog({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-muted-foreground text-xs">Category</p>
-                    <p className="text-sm font-medium capitalize">
-                      {material.category.replace(/_/g, " ")}
-                    </p>
+                    <p className="text-muted-foreground text-xs">{t("data.materials.details.category")}</p>
+                    <p className="text-sm font-medium">{material.category || t("common.uncategorized")}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Unit</p>
+                    <p className="text-muted-foreground text-xs">{t("data.materials.details.unit")}</p>
                     <p className="text-sm font-medium">{material.unit}</p>
                   </div>
                 </div>
-
-                {material.location && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="text-muted-foreground mt-0.5 h-4 w-4" />
-                    <div className="flex-1">
-                      <p className="text-muted-foreground text-xs">Storage Location</p>
-                      <p className="text-sm">{material.location}</p>
-                    </div>
-                  </div>
-                )}
-
-                {material.barcode && (
-                  <div className="flex items-start gap-2">
-                    <Barcode className="text-muted-foreground mt-0.5 h-4 w-4" />
-                    <div className="flex-1">
-                      <p className="text-muted-foreground text-xs">Barcode</p>
-                      <p className="font-mono text-sm">{material.barcode}</p>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
-            {/* Financial Information */}
+            {/* Suppliers */}
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <DollarSign className="h-4 w-4" />
-                  Financial Information
+                  {t("data.materials.details.suppliers")}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground text-sm">Cost per Unit</span>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(material.costPerUnit)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground text-sm">Total Value in Stock</span>
-                  <span className="text-sm font-bold">
-                    {formatCurrency(material.currentStock * material.costPerUnit)}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground text-sm">Minimum Stock Value</span>
-                  <span className="text-sm">
-                    {formatCurrency(material.minStock * material.costPerUnit)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground text-sm">Maximum Stock Value</span>
-                  <span className="text-sm">
-                    {formatCurrency(material.maxStock * material.costPerUnit)}
-                  </span>
-                </div>
+              <CardContent>
+                {!material.materialSuppliers || material.materialSuppliers.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">{t("data.materials.details.noSuppliersLinked")}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {material.materialSuppliers.map((supplierLink) => (
+                      <div
+                        key={supplierLink.id}
+                        className="flex items-center justify-between rounded-lg border p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          {supplierLink.isPreferred && (
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          )}
+                          <span className="font-medium">{supplierLink.supplier.name}</span>
+                        </div>
+                        <span className="text-muted-foreground text-sm">
+                          {formatPrice(Number(supplierLink.price))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Supplier Information */}
-            {supplier && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Supplier Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div>
-                    <p className="text-sm font-medium">{supplier.name}</p>
-                    <p className="text-muted-foreground text-xs">{supplier.contactPerson}</p>
+            {/* Pricing */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <DollarSign className="h-4 w-4" />
+                  {t("data.materials.details.pricing")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">{t("data.materials.details.unitCost")}</span>
+                    <span className="font-medium">{formatPrice(Number(material.unitCost))}</span>
                   </div>
-                  <Separator />
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-muted-foreground">Email:</span>
-                      <p className="text-sm">{supplier.email}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Phone:</span>
-                      <p className="text-sm">{supplier.phone}</p>
-                    </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">{t("data.materials.details.totalValue")}</span>
+                    <span className="font-medium">
+                      {formatPrice(Number(material.unitCost) * currentStock)}
+                    </span>
                   </div>
-                  {supplier.deliverySchedule && (
-                    <div>
-                      <span className="text-muted-foreground text-xs">Delivery Schedule:</span>
-                      <p className="text-sm">{supplier.deliverySchedule}</p>
-                    </div>
-                  )}
-                  {supplier.onTimeDeliveryRate !== undefined && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs">On-time Delivery Rate:</span>
-                      <Badge variant="outline">{supplier.onTimeDeliveryRate}%</Badge>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Description */}
             {material.description && (
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Description</CardTitle>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    {t("data.materials.details.description")}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm">{material.description}</p>
@@ -242,61 +212,40 @@ export default function MaterialDetailsDialog({
               </Card>
             )}
 
-            {/* Stock Alerts */}
-            {stockStatus !== "ok" && (
-              <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
-                    <div>
-                      <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                        Stock Alert: {stockStatus}
-                      </p>
-                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                        {stockStatus === "low"
-                          ? `Stock is below the minimum threshold of ${material.minStock} ${material.unit}. Consider reordering soon.`
-                          : stockStatus === "critical"
-                            ? `Stock is critically low! Immediate action required.`
-                            : `Stock exceeds maximum capacity of ${material.maxStock} ${material.unit}. Consider adjusting storage or reducing orders.`}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Metadata */}
-            <Separator />
-            <div className="text-muted-foreground flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-3 w-3" />
-                <span>Created: {formatDateTime(material.createdAt)}</span>
-              </div>
-              <span>Last updated: {formatDateTime(material.updatedAt)}</span>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Calendar className="h-4 w-4" />
+                  {t("data.materials.details.metadata")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("data.materials.details.created")}</span>
+                    <span>{new Date(material.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("data.materials.details.lastUpdated")}</span>
+                    <span>{new Date(material.updatedAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              {t("common.actions.close") || "Close"}
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={handleEdit}>
+              <Edit className="mr-2 h-4 w-4" />
+              {t("common.actions.edit")}
             </Button>
-            {onDelete && (
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                {t("actions.delete") || "Delete"}
-              </Button>
-            )}
-            {onEdit && (
-              <Button onClick={handleEdit} className="gap-2">
-                <Edit className="h-4 w-4" />
-                {t("data.materials.editTitle") || "Edit Material"}
-              </Button>
-            )}
-          </DialogFooter>
+            <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t("common.actions.delete")}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -304,10 +253,10 @@ export default function MaterialDetailsDialog({
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
         onConfirm={handleDelete}
-        title="Delete Material"
-        description={`Are you sure you want to delete "${material.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        variant="destructive"
+        title={t("data.materials.deleteConfirm.title")}
+        description={t("data.materials.deleteConfirm.description")?.replace("{name}", material.name) || ""}
+        confirmText={t("common.actions.delete")}
+        cancelText={t("common.actions.cancel")}
       />
     </>
   );

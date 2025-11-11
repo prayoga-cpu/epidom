@@ -1,72 +1,89 @@
 "use client";
-import { useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { MOCK_ALERTS_FULL, MOCK_MATERIALS } from "@/mocks";
-import { AlertType, AlertStatus, AlertPriority } from "@/types/entities";
-import { ArrowRight, AlertCircle } from "lucide-react";
+import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
+import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
+import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import DashboardCard from "../_components/dashboard-card";
+import { useMemo } from "react";
 
 export default function AlertsCard() {
   const { t } = useI18n();
+  const { storeId } = useCurrentStore();
 
-  // Filter critical and high priority alerts only
-  const criticalAlerts = useMemo(() => {
-    return MOCK_ALERTS_FULL.filter(
-      (alert) =>
-        alert.type === AlertType.LOW_STOCK &&
-        alert.status === AlertStatus.ACTIVE &&
-        (alert.priority === AlertPriority.CRITICAL || alert.priority === AlertPriority.HIGH)
-    ).slice(0, 5); // Show max 5 alerts
-  }, []);
+  // Fetch materials from API
+  const { data, isLoading } = useMaterials(storeId);
+
+  // Get low stock materials (currentStock <= minStock) and limit to 5
+  const lowStockMaterials = useMemo(() => {
+    if (!data?.materials) return [];
+
+    return data.materials
+      .map((material) => {
+        const currentStock = Number(material.currentStock);
+        const minStock = Number(material.minStock);
+        const maxStock = Number(material.maxStock);
+        const stockPercentage = maxStock > 0 ? (currentStock / maxStock) * 100 : 0;
+
+        return {
+          id: material.id,
+          name: material.name,
+          currentStock,
+          minStock,
+          maxStock,
+          unit: material.unit,
+          stockPercentage,
+        };
+      })
+      .filter((material) => material.currentStock <= material.minStock) // Only low stock
+      .sort((a, b) => a.stockPercentage - b.stockPercentage) // Lowest first
+      .slice(0, 5); // Show max 5 items
+  }, [data]);
 
   const cardContent = (
-    <div className="h-full overflow-auto">
-      {criticalAlerts.length === 0 ? (
+    <div className="flex min-h-[300px] flex-1 flex-col">
+      {isLoading ? (
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
+          <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+        </div>
+      ) : lowStockMaterials.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
-          <div className="mb-3 rounded-full bg-green-100 p-3 dark:bg-green-900">
-            <AlertCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+          <div className="bg-muted mb-3 rounded-full p-3">
+            <AlertCircle className="text-muted-foreground h-6 w-6" />
           </div>
-          <p className="text-muted-foreground text-sm">{t("dashboard.alertsCard.noCriticalAlerts")}</p>
+          <p className="text-muted-foreground text-sm">
+            {t("dashboard.alertsCard.noCriticalAlerts")}
+          </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="flex flex-1 flex-col overflow-hidden rounded-lg border">
           {/* Table Header */}
-          <div className="from-foreground/90 to-foreground/80 text-background flex bg-gradient-to-r px-3 py-2 text-xs font-bold">
+          <div className="from-foreground/90 to-foreground/80 text-background flex shrink-0 bg-gradient-to-r px-3 py-2 text-xs font-bold">
             <div className="w-2/5">{t("dashboard.alertsCard.material")}</div>
             <div className="w-2/5 text-center">{t("dashboard.alertsCard.stockLevel")}</div>
             <div className="w-1/5 text-right">{t("dashboard.alertsCard.current")}</div>
           </div>
 
           {/* Table Body */}
-          <div className="divide-border divide-y">
-            {criticalAlerts.map((alert) => {
-              const material = alert.materialId
-                ? MOCK_MATERIALS.find((m) => m.id === alert.materialId)
-                : null;
-              const currentStock = alert.metadata?.currentStock ?? material?.currentStock ?? 0;
-              const minStock = alert.metadata?.minStock ?? material?.minStock ?? 0;
-              const unit = alert.metadata?.unit ?? material?.unit ?? "";
-              const stockPercentage = minStock > 0 ? (currentStock / minStock) * 100 : 0;
-
+          <div className="divide-border flex-1 divide-y overflow-y-auto">
+            {lowStockMaterials.map((material) => {
               return (
                 <div
-                  key={alert.id}
+                  key={material.id}
                   className="hover:bg-muted/30 flex items-center px-3 py-2.5 text-sm transition-colors"
                 >
-                  <div className="w-2/5 truncate font-medium">
-                    {material?.name || t("dashboard.alertsCard.unknownMaterial")}
-                  </div>
+                  <div className="w-2/5 truncate font-medium">{material.name}</div>
                   <div className="w-2/5 px-2">
                     <Progress
-                      value={Math.min(stockPercentage, 100)}
+                      value={Math.min(material.stockPercentage, 100)}
                       className="bg-muted [&>div]:bg-destructive h-2"
                     />
                   </div>
                   <div className="w-1/5 text-right font-semibold text-red-600 dark:text-red-400">
-                    {currentStock} {unit}
+                    {material.currentStock} {material.unit}
                   </div>
                 </div>
               );
@@ -78,7 +95,7 @@ export default function AlertsCard() {
   );
 
   const cardOther = (
-    <Link href="/alerts">
+    <Link href={`/store/${storeId}/alerts`}>
       <Button variant="ghost" size="sm" className="h-8 gap-1">
         {t("dashboard.alertsCard.viewAll")}
         <ArrowRight className="h-3 w-3" />
@@ -88,7 +105,6 @@ export default function AlertsCard() {
 
   return (
     <DashboardCard
-      cardClassName="col-span-3"
       cardTitle={t("dashboard.alertsCard.title")}
       cardDescription={t("dashboard.alertsCard.description")}
       cardOther={cardOther}

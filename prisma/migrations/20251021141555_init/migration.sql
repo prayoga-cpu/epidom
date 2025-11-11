@@ -158,7 +158,7 @@ CREATE TABLE "recipes" (
 CREATE TABLE "recipe_ingredients" (
     "id" TEXT NOT NULL,
     "recipeId" TEXT NOT NULL,
-    "ingredientId" TEXT NOT NULL,
+    "materialId" TEXT NOT NULL,
     "quantity" DECIMAL(10,3) NOT NULL,
     "unit" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -191,7 +191,7 @@ CREATE TABLE "production_batches" (
 CREATE TABLE "stock_movements" (
     "id" TEXT NOT NULL,
     "productId" TEXT,
-    "ingredientId" TEXT,
+    "materialId" TEXT,
     "type" "MovementType" NOT NULL,
     "quantity" DECIMAL(10,3) NOT NULL,
     "unit" TEXT NOT NULL,
@@ -330,7 +330,7 @@ CREATE UNIQUE INDEX "recipes_productId_key" ON "recipes"("productId");
 CREATE INDEX "recipes_businessId_idx" ON "recipes"("businessId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "recipe_ingredients_recipeId_ingredientId_key" ON "recipe_ingredients"("recipeId", "ingredientId");
+CREATE UNIQUE INDEX "recipe_ingredients_recipeId_materialId_key" ON "recipe_ingredients"("recipeId", "materialId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "production_batches_batchNumber_key" ON "production_batches"("batchNumber");
@@ -351,7 +351,7 @@ CREATE INDEX "production_batches_scheduledDate_idx" ON "production_batches"("sch
 CREATE INDEX "stock_movements_productId_idx" ON "stock_movements"("productId");
 
 -- CreateIndex
-CREATE INDEX "stock_movements_ingredientId_idx" ON "stock_movements"("ingredientId");
+CREATE INDEX "stock_movements_materialId_idx" ON "stock_movements"("materialId");
 
 -- CreateIndex
 CREATE INDEX "stock_movements_type_idx" ON "stock_movements"("type");
@@ -423,7 +423,7 @@ ALTER TABLE "recipes" ADD CONSTRAINT "recipes_productId_fkey" FOREIGN KEY ("prod
 ALTER TABLE "recipe_ingredients" ADD CONSTRAINT "recipe_ingredients_recipeId_fkey" FOREIGN KEY ("recipeId") REFERENCES "recipes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "recipe_ingredients" ADD CONSTRAINT "recipe_ingredients_ingredientId_fkey" FOREIGN KEY ("ingredientId") REFERENCES "ingredients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "recipe_ingredients" ADD CONSTRAINT "recipe_ingredients_materialId_fkey" FOREIGN KEY ("materialId") REFERENCES "ingredients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "production_batches" ADD CONSTRAINT "production_batches_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -438,7 +438,7 @@ ALTER TABLE "production_batches" ADD CONSTRAINT "production_batches_recipeId_fke
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_ingredientId_fkey" FOREIGN KEY ("ingredientId") REFERENCES "ingredients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_materialId_fkey" FOREIGN KEY ("materialId") REFERENCES "ingredients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE SET NULL ON UPDATE CASCADE;

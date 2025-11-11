@@ -1,66 +1,151 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MapPin, ArrowRight, MoreVertical, Pencil, Trash2, Store } from "lucide-react";
+import { Store as StoreType } from "../hooks/use-stores";
+import { EditStoreDialog } from "./edit-store-dialog";
+import { DeleteStoreDialog } from "./delete-store-dialog";
 
 interface StoreCardProps {
-  store: {
-    id: string;
-    name: string;
-    city: string;
-    image: string;
-  };
+  store: StoreType;
 }
 
 export function StoreCard({ store }: StoreCardProps) {
   const { t } = useI18n();
+  const [imageError, setImageError] = useState(false);
+  const hasImage = store.image && !imageError;
 
   return (
-    <Link
-      href={`/dashboard?storeId=${store.id}`}
-      className="group block h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 rounded-xl"
-    >
-      <Card className="flex h-full flex-col overflow-hidden border border-neutral-200/60 bg-white p-0 shadow-sm transition-all duration-300 hover:border-neutral-300 hover:shadow-lg group-hover:shadow-xl">
-        {/* Store Image Container - Full width, no padding, rounded top corners */}
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-gradient-to-br from-neutral-100 to-neutral-200">
-          <Image
-            src={store.image}
-            alt={store.name}
-            fill
-            className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            priority={false}
-          />
+    <Card className="group relative flex h-full flex-col overflow-hidden border border-neutral-200/80 bg-white p-0 shadow-sm transition-all duration-300 hover:border-[var(--color-brand-primary)]/30 hover:shadow-xl hover:-translate-y-1">
+      {/* Actions Dropdown - Positioned absolutely */}
+      <div className="absolute top-3 right-3 z-10">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 bg-white/95 p-0 shadow-md backdrop-blur-sm hover:bg-white transition-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <EditStoreDialog
+              store={store}
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  <span>Edit</span>
+                </DropdownMenuItem>
+              }
+            />
+            <DropdownMenuSeparator />
+            <DeleteStoreDialog
+              store={store}
+              trigger={
+                <DropdownMenuItem
+                  onSelect={(e) => e.preventDefault()}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              }
+            />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Clickable Link Area */}
+      <Link
+        href={`/store/${store.id}/dashboard`}
+        className="flex h-full flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
+      >
+        {/* Store Image Container - Enhanced with overlay on hover */}
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-neutral-100 via-neutral-50 to-neutral-200">
+          {hasImage ? (
+            <Image
+              src={store.image!}
+              alt={store.name}
+              fill
+              className="object-cover transition-all duration-500 ease-out group-hover:scale-110"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              priority={false}
+              unoptimized={store.image?.includes('blob.vercel-storage.com') ? false : true}
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            // Attractive placeholder when no image
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-neutral-100 via-neutral-50 to-neutral-200 p-6">
+              {/* Decorative Pattern - Subtle grid */}
+              <div className="absolute inset-0 opacity-[0.03]">
+                <svg className="h-full w-full" fill="none" viewBox="0 0 400 300">
+                  <defs>
+                    <pattern id={`grid-${store.id}`} width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1"/>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill={`url(#grid-${store.id})`} className="text-[var(--color-brand-primary)]" />
+                </svg>
+              </div>
+
+              {/* Store Icon with Gradient Background */}
+              <div className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-brand-primary)]/20 via-[var(--color-brand-primary)]/15 to-[var(--color-brand-primary)]/10 backdrop-blur-sm shadow-sm sm:h-24 sm:w-24">
+                <Store className="h-10 w-10 text-[var(--color-brand-primary)]/80 sm:h-12 sm:w-12" />
+              </div>
+            </div>
+          )}
+          {/* Subtle overlay on hover */}
+          <div className="absolute inset-0 bg-[var(--color-brand-primary)]/0 transition-all duration-300 group-hover:bg-[var(--color-brand-primary)]/5" />
         </div>
 
-        {/* Store Info Section */}
-        <CardContent className="-mt-px flex flex-1 flex-col gap-3 bg-white px-4 pb-4 pt-0">
+        {/* Store Info Section - Enhanced */}
+        <CardContent className="flex flex-1 flex-col gap-2.5 bg-white p-4 sm:gap-3 sm:p-5 md:p-6">
           {/* Store Name */}
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="line-clamp-2 flex-1 text-base font-semibold leading-snug text-[var(--color-brand-primary)] transition-colors group-hover:text-[var(--color-brand-primary)]/90 sm:text-lg">
+          <div className="flex items-start justify-between gap-2 sm:gap-3">
+            <h3 className="line-clamp-2 flex-1 text-base leading-tight font-semibold text-[var(--color-brand-primary)] transition-colors group-hover:text-[var(--color-brand-primary)]/80 sm:text-lg md:text-xl">
               {store.name}
             </h3>
             {/* Arrow indicator for clickable action */}
-            <ArrowRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-neutral-400 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[var(--color-brand-primary)] sm:h-5 sm:w-5" aria-hidden="true" />
+            <ArrowRight
+              className="mt-0.5 h-4 w-4 flex-shrink-0 text-neutral-400 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[var(--color-brand-primary)] sm:mt-1 sm:h-5 sm:w-5"
+              aria-hidden="true"
+            />
           </div>
 
-          {/* Location Info */}
-          <div className="flex items-center gap-2">
-            <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-neutral-500 sm:h-4 sm:w-4" aria-hidden="true" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                {t("stores.city")}
-              </p>
-              <p className="truncate text-sm font-medium text-neutral-700 sm:text-base">
-                {store.city}
-              </p>
+          {/* Location Info - Enhanced */}
+          {store.city && (
+            <div className="flex items-start gap-2 sm:gap-2.5">
+              <MapPin
+                className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-neutral-500 sm:h-4 sm:w-4"
+                aria-hidden="true"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase mb-0.5">
+                  {t("stores.city")}
+                </p>
+                <p className="truncate text-xs font-medium text-neutral-700 sm:text-sm md:text-base">
+                  {store.city}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   );
 }

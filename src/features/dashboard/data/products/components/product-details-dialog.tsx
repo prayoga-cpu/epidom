@@ -17,24 +17,21 @@ import {
   TrendingUp,
   BarChart3,
   Edit,
-  Trash2,
-  ShoppingCart,
   Tag,
   Calendar,
   ChefHat,
-  Layers,
 } from "lucide-react";
-import type { Product } from "@/types/entities";
+import type { ProductWithRelations } from "@/lib/repositories/product.repository";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/utils/formatting";
-import { MOCK_RECIPES } from "@/mocks";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 interface ProductDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  product: Product;
+  product: ProductWithRelations;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -48,34 +45,43 @@ export default function ProductDetailsDialog({
 }: ProductDetailsDialogProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
+
   // Calculate profit margins
   const calculateMargins = () => {
-    if (!product.retailPrice || !product.costPrice) {
-      return { retailMargin: 0, wholesaleMargin: 0 };
+    const sellingPrice = Number(product.sellingPrice) || 0;
+    const costPrice = Number(product.costPrice) || 0;
+
+    if (!sellingPrice || !costPrice) {
+      return { retailMargin: 0 };
     }
-    const retailMargin = ((product.retailPrice - product.costPrice) / product.retailPrice) * 100;
-    const wholesaleMargin = product.wholesalePrice
-      ? ((product.wholesalePrice - product.costPrice) / product.wholesalePrice) * 100
-      : 0;
-    return { retailMargin, wholesaleMargin };
+    const retailMargin = ((sellingPrice - costPrice) / sellingPrice) * 100;
+    return { retailMargin };
   };
 
   // Calculate stock value
   const calculateStockValue = () => {
-    if (!product.currentStock) return 0;
-    return (product.currentStock || 0) * (product.costPrice || 0);
+    const currentStock = Number(product.currentStock) || 0;
+    const costPrice = Number(product.costPrice) || 0;
+    if (!currentStock) return 0;
+    return currentStock * costPrice;
   };
 
   // Calculate potential revenue
   const calculatePotentialRevenue = () => {
-    if (!product.currentStock || !product.retailPrice) return 0;
-    return (product.currentStock || 0) * (product.retailPrice || 0);
+    const currentStock = Number(product.currentStock) || 0;
+    const sellingPrice = Number(product.sellingPrice) || 0;
+    if (!currentStock || !sellingPrice) return 0;
+    return currentStock * sellingPrice;
   };
 
   // Get stock status
   const getStockStatus = () => {
-    if (!product.currentStock && product.currentStock !== 0) return "Unknown";
-    const { currentStock, minStock, maxStock } = product;
+    const currentStock = Number(product.currentStock) || 0;
+    const minStock = Number(product.minStock) || 0;
+    const maxStock = Number(product.maxStock) || 0;
+
+    if (!currentStock && currentStock !== 0) return "Unknown";
     if (currentStock === 0) return "Out of Stock";
     if (minStock && currentStock < minStock * 0.5) return "Critical";
     if (minStock && currentStock <= minStock) return "Low Stock";
@@ -101,11 +107,10 @@ export default function ProductDetailsDialog({
     }
   };
 
-  const { retailMargin, wholesaleMargin } = calculateMargins();
+  const { retailMargin } = calculateMargins();
   const stockValue = calculateStockValue();
   const potentialRevenue = calculatePotentialRevenue();
   const stockStatus = getStockStatus();
-  const recipe = product.recipeId ? MOCK_RECIPES.find((r) => r.id === product.recipeId) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,7 +154,9 @@ export default function ProductDetailsDialog({
                 <Package className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNumber(product.currentStock || 0)}</div>
+                <div className="text-2xl font-bold">
+                  {formatNumber(Number(product.currentStock) || 0)}
+                </div>
                 <p className="text-muted-foreground text-xs">{product.unit}</p>
                 <Badge variant={getStockStatusColor() as any} className="mt-2 text-xs">
                   {stockStatus}
@@ -163,7 +170,9 @@ export default function ProductDetailsDialog({
                 <DollarSign className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(product.retailPrice || 0)}</div>
+                <div className="text-2xl font-bold">
+                  {formatPrice(Number(product.sellingPrice) || 0)}
+                </div>
                 <p className="text-muted-foreground text-xs">per {product.unit}</p>
               </CardContent>
             </Card>
@@ -195,7 +204,7 @@ export default function ProductDetailsDialog({
                 <BarChart3 className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stockValue)}</div>
+                <div className="text-2xl font-bold">{formatPrice(stockValue)}</div>
                 <p className="text-muted-foreground text-xs">at cost price</p>
               </CardContent>
             </Card>
@@ -230,27 +239,56 @@ export default function ProductDetailsDialog({
                   <p className="text-sm">{product.unit || "N/A"}</p>
                 </div>
               </div>
-              <div className="space-y-3">
-                {product.imageUrl && (
-                  <div>
-                    <label className="text-muted-foreground text-sm font-medium">Image</label>
-                    <p className="text-sm">{product.imageUrl}</p>
-                  </div>
-                )}
-                {recipe && (
-                  <div>
-                    <label className="text-muted-foreground text-sm font-medium">
-                      Linked Recipe
-                    </label>
-                    <p className="flex items-center gap-2 text-sm">
-                      <ChefHat className="h-4 w-4" />
-                      {recipe.name}
-                    </p>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
+
+          {/* Recipe Information */}
+          {product.recipe && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+                  <ChefHat className="h-5 w-5" />
+                  Recipe Information
+                </h3>
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-6">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-muted-foreground text-sm font-medium">
+                          Recipe Name
+                        </label>
+                        <p className="mt-1 text-base font-semibold">{product.recipe.name}</p>
+                      </div>
+                      {product.recipe.description && (
+                        <div>
+                          <label className="text-muted-foreground text-sm font-medium">
+                            Description
+                          </label>
+                          <p className="text-muted-foreground mt-1 text-sm">
+                            {product.recipe.description}
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Category: </span>
+                          <Badge variant="outline">{product.recipe.category}</Badge>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Yield: </span>
+                          <span className="font-medium">
+                            {formatNumber(Number(product.recipe.yieldQuantity))}{" "}
+                            {product.recipe.yieldUnit}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
 
           <Separator />
 
@@ -265,14 +303,14 @@ export default function ProductDetailsDialog({
                 <div>
                   <label className="text-muted-foreground text-sm font-medium">Current Stock</label>
                   <p className="text-lg font-semibold">
-                    {formatNumber(product.currentStock || 0)} {product.unit}
+                    {formatNumber(Number(product.currentStock) || 0)} {product.unit}
                   </p>
                 </div>
                 <div>
                   <label className="text-muted-foreground text-sm font-medium">Minimum Stock</label>
                   <p className="text-lg font-semibold">
                     {product.minStock !== undefined
-                      ? `${formatNumber(product.minStock)} ${product.unit}`
+                      ? `${formatNumber(Number(product.minStock))} ${product.unit}`
                       : "Not set"}
                   </p>
                 </div>
@@ -280,7 +318,7 @@ export default function ProductDetailsDialog({
                   <label className="text-muted-foreground text-sm font-medium">Maximum Stock</label>
                   <p className="text-lg font-semibold">
                     {product.maxStock !== undefined
-                      ? `${formatNumber(product.maxStock)} ${product.unit}`
+                      ? `${formatNumber(Number(product.maxStock))} ${product.unit}`
                       : "Not set"}
                   </p>
                 </div>
@@ -292,7 +330,11 @@ export default function ProductDetailsDialog({
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Stock Level</span>
                     <span className="font-medium">
-                      {(((product.currentStock || 0) / product.maxStock) * 100).toFixed(1)}%
+                      {(
+                        ((Number(product.currentStock) || 0) / Number(product.maxStock)) *
+                        100
+                      ).toFixed(1)}
+                      %
                     </span>
                   </div>
                   <div className="bg-muted h-2 overflow-hidden rounded-full">
@@ -307,7 +349,7 @@ export default function ProductDetailsDialog({
                               : "bg-primary"
                       }`}
                       style={{
-                        width: `${Math.min(100, ((product.currentStock || 0) / product.maxStock) * 100)}%`,
+                        width: `${Math.min(100, ((Number(product.currentStock) || 0) / Number(product.maxStock)) * 100)}%`,
                       }}
                     />
                   </div>
@@ -344,40 +386,26 @@ export default function ProductDetailsDialog({
             </h3>
             <div className="space-y-4">
               {/* Pricing Breakdown */}
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium">Cost Price</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl font-bold">{formatCurrency(product.costPrice || 0)}</p>
+                    <p className="text-xl font-bold">
+                      {formatPrice(Number(product.costPrice) || 0)}
+                    </p>
                     <p className="text-muted-foreground text-xs">per {product.unit}</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Wholesale Price</CardTitle>
+                    <CardTitle className="text-sm font-medium">Selling Price</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-xl font-bold">
-                      {product.wholesalePrice ? formatCurrency(product.wholesalePrice) : "N/A"}
+                      {formatPrice(Number(product.sellingPrice) || 0)}
                     </p>
-                    {product.wholesalePrice && (
-                      <>
-                        <p className="text-muted-foreground text-xs">per {product.unit}</p>
-                        <p className="mt-1 text-xs font-medium text-blue-600">
-                          {wholesaleMargin.toFixed(1)}% margin
-                        </p>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Retail Price</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xl font-bold">{formatCurrency(product.retailPrice || 0)}</p>
                     <p className="text-muted-foreground text-xs">per {product.unit}</p>
                     <p className="mt-1 text-xs font-medium text-green-600">
                       {retailMargin.toFixed(1)}% margin
@@ -394,25 +422,27 @@ export default function ProductDetailsDialog({
                 <CardContent className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">Stock Value (at cost):</span>
-                    <span className="font-semibold">{formatCurrency(stockValue)}</span>
+                    <span className="font-semibold">{formatPrice(stockValue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">
                       Potential Revenue (retail):
                     </span>
-                    <span className="font-semibold">{formatCurrency(potentialRevenue)}</span>
+                    <span className="font-semibold">{formatPrice(potentialRevenue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">Potential Profit:</span>
                     <span className="font-semibold text-green-600">
-                      {formatCurrency(potentialRevenue - stockValue)}
+                      {formatPrice(potentialRevenue - stockValue)}
                     </span>
                   </div>
-                  {product.retailPrice && product.costPrice && (
+                  {product.sellingPrice && product.costPrice && (
                     <div className="flex items-center justify-between border-t pt-2">
                       <span className="text-muted-foreground text-sm">Profit per unit:</span>
                       <span className="font-semibold">
-                        {formatCurrency((product.retailPrice || 0) - (product.costPrice || 0))}
+                        {formatPrice(
+                          (Number(product.sellingPrice) || 0) - (Number(product.costPrice) || 0)
+                        )}
                       </span>
                     </div>
                   )}
@@ -420,45 +450,6 @@ export default function ProductDetailsDialog({
               </Card>
             </div>
           </div>
-
-          {/* Variants */}
-          {product.variants && product.variants.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-                  <Layers className="h-5 w-5" />
-                  Product Variants
-                </h3>
-                <div className="space-y-3">
-                  {product.variants.map((variant, index) => (
-                    <Card key={index}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base">{variant.name}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="grid gap-3 text-sm sm:grid-cols-2">
-                          <div>
-                            <span className="text-muted-foreground">SKU:</span>{" "}
-                            <span className="font-medium">{variant.sku || "N/A"}</span>
-                          </div>
-                          {variant.priceAdjustment !== undefined && (
-                            <div>
-                              <span className="text-muted-foreground">Price Adjustment:</span>{" "}
-                              <span className="font-medium">
-                                {variant.priceAdjustment >= 0 ? "+" : ""}
-                                {formatCurrency(variant.priceAdjustment)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
 
           {/* Metadata */}
           <Separator />

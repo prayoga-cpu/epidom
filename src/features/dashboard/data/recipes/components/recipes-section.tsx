@@ -1,16 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -18,55 +11,76 @@ import RecipeDetailsDialog from "./recipe-details-dialog";
 import EditRecipeDialog from "./edit-recipe-dialog";
 import DuplicateRecipeDialog from "./duplicate-recipe-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { ExportButton } from "@/components/ui/export-button";
 import AddRecipeDialog from "./add-recipe-dialog";
-import type { Recipe } from "@/types/entities";
 import {
-  Search,
-  Filter,
   ArrowUpDown,
   Eye,
   Pencil,
   Trash2,
-  X,
   CheckSquare,
   ChefHat,
   Clock,
   DollarSign,
   Copy,
+  Download,
+  Package,
+  Plus,
+  Loader2,
+  X,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { useCurrency } from "@/components/providers/currency-provider";
+import {
+  useRecipes,
+  useDeleteRecipe,
+  useBulkDeleteRecipes,
+  useExportRecipes,
+  type RecipeWithIngredients,
+} from "../hooks/use-recipes";
+import {
+  SectionLoadingState,
+  FilterSection,
+  ItemCardGrid,
+  BaseItemCard,
+  type FilterField,
+} from "../../components";
+import LoadingPage from "@/features/loading/loading-page";
 
-interface RecipesSectionProps {
-  recipes: Recipe[];
-}
-
-type SortField = "name" | "time" | "cost" | "yield" | "category";
+type SortField =
+  | "name"
+  | "category"
+  | "productionTimeMinutes"
+  | "costPerBatch"
+  | "createdAt"
+  | "updatedAt";
 type SortOrder = "asc" | "desc";
 
-const RECIPE_CATEGORIES = [
-  "Bread & Pastries",
-  "Cakes & Desserts",
-  "Confectionery",
-  "Dairy Products",
-  "Beverages",
-  "Sauces & Condiments",
-  "Other",
+// Recipe categories - use translation keys
+const getRecipeCategories = (t: (key: string) => string) => [
+  t("data.recipes.categories.breadPastries"),
+  t("data.recipes.categories.cakesDesserts"),
+  t("data.recipes.categories.confectionery"),
+  t("data.recipes.categories.dairyProducts"),
+  t("data.recipes.categories.beverages"),
+  t("data.recipes.categories.saucesCondiments"),
+  t("data.recipes.categories.other"),
 ];
 
-export function RecipesSection({ recipes }: RecipesSectionProps) {
+export function RecipesSection() {
   const { t } = useI18n();
-  const { toast } = useToast();
+  const { formatPrice } = useCurrency();
+  const params = useParams();
+  const storeId = params.storeId as string;
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeWithIngredients | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
@@ -74,53 +88,26 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Filtered and sorted recipes
-  const processedRecipes = useMemo(() => {
-    let filtered = recipes;
+  // API hooks
+  const {
+    data: recipesData,
+    isLoading,
+    error,
+  } = useRecipes(storeId, {
+    search: searchQuery || undefined,
+    category: categoryFilter,
+    sortBy: sortField,
+    sortOrder: sortOrder,
+    skip: 0,
+    take: 100,
+  });
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (r) =>
-          r.name.toLowerCase().includes(query) ||
-          r.description?.toLowerCase().includes(query) ||
-          r.category?.toLowerCase().includes(query)
-      );
-    }
+  const deleteRecipe = useDeleteRecipe(storeId);
+  const bulkDeleteRecipes = useBulkDeleteRecipes(storeId);
+  const exportRecipes = useExportRecipes();
 
-    // Category filter
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((r) => r.category === categoryFilter);
-    }
-
-    // Sort
-    filtered = [...filtered].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortField) {
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "time":
-          comparison = a.productionTimeMinutes - b.productionTimeMinutes;
-          break;
-        case "cost":
-          comparison = a.costPerBatch - b.costPerBatch;
-          break;
-        case "yield":
-          comparison = a.yieldQuantity - b.yieldQuantity;
-          break;
-        case "category":
-          comparison = (a.category || "").localeCompare(b.category || "");
-          break;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-
-    return filtered;
-  }, [recipes, searchQuery, categoryFilter, sortField, sortOrder]);
+  const recipes = recipesData?.recipes || [];
+  const total = recipesData?.total || 0;
 
   // Bulk selection handlers
   const toggleBulkSelect = () => {
@@ -129,10 +116,10 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === processedRecipes.length) {
+    if (selectedIds.size === recipes.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(processedRecipes.map((r) => r.id)));
+      setSelectedIds(new Set(recipes.map((r) => r.id)));
     }
   };
 
@@ -147,107 +134,179 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
   };
 
   // Action handlers
-  const handleView = (recipe: Recipe) => {
+  const handleView = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
     setViewDialogOpen(true);
   };
 
-  const handleEdit = (recipe: Recipe) => {
+  const handleEdit = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
     setEditDialogOpen(true);
   };
 
-  const handleDuplicate = (recipe: Recipe) => {
+  const handleDuplicate = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
     setDuplicateDialogOpen(true);
   };
 
-  const handleDeleteClick = (recipe: Recipe) => {
+  const handleDeleteClick = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    // TODO: API call to delete recipe
-    const deletedDesc = t("data.recipes.toasts.deleted.description") || "{name} has been deleted successfully.";
-    toast({
-      title: t("data.recipes.toasts.deleted.title"),
-      description: deletedDesc.replace(
-        "{name}",
-        selectedRecipe?.name || ""
-      ),
-    });
-    setDeleteDialogOpen(false);
-    setSelectedRecipe(null);
+  const handleDeleteConfirm = async () => {
+    if (!selectedRecipe) return;
+
+    try {
+      await deleteRecipe.mutateAsync(selectedRecipe.id);
+      toast.success(t("data.recipes.toasts.deleted.title"), {
+        description: t("data.recipes.toasts.deleted.description")?.replace("{name}", selectedRecipe.name) || "",
+      });
+      setDeleteDialogOpen(false);
+      setSelectedRecipe(null);
+    } catch (error) {
+      toast.error(t("common.error"), {
+        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
+      });
+    }
   };
 
-  const handleBulkDelete = () => {
-    // TODO: API call to bulk delete recipes
-    const bulkDeletedDesc = t("data.recipes.toasts.bulkDeleted.description") || "{count} recipes have been deleted successfully.";
-    toast({
-      title: t("data.recipes.toasts.bulkDeleted.title"),
-      description: bulkDeletedDesc.replace(
-        "{count}",
-        selectedIds.size.toString()
-      ),
-    });
-    setSelectedIds(new Set());
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      await bulkDeleteRecipes.mutateAsync(Array.from(selectedIds));
+      toast.success(t("data.recipes.toasts.bulkDeleted.title"), {
+        description: t("data.recipes.toasts.bulkDeleted.description")?.replace(
+          "{count}",
+          selectedIds.size.toString()
+        ) || "",
+      });
+      setSelectedIds(new Set());
+      setBulkSelectMode(false);
+    } catch (error) {
+      toast.error(t("common.error"), {
+        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
+      });
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportRecipes.mutateAsync({
+        storeId,
+        filters: {
+          search: searchQuery || undefined,
+          category: categoryFilter,
+          sortBy: sortField,
+          sortOrder: sortOrder,
+          skip: 0,
+          take: 100,
+        },
+      });
+      toast.success(t("messages.exportStarted"), {
+        description: t("messages.exportStartedDescription"),
+      });
+    } catch (error) {
+      toast.error(t("messages.exportFailed"), {
+        description: error instanceof Error ? error.message : t("messages.errorLoadingRecipes"),
+      });
+    }
   };
 
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
-    setCategoryFilter("all");
-    setSortField("name");
-    setSortOrder("asc");
+    setCategoryFilter(undefined);
+    setSortField("createdAt");
+    setSortOrder("desc");
   };
 
-  const hasActiveFilters = searchQuery || categoryFilter !== "all";
+  const hasActiveFilters = searchQuery || categoryFilter !== undefined;
 
-  // Export columns configuration
-  const exportColumns = [
-    { key: "name" as const, header: "Name" },
-    { key: "category" as const, header: "Category" },
-    { key: "yieldQuantity" as const, header: "Yield Quantity" },
-    { key: "yieldUnit" as const, header: "Yield Unit" },
-    { key: "productionTimeMinutes" as const, header: "Production Time (min)" },
-    { key: "costPerBatch" as const, header: "Cost Per Batch" },
-  ];
+  // Loading state
+  if (isLoading) {
+    return (
+      <SectionLoadingState
+        title={t("data.recipes.pageTitle")}
+        exportLabel={t("common.actions.export")}
+        addLabel={t("data.recipes.addButton")}
+        selectLabel={t("common.actions.view")}
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="overflow-hidden shadow-md">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <p className="text-destructive font-semibold">{t("messages.errorLoadingRecipes")}</p>
+          <p className="text-muted-foreground text-sm">
+            {error instanceof Error ? error.message : t("common.validation.unexpectedError")}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
-      <Card className="overflow-hidden shadow-md">
-        <CardHeader className="border-b pb-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">{t("data.recipes.pageTitle") || "Recipes"}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <ExportButton
-                data={processedRecipes}
-                filename="recipes"
-                columns={exportColumns}
-                title="Recipes"
-              />
-              <AddRecipeDialog />
+      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+        <CardHeader className="border-b">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="text-lg font-bold">{t("data.recipes.pageTitle")}</CardTitle>
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={exportRecipes.isPending || recipes.length === 0}
+                className="w-full md:w-auto"
+              >
+                {exportRecipes.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {t("common.actions.export")}
+              </Button>
+              <AddRecipeDialog trigger={
+                <Button size="sm" className="w-full md:w-auto">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("data.recipes.addButton")}
+                </Button>
+              } />
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete") || "Delete"} ({selectedIds.size})
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleteRecipes.isPending}
+                  className="w-full md:w-auto"
+                >
+                  {bulkDeleteRecipes.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  {t("actions.delete")} ({selectedIds.size})
                 </Button>
               )}
               <Button
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
+                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
                     <X className="mr-2 h-4 w-4" />
-                    {t("actions.cancel") || "Cancel"}
+                    {t("actions.cancel")}
                   </>
                 ) : (
                   <>
                     <CheckSquare className="mr-2 h-4 w-4" />
-                    {t("common.actions.view") || "Select"}
+                    {t("common.actions.view")}
                   </>
                 )}
               </Button>
@@ -257,142 +316,101 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
 
         <CardContent className="space-y-4">
           {/* Search and Filters */}
-          <div className="flex flex-col gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <Input
-                placeholder={t("actions.searchPlaceholder") || "Search..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Category Filter */}
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderCategory")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    {t("filters.allCategories") || "All Categories"}
-                  </SelectItem>
-                  {RECIPE_CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Sort */}
-              <Select
-                value={`${sortField}-${sortOrder}`}
-                onValueChange={(v) => {
+          <FilterSection
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder={t("actions.searchPlaceholder")}
+            filters={[
+              {
+                key: "category",
+                label: t("filters.placeholderCategory"),
+                placeholder: t("filters.placeholderCategory"),
+                value: categoryFilter || "all",
+                onChange: (value) => setCategoryFilter(value === "all" ? undefined : value),
+                options: [
+                  { value: "all", label: t("filters.allCategories") },
+                  ...getRecipeCategories(t).map((category) => ({
+                    value: category,
+                    label: category,
+                  })),
+                ],
+              },
+              {
+                key: "sort",
+                label: t("filters.placeholderSortBy"),
+                placeholder: t("filters.placeholderSortBy"),
+                value: `${sortField}-${sortOrder}`,
+                onChange: (v) => {
                   const [field, order] = v.split("-") as [SortField, SortOrder];
                   setSortField(field);
                   setSortOrder(order);
-                }}
-              >
-                <SelectTrigger>
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t("filters.placeholderSortBy")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name-asc">{t("sort.nameAZ") || "Name (A-Z)"}</SelectItem>
-                  <SelectItem value="name-desc">{t("sort.nameZA") || "Name (Z-A)"}</SelectItem>
-                  <SelectItem value="time-asc">
-                    {t("sort.timeShortest") || "Time (Shortest)"}
-                  </SelectItem>
-                  <SelectItem value="time-desc">
-                    {t("sort.timeLongest") || "Time (Longest)"}
-                  </SelectItem>
-                  <SelectItem value="cost-asc">
-                    {t("sort.costLowHigh") || "Cost (Low-High)"}
-                  </SelectItem>
-                  <SelectItem value="cost-desc">
-                    {t("sort.costHighLow") || "Cost (High-Low)"}
-                  </SelectItem>
-                  <SelectItem value="yield-asc">
-                    {t("sort.yieldLowHigh") || "Yield (Low-High)"}
-                  </SelectItem>
-                  <SelectItem value="yield-desc">
-                    {t("sort.yieldHighLow") || "Yield (High-Low)"}
-                  </SelectItem>
-                  <SelectItem value="category-asc">
-                    {t("sort.categoryAZ") || "Category (A-Z)"}
-                  </SelectItem>
-                  <SelectItem value="category-desc">
-                    {t("sort.categoryZA") || "Category (Z-A)"}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                },
+                options: [
+                  { value: "name-asc", label: t("sort.nameAZ") },
+                  { value: "name-desc", label: t("sort.nameZA") },
+                  { value: "productionTimeMinutes-asc", label: t("sort.timeShortest") },
+                  { value: "productionTimeMinutes-desc", label: t("sort.timeLongest") },
+                  { value: "costPerBatch-asc", label: t("sort.costLowHigh") },
+                  { value: "costPerBatch-desc", label: t("sort.costHighLow") },
+                  { value: "category-asc", label: t("sort.categoryAZ") },
+                  { value: "category-desc", label: t("sort.categoryZA") },
+                  { value: "createdAt-asc", label: t("sort.oldestFirst") },
+                  { value: "createdAt-desc", label: t("sort.newestFirst") },
+                ],
+              },
+            ]}
+            hasActiveFilters={!!hasActiveFilters}
+            onClearFilters={clearFilters}
+            clearFiltersLabel={t("common.actions.clearFilters")}
+          />
 
-              {/* Clear Filters */}
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  <X className="mr-2 h-4 w-4" />
-                  {t("common.actions.clearFilters") || "Clear Filters"}
-                </Button>
-              )}
+          {/* Bulk Select All */}
+          {bulkSelectMode && (
+            <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
+              <Checkbox
+                checked={selectedIds.size === recipes.length && recipes.length > 0}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span className="text-sm font-medium">
+                {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {recipes.length}{" "}
+                {t("common.selected")})
+              </span>
             </div>
-
-            {/* Bulk Select All */}
-            {bulkSelectMode && (
-              <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
-                <Checkbox
-                  checked={
-                    selectedIds.size === processedRecipes.length && processedRecipes.length > 0
-                  }
-                  onCheckedChange={toggleSelectAll}
-                />
-                <span className="text-sm font-medium">
-                  {t("common.selectAll") || "Select All"} ({selectedIds.size}{" "}
-                  {t("common.of") || "of"} {processedRecipes.length}{" "}
-                  {t("common.selected") || "selected"})
-                </span>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Results Count */}
-          <div className="flex items-center justify-between border-b pb-2">
+          <div className="flex items-center border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing") || "Showing"} {processedRecipes.length}{" "}
-              {t("common.of") || "of"} {recipes.length}{" "}
-              {t("data.recipes.pageTitle") || "recipes"}
+              {t("common.showing")} {recipes.length} {t("common.of")} {total}{" "}
+              {t("data.recipes.pageTitle")}
             </p>
           </div>
 
           {/* Recipes Grid */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {processedRecipes.map((recipe) => {
+          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }}>
+            {recipes.map((recipe) => {
               const isSelected = selectedIds.has(recipe.id);
               const costPerUnit = recipe.costPerBatch / recipe.yieldQuantity;
 
               return (
-                <div
+                <BaseItemCard
                   key={recipe.id}
-                  className={`group bg-card relative rounded-lg border p-4 px-6 shadow-sm transition-all hover:shadow-md ${
-                    isSelected ? "ring-primary ring-2" : ""
-                  }`}
+                  isSelected={isSelected}
+                  bulkSelectMode={bulkSelectMode}
+                  onSelect={(checked) => {
+                    if (checked) {
+                      setSelectedIds((prev) => new Set(prev).add(recipe.id));
+                    } else {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(recipe.id);
+                        return next;
+                      });
+                    }
+                  }}
+                  className="p-4"
+                  contentClassName="!px-6"
                 >
-                  {/* Bulk Select Checkbox */}
-                  {bulkSelectMode && (
-                    <div className="absolute top-2 left-2">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelectItem(recipe.id)}
-                      />
-                    </div>
-                  )}
-
-                  {/* Recipe Content */}
-                  <div className={bulkSelectMode ? "pl-6" : ""}>
                     <div className="mb-3 flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
@@ -435,27 +453,44 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                         <DollarSign className="h-3 w-3 text-green-600" />
                         <div className="flex-1">
                           <span className="text-foreground font-medium">
-                            {formatCurrency(recipe.costPerBatch)}
+                            {formatPrice(recipe.costPerBatch)}
                           </span>
-                          <span className="text-muted-foreground"> {t("data.recipes.cards.perBatch")}</span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            {t("data.recipes.cards.perBatch")}
+                          </span>
                         </div>
                       </div>
                       <div className="bg-muted rounded px-2 py-1 text-xs">
-                        <span className="text-muted-foreground">{t("data.recipes.cards.perUnit")}: </span>
+                        <span className="text-muted-foreground">
+                          {t("data.recipes.cards.perUnit")}:{" "}
+                        </span>
                         <span className="text-foreground font-semibold">
-                          {formatCurrency(costPerUnit)}
+                          {formatPrice(costPerUnit)}
                         </span>
                       </div>
                     </div>
 
                     {/* Ingredients Count */}
-                    <div className="text-muted-foreground mt-3 text-xs">
-                      {recipe.ingredients.length} {recipe.ingredients.length !== 1 ? t("data.recipes.cards.ingredients") : t("data.recipes.cards.ingredient")}
+                    <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
+                      <span>
+                        {recipe.ingredients.length}{" "}
+                        {recipe.ingredients.length !== 1
+                          ? t("data.recipes.cards.ingredients")
+                          : t("data.recipes.cards.ingredient")}
+                      </span>
+                      {recipe.products && recipe.products.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          <Package className="mr-1 h-3 w-3" />
+                          {recipe.products.length}{" "}
+                          {recipe.products.length === 1 ? "product" : "products"}
+                        </Badge>
+                      )}
                     </div>
 
                     {/* Hover Actions */}
                     {!bulkSelectMode && (
-                      <div className="mt-3 grid grid-cols-4 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="mt-3 grid grid-cols-4 gap-1 transition-opacity">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -518,28 +553,26 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
                         </Tooltip>
                       </div>
                     )}
-                  </div>
-                </div>
+                </BaseItemCard>
               );
             })}
-
             {/* Empty State */}
-            {processedRecipes.length === 0 && (
+            {recipes.length === 0 && (
               <div className="col-span-full py-12 text-center">
                 <ChefHat className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
                 <p className="text-muted-foreground">
                   {hasActiveFilters
-                    ? t("messages.noMatchingFilters") || "No recipes match your filters"
-                    : t("messages.noRecipesFound") || "No recipes found"}
+                    ? t("messages.noMatchingFilters")
+                    : t("messages.noRecipesFound")}
                 </p>
                 {hasActiveFilters && (
                   <Button variant="link" onClick={clearFilters} className="mt-2">
-                    {t("common.actions.clearAllFilters") || "Clear all filters"}
+                    {t("common.actions.clearFilters")}
                   </Button>
                 )}
               </div>
             )}
-          </div>
+          </ItemCardGrid>
         </CardContent>
       </Card>
 
@@ -576,9 +609,12 @@ export function RecipesSection({ recipes }: RecipesSectionProps) {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        title={t("data.recipes.toasts.deleted.title") || "Delete Recipe"}
-        description={(t("data.recipes.toasts.deleted.description") || "{name} has been deleted successfully.").replace("{name}", selectedRecipe?.name || "")}
-        confirmText={t("common.actions.delete") || "Delete"}
+        title={t("data.recipes.toasts.deleted.title")}
+        description={t("data.recipes.toasts.deleted.description")?.replace(
+          "{name}",
+          selectedRecipe?.name || ""
+        ) || ""}
+        confirmText={t("common.actions.delete")}
         variant="destructive"
       />
     </>

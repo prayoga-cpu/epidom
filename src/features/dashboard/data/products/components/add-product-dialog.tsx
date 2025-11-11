@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -33,43 +32,64 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Loader2, ChefHat } from "lucide-react";
-import { MOCK_RECIPES } from "@/mocks";
+import { Plus, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCreateProduct } from "../hooks/use-products";
+import { useRecipes } from "../../recipes/hooks/use-recipes";
+import { useProductUsage } from "../hooks/use-product-usage";
+import { toast as sonnerToast } from "sonner";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 
-// Zod validation schema
-const productSchema = z.object({
-  name: z.string().min(2, "Product name must be at least 2 characters"),
-  sku: z.string().optional(),
-  description: z.string().optional(),
-  recipeId: z.string().optional(),
-  category: z.string().min(1, "Please enter a category"),
-  retailPrice: z.coerce.number().positive("Retail price must be greater than 0"),
-  wholesalePrice: z.coerce
-    .number()
-    .positive("Wholesale price must be greater than 0")
-    .optional()
-    .or(z.literal(0)),
-  costPrice: z.coerce.number().positive("Cost price must be greater than 0"),
-  unit: z.string().min(1, "Please enter a unit"),
-  currentStock: z.coerce.number().min(0, "Stock cannot be negative"),
-  minStock: z.coerce.number().min(0, "Minimum stock cannot be negative"),
-  maxStock: z.coerce.number().positive("Maximum stock must be greater than 0"),
-  imageUrl: z.string().url().optional().or(z.literal("")),
-});
+// Helper function to create product schema with translated messages
+function createProductSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t("common.validation.productNameMin")),
+    sku: z.string().optional(),
+    description: z.string().optional(),
+    category: z.string().min(1, t("common.validation.categoryRequired")),
+    retailPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    costPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    unit: z.string().min(1, t("common.validation.unitRequired")),
+    currentStock: z.coerce.number().min(0, t("common.validation.stockNonNegative")),
+    minStock: z.coerce.number().min(0, t("common.validation.minStockNonNegative")),
+    maxStock: z.coerce.number().positive(t("common.validation.maxStockPositive")),
+    recipeId: z.string().optional(),
+  });
+}
 
-type ProductFormValues = z.infer<typeof productSchema>;
+type ProductFormValues = z.infer<ReturnType<typeof createProductSchema>>;
 
 interface AddProductDialogProps {
+  storeId: string;
   children?: React.ReactNode;
 }
 
-export default function AddProductDialog({ children }: AddProductDialogProps) {
+export default function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { t } = useI18n();
+  const { currency, convertToBase } = useCurrency();
+  const createProduct = useCreateProduct(storeId);
+  const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
+
+  // Fetch recipes for selection
+  const { data: recipesData } = useRecipes(storeId, {
+    sortBy: "name" as const,
+    sortOrder: "asc" as const,
+    skip: 0,
+    take: 100,
+  });
+  const recipes = recipesData?.recipes || [];
+
+  // Check if user can create more products
+  const canCreateMore = productUsage?.canCreateMore ?? true;
+  const productLimitReached = !isLoadingUsage && !canCreateMore;
+
+  const productSchema = createProductSchema(t);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -77,76 +97,56 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
       name: "",
       sku: "",
       description: "",
-      recipeId: "none",
       category: "",
       retailPrice: 0,
-      wholesalePrice: 0,
       costPrice: 0,
-      unit: "unit",
+      unit: "piece",
       currentStock: 0,
       minStock: 0,
-      maxStock: 0,
-      imageUrl: "",
+      maxStock: 1000,
+      recipeId: "none",
     },
   });
 
-  // Watch recipe selection to auto-fill category and calculate suggested prices
-  const selectedRecipeId = form.watch("recipeId");
   const costPrice = form.watch("costPrice");
 
   // Auto-suggest retail price based on 2.5x markup
   const suggestedRetailPrice = costPrice ? (costPrice * 2.5).toFixed(2) : "0.00";
-  // Auto-suggest wholesale price based on 1.8x markup
-  const suggestedWholesalePrice = costPrice ? (costPrice * 1.8).toFixed(2) : "0.00";
+
+  const isSubmitting = createProduct.isPending;
 
   const onSubmit = async (data: ProductFormValues) => {
-    setIsSubmitting(true);
+    try {
+      // Map form fields to API schema
+      // Note: retailPrice maps to sellingPrice
+      const apiData = {
+        sku: data.sku || `PRD-${Date.now()}`, // Auto-generate SKU if not provided
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        costPrice: convertToBase(data.costPrice), // Convert to EUR
+        sellingPrice: convertToBase(data.retailPrice), // Convert to EUR
+        currentStock: data.currentStock,
+        unit: data.unit,
+        minStock: data.minStock,
+        maxStock: data.maxStock,
+        recipeId: data.recipeId || undefined,
+        storeId,
+        isActive: true,
+      };
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      await createProduct.mutateAsync(apiData);
 
-    // Convert "none" to undefined for API
-    const submitData = {
-      ...data,
-      recipeId: data.recipeId === "none" ? undefined : data.recipeId,
-    };
+      sonnerToast.success(t("data.products.toasts.added.title"), {
+        description: t("data.products.toasts.added.description")?.replace("{name}", data.name) || "",
+      });
 
-    // TODO: Replace with actual API call
-    // const response = await fetch("/api/products", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     ...submitData,
-    //     storeId: "STORE-001", // Get from context/session
-    //   }),
-    // });
-
-    console.log("Product data to submit:", submitData);
-
-    setIsSubmitting(false);
-    toast({
-      title: "Product Added Successfully",
-      description: `${data.name} has been added to your products.`,
-    });
-
-    form.reset();
-    setOpen(false);
-  };
-
-  // Update category when recipe is selected
-  const handleRecipeChange = (recipeId: string) => {
-    if (recipeId === "none") {
-      // No recipe selected, don't auto-fill
-      return;
-    }
-    const recipe = MOCK_RECIPES.find((r) => r.id === recipeId);
-    if (recipe) {
-      form.setValue("category", recipe.category || "");
-      // Optionally set cost price based on recipe cost per unit
-      if (recipe.costPerBatch && recipe.yieldQuantity) {
-        const costPerUnit = recipe.costPerBatch / recipe.yieldQuantity;
-        form.setValue("costPrice", parseFloat(costPerUnit.toFixed(2)));
-      }
+      form.reset();
+      setOpen(false);
+    } catch (error) {
+      sonnerToast.error(t("common.error"), {
+        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
+      });
     }
   };
 
@@ -156,31 +156,49 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
         {children || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            {t("common.actions.add") || "Add Product"}
+            {t("data.products.addButton")}
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>button]:hidden">
-        <DialogHeader>
-          <DialogTitle>{t("data.products.addTitle") || "Add New Product"}</DialogTitle>
-          <DialogDescription>
-            Add a new product to your inventory. Link it to a recipe for automatic cost calculation.
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl [&>button]:hidden">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.products.addTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            {t("data.products.addDescription")}
           </DialogDescription>
         </DialogHeader>
-        <Separator />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form id="add-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Product Limit Warning */}
+            {productLimitReached && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t("data.products.limitReached.title") || "Product Limit Reached"}</AlertTitle>
+                <AlertDescription>
+                  {t("data.products.limitReached.description")?.replace("{current}", String(productUsage?.current || 0)).replace("{limit}", String(productUsage?.limit || 500)) ||
+                    `You've reached your plan's product limit (${productUsage?.current || 0}/${productUsage?.limit || 500}). Upgrade to Pro for unlimited products.`}
+                  <Link href="/pricing" className="ml-2 font-medium underline">
+                    {t("data.products.limitReached.upgrade") || "Upgrade to Pro"}
+                  </Link>
+                </AlertDescription>
+              </Alert>
+            )}
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Basic Information</h3>
+              <h3 className="text-sm font-semibold">{t("data.products.sections.basicInfo")}</h3>
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Product Name *</FormLabel>
+                      <FormLabel>{t("data.products.form.name")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.namePlaceholder")} {...field} />
                       </FormControl>
@@ -194,11 +212,11 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                   name="sku"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>SKU</FormLabel>
+                      <FormLabel>{t("data.products.form.sku")}</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.skuPlaceholder")} {...field} />
                       </FormControl>
-                      <FormDescription>Stock Keeping Unit (optional)</FormDescription>
+                      <FormDescription>{t("data.products.form.skuHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -210,7 +228,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t("data.products.form.description")}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder={t("data.products.form.descriptionPlaceholder")}
@@ -223,68 +241,47 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                 )}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="recipeId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <ChefHat className="mr-1 inline h-4 w-4" />
-                        Linked Recipe
-                      </FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          handleRecipeChange(value);
-                        }}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("data.products.form.selectRecipe")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">No recipe</SelectItem>
-                          {MOCK_RECIPES.map((recipe) => (
-                            <SelectItem key={recipe.id} value={recipe.id}>
-                              {recipe.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>Link to production recipe</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category *</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("data.products.form.category")} *</FormLabel>
+                    <FormControl>
+                      <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
-                name="imageUrl"
+                name="recipeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Image URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("data.products.form.imageUrlPlaceholder")} {...field} />
-                    </FormControl>
-                    <FormDescription>Product image URL (optional)</FormDescription>
+                    <FormLabel>{t("data.products.form.linkedRecipe")}</FormLabel>
+                    <Select
+                      onValueChange={(value) =>
+                        field.onChange(value === "none" ? undefined : value)
+                      }
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("data.products.form.selectRecipe")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">{t("data.products.form.noRecipe")}</SelectItem>
+                        {recipes.map((recipe) => (
+                          <SelectItem key={recipe.id} value={recipe.id}>
+                            {recipe.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>{t("data.products.form.recipeHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -293,38 +290,18 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
 
             {/* Pricing */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Pricing</h3>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <h3 className="text-sm font-semibold">{t("data.products.sections.pricing")}</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="costPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cost Price *</FormLabel>
+                      <FormLabel>{t("data.products.form.costPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" placeholder="0.00" {...field} />
                       </FormControl>
-                      <FormDescription>Production cost</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="wholesalePrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Wholesale Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder={suggestedWholesalePrice}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>B2B price (optional)</FormDescription>
+                      <FormDescription>{t("data.products.form.costPriceHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -335,7 +312,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                   name="retailPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Retail Price *</FormLabel>
+                      <FormLabel>{t("data.products.form.retailPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -344,7 +321,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Customer price</FormDescription>
+                      <FormDescription>{t("data.products.form.retailPriceHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -352,25 +329,24 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
               </div>
               {costPrice > 0 && (
                 <div className="bg-muted rounded-lg p-3 text-sm">
-                  <p className="font-medium">Suggested Pricing:</p>
-                  <ul className="text-muted-foreground mt-1 space-y-0.5">
-                    <li>• Wholesale: ${suggestedWholesalePrice} (1.8x markup)</li>
-                    <li>• Retail: ${suggestedRetailPrice} (2.5x markup)</li>
-                  </ul>
+                  <p className="font-medium">{t("data.products.pricingSuggestions.title")}</p>
+                  <p className="text-muted-foreground mt-1">
+                    {currency === "EUR" ? "€" : "$"}{suggestedRetailPrice} (2.5x markup)
+                  </p>
                 </div>
               )}
             </div>
 
             {/* Stock Management */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Stock Management</h3>
+              <h3 className="text-sm font-semibold">{t("data.products.sections.stockManagement")}</h3>
               <div className="grid items-start gap-4 sm:grid-cols-4">
                 <FormField
                   control={form.control}
                   name="unit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit *</FormLabel>
+                      <FormLabel>{t("data.products.form.unit")} *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -378,13 +354,13 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="unit">Unit</SelectItem>
-                          <SelectItem value="loaf">Loaf</SelectItem>
-                          <SelectItem value="piece">Piece</SelectItem>
-                          <SelectItem value="dozen">Dozen</SelectItem>
-                          <SelectItem value="box">Box</SelectItem>
-                          <SelectItem value="kg">Kilogram</SelectItem>
-                          <SelectItem value="g">Gram</SelectItem>
+                          <SelectItem value="unit">{t("data.products.units.unit")}</SelectItem>
+                          <SelectItem value="loaf">{t("data.products.units.loaf")}</SelectItem>
+                          <SelectItem value="piece">{t("data.products.units.piece")}</SelectItem>
+                          <SelectItem value="dozen">{t("data.products.units.dozen")}</SelectItem>
+                          <SelectItem value="box">{t("data.products.units.box")}</SelectItem>
+                          <SelectItem value="kg">{t("data.products.units.kg")}</SelectItem>
+                          <SelectItem value="g">{t("data.products.units.g")}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -397,7 +373,7 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                   name="currentStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Stock *</FormLabel>
+                      <FormLabel>{t("data.products.form.currentStock")} *</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="0" {...field} />
                       </FormControl>
@@ -411,11 +387,11 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                   name="minStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Min Stock *</FormLabel>
+                      <FormLabel>{t("data.products.form.minStock")} *</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="0" {...field} />
                       </FormControl>
-                      <FormDescription>Reorder point</FormDescription>
+                      <FormDescription>{t("data.products.form.minStockHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -426,34 +402,42 @@ export default function AddProductDialog({ children }: AddProductDialogProps) {
                   name="maxStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Stock *</FormLabel>
+                      <FormLabel>{t("data.products.form.maxStock")} *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                        <Input type="number" placeholder="1000" {...field} />
                       </FormControl>
-                      <FormDescription>Storage limit</FormDescription>
+                      <FormDescription>{t("data.products.form.maxStockHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
             </div>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
-                {t("actions.cancel") || "Cancel"}
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("common.actions.add") || "Add Product"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {/* Fixed Footer with Actions */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isSubmitting}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-product-form"
+              disabled={isSubmitting || productLimitReached}
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.products.addButton")}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

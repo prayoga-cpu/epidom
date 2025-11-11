@@ -4,6 +4,11 @@ export const logger = {
       console.log(message, ...args);
     }
   },
+  warn: (message: string, ...args: unknown[]) => {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(message, ...args);
+    }
+  },
   error: (message: string, error?: unknown) => {
     if (process.env.NODE_ENV === "development") {
       console.error(message, error);

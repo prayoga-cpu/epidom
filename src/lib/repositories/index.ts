@@ -15,3 +15,4 @@ export * from "./base.repository";
 export * from "./user.repository";
 export * from "./business.repository";
 export * from "./store.repository";
+export * from "./subscription.repository";

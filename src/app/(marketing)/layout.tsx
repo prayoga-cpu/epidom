@@ -15,6 +15,7 @@ import { Suspense } from "react";
 import { I18nProvider } from "@/components/lang/i18n-provider";
 import { CookieConsentBar } from "@/features/marketing/shared/components/cookie-consent-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
+import LoadingPage from "@/features/loading/loading-page";
 import { Lato } from "next/font/google";
 
 /** Lato font configuration for marketing pages */
@@ -39,7 +40,7 @@ export default function LandingLayout({
   return (
     <div className={`${lato.variable} font-lato`}>
       <ErrorBoundary>
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<LoadingPage />}>
           <I18nProvider>
             <SiteHeader />
             <main className="lg:min-h-screen">{children}</main>

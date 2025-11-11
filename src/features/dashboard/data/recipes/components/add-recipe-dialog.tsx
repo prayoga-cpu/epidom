@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -34,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   Plus,
   Loader2,
@@ -47,67 +46,57 @@ import {
   Calculator,
   ClipboardList,
 } from "lucide-react";
-import { MOCK_MATERIALS } from "@/mocks";
-import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useParams } from "next/navigation";
+import { useCreateRecipe } from "../hooks/use-recipes";
+import { useMaterials } from "../../materials/hooks/use-materials";
+import { useCurrency } from "@/components/providers/currency-provider";
+import {
+  createRecipeFormSchema,
+  type CreateRecipeFormInput,
+} from "@/lib/validation/inventory.schemas";
 
-// Ingredient item schema
-const ingredientSchema = z.object({
-  materialId: z.string().min(1, "Material is required"),
-  quantity: z.coerce.number().positive("Quantity must be greater than 0"),
-  unit: z.string().min(1, "Unit is required"),
-  notes: z.string().optional(),
-});
-
-// Multi-step form schema
-const recipeSchema = z.object({
-  // Step 1: Basic Information
-  name: z.string().min(2, "Recipe name must be at least 2 characters"),
-  description: z.string().optional(),
-  category: z.string().min(1, "Category is required"),
-  yieldQuantity: z.coerce.number().positive("Yield quantity must be greater than 0"),
-  yieldUnit: z.string().min(1, "Yield unit is required"),
-  productionTimeMinutes: z.coerce.number().positive("Production time must be greater than 0"),
-
-  // Step 2: Ingredients
-  ingredients: z.array(ingredientSchema).min(1, "At least one ingredient is required"),
-
-  // Step 3: Instructions
-  instructions: z.string().min(10, "Instructions must be at least 10 characters"),
-});
-
-type RecipeFormValues = z.infer<typeof recipeSchema>;
+type RecipeFormValues = CreateRecipeFormInput;
 
 interface AddRecipeDialogProps {
   trigger?: React.ReactNode;
 }
 
-const STEPS = [
-  { id: 1, name: "Basic Info", icon: ClipboardList },
-  { id: 2, name: "Ingredients", icon: Package },
-  { id: 3, name: "Instructions", icon: FileText },
-  { id: 4, name: "Review", icon: Calculator },
-];
-
-const RECIPE_CATEGORIES = [
-  "Bread & Pastries",
-  "Cakes & Desserts",
-  "Confectionery",
-  "Dairy Products",
-  "Beverages",
-  "Sauces & Condiments",
-  "Other",
-];
-
 export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
   const { t } = useI18n();
+  const { currency, convertPrice, formatPrice } = useCurrency();
+  const params = useParams();
+  const storeId = params.storeId as string;
+
+  // STEPS with translation
+  const STEPS = [
+    { id: 1, name: t("data.recipes.steps.basicInfo"), icon: ClipboardList },
+    { id: 2, name: t("data.recipes.steps.ingredients"), icon: Package },
+    { id: 3, name: t("data.recipes.steps.instructions"), icon: FileText },
+    { id: 4, name: t("data.recipes.steps.review"), icon: Calculator },
+  ];
+
+  // Recipe categories with translation
+  const getRecipeCategories = () => [
+    t("data.recipes.categories.breadPastries"),
+    t("data.recipes.categories.cakesDesserts"),
+    t("data.recipes.categories.confectionery"),
+    t("data.recipes.categories.dairyProducts"),
+    t("data.recipes.categories.beverages"),
+    t("data.recipes.categories.saucesCondiments"),
+    t("data.recipes.categories.other"),
+  ];
+
+  // Fetch real materials for dropdown
+  const { data: materialsData } = useMaterials(storeId);
+  const materials = materialsData?.materials || [];
+
+  const createRecipe = useCreateRecipe(storeId);
 
   const form = useForm<RecipeFormValues>({
-    resolver: zodResolver(recipeSchema),
+    resolver: zodResolver(createRecipeFormSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -126,10 +115,10 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     const ingredients = form.watch("ingredients");
     let totalCost = 0;
 
-    ingredients.forEach((ingredient) => {
-      const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+    ingredients?.forEach((ingredient) => {
+      const material = materials.find((m) => m.id === ingredient.materialId);
       if (material) {
-        totalCost += material.costPerUnit * ingredient.quantity;
+        totalCost += Number(material.unitCost) * ingredient.quantity;
       }
     });
 
@@ -147,30 +136,29 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   };
 
   const onSubmit = async (data: RecipeFormValues) => {
-    setIsSubmitting(true);
+    try {
+      await createRecipe.mutateAsync(data);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success(t("data.recipes.toasts.created.title"));
+      form.reset();
+      setCurrentStep(1);
+      setOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("common.error"));
+    }
+  };
 
-    // TODO: Replace with actual API call
-    // const response = await fetch("/api/recipes", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     ...data,
-    //     costPerBatch: calculateEstimatedCost(),
-    //   }),
-    // });
+  // Prevent form submission on Enter key from input/textarea fields
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    const target = e.target as HTMLElement;
+    const isInputField = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
 
-    setIsSubmitting(false);
-    toast({
-      title: "Recipe Created Successfully",
-      description: `${data.name} has been added to your recipes.`,
-    });
-
-    form.reset();
-    setCurrentStep(1);
-    setOpen(false);
+    if (e.key === "Enter" && isInputField) {
+      e.preventDefault();
+      if (currentStep < 4) {
+        nextStep();
+      }
+    }
   };
 
   const nextStep = async () => {
@@ -208,7 +196,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   };
 
   const addIngredient = () => {
-    const currentIngredients = form.watch("ingredients");
+    const currentIngredients = form.watch("ingredients") || [];
     form.setValue("ingredients", [
       ...currentIngredients,
       { materialId: "", quantity: 0, unit: "", notes: "" },
@@ -216,7 +204,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   };
 
   const removeIngredient = (index: number) => {
-    const currentIngredients = form.watch("ingredients");
+    const currentIngredients = form.watch("ingredients") || [];
     form.setValue(
       "ingredients",
       currentIngredients.filter((_, i) => i !== index)
@@ -237,21 +225,24 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
         {trigger || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            {t("common.actions.add") || "Add Recipe"}
+            {t("data.recipes.addButton")}
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px] [&>button]:hidden">
-        <DialogHeader>
-          <DialogTitle>{t("data.recipes.addTitle") || "Create New Recipe"}</DialogTitle>
-          <DialogDescription>
-            Create a new recipe with ingredients and instructions. Step {currentStep} of{" "}
-            {STEPS.length}
+      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px] [&>button]:hidden">
+        {/* Fixed Header */}
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <DialogTitle className="text-xl font-bold sm:text-2xl">
+            {t("data.recipes.addTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            {t("data.recipes.addDescription")
+              .replace("{step}", currentStep.toString())
+              .replace("{total}", STEPS.length.toString())}
           </DialogDescription>
-        </DialogHeader>
 
-        {/* Step Indicator */}
-        <div className="flex w-full items-center justify-between border-b pb-4">
+          {/* Step Indicator */}
+          <div className="mt-4 flex w-full items-center justify-between">
           {STEPS.map((step, index) => {
             const Icon = step.icon;
             const isActive = currentStep === step.id;
@@ -292,10 +283,18 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
               </React.Fragment>
             );
           })}
-        </div>
+          </div>
+        </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Scrollable Form Content */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form
+              id="add-recipe-form"
+              onSubmit={form.handleSubmit(onSubmit)}
+              onKeyDown={handleKeyDown}
+              className="space-y-6"
+            >
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <div className="space-y-4">
@@ -304,7 +303,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Recipe Name *</FormLabel>
+                      <FormLabel>{t("data.recipes.form.name")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.recipes.form.namePlaceholder")} {...field} />
                       </FormControl>
@@ -318,7 +317,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>{t("data.recipes.form.description")}</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder={t("data.recipes.form.descriptionPlaceholder")}
@@ -326,7 +325,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Brief description of the recipe</FormDescription>
+                      <FormDescription>{t("data.recipes.form.descriptionHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -337,7 +336,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category *</FormLabel>
+                      <FormLabel>{t("data.recipes.form.category")} *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -345,7 +344,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {RECIPE_CATEGORIES.map((category) => (
+                          {getRecipeCategories().map((category) => (
                             <SelectItem key={category} value={category}>
                               {category}
                             </SelectItem>
@@ -363,9 +362,16 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                     name="yieldQuantity"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Yield Quantity *</FormLabel>
+                        <FormLabel>{t("data.recipes.form.yieldQuantity")} *</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" min="0.01" placeholder="2" {...field} />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            placeholder="2"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -377,7 +383,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                     name="yieldUnit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Yield Unit *</FormLabel>
+                        <FormLabel>{t("data.recipes.form.yieldUnit")} *</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -385,13 +391,13 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                            <SelectItem value="g">Grams (g)</SelectItem>
-                            <SelectItem value="L">Liters (L)</SelectItem>
-                            <SelectItem value="mL">Milliliters (mL)</SelectItem>
-                            <SelectItem value="units">Units</SelectItem>
-                            <SelectItem value="loaves">Loaves</SelectItem>
-                            <SelectItem value="pieces">Pieces</SelectItem>
+                            <SelectItem value="kg">{t("data.recipes.units.kg")}</SelectItem>
+                            <SelectItem value="g">{t("data.recipes.units.g")}</SelectItem>
+                            <SelectItem value="L">{t("data.recipes.units.l")}</SelectItem>
+                            <SelectItem value="mL">{t("data.recipes.units.ml")}</SelectItem>
+                            <SelectItem value="units">{t("data.recipes.units.units")}</SelectItem>
+                            <SelectItem value="loaves">{t("data.recipes.units.loaves")}</SelectItem>
+                            <SelectItem value="pieces">{t("data.recipes.units.pieces")}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -405,11 +411,17 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   name="productionTimeMinutes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Production Time (minutes) *</FormLabel>
+                      <FormLabel>{t("data.recipes.form.productionTime")} *</FormLabel>
                       <FormControl>
-                        <Input type="number" min="1" placeholder="180" {...field} />
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder={t("data.recipes.form.productionTimePlaceholder")}
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        />
                       </FormControl>
-                      <FormDescription>Total time to produce this recipe</FormDescription>
+                      <FormDescription>{t("data.recipes.form.productionTimeHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -422,40 +434,38 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold">Ingredients</h3>
+                    <h3 className="font-semibold">{t("data.recipes.ingredients.title")}</h3>
                     <p className="text-muted-foreground text-sm">
-                      Add materials needed for this recipe
+                      {t("data.recipes.ingredients.description")}
                     </p>
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={addIngredient}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Ingredient
+                    {t("data.recipes.ingredients.addIngredient")}
                   </Button>
                 </div>
 
-                {form.watch("ingredients").length === 0 && (
+                {(form.watch("ingredients") || []).length === 0 && (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                       <Package className="text-muted-foreground mb-2 h-12 w-12" />
                       <p className="text-muted-foreground text-sm">
-                        No ingredients added yet. Click "Add Ingredient" to start.
+                        {t("data.recipes.ingredients.noIngredients")}
                       </p>
                     </CardContent>
                   </Card>
                 )}
 
                 <div className="space-y-3">
-                  {form.watch("ingredients").map((_, index) => {
+                  {(form.watch("ingredients") || []).map((_, index) => {
                     const selectedMaterialId = form.watch(`ingredients.${index}.materialId`);
-                    const selectedMaterial = MOCK_MATERIALS.find(
-                      (m) => m.id === selectedMaterialId
-                    );
+                    const selectedMaterial = materials.find((m) => m.id === selectedMaterialId);
 
                     return (
                       <Card key={index}>
                         <CardContent className="space-y-3 pt-6">
                           <div className="flex items-start justify-between">
-                            <h4 className="text-sm font-semibold">Ingredient {index + 1}</h4>
+                            <h4 className="text-sm font-semibold">{t("data.recipes.ingredients.ingredientNumber")?.replace("{number}", (index + 1).toString()) || `Ingredient ${index + 1}`}</h4>
                             <Button
                               type="button"
                               variant="ghost"
@@ -471,17 +481,20 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                             name={`ingredients.${index}.materialId`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Material *</FormLabel>
+                                <FormLabel>{t("data.recipes.ingredients.material")} *</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue placeholder={t("data.recipes.ingredients.selectMaterial") || "Select material"} />
+                                      <SelectValue
+                                        placeholder={t("data.recipes.ingredients.selectMaterial")}
+                                      />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {MOCK_MATERIALS.map((material) => (
+                                    {materials.map((material) => (
                                       <SelectItem key={material.id} value={material.id}>
-                                        {material.name} ({material.category.replace("_", " ")})
+                                        {material.name} (
+                                        {material.category?.replace("_", " ") || t("common.uncategorized")})
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -497,7 +510,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                               name={`ingredients.${index}.quantity`}
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Quantity *</FormLabel>
+                                  <FormLabel>{t("data.recipes.ingredients.quantity")} *</FormLabel>
                                   <FormControl>
                                     <Input
                                       type="number"
@@ -505,6 +518,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                       min="0.01"
                                       placeholder="500"
                                       {...field}
+                                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -517,12 +531,12 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                               name={`ingredients.${index}.unit`}
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Unit *</FormLabel>
+                                  <FormLabel>{t("data.recipes.ingredients.unit")} *</FormLabel>
                                   <FormControl>
                                     <Input placeholder={selectedMaterial?.unit || "g"} {...field} />
                                   </FormControl>
                                   <FormDescription className="text-xs">
-                                    {selectedMaterial && `Material unit: ${selectedMaterial.unit}`}
+                                    {selectedMaterial && `${t("data.materials.form.unit")}: ${selectedMaterial.unit}`}
                                   </FormDescription>
                                   <FormMessage />
                                 </FormItem>
@@ -532,16 +546,16 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
 
                           {selectedMaterial && (
                             <div className="bg-muted rounded-md p-3 text-sm">
-                              <p className="font-medium">Cost Estimate</p>
+                              <p className="font-medium">{t("data.recipes.ingredients.costEstimate")}</p>
                               <p className="text-muted-foreground">
-                                ${selectedMaterial.costPerUnit} per {selectedMaterial.unit} ×{" "}
-                                {form.watch(`ingredients.${index}.quantity`) || 0} ={" "}
+                                {formatPrice(Number(selectedMaterial.unitCost))} {t("common.per")} {" "}
+                                {selectedMaterial.unit} × {" "}
+                                {form.watch(`ingredients.${index}.quantity`) || 0} = {" "}
                                 <span className="text-foreground font-semibold">
-                                  $
-                                  {(
-                                    selectedMaterial.costPerUnit *
-                                    (form.watch(`ingredients.${index}.quantity`) || 0)
-                                  ).toFixed(2)}
+                                  {formatPrice(
+                                    Number(selectedMaterial.unitCost) *
+                                      (form.watch(`ingredients.${index}.quantity`) || 0)
+                                  )}
                                 </span>
                               </p>
                             </div>
@@ -552,9 +566,12 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                             name={`ingredients.${index}.notes`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Notes (optional)</FormLabel>
+                                <FormLabel>{t("data.recipes.ingredients.notes")}</FormLabel>
                                 <FormControl>
-                                  <Input placeholder={t("data.recipes.ingredients.notesPlaceholder")} {...field} />
+                                  <Input
+                                    placeholder={t("data.recipes.ingredients.notesPlaceholder")}
+                                    {...field}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -582,17 +599,17 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   name="instructions"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cooking Instructions *</FormLabel>
+                      <FormLabel>{t("data.recipes.form.instructions")} *</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="1. Preheat oven to 220°C&#10;2. Mix dry ingredients in a large bowl&#10;3. Add water and knead for 10 minutes&#10;4. Let rest for 1 hour&#10;5. Shape into loaves&#10;6. Bake for 35-40 minutes"
+                          placeholder={t("data.recipes.form.instructionsPlaceholder")}
                           rows={12}
                           className="font-mono text-sm"
                           {...field}
                         />
                       </FormControl>
                       <FormDescription>
-                        Provide step-by-step instructions for making this recipe
+                        {t("data.recipes.form.instructionsHint")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -600,12 +617,12 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                 />
 
                 <div className="bg-muted/50 rounded-lg border p-4">
-                  <h4 className="mb-2 font-semibold">Tips for writing instructions:</h4>
+                  <h4 className="mb-2 font-semibold">{t("data.recipes.instructionsTips.title")}</h4>
                   <ul className="text-muted-foreground space-y-1 text-sm">
-                    <li>• Number each step for clarity</li>
-                    <li>• Include specific temperatures and times</li>
-                    <li>• Mention any special techniques or equipment needed</li>
-                    <li>• Note any quality checks or visual cues</li>
+                    <li>• {t("data.recipes.instructionsTips.tip1")}</li>
+                    <li>• {t("data.recipes.instructionsTips.tip2")}</li>
+                    <li>• {t("data.recipes.instructionsTips.tip3")}</li>
+                    <li>• {t("data.recipes.instructionsTips.tip4")}</li>
                   </ul>
                 </div>
               </div>
@@ -614,7 +631,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
             {/* Step 4: Review */}
             {currentStep === 4 && (
               <div className="space-y-4">
-                <h3 className="font-semibold">Review Your Recipe</h3>
+                <h3 className="font-semibold">{t("data.recipes.review.title")}</h3>
 
                 {/* Basic Info Summary */}
                 <Card>
@@ -632,7 +649,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                         size="sm"
                         onClick={() => setCurrentStep(1)}
                       >
-                        Edit
+                        {t("common.actions.edit")}
                       </Button>
                     </div>
                     {form.watch("description") && (
@@ -640,14 +657,14 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                     )}
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-muted-foreground">Yield</p>
+                        <p className="text-muted-foreground">{t("data.recipes.review.yield")}</p>
                         <p className="font-medium">
                           {form.watch("yieldQuantity")} {form.watch("yieldUnit")}
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Production Time</p>
-                        <p className="font-medium">{form.watch("productionTimeMinutes")} minutes</p>
+                        <p className="text-muted-foreground">{t("data.recipes.review.productionTime")}</p>
+                        <p className="font-medium">{form.watch("productionTimeMinutes")} {t("data.recipes.review.minutes")}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -658,7 +675,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   <CardContent className="space-y-3 pt-6">
                     <div className="flex items-start justify-between">
                       <h4 className="font-semibold">
-                        Ingredients ({form.watch("ingredients").length})
+                        {t("data.recipes.review.ingredientsCount")?.replace("{count}", (form.watch("ingredients") || []).length.toString()) || `Ingredients (${(form.watch("ingredients") || []).length})`}
                       </h4>
                       <Button
                         type="button"
@@ -666,22 +683,21 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                         size="sm"
                         onClick={() => setCurrentStep(2)}
                       >
-                        Edit
+                        {t("common.actions.edit")}
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      {form.watch("ingredients").map((ingredient, index) => {
-                        const material = MOCK_MATERIALS.find((m) => m.id === ingredient.materialId);
+                      {(form.watch("ingredients") || []).map((ingredient, idx) => {
+                        const material = materials.find((m) => m.id === ingredient.materialId);
                         return (
-                          <div key={index} className="flex items-center justify-between text-sm">
+                          <div key={idx} className="flex justify-between text-sm">
                             <span>
                               {material?.name} - {ingredient.quantity} {ingredient.unit}
                             </span>
                             <span className="text-muted-foreground">
-                              $
                               {material
-                                ? (material.costPerUnit * ingredient.quantity).toFixed(2)
-                                : "0.00"}
+                                ? formatPrice(Number(material.unitCost) * ingredient.quantity)
+                                : formatPrice(0)}
                             </span>
                           </div>
                         );
@@ -693,19 +709,19 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                 {/* Cost Analysis */}
                 <Card className="border-primary/50 bg-primary/5">
                   <CardContent className="space-y-3 pt-6">
-                    <h4 className="font-semibold">Cost Analysis</h4>
+                    <h4 className="font-semibold">{t("data.recipes.review.costAnalysis")}</h4>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total Cost per Batch</span>
+                        <span className="text-muted-foreground">{t("data.recipes.review.totalCostPerBatch")}</span>
                         <span className="font-semibold">
-                          ${calculateEstimatedCost().toFixed(2)}
+                          {formatPrice(calculateEstimatedCost())}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">
-                          Cost per {form.watch("yieldUnit")}
+                          {t("data.recipes.review.costPerUnit")?.replace("{unit}", form.watch("yieldUnit")) || `Cost per ${form.watch("yieldUnit")}`}
                         </span>
-                        <span className="font-semibold">${calculateCostPerUnit().toFixed(2)}</span>
+                        <span className="font-semibold">{formatPrice(calculateCostPerUnit())}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -715,14 +731,14 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                 <Card>
                   <CardContent className="space-y-3 pt-6">
                     <div className="flex items-start justify-between">
-                      <h4 className="font-semibold">Instructions</h4>
+                      <h4 className="font-semibold">{t("data.recipes.review.instructionsPreview")}</h4>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => setCurrentStep(3)}
                       >
-                        Edit
+                        {t("common.actions.edit")}
                       </Button>
                     </div>
                     <pre className="bg-muted max-h-40 overflow-y-auto rounded-md p-3 text-sm whitespace-pre-wrap">
@@ -732,37 +748,46 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                 </Card>
               </div>
             )}
+            </form>
+          </Form>
+        </div>
 
-            {/* Navigation Buttons */}
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
-                {t("actions.cancel") || "Cancel"}
-              </Button>
+        {/* Fixed Footer with Navigation Buttons */}
+        <div className="shrink-0 border-t border-border px-6 py-4">
+          <div className="flex justify-between gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createRecipe.isPending}
+            >
+              {t("actions.cancel")}
+            </Button>
+            <div className="flex gap-2">
               {currentStep > 1 && (
                 <Button type="button" variant="outline" onClick={prevStep}>
                   <ChevronLeft className="mr-2 h-4 w-4" />
-                  {t("actions.previous") || "Previous"}
+                  {t("common.actions.previous")}
                 </Button>
               )}
               {currentStep < 4 ? (
                 <Button type="button" onClick={nextStep}>
-                  {t("actions.next") || "Next"}
+                  {t("common.actions.next")}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t("data.recipes.create") || "Create Recipe"}
+                <Button
+                  type="submit"
+                  form="add-recipe-form"
+                  disabled={createRecipe.isPending}
+                >
+                  {createRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {t("data.recipes.create")}
                 </Button>
               )}
-            </DialogFooter>
-          </form>
-        </Form>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

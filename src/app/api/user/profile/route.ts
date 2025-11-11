@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import authOptions from "@/lib/auth";
+import { authOptions } from "@/lib/auth";
 import { userService } from "@/lib/services";
 import { updateProfileSchema } from "@/lib/validation/auth.schemas";
-import {
-  createSuccessResponse,
-  createErrorResponse,
-  ApiErrorCode,
-} from "@/types/api";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api";
 import { ZodError } from "zod";
 
 /**
@@ -20,10 +16,9 @@ export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Get profile via service
@@ -34,17 +29,13 @@ export async function GET() {
     console.error("Error fetching profile:", error);
 
     if (error instanceof Error && error.message === "User not found") {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.USER_NOT_FOUND, "User not found"),
-        { status: 404 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.USER_NOT_FOUND, "User not found"), {
+        status: 404,
+      });
     }
 
     return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
     );
   }
@@ -60,10 +51,9 @@ export async function PATCH(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Parse and validate request body
@@ -92,18 +82,14 @@ export async function PATCH(request: Request) {
 
     // Handle business logic errors
     if (error instanceof Error && error.message === "User not found") {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.USER_NOT_FOUND, "User not found"),
-        { status: 404 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.USER_NOT_FOUND, "User not found"), {
+        status: 404,
+      });
     }
 
     console.error("Error updating profile:", error);
     return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
     );
   }

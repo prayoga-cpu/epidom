@@ -5,6 +5,11 @@ import {
   PackageSearch,
   Database,
   Bell,
+  Home,
+  Briefcase,
+  CreditCard,
+  Mail,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 
@@ -76,27 +81,43 @@ export const dashboardNavigation: NavSection[] = [
 ];
 
 /**
- * Landing page navigation items
+ * Landing page navigation items (for marketing/public pages)
  */
 export const landingNavigation: NavItem[] = [
   {
     href: "/",
-    labelKey: "nav.home",
-    icon: LayoutDashboard, // Placeholder
+    labelKey: "common.nav.home",
+    icon: Home,
   },
   {
     href: "/services",
-    labelKey: "nav.services",
-    icon: Boxes,
+    labelKey: "common.nav.services",
+    icon: Briefcase,
   },
   {
     href: "/pricing",
-    labelKey: "nav.pricing",
-    icon: Database,
+    labelKey: "common.nav.pricing",
+    icon: CreditCard,
   },
   {
     href: "/contact",
-    labelKey: "nav.contact",
+    labelKey: "common.nav.contact",
+    icon: Mail,
+  },
+];
+
+/**
+ * Authenticated navigation items (for logged-in users)
+ */
+export const authenticatedNavigation: NavItem[] = [
+  {
+    href: "/stores",
+    labelKey: "common.nav.stores", // Will use "My Stores" as fallback
+    icon: Store,
+  },
+  {
+    href: "/profile",
+    labelKey: "common.nav.profile",
     icon: UserRound,
   },
 ];
@@ -106,4 +127,11 @@ export const landingNavigation: NavItem[] = [
  */
 export function getAllDashboardNavItems(): NavItem[] {
   return dashboardNavigation.flatMap((section) => section.items);
+}
+
+/**
+ * Get navigation items by variant
+ */
+export function getNavigationByVariant(variant: "landing" | "authenticated"): NavItem[] {
+  return variant === "landing" ? landingNavigation : authenticatedNavigation;
 }

@@ -46,7 +46,13 @@ export const updateProfileSchema = z.object({
   locale: localeSchema.optional(),
   timezone: timezoneSchema.optional(),
   currency: currencySchema.optional(),
-  image: z.string().url("Invalid image URL").optional().or(z.literal("")),
+  image: z
+    .string()
+    .refine((val) => val === "" || z.string().url().safeParse(val).success, {
+      message: "Invalid image URL",
+    })
+    .optional()
+    .or(z.literal("")),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

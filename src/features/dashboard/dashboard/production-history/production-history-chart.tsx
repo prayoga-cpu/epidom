@@ -3,90 +3,108 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { ExportButton } from "@/components/ui/export-button";
 import DashboardCard from "../_components/dashboard-card";
 import Chart from "./components/chart";
-import { useState, useMemo } from "react";
-import { DateRange } from "react-day-picker";
-import { MOCK_ORDERS, MOCK_DASHBOARD_STATS, MOCK_PRODUCTION_HISTORY_WEEKLY } from "@/mocks";
+import { useMemo } from "react";
+import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
+import { useProductionBatches } from "@/features/dashboard/management/recipe-production/hooks/use-production-batches";
 import { exportData } from "@/features/dashboard/dashboard/production-history/utils/export";
+import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
+import { Loader2 } from "lucide-react";
 
 export default function ProductionHistoryChart() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const { storeId } = useCurrentStore();
+  const { advancedReportsAccess } = useFeatureAccess();
 
-  // Initialize without date filter (show all data by default)
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const { data, isLoading } = useProductionBatches(storeId, {
+    sortBy: "scheduledDate",
+    sortOrder: "desc",
+    skip: 0,
+    take: 10, // Just get 10 most recent batches
+  });
 
-  // Filter orders based on date range and other filters
-  // TODO: Replace with API call that accepts date range, search, and status filters
-  const filteredOrders = useMemo(() => {
-    let filtered = MOCK_ORDERS;
+  // Transform production batches into chart data
+  const chartData = useMemo(() => {
+    if (!data?.batches) return [];
 
-    // Filter by date range
-    if (dateRange?.from && dateRange?.to) {
-      filtered = filtered.filter((order) => {
-        if (!order.deliveryDate) return false;
-        const orderDate = new Date(order.deliveryDate);
-        return orderDate >= dateRange.from! && orderDate <= dateRange.to!;
-      });
+    // Group batches by day
+    const dailyData = new Map<string, number>();
+
+    // Initialize last 7 days
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateKey = date.toISOString().split("T")[0];
+      dailyData.set(dateKey, 0);
     }
 
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (order) =>
-          order.orderNumber.toLowerCase().includes(query) ||
-          order.customerName?.toLowerCase().includes(query) ||
-          order.customerEmail?.toLowerCase().includes(query)
-      );
-    }
+    // Aggregate production data by day
+    data.batches.forEach((batch) => {
+      // Use completedDate if available, otherwise use scheduledDate
+      const batchDate = batch.completedDate
+        ? new Date(batch.completedDate)
+        : batch.scheduledDate
+          ? new Date(batch.scheduledDate)
+          : null;
 
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((order) => order.status.toLowerCase() === statusFilter);
-    }
+      if (!batchDate) return;
 
-    return filtered;
-  }, [dateRange, searchQuery, statusFilter]);
+      const dateKey = batchDate.toISOString().split("T")[0];
+      if (dailyData.has(dateKey)) {
+        const current = dailyData.get(dateKey)!;
+        // Use actualQuantity if available, otherwise use plannedQuantity
+        const quantity = Number(batch.actualQuantity || batch.plannedQuantity || 0);
+        dailyData.set(dateKey, current + quantity);
+      }
+    });
 
-  // Filter chart data based on date range
-  // TODO: Replace with API call that accepts date range
-  // Note: Mock data uses day names (Mon, Tue, etc.) which can't be filtered by date
-  // In production, this will filter by actual dates from the API
-  const filteredChartData = useMemo(() => {
-    // For mock data, always show all data (day names can't be parsed as dates)
-    // In production with real dates, implement date filtering here
-    return MOCK_PRODUCTION_HISTORY_WEEKLY;
-  }, [dateRange]);
-
-  // Calculate dynamic stats based on filtered data
-  // TODO: Replace with API call
-  const dashboardStats = useMemo(() => {
-    const pendingOrders = filteredOrders.filter(
-      (o) => o.status === "pending" || o.status === "processing"
-    ).length;
-
-    return {
-      stockUtilization: MOCK_DASHBOARD_STATS.stockUtilization,
-      totalOpenOrders: pendingOrders > 0 ? pendingOrders : MOCK_DASHBOARD_STATS.totalOpenOrders,
-      activeRecipes: MOCK_DASHBOARD_STATS.activeRecipes,
+    // Convert to chart format
+    // Map locale to browser locale format
+    const localeMap: Record<string, string> = {
+      en: "en-US",
+      fr: "fr-FR",
+      id: "id-ID",
     };
-  }, [filteredOrders]);
+    const browserLocale = localeMap[locale] || "en-US";
+
+    return Array.from(dailyData.entries()).map(([dateKey, quantity]) => {
+      const date = new Date(dateKey);
+      return {
+        date: date.toLocaleDateString(browserLocale, { weekday: "short" }),
+        quantity,
+      };
+    });
+  }, [data, locale]);
 
   return (
     <DashboardCard
-      cardClassName="col-span-4"
       cardTitle={t("pages.prodHistory")}
       cardDescription={t("pages.prodHistoryDesc")}
       cardOther={
         <ExportButton
-          data={exportData({ chartData: filteredChartData })}
+          data={exportData({ chartData })}
           filename="production-history"
           variant="outline"
           size="sm"
+          disabled={!advancedReportsAccess}
+          title={
+            !advancedReportsAccess
+              ? "Advanced Reports is only available in Pro and Enterprise plans"
+              : undefined
+          }
         />
       }
-      cardContent={<Chart chartData={filteredChartData} />}
+      cardContent={
+        isLoading ? (
+          <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center">
+            <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+          </div>
+        ) : (
+          <div className="flex min-h-[300px] flex-1">
+          <Chart chartData={chartData} />
+          </div>
+        )
+      }
     />
   );
 }

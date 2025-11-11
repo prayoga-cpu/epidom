@@ -1,7 +1,3 @@
-// Epidom Dashboard MVP - Database Schema
-// Food Inventory & Production Management System
-// Next-auth (JWT) + Stripe Subscriptions
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -16,31 +12,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================
-// NEXT-AUTH (JWT-based)
-// ============================================
-
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String
-  emailVerified DateTime?
-  image         String?
-
-  // Profile settings
-  phone         String?
-  locale        String    @default("en") // en, fr, id
-  timezone      String    @default("UTC")
-  currency      String    @default("EUR")
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  accounts      Account[]
-  business      Business?
-  subscription  Subscription?
-  alerts        Alert[]
+  id                      String        @id @default(cuid())
+  name                    String?
+  email                   String        @unique
+  password                String
+  emailVerified           DateTime?
+  image                   String?
+  phone                   String?
+  locale                  String        @default("en")
+  timezone                String        @default("UTC")
+  currency                String        @default("EUR")
+  stripeConnectAccountId  String?       @unique // Stripe Connect account for receiving 80% of subscription revenue
+  stripeConnectOnboarded  Boolean       @default(false) // Track if Connect onboarding is complete
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  accounts                Account[]
+  alerts                  Alert[]
+  business                Business?
+  subscription            Subscription?
 
   @@map("users")
 }
@@ -51,286 +41,219 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
 }
 
-// ============================================
-// BUSINESS (1-to-1 with User)
-// ============================================
-
 model Business {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Business info
-  name        String
-  address     String?
-  city        String?
-  country     String?
-  phone       String?
-  email       String?
-  logo        String?
-  website     String?
-
-  // Business settings
-  currency    String   @default("EUR")
-  timezone    String   @default("UTC")
-  locale      String   @default("en")
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  stores       Store[]
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  name      String
+  address   String?
+  city      String?
+  country   String?
+  phone     String?
+  email     String?
+  logo      String?
+  website   String?
+  currency  String   @default("EUR")
+  timezone  String   @default("UTC")
+  locale    String   @default("en")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stores    Store[]
 
   @@map("businesses")
 }
 
-// ============================================
-// STORE (Multi-outlet support)
-// ============================================
-
 model Store {
-  id          String   @id @default(cuid())
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-
-  // Store info
-  name        String
-  address     String?
-  city        String?
-  country     String?
-  phone       String?
-  email       String?
-  image       String?
-
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations - all store data
-  products         Product[]
-  ingredients      Ingredient[]
-  recipes          Recipe[]
-  suppliers        Supplier[]
-  orders           Order[]
+  id                String            @id @default(cuid())
+  businessId        String
+  name              String
+  address           String?
+  city              String?
+  country           String?
+  phone             String?
+  email             String?
+  image             String?
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  ingredients       Material[]
+  orders            Order[]
   productionBatches ProductionBatch[]
+  products          Product[]
+  recipes           Recipe[]
+  business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  supplierOrders    SupplierOrder[]
+  suppliers         Supplier[]
 
   @@index([businessId])
   @@index([isActive])
   @@map("stores")
 }
 
-// ============================================
-// STRIPE SUBSCRIPTIONS
-// ============================================
-
-enum SubscriptionPlan {
-  STARTER     // €29/month
-  PRO         // €79/month
-  ENTERPRISE  // Custom pricing
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELED
-  PAST_DUE
-  INCOMPLETE
-}
-
 model Subscription {
   id                   String             @id @default(cuid())
   userId               String             @unique
-  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Stripe data
   stripeCustomerId     String             @unique
   stripeSubscriptionId String?            @unique
   stripePriceId        String?
-
-  // Subscription details
   plan                 SubscriptionPlan   @default(STARTER)
   status               SubscriptionStatus @default(INCOMPLETE)
-
   currentPeriodStart   DateTime?
   currentPeriodEnd     DateTime?
   cancelAtPeriodEnd    Boolean            @default(false)
-
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
 
-// ============================================
-// INVENTORY MANAGEMENT
-// ============================================
-
 model Product {
-  id              String    @id @default(cuid())
-  storeId         String
-  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  sku             String    @unique
-  name            String
-  description     String?
-  category        String?   // bread, pastries, cakes, etc.
-  image           String?
-
-  // Pricing
-  costPrice       Decimal   @db.Decimal(10, 2)
-  sellingPrice    Decimal   @db.Decimal(10, 2)
-
-  // Stock
-  currentStock    Decimal   @db.Decimal(10, 2) @default(0)
-  unit            String    @default("piece") // piece, kg, box, etc.
-  minStockLevel   Decimal   @db.Decimal(10, 2) @default(0)
-  criticalLevel   Decimal?  @db.Decimal(10, 2) // for alerts
-
-  // Production
-  productionTime  Int?      // in minutes
-  shelfLife       Int?      // in days
-
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  recipe          Recipe?
-  stockMovements  StockMovement[]
+  id                String            @id @default(cuid())
+  sku               String            @unique
+  name              String
+  description       String?
+  category          String?
+  costPrice         Decimal           @db.Decimal(10, 2)
+  sellingPrice      Decimal           @db.Decimal(10, 2)
+  currentStock      Decimal           @default(0) @db.Decimal(10, 2)
+  unit              String            @default("piece")
+  productionTime    Int?
+  shelfLife         Int?
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  storeId           String
+  maxStock          Decimal           @default(1000) @db.Decimal(10, 2)
+  minStock          Decimal           @default(0) @db.Decimal(10, 2)
+  recipeId          String?
+  orderItems        OrderItem[]
   productionBatches ProductionBatch[]
-  orderItems      OrderItem[]
+  recipe            Recipe?           @relation(fields: [recipeId], references: [id])
+  store             Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  stockMovements    StockMovement[]
 
   @@index([storeId])
   @@index([category])
+  @@index([recipeId])
   @@index([isActive])
   @@map("products")
 }
 
-model Ingredient {
-  id              String    @id @default(cuid())
-  storeId         String
-  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  sku             String    @unique
-  name            String
-  description     String?
-  category        String?   // flour, dairy, sugar, etc.
-  image           String?
-
-  // Purchasing
-  unit            String    @default("kg") // kg, liter, piece, etc.
-  unitCost        Decimal   @db.Decimal(10, 2)
-
-  // Stock
-  currentStock    Decimal   @db.Decimal(10, 2) @default(0)
-  minStockLevel   Decimal   @db.Decimal(10, 2) @default(0)
-  criticalLevel   Decimal?  @db.Decimal(10, 2)
-
-  // Supplier info
-  supplierId      String?
-  supplier        Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  recipeIngredients RecipeIngredient[]
-  stockMovements  StockMovement[]
+model Material {
+  id                 String              @id @default(cuid())
+  sku                String              @unique
+  name               String
+  description        String?
+  category           String?
+  unit               String              @default("kg")
+  unitCost           Decimal             @db.Decimal(10, 2)
+  currentStock       Decimal             @default(0) @db.Decimal(10, 2)
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  maxStock           Decimal             @default(1000) @db.Decimal(10, 2)
+  minStock           Decimal             @default(0) @db.Decimal(10, 2)
+  storeId            String
+  materialSuppliers  MaterialSupplier[]  @relation("MaterialToSuppliers")
+  store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  recipeIngredients  RecipeIngredient[]
+  stockMovements     StockMovement[]
+  supplierOrderItems SupplierOrderItem[]
 
   @@index([storeId])
   @@index([category])
-  @@index([supplierId])
   @@index([isActive])
   @@map("ingredients")
 }
 
-// ============================================
-// PRODUCTION & RECIPES
-// ============================================
+model MaterialSupplier {
+  id          String   @id @default(cuid())
+  supplierId  String
+  price       Decimal  @db.Decimal(10, 2)
+  isPreferred Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  materialId  String
+  material    Material @relation("MaterialToSuppliers", fields: [materialId], references: [id], onDelete: Cascade)
+  supplier    Supplier @relation("SupplierToMaterials", fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([materialId, supplierId])
+  @@index([materialId])
+  @@index([supplierId])
+  @@map("ingredient_suppliers")
+}
 
 model Recipe {
-  id              String    @id @default(cuid())
-  storeId         String
-  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  productId       String    @unique
-  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  batchSize       Decimal   @db.Decimal(10, 2) // yield quantity
-  batchUnit       String    @default("piece")
-  instructions    String?   @db.Text
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  ingredients     RecipeIngredient[]
-  productionBatches ProductionBatch[]
+  id                    String             @id @default(cuid())
+  instructions          String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  storeId               String
+  category              String?
+  costPerBatch          Decimal            @default(0) @db.Decimal(10, 2)
+  description           String?
+  name                  String
+  productionTimeMinutes Int
+  yieldQuantity         Decimal            @db.Decimal(10, 2)
+  yieldUnit             String
+  productionBatches     ProductionBatch[]
+  products              Product[]
+  ingredients           RecipeIngredient[]
+  store                 Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([storeId])
+  @@index([category])
   @@map("recipes")
 }
 
 model RecipeIngredient {
-  id              String     @id @default(cuid())
-  recipeId        String
-  recipe          Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  ingredientId    String
-  ingredient      Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  recipeId   String
+  quantity   Decimal  @db.Decimal(10, 3)
+  unit       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  notes      String?
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  recipe     Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
-  quantity        Decimal    @db.Decimal(10, 3)
-  unit            String
-
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-
-  @@unique([recipeId, ingredientId])
+  @@unique([recipeId, materialId])
   @@map("recipe_ingredients")
 }
 
-enum ProductionStatus {
-  PLANNED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
 model ProductionBatch {
-  id              String            @id @default(cuid())
-  storeId         String
-  store           Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  batchNumber     String            @unique
+  id              String           @id @default(cuid())
+  batchNumber     String           @unique
   productId       String
-  product         Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
   recipeId        String?
-  recipe          Recipe?           @relation(fields: [recipeId], references: [id], onDelete: SetNull)
-
-  plannedQuantity Decimal           @db.Decimal(10, 2)
-  actualQuantity  Decimal?          @db.Decimal(10, 2)
+  plannedQuantity Decimal          @db.Decimal(10, 2)
+  actualQuantity  Decimal?         @db.Decimal(10, 2)
   unit            String
-
-  status          ProductionStatus  @default(PLANNED)
-
+  status          ProductionStatus @default(PLANNED)
   scheduledDate   DateTime
   completedDate   DateTime?
-
   notes           String?
-
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  storeId         String
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recipe          Recipe?          @relation(fields: [recipeId], references: [id])
+  store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
   stockMovements  StockMovement[]
 
   @@index([storeId])
@@ -340,126 +263,119 @@ model ProductionBatch {
   @@map("production_batches")
 }
 
-// ============================================
-// STOCK TRACKING
-// ============================================
-
-enum MovementType {
-  PURCHASE        // Receiving from supplier
-  PRODUCTION_IN   // Finished goods from production
-  PRODUCTION_OUT  // Ingredients used in production
-  SALE            // Products sold to customer
-  ADJUSTMENT      // Manual stock adjustment
-  WASTE           // Spoilage, damage, expired
-}
-
 model StockMovement {
-  id              String        @id @default(cuid())
-
-  // Polymorphic relation - either product OR ingredient
-  productId       String?
-  product         Product?      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  ingredientId    String?
-  ingredient      Ingredient?   @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-
-  type            MovementType
-  quantity        Decimal       @db.Decimal(10, 3)
-  unit            String
-
-  // Balance after this movement
-  balanceAfter    Decimal       @db.Decimal(10, 3)
-
-  // Optional references
-  orderId         String?
-  order           Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  id                String           @id @default(cuid())
+  productId         String?
+  type              MovementType
+  quantity          Decimal          @db.Decimal(10, 3)
+  unit              String
+  balanceAfter      Decimal          @db.Decimal(10, 3)
+  orderId           String?
   productionBatchId String?
-  productionBatch ProductionBatch? @relation(fields: [productionBatchId], references: [id], onDelete: SetNull)
-
-  notes           String?
-  createdAt       DateTime      @default(now())
+  notes             String?
+  createdAt         DateTime         @default(now())
+  materialId        String?
+  material          Material?        @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  order             Order?           @relation(fields: [orderId], references: [id])
+  product           Product?         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productionBatch   ProductionBatch? @relation(fields: [productionBatchId], references: [id])
 
   @@index([productId])
-  @@index([ingredientId])
+  @@index([materialId])
   @@index([type])
   @@index([createdAt])
   @@map("stock_movements")
 }
 
-// ============================================
-// SUPPLIERS
-// ============================================
-
 model Supplier {
-  id              String    @id @default(cuid())
-  storeId         String
-  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  name            String
-  contactPerson   String?
-  email           String?
-  phone           String?
-
-  address         String?
-  city            String?
-  country         String?
-
-  notes           String?
-
-  isActive        Boolean   @default(true)
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  ingredients     Ingredient[]
+  id                String             @id @default(cuid())
+  name              String
+  contactPerson     String?
+  email             String?
+  phone             String?
+  address           String?
+  city              String?
+  country           String?
+  notes             String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  storeId           String
+  materialSuppliers MaterialSupplier[] @relation("SupplierToMaterials")
+  supplierOrders    SupplierOrder[]
+  store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([storeId])
   @@index([isActive])
   @@map("suppliers")
 }
 
-// ============================================
-// CUSTOMER ORDERS
-// ============================================
+model SupplierOrder {
+  id           String              @id @default(cuid())
+  storeId      String
+  supplierId   String
+  orderNumber  String              @unique
+  status       SupplierOrderStatus @default(PENDING)
+  orderDate    DateTime            @default(now())
+  expectedDate DateTime?
+  receivedDate DateTime?
+  subtotal     Decimal             @db.Decimal(10, 2)
+  tax          Decimal             @default(0) @db.Decimal(10, 2)
+  shipping     Decimal             @default(0) @db.Decimal(10, 2)
+  total        Decimal             @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  items        SupplierOrderItem[]
+  store        Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  supplier     Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  IN_PRODUCTION
-  READY
-  DELIVERED
-  CANCELLED
+  @@index([storeId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([orderDate])
+  @@map("supplier_orders")
+}
+
+model SupplierOrderItem {
+  id         String        @id @default(cuid())
+  orderId    String
+  materialId String
+  quantity   Decimal       @db.Decimal(10, 2)
+  unit       String
+  unitPrice  Decimal       @db.Decimal(10, 2)
+  total      Decimal       @db.Decimal(10, 2)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  material   Material      @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  order      SupplierOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([materialId])
+  @@map("supplier_order_items")
 }
 
 model Order {
-  id              String        @id @default(cuid())
-  storeId         String
-  store           Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  orderNumber     String        @unique
-
-  // Customer info (simplified - no separate customer table)
+  id              String          @id @default(cuid())
+  orderNumber     String          @unique
   customerName    String
   customerEmail   String?
   customerPhone   String?
   deliveryAddress String?
-
-  status          OrderStatus   @default(PENDING)
-
-  orderDate       DateTime      @default(now())
+  status          OrderStatus     @default(PENDING)
+  orderDate       DateTime        @default(now())
   dueDate         DateTime?
   deliveredDate   DateTime?
-
-  subtotal        Decimal       @db.Decimal(10, 2)
-  tax             Decimal       @db.Decimal(10, 2) @default(0)
-  delivery        Decimal       @db.Decimal(10, 2) @default(0)
-  total           Decimal       @db.Decimal(10, 2)
-
+  subtotal        Decimal         @db.Decimal(10, 2)
+  tax             Decimal         @default(0) @db.Decimal(10, 2)
+  delivery        Decimal         @default(0) @db.Decimal(10, 2)
+  total           Decimal         @db.Decimal(10, 2)
   notes           String?
-
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  storeId         String
   items           OrderItem[]
+  store           Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
   stockMovements  StockMovement[]
 
   @@index([storeId])
@@ -470,64 +386,112 @@ model Order {
 }
 
 model OrderItem {
-  id              String    @id @default(cuid())
-  orderId         String
-  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId       String
-  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  quantity        Decimal   @db.Decimal(10, 2)
-  unit            String
-  unitPrice       Decimal   @db.Decimal(10, 2)
-  total           Decimal   @db.Decimal(10, 2)
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Decimal  @db.Decimal(10, 2)
+  unit      String
+  unitPrice Decimal  @db.Decimal(10, 2)
+  total     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
 }
 
-// ============================================
-// ALERTS & NOTIFICATIONS
-// ============================================
+model Alert {
+  id         String        @id @default(cuid())
+  userId     String
+  type       AlertType
+  severity   AlertSeverity @default(INFO)
+  title      String
+  message    String
+  entityType String?
+  entityId   String?
+  isRead     Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([type])
+  @@index([createdAt])
+  @@map("alerts")
+}
+
+model ExchangeRate {
+  id           String   @id @default(cuid())
+  fromCurrency String   // Base currency (EUR)
+  toCurrency   String   // Target currency (USD)
+  rate         Decimal  @db.Decimal(10, 6) // Exchange rate with 6 decimal precision
+  fetchedAt    DateTime @default(now()) // When the rate was fetched
+  expiresAt    DateTime // When the cached rate expires
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([fromCurrency, toCurrency])
+  @@index([expiresAt])
+  @@map("exchange_rates")
+}
+
+enum SubscriptionPlan {
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  INCOMPLETE
+}
+
+enum ProductionStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MovementType {
+  PURCHASE
+  PRODUCTION_IN
+  PRODUCTION_OUT
+  SALE
+  ADJUSTMENT
+  WASTE
+}
+
+enum SupplierOrderStatus {
+  PENDING
+  PLACED
+  RECEIVED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PRODUCTION
+  READY
+  DELIVERED
+  CANCELLED
+}
 
 enum AlertType {
-  LOW_STOCK       // Stock below minimum level
-  CRITICAL_STOCK  // Stock below critical level
-  ORDER_DUE       // Order due date approaching
-  PRODUCTION_DUE  // Production scheduled
-  SYSTEM          // System notifications
+  LOW_STOCK
+  CRITICAL_STOCK
+  ORDER_DUE
+  PRODUCTION_DUE
+  SYSTEM
 }
 
 enum AlertSeverity {
   INFO
   WARNING
   CRITICAL
-}
-
-model Alert {
-  id              String        @id @default(cuid())
-  userId          String
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  type            AlertType
-  severity        AlertSeverity @default(INFO)
-
-  title           String
-  message         String
-
-  // Optional reference to related entity
-  entityType      String?       // product, ingredient, order, production
-  entityId        String?
-
-  isRead          Boolean       @default(false)
-
-  createdAt       DateTime      @default(now())
-
-  @@index([userId, isRead])
-  @@index([type])
-  @@index([createdAt])
-  @@map("alerts")
 }

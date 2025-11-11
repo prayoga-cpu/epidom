@@ -66,9 +66,7 @@ export class AuthService {
 
       return {
         user: userWithoutPassword,
-        business: business
-          ? { id: business.id, name: business.name }
-          : undefined,
+        business: business ? { id: business.id, name: business.name } : undefined,
       };
     });
   }
@@ -135,7 +133,6 @@ export class AuthService {
 
     // TODO: Generate reset token and send email
     // For now, just a placeholder
-    console.log(`Password reset requested for ${email}`);
   }
 
   /**

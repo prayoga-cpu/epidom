@@ -4,30 +4,50 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { MOCK_MATERIALS } from "@/mocks";
-import { ArrowRight, Package } from "lucide-react";
+import { ArrowRight, Package, Loader2 } from "lucide-react";
 import DashboardCard from "../_components/dashboard-card";
+import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
+import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 
 export default function TrackingCard() {
   const { t } = useI18n();
+  const { storeId } = useCurrentStore();
+
+  // Fetch materials from API
+  const { data, isLoading } = useMaterials(storeId);
 
   // Get materials with stock data, sorted by stock percentage
   const stockLevels = useMemo(() => {
-    return MOCK_MATERIALS.map((material) => {
-      const stockPercentage =
-        material.maxStock > 0 ? (material.currentStock / material.maxStock) * 100 : 0;
-      return {
-        ...material,
-        stockPercentage,
-      };
-    })
+    if (!data?.materials) return [];
+
+    return data.materials
+      .map((material) => {
+        const currentStock = Number(material.currentStock);
+        const minStock = Number(material.minStock);
+        const maxStock = Number(material.maxStock);
+        const stockPercentage = maxStock > 0 ? (currentStock / maxStock) * 100 : 0;
+        return {
+          id: material.id,
+          name: material.name,
+          currentStock,
+          minStock,
+          maxStock,
+          unit: material.unit,
+          stockPercentage,
+        };
+      })
       .sort((a, b) => a.stockPercentage - b.stockPercentage) // Low stock first
       .slice(0, 5); // Show max 5 items
-  }, []);
+  }, [data]);
 
   const cardContent = (
     <div className="h-full overflow-auto">
-      {stockLevels.length === 0 ? (
+      {isLoading ? (
+        <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+          <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
+          <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+        </div>
+      ) : stockLevels.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
           <div className="bg-muted mb-3 rounded-full p-3">
             <Package className="text-muted-foreground h-6 w-6" />
@@ -85,7 +105,7 @@ export default function TrackingCard() {
   );
 
   const cardOther = (
-    <Link href="/tracking">
+    <Link href={`/store/${storeId}/tracking`}>
       <Button variant="ghost" size="sm" className="h-8 gap-1">
         {t("dashboard.trackingCard.viewAll")}
         <ArrowRight className="h-3 w-3" />

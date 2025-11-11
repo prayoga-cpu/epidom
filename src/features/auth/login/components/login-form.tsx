@@ -1,60 +1,66 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, LoginInput } from "../../validation/auth.schemas";
+import { useLogin } from "../../hooks/use-auth";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 export function LoginForm() {
-  const router = useRouter();
   const { t } = useI18n();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get("next") || searchParams.get("callbackUrl");
+  const registered = searchParams.get("registered");
 
-  async function onSubmit(formData: FormData) {
-    setLoading(true);
-    setError("");
+  const { mutate: login, isPending, error } = useLogin();
 
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-
-    console.log("Attempting login with email:", email);
-
-    try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      console.log("SignIn result:", result);
-
-      if (result?.error) {
-        console.error("Login error:", result.error);
-        setError(t("messages.invalidCredentials") || "Invalid email or password");
-        setLoading(false);
-      } else if (result?.ok) {
-        // Login successful
-        console.log("Login successful, redirecting to dashboard");
-        router.push("/dashboard");
-        router.refresh();
-      } else {
-        console.error("Unexpected result:", result);
-        setError(t("messages.loginFailed") || "Login failed. Please try again.");
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error("Login exception:", error);
-      setError(t("messages.loginFailed") || "Login failed. Please try again.");
-      setLoading(false);
+  // Show success toast for new registrations
+  useEffect(() => {
+    if (registered === "true") {
+      toast.success("Account created successfully! Please log in to continue.");
     }
-  }
+  }, [registered]);
+
+  const form = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = (data: LoginInput) => {
+    login(data, {
+      onSuccess: () => {
+        toast.success(t("messages.loginSuccess") || "Logged in successfully!");
+
+        // Use full page reload to ensure session is properly loaded
+        // This prevents race condition where session might not be available yet
+        // when the profile page tries to fetch user data
+        const redirectUrl = nextUrl || "/profile";
+        window.location.href = redirectUrl;
+      },
+      onError: (err) => {
+        toast.error(err.message || t("messages.invalidCredentials"));
+      },
+    });
+  };
 
   return (
     <Card className="w-full max-w-md border-2 shadow-xl">
@@ -65,40 +71,57 @@ export function LoginForm() {
         <CardDescription className="text-base">{t("auth.signInToContinue")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={onSubmit} className="space-y-4">
-          {error && (
-            <div className="bg-destructive/10 text-destructive border-destructive/20 rounded-md border p-3 text-sm">
-              {error}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="email">{t("auth.email")}</Label>
-            <Input
-              type="email"
-              id="email"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
               name="email"
-              placeholder="you@bakery.com"
-              required
-              disabled={loading}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("auth.email")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="you@bakery.com"
+                      disabled={isPending}
+                      autoComplete="email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">{t("auth.password")}</Label>
-            <Input type="password" id="password" name="password" required disabled={loading} />
-          </div>
-          <div className="flex items-center justify-between">
-            <Link className="text-primary text-sm underline underline-offset-4" href="#">
-              {t("auth.forgotPassword")}
-            </Link>
-          </div>
-          <Button
-            type="submit"
-            className="w-full shadow-md transition-all hover:shadow-lg"
-            disabled={loading}
-          >
-            {loading ? t("messages.loggingIn") || "Logging in..." : t("auth.loginButton")}
-          </Button>
-        </form>
+
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("auth.password")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      disabled={isPending}
+                      autoComplete="current-password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type="submit"
+              className="w-full shadow-md transition-all hover:shadow-lg"
+              disabled={isPending}
+            >
+              {isPending ? t("messages.loggingIn") || "Logging in..." : t("auth.loginButton")}
+            </Button>
+          </form>
+        </Form>
+
         <Separator className="my-6" />
         <p className="text-muted-foreground text-center text-sm">
           {t("auth.dontHaveAccount")}{" "}

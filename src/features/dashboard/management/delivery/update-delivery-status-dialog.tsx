@@ -27,6 +27,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatDate } from "@/lib/utils/formatting";
 import { CalendarIcon } from "lucide-react";
+import { useParams } from "next/navigation";
+import { toast as sonnerToast } from "sonner";
+import { useUpdateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 
 interface UpdateDeliveryStatusDialogProps {
   open: boolean;
@@ -41,10 +44,14 @@ export default function UpdateDeliveryStatusDialog({
 }: UpdateDeliveryStatusDialogProps) {
   const { t } = useI18n();
   const { toast } = useToast();
+  const params = useParams();
+  const storeId = params?.storeId as string;
   const [newStatus, setNewStatus] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [receivedDate, setReceivedDate] = useState<Date | undefined>(undefined);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Use mutation hook for updating
+  const updateMutation = useUpdateSupplierOrder(storeId, delivery?.id || "");
 
   useEffect(() => {
     if (delivery) {
@@ -63,14 +70,29 @@ export default function UpdateDeliveryStatusDialog({
     // Define valid status transitions
     if (currentStatus === SupplierDeliveryStatus.PENDING) {
       statuses.push(
-        { value: SupplierDeliveryStatus.IN_TRANSIT, label: t("management.delivery.status.inTransit") || "In Transit" },
-        { value: SupplierDeliveryStatus.RECEIVED, label: t("management.delivery.status.received") || "Received" },
-        { value: SupplierDeliveryStatus.CANCELLED, label: t("management.delivery.status.cancelled") || "Cancelled" }
+        {
+          value: SupplierDeliveryStatus.IN_TRANSIT,
+          label: t("management.delivery.status.inTransit") || "In Transit",
+        },
+        {
+          value: SupplierDeliveryStatus.RECEIVED,
+          label: t("management.delivery.status.received") || "Received",
+        },
+        {
+          value: SupplierDeliveryStatus.CANCELLED,
+          label: t("management.delivery.status.cancelled") || "Cancelled",
+        }
       );
     } else if (currentStatus === SupplierDeliveryStatus.IN_TRANSIT) {
       statuses.push(
-        { value: SupplierDeliveryStatus.RECEIVED, label: t("management.delivery.status.received") || "Received" },
-        { value: SupplierDeliveryStatus.CANCELLED, label: t("management.delivery.status.cancelled") || "Cancelled" }
+        {
+          value: SupplierDeliveryStatus.RECEIVED,
+          label: t("management.delivery.status.received") || "Received",
+        },
+        {
+          value: SupplierDeliveryStatus.CANCELLED,
+          label: t("management.delivery.status.cancelled") || "Cancelled",
+        }
       );
     }
 
@@ -82,8 +104,9 @@ export default function UpdateDeliveryStatusDialog({
 
     if (!newStatus) {
       toast({
-        title: t("common.validation.error"),
-        description: t("management.delivery.updateStatus.selectNewStatus"),
+        title: t("common.validation.error") || "Error",
+        description:
+          t("management.delivery.updateStatus.selectNewStatus") || "Please select a new status",
         variant: "destructive",
       });
       return;
@@ -91,58 +114,113 @@ export default function UpdateDeliveryStatusDialog({
 
     if (newStatus === SupplierDeliveryStatus.RECEIVED && !receivedDate) {
       toast({
-        title: t("common.validation.error"),
-        description: t("management.delivery.updateStatus.selectReceivedDate"),
+        title: t("common.validation.error") || "Error",
+        description:
+          t("management.delivery.updateStatus.selectReceivedDate") ||
+          "Please select a received date",
         variant: "destructive",
       });
       return;
     }
 
-    setIsSubmitting(true);
+    if (!delivery) return;
 
-    // TODO: API call to update delivery status
-    // await updateDeliveryStatus(delivery.id, { status: newStatus, notes, receivedDate });
+    // Map UI status to database status
+    const statusMap: Record<string, "PENDING" | "PLACED" | "RECEIVED" | "CANCELLED"> = {
+      [SupplierDeliveryStatus.PENDING]: "PENDING",
+      [SupplierDeliveryStatus.IN_TRANSIT]: "PLACED",
+      [SupplierDeliveryStatus.RECEIVED]: "RECEIVED",
+      [SupplierDeliveryStatus.CANCELLED]: "CANCELLED",
+    };
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const statusLabel = getAvailableStatuses().find(s => s.value === newStatus)?.label || newStatus;
-      const descriptionText = t("management.delivery.updateStatus.toasts.updated.description") || "Delivery status has been updated to {status}";
-      toast({
-        title: t("management.delivery.updateStatus.toasts.updated.title"),
-        description: descriptionText.replace("{status}", statusLabel),
-      });
-      onOpenChange(false);
-    }, 1000);
+    const dbStatus = statusMap[newStatus];
+
+    const payload: {
+      status: "PENDING" | "PLACED" | "RECEIVED" | "CANCELLED";
+      notes?: string;
+      receivedDate?: string;
+    } = {
+      status: dbStatus,
+    };
+
+    if (notes) {
+      payload.notes = notes;
+    }
+
+    if (newStatus === SupplierDeliveryStatus.RECEIVED && receivedDate) {
+      payload.receivedDate = receivedDate.toISOString();
+    }
+
+    // Use mutation hook to update
+    updateMutation.mutate(
+      payload as {
+        status: "PENDING" | "PLACED" | "RECEIVED" | "CANCELLED";
+        notes?: string;
+        receivedDate?: string;
+      },
+      {
+        onSuccess: () => {
+          onOpenChange(false);
+        },
+      }
+    );
   };
 
   const availableStatuses = getAvailableStatuses();
+
+  // Helper to get the translation key for a status
+  const getStatusTranslationKey = (status: string) => {
+    const statusMap: Record<string, string> = {
+      [SupplierDeliveryStatus.PENDING]: "pending",
+      [SupplierDeliveryStatus.IN_TRANSIT]: "inTransit",
+      [SupplierDeliveryStatus.RECEIVED]: "received",
+      [SupplierDeliveryStatus.CANCELLED]: "cancelled",
+    };
+    return statusMap[status] || status;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{t("management.delivery.updateStatus.title")}</DialogTitle>
+          <DialogTitle>
+            {t("management.delivery.updateStatus.title") || "Update Delivery Status"}
+          </DialogTitle>
           <DialogDescription>
-            {(t("management.delivery.updateStatus.description") || "Update delivery status").replace("{reference}", delivery?.deliveryReference || "")}
+            {(
+              t("management.delivery.updateStatus.description") ||
+              "Update delivery status for {reference}"
+            ).replace("{reference}", delivery?.deliveryReference || "")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Current Status */}
           <div className="space-y-2">
-            <Label>{t("management.delivery.updateStatus.currentStatus")}</Label>
+            <Label>{t("management.delivery.updateStatus.currentStatus") || "Current Status"}</Label>
             <div>
-              <Badge variant="secondary">{t(`management.delivery.status.${delivery?.status?.toLowerCase()}`) || delivery?.status}</Badge>
+              <Badge variant="secondary">
+                {delivery?.status
+                  ? t(`management.delivery.status.${getStatusTranslationKey(delivery.status)}`) ||
+                    delivery.status
+                  : ""}
+              </Badge>
             </div>
           </div>
 
           {/* New Status */}
           <div className="space-y-2">
-            <Label htmlFor="status">{t("management.delivery.updateStatus.newStatus")} *</Label>
+            <Label htmlFor="status">
+              {t("management.delivery.updateStatus.newStatus") || "New Status"} *
+            </Label>
             <Select value={newStatus} onValueChange={setNewStatus}>
               <SelectTrigger id="status">
-                <SelectValue placeholder={t("management.delivery.updateStatus.selectNewStatusPlaceholder")} />
+                <SelectValue
+                  placeholder={
+                    t("management.delivery.updateStatus.selectNewStatusPlaceholder") ||
+                    "Select new status"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {availableStatuses.map((status) => (
@@ -157,7 +235,9 @@ export default function UpdateDeliveryStatusDialog({
           {/* Received Date (only if status is RECEIVED) */}
           {newStatus === SupplierDeliveryStatus.RECEIVED && (
             <div className="space-y-2">
-              <Label htmlFor="receivedDate">{t("management.delivery.updateStatus.receivedDate")} *</Label>
+              <Label htmlFor="receivedDate">
+                {t("management.delivery.updateStatus.receivedDate") || "Received Date"} *
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -166,7 +246,10 @@ export default function UpdateDeliveryStatusDialog({
                     className="w-full justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {receivedDate ? formatDate(receivedDate) : t("management.delivery.updateStatus.selectReceivedDatePlaceholder")}
+                    {receivedDate
+                      ? formatDate(receivedDate)
+                      : t("management.delivery.updateStatus.selectReceivedDatePlaceholder") ||
+                        "Select received date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -183,10 +266,13 @@ export default function UpdateDeliveryStatusDialog({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">{t("common.notes")}</Label>
+            <Label htmlFor="notes">{t("common.notes") || "Notes"}</Label>
             <Textarea
               id="notes"
-              placeholder={t("management.delivery.updateStatus.notesPlaceholder")}
+              placeholder={
+                t("management.delivery.updateStatus.notesPlaceholder") ||
+                "Add notes about this status change..."
+              }
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
@@ -195,10 +281,15 @@ export default function UpdateDeliveryStatusDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              {t("common.actions.cancel")}
+              {t("common.actions.cancel") || "Cancel"}
             </Button>
-            <Button type="submit" disabled={isSubmitting || availableStatuses.length === 0}>
-              {isSubmitting ? t("management.delivery.updateStatus.updating") : t("management.delivery.updateStatus.updateStatus")}
+            <Button
+              type="submit"
+              disabled={updateMutation.isPending || availableStatuses.length === 0}
+            >
+              {updateMutation.isPending
+                ? t("management.delivery.updateStatus.updating") || "Updating..."
+                : t("management.delivery.updateStatus.updateStatus") || "Update Status"}
             </Button>
           </DialogFooter>
         </form>

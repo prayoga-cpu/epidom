@@ -155,13 +155,12 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       });
 
       // Track conversion for analytics
-      if (typeof window !== "undefined" && (window as any).gtag) {
-        (window as any).gtag("event", "waitlist_signup", {
-          event_category: "engagement",
-          event_label: "pricing_cta",
-          value: 1,
-        });
-      }
+      const { trackConversion } = await import("@/lib/analytics");
+      trackConversion("waitlist_signup", {
+        event_category: "engagement",
+        event_label: "pricing_cta",
+        value: 1,
+      });
 
       formRef.current?.reset();
       setOpen(false);
@@ -202,13 +201,12 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       </DialogTrigger>
       <DialogContent aria-describedby="waitlist-description" className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl" style={{ color: "var(--color-brand-primary)" }}>
+          <DialogTitle className="text-xl text-brand-primary">
             {t("waitlist.title")}
           </DialogTitle>
           <DialogDescription
             id="waitlist-description"
-            className="text-base"
-            style={{ color: "var(--color-brand-primary)" }}
+            className="text-base text-brand-primary"
           >
             {t("waitlist.description")}
           </DialogDescription>
@@ -218,8 +216,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           <div className="grid gap-2">
             <Label
               htmlFor="name"
-              className="font-semibold"
-              style={{ color: "var(--color-brand-primary)" }}
+              className="font-semibold text-brand-primary"
             >
               {t("waitlist.fields.name")}
             </Label>
@@ -244,8 +241,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           <div className="grid gap-2">
             <Label
               htmlFor="email"
-              className="font-semibold"
-              style={{ color: "var(--color-brand-primary)" }}
+              className="font-semibold text-brand-primary"
             >
               {t("waitlist.fields.email")}
             </Label>
@@ -271,8 +267,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           <div className="grid gap-2">
             <Label
               htmlFor="company"
-              className="font-semibold"
-              style={{ color: "var(--color-brand-primary)" }}
+              className="font-semibold text-brand-primary"
             >
               {t("waitlist.fields.company")}
             </Label>
@@ -295,8 +290,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           <DialogFooter className="mt-4">
             <Button
               type="submit"
-              className="btn-smooth rounded-full px-6 font-semibold"
-              style={{ backgroundColor: "var(--color-brand-primary)", color: "var(--color-brand-white)" }}
+              className="btn-smooth rounded-full px-6 font-semibold bg-brand-primary text-white"
               disabled={isSubmitting}
             >
               {isSubmitting ? "Submitting..." : t("waitlist.submit")}

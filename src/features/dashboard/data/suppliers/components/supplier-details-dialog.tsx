@@ -16,26 +16,23 @@ import {
   Mail,
   Phone,
   MapPin,
-  DollarSign,
   Calendar,
-  TrendingUp,
-  Star,
   Edit,
   Trash2,
-  Clock,
   FileText,
-  Truck,
+  Package,
 } from "lucide-react";
-import type { Supplier } from "@/types/entities";
-import { formatDate } from "@/lib/utils/formatting";
+import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
+import { formatDate, formatCurrency, formatNumber } from "@/lib/utils/formatting";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 interface SupplierDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  supplier: Supplier;
+  supplier: SupplierWithRelations;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -49,39 +46,11 @@ export default function SupplierDetailsDialog({
 }: SupplierDetailsDialogProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t } = useI18n();
-  // Helper to get rating badge color
-  const getRatingColor = (rating?: number) => {
-    if (!rating) return "secondary";
-    if (rating >= 4.5) return "default";
-    if (rating >= 4.0) return "default";
-    if (rating >= 3.0) return "default";
-    return "destructive";
-  };
-
-  // Helper to get delivery rate color
-  const getDeliveryRateColor = (rate?: number) => {
-    if (!rate) return "text-muted-foreground";
-    if (rate >= 95) return "text-green-600";
-    if (rate >= 85) return "text-blue-600";
-    return "text-orange-600";
-  };
-
-  // Mock order history data (in production, fetch from API)
-  const mockOrderHistory = [
-    { date: new Date("2024-10-15"), amount: 1250.0, status: "Delivered" },
-    { date: new Date("2024-10-08"), amount: 850.5, status: "Delivered" },
-    { date: new Date("2024-09-29"), amount: 2100.0, status: "Delivered" },
-    { date: new Date("2024-09-22"), amount: 950.75, status: "Delivered" },
-    { date: new Date("2024-09-15"), amount: 1580.0, status: "Delayed" },
-  ];
-
-  const totalOrders = mockOrderHistory.length;
-  const totalSpent = mockOrderHistory.reduce((sum, order) => sum + order.amount, 0);
-  const avgOrderValue = totalSpent / totalOrders;
+  const { formatPrice } = useCurrency();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl [&>button]:hidden">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -94,105 +63,20 @@ export default function SupplierDetailsDialog({
               {onEdit && (
                 <Button variant="outline" size="sm" onClick={onEdit}>
                   <Edit className="mr-2 h-4 w-4" />
-                  {t("actions.edit") || "Edit"}
+                  {t("common.actions.edit")}
                 </Button>
               )}
               {onDelete && (
-                <ConfirmationDialog
-                  open={deleteDialogOpen}
-                  onOpenChange={setDeleteDialogOpen}
-                  title="Delete Supplier"
-                  description={`Are you sure you want to delete "${supplier.name}"? This action cannot be undone.`}
-                  confirmText="Delete Supplier"
-                  onConfirm={onDelete}
-                  variant="destructive"
-                />
+                <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t("common.actions.delete")}
+                </Button>
               )}
             </div>
           </div>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Quick Stats */}
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Rating</CardTitle>
-                <Star className="text-muted-foreground h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {supplier.rating ? supplier.rating.toFixed(1) : "N/A"}
-                </div>
-                <p className="text-muted-foreground text-xs">out of 5.0</p>
-                {supplier.rating && (
-                  <Badge variant={getRatingColor(supplier.rating) as any} className="mt-2 text-xs">
-                    {supplier.rating >= 4.5
-                      ? "Excellent"
-                      : supplier.rating >= 4.0
-                        ? "Good"
-                        : supplier.rating >= 3.0
-                          ? "Average"
-                          : "Poor"}
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">On-Time Delivery</CardTitle>
-                <TrendingUp className="text-muted-foreground h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <div
-                  className={`text-2xl font-bold ${getDeliveryRateColor(supplier.onTimeDeliveryRate)}`}
-                >
-                  {supplier.onTimeDeliveryRate || 0}%
-                </div>
-                <p className="text-muted-foreground text-xs">delivery rate</p>
-                {supplier.onTimeDeliveryRate !== undefined && (
-                  <div className="bg-muted mt-2 h-1.5 overflow-hidden rounded-full">
-                    <div
-                      className={`h-full transition-all ${
-                        supplier.onTimeDeliveryRate >= 95
-                          ? "bg-green-500"
-                          : supplier.onTimeDeliveryRate >= 85
-                            ? "bg-blue-500"
-                            : "bg-orange-500"
-                      }`}
-                      style={{ width: `${supplier.onTimeDeliveryRate}%` }}
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                <FileText className="text-muted-foreground h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalOrders}</div>
-                <p className="text-muted-foreground text-xs">orders placed</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-                <DollarSign className="text-muted-foreground h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${totalSpent.toFixed(2)}</div>
-                <p className="text-muted-foreground text-xs">lifetime value</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Separator />
-
           {/* Contact Information */}
           <div>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
@@ -251,124 +135,91 @@ export default function SupplierDetailsDialog({
             </div>
           </div>
 
-          <Separator />
-
-          {/* Business Terms */}
-          <div>
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-              <DollarSign className="h-5 w-5" />
-              Business Terms
-            </h3>
-            <div className="grid gap-4 sm:grid-cols-2">
+          {/* Supplied Materials */}
+          {supplier.materialSuppliers && supplier.materialSuppliers.length > 0 && (
+            <>
+              <Separator />
               <div>
-                <label className="text-muted-foreground text-sm font-medium">Payment Terms</label>
-                <p className="text-sm">
-                  {supplier.paymentTerms ? (
-                    <Badge variant="secondary">{supplier.paymentTerms}</Badge>
-                  ) : (
-                    "Not specified"
-                  )}
-                </p>
-              </div>
-              {supplier.deliverySchedule && (
-                <div>
-                  <label className="text-muted-foreground text-sm font-medium">
-                    Delivery Schedule
-                  </label>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Truck className="text-muted-foreground h-4 w-4" />
-                    <span>{supplier.deliverySchedule}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+                <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+                  <Package className="h-5 w-5" />
+                  Supplied Materials ({supplier.materialSuppliers.length})
+                </h3>
+                <div className="space-y-3">
+                  {supplier.materialSuppliers.map((ms, index) => {
+                    const material = ms.material;
+                    const stockStatus =
+                      Number(material.currentStock) <= Number(material.minStock)
+                        ? "low"
+                        : Number(material.currentStock) >= Number(material.maxStock)
+                          ? "high"
+                          : "normal";
 
-          <Separator />
-
-          {/* Performance Metrics */}
-          <div>
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-              <TrendingUp className="h-5 w-5" />
-              Performance Metrics
-            </h3>
-            <div className="space-y-4">
-              <Card className="bg-muted/50">
-                <CardContent className="pt-6">
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <div>
-                      <label className="text-muted-foreground text-sm font-medium">
-                        Average Order Value
-                      </label>
-                      <p className="text-xl font-semibold">${avgOrderValue.toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <label className="text-muted-foreground text-sm font-medium">
-                        Quality Rating
-                      </label>
-                      <p className="text-xl font-semibold">
-                        {supplier.rating ? `${supplier.rating.toFixed(1)}/5.0` : "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-muted-foreground text-sm font-medium">
-                        Reliability Score
-                      </label>
-                      <p
-                        className={`text-xl font-semibold ${getDeliveryRateColor(supplier.onTimeDeliveryRate)}`}
-                      >
-                        {supplier.onTimeDeliveryRate || 0}%
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Order History */}
-          <div>
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-              <FileText className="h-5 w-5" />
-              Recent Order History
-            </h3>
-            <div className="space-y-2">
-              {mockOrderHistory.map((order, index) => (
-                <Card key={index}>
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="text-muted-foreground h-4 w-4" />
-                      <div>
-                        <p className="text-sm font-medium">{formatDate(order.date)}</p>
-                        <p className="text-muted-foreground text-xs">{order.status}</p>
+                    return (
+                      <div key={ms.id}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{material.name}</p>
+                              {ms.isPreferred && (
+                                <Badge variant="default" className="text-xs">
+                                  Preferred
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-muted-foreground text-sm">
+                              {material.category && (
+                                <Badge variant="secondary" className="mr-2 text-xs">
+                                  {material.category}
+                                </Badge>
+                              )}
+                              {material.sku && <span className="text-xs">SKU: {material.sku}</span>}
+                            </p>
+                            <div className="mt-1 flex items-center gap-4 text-xs">
+                              <span className="text-muted-foreground">
+                                Stock: {formatNumber(Number(material.currentStock))} {material.unit}
+                              </span>
+                              <span className="text-muted-foreground">
+                                Unit Cost: {formatPrice(Number(material.unitCost))}
+                              </span>
+                              <span className="font-medium text-green-600">
+                                Supplier Price: {formatPrice(Number(ms.price))}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge
+                              variant={
+                                stockStatus === "low"
+                                  ? "destructive"
+                                  : stockStatus === "high"
+                                    ? "default"
+                                    : "secondary"
+                              }
+                            >
+                              {stockStatus === "low"
+                                ? t("common.stockStatus.lowStock")
+                                : stockStatus === "high"
+                                  ? t("common.stockStatus.overstocked")
+                                  : t("common.stockStatus.inStock")}
+                            </Badge>
+                          </div>
+                        </div>
+                        {index < (supplier.materialSuppliers?.length ?? 0) - 1 && (
+                          <Separator className="mt-3" />
+                        )}
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">${order.amount.toFixed(2)}</p>
-                      <Badge
-                        variant={order.status === "Delivered" ? "default" : "secondary"}
-                        className="mt-1 text-xs"
-                      >
-                        {order.status}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            {mockOrderHistory.length === 0 && (
-              <Card>
-                <CardContent className="flex min-h-[200px] items-center justify-center p-8 text-center">
-                  <div>
-                    <FileText className="text-muted-foreground/50 mx-auto mb-2 h-8 w-8" />
-                    <p className="text-muted-foreground text-sm">No order history available</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                    );
+                  })}
+                </div>
+                <div className="bg-muted/50 mt-4 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">
+                    💡 This supplier provides these materials. You can manage supplier-specific
+                    pricing and preferences in the materials section.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Notes */}
           {supplier.notes && (
@@ -402,6 +253,22 @@ export default function SupplierDetailsDialog({
           </div>
         </div>
       </DialogContent>
+
+      {/* Delete Confirmation Dialog */}
+      {onDelete && (
+        <ConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title={t("data.suppliers.toasts.deleted.title")}
+          description={t("data.suppliers.toasts.deleted.description")?.replace("{name}", supplier.name) || ""}
+          confirmText={t("common.actions.delete")}
+          onConfirm={() => {
+            onDelete();
+            setDeleteDialogOpen(false);
+          }}
+          variant="destructive"
+        />
+      )}
     </Dialog>
   );
 }

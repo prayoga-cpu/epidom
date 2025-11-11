@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecipeProductionCard } from "../recipe-production/recipe-production";
 import { ProductionHistoryCard } from "../production-history/production-history";
@@ -11,20 +11,97 @@ import UpdateDeliveryStatusDialog from "../delivery/update-delivery-status-dialo
 import PrintDeliveryDialog from "../delivery/print-delivery-dialog";
 import AddEditDeliveryDialog from "../delivery/add-edit-delivery-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { MOCK_SUPPLIER_DELIVERIES } from "@/mocks";
-import type { SupplierDelivery } from "@/types/entities";
+import {
+  useSupplierOrders,
+  type SupplierOrder,
+} from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+import { useParams } from "next/navigation";
+import { SupplierDelivery, SupplierDeliveryStatus, DeliveryType } from "@/types/entities";
+
+// Adapter to convert SupplierOrder to SupplierDelivery format
+function convertOrderToDelivery(order: SupplierOrder): SupplierDelivery {
+  // Map statuses
+  const statusMap: Record<typeof order.status, SupplierDeliveryStatus> = {
+    PENDING: SupplierDeliveryStatus.PENDING,
+    PLACED: SupplierDeliveryStatus.IN_TRANSIT,
+    RECEIVED: SupplierDeliveryStatus.RECEIVED,
+    CANCELLED: SupplierDeliveryStatus.CANCELLED,
+  };
+
+  return {
+    id: order.id,
+    deliveryReference: order.orderNumber,
+    supplierId: order.supplier.id,
+    supplier: {
+      id: order.supplier.id,
+      name: order.supplier.name,
+      email: order.supplier.email || undefined,
+      phone: order.supplier.phone || undefined,
+      storeId: order.storeId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    deliveryType: DeliveryType.INCOMING,
+    status: statusMap[order.status],
+    expectedDate: new Date(order.expectedDate || order.orderDate),
+    receivedDate: order.receivedDate ? new Date(order.receivedDate) : undefined,
+    storeId: order.storeId,
+    items: order.items.map((item) => ({
+      id: item.id,
+      deliveryId: order.id,
+      materialId: item.materialId,
+      material: {
+        id: item.material.id,
+        name: item.material.name,
+        sku: item.material.sku,
+        unit: item.material.unit,
+        unitCost: 0, // Not available in SupplierOrderItem, use 0 as default
+        currentStock: 0, // Not available in SupplierOrderItem, use 0 as default
+        minStock: 0, // Not available in SupplierOrderItem, use 0 as default
+        maxStock: 0, // Not available in SupplierOrderItem, use 0 as default
+        isActive: true,
+        storeId: order.storeId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      quantity: Number(item.quantity),
+      unit: item.unit,
+    })),
+    createdAt: new Date(order.createdAt),
+    updatedAt: new Date(order.updatedAt || order.createdAt),
+  };
+}
 
 export function ManagementView() {
-  const [selectedDelivery, setSelectedDelivery] = useState<SupplierDelivery | null>(
-    MOCK_SUPPLIER_DELIVERIES[0] || null
-  );
+  const { t } = useI18n();
+  const params = useParams();
+  const storeId = params?.storeId as string;
+
+  // Fetch supplier orders
+  const { data, isLoading } = useSupplierOrders(storeId);
+
+  // Filter for deliveries (PLACED orders waiting to be received) and convert to old format
+  const deliveries = useMemo(() => {
+    if (!data?.orders) return [];
+    return data.orders
+      .filter((order) => order.status === "PLACED" || order.status === "RECEIVED")
+      .map(convertOrderToDelivery);
+  }, [data]);
+
+  const [selectedDelivery, setSelectedDelivery] = useState<SupplierDelivery | null>(null);
   const [updateStatusDialogOpen, setUpdateStatusDialogOpen] = useState(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deliveryToUpdate, setDeliveryToUpdate] = useState<SupplierDelivery | null>(null);
   const [deliveryToPrint, setDeliveryToPrint] = useState<SupplierDelivery | null>(null);
   const [deliveryToEdit, setDeliveryToEdit] = useState<SupplierDelivery | null>(null);
-  const { t } = useI18n();
+
+  // Set first delivery as selected when data loads
+  useState(() => {
+    if (deliveries.length > 0 && !selectedDelivery) {
+      setSelectedDelivery(deliveries[0]);
+    }
+  });
 
   // Handler for updating status
   const handleUpdateStatus = (delivery: SupplierDelivery) => {
@@ -47,55 +124,59 @@ export function ManagementView() {
   // Handler for deleting delivery (placeholder for now)
   const handleDeleteDelivery = (deliveryId: string) => {
     // TODO: Implement delete confirmation
-    console.log("Delete delivery:", deliveryId);
   };
 
   return (
     <section className="min-h-[calc(100vh-150px)]">
       <Tabs defaultValue="delivery" className="grid w-full gap-6">
-        <TabsList className="bg-muted/50 -mx-4 w-full justify-start overflow-x-auto rounded-lg p-1.5 px-4 whitespace-nowrap shadow-sm backdrop-blur-sm sm:mx-0 sm:px-1.5">
+        <TabsList className="bg-muted/50 grid h-auto w-full max-w-full grid-cols-2 gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm md:inline-flex md:h-9 md:max-w-none md:grid-cols-none md:justify-start md:gap-0 md:p-1.5">
           <TabsTrigger
-            className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
             value="delivery"
           >
-            {t("tabs.supplierDeliveries") || "Supplier Deliveries"}
+            {t("tabs.supplierDeliveries")}
           </TabsTrigger>
           <TabsTrigger
-            className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
             value="recipe"
           >
-            {t("tabs.recipeProduction") || "Recipe Production"}
+            {t("tabs.recipeProduction")}
           </TabsTrigger>
           <TabsTrigger
-            className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
             value="history"
           >
-            {t("tabs.productionHistory") || "Production History"}
+            {t("tabs.productionHistory")}
           </TabsTrigger>
           <TabsTrigger
-            className="data-[state=active]:bg-card shrink-0 transition-all data-[state=active]:shadow-md"
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
             value="stock"
           >
-            {t("tabs.editStock") || "Edit Stock"}
+            {t("tabs.editStock")}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="delivery" className="grid w-full gap-4 lg:grid-cols-3">
+        <TabsContent value="delivery" className="grid w-full gap-4 md:grid-cols-1 lg:grid-cols-3 lg:items-stretch">
+          <div className="flex lg:col-span-2">
           <SupplierDeliveriesTable
-            deliveries={MOCK_SUPPLIER_DELIVERIES}
+            deliveries={deliveries}
             selectedDelivery={selectedDelivery}
             onDeliverySelect={setSelectedDelivery}
             onEditDelivery={handleEditDelivery}
             onUpdateStatus={handleUpdateStatus}
             onPrintDelivery={handlePrintDelivery}
             onDeleteDelivery={handleDeleteDelivery}
+            isLoading={isLoading}
           />
+          </div>
+          <div className="flex lg:col-span-1">
           <SupplierDeliveryDetails
             selectedDelivery={selectedDelivery}
             onEdit={handleEditDelivery}
             onUpdateStatus={handleUpdateStatus}
             onPrintDelivery={handlePrintDelivery}
           />
+          </div>
         </TabsContent>
 
         <TabsContent value="recipe">

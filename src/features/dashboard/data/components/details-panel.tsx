@@ -2,7 +2,17 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
-import type { Item } from "@/mocks";
+
+// Generic item type for display components
+type Item = {
+  id: string;
+  name: string;
+  category?: string | null;
+  unit?: string;
+  minStock?: number;
+  currentStock?: number;
+  [key: string]: any;
+};
 
 interface DetailsPanelProps {
   item?: Item;

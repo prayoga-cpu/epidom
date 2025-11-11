@@ -1,6 +1,15 @@
 export const id = {
-  common: {
-    brand: "EPIDOM",
+    common: {
+      brand: "EPIDOM",
+      item: "Item",
+      ingredient: "Bahan",
+      uncategorized: "Tidak Dikategorikan",
+      stockStatus: {
+      outOfStock: "Habis",
+      lowStock: "Stok Rendah",
+      inStock: "Tersedia",
+      overstocked: "Stok Berlebih",
+    },
     nav: {
       home: "Beranda",
       services: "Layanan",
@@ -12,6 +21,9 @@ export const id = {
       openMenu: "Buka menu",
       closeMenu: "Tutup menu",
       homepage: "Halaman utama",
+      searchAriaLabel: "Cari",
+      stores: "Toko Saya",
+      profile: "Profil",
     },
     language: {
       label: "Bahasa",
@@ -24,6 +36,7 @@ export const id = {
     selectAll: "Pilih Semua",
     of: "dari",
     selected: "dipilih",
+    per: "per",
     showing: "Menampilkan",
     sku: "SKU",
     stock: "Stok",
@@ -51,6 +64,16 @@ export const id = {
     },
     datePicker: {
       pickDate: "Pilih tanggal",
+      pickDateRange: "Pilih rentang tanggal",
+      selectPreset: "Pilih preset",
+      presets: {
+        today: "Hari ini",
+        last7Days: "7 hari terakhir",
+        last30Days: "30 hari terakhir",
+        last90Days: "90 hari terakhir",
+        thisYear: "Tahun ini",
+        custom: "Kustom",
+      },
     },
     metrics: {
       plannedQuantity: "Jumlah yang Direncanakan",
@@ -58,8 +81,29 @@ export const id = {
     },
     validation: {
       error: "Kesalahan Validasi",
+      required: "Field ini wajib diisi",
+      minLength: "Harus minimal {min} karakter",
+      maxLength: "Maksimal {max} karakter",
+      min: "Harus minimal {min}",
+      max: "Maksimal {max}",
+      positive: "Harus lebih besar dari 0",
+      nonNegative: "Tidak boleh negatif",
+      email: "Alamat email tidak valid",
+      invalidFormat: "Format tidak valid",
+      unexpectedError: "Terjadi kesalahan yang tidak terduga",
+      productNameMin: "Nama produk harus minimal 2 karakter",
+      supplierNameMin: "Nama supplier harus minimal 2 karakter",
+      categoryRequired: "Mohon masukkan kategori",
+      unitRequired: "Mohon masukkan unit",
+      pricePositive: "Harga harus lebih besar dari 0",
+      stockNonNegative: "Stok tidak boleh negatif",
+      minStockNonNegative: "Stok minimum tidak boleh negatif",
+      maxStockPositive: "Stok maksimum harus lebih besar dari 0",
     },
     error: "Kesalahan",
+    notes: "Catatan",
+    page: "Halaman",
+    other: "Lainnya",
     actions: {
       cancel: "Batalkan",
       save: "Simpan",
@@ -80,6 +124,24 @@ export const id = {
       exportAsCsv: "Ekspor sebagai CSV",
       exportAsExcel: "Ekspor sebagai Excel",
       exportAsPdf: "Ekspor sebagai PDF",
+      logout: "Keluar",
+      login: "Masuk",
+      searchPlaceholder: "Cari...",
+      retry: "Coba Lagi",
+      select: "Pilih",
+      apply: "Terapkan",
+    },
+  },
+  search: {
+    title: "Pencarian Global",
+    description: "Cari halaman, fitur, dan lainnya...",
+    placeholder: "Ketik untuk mencari atau tekan '/' untuk fokus...",
+    noResults: "Tidak ada hasil yang ditemukan.",
+    categories: {
+      navigation: "Navigasi",
+      data: "Pengelolaan Data",
+      management: "Manajemen",
+      tracking: "Pelacakan",
     },
   },
   hero: {
@@ -344,6 +406,12 @@ export const id = {
       title: "Selesaikan Langganan Anda",
       subtitle: "Pemrosesan pembayaran aman dengan enkripsi standar industri",
     },
+    steps: {
+      step1: "Pilih Paket",
+      step2: "Pembayaran",
+      step3: "Konfirmasi",
+      current: "Langkah 2 dari 3",
+    },
     billing: {
       title: "Informasi Penagihan",
       firstName: "Nama Depan",
@@ -384,20 +452,42 @@ export const id = {
       billingInfo2: "Batalkan kapan saja dari dashboard Anda",
     },
     security: {
-      title: "Pembayaran Aman",
+      title: "Pemrosesan Pembayaran Aman",
       feature1: {
-        title: "Keamanan Stripe",
-        description: "Didukung oleh keamanan terdepan industri Stripe",
-      },
-      feature2: {
-        title: "Sesuai Standar PCI DSS",
+        title: "PCI DSS Compliant",
         description: "Data kartu Anda tidak pernah disimpan di server kami",
       },
-      feature3: {
+      feature2: {
         title: "Enkripsi SSL 256-bit",
-        description: "Semua transaksi dienkripsi dari ujung ke ujung",
+        description: "Semua transaksi dienkripsi end-to-end",
+      },
+      feature3: {
+        title: "Didukung oleh Stripe",
+        description: "Keamanan terdepan industri yang dipercaya jutaan pengguna",
       },
       footer: "Informasi pembayaran Anda aman dan terenkripsi",
+    },
+    form: {
+      authRequiredPrefix: "Anda perlu",
+      authRequiredBold: "mendaftar atau masuk",
+      authRequiredSuffix: "sebelum berlangganan paket. Klik tombol di bawah untuk melanjutkan.",
+      termsAgreement: "Dengan melanjutkan, Anda menyetujui",
+      termsOfService: "Syarat Layanan",
+      and: "dan",
+      refundPolicy: "Kebijakan Pengembalian Dana",
+      agreeToTermsError: "Silakan setujui Syarat Layanan dan Kebijakan Pengembalian Dana untuk melanjutkan.",
+      redirecting: "Mengalihkan ke checkout...",
+      signUpLogin: "Daftar / Masuk untuk Melanjutkan",
+      proceedToCheckout: "Lanjutkan ke Checkout Aman",
+      checkoutSessionError: "Gagal membuat sesi checkout",
+      checkoutUrlError: "Tidak ada URL checkout yang dikembalikan",
+      checkoutError: "Gagal memulai checkout. Silakan coba lagi.",
+      taxAmount: "€0.00",
+    },
+    footer: {
+      securelyPowered: "Didukung dengan aman oleh",
+      stripe: "Stripe",
+      contactSupport: "Hubungi Dukungan",
     },
     enterprise: {
       hero: {
@@ -417,6 +507,12 @@ export const id = {
         phonePlaceholder: "+62 812-3456-7890",
         submit: "Minta Penawaran",
         submitting: "Mengirim Permintaan...",
+        success: "Terima kasih! Kami akan menghubungi Anda segera.",
+        error: "Gagal mengirim formulir. Silakan coba lagi.",
+        validation: {
+          email: "Harap masukkan alamat email yang valid.",
+          name: "Harap masukkan nama depan dan belakang Anda.",
+        },
       },
       contact: {
         title: "Lebih suka berbicara langsung?",
@@ -787,6 +883,15 @@ export const id = {
     title: "Dasbor",
     description:
       "Selamat datang di dasbor. Di sini Anda dapat melihat status terkini pesanan, resep, dan stok Anda.",
+    storeSelector: {
+      label: "Pilih toko",
+      select: "Pilih toko",
+      createFirst: "Buat Toko",
+      createNew: "Buat toko baru",
+      searchPlaceholder: "Cari toko...",
+      noStores: "Tidak ada toko ditemukan",
+      yourStores: "Toko Anda",
+    },
     alertsCard: {
       title: "Peringatan Kritis",
       description: "Peringatan stok yang memerlukan perhatian segera",
@@ -861,11 +966,15 @@ export const id = {
     materials: {
       pageTitle: "Bahan",
       addTitle: "Tambah Bahan Baru",
+      addButton: "Tambah Bahan",
       addDescription: "Tambahkan bahan baru ke inventaris Anda. Isi semua kolom yang wajib diisi.",
       editTitle: "Edit Bahan",
       editDescription: "Perbarui informasi bahan",
       detailsTitle: "Detail Bahan",
       detailsDescription: "Lihat informasi lengkap tentang bahan ini",
+      title: "Bahan",
+      unknownMaterial: "Bahan Tidak Dikenal",
+      noDescription: "Tidak ada deskripsi yang disediakan",
 
       // Form fields
       form: {
@@ -875,6 +984,8 @@ export const id = {
         selectCategory: "Pilih kategori",
         supplier: "Pemasok",
         selectSupplier: "Pilih pemasok",
+        addSupplier: "Tambah Pemasok",
+        noSuppliersYet: "Belum ada pemasok yang ditambahkan. Klik \"Tambah Pemasok\" untuk menghubungkan pemasok ke bahan ini.",
         quantity: "Jumlah",
         unit: "Satuan",
         selectUnit: "Satuan",
@@ -883,6 +994,25 @@ export const id = {
         costPlaceholder: "25.00",
         notes: "Catatan (Opsional)",
         notesPlaceholder: "Informasi tambahan tentang bahan ini...",
+        description: "Deskripsi",
+        descriptionPlaceholder: "Informasi tambahan tentang bahan ini...",
+        categoryPlaceholder: "contoh: Biji-bijian, Produk Susu",
+        selectSupplierPlaceholder: "Pilih pemasok...",
+        unitCost: "Biaya per Satuan",
+        currentStock: "Stok Saat Ini",
+        minStockLevel: "Tingkat Stok Minimum",
+        maxStockLevel: "Tingkat Stok Maksimum",
+        supplierPrice: "Harga",
+        preferred: "Disukai",
+        chooseSupplier: "Pilih pemasok untuk bahan ini",
+        alertMinStock: "Peringatan ketika stok turun di bawah level ini",
+        alertMaxStock: "Peringatan ketika stok melebihi level ini",
+      },
+      // Form sections
+      sections: {
+        basicInfo: "Informasi Dasar",
+        pricingStock: "Harga & Stok",
+        suppliers: "Pemasok (Opsional)",
       },
 
       // Categories
@@ -931,12 +1061,34 @@ export const id = {
           description: "{count} bahan telah berhasil dihapus.",
         },
       },
+      details: {
+        stockInfo: "Informasi Stok",
+        suppliers: "Pemasok",
+        pricing: "Harga",
+        description: "Deskripsi",
+        metadata: "Informasi",
+        currentStock: "Stok Saat Ini",
+        minStock: "Min",
+        maxStock: "Max",
+        unitCost: "Biaya per Satuan",
+        totalValue: "Total Nilai",
+        category: "Kategori",
+        unit: "Satuan",
+        noSuppliersLinked: "Tidak ada pemasok yang ditautkan",
+        created: "Dibuat",
+        lastUpdated: "Terakhir Diperbarui",
+      },
+      deleteConfirm: {
+        title: "Hapus Bahan",
+        description: "Apakah Anda yakin ingin menghapus \"{name}\"? Tindakan ini tidak dapat dibatalkan.",
+      },
     },
 
     // Recipes section
     recipes: {
       pageTitle: "Resep",
       addTitle: "Buat Resep Baru",
+      addButton: "Tambah Resep",
       editTitle: "Edit Resep",
       detailsTitle: "Detail Resep",
       duplicateTitle: "Duplikasi Resep",
@@ -1122,6 +1274,7 @@ export const id = {
     products: {
       pageTitle: "Produk",
       addTitle: "Tambah Produk Baru",
+      addButton: "Tambah Produk",
       editTitle: "Edit Produk",
       detailsTitle: "Detail Produk",
       addDescription:
@@ -1218,6 +1371,7 @@ export const id = {
     suppliers: {
       pageTitle: "Pemasok",
       addTitle: "Tambah Pemasok Baru",
+      addButton: "Tambah Pemasok",
       editTitle: "Edit Pemasok",
       detailsTitle: "Detail Pemasok",
       addDescription:
@@ -1310,8 +1464,10 @@ export const id = {
   filters: {
     allSuppliers: "Semua Pemasok",
     allStock: "Semua Stok",
+    allStockLevels: "Semua Level Stok",
     inStock: "Tersedia",
     lowStock: "Stok Rendah",
+    outOfStock: "Habis",
     critical: "Kritis",
     overstocked: "Stok Berlebih",
     allCategories: "Semua Kategori",
@@ -1354,6 +1510,14 @@ export const id = {
     difficultyHighLow: "Kesulitan (Tinggi-Rendah)",
     prepTimeLowHigh: "Waktu Persiapan (Rendah-Tinggi)",
     prepTimeHighLow: "Waktu Persiapan (Tinggi-Rendah)",
+    timeShortest: "Waktu (Terpendek)",
+    timeLongest: "Waktu (Terpanjang)",
+    contactAZ: "Kontak (A-Z)",
+    contactZA: "Kontak (Z-A)",
+    newest: "Terbaru",
+    newestFirst: "Terbaru",
+    oldest: "Terlama",
+    oldestFirst: "Terlama",
   },
   tables: {
     order: "Pesanan",
@@ -1418,11 +1582,25 @@ export const id = {
     getStartedRecipe: "Mulai dengan membuat resep pertama Anda",
     getStartedProduct: "Mulai dengan menambahkan produk pertama Anda",
     getStartedSupplier: "Mulai dengan menambahkan pemasok pertama Anda",
+    errorLoadingMaterials: "Kesalahan memuat bahan",
+    errorLoadingRecipes: "Kesalahan memuat resep",
+    errorLoadingProducts: "Kesalahan memuat produk",
+    errorLoadingSuppliers: "Kesalahan memuat pemasok",
     noDataToExport: "Tidak ada data untuk diekspor",
     noDataToExportDesc: "Tidak ada data yang tersedia untuk diekspor.",
+    exportStarted: "Ekspor dimulai",
+    exportStartedDescription: "Ekspor Anda akan segera diunduh.",
     exportSuccessful: "Ekspor berhasil",
     exportFailed: "Ekspor gagal",
     exportFailedDesc: "Terjadi kesalahan saat mengekspor data.",
+    failedToDeleteMaterial: "Gagal menghapus bahan",
+    failedToDeleteMaterials: "Gagal menghapus bahan",
+    failedToDeleteSupplier: "Gagal menghapus pemasok",
+    failedToDeleteSuppliers: "Gagal menghapus pemasok",
+    failedToUpdateMaterial: "Gagal memperbarui bahan",
+    failedToUpdateOrder: "Gagal memperbarui pesanan",
+    orderPlaced: "Pesanan ditandai sebagai ditempatkan",
+    orderPlacedError: "Gagal menandai pesanan sebagai ditempatkan",
   },
   alerts: {
     // Page titles
@@ -1462,7 +1640,11 @@ export const id = {
       createOrder: "Buat Pesanan",
       callSupplier: "Telepon",
       emailSupplier: "Email",
+      noSupplier: "Tidak Ada Pemasok",
     },
+
+    // Supplier info
+    noSupplierAssigned: "Tidak Ada Pemasok",
 
     // Details Dialog
     detailsDialog: {
@@ -1511,8 +1693,18 @@ export const id = {
     current: "Saat Ini",
     required: "Diperlukan",
     toOrder: "Perlu Dipesan",
+    quantity: "Kuantitas",
+    price: "Harga",
+    total: "Total",
+    orderTotal: "Total Pesanan",
+    expectedDelivery: "Pengiriman Diharapkan",
+    markAsPlaced: "Tandai Sudah Dipesan",
+    placing: "Memproses...",
+    orderPlaced: "Pesanan ditandai sudah dipesan",
+    orderPlacedError: "Gagal menandai pesanan",
     noOrdersToPlace: "Tidak Ada Pesanan yang Perlu Dibuat",
     noOrdersDescription: "Anda tidak memiliki pesanan yang tertunda saat ini",
+    errorLoadingOrders: "Gagal memuat pesanan",
 
     // Toasts
     toasts: {
@@ -1602,7 +1794,10 @@ export const id = {
         active: "Aktif",
         canceled: "Dibatalkan",
         pastDue: "Tertunda",
+        incomplete: "Tidak Lengkap",
+        canceling: "Membatalkan",
       },
+      renew: "Perpanjang",
       warnings: {
         ending: {
           title: "Langganan Berakhir",
@@ -1670,6 +1865,14 @@ export const id = {
       editBusinessInfo: "Edit Informasi Bisnis",
       editBusinessInfoDescription: "Perbarui informasi kontak dan detail bisnis Anda",
       addBusinessInfoDescription: "Tambahkan informasi bisnis Anda untuk melengkapi profil",
+      editAvatar: "Edit Foto Profil",
+      editAvatarDescription: "Unggah foto profil baru atau hapus foto yang ada.",
+      cropAvatarDescription: "Potong dan sesuaikan foto profil Anda.",
+      previewAvatarDescription: "Pratinjau foto profil baru Anda.",
+      uploadAvatar: "Klik untuk mengunggah",
+      fileTypesInfo: "JPEG, PNG, WebP, atau GIF (maks 5MB)",
+      loadImageFailed: "Gagal memuat gambar",
+      uploadFailed: "Gagal mengunggah",
       namePlaceholder: "Masukkan nama lengkap Anda",
       emailPlaceholder: "email@anda.com",
       phonePlaceholder: "+62 812 3456 7890",
@@ -1688,12 +1891,18 @@ export const id = {
       cancel: "Batal",
       update: "Perbarui Profil",
       delete: "Hapus",
+      remove: "Hapus",
+      removeAvatar: "Hapus Avatar",
+      uploadAvatar: "Unggah",
+      apply: "Terapkan",
     },
 
     // Kesalahan
     errors: {
       updateFailed: "Gagal memperbarui profil. Silakan coba lagi.",
       businessUpdateFailed: "Gagal memperbarui informasi bisnis. Silakan coba lagi.",
+      loadImageFailed: "Gagal memuat gambar",
+      uploadFailed: "Gagal mengunggah",
     },
 
     // Pesan toast
@@ -1709,6 +1918,14 @@ export const id = {
       businessCreated: {
         title: "Info Bisnis Ditambahkan",
         description: "Informasi bisnis berhasil ditambahkan.",
+      },
+      avatarUpdated: {
+        title: "Avatar Diperbarui",
+        description: "Foto profil Anda telah berhasil diperbarui.",
+      },
+      avatarRemoved: {
+        title: "Avatar Dihapus",
+        description: "Foto profil Anda telah dihapus.",
       },
       avatarUploaded: {
         title: "Avatar Diperbarui",
@@ -1734,6 +1951,13 @@ export const id = {
       businessNameRequired: "Nama bisnis diperlukan",
     },
 
+    // Cropper
+    cropper: {
+      zoom: "Zoom",
+      rotation: "Rotasi",
+      processing: "Memproses...",
+    },
+
     // Kunci warisan (menjaga kompatibilitas mundur)
     address: "Alamat",
     businessName: "Nama Bisnis",
@@ -1742,10 +1966,28 @@ export const id = {
   stores: {
     title: "Toko Anda",
     createStore: "Buat toko",
+    subscribeToCreateStore: "Berlangganan untuk Membuat Toko",
+    upgradePlan: "Tingkatkan Paket",
+    editStore: "Edit Toko",
+    updateStore: "Perbarui Toko",
+    editDescription: "Perbarui informasi toko Anda. Semua field kecuali nama bersifat opsional.",
     storeName: "Nama Toko",
+    storeNamePlaceholder: "contoh: Toko Roti Artisan Jakarta",
     city: "Kota",
+    cityPlaceholder: "contoh: Jakarta",
+    country: "Negara",
+    countryPlaceholder: "contoh: Indonesia",
+    addressPlaceholder: "contoh: Jl. Sudirman No. 123",
+    phonePlaceholder: "contoh: +62 812 3456 7890",
+    emailPlaceholder: "contoh: kontak@toko.com",
+    storeImage: "Gambar Toko",
     noStores: "Belum ada toko",
     createFirst: "Buat toko pertama Anda untuk memulai",
+    searchPlaceholder: "Cari toko berdasarkan nama, kota, atau alamat...",
+    createSuccess: "Toko berhasil dibuat",
+    createError: "Gagal membuat toko",
+    editSuccess: "Toko berhasil diperbarui",
+    editError: "Gagal memperbarui toko",
   },
   tabs: {
     delivery: "Pengiriman",
@@ -1793,6 +2035,7 @@ export const id = {
       },
       noMatches: "Tidak ada pengiriman yang sesuai dengan filter Anda",
       noDeliveries: "Belum ada pengiriman",
+      noDeliveriesDescription: "Tidak ada pengiriman supplier ditemukan",
       actions: {
         edit: "Edit",
         updateStatus: "Perbarui Status",
@@ -1837,7 +2080,7 @@ export const id = {
       dialogs: {
         updateStatus: {
           title: "Perbarui Status Pengiriman",
-          description: "Perbarui status pengiriman ini",
+          description: "Ubah status pengiriman {reference}",
           currentStatus: "Status Saat Ini",
           newStatus: "Status Baru",
           receivedDate: "Tanggal Diterima",
@@ -1846,6 +2089,18 @@ export const id = {
           notesPlaceholder: "Tambahkan catatan tentang perubahan status ini...",
           updateButton: "Perbarui Status",
           success: "Status berhasil diperbarui",
+          selectNewStatus: "Harap pilih status baru",
+          selectReceivedDate: "Harap pilih tanggal diterima",
+          selectNewStatusPlaceholder: "Pilih status baru",
+          selectReceivedDatePlaceholder: "Pilih tanggal diterima",
+          updating: "Memperbarui...",
+          updateStatus: "Perbarui Status",
+          toasts: {
+            updated: {
+              title: "Status Diperbarui",
+              description: "Status pengiriman telah diperbarui menjadi {status}",
+            },
+          },
         },
         printDelivery: {
           title: "Cetak Pengiriman",
@@ -1897,6 +2152,7 @@ export const id = {
             expectedDateRequired: "Tanggal yang diharapkan wajib diisi",
             atLeastOneItem: "Harap tambahkan setidaknya satu item",
             itemsMustHaveMaterial: "Semua item harus memiliki bahan dan jumlah lebih besar dari 0",
+            addModeNotImplemented: "Mode tambah belum diimplementasikan. Pesanan harus dibuat dari peringatan.",
           },
           toasts: {
             created: {
@@ -1922,6 +2178,7 @@ export const id = {
       selectItemDescription:
         "Pilih item dari daftar untuk melihat detail dan melakukan penyesuaian",
       noItemsFound: "Tidak ada item ditemukan",
+      noStockItemsYet: "Belum ada item stok",
       selectAll: "Pilih Semua",
       deselectAll: "Batalkan Semua",
 
@@ -2079,11 +2336,10 @@ export const id = {
 
       // Batch Statuses
       statuses: {
-        pending: "Menunggu",
+        planned: "Direncanakan",
         inProgress: "Sedang Berjalan",
-        qualityCheck: "Pemeriksaan Kualitas",
         completed: "Selesai",
-        failed: "Gagal",
+        cancelled: "Dibatalkan",
       },
 
       // Start Production Dialog
@@ -2151,17 +2407,18 @@ export const id = {
 
       // Batch Statuses
       statuses: {
-        pending: "Menunggu",
+        planned: "Direncanakan",
         inProgress: "Sedang Berjalan",
-        qualityCheck: "Pemeriksaan Kualitas",
         completed: "Selesai",
-        failed: "Gagal",
+        cancelled: "Dibatalkan",
       },
 
       // Metrics
       metrics: {
         totalBatches: "Total Batch",
         totalBatchesDescription: "Semua batch produksi",
+        completedBatches: "Batch Selesai",
+        completedBatchesDescription: "Jumlah batch yang selesai",
         averageQuality: "Rata-rata Kualitas",
         averageQualityDescription: "Skor kualitas rata-rata",
         efficiency: "Efisiensi",
@@ -2303,6 +2560,20 @@ export const id = {
     lastMovement: "Pergerakan Terakhir",
     recentActivity: "Aktivitas Terakhir",
 
+    // Filters for stock levels
+    filters: {
+      allItems: "Semua Item",
+      allItemsPlaceholder: "Semua Item",
+      allStatus: "Semua Status",
+      allStatusPlaceholder: "Semua Status Stok",
+      outOfStock: "Habis",
+      lowStock: "Stok Rendah",
+      inStock: "Tersedia",
+      overstocked: "Stok Berlebih",
+    },
+    item: "item",
+    items: "item",
+
     // Stock History
     stockHistory: "Riwayat Stok",
     runningBalance: "Saldo Berjalan",
@@ -2410,16 +2681,220 @@ export const id = {
   footer: {
     tagline: "SOLUSI UNTUK MANAJEMEN STOK MAKANAN ANDA",
     contact: "Hubungi kami",
-    addressHeading: "Prancis, Massy",
-    addressLines: ["1 Av. Marcel Ramolfo Garnier", "Massy, 91300", "Tel (+33) 7 81 73 23 86"],
+    addressHeading: "Alamat",
+    address: "France, Paris",
     rights: (year: number) => `© ${year} Epidom. Hak cipta dilindungi.`,
   },
   cookie: {
     title: "Kami menggunakan cookie",
     description:
-      "Kami menggunakan cookie untuk meningkatkan pengalaman Anda, menganalisis lalu lintas situs, dan menyajikan konten yang dipersonalisasi. Dengan mengklik 'Terima', Anda menyetujui penggunaan cookie kami.",
+      "Terima: Kami akan melacak kunjungan Anda untuk meningkatkan website kami. Tolak: Hanya cookie penting (login, keamanan) yang akan digunakan.",
     accept: "Terima",
     reject: "Tolak",
     close: "Tutup pemberitahuan cookie",
+    customize: "Sesuaikan",
+    back: "Kembali",
+    save: "Simpan Preferensi",
+    settingsTitle: "Preferensi Cookie",
+    settingsDescription: "Pilih cookie yang ingin Anda izinkan. Cookie penting selalu diaktifkan karena diperlukan agar situs web berfungsi.",
+    essential: {
+      title: "Cookie Penting",
+      description: "Diperlukan agar situs web berfungsi dengan baik. Cookie ini tidak dapat dinonaktifkan.",
+    },
+    analytics: {
+      title: "Cookie Analitik",
+      description: "Jika diterima: Kami melacak page views dan perilaku pengguna untuk meningkatkan website. Jika ditolak: Tidak ada data tracking yang dikumpulkan.",
+    },
+    marketing: {
+      title: "Cookie Pemasaran",
+      description: "Jika diterima: Kami melacak conversions dan events untuk keperluan marketing. Jika ditolak: Tidak ada tracking marketing yang dilakukan.",
+    },
+  },
+  billing: {
+    title: "Tagihan & Langganan",
+    currentPlan: "Paket Saat Ini",
+    planStatus: "Status Paket",
+    nextBilling: "Tanggal tagihan berikutnya",
+    storeUsage: "Penggunaan toko",
+    stores: "toko",
+    unlimited: "Tidak Terbatas",
+    limitReached: "Batas tercapai",
+    managePayment: "Kelola Metode Pembayaran",
+    cancelSubscription: "Batalkan Langganan",
+    upgradeNow: "Tingkatkan Sekarang",
+    upgradeToPro: "Tingkatkan ke Pro",
+    viewPlans: "Lihat Paket & Harga",
+    noSubscription: "Tidak Ada Langganan Aktif",
+    noSubscriptionDesc: "Berlangganan paket untuk mulai mengelola bisnis Anda dengan Epidom.",
+    currentPlanLabel: "Paket Saat Ini",
+    availablePlans: "Paket yang Tersedia",
+    comparePlans: "Bandingkan fitur dan tingkatkan kapan saja",
+    subscriptionWillCancel: "Langganan Anda akan dibatalkan pada {date}. Anda akan tetap memiliki akses hingga saat itu.",
+    confirmCancel: "Apakah Anda yakin ingin membatalkan langganan Anda? Anda akan tetap memiliki akses hingga akhir periode penagihan Anda.",
+    subscriptionActivated: "Langganan berhasil diaktifkan! Selamat datang di paket {plan}.",
+    subscriptionRequired: "Langganan aktif diperlukan untuk mengakses dasbor.",
+    upgradePro: "Tingkatkan ke Pro untuk menambahkan lebih banyak toko.",
+    storeLimitReached: "Anda telah mencapai batas toko paket Anda ({current}/{limit}).",
+    status: {
+      active: "Aktif",
+      canceled: "Dibatalkan",
+      pastDue: "Terlambat",
+      incomplete: "Tidak Lengkap",
+    },
+  },
+  stripeConnect: {
+    title: "Pengaturan Pembayaran",
+    description: "Terima 80% pendapatan langganan melalui Stripe Connect",
+    connected: "Terhubung",
+    setupComplete: "Pengaturan pembayaran selesai",
+    setupCompleteDesc: "Anda sudah siap menerima pembayaran. 80% dari semua pendapatan langganan akan secara otomatis ditransfer ke akun Stripe Anda.",
+    accountStatus: "Status Akun",
+    charges: "Tagihan",
+    payouts: "Pembayaran",
+    accountId: "ID Akun",
+    enabled: "Diaktifkan",
+    disabled: "Dinonaktifkan",
+    viewEarnings: "Lihat Pendapatan di Dasbor Stripe",
+    completeOnboarding: "Selesaikan onboarding Stripe Connect untuk mulai menerima 80% pembayaran langganan. Ini diperlukan agar sistem pembayaran berfungsi.",
+    whatYouNeed: "Apa yang Anda perlukan:",
+    needBusiness: "Informasi bisnis (nama, alamat, ID pajak)",
+    needBank: "Detail rekening bank untuk pembayaran",
+    needIdentity: "Verifikasi identitas (mungkin memerlukan dokumen)",
+    processTime: "Proses ini ditangani dengan aman oleh Stripe dan biasanya memakan waktu 5-10 menit.",
+    completeSetup: "Selesaikan Pengaturan Pembayaran",
+    redirectingToStripe: "Mengalihkan ke Stripe...",
+    secureOnboarding: "Anda akan dialihkan ke halaman onboarding aman Stripe",
+  },
+  terms: {
+    title: "Syarat dan Ketentuan",
+    lastUpdated: "Terakhir Diperbarui:",
+    lastUpdatedDate: "November 2025",
+    introduction:
+      "Selamat datang di EPIDOM. Syarat dan Ketentuan ini mengatur penggunaan platform manajemen inventaris makanan kami. Dengan mengakses atau menggunakan layanan kami, Anda setuju untuk terikat oleh ketentuan ini.",
+    section1: {
+      title: "1. Penerimaan Syarat",
+      content:
+        "Dengan mengakses dan menggunakan EPIDOM, Anda menerima dan setuju untuk terikat oleh ketentuan dan ketentuan perjanjian ini. Jika Anda tidak setuju untuk mematuhi hal di atas, harap jangan gunakan layanan ini.",
+    },
+    section2: {
+      title: "2. Deskripsi Layanan",
+      content:
+        "EPIDOM adalah platform manajemen inventaris makanan berbasis cloud yang dirancang untuk membantu bisnis melacak, mengelola, dan mengoptimalkan inventaris mereka. Kami menyediakan berbagai paket berlangganan dengan fitur dan kemampuan yang berbeda.",
+    },
+    section3: {
+      title: "3. Akun Pengguna",
+      content: "Untuk menggunakan EPIDOM, Anda harus membuat akun. Anda bertanggung jawab untuk:",
+      item1: "Mempertahankan kerahasiaan kredensial akun Anda",
+      item2: "Semua aktivitas yang terjadi di bawah akun Anda",
+      item3: "Memberikan informasi yang akurat dan lengkap saat membuat akun Anda",
+      item4: "Memberitahu kami segera tentang penggunaan akun Anda yang tidak sah",
+    },
+    section4: {
+      title: "4. Berlangganan dan Pembayaran",
+      content:
+        "EPIDOM menawarkan layanan berbasis berlangganan dengan berbagai paket harga. Dengan berlangganan, Anda setuju untuk:",
+      item1: "Membayar biaya berlangganan seperti yang ditentukan dalam paket yang Anda pilih",
+      item2: "Pembaruan otomatis berlangganan Anda kecuali dibatalkan",
+      item3: "Pemrosesan pembayaran melalui gateway pembayaran aman kami",
+      item4: "Kepatuhan terhadap kebijakan pengembalian dana kami seperti yang diuraikan secara terpisah",
+    },
+    section5: {
+      title: "5. Tanggung Jawab Pengguna",
+      content:
+        "Anda setuju untuk menggunakan EPIDOM dengan cara yang sah dan bertanggung jawab untuk:",
+      item1: "Memastikan keakuratan data yang dimasukkan ke dalam sistem",
+      item2: "Tidak menggunakan layanan untuk tujuan ilegal atau tidak sah",
+      item3: "Tidak mencoba mendapatkan akses tidak sah ke sistem",
+      item4: "Menghormati hak kekayaan intelektual dan tidak melanggar hak orang lain",
+    },
+    section6: {
+      title: "6. Kekayaan Intelektual",
+      content:
+        "Semua konten, fitur, dan fungsionalitas EPIDOM, termasuk tetapi tidak terbatas pada teks, grafik, logo, dan perangkat lunak, adalah milik EPIDOM dan dilindungi oleh undang-undang hak cipta, merek dagang, dan kekayaan intelektual internasional lainnya.",
+    },
+    section7: {
+      title: "7. Pembatasan Tanggung Jawab",
+      content:
+        "EPIDOM tidak akan bertanggung jawab atas kerugian tidak langsung, insidental, khusus, konsekuensial, atau hukuman yang diakibatkan oleh penggunaan atau ketidakmampuan Anda untuk menggunakan layanan. Total tanggung jawab kami tidak akan melebihi jumlah yang Anda bayar untuk layanan dalam 12 bulan sebelum klaim.",
+    },
+    section8: {
+      title: "8. Pengakhiran",
+      content:
+        "Kami berhak mengakhiri atau menangguhkan akun Anda dan akses ke layanan segera, tanpa pemberitahuan sebelumnya, untuk perilaku yang kami yakini melanggar Syarat ini atau merugikan pengguna lain, kami, atau pihak ketiga.",
+    },
+    section9: {
+      title: "9. Perubahan Syarat",
+      content:
+        "Kami berhak memodifikasi Syarat ini kapan saja. Kami akan memberi tahu pengguna tentang perubahan material melalui email atau melalui layanan. Penggunaan lanjutan layanan setelah modifikasi tersebut merupakan penerimaan Syarat yang diperbarui.",
+    },
+    section10: {
+      title: "10. Informasi Kontak",
+      content:
+        "Jika Anda memiliki pertanyaan tentang Syarat dan Ketentuan ini, silakan hubungi kami:",
+      email: "Email",
+    },
+    footer:
+      "Dengan menggunakan EPIDOM, Anda mengakui bahwa Anda telah membaca, memahami, dan setuju untuk terikat oleh Syarat dan Ketentuan ini.",
+  },
+  refundPolicy: {
+    title: "Kebijakan Pengembalian Dana",
+    lastUpdated: "Terakhir Diperbarui:",
+    lastUpdatedDate: "November 2025",
+    introduction:
+      "Di EPIDOM, kami berusaha memberikan layanan yang sangat baik. Kebijakan Pengembalian Dana ini menguraikan syarat dan ketentuan untuk pengembalian dana dan pembatalan layanan berlangganan kami.",
+    section1: {
+      title: "1. Kelayakan Pengembalian Dana",
+      content:
+        "Anda mungkin memenuhi syarat untuk pengembalian dana dalam keadaan berikut:",
+      item1: "Anda membatalkan berlangganan dalam 14 hari sejak pembelian awal",
+      item2: "Anda mengalami masalah teknis yang mencegah Anda menggunakan layanan, dan kami tidak dapat menyelesaikannya",
+      item3: "Anda ditagih secara tidak benar karena kesalahan penagihan dari pihak kami",
+    },
+    section2: {
+      title: "2. Proses Pengembalian Dana",
+      content: "Untuk meminta pengembalian dana, silakan ikuti langkah-langkah berikut:",
+      step1: "Hubungi tim dukungan kami di support@epidom.com dengan permintaan pengembalian dana Anda",
+      step2: "Berikan email akun dan detail berlangganan Anda",
+      step3: "Jelaskan alasan permintaan pengembalian dana Anda",
+      step4: "Kami akan meninjau permintaan Anda dan merespons dalam 5-7 hari kerja",
+    },
+    section3: {
+      title: "3. Waktu Pemrosesan",
+      content:
+        "Setelah pengembalian dana Anda disetujui, itu akan diproses dalam 5-10 hari kerja. Pengembalian dana akan dikreditkan ke metode pembayaran asli yang digunakan untuk pembelian.",
+    },
+    section4: {
+      title: "4. Item yang Tidak Dapat Dikembalikan",
+      content: "Berikut ini tidak memenuhi syarat untuk pengembalian dana:",
+      item1: "Berlangganan yang dibatalkan setelah 14 hari sejak pembelian awal",
+      item2: "Bulan parsial layanan yang sudah digunakan",
+      item3: "Berlangganan yang telah aktif selama lebih dari 30 hari",
+    },
+    section5: {
+      title: "5. Pembatalan",
+      content:
+        "Anda dapat membatalkan berlangganan kapan saja dari dasbor akun Anda. Pembatalan akan berlaku pada akhir periode penagihan saat ini. Anda akan terus memiliki akses ke layanan hingga akhir periode yang dibayar.",
+    },
+    section6: {
+      title: "6. Pengembalian Dana Sebagian",
+      content:
+        "Dalam keadaan luar biasa, kami dapat menawarkan pengembalian dana sebagian berdasarkan kasus per kasus. Ini akan ditentukan atas kebijakan kami sendiri berdasarkan keadaan spesifik permintaan Anda.",
+    },
+    section7: {
+      title: "7. Kontak untuk Pengembalian Dana",
+      content:
+        "Untuk semua permintaan pengembalian dana dan pertanyaan, silakan hubungi tim dukungan kami:",
+      email: "Email",
+    },
+    footer:
+      "Kebijakan pengembalian dana ini dapat berubah. Kami akan memberi tahu pengguna tentang perubahan material melalui email atau melalui layanan.",
+  },
+  notFound: {
+    title: "Halaman Tidak Ditemukan",
+    description: "Maaf, kami tidak dapat menemukan halaman yang Anda cari.",
+    goToDashboard: "Ke Dasbor",
+    backToHome: "Kembali ke Beranda",
+    helpText: "Jika Anda yakin ini adalah kesalahan, silakan",
+    contactSupport: "hubungi dukungan",
   },
 };

@@ -17,7 +17,7 @@ interface PersonalInfoCardProps {
     timezone: string;
     currency: string;
   };
-  onUpdate: () => void;
+  onUpdate?: () => void;
 }
 
 export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
@@ -27,13 +27,13 @@ export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
   const getLanguageLabel = (locale?: string) => {
     switch (locale) {
       case "en":
-        return t("common.language.en") || "English";
+        return t("common.language.en");
       case "fr":
-        return t("common.language.fr") || "Français";
+        return t("common.language.fr");
       case "id":
-        return t("common.language.id") || "Bahasa";
+        return t("common.language.id");
       default:
-        return locale || "—";
+        return locale || t("common.notAvailable");
     }
   };
 
@@ -48,12 +48,17 @@ export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
 
   return (
     <>
-      <Card className="border-2">
+      <Card className="border-2 h-full">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-xl font-bold">{t("profile.personal.title")}</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditOpen(true)}
+            className="h-9 w-9 gap-0 p-0 sm:h-auto sm:w-auto sm:gap-2 sm:px-3"
+          >
             <Pencil className="h-4 w-4" />
-            {t("profile.actions.edit")}
+            <span className="hidden sm:inline">{t("profile.actions.edit")}</span>
           </Button>
         </CardHeader>
         <CardContent>

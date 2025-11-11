@@ -32,7 +32,8 @@ import {
 } from "@/components/ui/form";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { updateProfileSchema } from "@/lib/validation/auth.schemas";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { useUpdateProfile } from "../hooks/use-profile";
 
 interface EditPersonalInfoDialogProps {
   open: boolean;
@@ -46,7 +47,7 @@ interface EditPersonalInfoDialogProps {
     timezone: string;
     currency: string;
   };
-  onUpdate: () => void;
+  onUpdate?: () => void;
 }
 
 type FormData = z.infer<typeof updateProfileSchema>;
@@ -58,7 +59,7 @@ export function EditPersonalInfoDialog({
   onUpdate,
 }: EditPersonalInfoDialogProps) {
   const { t } = useI18n();
-  const { toast } = useToast();
+  const updateProfile = useUpdateProfile();
 
   const form = useForm<FormData>({
     resolver: zodResolver(updateProfileSchema),
@@ -68,7 +69,6 @@ export function EditPersonalInfoDialog({
       locale: user.locale,
       timezone: user.timezone,
       currency: user.currency,
-      image: "",
     },
   });
 
@@ -81,51 +81,24 @@ export function EditPersonalInfoDialog({
         locale: user.locale,
         timezone: user.timezone,
         currency: user.currency,
-        image: "",
       });
     }
   }, [open, user, form]);
 
   async function onSubmit(data: FormData) {
     try {
-      // TODO: Replace with actual API call using TanStack Query
-      const response = await fetch("/api/user/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      await updateProfile.mutateAsync(data);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        // Handle validation errors
-        if (result.error?.code === "VALIDATION_ERROR" && result.error?.details) {
-          result.error.details.forEach((detail: { field: string; message: string }) => {
-            form.setError(detail.field as keyof FormData, {
-              type: "manual",
-              message: detail.message,
-            });
-          });
-          return;
-        }
-
-        throw new Error(result.error?.message || "Failed to update profile");
-      }
-
-      toast({
-        title: t("profile.toasts.profileUpdated.title"),
+      toast.success(t("profile.toasts.profileUpdated.title"), {
         description: t("profile.toasts.profileUpdated.description"),
       });
 
-      onUpdate();
+      onUpdate?.();
       onOpenChange(false);
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast({
-        title: t("common.error"),
-        description:
-          error instanceof Error ? error.message : t("profile.errors.updateFailed"),
-        variant: "destructive",
+      toast.error(t("common.error"), {
+        description: error instanceof Error ? error.message : t("profile.errors.updateFailed"),
       });
     }
   }
@@ -224,8 +197,6 @@ export function EditPersonalInfoDialog({
                       <SelectContent>
                         <SelectItem value="EUR">EUR (€)</SelectItem>
                         <SelectItem value="USD">USD ($)</SelectItem>
-                        <SelectItem value="GBP">GBP (£)</SelectItem>
-                        <SelectItem value="IDR">IDR (Rp)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -264,13 +235,13 @@ export function EditPersonalInfoDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={form.formState.isSubmitting}
+                disabled={updateProfile.isPending}
                 className="flex-1"
               >
                 {t("profile.actions.cancel")}
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting} className="flex-1">
-                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={updateProfile.isPending} className="flex-1">
+                {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t("profile.actions.save")}
               </Button>
             </div>

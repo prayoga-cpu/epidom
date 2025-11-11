@@ -1,0 +1,110 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { subscriptionRepository } from "@/lib/repositories";
+import { stripe } from "@/lib/stripe";
+import Stripe from "stripe";
+
+type SubscriptionDetail = {
+  id: string;
+  status: string;
+  plan: string;
+  priceId: string | undefined;
+  amount: number | null | undefined;
+  currency: string | undefined;
+  created: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+};
+
+/**
+ * GET /api/subscriptions/debug
+ *
+ * Show all subscriptions in Stripe for debugging
+ * This helps identify duplicate/stuck subscriptions
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // Verify session
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    // Get subscription from database
+    const dbSubscription = await subscriptionRepository.findByUserId(userId);
+
+    if (!dbSubscription) {
+      return NextResponse.json({ error: "No subscription found in database" }, { status: 404 });
+    }
+
+    // Get ALL subscriptions from Stripe (active, canceled, all statuses)
+    const allSubscriptions = await stripe.subscriptions.list({
+      customer: dbSubscription.stripeCustomerId,
+      limit: 100, // Get all subscriptions
+    });
+
+    const subscriptionDetails = allSubscriptions.data.map((sub: Stripe.Subscription) => ({
+      id: sub.id,
+      status: sub.status,
+      plan: sub.metadata?.plan || "unknown",
+      priceId: sub.items.data[0]?.price.id,
+      amount: sub.items.data[0]?.price.unit_amount,
+      currency: sub.items.data[0]?.price.currency,
+      created: new Date(sub.created * 1000).toISOString(),
+      currentPeriodStart: new Date((sub as any).current_period_start * 1000).toISOString(),
+      currentPeriodEnd: new Date((sub as any).current_period_end * 1000).toISOString(),
+      cancelAtPeriodEnd: (sub as any).cancel_at_period_end || false,
+      canceledAt: (sub as any).canceled_at
+        ? new Date((sub as any).canceled_at * 1000).toISOString()
+        : null,
+    }));
+
+    // Group by status
+    const grouped = {
+      active: subscriptionDetails.filter((s: SubscriptionDetail) => s.status === "active"),
+      canceled: subscriptionDetails.filter((s: SubscriptionDetail) => s.status === "canceled"),
+      other: subscriptionDetails.filter(
+        (s: SubscriptionDetail) => s.status !== "active" && s.status !== "canceled"
+      ),
+    };
+
+    return NextResponse.json({
+      database: {
+        plan: dbSubscription.plan,
+        status: dbSubscription.status,
+        stripeSubscriptionId: dbSubscription.stripeSubscriptionId,
+        stripeCustomerId: dbSubscription.stripeCustomerId,
+      },
+      stripe: {
+        total: allSubscriptions.data.length,
+        active: grouped.active.length,
+        canceled: grouped.canceled.length,
+        other: grouped.other.length,
+      },
+      subscriptions: {
+        active: grouped.active,
+        canceled: grouped.canceled,
+        other: grouped.other,
+      },
+      issues: {
+        hasMultipleActive: grouped.active.length > 1,
+        dbMismatch:
+          grouped.active.length > 0 &&
+          !grouped.active.find(
+            (s: SubscriptionDetail) => s.id === dbSubscription.stripeSubscriptionId
+          ),
+      },
+    });
+  } catch (error: any) {
+    console.error("[API] Subscription debug error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to get subscription details" },
+      { status: 500 }
+    );
+  }
+}

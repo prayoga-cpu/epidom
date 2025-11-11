@@ -1,112 +1,138 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { MOCK_ALERTS_FULL, MOCK_MATERIALS, MOCK_SUPPLIERS } from "@/mocks";
-import { AlertType, AlertStatus, type Alert } from "@/types/entities";
-import { AlertCircle } from "lucide-react";
+import { useAlerts, type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { AlertCircle, Loader2, ShoppingCart, Package2 } from "lucide-react";
+import { useParams } from "next/navigation";
+import BulkOrderDialog from "./bulk-order-dialog";
 
 interface AlertsTableProps {
-  onViewDetails: (alert: Alert) => void;
+  onViewDetails?: (alert: Alert) => void;
   onCreateOrder: (alert: Alert) => void;
-}
-
-// Check if alert should be shown
-function shouldShowAlert(alert: Alert): boolean {
-  // Only show LOW_STOCK alerts
-  if (alert.type !== AlertType.LOW_STOCK) return false;
-
-  // Don't show resolved or snoozed alerts
-  if (alert.status === AlertStatus.RESOLVED || alert.status === AlertStatus.SNOOZED) {
-    return false;
-  }
-
-  return true;
 }
 
 export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) {
   const { t } = useI18n();
+  const params = useParams();
+  const storeId = params?.storeId as string;
 
-  // Filter active alerts
-  const activeAlerts = useMemo(() => {
-    return MOCK_ALERTS_FULL.filter(shouldShowAlert);
-  }, []);
+  const { data, isLoading, error } = useAlerts(storeId);
+
+  // Bulk order dialog state
+  const [isBulkOrderOpen, setIsBulkOrderOpen] = useState(false);
+  const [selectedSupplierGroup, setSelectedSupplierGroup] = useState<{
+    supplier: { id: string; name: string };
+    items: Alert[];
+  } | null>(null);
+
+  // Handle bulk order
+  const handleBulkOrder = (supplierGroup: { supplier: { id: string; name: string }; items: Alert[] }) => {
+    setSelectedSupplierGroup(supplierGroup);
+    setIsBulkOrderOpen(true);
+  };
 
   // Group alerts by supplier
   const alertsBySupplier = useMemo(() => {
-    const grouped = new Map<string, Array<{
-      alert: Alert;
-      material: any;
-      currentStock: number;
-      minStock: number;
-      unit: string;
-      stockPercentage: number;
-    }>>();
+    if (!data?.alerts) return [];
 
-    activeAlerts.forEach((alert) => {
-      const material = alert.materialId
-        ? MOCK_MATERIALS.find((m) => m.id === alert.materialId)
-        : null;
+    const grouped = new Map<string, Array<Alert>>();
+    const noSupplierAlerts: Alert[] = [];
 
-      const supplierId = alert.supplierId ?? material?.supplierId;
-      const supplier = supplierId
-        ? MOCK_SUPPLIERS.find((s) => s.id === supplierId)
-        : null;
+    data.alerts.forEach((alert) => {
+      // Check if alert has suppliers
+      if (!alert.suppliers || alert.suppliers.length === 0) {
+        noSupplierAlerts.push(alert);
+        return;
+      }
 
-      const currentStock = alert.metadata?.currentStock ?? material?.currentStock ?? 0;
-      const minStock = alert.metadata?.minStock ?? material?.minStock ?? 0;
-      const unit = alert.metadata?.unit ?? material?.unit ?? "";
-      const stockPercentage = minStock > 0 ? (currentStock / minStock) * 100 : 0;
+      // Group by preferred supplier or first supplier
+      const preferredSupplier = alert.suppliers.find((s) => s.isPreferred);
+      const supplier = preferredSupplier || alert.suppliers[0];
 
-      const supplierKey = supplier?.name || "Unknown Supplier";
+      const supplierKey = supplier.name;
 
       if (!grouped.has(supplierKey)) {
         grouped.set(supplierKey, []);
       }
 
-      grouped.get(supplierKey)!.push({
-        alert,
-        material,
-        currentStock,
-        minStock,
-        unit,
-        stockPercentage,
-      });
+      grouped.get(supplierKey)!.push(alert);
     });
 
     // Convert to array and add supplier info
-    return Array.from(grouped.entries()).map(([supplierName, items]) => {
-      const supplier = MOCK_SUPPLIERS.find((s) => s.name === supplierName);
+    const result = Array.from(grouped.entries()).map(([supplierName, items]) => {
+      const firstItem = items[0];
+      const supplier =
+        firstItem.suppliers.find((s) => s.name === supplierName) || firstItem.suppliers[0];
+
       return {
-        supplier: supplier || { name: supplierName, phone: "N/A" },
+        supplier: {
+          id: supplier.id,
+          name: supplierName,
+        },
         items,
       };
     });
-  }, [activeAlerts]);
 
-  if (alertsBySupplier.length === 0) {
+    // Add materials without suppliers at the end
+    if (noSupplierAlerts.length > 0) {
+      result.push({
+        supplier: {
+          id: "no-supplier",
+          name: t("alerts.noSupplierAssigned"),
+        },
+        items: noSupplierAlerts,
+      });
+    }
+
+    return result;
+  }, [data, t]);
+
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="rounded-full bg-primary/10 p-3 mb-4">
-          <AlertCircle className="h-6 w-6 text-primary" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">
-          {t("alerts.noActiveAlerts")}
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          {t("alerts.noActiveAlertsDescription")}
-        </p>
+      <div className="flex flex-col items-center justify-center text-center">
+        <Loader2 className="text-muted-foreground mb-4 h-8 w-8 animate-spin" />
+        <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="bg-destructive/10 mb-4 rounded-full p-3">
+            <AlertCircle className="text-destructive h-6 w-6" />
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
+          <p className="text-muted-foreground text-sm">{error.message || t("alerts.errorLoading")}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (alertsBySupplier.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="bg-primary/10 mb-4 rounded-full p-3">
+            <AlertCircle className="text-primary h-6 w-6" />
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">{t("alerts.noActiveAlerts")}</h3>
+          <p className="text-muted-foreground text-sm">{t("alerts.noActiveAlertsDescription")}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <section className="space-y-6">
-      {alertsBySupplier.map((supplierGroup, idx) => (
+    <>
+      <section className="space-y-6">
+        {alertsBySupplier.map((supplierGroup, idx) => (
         <div
           key={idx}
           className="bg-card relative z-0 rounded-xl border p-4 shadow-md transition-shadow hover:z-10 hover:shadow-lg sm:p-5"
@@ -114,24 +140,7 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
           {/* Supplier Header */}
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-              <Avatar className="h-12 w-12">
-                <AvatarFallback className="from-primary/20 to-primary/10 text-primary bg-gradient-to-br text-lg font-bold">
-                  {supplierGroup.supplier.name[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-semibold">
-                  {supplierGroup.supplier.name}
-                </p>
-                {supplierGroup.supplier.phone && (
-                  <a
-                    href={`tel:${supplierGroup.supplier.phone}`}
-                    className="text-primary hover:text-primary/80 block truncate text-sm underline underline-offset-2 transition-colors"
-                  >
-                    {supplierGroup.supplier.phone}
-                  </a>
-                )}
-              </div>
+              <p className="truncate text-base font-semibold">{supplierGroup.supplier.name}</p>
             </div>
             <Badge variant="destructive">
               {t("alerts.table.lowStock")} ({supplierGroup.items.length})
@@ -149,25 +158,28 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
                   <div className="w-1/6 text-center">{t("alerts.table.minStock")}</div>
                 </div>
                 <ul className="divide-border divide-y">
-                  {supplierGroup.items.map((item, i) => (
+                  {supplierGroup.items.map((alert) => (
                     <li
-                      key={i}
+                      key={alert.id}
                       className="hover:bg-muted/30 flex items-center px-4 py-3 text-sm transition-colors"
                     >
                       <div className="w-2/6 font-medium">
-                        {item.material?.name || "Unknown Material"}
+                        {alert.materialName}
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          ({alert.materialSku})
+                        </span>
                       </div>
                       <div className="w-2/6 px-3">
                         <Progress
-                          value={Math.min(item.stockPercentage, 100)}
-                          className="bg-muted [&>div]:bg-destructive h-2"
+                          value={Math.min(alert.stockPercentage, 100)}
+                          className="bg-muted h-2 [&>div]:bg-red-600"
                         />
                       </div>
                       <div className="w-1/6 text-center font-semibold text-red-600 dark:text-red-400">
-                        {item.currentStock} {item.unit}
+                        {Number(alert.currentStock)} {alert.unit}
                       </div>
                       <div className="w-1/6 text-center font-semibold text-emerald-600 dark:text-emerald-400">
-                        {item.minStock} {item.unit}
+                        {Number(alert.minStock)} {alert.unit}
                       </div>
                     </li>
                   ))}
@@ -177,31 +189,55 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-4 flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onViewDetails(supplierGroup.items[0].alert)}
-            >
-              {t("alerts.actions.viewDetails")}
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => onCreateOrder(supplierGroup.items[0].alert)}
-            >
-              {t("alerts.actions.createOrder")}
-            </Button>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            {supplierGroup.supplier.id === "no-supplier" ? (
+              <Button variant="outline" size="sm" disabled>
+                {t("alerts.actions.noSupplier")}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkOrder(supplierGroup)}
+                  className="gap-2"
+                >
+                  <Package2 className="h-4 w-4" />
+                  Bulk Order
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => onCreateOrder(supplierGroup.items[0])}
+                  className="gap-2"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {t("alerts.actions.createOrder")}
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Date Footer */}
           <div className="mt-3 text-right">
             <span className="text-muted-foreground text-xs">
-              {new Date(supplierGroup.items[0].alert.createdAt).toLocaleDateString()}
+              {new Date(supplierGroup.items[0].createdAt).toLocaleDateString()}
             </span>
           </div>
         </div>
-      ))}
-    </section>
+        ))}
+      </section>
+
+      {/* Bulk Order Dialog */}
+      {selectedSupplierGroup && (
+        <BulkOrderDialog
+          open={isBulkOrderOpen}
+          onOpenChange={setIsBulkOrderOpen}
+          alerts={selectedSupplierGroup.items}
+          supplierName={selectedSupplierGroup.supplier.name}
+          supplierId={selectedSupplierGroup.supplier.id}
+        />
+      )}
+    </>
   );
 }

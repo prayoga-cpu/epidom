@@ -20,23 +20,58 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Check, Mail, Phone, Building, User, MessageSquare } from "lucide-react";
+import { Check, Mail, Phone, Building, User, MessageSquare, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function ContactSalesForm() {
   const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
+    setSuccess(false);
 
     try {
+      const formData = new FormData(e.currentTarget);
+      const formValues = {
+        firstName: (formData.get("firstName") as string)?.trim() || "",
+        lastName: (formData.get("lastName") as string)?.trim() || "",
+        email: (formData.get("email") as string)?.trim() || "",
+        company: (formData.get("company") as string)?.trim() || "",
+        phone: (formData.get("phone") as string)?.trim() || "",
+        requirements: (formData.get("requirements") as string)?.trim() || "",
+      };
+
+      // Basic validation
+      if (!formValues.email || !formValues.email.includes("@")) {
+        setError(t("payments.enterprise.form.validation.email"));
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!formValues.firstName || !formValues.lastName) {
+        setError(t("payments.enterprise.form.validation.name"));
+        setIsSubmitting(false);
+        return;
+      }
+
+      // TODO: Integrate with API endpoint for form submission
       // Simulate form submission
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      // Handle success here
-      logger.info("Form submitted successfully");
-    } catch (error) {
-      logger.error("Form submission error:", error);
+
+      // Handle success
+      setSuccess(true);
+      logger.info("Enterprise form submitted successfully", { email: formValues.email });
+
+      // Reset form after success
+      e.currentTarget.reset();
+    } catch (err: unknown) {
+      logger.error("Form submission error:", err);
+      setError(t("payments.enterprise.form.error"));
     } finally {
       setIsSubmitting(false);
     }
@@ -48,10 +83,10 @@ export function ContactSalesForm() {
       <Card className="border-primary rounded-xl border-2 sm:rounded-2xl">
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg sm:text-xl">
+            <CardTitle className="text-lg sm:text-xl text-brand-primary">
               {t("pricing.plans.enterprise.title")}
             </CardTitle>
-            <Badge className="bg-primary text-primary-foreground w-fit">
+            <Badge className="w-fit border bg-brand-primary text-white border-brand-primary">
               {t("pricing.plans.enterprise.billing")}
             </Badge>
           </div>
@@ -61,22 +96,22 @@ export function ContactSalesForm() {
             {t("pricing.plans.enterprise.description")}
           </p>
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold">{t("payments.enterprise.included")}</h4>
+            <h4 className="text-sm font-semibold text-brand-primary">{t("payments.enterprise.included")}</h4>
             <ul className="space-y-2">
               <li className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-primary" />
                 <span className="text-xs text-gray-600 sm:text-sm">
                   {t("pricing.plans.enterprise.f1")}
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-primary" />
                 <span className="text-xs text-gray-600 sm:text-sm">
                   {t("pricing.plans.enterprise.f2")}
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-primary" />
                 <span className="text-xs text-gray-600 sm:text-sm">
                   {t("pricing.plans.enterprise.f3")}
                 </span>
@@ -89,17 +124,33 @@ export function ContactSalesForm() {
       {/* Contact Form */}
       <Card className="rounded-xl border-2 sm:rounded-2xl">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl text-brand-primary">
+            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
             {t("payments.enterprise.form.title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Error Message */}
+          {error && (
+            <Alert variant="destructive" className="mb-4 rounded-lg border-red-200 bg-red-50 text-red-800">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <Alert className="mb-4 rounded-lg border-green-200 bg-green-50 text-green-800">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{t("payments.enterprise.form.success")}</AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Personal Information */}
             <div className="space-y-4">
-              <h3 className="flex items-center gap-2 text-base font-semibold sm:text-lg">
-                <User className="h-4 w-4 sm:h-5 sm:w-5" />
+              <h3 className="flex items-center gap-2 text-base font-semibold sm:text-lg text-brand-primary">
+                <User className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
                 {t("payments.enterprise.form.personalInfo")}
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -109,6 +160,7 @@ export function ContactSalesForm() {
                   </Label>
                   <Input
                     id="firstName"
+                    name="firstName"
                     placeholder={t("payments.billing.firstNamePlaceholder")}
                     className="h-10 sm:h-11"
                     required
@@ -120,6 +172,7 @@ export function ContactSalesForm() {
                   </Label>
                   <Input
                     id="lastName"
+                    name="lastName"
                     placeholder={t("payments.billing.lastNamePlaceholder")}
                     className="h-10 sm:h-11"
                     required
@@ -132,6 +185,7 @@ export function ContactSalesForm() {
                 </Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder={t("payments.billing.emailPlaceholder")}
                   className="h-10 sm:h-11"
@@ -144,8 +198,8 @@ export function ContactSalesForm() {
 
             {/* Company Information */}
             <div className="space-y-4">
-              <h3 className="flex items-center gap-2 text-base font-semibold sm:text-lg">
-                <Building className="h-4 w-4 sm:h-5 sm:w-5" />
+              <h3 className="flex items-center gap-2 text-base font-semibold sm:text-lg text-brand-primary">
+                <Building className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
                 {t("payments.enterprise.form.companyInfo")}
               </h3>
               <div className="space-y-2">
@@ -154,6 +208,7 @@ export function ContactSalesForm() {
                 </Label>
                 <Input
                   id="company"
+                  name="company"
                   placeholder={t("payments.billing.companyPlaceholder")}
                   className="h-10 sm:h-11"
                   required
@@ -165,6 +220,7 @@ export function ContactSalesForm() {
                 </Label>
                 <Input
                   id="phone"
+                  name="phone"
                   type="tel"
                   placeholder={t("payments.enterprise.form.phonePlaceholder")}
                   className="h-10 sm:h-11"
@@ -177,7 +233,7 @@ export function ContactSalesForm() {
 
             {/* Requirements */}
             <div className="space-y-4">
-              <h3 className="text-base font-semibold sm:text-lg">
+              <h3 className="text-base font-semibold sm:text-lg text-brand-primary">
                 {t("payments.enterprise.form.requirements")}
               </h3>
               <div className="space-y-2">
@@ -186,6 +242,7 @@ export function ContactSalesForm() {
                 </Label>
                 <Textarea
                   id="requirements"
+                  name="requirements"
                   placeholder={t("payments.enterprise.form.requirementsPlaceholder")}
                   rows={4}
                   className="resize-none"
@@ -216,7 +273,7 @@ export function ContactSalesForm() {
       <Card className="rounded-xl border-2 sm:rounded-2xl">
         <CardContent className="pt-4 sm:pt-6">
           <div className="space-y-3 text-center sm:space-y-4">
-            <h3 className="text-base font-semibold sm:text-lg">
+            <h3 className="text-base font-semibold sm:text-lg text-brand-primary">
               {t("payments.enterprise.contact.title")}
             </h3>
             <p className="text-sm text-gray-600 sm:text-base">

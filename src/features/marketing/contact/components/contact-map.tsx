@@ -62,10 +62,7 @@ export function ContactMap() {
           <Marker position={MAP_POSITION}>
             <Popup>
               <div className="text-center">
-                <h3
-                  className="mb-2 text-lg font-semibold"
-                  style={{ color: "var(--color-brand-primary)" }}
-                >
+                <h3 className="mb-2 text-lg font-semibold text-brand-primary">
                   EPIDOM
                 </h3>
                 <p className="mb-1 text-sm text-gray-600">{t("contact.info.address.line1")}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExportButton } from "@/components/ui/export-button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { MOCK_PRODUCTION_BATCHES, MOCK_RECIPES } from "@/mocks";
 import {
   Search,
   ArrowUpDown,
@@ -34,98 +34,67 @@ import {
   CheckCircle,
   Loader2,
   XCircle,
-  AlertCircle,
   Clock,
-  Eye
+  Eye,
+  Ban,
+  AlertCircle,
 } from "lucide-react";
 import { ProductionBatch } from "@/types/entities";
 import { BatchDetailsDialog } from "./batch-details-dialog";
 import { ProductionMetricsCards } from "./production-metrics-cards";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
+import { useProductionBatches } from "../recipe-production/hooks/use-production-batches";
+import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 
 export function ProductionHistoryCard() {
   const { t } = useI18n();
+  const params = useParams();
+  const storeId = params?.storeId as string;
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [recipeFilter, setRecipeFilter] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [sortField, setSortField] = useState<keyof ProductionBatch | "">("");
+  const [sortField, setSortField] = useState<"batchNumber" | "scheduledDate" | "status">(
+    "scheduledDate"
+  );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [selectedBatch, setSelectedBatch] = useState<ProductionBatch | null>(null);
+  const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
   const [isBatchDetailsOpen, setIsBatchDetailsOpen] = useState(false);
 
-  // Filter batches
-  const filteredBatches = useMemo(() => {
-    let filtered = [...MOCK_PRODUCTION_BATCHES];
+  // Fetch production batches from API
+  const { data: batchesData, isLoading: batchesLoading } = useProductionBatches(storeId, {
+    search: searchQuery || undefined,
+    status: statusFilter !== "ALL" ? [statusFilter as any] : undefined,
+    recipeId: recipeFilter !== "ALL" ? recipeFilter : undefined,
+    startDate: dateRange?.from,
+    endDate: dateRange?.to,
+    sortBy: sortField as any,
+    sortOrder: sortDirection,
+    skip: (currentPage - 1) * pageSize,
+    take: pageSize,
+  });
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((batch) =>
-        batch.batchNumber.toLowerCase().includes(query)
-      );
-    }
+  // Fetch recipes for filter dropdown
+  const { data: recipesData } = useRecipes(storeId, {
+    sortBy: "name",
+    sortOrder: "asc",
+    skip: 0,
+    take: 100,
+  });
 
-    // Status filter
-    if (statusFilter && statusFilter !== "ALL") {
-      filtered = filtered.filter((batch) => batch.status === statusFilter);
-    }
+  const allBatches = batchesData?.batches || [];
+  const totalBatches = batchesData?.total || 0;
+  const recipes = recipesData?.recipes || [];
 
-    // Recipe filter
-    if (recipeFilter && recipeFilter !== "ALL") {
-      filtered = filtered.filter((batch) => batch.recipeId === recipeFilter);
-    }
-
-    // Date range filter
-    if (dateRange?.from) {
-      filtered = filtered.filter((batch) => batch.startedAt && new Date(batch.startedAt) >= dateRange.from!);
-    }
-    if (dateRange?.to) {
-      filtered = filtered.filter((batch) => batch.startedAt && new Date(batch.startedAt) <= dateRange.to!);
-    }
-
-    return filtered;
-  }, [searchQuery, statusFilter, recipeFilter, dateRange]);
-
-  // Sort batches
-  const sortedBatches = useMemo(() => {
-    if (!sortField) return filteredBatches;
-
-    return [...filteredBatches].sort((a, b) => {
-      let aVal = a[sortField];
-      let bVal = b[sortField];
-
-      // Handle null or undefined values
-      if (aVal === null || aVal === undefined) return 1;
-      if (bVal === null || bVal === undefined) return -1;
-
-      // Convert dates to timestamps for comparison
-      if (sortField === "startedAt" || sortField === "completedAt") {
-        aVal = new Date(aVal as string | Date).getTime();
-        bVal = new Date(bVal as string | Date).getTime();
-      }
-
-      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [filteredBatches, sortField, sortDirection]);
-
-  // Paginate batches
-  const paginatedBatches = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return sortedBatches.slice(startIndex, startIndex + pageSize);
-  }, [sortedBatches, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(sortedBatches.length / pageSize);
+  const totalPages = Math.ceil(totalBatches / pageSize);
 
   // Handle sort
-  const handleSort = (field: keyof ProductionBatch) => {
+  const handleSort = (field: "batchNumber" | "scheduledDate" | "status") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -135,45 +104,41 @@ export function ProductionHistoryCard() {
   };
 
   // Get recipe name
-  const getRecipeName = (recipeId: string) => {
-    const recipe = MOCK_RECIPES.find((r) => r.id === recipeId);
+  const getRecipeName = (recipeId: string | null) => {
+    if (!recipeId) return t("common.notAvailable") || "N/A";
+    const recipe = recipes.find((r) => r.id === recipeId);
     return recipe?.name || recipeId;
   };
 
-  // Get status configuration
+  // Get status configuration with neutral colors
   const getStatusConfig = (status: string) => {
     const configs = {
-      PENDING: {
-        label: t("management.productionHistory.statuses.pending"),
-        color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100",
+      PLANNED: {
+        label: t("management.productionHistory.statuses.planned") || "Planned",
+        color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100",
         icon: Clock,
       },
       IN_PROGRESS: {
-        label: t("management.productionHistory.statuses.inProgress"),
-        color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+        label: t("management.productionHistory.statuses.inProgress") || "In Progress",
+        color: "bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-50",
         icon: Loader2,
       },
-      QUALITY_CHECK: {
-        label: t("management.productionHistory.statuses.qualityCheck"),
-        color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
-        icon: AlertCircle,
-      },
       COMPLETED: {
-        label: t("management.productionHistory.statuses.completed"),
-        color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+        label: t("management.productionHistory.statuses.completed") || "Completed",
+        color: "bg-gray-300 text-gray-950 dark:bg-gray-600 dark:text-white",
         icon: CheckCircle,
       },
-      FAILED: {
-        label: t("management.productionHistory.statuses.failed"),
-        color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
-        icon: XCircle,
+      CANCELLED: {
+        label: t("management.productionHistory.statuses.cancelled") || "Cancelled",
+        color: "bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400",
+        icon: Ban,
       },
     };
-    return configs[status as keyof typeof configs] || configs.PENDING;
+    return configs[status as keyof typeof configs] || configs.PLANNED;
   };
 
   // Render sort icon
-  const renderSortIcon = (field: keyof ProductionBatch) => {
+  const renderSortIcon = (field: "batchNumber" | "scheduledDate" | "status") => {
     if (sortField !== field) return <ArrowUpDown className="ml-1 h-4 w-4" />;
     return sortDirection === "asc" ? (
       <ArrowUp className="ml-1 h-4 w-4" />
@@ -183,134 +148,143 @@ export function ProductionHistoryCard() {
   };
 
   // Handle view batch details
-  const handleViewBatch = (batch: ProductionBatch) => {
+  const handleViewBatch = (batch: any) => {
     setSelectedBatch(batch);
     setIsBatchDetailsOpen(true);
   };
 
   // Prepare export data
-  const exportData = sortedBatches.map((batch) => ({
+  const exportData = allBatches.map((batch) => ({
     [t("management.productionHistory.batchNumber")]: batch.batchNumber,
-    [t("management.productionHistory.recipe")]: getRecipeName(batch.recipeId),
+    [t("management.productionHistory.recipe")]:
+      batch.product?.name || getRecipeName(batch.recipeId || ""),
     [t("management.productionHistory.status")]: getStatusConfig(batch.status).label,
-    [t("management.productionHistory.metrics.plannedQuantity")]: batch.quantityPlanned,
-    [t("management.productionHistory.metrics.producedQuantity")]: batch.quantityProduced,
-    [t("management.productionHistory.qualityScore")]: batch.qualityScore ?? t("common.notAvailable"),
-    [t("management.productionHistory.startedAt")]: batch.startedAt ? format(new Date(batch.startedAt as string | Date), "yyyy-MM-dd HH:mm") : t("common.notAvailable"),
-    [t("management.productionHistory.completedAt")]: batch.completedAt
-      ? format(new Date(batch.completedAt), "yyyy-MM-dd HH:mm")
+    [t("management.productionHistory.metrics.plannedQuantity")]: batch.plannedQuantity,
+    [t("management.productionHistory.metrics.producedQuantity")]: batch.actualQuantity || 0,
+    [t("management.productionHistory.unit")]: batch.unit,
+    [t("management.productionHistory.startedAt")]: batch.scheduledDate
+      ? format(new Date(batch.scheduledDate), "yyyy-MM-dd HH:mm")
+      : t("common.notAvailable"),
+    [t("management.productionHistory.completedAt")]: batch.completedDate
+      ? format(new Date(batch.completedDate), "yyyy-MM-dd HH:mm")
       : t("common.notAvailable"),
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          {t("tabs.productionHistory")}
-        </h2>
-        <p className="text-muted-foreground">
-          {t("management.productionHistory.description")}
-        </p>
+      <div className="text-left">
+        <h2 className="text-2xl font-bold tracking-tight">{t("tabs.productionHistory")}</h2>
+        <p className="text-muted-foreground text-sm">{t("management.productionHistory.description")}</p>
       </div>
 
       {/* Metrics Cards */}
-      <ProductionMetricsCards batches={filteredBatches} />
+      <ProductionMetricsCards batches={allBatches as any} />
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 md:pb-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="text-lg">
-                {t("management.productionHistory.filters")}
-              </CardTitle>
+              <CardTitle className="text-lg">{t("management.productionHistory.filters")}</CardTitle>
               <CardDescription>
                 {t("management.productionHistory.filtersDescription")}
               </CardDescription>
             </div>
-            <ExportButton
-              data={exportData}
-              filename="production-history"
-            />
+            <div className="flex w-full justify-start md:w-auto md:justify-end">
+              <ExportButton data={exportData} filename="production-history" size="sm" className="w-full md:w-auto" />
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardContent className="space-y-3 md:space-y-4">
+          <div className="space-y-2 md:space-y-3">
             {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative w-full">
+              <Search className="text-muted-foreground/80 absolute top-2 left-2.5 h-4.5 w-4.5" />
               <Input
                 placeholder={t("management.productionHistory.searchBatches")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="w-full pl-9"
               />
             </div>
-
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("management.productionHistory.selectStatus")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">{t("management.productionHistory.allStatuses")}</SelectItem>
-                <SelectItem value="pending">{t("management.productionHistory.statuses.pending")}</SelectItem>
-                <SelectItem value="in_progress">{t("management.productionHistory.statuses.inProgress")}</SelectItem>
-                <SelectItem value="quality_check">{t("management.productionHistory.statuses.qualityCheck")}</SelectItem>
-                <SelectItem value="completed">{t("management.productionHistory.statuses.completed")}</SelectItem>
-                <SelectItem value="failed">{t("management.productionHistory.statuses.failed")}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Recipe Filter */}
-            <Select value={recipeFilter} onValueChange={setRecipeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("management.productionHistory.selectRecipe")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">{t("management.productionHistory.allRecipes")}</SelectItem>
-                {MOCK_RECIPES.map((recipe) => (
-                  <SelectItem key={recipe.id} value={recipe.id}>
-                    {recipe.name}
+            <div className="flex w-full flex-wrap gap-2">
+              {/* Status Filter */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <SelectValue placeholder={t("management.productionHistory.selectStatus")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">
+                    {t("management.productionHistory.allStatuses")}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  <SelectItem value="PLANNED">
+                    {t("management.productionHistory.statuses.planned") || "Planned"}
+                  </SelectItem>
+                  <SelectItem value="IN_PROGRESS">
+                    {t("management.productionHistory.statuses.inProgress") || "In Progress"}
+                  </SelectItem>
+                  <SelectItem value="COMPLETED">
+                    {t("management.productionHistory.statuses.completed") || "Completed"}
+                  </SelectItem>
+                  <SelectItem value="CANCELLED">
+                    {t("management.productionHistory.statuses.cancelled") || "Cancelled"}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
-            {/* Date Range */}
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+              {/* Recipe Filter */}
+              <Select value={recipeFilter} onValueChange={setRecipeFilter}>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder={t("management.productionHistory.selectRecipe")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">
+                    {t("management.productionHistory.allRecipes")}
+                  </SelectItem>
+                  {recipes.map((recipe) => (
+                    <SelectItem key={recipe.id} value={recipe.id}>
+                      {recipe.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Date Range */}
+              <div className="w-full md:w-auto">
+              <DateRangePicker value={dateRange} onChange={setDateRange} />
+              </div>
+            </div>
           </div>
 
           {/* Active Filters */}
           {(searchQuery || statusFilter !== "ALL" || recipeFilter !== "ALL" || dateRange?.from) && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground text-sm">
                 {t("management.productionHistory.activeFilters")}:
               </span>
               {searchQuery && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {t("management.productionHistory.search")}: {searchQuery}
                 </Badge>
               )}
               {statusFilter !== "ALL" && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {t("management.productionHistory.status")}: {getStatusConfig(statusFilter).label}
                 </Badge>
               )}
               {recipeFilter !== "ALL" && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {t("management.productionHistory.recipe")}: {getRecipeName(recipeFilter)}
                 </Badge>
               )}
               {dateRange?.from && (
-                <Badge variant="secondary">
-                  {t("management.productionHistory.dateRange")}
-                </Badge>
+                <Badge variant="secondary" className="text-xs">{t("management.productionHistory.dateRange")}</Badge>
               )}
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-7 text-xs"
                 onClick={() => {
                   setSearchQuery("");
                   setStatusFilter("ALL");
@@ -327,13 +301,13 @@ export function ProductionHistoryCard() {
 
       {/* Table */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 md:pb-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg">
-              {t("management.productionHistory.batchesList")} ({sortedBatches.length})
+              {t("management.productionHistory.batchesList")} ({totalBatches})
             </CardTitle>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-muted-foreground text-sm">
                 {t("management.productionHistory.rowsPerPage")}:
               </span>
               <Select
@@ -343,7 +317,7 @@ export function ProductionHistoryCard() {
                   setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="w-20">
+                <SelectTrigger className="h-9 w-20 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -356,30 +330,31 @@ export function ProductionHistoryCard() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {paginatedBatches.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>{t("management.productionHistory.noBatchesFound")}</p>
+        <CardContent className="pt-0">
+          {batchesLoading ? (
+            <div className="py-12 text-center">
+              <Loader2 className="text-muted-foreground mx-auto h-8 w-8 animate-spin" />
+              <p className="text-muted-foreground mt-2 text-sm">{t("common.loading")}</p>
+            </div>
+          ) : allBatches.length === 0 ? (
+            <div className="text-muted-foreground py-12 text-center">
+              <p className="text-sm">{t("management.productionHistory.noBatchesFound")}</p>
             </div>
           ) : (
             <>
+              <div className="overflow-x-auto">
+                <div className="min-w-[640px]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => handleSort("batchNumber")}
-                    >
+                    <TableHead className="cursor-pointer" onClick={() => handleSort("batchNumber")}>
                       <div className="flex items-center">
                         {t("management.productionHistory.batchNumber")}
                         {renderSortIcon("batchNumber")}
                       </div>
                     </TableHead>
                     <TableHead>{t("management.productionHistory.recipe")}</TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => handleSort("status")}
-                    >
+                    <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
                       <div className="flex items-center">
                         {t("management.productionHistory.status")}
                         {renderSortIcon("status")}
@@ -388,16 +363,13 @@ export function ProductionHistoryCard() {
                     <TableHead className="text-right">
                       {t("management.productionHistory.quantity")}
                     </TableHead>
-                    <TableHead className="text-right">
-                      {t("management.productionHistory.qualityScore")}
-                    </TableHead>
                     <TableHead
                       className="cursor-pointer"
-                      onClick={() => handleSort("startedAt")}
+                      onClick={() => handleSort("scheduledDate")}
                     >
                       <div className="flex items-center">
-                        {t("management.productionHistory.startedAt")}
-                        {renderSortIcon("startedAt")}
+                        {t("management.productionHistory.scheduledDate") || "Scheduled"}
+                        {renderSortIcon("scheduledDate")}
                       </div>
                     </TableHead>
                     <TableHead className="text-right">
@@ -406,32 +378,35 @@ export function ProductionHistoryCard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedBatches.map((batch) => {
+                  {allBatches.map((batch) => {
                     const statusConfig = getStatusConfig(batch.status);
                     const StatusIcon = statusConfig.icon;
 
                     return (
                       <TableRow
                         key={batch.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="hover:bg-muted/50 cursor-pointer"
                         onClick={() => handleViewBatch(batch)}
                       >
                         <TableCell className="font-medium">{batch.batchNumber}</TableCell>
-                        <TableCell>{getRecipeName(batch.recipeId)}</TableCell>
+                        <TableCell>
+                          {batch.product?.name || getRecipeName(batch.recipeId)}
+                        </TableCell>
                         <TableCell>
                           <Badge className={statusConfig.color}>
-                            <StatusIcon className="mr-1 h-3 w-3" />
+                            <StatusIcon
+                              className={`mr-1 h-3 w-3 ${batch.status === "IN_PROGRESS" ? "animate-spin" : ""}`}
+                            />
                             {statusConfig.label}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {batch.quantityProduced} / {batch.quantityPlanned}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {batch.qualityScore !== null && batch.qualityScore !== undefined ? batch.qualityScore.toFixed(1) : t("common.notAvailable")}
+                          {batch.actualQuantity || 0} / {batch.plannedQuantity} {batch.unit}
                         </TableCell>
                         <TableCell>
-                          {batch.startedAt ? format(new Date(batch.startedAt as string | Date), "MMM d, yyyy HH:mm") : t("common.notAvailable")}
+                          {batch.scheduledDate
+                            ? format(new Date(batch.scheduledDate), "MMM d, yyyy HH:mm")
+                            : t("common.notAvailable")}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -450,14 +425,15 @@ export function ProductionHistoryCard() {
                   })}
                 </TableBody>
               </Table>
+                </div>
+              </div>
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
+                <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <p className="text-muted-foreground text-sm">
                     {t("management.productionHistory.showing")} {(currentPage - 1) * pageSize + 1} -{" "}
-                    {Math.min(currentPage * pageSize, sortedBatches.length)} {t("common.of")}{" "}
-                    {sortedBatches.length}
+                    {Math.min(currentPage * pageSize, totalBatches)} {t("common.of")} {totalBatches}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -465,9 +441,10 @@ export function ProductionHistoryCard() {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage - 1)}
                       disabled={currentPage === 1}
+                      className="h-9 text-sm"
                     >
                       <ChevronLeft className="h-4 w-4" />
-                      {t("common.actions.previous")}
+                      <span className="hidden sm:inline">{t("common.actions.previous")}</span>
                     </Button>
                     <span className="text-sm">
                       {t("common.page")} {currentPage} {t("common.of")} {totalPages}
@@ -477,8 +454,9 @@ export function ProductionHistoryCard() {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage + 1)}
                       disabled={currentPage === totalPages}
+                      className="h-9 text-sm"
                     >
-                      {t("common.actions.next")}
+                      <span className="hidden sm:inline">{t("common.actions.next")}</span>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>

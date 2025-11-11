@@ -3,249 +3,253 @@
 /**
  * Payment Form Component
  *
- * Checkout form for Starter and Pro plans.
- * Includes billing information and credit card inputs.
- * Simulates payment processing (TODO: integrate Stripe).
+ * Redirects to Stripe Checkout for secure payment processing.
+ * Uses Stripe Checkout (PCI-compliant, hosted by Stripe).
+ *
+ * Flow:
+ * 1. User must be logged in
+ * 2. Click "Subscribe" button
+ * 3. Redirect to Stripe Checkout (hosted)
+ * 4. After payment, redirect back to /profile?success=true
  *
  * @component
  */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { logger } from "@/lib/logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { CreditCard, Lock, User, Mail, Building } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertCircle, ArrowRight } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { PAYMENT_SECURITY_FEATURES } from "../constants/security-features";
+import { toStripePlan, isStripePlan } from "../utils/plan-validation";
 
 /**
  * Props for PaymentForm component
  */
 interface PaymentFormProps {
-  /** Plan type: starter or pro */
+  /** Plan type: starter or pro only (enterprise handled separately) */
   plan: "starter" | "pro";
 }
 
 export function PaymentForm({ plan }: PaymentFormProps) {
   const { t } = useI18n();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  const handleCheckout = async () => {
+    setIsLoading(true);
+    setError(null);
 
     try {
-      // Simulate payment processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      // Handle success here
-      logger.info("Payment processed successfully");
-    } catch (error) {
-      logger.error("Payment processing error:", error);
-    } finally {
-      setIsSubmitting(false);
+      // Check if user agreed to terms
+      if (!agreedToTerms) {
+        setError(t("payments.form.agreeToTermsError"));
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if user is logged in
+      if (status !== "authenticated" || !session) {
+        // Redirect to login with return URL
+        router.push(`/login?callbackUrl=${encodeURIComponent(`/payments?plan=${plan}`)}`);
+        return;
+      }
+
+      // Validate plan is Stripe-supported (should not happen due to page validation, but safety check)
+      if (!isStripePlan(plan)) {
+        setError(t("payments.form.checkoutError"));
+        setIsLoading(false);
+        return;
+      }
+
+      // Convert to Stripe format
+      const stripePlan = toStripePlan(plan);
+      if (!stripePlan) {
+        setError(t("payments.form.checkoutError"));
+        setIsLoading(false);
+        return;
+      }
+
+      // Create checkout session
+      const response = await fetch("/api/subscriptions/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          plan: stripePlan,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || t("payments.form.checkoutSessionError"));
+      }
+
+      // Redirect to Stripe Checkout
+      // Security: Validate URL is from Stripe (server-side validated, but double-check client-side)
+      if (data.url && typeof data.url === "string") {
+        // Stripe checkout URLs should start with https://checkout.stripe.com or https://checkout.stripe.com/c/pay/
+        const isValidStripeUrl = data.url.startsWith("https://checkout.stripe.com/");
+        if (isValidStripeUrl) {
+          window.location.href = data.url;
+        } else {
+          throw new Error(t("payments.form.checkoutUrlError"));
+        }
+      } else {
+        throw new Error(t("payments.form.checkoutUrlError"));
+      }
+    } catch (err: unknown) {
+      logger.error("Checkout error:", err);
+      // Security: Don't expose internal error details to user
+      const errorMessage = err instanceof Error ? err.message : t("payments.form.checkoutError");
+      // Only show safe error messages (avoid exposing system details)
+      if (errorMessage.includes("Unauthorized") || errorMessage.includes("Invalid plan")) {
+        setError(errorMessage);
+      } else {
+        setError(t("payments.form.checkoutError"));
+      }
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="h-full space-y-4 sm:space-y-6">
-      {/* Billing Information */}
-      <Card className="rounded-xl border-2 sm:rounded-2xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <User className="h-4 w-4 sm:h-5 sm:w-5" />
-            {t("payments.billing.title")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-sm font-medium">
-                {t("payments.billing.firstName")}
-              </Label>
-              <Input
-                id="firstName"
-                placeholder={t("payments.billing.firstNamePlaceholder")}
-                className="h-10 sm:h-11"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-sm font-medium">
-                {t("payments.billing.lastName")}
-              </Label>
-              <Input
-                id="lastName"
-                placeholder={t("payments.billing.lastNamePlaceholder")}
-                className="h-10 sm:h-11"
-                required
-              />
-            </div>
-          </div>
+    <div className="flex h-full flex-col">
+      {/* Error Alert */}
+      {error && (
+        <Alert
+          variant="destructive"
+          className="mb-6 rounded-xl border-red-200 bg-red-50 text-red-800"
+        >
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium">
-              {t("payments.billing.email")}
-            </Label>
-            <div className="relative">
-              <Mail className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
-              <Input
-                id="email"
-                type="email"
-                placeholder={t("payments.billing.emailPlaceholder")}
-                className="h-10 pl-10 sm:h-11"
-                required
-              />
-            </div>
-          </div>
+      {/* Authentication Status */}
+      {status === "unauthenticated" && (
+        <Alert className="mb-6 rounded-xl border-blue-200 bg-blue-50 text-blue-800">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {t("payments.form.authRequiredPrefix")}{" "}
+            <span className="font-semibold">{t("payments.form.authRequiredBold")}</span>{" "}
+            {t("payments.form.authRequiredSuffix")}
+          </AlertDescription>
+        </Alert>
+      )}
 
-          <div className="space-y-2">
-            <Label htmlFor="company" className="text-sm font-medium">
-              {t("payments.billing.company")}
-            </Label>
-            <div className="relative">
-              <Building className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
-              <Input
-                id="company"
-                placeholder={t("payments.billing.companyPlaceholder")}
-                className="h-10 pl-10 sm:h-11"
-              />
+      {/* Cards Container - akan match height dengan summary card di kanan */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[1fr_1fr] gap-5">
+        {/* Secure Payment Info */}
+        <Card className="flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold text-brand-primary">
+              {t("payments.security.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 space-y-3">
+            <div className="space-y-2.5">
+              {PAYMENT_SECURITY_FEATURES.map((feature, index) => {
+                const Icon = feature.icon;
+                return (
+                  <div key={index} className="flex items-start gap-2.5">
+                    <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-primary" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-brand-primary">
+                        {t(`${feature.translationKey}.title`)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-600">
+                        {t(`${feature.translationKey}.description`)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Payment Information */}
-      <Card className="rounded-xl border-2 sm:rounded-2xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
-            {t("payments.payment.title")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cardNumber" className="text-sm font-medium">
-              {t("payments.payment.cardNumber")}
-            </Label>
-            <div className="relative">
-              <CreditCard className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
-              <Input
-                id="cardNumber"
-                placeholder="1234 5678 9012 3456"
-                className="h-10 pl-10 sm:h-11"
-                required
+        {/* Terms and Conditions */}
+        <Card className="flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold text-brand-primary">
+              {t("payments.terms.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 space-y-4">
+            {/* Checkbox and Agreement Text */}
+            <label
+              htmlFor="terms-agreement"
+              className="flex items-start gap-2.5 cursor-pointer"
+            >
+              <Checkbox
+                id="terms-agreement"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                className="mt-0.5 shrink-0 data-[state=checked]:bg-[var(--color-brand-primary)] data-[state=checked]:border-[var(--color-brand-primary)]"
               />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="expiryMonth" className="text-sm font-medium">
-                {t("payments.payment.expiryMonth")}
-              </Label>
-              <Input
-                id="expiryMonth"
-                placeholder="MM"
-                maxLength={2}
-                className="h-10 sm:h-11"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="expiryYear" className="text-sm font-medium">
-                {t("payments.payment.expiryYear")}
-              </Label>
-              <Input
-                id="expiryYear"
-                placeholder="YY"
-                maxLength={2}
-                className="h-10 sm:h-11"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cvv" className="text-sm font-medium">
-                {t("payments.payment.cvv")}
-              </Label>
-              <Input id="cvv" placeholder="123" maxLength={3} className="h-10 sm:h-11" required />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Terms and Conditions */}
-      <Card className="rounded-xl border-2 bg-gray-50 sm:rounded-2xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-            <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
-            {t("payments.terms.title")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="space-y-3 sm:space-y-4">
-            <div className="flex items-start gap-2 sm:gap-3">
-              <input
-                type="checkbox"
-                id="terms"
-                className="text-primary mt-1 h-4 w-4 flex-shrink-0 sm:h-5 sm:w-5"
-                required
-              />
-              <Label htmlFor="terms" className="text-xs leading-relaxed text-gray-600 sm:text-sm">
-                {t("payments.terms.text")}{" "}
+              <span className="min-w-0 flex-1 text-sm leading-relaxed text-gray-600">
+                {t("payments.form.termsAgreement")}{" "}
                 <a
                   href="/terms"
                   target="_blank"
-                  className="text-primary font-medium break-words hover:underline"
+                  rel="noopener noreferrer"
+                  className="text-brand-primary underline decoration-1 hover:decoration-2 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {t("payments.terms.link")}
-                </a>
-              </Label>
-            </div>
-
-            <div className="flex items-start gap-2 sm:gap-3">
-              <input
-                type="checkbox"
-                id="billing"
-                className="text-primary mt-1 h-4 w-4 flex-shrink-0 sm:h-5 sm:w-5"
-                required
-              />
-              <Label htmlFor="billing" className="text-xs leading-relaxed text-gray-600 sm:text-sm">
-                {t("payments.terms.billing")}
-              </Label>
-            </div>
-
-            <div className="flex items-start gap-2 sm:gap-3">
-              <input
-                type="checkbox"
-                id="refund"
-                className="text-primary mt-1 h-4 w-4 flex-shrink-0 sm:h-5 sm:w-5"
-                required
-              />
-              <Label htmlFor="refund" className="text-xs leading-relaxed text-gray-600 sm:text-sm">
-                {t("payments.terms.refund")}{" "}
+                  {t("payments.form.termsOfService")}
+                </a>{" "}
+                {t("payments.form.and")}{" "}
                 <a
                   href="/refund-policy"
                   target="_blank"
-                  className="text-primary font-medium break-words hover:underline"
+                  rel="noopener noreferrer"
+                  className="text-brand-primary underline decoration-1 hover:decoration-2 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {t("payments.terms.refundLink")}
+                  {t("payments.form.refundPolicy")}
                 </a>
-              </Label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                .
+              </span>
+            </label>
 
-      {/* Submit Button */}
+            {/* Billing Information */}
+            <div className="rounded-lg bg-gray-50 p-3">
+              <p className="text-sm leading-relaxed text-gray-700">{t("payments.terms.billing")}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Checkout Button - di luar cards container, tidak dihitung dalam height balance */}
       <Button
-        onClick={handleSubmit}
-        disabled={isSubmitting}
-        className="mb-6 h-11 w-full rounded-lg text-base font-semibold transition-colors duration-200 hover:bg-gray-700 sm:mb-8 sm:h-12 sm:text-lg"
-        style={{ backgroundColor: "var(--color-brand-primary)", color: "var(--color-brand-white)" }}
+        onClick={handleCheckout}
+        disabled={isLoading || !agreedToTerms}
+        className="mt-5 flex-shrink-0 h-12 w-full rounded-lg text-base font-semibold text-white bg-brand-primary hover:bg-gray-700 transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isSubmitting ? t("payments.processing") : t("payments.completePayment")}
+        {isLoading ? (
+          <span className="flex items-center gap-2">
+            {t("payments.form.redirecting")}
+            <ArrowRight className="h-4 w-4" />
+          </span>
+        ) : status === "unauthenticated" ? (
+          t("payments.form.signUpLogin")
+        ) : (
+          <span className="flex items-center justify-center gap-2">
+            {t("payments.form.proceedToCheckout")}
+            <ArrowRight className="h-4 w-4" />
+          </span>
+        )}
       </Button>
     </div>
   );

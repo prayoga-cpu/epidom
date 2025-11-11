@@ -6,11 +6,6 @@
    SCROLLBAR STYLES
    ======================================== */
 
-/* Hide scrollbar for Chrome, Safari, and Opera */
-::-webkit-scrollbar {
-  display: none;
-}
-
 /* Hide scrollbar for IE, Edge and Firefox */
 html,
 body {
@@ -26,6 +21,32 @@ body {
 .scrollbar-hide {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
+}
+
+/* Thin and minimal scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: oklch(0.556 0 0 / 0.3);
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.556 0 0 / 0.5);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: oklch(0.556 0 0 / 0.3) transparent; /* Firefox */
 }
 
 /* Fix for dialog scrollbar issue - prevent navbar shift when modal opens */
@@ -144,11 +165,11 @@ body.dialog-open {
    ======================================== */
 
 .text-section-title {
-  @apply mb-5 text-2xl leading-tight font-bold sm:mb-5 sm:mb-10 sm:text-3xl lg:text-4xl;
+  @apply mb-5 text-2xl leading-tight font-bold sm:mb-10 sm:text-3xl lg:text-4xl;
 }
 
 .text-subtitle {
-  @apply mb-5 text-lg leading-relaxed font-normal sm:mb-5 sm:mb-10 sm:text-xl lg:text-2xl;
+  @apply mb-5 text-lg leading-relaxed font-normal sm:mb-10 sm:text-xl lg:text-2xl;
 }
 
 .text-description {
@@ -453,6 +474,25 @@ body.dialog-open {
 .animate-slide-up-delayed-2,
 .animate-slide-up-delayed-3 {
   will-change: transform, opacity;
+}
+
+/* ========================================
+   BRAND COLOR UTILITIES
+   ======================================== */
+
+/* Text color utility for brand primary */
+.text-brand-primary {
+  color: var(--color-brand-primary);
+}
+
+/* Background color utility for brand primary */
+.bg-brand-primary {
+  background-color: var(--color-brand-primary);
+}
+
+/* Border color utility for brand primary */
+.border-brand-primary {
+  border-color: var(--color-brand-primary);
 }
 
 /* ========================================

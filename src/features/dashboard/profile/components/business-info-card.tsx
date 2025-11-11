@@ -19,7 +19,7 @@ interface BusinessInfoCardProps {
     website?: string | null;
   } | null;
   userId: string;
-  onUpdate: () => void;
+  onUpdate?: () => void;
 }
 
 export function BusinessInfoCard({ business, userId, onUpdate }: BusinessInfoCardProps) {
@@ -70,9 +70,14 @@ export function BusinessInfoCard({ business, userId, onUpdate }: BusinessInfoCar
       <Card className="border-2">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-xl font-bold">{t("profile.business.title")}</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditOpen(true)}
+            className="h-9 w-9 gap-0 p-0 sm:h-auto sm:w-auto sm:gap-2 sm:px-3"
+          >
             <Pencil className="h-4 w-4" />
-            {t("profile.actions.edit")}
+            <span className="hidden sm:inline">{t("profile.actions.edit")}</span>
           </Button>
         </CardHeader>
         <CardContent>
