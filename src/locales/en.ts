@@ -411,6 +411,12 @@ export const en = {
       title: "Complete Your Subscription",
       subtitle: "Secure payment processing with industry-standard encryption",
     },
+    steps: {
+      step1: "Choose Plan",
+      step2: "Payment",
+      step3: "Confirmation",
+      current: "Step 2 of 3",
+    },
     billing: {
       title: "Billing Information",
       firstName: "First Name",
@@ -451,20 +457,42 @@ export const en = {
       billingInfo2: "Cancel anytime from your dashboard",
     },
     security: {
-      title: "Secure Payment",
+      title: "Secure Payment Processing",
       feature1: {
-        title: "Stripe Security",
-        description: "Powered by Stripe's industry-leading security",
-      },
-      feature2: {
         title: "PCI DSS Compliant",
         description: "Your card data is never stored on our servers",
       },
-      feature3: {
+      feature2: {
         title: "256-bit SSL Encryption",
         description: "All transactions are encrypted end-to-end",
       },
+      feature3: {
+        title: "Powered by Stripe",
+        description: "Industry-leading security trusted by millions",
+      },
       footer: "Your payment information is secure and encrypted",
+    },
+    form: {
+      authRequiredPrefix: "You need to",
+      authRequiredBold: "sign up or log in",
+      authRequiredSuffix: "before subscribing to a plan. Click the button below to continue.",
+      termsAgreement: "By proceeding, you agree to our",
+      termsOfService: "Terms of Service",
+      and: "and",
+      refundPolicy: "Refund Policy",
+      agreeToTermsError: "Please agree to the Terms of Service and Refund Policy to continue.",
+      redirecting: "Redirecting to checkout...",
+      signUpLogin: "Sign Up / Log In to Continue",
+      proceedToCheckout: "Proceed to Secure Checkout",
+      checkoutSessionError: "Failed to create checkout session",
+      checkoutUrlError: "No checkout URL returned",
+      checkoutError: "Failed to start checkout. Please try again.",
+      taxAmount: "€0.00",
+    },
+    footer: {
+      securelyPowered: "Securely powered by",
+      stripe: "Stripe",
+      contactSupport: "Contact Support",
     },
     enterprise: {
       hero: {
@@ -484,6 +512,12 @@ export const en = {
         phonePlaceholder: "+1 (555) 123-4567",
         submit: "Request Quote",
         submitting: "Sending Request...",
+        success: "Thank you! We'll contact you soon.",
+        error: "Failed to submit form. Please try again.",
+        validation: {
+          email: "Please enter a valid email address.",
+          name: "Please enter your first and last name.",
+        },
       },
       contact: {
         title: "Prefer to talk directly?",

@@ -406,6 +406,12 @@ export const id = {
       title: "Selesaikan Langganan Anda",
       subtitle: "Pemrosesan pembayaran aman dengan enkripsi standar industri",
     },
+    steps: {
+      step1: "Pilih Paket",
+      step2: "Pembayaran",
+      step3: "Konfirmasi",
+      current: "Langkah 2 dari 3",
+    },
     billing: {
       title: "Informasi Penagihan",
       firstName: "Nama Depan",
@@ -446,20 +452,42 @@ export const id = {
       billingInfo2: "Batalkan kapan saja dari dashboard Anda",
     },
     security: {
-      title: "Pembayaran Aman",
+      title: "Pemrosesan Pembayaran Aman",
       feature1: {
-        title: "Keamanan Stripe",
-        description: "Didukung oleh keamanan terdepan industri Stripe",
-      },
-      feature2: {
-        title: "Sesuai Standar PCI DSS",
+        title: "PCI DSS Compliant",
         description: "Data kartu Anda tidak pernah disimpan di server kami",
       },
-      feature3: {
+      feature2: {
         title: "Enkripsi SSL 256-bit",
-        description: "Semua transaksi dienkripsi dari ujung ke ujung",
+        description: "Semua transaksi dienkripsi end-to-end",
+      },
+      feature3: {
+        title: "Didukung oleh Stripe",
+        description: "Keamanan terdepan industri yang dipercaya jutaan pengguna",
       },
       footer: "Informasi pembayaran Anda aman dan terenkripsi",
+    },
+    form: {
+      authRequiredPrefix: "Anda perlu",
+      authRequiredBold: "mendaftar atau masuk",
+      authRequiredSuffix: "sebelum berlangganan paket. Klik tombol di bawah untuk melanjutkan.",
+      termsAgreement: "Dengan melanjutkan, Anda menyetujui",
+      termsOfService: "Syarat Layanan",
+      and: "dan",
+      refundPolicy: "Kebijakan Pengembalian Dana",
+      agreeToTermsError: "Silakan setujui Syarat Layanan dan Kebijakan Pengembalian Dana untuk melanjutkan.",
+      redirecting: "Mengalihkan ke checkout...",
+      signUpLogin: "Daftar / Masuk untuk Melanjutkan",
+      proceedToCheckout: "Lanjutkan ke Checkout Aman",
+      checkoutSessionError: "Gagal membuat sesi checkout",
+      checkoutUrlError: "Tidak ada URL checkout yang dikembalikan",
+      checkoutError: "Gagal memulai checkout. Silakan coba lagi.",
+      taxAmount: "€0.00",
+    },
+    footer: {
+      securelyPowered: "Didukung dengan aman oleh",
+      stripe: "Stripe",
+      contactSupport: "Hubungi Dukungan",
     },
     enterprise: {
       hero: {
@@ -479,6 +507,12 @@ export const id = {
         phonePlaceholder: "+62 812-3456-7890",
         submit: "Minta Penawaran",
         submitting: "Mengirim Permintaan...",
+        success: "Terima kasih! Kami akan menghubungi Anda segera.",
+        error: "Gagal mengirim formulir. Silakan coba lagi.",
+        validation: {
+          email: "Harap masukkan alamat email yang valid.",
+          name: "Harap masukkan nama depan dan belakang Anda.",
+        },
       },
       contact: {
         title: "Lebih suka berbicara langsung?",

@@ -402,6 +402,12 @@ export const fr = {
       title: "Finalisez Votre Abonnement",
       subtitle: "Traitement de paiement sécurisé avec chiffrement de niveau industrie",
     },
+    steps: {
+      step1: "Choisir le Forfait",
+      step2: "Paiement",
+      step3: "Confirmation",
+      current: "Étape 2 sur 3",
+    },
     billing: {
       title: "Informations de Facturation",
       firstName: "Prénom",
@@ -442,20 +448,42 @@ export const fr = {
       billingInfo2: "Annulez à tout moment depuis votre tableau de bord",
     },
     security: {
-      title: "Paiement Sécurisé",
+      title: "Traitement de Paiement Sécurisé",
       feature1: {
-        title: "Sécurité Stripe",
-        description: "Alimenté par la sécurité de pointe de Stripe",
-      },
-      feature2: {
         title: "Conforme PCI DSS",
         description: "Vos données de carte ne sont jamais stockées sur nos serveurs",
       },
-      feature3: {
+      feature2: {
         title: "Chiffrement SSL 256-bit",
         description: "Toutes les transactions sont chiffrées de bout en bout",
       },
+      feature3: {
+        title: "Alimenté par Stripe",
+        description: "Sécurité de pointe de l'industrie, approuvée par des millions",
+      },
       footer: "Vos informations de paiement sont sécurisées et chiffrées",
+    },
+    form: {
+      authRequiredPrefix: "Vous devez",
+      authRequiredBold: "vous inscrire ou vous connecter",
+      authRequiredSuffix: "avant de souscrire à un forfait. Cliquez sur le bouton ci-dessous pour continuer.",
+      termsAgreement: "En procédant, vous acceptez nos",
+      termsOfService: "Conditions d'Utilisation",
+      and: "et",
+      refundPolicy: "Politique de Remboursement",
+      agreeToTermsError: "Veuillez accepter les Conditions d'Utilisation et la Politique de Remboursement pour continuer.",
+      redirecting: "Redirection vers le checkout...",
+      signUpLogin: "S'Inscrire / Se Connecter pour Continuer",
+      proceedToCheckout: "Procéder au Checkout Sécurisé",
+      checkoutSessionError: "Échec de la création de la session de checkout",
+      checkoutUrlError: "Aucune URL de checkout retournée",
+      checkoutError: "Échec du démarrage du checkout. Veuillez réessayer.",
+      taxAmount: "€0.00",
+    },
+    footer: {
+      securelyPowered: "Alimenté en toute sécurité par",
+      stripe: "Stripe",
+      contactSupport: "Contacter le Support",
     },
     enterprise: {
       hero: {
@@ -475,6 +503,12 @@ export const fr = {
         phonePlaceholder: "+33 7 81 73 23 86",
         submit: "Demander un Devis",
         submitting: "Envoi de la Demande...",
+        success: "Merci ! Nous vous contacterons bientôt.",
+        error: "Échec de l'envoi du formulaire. Veuillez réessayer.",
+        validation: {
+          email: "Veuillez entrer une adresse e-mail valide.",
+          name: "Veuillez entrer votre prénom et votre nom.",
+        },
       },
       contact: {
         title: "Préférez-vous parler directement ?",

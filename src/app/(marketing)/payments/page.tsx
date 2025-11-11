@@ -11,8 +11,9 @@
 import { PaymentHero } from "@/features/marketing/payments/components/payment-hero";
 import { PaymentForm } from "@/features/marketing/payments/components/payment-form";
 import { PaymentSummary } from "@/features/marketing/payments/components/payment-summary";
-import { PaymentSecurity } from "@/features/marketing/payments/components/payment-security";
 import { ContactSalesForm } from "@/features/marketing/payments/components/contact-sales-form";
+import { PaymentFooter } from "@/features/marketing/payments/components/payment-footer";
+import { getValidPlan, type PlanType, isStripePlan } from "@/features/marketing/payments/utils/plan-validation";
 
 /**
  * Props for PaymentsPage component
@@ -25,46 +26,48 @@ interface PaymentsPageProps {
 
 export default async function PaymentsPage({ searchParams }: PaymentsPageProps) {
   const resolvedSearchParams = await searchParams;
-  const plan = resolvedSearchParams.plan as "starter" | "pro" | "enterprise" | undefined;
-  const isValidPlan = plan && ["starter", "pro", "enterprise"].includes(plan);
-
-  // If no valid plan is selected, default to starter
-  const selectedPlan = isValidPlan ? plan : "starter";
+  const selectedPlan: PlanType = getValidPlan(resolvedSearchParams.plan);
 
   return (
-    <main
-      className="min-h-screen bg-white pt-24 md:pt-32"
-      style={{ color: "var(--color-brand-primary)" }}
-    >
-      <div className="animate-slide-up">
-        <PaymentHero plan={selectedPlan} />
-      </div>
-      <div className="animate-slide-up-delayed">
-        <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
-          {selectedPlan === "enterprise" ? (
-            // Enterprise plan - show contact sales form
-            <div className="mx-auto max-w-4xl">
-              <ContactSalesForm />
-            </div>
-          ) : (
-            // Starter and Pro plans - show payment form
-            <div
-              className="grid grid-cols-1 gap-6 md:gap-12 lg:grid-cols-3 lg:grid-rows-1 lg:gap-8"
-              style={{ gridTemplateRows: "1fr" }}
-            >
-              <div className="order-2 lg:order-1 lg:col-span-2">
-                <PaymentForm plan={selectedPlan} />
-              </div>
-              <div className="order-1 lg:order-2 lg:col-span-1">
-                <div className="h-full space-y-4 lg:sticky lg:top-8 lg:space-y-6">
-                  <PaymentSummary plan={selectedPlan} />
-                  <PaymentSecurity />
+    <div className="min-h-screen bg-[#F9FAFB]">
+      <main className="min-h-screen pt-20 md:pt-24">
+        <div className="animate-slide-up">
+          <PaymentHero plan={selectedPlan} />
+        </div>
+        <div className="py-8 md:py-12">
+          <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+            {selectedPlan === "enterprise" ? (
+              // Enterprise plan - show contact sales form
+              <div className="mx-auto max-w-4xl pb-12 md:pb-16 lg:pb-20">
+                <div className="animate-slide-up-delayed">
+                  <ContactSalesForm />
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              // Starter and Pro plans - show payment form
+              // TypeScript: After checking for "enterprise", selectedPlan is narrowed to "starter" | "pro"
+              <div className="pb-12 md:pb-16">
+                {/* Main Grid: Terms & Summary */}
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_1fr] lg:items-stretch lg:gap-10">
+                  {/* Left Column - Payment Form */}
+                  <div className="order-2 lg:order-1 flex flex-col animate-slide-up-delayed">
+                    <PaymentForm plan={selectedPlan as "starter" | "pro"} />
+                  </div>
+                  {/* Right Column - Summary */}
+                  <div className="order-1 lg:order-2 flex flex-col animate-slide-up-delayed">
+                    <div className="lg:sticky lg:top-24 flex h-full flex-col">
+                      <PaymentSummary plan={selectedPlan} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+
+      {/* Footer */}
+      <PaymentFooter />
+    </div>
   );
 }
