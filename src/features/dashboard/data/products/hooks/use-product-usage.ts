@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
  */
 export interface ProductUsageResponse {
   current: number;
-  limit: number;
+  limit: number | null; // null means unlimited (PRO/ENTERPRISE plans)
   canCreateMore: boolean;
 }
 

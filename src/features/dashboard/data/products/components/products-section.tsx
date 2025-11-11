@@ -93,7 +93,8 @@ export function ProductsSection() {
   // Check if user can create more products
   const canCreateMore = productUsage?.canCreateMore ?? true;
   const productLimitReached = !isLoadingUsage && !canCreateMore;
-  const showLimitBadge = productUsage && productUsage.limit !== Infinity;
+  // Only show badge if limit exists and is not unlimited (null or Infinity means unlimited)
+  const showLimitBadge = productUsage && productUsage.limit !== null && productUsage.limit !== Infinity;
 
   // Helper function to determine stock status
   const getStockStatus = (product: Product): StockFilter => {
@@ -274,9 +275,9 @@ export function ProductsSection() {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
               <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
-              {showLimitBadge && (
+              {showLimitBadge && productUsage?.limit !== null && (
                 <Badge variant="outline" className="text-xs">
-                  {productUsage?.current || 0} / {productUsage?.limit || 500} {t("data.products.limitBadge") || "products"}
+                  {productUsage.current} / {productUsage.limit} {t("data.products.limitBadge") || "products"}
                 </Badge>
               )}
             </div>
@@ -310,11 +311,13 @@ export function ProductsSection() {
                     </AddProductDialog>
                   </div>
                 </TooltipTrigger>
-                {productLimitReached && (
+                {productLimitReached && productUsage && productUsage.limit !== null && (
                   <TooltipContent>
                     <p>
-                      {t("data.products.limitTooltip")?.replace("{current}", String(productUsage?.current || 0)).replace("{limit}", String(productUsage?.limit || 500)) ||
-                        `You've reached your plan's product limit (${productUsage?.current || 0}/${productUsage?.limit || 500}). Upgrade to Pro for unlimited products.`}
+                      {t("data.products.limitTooltip")
+                        ?.replace("{current}", String(productUsage.current))
+                        .replace("{limit}", String(productUsage.limit)) ||
+                        `You've reached your plan's product limit (${productUsage.current}/${productUsage.limit}). Upgrade to Pro for unlimited products.`}
                     </p>
                   </TooltipContent>
                 )}

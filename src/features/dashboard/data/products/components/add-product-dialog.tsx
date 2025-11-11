@@ -207,13 +207,13 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
           <Form {...form}>
             <form id="add-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Product Limit Warning */}
-            {productLimitReached && (
+            {productLimitReached && productUsage && productUsage.limit !== null && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>{t("data.products.limitReached.title") || "Product Limit Reached"}</AlertTitle>
                 <AlertDescription>
-                  {t("data.products.limitReached.description")?.replace("{current}", String(productUsage?.current || 0)).replace("{limit}", String(productUsage?.limit || 500)) ||
-                    `You've reached your plan's product limit (${productUsage?.current || 0}/${productUsage?.limit || 500}). Upgrade to Pro for unlimited products.`}
+                  {t("data.products.limitReached.description")?.replace("{current}", String(productUsage.current)).replace("{limit}", String(productUsage.limit)) ||
+                    `You've reached your plan's product limit (${productUsage.current}/${productUsage.limit}). Upgrade to Pro for unlimited products.`}
                   <Link href="/pricing" className="ml-2 font-medium underline">
                     {t("data.products.limitReached.upgrade") || "Upgrade to Pro"}
                   </Link>
