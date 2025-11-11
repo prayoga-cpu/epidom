@@ -6,7 +6,17 @@ import {
 } from "@/lib/repositories/subscription.repository";
 import { userRepository, UserRepository } from "@/lib/repositories/user.repository";
 import { storeRepository, StoreRepository } from "@/lib/repositories/store.repository";
-import { STRIPE_CONFIG, canCreateStore, getStoreLimit } from "@/config/stripe.config";
+import {
+  productRepository,
+  ProductRepository,
+} from "@/lib/repositories/product.repository";
+import {
+  STRIPE_CONFIG,
+  canCreateStore,
+  getStoreLimit,
+  canCreateProduct as canCreateProductHelper,
+  getProductLimit,
+} from "@/config/stripe.config";
 import Stripe from "stripe";
 
 /**
@@ -24,7 +34,8 @@ export class SubscriptionService {
   constructor(
     private readonly subscriptionRepo: SubscriptionRepository = subscriptionRepository,
     private readonly userRepo: UserRepository = userRepository,
-    private readonly storeRepo: StoreRepository = storeRepository
+    private readonly storeRepo: StoreRepository = storeRepository,
+    private readonly productRepo: ProductRepository = productRepository
   ) {}
 
   /**
@@ -235,6 +246,36 @@ export class SubscriptionService {
       allowed,
       limit,
       current: currentStoreCount,
+    };
+  }
+
+  /**
+   * Check if user can create another product in a store based on their plan
+   */
+  async canCreateProduct(
+    userId: string,
+    storeId: string
+  ): Promise<{ allowed: boolean; limit: number; current: number }> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+
+    // If no subscription, no products allowed
+    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+      return { allowed: false, limit: 0, current: 0 };
+    }
+
+    // Count products in the store
+    const currentProductCount = await this.productRepo.count({
+      storeId,
+      isActive: true,
+    });
+
+    const limit = getProductLimit(subscription.plan);
+    const allowed = canCreateProductHelper(subscription.plan, currentProductCount);
+
+    return {
+      allowed,
+      limit,
+      current: currentProductCount,
     };
   }
 

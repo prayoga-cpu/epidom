@@ -92,7 +92,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
               variant="outline"
               className="border-yellow-500 text-yellow-700 dark:text-yellow-500"
             >
-              Canceling
+              {t("profile.subscription.status.canceling")}
             </Badge>
           )}
           <Badge className={getStatusColor(subscription.status)}>
@@ -221,7 +221,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
                       <span className="hidden sm:inline">
                         {t("profile.subscription.renewSubscription")}
                       </span>
-                      <span className="sm:hidden">Renew</span>
+                      <span className="sm:hidden">{t("profile.subscription.renew")}</span>
                     </>
                   ) : (
                     // Show "Manage Billing" normally

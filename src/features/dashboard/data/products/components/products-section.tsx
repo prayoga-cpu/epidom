@@ -46,6 +46,7 @@ import {
   useExportProducts,
   type Product,
 } from "../hooks/use-products";
+import { useProductUsage } from "../hooks/use-product-usage";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
@@ -78,11 +79,17 @@ export function ProductsSection() {
   const deleteProduct = useDeleteProduct(storeId);
   const bulkDeleteProducts = useBulkDeleteProducts(storeId);
   const exportProducts = useExportProducts();
+  const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
 
   const products = data?.products || [];
   const totalProducts = data?.total || 0;
   const currentPage = Math.floor(filters.skip / filters.take) + 1;
   const totalPages = Math.ceil(totalProducts / filters.take);
+
+  // Check if user can create more products
+  const canCreateMore = productUsage?.canCreateMore ?? true;
+  const productLimitReached = !isLoadingUsage && !canCreateMore;
+  const showLimitBadge = productUsage && productUsage.limit !== Infinity;
 
   // Helper function to determine stock status
   const getStockStatus = (product: Product): StockFilter => {
@@ -270,7 +277,14 @@ export function ProductsSection() {
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
+              {showLimitBadge && (
+                <Badge variant="outline" className="text-xs">
+                  {productUsage?.current || 0} / {productUsage?.limit || 500} {t("data.products.limitBadge") || "products"}
+                </Badge>
+              )}
+            </div>
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Button
                 variant="outline"
@@ -286,12 +300,30 @@ export function ProductsSection() {
                 )}
                 {t("common.actions.export")}
               </Button>
-              <AddProductDialog storeId={storeId}>
-                <Button size="sm" className="w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("data.products.addButton")}
-                </Button>
-              </AddProductDialog>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <AddProductDialog storeId={storeId}>
+                      <Button
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        disabled={productLimitReached}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t("data.products.addButton")}
+                      </Button>
+                    </AddProductDialog>
+                  </div>
+                </TooltipTrigger>
+                {productLimitReached && (
+                  <TooltipContent>
+                    <p>
+                      {t("data.products.limitTooltip")?.replace("{current}", String(productUsage?.current || 0)).replace("{limit}", String(productUsage?.limit || 500)) ||
+                        `You've reached your plan's product limit (${productUsage?.current || 0}/${productUsage?.limit || 500}). Upgrade to Pro for unlimited products.`}
+                    </p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
               {bulkSelectMode && selectedIds.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
                   <Trash2 className="mr-2 h-4 w-4" />

@@ -1797,7 +1797,10 @@ export const en = {
         active: "Active",
         canceled: "Canceled",
         pastDue: "Past Due",
+        incomplete: "Incomplete",
+        canceling: "Canceling",
       },
+      renew: "Renew",
       warnings: {
         ending: {
           title: "Subscription Ending",
@@ -2761,6 +2764,130 @@ export const en = {
     redirectingToStripe: "Redirecting to Stripe...",
     secureOnboarding: "You'll be redirected to Stripe's secure onboarding page",
   },
+  terms: {
+    title: "Terms and Conditions",
+    lastUpdated: "Last Updated:",
+    lastUpdatedDate: "November 2025",
+    introduction:
+      "Welcome to EPIDOM. These Terms and Conditions govern your use of our food inventory management platform. By accessing or using our service, you agree to be bound by these terms.",
+    section1: {
+      title: "1. Acceptance of Terms",
+      content:
+        "By accessing and using EPIDOM, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.",
+    },
+    section2: {
+      title: "2. Description of Service",
+      content:
+        "EPIDOM is a cloud-based food inventory management platform designed to help businesses track, manage, and optimize their inventory. We provide various subscription plans with different features and capabilities.",
+    },
+    section3: {
+      title: "3. User Accounts",
+      content: "To use EPIDOM, you must create an account. You are responsible for:",
+      item1: "Maintaining the confidentiality of your account credentials",
+      item2: "All activities that occur under your account",
+      item3: "Providing accurate and complete information when creating your account",
+      item4: "Notifying us immediately of any unauthorized use of your account",
+    },
+    section4: {
+      title: "4. Subscription and Payment",
+      content:
+        "EPIDOM offers subscription-based services with different pricing plans. By subscribing, you agree to:",
+      item1: "Pay the subscription fees as specified in your chosen plan",
+      item2: "Automatic renewal of your subscription unless cancelled",
+      item3: "Payment processing through our secure payment gateway",
+      item4: "Compliance with our refund policy as outlined separately",
+    },
+    section5: {
+      title: "5. User Responsibilities",
+      content:
+        "You agree to use EPIDOM in a lawful manner and are responsible for:",
+      item1: "Ensuring the accuracy of data entered into the system",
+      item2: "Not using the service for any illegal or unauthorized purpose",
+      item3: "Not attempting to gain unauthorized access to the system",
+      item4: "Respecting intellectual property rights and not infringing on others' rights",
+    },
+    section6: {
+      title: "6. Intellectual Property",
+      content:
+        "All content, features, and functionality of EPIDOM, including but not limited to text, graphics, logos, and software, are the property of EPIDOM and are protected by international copyright, trademark, and other intellectual property laws.",
+    },
+    section7: {
+      title: "7. Limitation of Liability",
+      content:
+        "EPIDOM shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the service. Our total liability shall not exceed the amount you paid for the service in the 12 months preceding the claim.",
+    },
+    section8: {
+      title: "8. Termination",
+      content:
+        "We reserve the right to terminate or suspend your account and access to the service immediately, without prior notice, for conduct that we believe violates these Terms or is harmful to other users, us, or third parties.",
+    },
+    section9: {
+      title: "9. Changes to Terms",
+      content:
+        "We reserve the right to modify these Terms at any time. We will notify users of any material changes via email or through the service. Your continued use of the service after such modifications constitutes acceptance of the updated Terms.",
+    },
+    section10: {
+      title: "10. Contact Information",
+      content:
+        "If you have any questions about these Terms and Conditions, please contact us:",
+      email: "Email",
+    },
+    footer:
+      "By using EPIDOM, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.",
+  },
+  refundPolicy: {
+    title: "Refund Policy",
+    lastUpdated: "Last Updated:",
+    lastUpdatedDate: "November 2025",
+    introduction:
+      "At EPIDOM, we strive to provide excellent service. This Refund Policy outlines the terms and conditions for refunds and cancellations of our subscription services.",
+    section1: {
+      title: "1. Refund Eligibility",
+      content:
+        "You may be eligible for a refund under the following circumstances:",
+      item1: "You cancel your subscription within 14 days of the initial purchase",
+      item2: "You experience technical issues that prevent you from using the service, and we are unable to resolve them",
+      item3: "You were charged incorrectly due to a billing error on our part",
+    },
+    section2: {
+      title: "2. Refund Process",
+      content: "To request a refund, please follow these steps:",
+      step1: "Contact our support team at support@epidom.com with your refund request",
+      step2: "Provide your account email and subscription details",
+      step3: "Explain the reason for your refund request",
+      step4: "We will review your request and respond within 5-7 business days",
+    },
+    section3: {
+      title: "3. Processing Time",
+      content:
+        "Once your refund is approved, it will be processed within 5-10 business days. The refund will be credited to the original payment method used for the purchase.",
+    },
+    section4: {
+      title: "4. Non-Refundable Items",
+      content: "The following are not eligible for refunds:",
+      item1: "Subscriptions cancelled after 14 days from the initial purchase",
+      item2: "Partial months of service already used",
+      item3: "Subscriptions that have been active for more than 30 days",
+    },
+    section5: {
+      title: "5. Cancellation",
+      content:
+        "You may cancel your subscription at any time from your account dashboard. Cancellation will take effect at the end of your current billing period. You will continue to have access to the service until the end of the paid period.",
+    },
+    section6: {
+      title: "6. Partial Refunds",
+      content:
+        "In exceptional circumstances, we may offer partial refunds on a case-by-case basis. This will be determined at our sole discretion based on the specific circumstances of your request.",
+    },
+    section7: {
+      title: "7. Contact for Refunds",
+      content:
+        "For all refund requests and inquiries, please contact our support team:",
+      email: "Email",
+    },
+    footer:
+      "This refund policy is subject to change. We will notify users of any material changes via email or through the service.",
+  },
   checkout: {
     success: {
       title: "Payment Successful! 🎉",
@@ -2789,5 +2916,13 @@ export const en = {
         "Your card hasn't been charged. Please review the error above and try again. If you continue to have issues, please contact support.",
       chargeNotApplied: "No charges have been applied to your account.",
     },
+  },
+  notFound: {
+    title: "Page Not Found",
+    description: "Sorry, we couldn't find the page you're looking for.",
+    goToDashboard: "Go to Dashboard",
+    backToHome: "Back to Home",
+    helpText: "If you believe this is a mistake, please",
+    contactSupport: "contact support",
   },
 };

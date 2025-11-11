@@ -18,6 +18,8 @@ export function getStatusColor(status?: string | SubscriptionStatus): string {
       return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
     case "PAST_DUE":
       return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+    case "INCOMPLETE":
+      return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
     default:
       return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
   }
@@ -35,6 +37,8 @@ export function getStatusLabelKey(status?: string | SubscriptionStatus): string 
       return "profile.subscription.status.canceled";
     case "PAST_DUE":
       return "profile.subscription.status.pastDue";
+    case "INCOMPLETE":
+      return "profile.subscription.status.incomplete";
     default:
       return "";
   }

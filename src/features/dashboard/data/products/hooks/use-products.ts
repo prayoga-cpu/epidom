@@ -187,6 +187,8 @@ export function useCreateProduct(storeId: string) {
     mutationFn: (data: CreateProductInput) => createProduct(storeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", storeId] });
+      // Invalidate product usage cache (product count has changed)
+      queryClient.invalidateQueries({ queryKey: ["product-usage", storeId] });
       // Invalidate alerts (new product may affect alerts)
       queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
       // Invalidate stock movements (initial stock movement may have been created)

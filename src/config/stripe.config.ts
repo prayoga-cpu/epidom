@@ -26,16 +26,19 @@ export const STRIPE_CONFIG = {
   PLAN_LIMITS: {
     STARTER: {
       maxStores: 1,
+      maxProducts: 500,
       name: "Starter",
       price: 29, // EUR
     },
     PRO: {
       maxStores: Infinity, // Unlimited
+      maxProducts: Infinity, // Unlimited
       name: "Pro",
       price: 79, // EUR
     },
     ENTERPRISE: {
       maxStores: Infinity, // Unlimited
+      maxProducts: Infinity, // Unlimited
       name: "Enterprise",
       price: null, // Custom pricing
     },
@@ -97,4 +100,22 @@ export function canCreateStore(
 ): boolean {
   const limit = getStoreLimit(plan);
   return currentStoreCount < limit;
+}
+
+/**
+ * Helper to get product limit by plan name
+ */
+export function getProductLimit(plan: "STARTER" | "PRO" | "ENTERPRISE"): number {
+  return STRIPE_CONFIG.PLAN_LIMITS[plan].maxProducts;
+}
+
+/**
+ * Helper to check if a plan allows more products
+ */
+export function canCreateProduct(
+  plan: "STARTER" | "PRO" | "ENTERPRISE",
+  currentProductCount: number
+): boolean {
+  const limit = getProductLimit(plan);
+  return currentProductCount < limit;
 }
