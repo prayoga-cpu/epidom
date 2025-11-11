@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
+import { Container } from "./container";
 
 export function CookieConsentBar() {
   const { t } = useI18n();
@@ -40,7 +41,7 @@ export function CookieConsentBar() {
 
   return (
     <div className="bg-background border-border fixed right-0 bottom-0 left-0 z-50 border-t shadow-lg">
-      <div className="mx-auto max-w-7xl px-6 py-6">
+      <Container maxWidth="7xl" className="py-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex-1">
             <p className="text-foreground mb-2 text-sm font-medium">{t("cookie.title")}</p>
@@ -61,7 +62,7 @@ export function CookieConsentBar() {
             </Button>
           </div>
         </div>
-      </div>
+      </Container>
     </div>
   );
 }

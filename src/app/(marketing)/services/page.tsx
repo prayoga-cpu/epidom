@@ -19,10 +19,7 @@ import { AlertsPreviewSection } from "@/features/marketing/services/components/a
 
 export default function ServicesPage() {
   return (
-    <main
-      className="min-h-screen bg-white pt-24 md:pt-32"
-      style={{ color: "var(--color-brand-primary)" }}
-    >
+    <main className="min-h-screen bg-white pt-24 md:pt-32 text-brand-primary">
       <div className="animate-slide-up mb-8 md:mb-12">
         <HeroSection />
       </div>

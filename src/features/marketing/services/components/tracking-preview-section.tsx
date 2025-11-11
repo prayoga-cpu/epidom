@@ -19,10 +19,7 @@ export function TrackingPreviewSection() {
     <section className="relative z-10 flex items-center overflow-visible bg-white py-8 md:py-4 lg:py-16">
       <div className="services-narrow-container">
         {/* Title - Centered */}
-        <h2
-          className="text-section-title mb-6 text-center md:mb-4 lg:mb-12"
-          style={{ color: "var(--color-brand-primary)" }}
-        >
+        <h2 className="text-section-title mb-6 text-center md:mb-4 lg:mb-12 text-brand-primary">
           {t("services.tracking.title")}
         </h2>
 

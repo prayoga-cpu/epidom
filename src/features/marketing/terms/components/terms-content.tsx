@@ -11,7 +11,7 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Container } from "@/features/marketing/shared/components/container";
-import { LogoWithSkeleton } from "@/features/marketing/shared/components/logo-with-skeleton";
+import { LegalPageHero } from "@/features/marketing/shared/components/legal-page-hero";
 
 export function TermsContent() {
   const { t } = useI18n();
@@ -19,34 +19,11 @@ export function TermsContent() {
   return (
     <div className="space-y-8 py-8 md:space-y-12 md:py-12 lg:py-16">
       {/* Hero Section */}
-      <section className="border-b border-gray-200 pb-8 md:pb-12">
-        <Container maxWidth="4xl">
-          <div className="text-center">
-            {/* Logo */}
-            <div className="mb-6 md:mb-8">
-              <LogoWithSkeleton
-                src="/images/logo-black.png"
-                alt="EPIDOM"
-                filter="invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)"
-                wrapperClassName="relative mx-auto h-8 w-[120px] flex items-center justify-center"
-              />
-            </div>
-
-            {/* Title */}
-            <h1
-              className="mb-4 text-3xl leading-tight font-bold tracking-tight md:mb-6 md:text-5xl lg:text-6xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
-              {t("terms.title")}
-            </h1>
-
-            {/* Last Updated */}
-            <p className="text-base text-gray-600 md:text-lg">
-              {t("terms.lastUpdated")} {t("terms.lastUpdatedDate")}
-            </p>
-          </div>
-        </Container>
-      </section>
+      <LegalPageHero
+        titleKey="terms.title"
+        lastUpdatedKey="terms.lastUpdated"
+        lastUpdatedDateKey="terms.lastUpdatedDate"
+      />
 
       {/* Content Sections */}
       <Container maxWidth="4xl">
@@ -60,10 +37,7 @@ export function TermsContent() {
 
           {/* Section 1: Acceptance of Terms */}
           <section className="space-y-4">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section1.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -73,10 +47,7 @@ export function TermsContent() {
 
           {/* Section 2: Description of Service */}
           <section className="space-y-4 border-t border-gray-200 pt-8">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section2.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -86,10 +57,7 @@ export function TermsContent() {
 
           {/* Section 3: User Accounts */}
           <section className="space-y-4 border-t border-gray-200 pt-8">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section3.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -113,10 +81,7 @@ export function TermsContent() {
 
           {/* Section 4: Subscription and Payment */}
           <section className="space-y-4 border-t border-gray-200 pt-8">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section4.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -140,10 +105,7 @@ export function TermsContent() {
 
           {/* Section 5: User Responsibilities */}
           <section className="space-y-4 border-t border-gray-200 pt-8">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section5.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -167,10 +129,7 @@ export function TermsContent() {
 
           {/* Section 6: Intellectual Property */}
           <section className="space-y-4 border-t border-gray-200 pt-8">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section6.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -180,10 +139,7 @@ export function TermsContent() {
 
           {/* Section 7: Limitation of Liability */}
           <section className="space-y-4 border-t border-gray-200 pt-8">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section7.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -193,10 +149,7 @@ export function TermsContent() {
 
           {/* Section 8: Termination */}
           <section className="space-y-4 border-t border-gray-200 pt-8">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section8.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -206,10 +159,7 @@ export function TermsContent() {
 
           {/* Section 9: Changes to Terms */}
           <section className="space-y-4 border-t border-gray-200 pt-8">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section9.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -219,10 +169,7 @@ export function TermsContent() {
 
           {/* Section 10: Contact Information */}
           <section className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-6 md:p-8">
-            <h2
-              className="text-2xl font-semibold md:text-3xl"
-              style={{ color: "var(--color-brand-primary)" }}
-            >
+            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
               {t("terms.section10.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">
@@ -232,8 +179,7 @@ export function TermsContent() {
               <strong className="font-semibold">{t("terms.section10.email")}:</strong>{" "}
               <a
                 href="mailto:support@epidom.com"
-                className="font-medium underline transition-colors hover:no-underline"
-                style={{ color: "var(--color-brand-primary)" }}
+                className="font-medium underline transition-colors hover:no-underline text-brand-primary"
               >
                 support@epidom.com
               </a>

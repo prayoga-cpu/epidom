@@ -15,6 +15,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { type PlanType } from "../utils/plan-validation";
+import { Container } from "@/features/marketing/shared/components/container";
 
 /**
  * Props for PaymentHero component
@@ -53,7 +54,7 @@ export function PaymentHero({ plan }: PaymentHeroProps) {
 
   return (
     <section className="py-8 md:py-12 lg:py-16">
-      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+      <Container maxWidth="7xl">
         <div className="text-center">
           <Button asChild variant="ghost" className="mb-6 text-gray-600 hover:opacity-80">
             <Link href="/pricing" className="flex items-center gap-2 text-brand-primary">
@@ -122,7 +123,7 @@ export function PaymentHero({ plan }: PaymentHeroProps) {
             </div>
           )}
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

@@ -5,7 +5,12 @@
  *
  * Landing page countdown timer for EPIDOM launch date.
  * Features flip-board style timer units with brand colors.
- * Currently disabled on homepage (see page.tsx comment).
+ *
+ * STATUS: Currently disabled on homepage (see src/app/(marketing)/page.tsx).
+ * To activate: Uncomment LazyCountdownComponent in page.tsx and comment out LazyHero.
+ *
+ * This component is kept for future use when countdown mode is needed.
+ * It's fully functional and can be enabled by uncommenting the import in page.tsx.
  *
  * @component
  */
@@ -16,6 +21,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { WaitlistDialog } from "@/features/marketing/shared/components/waitlist-dialog";
 import { Mail, MessageCircle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Container } from "./container";
 
 export const CountdownComponent = memo(function CountdownComponent() {
   const { t } = useI18n();
@@ -30,14 +36,11 @@ export const CountdownComponent = memo(function CountdownComponent() {
 
   return (
     <main className="flex min-h-screen items-center bg-white pt-12 sm:pt-16">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container maxWidth="7xl" className="px-4 sm:px-6 lg:px-8">
         {/* Content wrapper - ultra compact design */}
         <div className="animate-slide-up flex flex-col items-center space-y-3 py-4 text-center sm:space-y-4 sm:py-6">
           {/* Main heading */}
-          <h1
-            className="text-3xl leading-tight font-bold sm:text-4xl md:text-5xl lg:text-6xl"
-            style={{ color: "var(--color-brand-primary)" }}
-          >
+          <h1 className="text-3xl leading-tight font-bold sm:text-4xl md:text-5xl lg:text-6xl text-brand-primary">
             {t("countdown.title")}
           </h1>
 
@@ -75,22 +78,20 @@ export const CountdownComponent = memo(function CountdownComponent() {
           {/* Contact information - ultra compact */}
           <div className="flex flex-col items-center justify-center gap-3 text-sm sm:flex-row sm:gap-4 sm:text-base">
             <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5" style={{ color: "var(--color-brand-primary)" }} />
+              <Mail className="h-5 w-5 text-brand-primary" />
               <a
-                className="font-medium underline transition-all duration-200 hover:no-underline"
+                className="font-medium underline transition-all duration-200 hover:no-underline text-brand-primary"
                 href="mailto:mrcaoevan@gmail.com"
-                style={{ color: "var(--color-brand-primary)" }}
               >
                 {t("countdown.email")}
               </a>
             </div>
 
             <div className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" style={{ color: "var(--color-brand-primary)" }} />
+              <MessageCircle className="h-5 w-5 text-brand-primary" />
               <a
-                className="font-medium underline transition-all duration-200 hover:no-underline"
+                className="font-medium underline transition-all duration-200 hover:no-underline text-brand-primary"
                 href="http://wa.me/33781732386"
-                style={{ color: "var(--color-brand-primary)" }}
               >
                 {t("countdown.whatsapp")}
               </a>
@@ -107,7 +108,7 @@ export const CountdownComponent = memo(function CountdownComponent() {
             </div>
           </div>
         </div>
-      </div>
+      </Container>
     </main>
   );
 });
@@ -123,11 +124,7 @@ function FlipUnit({ value, label }: { value: number; label: string }) {
         {displayValue.split("").map((digit, i) => (
           <div
             key={i}
-            className="relative mx-1 flex h-10 w-8 items-center justify-center rounded-md border-2 bg-white text-sm font-bold shadow-md transition-all duration-300 hover:shadow-lg sm:h-12 sm:w-10 sm:text-base md:h-14 md:w-12 md:text-lg lg:h-16 lg:w-14 lg:text-xl"
-            style={{
-              borderColor: "var(--color-brand-primary)",
-              color: "var(--color-brand-primary)",
-            }}
+            className="relative mx-1 flex h-10 w-8 items-center justify-center rounded-md border-2 bg-white text-sm font-bold shadow-md transition-all duration-300 hover:shadow-lg sm:h-12 sm:w-10 sm:text-base md:h-14 md:w-12 md:text-lg lg:h-16 lg:w-14 lg:text-xl border-brand-primary text-brand-primary"
           >
             {digit}
             {/* Divider line */}
@@ -138,10 +135,7 @@ function FlipUnit({ value, label }: { value: number; label: string }) {
           </div>
         ))}
       </div>
-      <span
-        className="mt-2 text-sm font-semibold tracking-wider uppercase sm:text-xs"
-        style={{ color: "var(--color-brand-primary)" }}
-      >
+      <span className="mt-2 text-sm font-semibold tracking-wider uppercase sm:text-xs text-brand-primary">
         {label}
       </span>
     </div>

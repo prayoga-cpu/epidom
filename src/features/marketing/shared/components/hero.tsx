@@ -52,16 +52,10 @@ export const Hero = React.memo(function Hero() {
 
             {/* Title and Subtitle */}
             <div className="space-y-2 md:space-y-3">
-              <h1
-                className="text-5xl leading-tight font-bold tracking-tight md:text-6xl lg:text-5xl xl:text-6xl"
-                style={{ color: "var(--color-brand-primary)" }}
-              >
+              <h1 className="text-5xl leading-tight font-bold tracking-tight md:text-6xl lg:text-5xl xl:text-6xl text-brand-primary">
                 {t("hero.title")}
               </h1>
-              <p
-                className="text-2xl leading-relaxed font-medium text-balance md:text-3xl lg:text-2xl"
-                style={{ color: "var(--color-brand-primary)" }}
-              >
+              <p className="text-2xl leading-relaxed font-medium text-balance md:text-3xl lg:text-2xl text-brand-primary">
                 {t("hero.subtitle")}
               </p>
             </div>

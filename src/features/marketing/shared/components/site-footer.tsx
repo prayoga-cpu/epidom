@@ -13,16 +13,16 @@
 import { memo } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { Container } from "./container";
 
 export const SiteFooter = memo(function SiteFooter() {
   const { t } = useI18n();
   return (
     <footer
       role="contentinfo"
-      className="border-border/20 border-t"
-      style={{ backgroundColor: "var(--color-brand-primary)", color: "var(--color-brand-white)" }}
+      className="border-border/20 border-t bg-brand-primary text-white"
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container maxWidth="7xl" className="px-4 sm:px-6 lg:px-8">
         <div className="grid gap-8 py-8 sm:gap-10 sm:py-12 md:grid-cols-2 md:py-16 lg:grid-cols-3">
           {/* Left: tagline */}
           <div className="space-y-4 lg:col-span-1">
@@ -67,7 +67,7 @@ export const SiteFooter = memo(function SiteFooter() {
             </ul>
           </div>
         </div>
-      </div>
+      </Container>
     </footer>
   );
 });

@@ -11,13 +11,14 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import Link from "next/link";
+import { Container } from "@/features/marketing/shared/components/container";
 
 export function PaymentFooter() {
   const { t } = useI18n();
 
   return (
     <footer className="border-t border-gray-200 bg-white py-6 animate-slide-up-delayed-2">
-      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+      <Container maxWidth="7xl">
         <div className="flex flex-col items-center justify-between gap-4 text-sm text-gray-600 md:flex-row">
           <div className="text-center md:text-left">
             <p>{t("footer.rights")}</p>
@@ -31,7 +32,7 @@ export function PaymentFooter() {
             </Link>
           </div>
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }

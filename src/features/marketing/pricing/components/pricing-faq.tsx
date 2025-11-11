@@ -16,13 +16,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Container } from "@/features/marketing/shared/components/container";
 
 export function PricingFaq() {
   const { t } = useI18n();
 
   return (
     <section className="pb-12 md:pb-20 lg:pb-24">
-      <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
+      <Container maxWidth="7xl">
         <h2 className="mb-6 text-center text-2xl font-bold tracking-tight md:mb-8 md:text-4xl">
           {t("pricing.faq.title")}
         </h2>
@@ -52,7 +53,7 @@ export function PricingFaq() {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </div>
+      </Container>
     </section>
   );
 }
