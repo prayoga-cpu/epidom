@@ -128,8 +128,12 @@ export const SiteHeader = memo(function SiteHeader({
 
   /**
    * Handle login action - redirect to login page
+   * After successful login, user will be redirected to /stores (store selection)
+   * This is the natural entry point for authenticated users
    */
   const handleLogin = () => {
+    // Simply redirect to login page
+    // Login form will redirect to /stores after successful login (if no callbackUrl)
     router.push("/login");
   };
 
