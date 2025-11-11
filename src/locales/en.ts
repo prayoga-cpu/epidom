@@ -1741,6 +1741,7 @@ export const en = {
       periodEnd: "Period End",
       changePlan: "Change Plan",
       manageBilling: "Manage Billing",
+      renewSubscription: "Renew Subscription",
       noSubscription: "No active subscription",
       noActiveSubscription: "No active subscription",
       viewPlans: "View Plans",

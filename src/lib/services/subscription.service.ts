@@ -51,14 +51,15 @@ export class SubscriptionService {
     // Check if user already has a subscription
     let subscription = await this.subscriptionRepo.findByUserId(userId);
 
-    // Prevent buying the same plan they already have
-    if (
+    // Prevent buying the same active plan (commented out - we allow re-subscribing)
+    // This is now handled by canceling all active subscriptions before creating new one
+    /* if (
       subscription &&
       subscription.status === SubscriptionStatus.ACTIVE &&
       subscription.plan === plan
     ) {
-      throw new Error(`You already have the ${plan} plan`);
-    }
+      throw new Error(`You already have an active ${plan} plan`);
+    } */
 
     // Get Epidom owner's Stripe Connect account (for receiving 80%)
     // NOTE: For MVP, this should be a configuration.
@@ -75,6 +76,43 @@ export class SubscriptionService {
     if (subscription) {
       // Use existing Stripe customer ID
       stripeCustomerId = subscription.stripeCustomerId;
+
+      // IMPORTANT: Cancel ALL active subscriptions in Stripe for this customer
+      // This prevents duplicate subscriptions
+      try {
+        console.log(
+          `[Subscription] Checking for active subscriptions in Stripe for customer ${stripeCustomerId}...`
+        );
+
+        const existingSubscriptions = await stripe.subscriptions.list({
+          customer: stripeCustomerId,
+          status: "active",
+          limit: 100,
+        });
+
+        console.log(
+          `[Subscription] Found ${existingSubscriptions.data.length} active subscription(s) in Stripe`
+        );
+
+        // Cancel all existing active subscriptions
+        for (const existingSub of existingSubscriptions.data) {
+          console.log(`[Subscription] Canceling subscription ${existingSub.id} in Stripe...`);
+          await stripe.subscriptions.cancel(existingSub.id);
+          console.log(`[Subscription] Successfully canceled subscription ${existingSub.id}`);
+        }
+
+        // Update our DB to reflect cancellation
+        if (subscription.status === SubscriptionStatus.ACTIVE) {
+          await this.subscriptionRepo.update(userId, {
+            status: SubscriptionStatus.CANCELED,
+            cancelAtPeriodEnd: true,
+          });
+          console.log(`[Subscription] Updated DB status to CANCELED`);
+        }
+      } catch (error: any) {
+        console.error(`[Subscription] Failed to cancel existing subscriptions:`, error.message);
+        // Continue anyway - new subscription will be created
+      }
     } else {
       // Create new Stripe customer
       const customer = await stripe.customers.create({
@@ -257,6 +295,70 @@ export class SubscriptionService {
     await this.subscriptionRepo.update(userId, {
       cancelAtPeriodEnd: false,
     });
+  }
+
+  /**
+   * Audit and fix duplicate active subscriptions for a user
+   * This is a safety function to ensure users only have one active Stripe subscription
+   *
+   * @param userId - User ID to audit
+   * @returns Array of canceled subscription IDs
+   */
+  async auditAndFixDuplicateSubscriptions(userId: string): Promise<{
+    duplicatesFound: number;
+    canceledSubscriptionIds: string[];
+  }> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+
+    if (!subscription) {
+      return { duplicatesFound: 0, canceledSubscriptionIds: [] };
+    }
+
+    // Get all active subscriptions for this customer from Stripe
+    const subscriptions = await stripe.subscriptions.list({
+      customer: subscription.stripeCustomerId,
+      status: "active",
+      limit: 100,
+    });
+
+    const activeSubscriptions = subscriptions.data;
+    const canceledIds: string[] = [];
+
+    // If we have more than one active subscription, cancel the old ones
+    if (activeSubscriptions.length > 1) {
+      console.log(
+        `[Subscription Audit] Found ${activeSubscriptions.length} active subscriptions for user ${userId}`
+      );
+
+      // Keep the newest subscription (highest created timestamp)
+      const sortedByDate = activeSubscriptions.sort((a, b) => b.created - a.created);
+      const keepSubscription = sortedByDate[0];
+      const toCancel = sortedByDate.slice(1);
+
+      // Cancel old subscriptions IMMEDIATELY
+      for (const sub of toCancel) {
+        console.log(`[Subscription Audit] Canceling duplicate subscription IMMEDIATELY: ${sub.id}`);
+        await stripe.subscriptions.cancel(sub.id, {
+          prorate: false, // No refund for unused time
+        });
+        canceledIds.push(sub.id);
+      }
+
+      // Ensure database reflects the kept subscription
+      if (subscription.stripeSubscriptionId !== keepSubscription.id) {
+        console.log(
+          `[Subscription Audit] Updating database to use subscription ${keepSubscription.id}`
+        );
+        await this.subscriptionRepo.update(userId, {
+          stripeSubscriptionId: keepSubscription.id,
+        });
+      }
+    }
+
+    return {
+      duplicatesFound: activeSubscriptions.length - 1,
+      canceledSubscriptionIds: canceledIds,
+    };
   }
 
   /**

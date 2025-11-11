@@ -58,6 +58,10 @@ export async function POST(request: NextRequest) {
         await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
         break;
 
+      case "customer.subscription.created":
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
+        break;
+
       case "customer.subscription.updated":
         await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
         break;
@@ -101,24 +105,99 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return;
   }
 
-  // Get or retrieve subscription from Stripe
+  // Get subscription from Stripe with expanded details
   const subscriptionId = session.subscription as string;
-  const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-  // Update subscription in database
+  if (!subscriptionId) {
+    console.error("[Webhook] No subscription ID in checkout session:", session.id);
+    return;
+  }
+
+  const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ["latest_invoice", "customer"],
+  });
+
+  // Cast to access properties TypeScript doesn't recognize
+  const subscriptionData = stripeSubscription as any;
+
+  console.log("[Webhook] Retrieved subscription:", {
+    id: stripeSubscription.id,
+    status: stripeSubscription.status,
+    current_period_start: subscriptionData.current_period_start,
+    current_period_end: subscriptionData.current_period_end,
+  });
+
+  // Convert Unix timestamps (seconds) to JavaScript Date (milliseconds)
+  const currentPeriodStart = new Date(subscriptionData.current_period_start * 1000);
+  const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000);
+
+  // Validate dates
+  if (isNaN(currentPeriodStart.getTime()) || isNaN(currentPeriodEnd.getTime())) {
+    console.error("[Webhook] Invalid date conversion in checkout.session.completed:", {
+      start: subscriptionData.current_period_start,
+      end: subscriptionData.current_period_end,
+    });
+    console.log(
+      "[Webhook] Skipping checkout.session.completed, will be handled by subscription.created"
+    );
+    return; // Don't fail, let subscription.created handle it
+  }
+
+  // Check if user already has a subscription (upgrade/downgrade scenario)
   const existingSubscription = await subscriptionRepository.findByUserId(userId);
 
   if (existingSubscription) {
+    // User is upgrading/downgrading
+    console.log(
+      `[Webhook] Upgrading subscription for user ${userId}: ${existingSubscription.plan} -> ${plan}`
+    );
+
+    // The old subscription should have been canceled by subscription.service.ts
+    // But let's double-check and cancel if it somehow still exists in Stripe
+    if (
+      existingSubscription.stripeSubscriptionId &&
+      existingSubscription.stripeSubscriptionId !== subscriptionId
+    ) {
+      try {
+        const oldStripeSubscription = await stripe.subscriptions.retrieve(
+          existingSubscription.stripeSubscriptionId
+        );
+
+        // If old subscription is still active in Stripe, cancel it
+        if (oldStripeSubscription.status === "active") {
+          await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
+          console.log(
+            `[Webhook] Canceled old Stripe subscription: ${existingSubscription.stripeSubscriptionId}`
+          );
+        } else {
+          console.log(
+            `[Webhook] Old subscription already canceled in Stripe: ${existingSubscription.stripeSubscriptionId}`
+          );
+        }
+      } catch (error: any) {
+        // Subscription might already be deleted, that's fine
+        console.log(
+          `[Webhook] Old subscription not found in Stripe (already deleted): ${error.message}`
+        );
+      }
+    }
+
+    // Update the existing subscription record (1 user = 1 subscription due to unique constraint)
     await subscriptionRepository.update(userId, {
       stripeSubscriptionId: subscriptionId,
       stripePriceId: stripeSubscription.items.data[0].price.id,
       plan: plan as SubscriptionPlan,
       status: SubscriptionStatus.ACTIVE,
-      currentPeriodStart: new Date((stripeSubscription as any).current_period_start * 1000),
-      currentPeriodEnd: new Date((stripeSubscription as any).current_period_end * 1000),
+      currentPeriodStart,
+      currentPeriodEnd,
       cancelAtPeriodEnd: false,
     });
+
+    console.log(`[Webhook] Subscription updated successfully for user ${userId}`);
   } else {
+    // New subscription
+    console.log(`[Webhook] Creating new subscription for user ${userId}: ${plan}`);
+
     await subscriptionRepository.create({
       userId,
       stripeCustomerId: session.customer as string,
@@ -126,17 +205,94 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       stripePriceId: stripeSubscription.items.data[0].price.id,
       plan: plan as SubscriptionPlan,
       status: SubscriptionStatus.ACTIVE,
-      currentPeriodStart: new Date((stripeSubscription as any).current_period_start * 1000),
-      currentPeriodEnd: new Date((stripeSubscription as any).current_period_end * 1000),
+      currentPeriodStart,
+      currentPeriodEnd,
     });
-  }
 
-  console.log(`[Webhook] Subscription activated for user ${userId}, plan: ${plan}`);
+    console.log(`[Webhook] Subscription created successfully for user ${userId}`);
+  }
 
   // Note: The 80/20 split transfer happens automatically via Stripe
   // - Platform (developer) receives 20% as application fee
   // - Epidom owner receives 80% via transfer_data.destination
-  // No manual transfer needed here!
+}
+
+/**
+ * Handle customer.subscription.created
+ * This event is more reliable than checkout.session.completed for subscription data
+ */
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  const userId = subscription.metadata?.userId;
+  const plan = subscription.metadata?.plan as "STARTER" | "PRO";
+
+  if (!userId || !plan) {
+    console.log(
+      "[Webhook] No userId/plan metadata in subscription.created, skipping (created via checkout)"
+    );
+    return;
+  }
+
+  console.log(`[Webhook] Processing subscription.created for user ${userId}: ${plan}`);
+
+  // Cast to access properties
+  const subscriptionData = subscription as any;
+
+  // Convert Unix timestamps
+  const currentPeriodStart = new Date(subscriptionData.current_period_start * 1000);
+  const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000);
+
+  // Check if already exists
+  const existingSubscription = await subscriptionRepository.findByUserId(userId);
+
+  if (existingSubscription) {
+    // Cancel old subscription in Stripe if different
+    if (
+      existingSubscription.stripeSubscriptionId &&
+      existingSubscription.stripeSubscriptionId !== subscription.id
+    ) {
+      try {
+        const oldStripeSubscription = await stripe.subscriptions.retrieve(
+          existingSubscription.stripeSubscriptionId
+        );
+
+        if (oldStripeSubscription.status === "active") {
+          await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
+          console.log(
+            `[Webhook] Canceled old subscription: ${existingSubscription.stripeSubscriptionId}`
+          );
+        }
+      } catch (error: any) {
+        console.log(`[Webhook] Old subscription already deleted: ${error.message}`);
+      }
+    }
+
+    // Update existing record
+    await subscriptionRepository.update(userId, {
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: subscription.items.data[0].price.id,
+      plan: plan as SubscriptionPlan,
+      status: SubscriptionStatus.ACTIVE,
+      currentPeriodStart,
+      currentPeriodEnd,
+      cancelAtPeriodEnd: false,
+    });
+
+    console.log(`[Webhook] Updated subscription via subscription.created for user ${userId}`);
+  } else {
+    // Create new
+    await subscriptionRepository.create({
+      userId,
+      stripeCustomerId: subscription.customer as string,
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: subscription.items.data[0].price.id,
+      plan: plan as SubscriptionPlan,
+      status: SubscriptionStatus.ACTIVE,
+      currentPeriodStart,
+      currentPeriodEnd,
+    });
+
+    console.log(`[Webhook] Created subscription via subscription.created for user ${userId}`);
+  }
 }
 
 /**
@@ -144,40 +300,62 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
  * Update subscription details (plan changes, cancellations, etc.)
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.userId;
+  // Convert Unix timestamps to Date
+  const currentPeriodStart = new Date((subscription as any).current_period_start * 1000);
+  const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
 
-  if (!userId) {
-    // Try to find subscription by Stripe subscription ID
-    const existingSubscription = await subscriptionRepository.findByStripeSubscriptionId(
-      subscription.id
-    );
-    if (!existingSubscription) {
-      console.error("[Webhook] Cannot find user for subscription:", subscription.id);
-      return;
-    }
-
-    await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
-      status: mapStripeStatus(subscription.status),
-      currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
-      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
-      cancelAtPeriodEnd: (subscription as any).cancel_at_period_end,
-    });
-
-    console.log(
-      `[Webhook] Subscription updated: ${subscription.id}, status: ${subscription.status}`
-    );
+  // Validate dates
+  if (isNaN(currentPeriodStart.getTime()) || isNaN(currentPeriodEnd.getTime())) {
+    console.error("[Webhook] Invalid date conversion in subscription.updated");
     return;
   }
 
-  // Update subscription in database
-  await subscriptionRepository.update(userId, {
-    status: mapStripeStatus(subscription.status),
-    currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
-    currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
-    cancelAtPeriodEnd: (subscription as any).cancel_at_period_end,
+  // Find subscription by Stripe subscription ID
+  const existingSubscription = await subscriptionRepository.findByStripeSubscriptionId(
+    subscription.id
+  );
+
+  if (!existingSubscription) {
+    console.error("[Webhook] Cannot find subscription:", subscription.id);
+    return;
+  }
+
+  // Map Stripe status to our status
+  const status = mapStripeStatus(subscription.status);
+  const subscriptionData = subscription as any;
+
+  // Log the raw Stripe subscription data for debugging
+  console.log(`[Webhook] Raw subscription data:`, {
+    id: subscription.id,
+    status: subscription.status,
+    cancel_at_period_end: subscriptionData.cancel_at_period_end,
+    cancel_at: subscriptionData.cancel_at,
   });
 
-  console.log(`[Webhook] Subscription updated for user ${userId}, status: ${subscription.status}`);
+  // Check if subscription is scheduled for cancellation
+  // Either cancel_at_period_end is true OR cancel_at is set (future timestamp)
+  const cancelAtPeriodEnd = Boolean(
+    subscriptionData.cancel_at_period_end || subscriptionData.cancel_at
+  );
+
+  console.log(`[Webhook] Updating subscription ${subscription.id}:`, {
+    stripeStatus: subscription.status,
+    mappedStatus: status,
+    cancelAtPeriodEnd,
+    cancelAt: subscriptionData.cancel_at,
+  });
+
+  // Update subscription
+  await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
+    status,
+    currentPeriodStart,
+    currentPeriodEnd,
+    cancelAtPeriodEnd,
+  });
+
+  console.log(
+    `[Webhook] Subscription updated: ${subscription.id}, status: ${status}, cancelAtPeriodEnd: ${cancelAtPeriodEnd}`
+  );
 }
 
 /**
@@ -195,7 +373,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   }
 
   // Mark subscription as canceled
-  await subscriptionRepository.update(existingSubscription.userId, {
+  await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
     status: SubscriptionStatus.CANCELED,
     cancelAtPeriodEnd: true,
   });
@@ -223,7 +401,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
   // Ensure subscription is active
   if (subscription.status !== SubscriptionStatus.ACTIVE) {
-    await subscriptionRepository.update(subscription.userId, {
+    await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
       status: SubscriptionStatus.ACTIVE,
     });
   }
@@ -250,7 +428,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   }
 
   // Mark subscription as past due (immediate lockout)
-  await subscriptionRepository.update(subscription.userId, {
+  await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
     status: SubscriptionStatus.PAST_DUE,
   });
 

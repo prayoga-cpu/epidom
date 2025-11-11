@@ -57,7 +57,6 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
     }
   };
 
-
   if (!subscription) {
     return (
       <Card className="border-2">
@@ -87,9 +86,19 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
     <Card className="border-2">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl font-bold">{t("profile.subscription.title")}</CardTitle>
-        <Badge className={getStatusColor(subscription.status)}>
-          {getStatusLabel(subscription.status, t)}
-        </Badge>
+        <div className="flex gap-2">
+          {subscription.cancelAtPeriodEnd && (
+            <Badge
+              variant="outline"
+              className="border-yellow-500 text-yellow-700 dark:text-yellow-500"
+            >
+              Canceling
+            </Badge>
+          )}
+          <Badge className={getStatusColor(subscription.status)}>
+            {getStatusLabel(subscription.status, t)}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Plan Details */}
@@ -189,7 +198,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
           <Button variant="outline" asChild className="w-full sm:flex-1">
             <Link href="/pricing">{t("profile.subscription.changePlan")}</Link>
           </Button>
-          {isActive && !subscription.cancelAtPeriodEnd && (
+          {isActive && (
             <Button
               variant="outline"
               className="w-full gap-2 sm:flex-1"
@@ -203,7 +212,20 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
                   <span className="sm:hidden">Loading</span>
                 </>
               ) : (
-                t("profile.subscription.manageBilling")
+                <>
+                  {subscription.cancelAtPeriodEnd ? (
+                    // Show "Renew Subscription" when canceling
+                    <>
+                      <span className="hidden sm:inline">
+                        {t("profile.subscription.renewSubscription")}
+                      </span>
+                      <span className="sm:hidden">Renew</span>
+                    </>
+                  ) : (
+                    // Show "Manage Billing" normally
+                    t("profile.subscription.manageBilling")
+                  )}
+                </>
               )}
             </Button>
           )}

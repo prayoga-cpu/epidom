@@ -10,6 +10,7 @@ import { BaseRepository } from "./base.repository";
 export class SubscriptionRepository extends BaseRepository {
   /**
    * Find subscription by user ID
+   * Since userId is unique, each user can only have one subscription record
    */
   async findByUserId(userId: string): Promise<Subscription | null> {
     return this.db.subscription.findUnique({
