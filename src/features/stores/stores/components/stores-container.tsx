@@ -21,10 +21,14 @@ export function StoresContainer() {
    * Render create store button based on subscription status
    */
   const renderCreateStoreButton = () => {
-    // Loading state - show skeleton button
+    // Loading state - show skeleton button that matches actual button size
+    // Width matches "Subscribe to Create Store" button:
+    // - Mobile: w-full (matches button's w-full)
+    // - Desktop: fixed width that approximates button's content-based width (w-auto)
+    // Text "Subscribe to Create Store" + ArrowRight icon + padding ≈ 200px (sm) to 220px (md)
     if (isLoadingSubscription) {
       return (
-        <Skeleton className="h-10 w-full rounded-full sm:w-auto sm:px-8" />
+        <Skeleton className="h-9 w-full rounded-full sm:h-10 sm:w-[200px] md:h-11 md:w-[220px]" />
       );
     }
 

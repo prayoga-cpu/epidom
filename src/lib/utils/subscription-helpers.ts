@@ -88,8 +88,8 @@ export function getPlanDetails(
       return {
         name: t("profile.subscription.plans.starter") || "Starter",
         price: t("profile.subscription.pricing.starter") || "€29/month",
-        color: "text-gray-600",
-        badgeColor: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
+        color: "text-green-600",
+        badgeColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
       };
   }
 }
@@ -104,7 +104,7 @@ export function getPlanBadgeColor(plan?: string): string {
     case "ENTERPRISE":
       return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
     default:
-      return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+      return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
   }
 }
 

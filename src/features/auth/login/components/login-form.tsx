@@ -20,7 +20,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, LoginInput } from "../../validation/auth.schemas";
 import { useLogin } from "../../hooks/use-auth";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export function LoginForm() {
@@ -28,7 +27,6 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || searchParams.get("callbackUrl");
   const registered = searchParams.get("registered");
-  const router = useRouter();
 
   const { mutate: login, isPending, error } = useLogin();
 
@@ -51,7 +49,12 @@ export function LoginForm() {
     login(data, {
       onSuccess: () => {
         toast.success(t("messages.loginSuccess") || "Logged in successfully!");
-        router.push("/profile");
+
+        // Use full page reload to ensure session is properly loaded
+        // This prevents race condition where session might not be available yet
+        // when the profile page tries to fetch user data
+        const redirectUrl = nextUrl || "/profile";
+        window.location.href = redirectUrl;
       },
       onError: (err) => {
         toast.error(err.message || t("messages.invalidCredentials"));

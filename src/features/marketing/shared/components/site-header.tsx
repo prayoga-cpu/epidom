@@ -243,7 +243,7 @@ export const SiteHeader = memo(function SiteHeader({
                   variant="outline"
                   className="cursor-pointer rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
                 >
-                  {t("actions.logout")}
+                  {t("common.actions.logout")}
                 </Button>
               ) : session?.user ? (
                 // MY STORES MODE: Show My Stores button (for marketing pages when logged in)
@@ -255,13 +255,13 @@ export const SiteHeader = memo(function SiteHeader({
                   {t("common.nav.stores")}
                 </Button>
               ) : (
-                // LOGIN MODE: Show Login button (for marketing pages when not logged in)
+                // LOGIN MODE: Show Login button (for marketing pages when not logged in or loading)
                 <Button
                   onClick={handleLogin}
                   variant="outline"
                   className="cursor-pointer rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
                 >
-                  {t("actions.login")}
+                  {t("common.actions.login")}
                 </Button>
               )}
             </div>
@@ -358,7 +358,7 @@ export const SiteHeader = memo(function SiteHeader({
                         variant="outline"
                         className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
                       >
-                        {t("actions.logout")}
+                        {t("common.actions.logout")}
                       </Button>
                     ) : session?.user ? (
                       // MY STORES MODE: Show My Stores button (for marketing pages when logged in)
@@ -372,14 +372,14 @@ export const SiteHeader = memo(function SiteHeader({
                         </Button>
                       </SheetClose>
                     ) : (
-                      // LOGIN MODE: Show Login button (for marketing pages when not logged in)
+                      // LOGIN MODE: Show Login button (for marketing pages when not logged in or loading)
                       <SheetClose asChild>
                         <Button
                           onClick={handleLogin}
                           variant="outline"
                           className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
                         >
-                          {t("actions.login")}
+                          {t("common.actions.login")}
                         </Button>
                       </SheetClose>
                     )}
