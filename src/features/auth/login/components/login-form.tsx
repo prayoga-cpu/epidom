@@ -53,11 +53,17 @@ export function LoginForm() {
         // Use full page reload to ensure session is properly loaded
         // This prevents race condition where session might not be available yet
         // when the profile page tries to fetch user data
-        const redirectUrl = nextUrl || "/profile";
+
+        // Redirect logic:
+        // 1. If callbackUrl exists (from middleware or manual), redirect there
+        // 2. If no callbackUrl, redirect to /stores (store selection page)
+        //    This is more appropriate for new users than /profile
+        const redirectUrl = nextUrl || "/stores";
         window.location.href = redirectUrl;
       },
       onError: (err) => {
         toast.error(err.message || t("messages.invalidCredentials"));
+        // User stays on login page to retry
       },
     });
   };
