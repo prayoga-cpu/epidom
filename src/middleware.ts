@@ -1,4 +1,4 @@
-import { withAuth } from "next-auth/middleware";
+import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -6,87 +6,131 @@ import type { NextRequest } from "next/server";
  * Authentication & Subscription Middleware
  *
  * Protects routes defined in matcher configuration.
- * - Redirects unauthenticated users to /login
+ * - Redirects unauthenticated users to /login ONLY for protected routes
  * - Checks subscription status for dashboard access
  * - Redirects users with inactive subscriptions to /pricing
+ * - Marketing pages (/, /services, /pricing, /contact, etc.) are ALWAYS accessible without authentication
  *
  * Protected routes are configured below in the matcher array.
  */
-export default withAuth(
-  async function middleware(req: NextRequest & { nextauth?: { token?: any } }) {
-    const token = req.nextauth?.token;
-    const path = req.nextUrl.pathname;
+export default async function middleware(req: NextRequest) {
+  const path = req.nextUrl.pathname;
 
-    // Allow access to billing pages (store-specific), pricing, payment, and profile pages without subscription check
-    const allowedPaths = ["/billing", "/pricing", "/payments", "/profile"];
-    const isAllowedPath = allowedPaths.some((allowedPath) => path.includes(allowedPath));
-
-    if (isAllowedPath) {
-      return NextResponse.next();
-    }
-
-    // Check if accessing dashboard routes (requires active subscription)
-    // Note: /stores page is accessible without subscription, but creating stores requires subscription
-    // Only dashboard routes for individual stores require subscription
-    const isDashboardRoute =
-      path.includes("/dashboard") ||
-      path.includes("/tracking") ||
-      path.includes("/data") ||
-      path.includes("/management") ||
-      path.includes("/alerts");
-    // /stores is removed from here to allow access without subscription
-
-    if (isDashboardRoute && token?.sub) {
-      try {
-        // Fetch subscription status
-        const baseUrl = req.nextUrl.origin;
-        const response = await fetch(`${baseUrl}/api/subscriptions/status`, {
-          headers: {
-            Cookie: req.headers.get("cookie") || "",
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-
-          // Check if user has an active subscription
-          if (!data.hasSubscription || data.subscription?.status !== "ACTIVE") {
-            // Redirect to pricing page
-            const url = new URL("/pricing", req.url);
-            return NextResponse.redirect(url);
-          }
-        }
-      } catch (error) {
-        console.error("[Middleware] Error checking subscription:", error);
-        // Allow access if subscription check fails (fail open for now)
-        // In production, you might want to fail closed
-      }
-    }
-
+  // Skip middleware for API routes - they handle authentication internally
+  if (path.startsWith("/api/")) {
     return NextResponse.next();
-  },
-  {
-    pages: {
-      signIn: "/login",
-    },
   }
-);
+
+  // PUBLIC ROUTES - Always accessible without authentication
+  // Marketing pages and auth pages should never be blocked
+  const publicRoutes = [
+    "/", // Home page
+    "/services",
+    "/pricing",
+    "/contact",
+    "/payments",
+    "/terms",
+    "/refund-policy",
+    "/login",
+    "/register",
+    "/checkout/success",
+    "/checkout/failed",
+  ];
+
+  // Check if current path is a public route
+  const isPublicRoute = publicRoutes.some((route) => {
+    if (route === "/") {
+      return path === "/";
+    }
+    return path.startsWith(route);
+  });
+
+  // If it's a public route, allow access without authentication
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  // PROTECTED ROUTES - Require authentication
+  // Get token from session
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+  // If no token and trying to access protected route, redirect to login
+  if (!token) {
+    const loginUrl = new URL("/login", req.url);
+    // Preserve the original URL as callbackUrl so user can return after login
+    loginUrl.searchParams.set("callbackUrl", path);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Routes that require authentication but NOT active subscription
+  // These routes are accessible to authenticated users regardless of subscription status
+  const authRequiredButNoSubscriptionRoutes = ["/billing", "/profile", "/stores"];
+  const isAuthRequiredButNoSubscription = authRequiredButNoSubscriptionRoutes.some((route) =>
+    path.includes(route)
+  );
+
+  if (isAuthRequiredButNoSubscription) {
+    return NextResponse.next();
+  }
+
+  // Check if accessing dashboard routes (requires active subscription)
+  // Note: /stores page is accessible without subscription, but creating stores requires subscription
+  // Only dashboard routes for individual stores require subscription
+  const isDashboardRoute =
+    path.includes("/dashboard") ||
+    path.includes("/tracking") ||
+    path.includes("/data") ||
+    path.includes("/management") ||
+    path.includes("/alerts");
+
+  if (isDashboardRoute && token?.sub) {
+    try {
+      // Fetch subscription status
+      const baseUrl = req.nextUrl.origin;
+      const response = await fetch(`${baseUrl}/api/subscriptions/status`, {
+        headers: {
+          Cookie: req.headers.get("cookie") || "",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Check if user has an active subscription
+        if (!data.hasSubscription || data.subscription?.status !== "ACTIVE") {
+          // Redirect to pricing page
+          const url = new URL("/pricing", req.url);
+          return NextResponse.redirect(url);
+        }
+      }
+    } catch (error) {
+      console.error("[Middleware] Error checking subscription:", error);
+      // Allow access if subscription check fails (fail open for now)
+      // In production, you might want to fail closed
+    }
+  }
+
+  return NextResponse.next();
+}
 
 /**
  * Middleware matcher configuration
  *
- * List all protected routes that require authentication.
- * To add a new protected route, add it to this array.
+ * List all routes that should be checked by middleware.
+ * - Public routes (marketing pages) are handled in middleware logic above
+ * - Protected routes require authentication
+ * - API routes are excluded (they handle auth internally)
  */
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/profile/:path*",
-    "/management/:path*",
-    "/tracking/:path*",
-    "/data/:path*",
-    "/alerts/:path*",
-    "/stores/:path*",
-    "/billing/:path*", // Billing page requires auth but not active subscription
+    /*
+     * Match all request paths except:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (images, etc.)
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
