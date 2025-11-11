@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import {
   Form,
   FormControl,
@@ -178,11 +179,11 @@ export function EditBusinessInfoDialog({
                   <FormItem>
                     <FormLabel>{t("profile.business.phone")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="tel"
+                      <PhoneInput
                         placeholder={t("profile.forms.phonePlaceholder")}
-                        {...field}
                         value={field.value || ""}
+                        onChange={field.onChange}
+                        defaultCountry="FR"
                       />
                     </FormControl>
                     <FormMessage />

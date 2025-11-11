@@ -90,42 +90,24 @@ export class SubscriptionService {
       // Use existing Stripe customer ID
       stripeCustomerId = subscription.stripeCustomerId;
 
-      // IMPORTANT: Cancel ALL active subscriptions in Stripe for this customer
-      // This prevents duplicate subscriptions
-      try {
-        console.log(
-          `[Subscription] Checking for active subscriptions in Stripe for customer ${stripeCustomerId}...`
-        );
-
-        const existingSubscriptions = await stripe.subscriptions.list({
-          customer: stripeCustomerId,
-          status: "active",
-          limit: 100,
-        });
-
-        console.log(
-          `[Subscription] Found ${existingSubscriptions.data.length} active subscription(s) in Stripe`
-        );
-
-        // Cancel all existing active subscriptions
-        for (const existingSub of existingSubscriptions.data) {
-          console.log(`[Subscription] Canceling subscription ${existingSub.id} in Stripe...`);
-          await stripe.subscriptions.cancel(existingSub.id);
-          console.log(`[Subscription] Successfully canceled subscription ${existingSub.id}`);
-        }
-
-        // Update our DB to reflect cancellation
-        if (subscription.status === SubscriptionStatus.ACTIVE) {
-          await this.subscriptionRepo.update(userId, {
-            status: SubscriptionStatus.CANCELED,
-            cancelAtPeriodEnd: true,
-          });
-          console.log(`[Subscription] Updated DB status to CANCELED`);
-        }
-      } catch (error: any) {
-        console.error(`[Subscription] Failed to cancel existing subscriptions:`, error.message);
-        // Continue anyway - new subscription will be created
-      }
+      // IMPORTANT: DO NOT cancel existing subscriptions here!
+      // Canceling before payment confirmation means user loses their current plan if they click "back"
+      //
+      // The correct flow:
+      // 1. User has Starter plan (ACTIVE)
+      // 2. User clicks upgrade to Pro → creates checkout session
+      // 3. User pays successfully → webhook confirms → THEN cancel old subscription
+      // 4. If user cancels checkout → old subscription stays ACTIVE ✅
+      //
+      // Duplicate subscriptions will be handled by:
+      // - Webhook handler: Cancel old subscription when new one is confirmed
+      // - Audit function: Clean up any duplicates as safety measure
+      console.log(
+        `[Subscription] User has existing subscription. Will keep it active until new payment confirms.`
+      );
+      console.log(
+        `[Subscription] Current plan: ${subscription.plan}, Status: ${subscription.status}`
+      );
     } else {
       // Create new Stripe customer
       const customer = await stripe.customers.create({

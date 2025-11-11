@@ -1,0 +1,76 @@
+/* PhoneInput Component Styles - Shadcn/UI Integration */
+
+.phone-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.PhoneInputCountry {
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  margin-right: 0;
+}
+
+.PhoneInputCountryIcon {
+  width: 24px;
+  height: 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.25rem;
+  overflow: hidden;
+  background-color: hsl(var(--background));
+}
+
+.PhoneInputCountryIcon--border {
+  box-shadow: none;
+}
+
+.PhoneInputCountryIconImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.PhoneInputCountrySelect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.PhoneInputCountrySelect:disabled {
+  cursor: not-allowed;
+}
+
+.PhoneInputCountrySelect:focus + .PhoneInputCountryIcon {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.PhoneInputCountrySelectArrow {
+  display: block;
+  width: 0.3em;
+  height: 0.3em;
+  margin-left: 0.35em;
+  border-style: solid;
+  border-color: hsl(var(--foreground));
+  border-top-width: 0;
+  border-bottom-width: 1px;
+  border-left-width: 0;
+  border-right-width: 1px;
+  transform: rotate(45deg);
+  opacity: 0.6;
+}
+
+.PhoneInputInput {
+  flex: 1;
+  min-width: 0;
+}

@@ -13,29 +13,43 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, LoginInput } from "../../validation/auth.schemas";
 import { useLogin } from "../../hooks/use-auth";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 export function LoginForm() {
   const { t } = useI18n();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || searchParams.get("callbackUrl");
   const registered = searchParams.get("registered");
 
   const { mutate: login, isPending, error } = useLogin();
 
-  // Show success toast for new registrations
+  // Use ref to track if toast has already been shown
+  const toastShownRef = useRef(false);
+
+  // Show success toast for new registrations (only once)
   useEffect(() => {
-    if (registered === "true") {
+    if (registered === "true" && !toastShownRef.current) {
+      toastShownRef.current = true;
       toast.success("Account created successfully! Please log in to continue.");
+
+      // Remove the 'registered' query param to prevent toast from showing again
+      // on component re-render or browser back/forward
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete("registered");
+      const newUrl = newSearchParams.toString()
+        ? `/login?${newSearchParams.toString()}`
+        : "/login";
+      router.replace(newUrl, { scroll: false });
     }
-  }, [registered]);
+  }, [registered, searchParams, router]);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
