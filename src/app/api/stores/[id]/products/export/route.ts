@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { productService } from "@/lib/services/product.service";
+import { subscriptionService } from "@/lib/services";
 import { createCSVResponse } from "@/lib/utils/csv-export";
+import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
 
 // Validation schema for filtering products (same as main route)
@@ -25,6 +27,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
+    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(session.user.id);
+    if (!hasAccess) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
+          "Advanced Reports (Export) is only available in Pro and Enterprise plans. Upgrade to access this feature.",
+          {
+            feature: "advancedReports",
+            upgradeRequired: true,
+          }
+        ),
+        { status: 403 }
+      );
     }
 
     const { id: storeId } = await params;

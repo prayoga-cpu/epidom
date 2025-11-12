@@ -39,20 +39,26 @@ import { useUpdateProduct } from "../hooks/use-products";
 import { useRecipes } from "../../recipes/hooks/use-recipes";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
+import {
+  formatNumberForInput,
+  createNumberInputHandler,
+} from "@/lib/utils/number-input";
 
 // Helper function to create product schema with translated messages
+// Note: Number fields allow undefined in form state (for better UX - can clear field),
+// validation happens in onSubmit after converting undefined to defaults
 function createProductSchema(t: (key: string) => string) {
   return z.object({
     name: z.string().min(2, t("common.validation.productNameMin")),
-    sku: z.string().optional(),
+    sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
-    retailPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
-    costPrice: z.coerce.number().positive(t("common.validation.pricePositive")),
+    retailPrice: z.union([z.number().positive(t("common.validation.pricePositive")), z.undefined()]),
+    costPrice: z.union([z.number().positive(t("common.validation.pricePositive")), z.undefined()]),
     unit: z.string().min(1, t("common.validation.unitRequired")),
-    currentStock: z.coerce.number().min(0, t("common.validation.stockNonNegative")),
-    minStock: z.coerce.number().min(0, t("common.validation.minStockNonNegative")),
-    maxStock: z.coerce.number().positive(t("common.validation.maxStockPositive")),
+    currentStock: z.union([z.number().min(0, t("common.validation.stockNonNegative")), z.undefined()]),
+    minStock: z.union([z.number().min(0, t("common.validation.minStockNonNegative")), z.undefined()]),
+    maxStock: z.union([z.number().positive(t("common.validation.maxStockPositive")), z.undefined()]),
     recipeId: z.string().optional(),
   });
 }
@@ -90,60 +96,99 @@ export default function EditProductDialog({
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
+    mode: "onSubmit", // Validate only on submit to allow undefined values during editing
     defaultValues: {
       name: "",
       sku: "",
       description: "",
       category: "",
-      retailPrice: 0,
-      costPrice: 0,
+      retailPrice: undefined,
+      costPrice: undefined,
       unit: "piece",
-      currentStock: 0,
-      minStock: 0,
-      maxStock: 100,
+      currentStock: undefined,
+      minStock: undefined,
+      maxStock: undefined,
       recipeId: "none",
     },
   });
 
   // Update form when product changes
   useEffect(() => {
-    if (product) {
+    if (product && open) {
+      const sellingPrice = Number(product.sellingPrice) || 0;
+      const costPrice = Number(product.costPrice) || 0;
+      const currentStock = Number(product.currentStock) || 0;
+      const minStock = Number(product.minStock) || 0;
+      const maxStock = Number(product.maxStock) || 0;
+
       form.reset({
         name: product.name || "",
         sku: product.sku || "",
         description: product.description || "",
         category: product.category || "",
-        retailPrice: convertPrice(Number(product.sellingPrice) || 0), // Convert to user's currency
-        costPrice: convertPrice(Number(product.costPrice) || 0), // Convert to user's currency
+        retailPrice: sellingPrice > 0 ? convertPrice(sellingPrice) : undefined, // Convert to user's currency, undefined if 0
+        costPrice: costPrice > 0 ? convertPrice(costPrice) : undefined, // Convert to user's currency, undefined if 0
         unit: product.unit || "piece",
-        currentStock: Number(product.currentStock) || 0,
-        minStock: Number(product.minStock) || 0,
-        maxStock: Number(product.maxStock) || 1000,
+        currentStock: currentStock > 0 ? currentStock : undefined,
+        minStock: minStock > 0 ? minStock : undefined,
+        maxStock: maxStock > 0 ? maxStock : undefined,
         recipeId: product.recipeId || "none",
       });
     }
-  }, [product, form, convertPrice]);
+  }, [product, open, form, convertPrice]);
 
   // Watch cost price for pricing suggestions
   const costPrice = form.watch("costPrice");
-  const suggestedRetailPrice = costPrice ? (costPrice * 2.5).toFixed(2) : "0.00";
+  const suggestedRetailPrice = costPrice && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
 
   const isSubmitting = updateProduct.isPending;
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
+      // Validate required number fields (convert undefined to defaults and validate)
+      const costPrice = data.costPrice ?? (Number(product.costPrice) || 0);
+      const retailPrice = data.retailPrice ?? (Number(product.sellingPrice) || 0);
+      const currentStock = data.currentStock ?? (Number(product.currentStock) || 0);
+      const minStock = data.minStock ?? (Number(product.minStock) || 0);
+      const maxStock = data.maxStock ?? (Number(product.maxStock) || 1000);
+
+      // Validate required fields
+      if (costPrice <= 0) {
+        form.setError("costPrice", {
+          type: "manual",
+          message: t("common.validation.pricePositive"),
+        });
+        return;
+      }
+
+      if (retailPrice <= 0) {
+        form.setError("retailPrice", {
+          type: "manual",
+          message: t("common.validation.pricePositive"),
+        });
+        return;
+      }
+
+      if (maxStock <= 0) {
+        form.setError("maxStock", {
+          type: "manual",
+          message: t("common.validation.maxStockPositive"),
+        });
+        return;
+      }
+
       // Map form fields to API schema
       const apiData = {
         sku: data.sku || product.sku,
         name: data.name,
         description: data.description,
         category: data.category,
-        costPrice: convertToBase(data.costPrice), // Convert back to EUR
-        sellingPrice: convertToBase(data.retailPrice), // Convert back to EUR
-        currentStock: data.currentStock,
+        costPrice: convertToBase(costPrice), // Convert back to EUR
+        sellingPrice: convertToBase(retailPrice), // Convert back to EUR
+        currentStock: currentStock,
         unit: data.unit,
-        minStock: data.minStock,
-        maxStock: data.maxStock,
+        minStock: minStock,
+        maxStock: maxStock,
         recipeId: data.recipeId || undefined,
       };
 
@@ -186,14 +231,14 @@ export default function EditProductDialog({
             <form id="edit-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Basic Information</h3>
+              <h3 className="text-sm font-semibold">{t("data.products.sections.basicInfo")}</h3>
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Product Name *</FormLabel>
+                      <FormLabel>{t("data.products.form.name")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.namePlaceholder")} {...field} />
                       </FormControl>
@@ -207,11 +252,11 @@ export default function EditProductDialog({
                   name="sku"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>SKU</FormLabel>
+                      <FormLabel>{t("data.products.form.sku")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.skuPlaceholder")} {...field} />
                       </FormControl>
-                      <FormDescription>Stock Keeping Unit (optional)</FormDescription>
+                      <FormDescription>{t("data.products.form.skuHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -223,7 +268,7 @@ export default function EditProductDialog({
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t("data.products.form.description")}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder={t("data.products.form.descriptionPlaceholder")}
@@ -241,7 +286,7 @@ export default function EditProductDialog({
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category *</FormLabel>
+                    <FormLabel>{t("data.products.form.category")} *</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
                     </FormControl>
@@ -255,7 +300,7 @@ export default function EditProductDialog({
                 name="recipeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Recipe (Optional)</FormLabel>
+                    <FormLabel>{t("data.products.form.linkedRecipe")}</FormLabel>
                     <Select
                       onValueChange={(value) =>
                         field.onChange(value === "none" ? undefined : value)
@@ -264,11 +309,11 @@ export default function EditProductDialog({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a recipe..." />
+                          <SelectValue placeholder={t("data.products.form.selectRecipe")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="none">{t("data.products.form.noRecipe")}</SelectItem>
                         {recipes.map((recipe) => (
                           <SelectItem key={recipe.id} value={recipe.id}>
                             {recipe.name}
@@ -276,7 +321,7 @@ export default function EditProductDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>Link this product to a production recipe</FormDescription>
+                    <FormDescription>{t("data.products.form.recipeHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -285,18 +330,27 @@ export default function EditProductDialog({
 
             {/* Pricing */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Pricing</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <h3 className="text-sm font-semibold">{t("data.products.sections.pricing")}</h3>
+              <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="costPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cost Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                      <FormLabel>{t("data.products.form.costPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
-                      <FormDescription>Production cost</FormDescription>
+                      <FormDescription>{t("data.products.form.costPriceHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -307,26 +361,30 @@ export default function EditProductDialog({
                   name="retailPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Selling Price ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                      <FormLabel>{t("data.products.form.retailPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           step="0.01"
                           placeholder={suggestedRetailPrice}
-                          {...field}
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription>Customer price</FormDescription>
+                      <FormDescription>{t("data.products.form.retailPriceHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-              {costPrice > 0 && (
+              {costPrice && costPrice > 0 && (
                 <div className="bg-muted rounded-lg p-3 text-sm">
-                  <p className="font-medium">Suggested Selling Price:</p>
+                  <p className="font-medium">{t("data.products.pricingSuggestions.title")}</p>
                   <p className="text-muted-foreground mt-1">
-                    ${suggestedRetailPrice} (2.5x markup)
+                    {currency === "EUR" ? "€" : "$"}{suggestedRetailPrice} (2.5x markup)
                   </p>
                 </div>
               )}
@@ -334,14 +392,14 @@ export default function EditProductDialog({
 
             {/* Stock Management */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Stock Management</h3>
+              <h3 className="text-sm font-semibold">{t("data.products.sections.stockManagement")}</h3>
               <div className="grid items-start gap-4 sm:grid-cols-4">
                 <FormField
                   control={form.control}
                   name="unit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit *</FormLabel>
+                      <FormLabel>{t("data.products.form.unit")} *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -349,13 +407,13 @@ export default function EditProductDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="unit">Unit</SelectItem>
-                          <SelectItem value="loaf">Loaf</SelectItem>
-                          <SelectItem value="piece">Piece</SelectItem>
-                          <SelectItem value="dozen">Dozen</SelectItem>
-                          <SelectItem value="box">Box</SelectItem>
-                          <SelectItem value="kg">Kilogram</SelectItem>
-                          <SelectItem value="g">Gram</SelectItem>
+                          <SelectItem value="unit">{t("data.products.units.unit")}</SelectItem>
+                          <SelectItem value="loaf">{t("data.products.units.loaf")}</SelectItem>
+                          <SelectItem value="piece">{t("data.products.units.piece")}</SelectItem>
+                          <SelectItem value="dozen">{t("data.products.units.dozen")}</SelectItem>
+                          <SelectItem value="box">{t("data.products.units.box")}</SelectItem>
+                          <SelectItem value="kg">{t("data.products.units.kg")}</SelectItem>
+                          <SelectItem value="g">{t("data.products.units.g")}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -368,9 +426,17 @@ export default function EditProductDialog({
                   name="currentStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Stock *</FormLabel>
+                      <FormLabel>{t("data.products.form.currentStock")} *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -382,11 +448,19 @@ export default function EditProductDialog({
                   name="minStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Min Stock *</FormLabel>
+                      <FormLabel>{t("data.products.form.minStock")} *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
-                      <FormDescription>Reorder point</FormDescription>
+                      <FormDescription>{t("data.products.form.minStockHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -397,11 +471,19 @@ export default function EditProductDialog({
                   name="maxStock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Stock *</FormLabel>
+                      <FormLabel>{t("data.products.form.maxStock")} *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="100" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="1000"
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
-                      <FormDescription>Maximum stock level</FormDescription>
+                      <FormDescription>{t("data.products.form.maxStockHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

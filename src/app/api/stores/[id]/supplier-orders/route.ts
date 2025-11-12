@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { subscriptionService } from "@/lib/services";
+import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
  * GET /api/stores/[id]/supplier-orders
@@ -13,6 +15,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    if (!hasAccess) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
+          "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
+          {
+            feature: "supplierManagement",
+            upgradeRequired: true,
+          }
+        ),
+        { status: 403 }
+      );
     }
 
     const storeId = (await params).id;
@@ -64,6 +82,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    if (!hasAccess) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
+          "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
+          {
+            feature: "supplierManagement",
+            upgradeRequired: true,
+          }
+        ),
+        { status: 403 }
+      );
     }
 
     const storeId = (await params).id;

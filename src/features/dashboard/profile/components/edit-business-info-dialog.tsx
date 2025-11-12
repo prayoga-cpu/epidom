@@ -152,7 +152,7 @@ export function EditBusinessInfoDialog({
               )}
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="email"
@@ -229,7 +229,7 @@ export function EditBusinessInfoDialog({
               )}
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="city"

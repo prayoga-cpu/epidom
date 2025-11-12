@@ -242,7 +242,8 @@ export function StockAdjustmentDialog({
                   <FormLabel>
                     {watchItemType === "material"
                       ? t("management.editStock.selectMaterial")
-                      : t("management.editStock.selectProduct")}
+                      : t("management.editStock.selectProduct")}{" "}
+                    *
                   </FormLabel>
                   <Select
                     onValueChange={field.onChange}
@@ -293,7 +294,9 @@ export function StockAdjustmentDialog({
               name="adjustmentType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("management.editStock.adjustmentType")}</FormLabel>
+                  <FormLabel>
+                    {t("management.editStock.adjustmentType")} *
+                  </FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -326,7 +329,7 @@ export function StockAdjustmentDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {t("management.editStock.quantity")} {selectedItem && `(${selectedItem.unit})`}
+                    {t("management.editStock.quantity")} {selectedItem && `(${selectedItem.unit})`} *
                   </FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" min="0.01" placeholder="0.00" {...field} />
@@ -342,7 +345,9 @@ export function StockAdjustmentDialog({
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("management.editStock.reason")}</FormLabel>
+                  <FormLabel>
+                    {t("management.editStock.reason")} *
+                  </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>

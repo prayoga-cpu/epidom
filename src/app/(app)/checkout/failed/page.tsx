@@ -78,13 +78,15 @@ export default function CheckoutFailedPage() {
 
           {/* Help Message */}
           <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-            <p className="text-sm text-yellow-800">{t("checkout.failed.tryAgain")}</p>
+            <p className="text-sm leading-relaxed text-yellow-800">
+              {t("checkout.failed.helpMessage")}
+            </p>
           </div>
 
           {/* Action Buttons */}
           <div className="space-y-3 pt-4">
             <Button onClick={handleRetry} disabled={isLoading} className="w-full" size="lg">
-              {isLoading ? t("common.loading") : t("checkout.failed.tryAgain")}
+              {isLoading ? t("common.loading") : t("checkout.failed.tryAgainButton")}
             </Button>
             <Button
               onClick={handleGoHome}

@@ -22,6 +22,22 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    if (!hasAccess) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
+          "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
+          {
+            feature: "supplierManagement",
+            upgradeRequired: true,
+          }
+        ),
+        { status: 403 }
+      );
+    }
+
     const { id: storeId, supplierId } = await params;
 
     // Get supplier from service

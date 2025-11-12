@@ -45,7 +45,17 @@ export function BaseItemCard({
       )}
 
       {/* Content */}
-      <CardContent className={cn(bulkSelectMode && "pl-8", contentClassName || "px-0")}>
+      <CardContent
+        className={cn(
+          // CardContent has default px-6 from shadcn/ui
+          // If contentClassName is provided, use it (will override px-6)
+          // If not provided, override px-6 to px-4 for consistent spacing
+          contentClassName || "!px-4",
+          // When in bulk select mode, override left padding for checkbox space
+          // Always use pr-4 for right padding to match the default/contentClassName
+          bulkSelectMode && "!pl-8 !pr-4"
+        )}
+      >
         {children}
       </CardContent>
     </Card>

@@ -6,11 +6,8 @@
  * Landing page countdown timer for EPIDOM launch date.
  * Features flip-board style timer units with brand colors.
  *
- * STATUS: Currently disabled on homepage (see src/app/(marketing)/page.tsx).
- * To activate: Uncomment LazyCountdownComponent in page.tsx and comment out LazyHero.
- *
- * This component is kept for future use when countdown mode is needed.
- * It's fully functional and can be enabled by uncommenting the import in page.tsx.
+ * STATUS: Currently ACTIVE on homepage (see src/app/(marketing)/page.tsx).
+ * Countdown target date: November 20, 2025.
  *
  * @component
  */
@@ -26,8 +23,8 @@ import { Container } from "./container";
 export const CountdownComponent = memo(function CountdownComponent() {
   const { t } = useI18n();
   const [isClient, setIsClient] = useState(false);
-  /** Target launch date: November 12, 2025 */
-  const targetDate = new Date("2025-11-12T00:00:00");
+  /** Target launch date: November 20, 2025 */
+  const targetDate = new Date("2025-11-20T00:00:00");
 
   /** Hydrate client-side to avoid SSR mismatch */
   useEffect(() => {

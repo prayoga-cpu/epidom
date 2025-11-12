@@ -22,18 +22,19 @@ export default function ProfilePage() {
     process.env.NEXT_PUBLIC_EPIDOM_OWNER_EMAIL || process.env.EPIDOM_OWNER_EMAIL;
   const isOwner = session?.user?.email === epidomOwnerEmail;
 
-  // Debug logging
-  useEffect(() => {
-    console.log("Profile page debug:", {
-      sessionStatus: status,
-      sessionUser: session?.user?.email,
-      isLoading,
-      isError,
-      hasProfileData: !!profileData,
-      retryCount,
-      error: error?.message,
-    });
-  }, [status, session?.user?.email, isLoading, isError, profileData, retryCount, error]);
+  // Debug logging - disabled to reduce Fast Refresh triggers
+  // Uncomment only when debugging is needed
+  // useEffect(() => {
+  //   console.log("Profile page debug:", {
+  //     sessionStatus: status,
+  //     sessionUser: session?.user?.email,
+  //     isLoading,
+  //     isError,
+  //     hasProfileData: !!profileData,
+  //     retryCount,
+  //     error: error?.message,
+  //   });
+  // }, [status, session?.user?.email, isLoading, isError, profileData, retryCount, error]);
 
   // Auto-retry jika profile gagal load
   useEffect(() => {

@@ -14,12 +14,12 @@ import type { NextRequest } from "next/server";
  * Protected routes are configured below in the matcher array.
  */
 export default async function middleware(req: NextRequest) {
-  const path = req.nextUrl.pathname;
+    const path = req.nextUrl.pathname;
 
-  // Skip middleware for API routes - they handle authentication internally
-  if (path.startsWith("/api/")) {
-    return NextResponse.next();
-  }
+    // Skip middleware for API routes - they handle authentication internally
+    if (path.startsWith("/api/")) {
+      return NextResponse.next();
+    }
 
   // PUBLIC ROUTES - Always accessible without authentication
   // Marketing pages and auth pages should never be blocked
@@ -70,48 +70,50 @@ export default async function middleware(req: NextRequest) {
   );
 
   if (isAuthRequiredButNoSubscription) {
+      return NextResponse.next();
+    }
+
+    // Check if accessing store dashboard routes (requires active subscription)
+    // Note: /stores page is accessible without subscription, but creating stores requires subscription
+    // Only dashboard routes for individual stores require subscription
+    // Route pattern: /store/[storeId]/dashboard, /store/[storeId]/tracking, etc.
+    // IMPORTANT: This catches ALL routes starting with /store/ (except /stores which is whitelisted above)
+    // This prevents users from manually typing URLs to access stores without active subscription
+    const isStoreRoute = path.startsWith("/store/") && !path.startsWith("/stores");
+
+    // Check subscription for ALL store routes (dashboard, tracking, data, management, alerts, profile, billing, etc.)
+    // This ensures complete protection - users cannot access any store page without active subscription
+    if (isStoreRoute && token?.sub) {
+      try {
+        // Fetch subscription status
+        const baseUrl = req.nextUrl.origin;
+        const response = await fetch(`${baseUrl}/api/subscriptions/status`, {
+          headers: {
+            Cookie: req.headers.get("cookie") || "",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Check if user has an active subscription
+          // Block access to store dashboards if subscription is not active
+          if (!data.hasSubscription || data.subscription?.status !== "ACTIVE") {
+            // Redirect to pricing page with message
+            const url = new URL("/pricing", req.url);
+            url.searchParams.set("reason", "subscription_required");
+            return NextResponse.redirect(url);
+          }
+        }
+      } catch (error) {
+        console.error("[Middleware] Error checking subscription:", error);
+        // Allow access if subscription check fails (fail open for now)
+        // In production, you might want to fail closed
+      }
+    }
+
     return NextResponse.next();
   }
-
-  // Check if accessing dashboard routes (requires active subscription)
-  // Note: /stores page is accessible without subscription, but creating stores requires subscription
-  // Only dashboard routes for individual stores require subscription
-  const isDashboardRoute =
-    path.includes("/dashboard") ||
-    path.includes("/tracking") ||
-    path.includes("/data") ||
-    path.includes("/management") ||
-    path.includes("/alerts");
-
-  if (isDashboardRoute && token?.sub) {
-    try {
-      // Fetch subscription status
-      const baseUrl = req.nextUrl.origin;
-      const response = await fetch(`${baseUrl}/api/subscriptions/status`, {
-        headers: {
-          Cookie: req.headers.get("cookie") || "",
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-
-        // Check if user has an active subscription
-        if (!data.hasSubscription || data.subscription?.status !== "ACTIVE") {
-          // Redirect to pricing page
-          const url = new URL("/pricing", req.url);
-          return NextResponse.redirect(url);
-        }
-      }
-    } catch (error) {
-      console.error("[Middleware] Error checking subscription:", error);
-      // Allow access if subscription check fails (fail open for now)
-      // In production, you might want to fail closed
-    }
-  }
-
-  return NextResponse.next();
-}
 
 /**
  * Middleware matcher configuration

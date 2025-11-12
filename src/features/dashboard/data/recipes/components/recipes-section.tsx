@@ -19,17 +19,14 @@ import {
   Trash2,
   CheckSquare,
   ChefHat,
-  Clock,
-  DollarSign,
   Copy,
   Download,
-  Package,
   Plus,
   Loader2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
+import { formatDuration } from "@/lib/utils/formatting";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -408,89 +405,74 @@ export function RecipesSection() {
                       });
                     }
                   }}
-                  className="p-4"
-                  contentClassName="!px-6"
+                  contentClassName="!px-4"
                 >
-                    <div className="mb-3 flex items-start justify-between">
+                    <div className="mb-2 flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
                           {recipe.name}
                         </h3>
                         {recipe.category && (
-                          <Badge variant="secondary" className="mt-2 text-xs">
+                          <Badge variant="secondary" className="mt-1 text-xs">
                             {recipe.category}
                           </Badge>
                         )}
                       </div>
-                      <div className="bg-primary/10 ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
-                        <ChefHat className="text-primary h-5 w-5" />
+                      <div className="bg-primary/10 ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                        <ChefHat className="text-primary h-4 w-4" />
                       </div>
                     </div>
 
                     {recipe.description && (
-                      <div className="h-[2rem]">
-                        <p className="text-muted-foreground line-clamp-2 text-xs">
-                          {recipe.description}
-                        </p>
-                      </div>
+                      <p className="text-muted-foreground mb-2 line-clamp-2 text-xs">
+                        {recipe.description}
+                      </p>
                     )}
 
-                    <Separator className="mt-2 mb-3" />
+                    <Separator className="my-2" />
 
-                    {/* Recipe Metrics */}
-                    <div className="space-y-2">
-                      <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                        <ChefHat className="h-3 w-3" />
-                        <span>
-                          {t("data.recipes.cards.yield")}: {recipe.yieldQuantity} {recipe.yieldUnit}
+                    {/* Recipe Info */}
+                    <div className="text-muted-foreground my-2 space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span>{t("data.recipes.cards.yield")}:</span>
+                        <span className="text-foreground font-medium">
+                          {recipe.yieldQuantity} {recipe.yieldUnit}
                         </span>
                       </div>
-                      <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                        <Clock className="h-3 w-3" />
-                        <span>{formatDuration(recipe.productionTimeMinutes)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <DollarSign className="h-3 w-3 text-green-600" />
-                        <div className="flex-1">
-                          <span className="text-foreground font-medium">
-                            {formatPrice(recipe.costPerBatch)}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {" "}
-                            {t("data.recipes.cards.perBatch")}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="bg-muted rounded px-2 py-1 text-xs">
-                        <span className="text-muted-foreground">
-                          {t("data.recipes.cards.perUnit")}:{" "}
+                      <div className="flex justify-between">
+                        <span>{t("data.recipes.review.productionTime")}:</span>
+                        <span className="text-foreground font-medium">
+                          {formatDuration(recipe.productionTimeMinutes)}
                         </span>
-                        <span className="text-foreground font-semibold">
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t("data.recipes.cards.perBatch")}:</span>
+                        <span className="text-foreground font-medium">
+                          {formatPrice(recipe.costPerBatch)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t("data.recipes.cards.perUnit")}:</span>
+                        <span className="text-foreground font-medium">
                           {formatPrice(costPerUnit)}
                         </span>
                       </div>
-                    </div>
-
-                    {/* Ingredients Count */}
-                    <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
-                      <span>
-                        {recipe.ingredients.length}{" "}
-                        {recipe.ingredients.length !== 1
-                          ? t("data.recipes.cards.ingredients")
-                          : t("data.recipes.cards.ingredient")}
-                      </span>
-                      {recipe.products && recipe.products.length > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          <Package className="mr-1 h-3 w-3" />
-                          {recipe.products.length}{" "}
-                          {recipe.products.length === 1 ? "product" : "products"}
-                        </Badge>
-                      )}
+                      <div className="flex justify-between">
+                        <span>
+                          {recipe.ingredients.length === 1
+                            ? t("data.recipes.cards.ingredient")
+                            : t("data.recipes.cards.ingredients")}
+                          :
+                        </span>
+                        <span className="text-foreground font-medium">
+                          {recipe.ingredients.length}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Hover Actions */}
                     {!bulkSelectMode && (
-                      <div className="mt-3 grid grid-cols-4 gap-1 transition-opacity">
+                      <div className="mt-2 grid grid-cols-4 gap-1 transition-opacity">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button

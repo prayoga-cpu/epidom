@@ -14,7 +14,7 @@ export default function AlertsCard() {
   const { storeId } = useCurrentStore();
 
   // Fetch materials from API
-  const { data, isLoading } = useMaterials(storeId);
+  const { data, isLoading, error } = useMaterials(storeId || "");
 
   // Get low stock materials (currentStock <= minStock) and limit to 5
   const lowStockMaterials = useMemo(() => {
@@ -44,10 +44,19 @@ export default function AlertsCard() {
 
   const cardContent = (
     <div className="flex min-h-[300px] flex-1 flex-col">
-      {isLoading ? (
+      {!storeId ? (
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+        </div>
+      ) : isLoading ? (
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <AlertCircle className="text-muted-foreground mb-3 h-8 w-8" />
+          <p className="text-muted-foreground text-sm">{t("messages.errorLoadingMaterials")}</p>
         </div>
       ) : lowStockMaterials.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">

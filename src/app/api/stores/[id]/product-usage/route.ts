@@ -27,10 +27,13 @@ export async function GET(
     // Get product usage check
     const productCheck = await subscriptionService.canCreateProduct(session.user.id, storeId);
 
+    // Convert Infinity to null for JSON serialization (unlimited plans)
+    const limit = productCheck.limit === Infinity ? null : productCheck.limit;
+
     return NextResponse.json(
       {
         current: productCheck.current,
-        limit: productCheck.limit,
+        limit: limit,
         canCreateMore: productCheck.allowed,
       },
       { status: 200 }
