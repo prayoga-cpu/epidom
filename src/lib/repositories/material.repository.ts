@@ -134,6 +134,32 @@ export class MaterialRepository extends BaseRepository {
   }
 
   /**
+   * Find material by SKU and storeId
+   */
+  async findBySku(storeId: string, sku: string): Promise<MaterialWithSuppliers | null> {
+    return this.db.material.findFirst({
+      where: {
+        storeId,
+        sku,
+        isActive: true,
+      },
+      include: {
+        materialSuppliers: {
+          include: {
+            supplier: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: { isPreferred: "desc" },
+        },
+      },
+    });
+  }
+
+  /**
    * Find material by ID with suppliers
    */
   async findById(materialId: string): Promise<MaterialWithSuppliers | null> {

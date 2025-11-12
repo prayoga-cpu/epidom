@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/utils/formatting";
 import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import { useProductionBatches } from "./hooks/use-production-batches";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { hasMaterialStockChanged } from "./utils/recipe-helpers";
 
 export function RecipeProductionCard() {
   const { t } = useI18n();
@@ -34,6 +35,23 @@ export function RecipeProductionCard() {
     skip: 0,
     take: 100,
   });
+
+  // Memoize the updated recipe to avoid unnecessary recalculations
+  const updatedRecipe = useMemo(() => {
+    if (selectedRecipe?.id && recipesData?.recipes) {
+      return recipesData.recipes.find((r) => r.id === selectedRecipe.id);
+    }
+    return null;
+  }, [selectedRecipe?.id, recipesData?.recipes]);
+
+  // Update selectedRecipe when material stock changes
+  // This ensures the selected recipe always has the latest material stock data
+  useEffect(() => {
+    if (updatedRecipe && hasMaterialStockChanged(selectedRecipe, updatedRecipe)) {
+      setSelectedRecipe(updatedRecipe);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updatedRecipe]); // Only depend on updatedRecipe to avoid infinite loops
 
   // Fetch active production batches for selected recipe
   const { data: batchesData, isLoading: batchesLoading } = useProductionBatches(storeId, {

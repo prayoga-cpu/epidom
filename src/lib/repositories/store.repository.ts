@@ -19,8 +19,7 @@ export class StoreRepository extends BaseRepository {
 
   /**
    * Find all stores for a business
-   * Since we're using hard delete, we don't need to filter by isActive
-   * (kept isActive field in schema for future soft delete implementation)
+   * All delete operations use hard delete (permanently removes records)
    */
   async findByBusinessId(businessId: string): Promise<Store[]> {
     return this.db.store.findMany({
@@ -31,7 +30,6 @@ export class StoreRepository extends BaseRepository {
 
   /**
    * Check if store name already exists for a business
-   * Using hard delete, so we don't filter by isActive
    */
   async existsByName(businessId: string, name: string, excludeId?: string): Promise<boolean> {
     const store = await this.db.store.findFirst({
@@ -79,31 +77,12 @@ export class StoreRepository extends BaseRepository {
   }
 
   /**
-   * Soft delete store (set isActive to false)
-   */
-  async softDelete(storeId: string): Promise<Store> {
-    return this.db.store.update({
-      where: { id: storeId },
-      data: { isActive: false },
-    });
-  }
-
-  /**
-   * Hard delete store
+   * Delete store (hard delete)
+   * WARNING: This will permanently delete the store and cascade delete all related data
    */
   async delete(storeId: string): Promise<Store> {
     return this.db.store.delete({
       where: { id: storeId },
-    });
-  }
-
-  /**
-   * Activate store
-   */
-  async activate(storeId: string): Promise<Store> {
-    return this.db.store.update({
-      where: { id: storeId },
-      data: { isActive: true },
     });
   }
 

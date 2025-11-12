@@ -1,4 +1,4 @@
-import { Business } from "@prisma/client";
+import { Business, Prisma } from "@prisma/client";
 import { businessRepository, BusinessRepository } from "@/lib/repositories/business.repository";
 import { storeRepository, StoreRepository } from "@/lib/repositories/store.repository";
 import {
@@ -9,6 +9,10 @@ import {
 } from "@/lib/validation/business.schemas";
 import { BusinessDto, BusinessWithStoresDto, StoreDto } from "@/types/dto";
 import { getStorageAdapter } from "@/lib/storage";
+import { prisma } from "@/lib/prisma";
+import { subscriptionRepository } from "@/lib/repositories/subscription.repository";
+import { SubscriptionStatus } from "@prisma/client";
+import { getStoreLimit, canCreateStore } from "@/config/stripe.config";
 
 /**
  * Business Service
@@ -123,32 +127,96 @@ export class BusinessService {
 
   /**
    * Create a store for a business
+   * Uses transaction with lock to prevent race condition when checking store limit
+   * This ensures that concurrent requests cannot create more stores than allowed
+   *
+   * IMPORTANT: This method performs the store limit check within the transaction
+   * to prevent race conditions where multiple requests check the limit simultaneously
+   * and both pass validation before either creates a store.
    */
   async createStore(
     businessId: string,
     userId: string,
     input: CreateStoreInput
   ): Promise<StoreDto> {
-    // Verify business exists and belongs to user
-    const business = await this.businessRepo.findById(businessId);
-    if (!business) {
-      throw new Error("Business not found");
-    }
-    if (business.userId !== userId) {
-      throw new Error("Unauthorized to create store for this business");
-    }
+    // Use transaction with row-level lock to ensure atomicity and prevent race condition
+    return prisma.$transaction(async (tx) => {
+      // 1. Lock business row and verify it exists and belongs to user
+      // Using SELECT FOR UPDATE (row-level lock) to prevent concurrent access
+      // This ensures only one transaction can proceed at a time for this business
+      const business = await tx.$queryRaw<Array<{ id: string; userId: string }>>`
+        SELECT id, "userId"
+        FROM "Business"
+        WHERE id = ${businessId}
+        FOR UPDATE
+      `;
 
-    // Check if store name already exists for this business
-    const nameExists = await this.storeRepo.existsByName(businessId, input.name);
-    if (nameExists) {
-      throw new Error("A store with this name already exists in your business");
-    }
+      if (!business || business.length === 0) {
+        throw new Error("Business not found");
+      }
 
-    // Create store
-    return this.storeRepo.create({
-      businessId,
-      ...input,
-    }) as unknown as StoreDto;
+      if (business[0].userId !== userId) {
+        throw new Error("Unauthorized to create store for this business");
+      }
+
+      // 2. Check subscription and store limit WITHIN transaction (prevents race condition)
+      // This is critical: we check the limit inside the transaction with lock
+      // so concurrent requests will wait for the lock and see the updated count
+      const subscription = await tx.subscription.findUnique({
+        where: { userId },
+      });
+
+      if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+        throw new Error("No active subscription found. Please subscribe to create stores.");
+      }
+
+      // Count current stores WITHIN transaction (with lock, this is accurate)
+      const currentStoreCount = await tx.store.count({
+        where: {
+          businessId,
+          isActive: true,
+        },
+      });
+
+      // Check if user can create more stores
+      const limit = getStoreLimit(subscription.plan);
+      const allowed = canCreateStore(subscription.plan, currentStoreCount);
+
+      if (!allowed) {
+        throw new Error(
+          `You have reached your plan's store limit (${currentStoreCount}/${limit}). Upgrade to Pro to add more stores.`
+        );
+      }
+
+      // 3. Check if store name already exists for this business (within transaction)
+      const nameExists = await tx.store.findFirst({
+        where: {
+          businessId,
+          name: {
+            equals: input.name,
+            mode: "insensitive",
+          },
+        },
+      });
+
+      if (nameExists) {
+        throw new Error("A store with this name already exists in your business");
+      }
+
+      // 4. Create store (within transaction)
+      const store = await tx.store.create({
+        data: {
+          businessId,
+          ...input,
+        },
+      });
+
+      return store as unknown as StoreDto;
+    }, {
+      // Use SERIALIZABLE isolation level for maximum safety
+      // This prevents phantom reads and ensures strict isolation
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    });
   }
 
   /**
@@ -300,41 +368,6 @@ export class BusinessService {
     }
   }
 
-  /**
-   * Deactivate store (soft delete) - kept for future use
-   */
-  async deactivateStore(storeId: string, businessId: string, userId: string): Promise<void> {
-    // Verify ownership
-    const belongsToBusiness = await this.storeRepo.belongsToBusiness(storeId, businessId);
-    if (!belongsToBusiness) {
-      throw new Error("Store does not belong to this business");
-    }
-
-    const business = await this.businessRepo.findById(businessId);
-    if (!business || business.userId !== userId) {
-      throw new Error("Unauthorized to deactivate this store");
-    }
-
-    await this.storeRepo.softDelete(storeId);
-  }
-
-  /**
-   * Activate store
-   */
-  async activateStore(storeId: string, businessId: string, userId: string): Promise<void> {
-    // Verify ownership
-    const belongsToBusiness = await this.storeRepo.belongsToBusiness(storeId, businessId);
-    if (!belongsToBusiness) {
-      throw new Error("Store does not belong to this business");
-    }
-
-    const business = await this.businessRepo.findById(businessId);
-    if (!business || business.userId !== userId) {
-      throw new Error("Unauthorized to activate this store");
-    }
-
-    await this.storeRepo.activate(storeId);
-  }
 
   /**
    * Get business statistics

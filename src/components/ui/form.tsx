@@ -125,11 +125,17 @@ function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
 function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
   const { formDescriptionId } = useFormField()
 
+  // Always render to prevent layout shift when description appears/disappears
+  // Use min-height to maintain consistent spacing
+  if (!props.children) {
+    return null // Don't render if no content
+  }
+
   return (
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-muted-foreground text-sm min-h-[1rem]", className)}
       {...props}
     />
   )
@@ -139,18 +145,20 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField()
   const body = error ? String(error?.message ?? "") : props.children
 
-  if (!body) {
-    return null
-  }
-
+  // Always render container to prevent layout shift
+  // Use min-height to reserve space for error messages
   return (
     <p
       data-slot="form-message"
       id={formMessageId}
-      className={cn("text-destructive text-sm", className)}
+      className={cn(
+        "text-destructive text-sm min-h-[1.25rem]",
+        !body && "invisible", // Hide but keep space when no error
+        className
+      )}
       {...props}
     >
-      {body}
+      {body || "\u00A0"} {/* Non-breaking space to maintain height */}
     </p>
   )
 }

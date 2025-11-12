@@ -162,12 +162,8 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
         });
       }
 
-      toast.success(t("profile.toasts.avatarUpdated.title"), {
-        description: t("profile.toasts.avatarUpdated.description"),
-      });
-
-      // Note: onUpdate is not needed - TanStack Query already updates the cache
-      // onUpdate?.();
+      // Note: Toast notification is now handled in useUpdateProfile hook
+      // to prevent duplicate notifications
       handleOpenChange(false);
     } catch (error) {
       console.error("Error updating avatar:", error);
@@ -195,12 +191,8 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
       });
 
       setOriginalImageUrl(undefined);
-      toast.success(t("profile.toasts.avatarRemoved.title"), {
-        description: t("profile.toasts.avatarRemoved.description"),
-      });
-
-      // Note: onUpdate is not needed - TanStack Query already updates the cache
-      // onUpdate?.();
+      // Note: Toast notification is now handled in useUpdateProfile hook
+      // to prevent duplicate notifications
       handleOpenChange(false);
     } catch (error) {
       console.error("Error removing avatar:", error);

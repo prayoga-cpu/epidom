@@ -104,7 +104,7 @@ Table subscriptions {
 
 Table products {
   id String [pk]
-  sku String [unique, not null]
+  sku String [not null]
   name String [not null]
   description String
   category String
@@ -126,11 +126,15 @@ Table products {
   recipe recipes
   store stores [not null]
   stockMovements stock_movements [not null]
+
+  indexes {
+    (storeId, sku) [unique]
+  }
 }
 
 Table ingredients {
   id String [pk]
-  sku String [unique, not null]
+  sku String [not null]
   name String [not null]
   description String
   category String
@@ -148,6 +152,10 @@ Table ingredients {
   recipeIngredients recipe_ingredients [not null]
   stockMovements stock_movements [not null]
   supplierOrderItems supplier_order_items [not null]
+
+  indexes {
+    (storeId, sku) [unique]
+  }
 }
 
 Table ingredient_suppliers {

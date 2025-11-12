@@ -148,7 +148,8 @@ export async function PATCH(
 
 /**
  * DELETE /api/stores/[id]/suppliers/[supplierId]
- * Delete a supplier (soft delete)
+ * Delete a supplier (hard delete)
+ * WARNING: This will permanently delete the supplier and cascade delete related records
  */
 export async function DELETE(
   request: NextRequest,

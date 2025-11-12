@@ -1,17 +1,21 @@
 "use client";
 import { useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Phone, Mail, Star, Loader2, Package } from "lucide-react";
+import { Phone, Mail, Star, Loader2, Package, ArrowRight } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { useSuppliers } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
+import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import DashboardCard from "../_components/dashboard-card";
 
 export default function SupplierCard() {
   const { t } = useI18n();
+  const router = useRouter();
   const { storeId } = useCurrentStore();
+  const { supplierManagementAccess, isLoading: isLoadingAccess } = useFeatureAccess();
 
   // Fetch suppliers from API
   const { data, isLoading, error } = useSuppliers(storeId || "", {
@@ -25,16 +29,35 @@ export default function SupplierCard() {
     return data.suppliers.slice(0, 4);
   }, [data]);
 
+  // Check if subscription is locked (STARTER plan)
+  const isSubscriptionLocked =
+    (!isLoadingAccess && !supplierManagementAccess) ||
+    (error && ((error as any).code === "SUBSCRIPTION_FEATURE_LOCKED" || (error as any).status === 403));
+
   const cardContent = (
     <div className="h-full overflow-auto">
       {!storeId ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         </div>
-      ) : isLoading ? (
+      ) : isLoading || isLoadingAccess ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
           <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+        </div>
+      ) : isSubscriptionLocked ? (
+        <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
+          <p className="text-muted-foreground text-sm">
+            {t("data.suppliers.locked")}
+          </p>
+          <Button
+            onClick={() => router.push("/pricing")}
+            size="sm"
+            className="bg-[var(--color-brand-primary)] hover:opacity-90"
+          >
+            {t("billing.upgradeToPro")}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       ) : error ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">

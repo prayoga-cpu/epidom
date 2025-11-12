@@ -75,33 +75,42 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check subscription plan limits (Starter = 1 store, Pro/Enterprise = unlimited)
-    const storeCheck = await subscriptionService.canCreateStore(session.user.id);
-
-    if (!storeCheck.allowed) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.SUBSCRIPTION_LIMIT_EXCEEDED,
-          `You have reached your plan's store limit (${storeCheck.current}/${storeCheck.limit}). Upgrade to Pro to add more stores.`,
-          {
-            current: storeCheck.current,
-            limit: storeCheck.limit,
-            upgradeRequired: true,
-          }
-        ),
-        { status: 403 }
-      );
-    }
-
     // Parse and validate request body
     const body = await request.json();
 
     const input = createStoreSchema.parse(body);
 
     // Create store via service
-    const store = await businessService.createStore(business.id, session.user.id, input);
+    // IMPORTANT: Store limit check is performed inside createStore() method
+    // using a transaction with row-level lock to prevent race conditions.
+    // This ensures that concurrent requests cannot create more stores than allowed.
+    // The service will throw an error if the limit is exceeded.
+    try {
+      const store = await businessService.createStore(business.id, session.user.id, input);
 
-    return NextResponse.json(createSuccessResponse(store), { status: 201 });
+      return NextResponse.json(createSuccessResponse(store), { status: 201 });
+    } catch (storeError) {
+      // Handle store limit exceeded error (from service)
+      if (storeError instanceof Error && storeError.message.includes("store limit")) {
+        // Extract limit info from error message or check subscription again for error response
+        const storeCheck = await subscriptionService.canCreateStore(session.user.id);
+        return NextResponse.json(
+          createErrorResponse(
+            ApiErrorCode.SUBSCRIPTION_LIMIT_EXCEEDED,
+            storeError.message,
+            {
+              current: storeCheck.current,
+              limit: storeCheck.limit,
+              upgradeRequired: true,
+            }
+          ),
+          { status: 403 }
+        );
+      }
+
+      // Re-throw to be handled by outer catch
+      throw storeError;
+    }
   } catch (error) {
     // Handle validation errors
     if (error instanceof ZodError) {
@@ -118,8 +127,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle business logic errors
+    // Handle business logic errors (subscription, name duplicate, etc.)
     if (error instanceof Error) {
+      // Check if it's a subscription error
+      if (error.message.includes("subscription") || error.message.includes("No active subscription")) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.UNAUTHORIZED, error.message),
+          { status: 403 }
+        );
+      }
+
+      // Check if it's a duplicate name error
+      if (error.message.includes("already exists")) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 400 }
+        );
+      }
+
       console.error("Error creating store:", error.message);
     }
 

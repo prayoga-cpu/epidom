@@ -166,31 +166,31 @@ export default function EditMaterialDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[600px]">
         {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-          <DialogTitle className="text-xl font-bold sm:text-2xl">
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
+          <DialogTitle className="text-lg font-bold sm:text-xl">
             {t("data.materials.editTitle")}
           </DialogTitle>
-          <DialogDescription className="text-sm sm:text-base">
+          <DialogDescription className="text-xs sm:text-sm">
             {t("data.materials.editDescription") ||
               "Update material information. Fields marked with * are required."}
           </DialogDescription>
         </DialogHeader>
 
         {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
           <Form {...form}>
-            <form id="edit-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form id="edit-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
             {/* Basic Information */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">{t("data.materials.sections.basicInfo")}</h3>
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.materials.sections.basicInfo")}</h3>
             {/* Material Name & SKU */}
-            <div className="grid items-start gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-1.5 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("data.materials.form.name")} *</FormLabel>
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("data.materials.form.name")} *</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.materials.form.namePlaceholder")} {...field} />
                     </FormControl>
@@ -203,8 +203,8 @@ export default function EditMaterialDialog({
                 control={form.control}
                 name="sku"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("data.materials.form.sku")} *</FormLabel>
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("data.materials.form.sku")} *</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.materials.form.skuPlaceholder")} {...field} />
                     </FormControl>
@@ -214,13 +214,13 @@ export default function EditMaterialDialog({
               />
             </div>
 
-              <div className="grid items-start grid-cols-2 gap-4">
+              <div className="grid items-start grid-cols-2 gap-1.5">
                 <FormField
                   control={form.control}
                   name="category"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.materials.form.category")}</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.materials.form.category")}</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.materials.form.categoryPlaceholder")} {...field} />
                       </FormControl>
@@ -233,8 +233,8 @@ export default function EditMaterialDialog({
                   control={form.control}
                   name="unit"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.materials.form.unit")} *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.materials.form.unit")} *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -261,12 +261,12 @@ export default function EditMaterialDialog({
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("data.materials.form.description")}</FormLabel>
+                <FormItem className="space-y-0.5">
+                  <FormLabel className="text-sm">{t("data.materials.form.description")}</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder={t("data.materials.form.descriptionPlaceholder")}
-                      rows={3}
+                      className="min-h-[55px] text-sm"
                       {...field}
                     />
                   </FormControl>
@@ -276,19 +276,17 @@ export default function EditMaterialDialog({
             />
             </div>
 
-            <Separator />
-
             {/* Pricing & Stock */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">{t("data.materials.sections.pricingStock")}</h3>
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.materials.sections.pricingStock")}</h3>
 
-              <div className="grid items-start grid-cols-2 gap-4">
+              <div className="grid items-start grid-cols-2 gap-1.5">
                 <FormField
                   control={form.control}
                   name="unitCost"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.materials.form.unitCost")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.materials.form.unitCost")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -311,8 +309,8 @@ export default function EditMaterialDialog({
                   control={form.control}
                   name="currentStock"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.materials.form.currentStock")}</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.materials.form.currentStock")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -332,13 +330,13 @@ export default function EditMaterialDialog({
                 />
               </div>
 
-              <div className="grid items-start grid-cols-2 gap-4">
+              <div className="grid items-start grid-cols-2 gap-1.5">
                 <FormField
                   control={form.control}
                   name="minStock"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.materials.form.minStockLevel")}</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.materials.form.minStockLevel")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -352,7 +350,7 @@ export default function EditMaterialDialog({
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription>{t("data.materials.form.alertMinStock")}</FormDescription>
+                      <FormDescription className="text-xs">{t("data.materials.form.alertMinStock")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -362,8 +360,8 @@ export default function EditMaterialDialog({
                   control={form.control}
                   name="maxStock"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.materials.form.maxStockLevel")}</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.materials.form.maxStockLevel")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -377,7 +375,7 @@ export default function EditMaterialDialog({
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription>{t("data.materials.form.alertMaxStock")}</FormDescription>
+                      <FormDescription className="text-xs">{t("data.materials.form.alertMaxStock")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -385,12 +383,10 @@ export default function EditMaterialDialog({
               </div>
             </div>
 
-            <Separator />
-
             {/* Suppliers */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">{t("data.materials.sections.suppliers")}</h3>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("data.materials.sections.suppliers")}</h3>
                 <Button
                   type="button"
                   variant="outline"
@@ -409,14 +405,14 @@ export default function EditMaterialDialog({
               )}
 
               {fields.map((field, index) => (
-                <div key={field.id} className="flex gap-4 rounded-lg border p-4">
-                  <div className="flex-1 space-y-4">
+                <div key={field.id} className="flex gap-2 rounded-lg border p-2">
+                  <div className="flex-1 space-y-1">
                     <FormField
                       control={form.control}
                       name={`suppliers.${index}.supplierId` as any}
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("data.materials.form.supplier")} *</FormLabel>
+                        <FormItem className="space-y-0.5">
+                          <FormLabel className="text-sm">{t("data.materials.form.supplier")} *</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={(field.value as string) || "none"}
@@ -445,13 +441,13 @@ export default function EditMaterialDialog({
                       )}
                     />
 
-                    <div className="grid items-start grid-cols-2 gap-4">
+                    <div className="grid items-start grid-cols-2 gap-1.5">
                       <FormField
                         control={form.control}
                         name={`suppliers.${index}.price` as any}
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("data.materials.form.supplierPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                          <FormItem className="space-y-0.5">
+                            <FormLabel className="text-sm">{t("data.materials.form.supplierPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -509,7 +505,7 @@ export default function EditMaterialDialog({
         </div>
 
         {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-4">
+        <div className="shrink-0 border-t border-border px-6 py-1.5">
           <div className="flex justify-end gap-3">
             <Button
               type="button"

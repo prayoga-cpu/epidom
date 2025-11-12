@@ -95,27 +95,39 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
-   * Find product by SKU
+   * Find product by SKU and storeId
    */
-  async findBySku(sku: string): Promise<ProductWithRelations | null> {
+  async findBySku(storeId: string, sku: string): Promise<ProductWithRelations | null> {
     return this.db.product.findUnique({
-      where: { sku },
+      where: {
+        storeId_sku: {
+          storeId,
+          sku,
+        },
+      },
+      include: {
+        recipe: true,
+      },
     });
   }
 
   /**
-   * Check if product SKU already exists
+   * Check if product SKU already exists for a store
    */
-  async existsBySku(sku: string, excludeId?: string): Promise<boolean> {
-    const product = await this.db.product.findUnique({
-      where: { sku },
+  async existsBySku(storeId: string, sku: string, excludeId?: string): Promise<boolean> {
+    const product = await this.db.product.findFirst({
+      where: {
+        storeId,
+        sku: {
+          equals: sku,
+          mode: "insensitive",
+        },
+        ...(excludeId && { id: { not: excludeId } }),
+      },
       select: { id: true },
     });
 
-    if (!product) return false;
-    if (excludeId && product.id === excludeId) return false;
-
-    return true;
+    return !!product;
   }
 
   /**
@@ -157,22 +169,22 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
-   * Delete product (soft delete by setting isActive to false)
+   * Delete product (hard delete)
+   * Note: Related records (OrderItem, ProductionBatch, StockMovement) will be cascade deleted
    */
   async delete(productId: string): Promise<void> {
-    await this.db.product.update({
+    await this.db.product.delete({
       where: { id: productId },
-      data: { isActive: false },
     });
   }
 
   /**
-   * Bulk delete products (soft delete)
+   * Bulk delete products (hard delete)
+   * Note: Related records will be cascade deleted
    */
   async bulkDelete(productIds: string[]): Promise<{ count: number }> {
-    const result = await this.db.product.updateMany({
+    const result = await this.db.product.deleteMany({
       where: { id: { in: productIds } },
-      data: { isActive: false },
     });
 
     return { count: result.count };

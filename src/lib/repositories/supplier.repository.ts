@@ -175,22 +175,22 @@ export class SupplierRepository extends BaseRepository {
   }
 
   /**
-   * Delete supplier (soft delete by setting isActive to false)
+   * Delete supplier (hard delete)
+   * Note: Related records (MaterialSupplier, SupplierOrder) will be cascade deleted
    */
   async delete(supplierId: string): Promise<void> {
-    await this.db.supplier.update({
+    await this.db.supplier.delete({
       where: { id: supplierId },
-      data: { isActive: false },
     });
   }
 
   /**
-   * Bulk delete suppliers (soft delete)
+   * Bulk delete suppliers (hard delete)
+   * Note: Related records will be cascade deleted
    */
   async bulkDelete(supplierIds: string[]): Promise<{ count: number }> {
-    const result = await this.db.supplier.updateMany({
+    const result = await this.db.supplier.deleteMany({
       where: { id: { in: supplierIds } },
-      data: { isActive: false },
     });
 
     return { count: result.count };

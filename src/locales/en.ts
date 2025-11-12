@@ -1459,6 +1459,9 @@ export const en = {
           description: "{count} suppliers have been deleted successfully.",
         },
       },
+
+      // Locked message
+      locked: "Upgrade to Pro to access Supplier Management.",
     },
   },
   filters: {
@@ -1540,6 +1543,7 @@ export const en = {
     role: "Role",
     recipe: "Recipe",
     name: "Name",
+    supplier: "Supplier",
   },
   actions: {
     view: "View",
@@ -2228,6 +2232,20 @@ export const en = {
       viewHistory: "View History",
       importCSV: "Import CSV",
       importCSVDescription: "CSV import functionality coming soon",
+      importCSVDialog: {
+        title: "Import Stock from CSV",
+        description: "Upload a CSV file to update stock levels. The CSV should have columns: SKU, Type (material/product), Current Stock",
+        formatTitle: "CSV Format",
+        formatDescription: "Your CSV file should have the following columns: SKU, Type (material or product), Current Stock",
+        selectFile: "Click to select CSV file",
+        fileHint: "CSV files only",
+        invalidFile: "Please select a CSV file",
+        importButton: "Import Stock",
+        successTitle: "Import Successful",
+        partialSuccessTitle: "Import Completed with Errors",
+        resultsSummary: "Successfully imported {success} items, {failed} failed out of {total} total",
+        resultsTitle: "Import Results",
+      },
 
       // Adjustment Types
       adjustmentType: "Adjustment Type",
@@ -2757,6 +2775,7 @@ export const en = {
     subscriptionRequired: "An active subscription is required to access the dashboard.",
     upgradePro: "Upgrade to Pro to add more stores.",
     storeLimitReached: "You have reached your plan's store limit ({current}/{limit}).",
+    advancedReportsOnly: "Advanced Reports is only available in Pro and Enterprise plans",
     status: {
       active: "Active",
       canceled: "Canceled",
