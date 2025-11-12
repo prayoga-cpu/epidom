@@ -30,6 +30,7 @@ import { Loader2 } from "lucide-react";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUpdateSupplier } from "../hooks/use-suppliers";
+import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 
 // Zod validation schema
 // Helper function to create supplier schema with translated messages
@@ -69,21 +70,12 @@ export default function EditSupplierDialog({
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
-    defaultValues: {
-      name: "",
-      contactPerson: "",
-      email: "",
-      phone: "",
-      address: "",
-      city: "",
-      country: "",
-      notes: "",
-    },
+    defaultValues: FORM_DEFAULTS.supplier,
   });
 
   // Update form when supplier changes
   useEffect(() => {
-    if (supplier) {
+    if (supplier && open) {
       form.reset({
         name: supplier.name || "",
         contactPerson: supplier.contactPerson || "",
@@ -95,7 +87,7 @@ export default function EditSupplierDialog({
         notes: supplier.notes || "",
       });
     }
-  }, [supplier, form]);
+  }, [supplier, open, form]);
 
   const onSubmit = async (data: SupplierFormValues) => {
     try {
@@ -127,13 +119,13 @@ export default function EditSupplierDialog({
             <form id="edit-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Basic Information</h3>
+              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.basicInfo")}</h3>
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Supplier Name *</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.name")} *</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.suppliers.form.namePlaceholder")} {...field} />
                     </FormControl>
@@ -142,20 +134,20 @@ export default function EditSupplierDialog({
                 )}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="contactPerson"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.contactPerson")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("data.suppliers.form.contactPersonPlaceholder")}
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Primary contact name</FormDescription>
+                      <FormDescription>{t("data.suppliers.form.contactPersonHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -166,7 +158,7 @@ export default function EditSupplierDialog({
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.email")}</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -174,7 +166,7 @@ export default function EditSupplierDialog({
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Business email</FormDescription>
+                      <FormDescription>{t("data.suppliers.form.emailHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -186,7 +178,7 @@ export default function EditSupplierDialog({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.phone")}</FormLabel>
                     <FormControl>
                       <PhoneInput
                         placeholder={t("data.suppliers.form.phonePlaceholder")}
@@ -195,7 +187,7 @@ export default function EditSupplierDialog({
                         defaultCountry="FR"
                       />
                     </FormControl>
-                    <FormDescription>Business phone number</FormDescription>
+                    <FormDescription>{t("data.suppliers.form.phoneHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -204,13 +196,13 @@ export default function EditSupplierDialog({
 
             {/* Address Information */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Address</h3>
+              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.address")}</h3>
               <FormField
                 control={form.control}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Street Address</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.address")}</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.suppliers.form.addressPlaceholder")} {...field} />
                     </FormControl>
@@ -219,13 +211,13 @@ export default function EditSupplierDialog({
                 )}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>City</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.city")}</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.suppliers.form.cityPlaceholder")} {...field} />
                       </FormControl>
@@ -239,7 +231,7 @@ export default function EditSupplierDialog({
                   name="country"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Country</FormLabel>
+                      <FormLabel>{t("data.suppliers.form.country")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("data.suppliers.form.countryPlaceholder")}
@@ -255,13 +247,13 @@ export default function EditSupplierDialog({
 
             {/* Notes */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Additional Notes</h3>
+              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.additionalNotes")}</h3>
               <FormField
                 control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>{t("data.suppliers.form.notes")}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder={t("data.suppliers.form.notesPlaceholder")}
@@ -270,7 +262,7 @@ export default function EditSupplierDialog({
                       />
                     </FormControl>
                     <FormDescription>
-                      Special requirements, preferences, or important details
+                      {t("data.suppliers.form.notesHint")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

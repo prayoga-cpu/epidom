@@ -437,6 +437,7 @@ export function MaterialsSection() {
                       });
                     }
                   }}
+                  contentClassName="!px-4"
                 >
                     <div className="mb-2 flex items-start justify-between">
                       <div className="flex-1">

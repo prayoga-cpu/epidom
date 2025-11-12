@@ -15,7 +15,7 @@ export default function ProductionHistoryChart() {
   const { storeId } = useCurrentStore();
   const { advancedReportsAccess } = useFeatureAccess();
 
-  const { data, isLoading } = useProductionBatches(storeId, {
+  const { data, isLoading, error } = useProductionBatches(storeId || "", {
     sortBy: "scheduledDate",
     sortOrder: "desc",
     skip: 0,
@@ -94,10 +94,18 @@ export default function ProductionHistoryChart() {
         />
       }
       cardContent={
-        isLoading ? (
+        !storeId ? (
+          <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center">
+            <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+          </div>
+        ) : isLoading ? (
           <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center">
             <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
             <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+          </div>
+        ) : error ? (
+          <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center">
+            <p className="text-muted-foreground text-sm">{t("common.error")}</p>
           </div>
         ) : (
           <div className="flex min-h-[300px] flex-1">

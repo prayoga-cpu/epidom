@@ -31,6 +31,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateSupplier } from "../hooks/use-suppliers";
+import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 
 // Helper function to create supplier schema with translated messages
 function createSupplierSchema(t: (key: string) => string) {
@@ -64,16 +65,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
-    defaultValues: {
-      name: "",
-      contactPerson: "",
-      email: "",
-      phone: "",
-      address: "",
-      city: "",
-      country: "",
-      notes: "",
-    },
+    defaultValues: FORM_DEFAULTS.supplier,
   });
 
   async function onSubmit(data: SupplierFormValues) {
@@ -139,7 +131,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                 )}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="contactPerson"
@@ -216,7 +208,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                 )}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="city"

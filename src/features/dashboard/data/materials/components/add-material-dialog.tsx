@@ -43,6 +43,12 @@ import {
 } from "@/lib/validation/inventory.schemas";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCurrency } from "@/components/providers/currency-provider";
+import {
+  parseNumberInput,
+  formatNumberForInput,
+  createNumberInputHandler,
+} from "@/lib/utils/number-input";
+import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 
 // Use the form schema (without storeId)
 const formSchema = createIngredientFormSchema;
@@ -71,19 +77,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
   const form = useForm({
     resolver: zodResolver(formSchema) as any,
-    defaultValues: {
-      sku: "",
-      name: "",
-      description: "",
-      category: "",
-      unit: "kg",
-      unitCost: 0,
-      currentStock: 0,
-      minStock: 0,
-      maxStock: 1000,
-      suppliers: [],
-      isActive: true,
-    },
+    defaultValues: FORM_DEFAULTS.material,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -98,19 +92,20 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         data.suppliers?.filter((s: any) => s.supplierId && s.supplierId !== "none") || [];
 
       // Ensure we have default values for required fields
+      // Convert undefined to 0 for API submission
       const payload = {
         ...data,
         unit: data.unit || "kg",
-        unitCost: convertToBase(data.unitCost), // Convert from user's currency to EUR
-        currentStock: data.currentStock || 0,
-        minStock: data.minStock || 0,
-        maxStock: data.maxStock || 1000,
+        unitCost: convertToBase(data.unitCost ?? 0), // Convert from user's currency to EUR
+        currentStock: data.currentStock ?? 0,
+        minStock: data.minStock ?? 0,
+        maxStock: data.maxStock ?? 1000,
         isActive: data.isActive ?? true,
         suppliers:
           validSuppliers.length > 0
             ? validSuppliers.map((s: any) => ({
                 ...s,
-                price: convertToBase(s.price), // Convert supplier prices to EUR
+                price: convertToBase(s.price ?? 0), // Convert supplier prices to EUR
               }))
             : undefined,
       };
@@ -157,7 +152,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
             <div className="space-y-4">
               <h3 className="text-sm font-medium">{t("data.materials.sections.basicInfo")}</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid items-start grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="name"
@@ -187,7 +182,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid items-start grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="category"
@@ -254,7 +249,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
             <div className="space-y-4">
               <h3 className="text-sm font-medium">{t("data.materials.sections.pricingStock")}</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid items-start grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="unitCost"
@@ -266,8 +261,11 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                           type="number"
                           step="0.01"
                           placeholder={t("data.materials.form.costPlaceholder")}
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormMessage />
@@ -286,8 +284,11 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                           type="number"
                           step="0.01"
                           placeholder="100"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormMessage />
@@ -296,7 +297,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid items-start grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="minStock"
@@ -308,8 +309,11 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                           type="number"
                           step="0.01"
                           placeholder="20"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormDescription>{t("data.materials.form.alertMinStock")}</FormDescription>
@@ -329,8 +333,11 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                           type="number"
                           step="0.01"
                           placeholder="500"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormDescription>{t("data.materials.form.alertMaxStock")}</FormDescription>
@@ -351,7 +358,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({ supplierId: "", price: 0, isPreferred: false })}
+                  onClick={() => append({ supplierId: "", price: undefined as number | undefined, isPreferred: false })}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   {t("data.materials.form.addSupplier")}
@@ -401,7 +408,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                       )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid items-start grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name={`suppliers.${index}.price` as any}
@@ -413,9 +420,11 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                                 type="number"
                                 step="0.01"
                                 placeholder="25.00"
-                                {...field}
-                                value={field.value as number}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                value={formatNumberForInput(field.value as number | undefined)}
+                                onChange={createNumberInputHandler(field.onChange)}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                ref={field.ref}
                               />
                             </FormControl>
                             <FormMessage />

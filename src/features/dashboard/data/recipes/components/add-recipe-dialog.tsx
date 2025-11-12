@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -55,6 +55,11 @@ import {
   createRecipeFormSchema,
   type CreateRecipeFormInput,
 } from "@/lib/validation/inventory.schemas";
+import {
+  formatNumberForInput,
+  createNumberInputHandler,
+} from "@/lib/utils/number-input";
+import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 
 type RecipeFormValues = CreateRecipeFormInput;
 
@@ -65,10 +70,17 @@ interface AddRecipeDialogProps {
 export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  // Use ref to track current step to avoid stale closure issues
+  const currentStepRef = useRef(1);
   const { t } = useI18n();
   const { currency, convertPrice, formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
 
   // STEPS with translation
   const STEPS = [
@@ -98,16 +110,10 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   const form = useForm<RecipeFormValues>({
     resolver: zodResolver(createRecipeFormSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      category: "",
-      yieldQuantity: 0,
-      yieldUnit: "",
-      productionTimeMinutes: 0,
-      ingredients: [],
-      instructions: "",
+      ...FORM_DEFAULTS.recipe,
+      ingredients: [], // Ensure mutable array
     },
-    mode: "onChange",
+    mode: "onSubmit", // Validate only on submit to allow undefined values during editing
   });
 
   // Calculate estimated cost based on ingredients
@@ -117,7 +123,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
 
     ingredients?.forEach((ingredient) => {
       const material = materials.find((m) => m.id === ingredient.materialId);
-      if (material) {
+      if (material && ingredient.quantity) {
         totalCost += Number(material.unitCost) * ingredient.quantity;
       }
     });
@@ -129,7 +135,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   const calculateCostPerUnit = () => {
     const totalCost = calculateEstimatedCost();
     const yieldQuantity = form.watch("yieldQuantity");
-    if (yieldQuantity > 0) {
+    if (yieldQuantity && yieldQuantity > 0) {
       return totalCost / yieldQuantity;
     }
     return 0;
@@ -137,15 +143,82 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
 
   const onSubmit = async (data: RecipeFormValues) => {
     try {
-      await createRecipe.mutateAsync(data);
+      // Validate and convert undefined to defaults for required fields
+      const yieldQuantity = data.yieldQuantity ?? 0;
+      const productionTimeMinutes = data.productionTimeMinutes ?? 0;
+
+      // Validate required fields
+      if (yieldQuantity <= 0) {
+        form.setError("yieldQuantity", {
+          type: "manual",
+          message: "Yield quantity must be positive",
+        });
+        setCurrentStep(1); // Go back to step 1 where yieldQuantity field is
+        currentStepRef.current = 1;
+        return;
+      }
+
+      if (productionTimeMinutes <= 0) {
+        form.setError("productionTimeMinutes", {
+          type: "manual",
+          message: "Production time must be at least 1 minute",
+        });
+        setCurrentStep(1); // Go back to step 1 where productionTimeMinutes field is
+        currentStepRef.current = 1;
+        return;
+      }
+
+      // Process ingredients - convert undefined quantities to 0 or validate
+      const processedIngredients = (data.ingredients || []).map((ing) => ({
+        ...ing,
+        quantity: ing.quantity ?? 0,
+      }));
+
+      // Validate ingredients
+      if (processedIngredients.length === 0) {
+        form.setError("ingredients", {
+          type: "manual",
+          message: "At least one ingredient is required",
+        });
+        setCurrentStep(2); // Go back to step 2 where ingredients are
+        currentStepRef.current = 2;
+        return;
+      }
+
+      const payload = {
+        ...data,
+        yieldQuantity,
+        productionTimeMinutes,
+        ingredients: processedIngredients,
+      };
+
+      await createRecipe.mutateAsync(payload);
 
       toast.success(t("data.recipes.toasts.created.title"));
       form.reset();
+      currentStepRef.current = 1;
       setCurrentStep(1);
       setOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("common.error"));
     }
+  };
+
+  // Handler for Create button - only submit when on Review step
+  const handleCreateRecipe = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Double check we're on Review step using ref to avoid stale closure
+    if (currentStepRef.current !== 4) {
+      return;
+    }
+
+    // Get form data and submit - validation is handled in onSubmit
+    // We skip form.trigger() because schema validation will fail with undefined values
+    // Validation and conversion of undefined → defaults is handled in onSubmit
+    const data = form.getValues();
+    await onSubmit(data);
   };
 
   // Prevent form submission on Enter key from input/textarea fields
@@ -155,43 +228,83 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
 
     if (e.key === "Enter" && isInputField) {
       e.preventDefault();
-      if (currentStep < 4) {
+      e.stopPropagation();
+      // Use ref to check current step
+      if (currentStepRef.current < 4) {
         nextStep();
       }
     }
   };
 
-  const nextStep = async () => {
+  const nextStep = async (e?: React.MouseEvent<HTMLButtonElement>) => {
+    // Prevent any form submission
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    // Use ref to get current step to avoid stale closure
+    const step = currentStepRef.current;
+
     let fieldsToValidate: any[] = [];
 
     // Validate current step fields
-    switch (currentStep) {
+    // Note: We only validate non-number fields in steps, number fields are validated in onSubmit
+    // This allows users to clear number fields (undefined) and move between steps
+    switch (step) {
       case 1:
-        fieldsToValidate = [
-          "name",
-          "category",
-          "yieldQuantity",
-          "yieldUnit",
-          "productionTimeMinutes",
-        ];
+        // Only validate required text fields, skip number fields (validated in onSubmit)
+        fieldsToValidate = ["name", "category", "yieldUnit"];
         break;
       case 2:
-        fieldsToValidate = ["ingredients"];
-        break;
+        // Validate ingredients array exists (at least one ingredient)
+        // Individual ingredient validation happens in onSubmit
+        const ingredients = form.getValues("ingredients") || [];
+        if (ingredients.length === 0) {
+          form.setError("ingredients", {
+            type: "manual",
+            message: "At least one ingredient is required",
+          });
+          return;
+        }
+        // Clear error if ingredients exist
+        form.clearErrors("ingredients");
+        // Allow moving to next step
+        if (step < 4) {
+          const newStep = step + 1;
+          currentStepRef.current = newStep;
+          setCurrentStep(newStep);
+        }
+        return;
       case 3:
-        fieldsToValidate = ["instructions"];
-        break;
+        // Instructions is optional, so just allow moving to next step
+        if (step < 4) {
+          const newStep = step + 1;
+          currentStepRef.current = newStep;
+          setCurrentStep(newStep);
+        }
+        return;
+      default:
+        // If we're already on step 4 or beyond, don't do anything
+        return;
     }
 
+    // Validate only text fields (skip number fields)
     const isValid = await form.trigger(fieldsToValidate as any);
-    if (isValid && currentStep < 4) {
-      setCurrentStep(currentStep + 1);
+    if (isValid && step < 4) {
+      // Update both state and ref
+      const newStep = step + 1;
+      currentStepRef.current = newStep;
+      setCurrentStep(newStep);
     }
   };
 
   const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    const step = currentStepRef.current;
+    if (step > 1) {
+      const newStep = step - 1;
+      currentStepRef.current = newStep;
+      setCurrentStep(newStep);
     }
   };
 
@@ -199,7 +312,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     const currentIngredients = form.watch("ingredients") || [];
     form.setValue("ingredients", [
       ...currentIngredients,
-      { materialId: "", quantity: 0, unit: "", notes: "" },
+      { materialId: "", quantity: undefined as any, unit: "", notes: "" },
     ]);
   };
 
@@ -215,6 +328,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     setOpen(newOpen);
     if (!newOpen) {
       form.reset();
+      currentStepRef.current = 1;
       setCurrentStep(1);
     }
   };
@@ -291,7 +405,18 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
           <Form {...form}>
             <form
               id="add-recipe-form"
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={(e) => {
+                // Always prevent default form submission
+                // Form should only be submitted via handleCreateRecipe button
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Only allow submission when on Review step (step 4)
+                // This is a safety net - normal flow uses handleCreateRecipe
+                if (currentStepRef.current === 4) {
+                  form.handleSubmit(onSubmit)(e);
+                }
+              }}
               onKeyDown={handleKeyDown}
               className="space-y-6"
             >
@@ -356,7 +481,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   )}
                 />
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid items-start gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="yieldQuantity"
@@ -369,8 +494,11 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                             step="0.01"
                             min="0.01"
                             placeholder="2"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                            value={formatNumberForInput(field.value)}
+                            onChange={createNumberInputHandler(field.onChange)}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                         </FormControl>
                         <FormMessage />
@@ -417,8 +545,11 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                           type="number"
                           min="1"
                           placeholder={t("data.recipes.form.productionTimePlaceholder")}
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          value={formatNumberForInput(field.value)}
+                          onChange={createNumberInputHandler(field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormDescription>{t("data.recipes.form.productionTimeHint")}</FormDescription>
@@ -504,7 +635,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                             )}
                           />
 
-                          <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="grid items-start gap-3 sm:grid-cols-2">
                             <FormField
                               control={form.control}
                               name={`ingredients.${index}.quantity`}
@@ -517,8 +648,11 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                       step="0.01"
                                       min="0.01"
                                       placeholder="500"
-                                      {...field}
-                                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                      value={formatNumberForInput(field.value)}
+                                      onChange={createNumberInputHandler(field.onChange)}
+                                      onBlur={field.onBlur}
+                                      name={field.name}
+                                      ref={field.ref}
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -550,7 +684,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                               <p className="text-muted-foreground">
                                 {formatPrice(Number(selectedMaterial.unitCost))} {t("common.per")} {" "}
                                 {selectedMaterial.unit} × {" "}
-                                {form.watch(`ingredients.${index}.quantity`) || 0} = {" "}
+                                {form.watch(`ingredients.${index}.quantity`) ?? "—"} = {" "}
                                 <span className="text-foreground font-semibold">
                                   {formatPrice(
                                     Number(selectedMaterial.unitCost) *
@@ -647,7 +781,10 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => setCurrentStep(1)}
+                        onClick={() => {
+                          currentStepRef.current = 1;
+                          setCurrentStep(1);
+                        }}
                       >
                         {t("common.actions.edit")}
                       </Button>
@@ -659,12 +796,12 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                       <div>
                         <p className="text-muted-foreground">{t("data.recipes.review.yield")}</p>
                         <p className="font-medium">
-                          {form.watch("yieldQuantity")} {form.watch("yieldUnit")}
+                          {form.watch("yieldQuantity") || "—"} {form.watch("yieldUnit") || ""}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">{t("data.recipes.review.productionTime")}</p>
-                        <p className="font-medium">{form.watch("productionTimeMinutes")} {t("data.recipes.review.minutes")}</p>
+                        <p className="font-medium">{form.watch("productionTimeMinutes") || "—"} {form.watch("productionTimeMinutes") ? t("data.recipes.review.minutes") : ""}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -681,7 +818,10 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => setCurrentStep(2)}
+                        onClick={() => {
+                          currentStepRef.current = 2;
+                          setCurrentStep(2);
+                        }}
                       >
                         {t("common.actions.edit")}
                       </Button>
@@ -689,14 +829,15 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                     <div className="space-y-2">
                       {(form.watch("ingredients") || []).map((ingredient, idx) => {
                         const material = materials.find((m) => m.id === ingredient.materialId);
+                        const quantity = ingredient.quantity || 0;
                         return (
                           <div key={idx} className="flex justify-between text-sm">
                             <span>
-                              {material?.name} - {ingredient.quantity} {ingredient.unit}
+                              {material?.name} - {quantity} {ingredient.unit}
                             </span>
                             <span className="text-muted-foreground">
                               {material
-                                ? formatPrice(Number(material.unitCost) * ingredient.quantity)
+                                ? formatPrice(Number(material.unitCost) * quantity)
                                 : formatPrice(0)}
                             </span>
                           </div>
@@ -736,7 +877,10 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => setCurrentStep(3)}
+                        onClick={() => {
+                          currentStepRef.current = 3;
+                          setCurrentStep(3);
+                        }}
                       >
                         {t("common.actions.edit")}
                       </Button>
@@ -771,14 +915,21 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                 </Button>
               )}
               {currentStep < 4 ? (
-                <Button type="button" onClick={nextStep}>
+                <Button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    nextStep(e);
+                  }}
+                >
                   {t("common.actions.next")}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
                 <Button
-                  type="submit"
-                  form="add-recipe-form"
+                  type="button"
+                  onClick={handleCreateRecipe}
                   disabled={createRecipe.isPending}
                 >
                   {createRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

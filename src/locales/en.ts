@@ -168,7 +168,7 @@ export const en = {
     hours: "Hours",
     minutes: "Minutes",
     seconds: "Seconds",
-    targetDate: "Launch Date: November 12th, 2025",
+    targetDate: "Launch Date: November 20th, 2025",
     email: "mrcaoevan@gmail.com",
     whatsapp: "WhatsApp",
     waitlistText: "Be the first to know when we launch!",
@@ -325,6 +325,8 @@ export const en = {
     },
     map: {
       placeholder: "Interactive map will be displayed here",
+      error: "Map unavailable",
+      errorDesc: "Please refresh the page to load the map",
     },
   },
   pricing: {
@@ -338,7 +340,7 @@ export const en = {
         price: "€29",
         billing: "per month",
         select: "Get Started",
-        f1: "1 point of sale",
+        f1: "1 store",
         f2: "Basic inventory tracking",
         f3: "Up to 500 products",
       },
@@ -349,7 +351,7 @@ export const en = {
         billing: "per month",
         select: "Get Started",
         recommended: "Most Popular",
-        f1: "Unlimited points of sale",
+        f1: "Unlimited stores",
         f2: "Multi-site management",
         f3: "Supplier management",
         f4: "Advanced reports & analytics",
@@ -374,7 +376,7 @@ export const en = {
         enterprise: "Enterprise",
       },
       rows: {
-        pointOfSale: { name: "Points of Sale" },
+        pointOfSale: { name: "Stores" },
         multiSite: { name: "Multi-site Management" },
         supplierManagement: { name: "Supplier Management" },
         reports: { name: "Advanced Reports" },
@@ -1368,12 +1370,14 @@ export const en = {
     suppliers: {
       pageTitle: "Suppliers",
       addTitle: "Add New Supplier",
+      addButton: "Add Supplier",
       editTitle: "Edit Supplier",
       detailsTitle: "Supplier Details",
       addDescription:
         "Add a new supplier to your contact list. Fill in as much information as possible.",
       editDescription: "Update supplier information",
       detailsDescription: "View complete information about this supplier",
+      searchPlaceholder: "Search suppliers by name, email, or contact person...",
 
       // Form sections
       sections: {
@@ -1992,6 +1996,10 @@ export const en = {
     createError: "Failed to create store",
     editSuccess: "Store updated successfully",
     editError: "Failed to update store",
+    subscriptionRequired: "Subscription Required",
+    renewSubscription: "Renew your subscription to access this store",
+    clickToSubscribe: "Click to Subscribe",
+    errorLoading: "Failed to load stores",
   },
   tabs: {
     delivery: "Delivery",
@@ -2929,8 +2937,9 @@ export const en = {
       canceled: "You canceled the payment process. No charges have been applied.",
       sessionExpired: "Your payment session has expired. Please try again.",
       unknownError: "An unexpected error occurred during payment processing.",
-      tryAgain:
+      helpMessage:
         "Your card hasn't been charged. Please review the error above and try again. If you continue to have issues, please contact support.",
+      tryAgainButton: "Try Again",
       chargeNotApplied: "No charges have been applied to your account.",
     },
   },

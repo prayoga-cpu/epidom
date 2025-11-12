@@ -265,7 +265,7 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("alerts.createOrderDialog.quantity")} *</FormLabel>
-                  <div className="flex items-end gap-2">
+                  <div className="flex items-start gap-2">
                     <FormControl>
                       <Input
                         type="number"
