@@ -159,6 +159,16 @@ export function useSuppliers(storeId: string, filters: SupplierFilterInput) {
 
       if (!response.ok) {
         const error = await response.json();
+
+        // Handle 403 Forbidden (subscription feature locked)
+        if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
+          const customError = new Error(error.message || "Supplier Management is only available in Pro and Enterprise plans");
+          (customError as any).code = "SUBSCRIPTION_FEATURE_LOCKED";
+          (customError as any).status = 403;
+          (customError as any).upgradeRequired = true;
+          throw customError;
+        }
+
         throw new Error(error.error || "Failed to fetch suppliers");
       }
 

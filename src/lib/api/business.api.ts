@@ -91,21 +91,8 @@ export class BusinessApi {
   }
 
   /**
-   * Deactivate store (soft delete)
-   */
-  async deactivateStore(storeId: string): Promise<{ message: string }> {
-    return apiClient.post(`/user/business/stores/${storeId}/deactivate`, {});
-  }
-
-  /**
-   * Activate store
-   */
-  async activateStore(storeId: string): Promise<{ message: string }> {
-    return apiClient.post(`/user/business/stores/${storeId}/activate`, {});
-  }
-
-  /**
    * Delete store (hard delete)
+   * WARNING: This will permanently delete the store and cascade delete all related data
    */
   async deleteStore(storeId: string): Promise<{ message: string }> {
     return apiClient.delete(`/user/business/stores/${storeId}`);

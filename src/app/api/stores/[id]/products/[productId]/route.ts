@@ -117,7 +117,8 @@ export async function PATCH(
 
 /**
  * DELETE /api/stores/[id]/products/[productId]
- * Delete a product (soft delete)
+ * Delete a product (hard delete)
+ * Note: Related records (OrderItem, ProductionBatch, StockMovement) will be cascade deleted
  */
 export async function DELETE(
   request: NextRequest,

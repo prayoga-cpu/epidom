@@ -191,22 +191,22 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px]">
         {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-          <DialogTitle className="text-xl font-bold sm:text-2xl">
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
+          <DialogTitle className="text-lg font-bold sm:text-xl">
             {t("data.recipes.editTitle")}
           </DialogTitle>
-          <DialogDescription className="text-sm sm:text-base">
+          <DialogDescription className="text-xs sm:text-sm">
             {t("data.recipes.editDescription")}
           </DialogDescription>
         </DialogHeader>
 
         {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
           <Form {...form}>
-            <form id="edit-recipe-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form id="edit-recipe-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
             {/* Basic Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                 {t("data.recipes.sections.basicInfo")}
               </h3>
 
@@ -214,8 +214,8 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("data.recipes.form.name")} *</FormLabel>
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("data.recipes.form.name")} *</FormLabel>
                     <FormControl>
                       <Input
                         placeholder={t("data.recipes.form.namePlaceholder")}
@@ -231,12 +231,12 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 control={form.control}
                 name="description"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("data.recipes.form.description")}</FormLabel>
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("data.recipes.form.description")}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder={t("data.recipes.form.descriptionPlaceholder")}
-                        rows={2}
+                        className="min-h-[55px] text-sm"
                         {...field}
                       />
                     </FormControl>
@@ -249,8 +249,8 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 control={form.control}
                 name="category"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("data.recipes.form.category")} *</FormLabel>
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("data.recipes.form.category")} *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -272,13 +272,13 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 )}
               />
 
-              <div className="grid items-start gap-4 sm:grid-cols-3">
+              <div className="grid items-start gap-1.5 sm:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="yieldQuantity"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">
                         {t("data.recipes.form.yieldQuantity")} *
                       </FormLabel>
                       <FormControl>
@@ -303,8 +303,8 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                   control={form.control}
                   name="yieldUnit"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.recipes.form.yieldUnit")} *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.recipes.form.yieldUnit")} *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -332,8 +332,8 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                   control={form.control}
                   name="productionTimeMinutes"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">
                         {t("data.recipes.form.productionTime")} *
                       </FormLabel>
                       <FormControl>
@@ -348,7 +348,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription>{t("data.recipes.form.productionTimeHint")}</FormDescription>
+                      <FormDescription className="text-xs">{t("data.recipes.form.productionTimeHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -357,9 +357,9 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
             </div>
 
             {/* Ingredients */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   {t("data.recipes.ingredients.title")}
                 </h3>
                 <Button type="button" variant="outline" size="sm" onClick={addIngredient}>
@@ -379,7 +379,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 </Card>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {(form.watch("ingredients") || []).map((_, index) => {
                   const selectedMaterialId = form.watch(`ingredients.${index}.materialId`);
                   const selectedMaterial = materials.find((m) => m.id === selectedMaterialId);
@@ -390,8 +390,8 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
 
                   return (
                     <Card key={index}>
-                      <CardContent className="px-4 py-4 space-y-3">
-                        <div className="flex items-center justify-between mb-2">
+                      <CardContent className="px-2 py-2 space-y-1">
+                        <div className="flex items-center justify-between mb-1">
                           <Badge variant="outline" className="text-xs">
                             #{index + 1}
                           </Badge>
@@ -410,7 +410,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                           control={form.control}
                           name={`ingredients.${index}.materialId`}
                           render={({ field }) => (
-                            <FormItem className="space-y-2">
+                            <FormItem className="space-y-0.5">
                               <FormLabel className="text-sm">
                                 {t("data.recipes.ingredients.material")} *
                               </FormLabel>
@@ -441,12 +441,12 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                           )}
                         />
 
-                        <div className="grid items-start gap-3 sm:grid-cols-2">
+                        <div className="grid items-start gap-1.5 sm:grid-cols-2">
                           <FormField
                             control={form.control}
                             name={`ingredients.${index}.quantity`}
                             render={({ field }) => (
-                              <FormItem className="space-y-2">
+                              <FormItem className="space-y-0.5">
                                 <FormLabel className="text-sm">
                                   {t("data.recipes.ingredients.quantity")} *
                                 </FormLabel>
@@ -473,7 +473,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                             control={form.control}
                             name={`ingredients.${index}.unit`}
                             render={({ field }) => (
-                              <FormItem className="space-y-2">
+                              <FormItem className="space-y-0.5">
                                 <FormLabel className="text-sm">
                                   {t("data.recipes.ingredients.unit")} *
                                 </FormLabel>
@@ -491,7 +491,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                         </div>
 
                         {selectedMaterial && quantity && quantity > 0 && (
-                          <div className="bg-muted/50 rounded border px-3 py-2 text-xs">
+                          <div className="bg-muted/50 rounded border px-2 py-1.5 text-xs">
                             <div className="flex items-center justify-between">
                               <span className="text-muted-foreground">
                                 {t("data.recipes.ingredients.costEstimate")}:
@@ -500,7 +500,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                                 {formatPrice(cost)}
                               </span>
                             </div>
-                            <div className="text-muted-foreground mt-1">
+                            <div className="text-muted-foreground mt-0.5">
                               {formatPrice(Number(selectedMaterial.unitCost))} {t("common.per")}{" "}
                               {selectedMaterial.unit} × {quantity}
                             </div>
@@ -511,7 +511,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                           control={form.control}
                           name={`ingredients.${index}.notes`}
                           render={({ field }) => (
-                            <FormItem className="space-y-2">
+                            <FormItem className="space-y-0.5">
                               <FormLabel className="text-sm">
                                 {t("data.recipes.ingredients.notes")}
                               </FormLabel>
@@ -534,23 +534,22 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
             </div>
 
             {/* Instructions */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                 {t("data.recipes.steps.instructions")}
               </h3>
               <FormField
                 control={form.control}
                 name="instructions"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">
                       {t("data.recipes.form.instructions")} *
                     </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder={t("data.recipes.form.instructionsPlaceholder")}
-                        rows={8}
-                        className="font-mono text-sm"
+                        className="min-h-[200px] font-mono text-sm"
                         {...field}
                       />
                     </FormControl>
@@ -564,7 +563,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
         </div>
 
         {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-4">
+        <div className="shrink-0 border-t border-border px-6 py-1.5">
           <div className="flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("common.actions.cancel")}

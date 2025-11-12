@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/lib/auth-client";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { useI18n } from "@/components/lang/i18n-provider";
 import type { ProfileData } from "../types";
 
 interface UpdateProfilePayload {
@@ -113,12 +115,25 @@ export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   const { user } = useUser();
   const { update: updateSession } = useSession();
+  const { t } = useI18n();
 
   return useMutation({
     mutationFn: updateProfile,
-    onSuccess: async (data) => {
+    onSuccess: async (data, variables) => {
       console.log("[useUpdateProfile] Profile updated successfully:", data);
       console.log("[useUpdateProfile] Profile image:", data.image);
+
+      // Determine if this is an avatar update (only image field changed, no other fields)
+      const hasImageUpdate = variables.image !== undefined;
+      const hasOtherUpdates =
+        variables.name !== undefined ||
+        variables.phone !== undefined ||
+        variables.locale !== undefined ||
+        variables.timezone !== undefined ||
+        variables.currency !== undefined;
+
+      const isAvatarOnlyUpdate = hasImageUpdate && !hasOtherUpdates;
+      const isAvatarRemoval = isAvatarOnlyUpdate && (variables.image === "" || variables.image === null);
 
       // Invalidate the profile query to trigger refetch
       await queryClient.invalidateQueries({
@@ -145,6 +160,28 @@ export const useUpdateProfile = () => {
         await updateSession(sessionUpdate);
         console.log("[useUpdateProfile] Session updated successfully");
       }
+
+      // Show toast notification based on update type
+      // Only show toast once in the mutation hook to prevent duplicates
+      if (isAvatarRemoval) {
+        toast.success(t("profile.toasts.avatarRemoved.title"), {
+          description: t("profile.toasts.avatarRemoved.description"),
+        });
+      } else if (isAvatarOnlyUpdate) {
+        toast.success(t("profile.toasts.avatarUpdated.title"), {
+          description: t("profile.toasts.avatarUpdated.description"),
+        });
+      } else {
+        // General profile update (name, phone, locale, etc.) or mixed update
+        toast.success(t("profile.toasts.profileUpdated.title"), {
+          description: t("profile.toasts.profileUpdated.description"),
+        });
+      }
+    },
+    onError: (error) => {
+      // Error toast is handled in the component that calls the mutation
+      // This prevents duplicate error toasts
+      console.error("[useUpdateProfile] Profile update failed:", error);
     },
   });
 };

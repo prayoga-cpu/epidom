@@ -216,29 +216,29 @@ export default function EditProductDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl">
         {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-          <DialogTitle className="text-xl font-bold sm:text-2xl">
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
+          <DialogTitle className="text-lg font-bold sm:text-xl">
             {t("data.products.editTitle") || "Edit Product"}
           </DialogTitle>
-          <DialogDescription className="text-sm sm:text-base">
+          <DialogDescription className="text-xs sm:text-sm">
             Update product information. Changes will be saved to your inventory.
           </DialogDescription>
         </DialogHeader>
 
         {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
           <Form {...form}>
-            <form id="edit-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form id="edit-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
             {/* Basic Information */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">{t("data.products.sections.basicInfo")}</h3>
-              <div className="grid items-start gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.products.sections.basicInfo")}</h3>
+              <div className="grid items-start gap-1.5 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.products.form.name")} *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.products.form.name")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.namePlaceholder")} {...field} />
                       </FormControl>
@@ -251,12 +251,12 @@ export default function EditProductDialog({
                   control={form.control}
                   name="sku"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.products.form.sku")} *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.products.form.sku")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.skuPlaceholder")} {...field} />
                       </FormControl>
-                      <FormDescription>{t("data.products.form.skuHint")}</FormDescription>
+                      <FormDescription className="text-xs">{t("data.products.form.skuHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -267,12 +267,12 @@ export default function EditProductDialog({
                 control={form.control}
                 name="description"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("data.products.form.description")}</FormLabel>
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("data.products.form.description")}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder={t("data.products.form.descriptionPlaceholder")}
-                        className="min-h-[80px]"
+                        className="min-h-[55px] text-sm"
                         {...field}
                       />
                     </FormControl>
@@ -285,8 +285,8 @@ export default function EditProductDialog({
                 control={form.control}
                 name="category"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("data.products.form.category")} *</FormLabel>
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("data.products.form.category")} *</FormLabel>
                     <FormControl>
                       <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
                     </FormControl>
@@ -299,8 +299,8 @@ export default function EditProductDialog({
                 control={form.control}
                 name="recipeId"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("data.products.form.linkedRecipe")}</FormLabel>
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("data.products.form.linkedRecipe")}</FormLabel>
                     <Select
                       onValueChange={(value) =>
                         field.onChange(value === "none" ? undefined : value)
@@ -321,7 +321,7 @@ export default function EditProductDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>{t("data.products.form.recipeHint")}</FormDescription>
+                    <FormDescription className="text-xs">{t("data.products.form.recipeHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -329,15 +329,15 @@ export default function EditProductDialog({
             </div>
 
             {/* Pricing */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">{t("data.products.sections.pricing")}</h3>
-              <div className="grid items-start gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.products.sections.pricing")}</h3>
+              <div className="grid items-start gap-1.5 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="costPrice"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.products.form.costPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.products.form.costPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -350,7 +350,7 @@ export default function EditProductDialog({
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription>{t("data.products.form.costPriceHint")}</FormDescription>
+                      <FormDescription className="text-xs">{t("data.products.form.costPriceHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -360,8 +360,8 @@ export default function EditProductDialog({
                   control={form.control}
                   name="retailPrice"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.products.form.retailPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.products.form.retailPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -374,16 +374,16 @@ export default function EditProductDialog({
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription>{t("data.products.form.retailPriceHint")}</FormDescription>
+                      <FormDescription className="text-xs">{t("data.products.form.retailPriceHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
               {costPrice && costPrice > 0 && (
-                <div className="bg-muted rounded-lg p-3 text-sm">
+                <div className="bg-muted rounded-lg p-1.5 text-xs mt-1">
                   <p className="font-medium">{t("data.products.pricingSuggestions.title")}</p>
-                  <p className="text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-0.5">
                     {currency === "EUR" ? "€" : "$"}{suggestedRetailPrice} (2.5x markup)
                   </p>
                 </div>
@@ -391,15 +391,15 @@ export default function EditProductDialog({
             </div>
 
             {/* Stock Management */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">{t("data.products.sections.stockManagement")}</h3>
-              <div className="grid items-start gap-4 sm:grid-cols-4">
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.products.sections.stockManagement")}</h3>
+              <div className="grid items-start gap-1.5 sm:grid-cols-4">
                 <FormField
                   control={form.control}
                   name="unit"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.products.form.unit")} *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.products.form.unit")} *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -425,8 +425,8 @@ export default function EditProductDialog({
                   control={form.control}
                   name="currentStock"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.products.form.currentStock")} *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.products.form.currentStock")} *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -447,8 +447,8 @@ export default function EditProductDialog({
                   control={form.control}
                   name="minStock"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.products.form.minStock")} *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.products.form.minStock")} *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -460,7 +460,7 @@ export default function EditProductDialog({
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription>{t("data.products.form.minStockHint")}</FormDescription>
+                      <FormDescription className="text-xs">{t("data.products.form.minStockHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -470,8 +470,8 @@ export default function EditProductDialog({
                   control={form.control}
                   name="maxStock"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("data.products.form.maxStock")} *</FormLabel>
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.products.form.maxStock")} *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -483,7 +483,7 @@ export default function EditProductDialog({
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription>{t("data.products.form.maxStockHint")}</FormDescription>
+                      <FormDescription className="text-xs">{t("data.products.form.maxStockHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -495,7 +495,7 @@ export default function EditProductDialog({
         </div>
 
         {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-4">
+        <div className="shrink-0 border-t border-border px-6 py-1.5">
           <div className="flex justify-end gap-3">
             <Button
               type="button"

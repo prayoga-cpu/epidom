@@ -204,6 +204,8 @@ export function useRecipes(storeId: string, filters: RecipeFilterInput) {
     queryKey: ["recipes", storeId, filters],
     queryFn: () => fetchRecipes(storeId, filters),
     enabled: !!storeId,
+    // Refetch on window focus to ensure latest material stock data
+    refetchOnWindowFocus: true,
   });
 }
 

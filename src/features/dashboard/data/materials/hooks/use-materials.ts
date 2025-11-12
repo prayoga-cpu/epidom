@@ -116,6 +116,9 @@ export function useCreateMaterial(storeId: string) {
       queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
       // Invalidate stock movements (initial stock movement may have been created)
       queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+      // Invalidate recipes cache - recipes include material data with currentStock
+      // This ensures Management > Start Production shows updated material stock
+      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
     },
   });
 }
@@ -155,6 +158,9 @@ export function useUpdateMaterial(storeId: string, id: string) {
       queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
       // Invalidate stock movements (new movement may have been created)
       queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+      // Invalidate recipes cache - recipes include material data with currentStock
+      // This ensures Management > Start Production shows updated material stock
+      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
     },
   });
 }
@@ -186,6 +192,9 @@ export function useDeleteMaterial(storeId: string) {
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
       // Invalidate alerts (deleted material may affect alerts)
       queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Invalidate recipes cache - recipes include material data with currentStock
+      // This ensures Management > Start Production shows updated material stock
+      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
     },
   });
 }
@@ -224,6 +233,9 @@ export function useBulkDeleteMaterials(storeId: string) {
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
       // Invalidate alerts (deleted materials may affect alerts)
       queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Invalidate recipes cache - recipes include material data with currentStock
+      // This ensures Management > Start Production shows updated material stock
+      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
     },
   });
 }

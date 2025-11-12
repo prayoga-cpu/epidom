@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +34,30 @@ export function RecipeProductionCard() {
     skip: 0,
     take: 100,
   });
+
+  // Update selectedRecipe when recipesData updates (e.g., after material stock changes)
+  // This ensures the selected recipe always has the latest material stock data
+  useEffect(() => {
+    if (selectedRecipe?.id && recipesData?.recipes) {
+      const updatedRecipe = recipesData.recipes.find((r) => r.id === selectedRecipe.id);
+      if (updatedRecipe) {
+        // Only update if material stock data has actually changed
+        // Compare currentStock values to avoid unnecessary updates
+        const hasStockChanged = updatedRecipe.ingredients.some((ing, idx) => {
+          const oldIng = selectedRecipe.ingredients?.[idx];
+          return (
+            oldIng &&
+            Number(oldIng.material.currentStock) !== Number(ing.material.currentStock)
+          );
+        });
+
+        if (hasStockChanged) {
+          setSelectedRecipe(updatedRecipe);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipesData?.recipes]);
 
   // Fetch active production batches for selected recipe
   const { data: batchesData, isLoading: batchesLoading } = useProductionBatches(storeId, {

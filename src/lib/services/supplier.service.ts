@@ -103,7 +103,8 @@ export class SupplierService {
   }
 
   /**
-   * Delete supplier (soft delete)
+   * Delete supplier (hard delete)
+   * WARNING: This will permanently delete the supplier and cascade delete related records
    */
   async deleteSupplier(supplierId: string, storeId: string): Promise<void> {
     // Verify supplier belongs to store
@@ -116,7 +117,8 @@ export class SupplierService {
   }
 
   /**
-   * Bulk delete suppliers (soft delete)
+   * Bulk delete suppliers (hard delete)
+   * WARNING: This will permanently delete suppliers and cascade delete related records
    */
   async bulkDeleteSuppliers(supplierIds: string[], storeId: string): Promise<{ deletedCount: number }> {
     // Verify all suppliers belong to the store

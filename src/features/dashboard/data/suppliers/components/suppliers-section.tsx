@@ -219,22 +219,12 @@ export function SuppliersSection() {
     );
   }
 
-  // Show error state
-  if (error) {
-    return (
-      <Card className="overflow-hidden shadow-md">
-        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
-          <p className="text-destructive">{t("messages.errorLoadingSuppliers")}</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            {t("common.actions.retry")}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Show upgrade prompt if no access (from hook or from API error 403)
+  const isSubscriptionLocked =
+    (!isLoadingAccess && !supplierManagementAccess) ||
+    (error && ((error as any).code === "SUBSCRIPTION_FEATURE_LOCKED" || (error as any).status === 403));
 
-  // Show upgrade prompt if no access
-  if (!isLoadingAccess && !supplierManagementAccess) {
+  if (isSubscriptionLocked) {
     return (
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
@@ -243,22 +233,29 @@ export function SuppliersSection() {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-4 py-12">
-          <Alert className="max-w-md border-orange-200 bg-orange-50 dark:bg-orange-950">
-            <Lock className="h-4 w-4 text-orange-600" />
-            <AlertTitle className="text-orange-900 dark:text-orange-100">
-              Supplier Management Locked
-            </AlertTitle>
-            <AlertDescription className="text-orange-800 dark:text-orange-200">
-              Supplier Management is only available in Pro and Enterprise plans. Upgrade to access
-              this feature and manage your suppliers efficiently.
-            </AlertDescription>
-          </Alert>
+          <p className="text-muted-foreground text-center">
+            {t("data.suppliers.locked")}
+          </p>
           <Button
             onClick={() => router.push("/pricing")}
             className="bg-[var(--color-brand-primary)] hover:opacity-90"
           >
-            Upgrade to Pro
+            {t("billing.upgradeToPro")}
             <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error state for other errors
+  if (error) {
+    return (
+      <Card className="overflow-hidden shadow-md">
+        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
+          <p className="text-destructive">{t("messages.errorLoadingSuppliers")}</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            {t("common.actions.retry")}
           </Button>
         </CardContent>
       </Card>
@@ -274,25 +271,29 @@ export function SuppliersSection() {
               {t("data.suppliers.pageTitle")}
             </CardTitle>
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                disabled={exportSuppliers.isPending || !advancedReportsAccess}
-                className="w-full md:w-auto"
-                title={
-                  !advancedReportsAccess
-                    ? "Advanced Reports is only available in Pro and Enterprise plans"
-                    : undefined
-                }
-              >
-                {exportSuppliers.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExport}
+                    disabled={exportSuppliers.isPending || !advancedReportsAccess}
+                    className="w-full md:w-auto"
+                  >
+                    {exportSuppliers.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {t("common.actions.export")}
+                  </Button>
+                </TooltipTrigger>
+                {!advancedReportsAccess && (
+                  <TooltipContent>
+                    <p>{t("billing.advancedReportsOnly")}</p>
+                  </TooltipContent>
                 )}
-                {t("common.actions.export")}
-              </Button>
+              </Tooltip>
               <AddSupplierDialog>
                 <Button size="sm" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />

@@ -27,7 +27,10 @@ import {
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
 import { BulkAdjustmentDialog } from "./bulk-adjustment-dialog";
 import { AdjustmentHistoryDialog } from "./adjustment-history-dialog";
+import { CSVImportDialog } from "./csv-import-dialog";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ItemType = "material" | "product";
 
@@ -49,6 +52,7 @@ export function EditStockCard() {
   const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params?.storeId as string;
+  const { advancedReportsAccess } = useFeatureAccess();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -58,6 +62,7 @@ export function EditStockCard() {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
   const [historyItemType, setHistoryItemType] = useState<ItemType>("material");
+  const [csvImportDialogOpen, setCsvImportDialogOpen] = useState(false);
 
   // Fetch materials from API
   const { data: materialsData, isLoading } = useMaterials(storeId);
@@ -157,13 +162,9 @@ export function EditStockCard() {
       }));
   }, [allStockItems, selectedItems]);
 
-  // Handle CSV import (placeholder)
+  // Handle CSV import
   const handleCSVImport = () => {
-    toast({
-      title: t("management.editStock.importCSV"),
-      description: t("management.editStock.importCSVDescription"),
-    });
-    // TODO: Implement CSV import functionality
+    setCsvImportDialogOpen(true);
   };
 
   // Export data
@@ -201,11 +202,43 @@ export function EditStockCard() {
           </div>
 
           <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
-            <Button variant="outline" size="sm" onClick={handleCSVImport} className="w-full md:w-auto">
-              <Upload className="mr-2 h-4 w-4" />
-              {t("management.editStock.importCSV")}
-            </Button>
-            <ExportButton data={exportData} filename="stock-inventory" size="sm" className="w-full md:w-auto" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCSVImport}
+                  disabled={!advancedReportsAccess}
+                  className="w-full md:w-auto"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {t("management.editStock.importCSV")}
+                </Button>
+              </TooltipTrigger>
+              {!advancedReportsAccess && (
+                <TooltipContent>
+                  <p>{t("billing.advancedReportsOnly")}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <ExportButton
+                    data={exportData}
+                    filename="stock-inventory"
+                    size="sm"
+                    disabled={!advancedReportsAccess}
+                    className="w-full md:w-auto"
+                  />
+                </div>
+              </TooltipTrigger>
+              {!advancedReportsAccess && (
+                <TooltipContent>
+                  <p>{t("billing.advancedReportsOnly")}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
           </div>
         </div>
 
@@ -446,6 +479,12 @@ export function EditStockCard() {
         onOpenChange={setHistoryDialogOpen}
         itemId={historyItemId}
         itemType={historyItemType}
+      />
+
+      {/* CSV Import Dialog */}
+      <CSVImportDialog
+        open={csvImportDialogOpen}
+        onOpenChange={setCsvImportDialogOpen}
       />
     </>
   );

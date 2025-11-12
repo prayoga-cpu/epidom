@@ -13,24 +13,24 @@ datasource db {
 }
 
 model User {
-  id                      String        @id @default(cuid())
-  name                    String?
-  email                   String        @unique
-  password                String
-  emailVerified           DateTime?
-  image                   String?
-  phone                   String?
-  locale                  String        @default("en")
-  timezone                String        @default("UTC")
-  currency                String        @default("EUR")
-  stripeConnectAccountId  String?       @unique // Stripe Connect account for receiving 80% of subscription revenue
-  stripeConnectOnboarded  Boolean       @default(false) // Track if Connect onboarding is complete
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-  accounts                Account[]
-  alerts                  Alert[]
-  business                Business?
-  subscription            Subscription?
+  id                     String        @id @default(cuid())
+  name                   String?
+  email                  String        @unique
+  password               String
+  emailVerified          DateTime?
+  image                  String?
+  phone                  String?
+  locale                 String        @default("en")
+  timezone               String        @default("UTC")
+  currency               String        @default("EUR")
+  stripeConnectAccountId String?       @unique // Stripe Connect account for receiving 80% of subscription revenue
+  stripeConnectOnboarded Boolean       @default(false) // Track if Connect onboarding is complete
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  accounts               Account[]
+  alerts                 Alert[]
+  business               Business?
+  subscription           Subscription?
 
   @@map("users")
 }
@@ -123,7 +123,7 @@ model Subscription {
 
 model Product {
   id                String            @id @default(cuid())
-  sku               String            @unique
+  sku               String
   name              String
   description       String?
   category          String?
@@ -146,6 +146,7 @@ model Product {
   store             Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
   stockMovements    StockMovement[]
 
+  @@unique([storeId, sku])
   @@index([storeId])
   @@index([category])
   @@index([recipeId])
@@ -155,7 +156,7 @@ model Product {
 
 model Material {
   id                 String              @id @default(cuid())
-  sku                String              @unique
+  sku                String
   name               String
   description        String?
   category           String?
@@ -174,6 +175,7 @@ model Material {
   stockMovements     StockMovement[]
   supplierOrderItems SupplierOrderItem[]
 
+  @@unique([storeId, sku])
   @@index([storeId])
   @@index([category])
   @@index([isActive])
@@ -424,8 +426,8 @@ model Alert {
 
 model ExchangeRate {
   id           String   @id @default(cuid())
-  fromCurrency String   // Base currency (EUR)
-  toCurrency   String   // Target currency (USD)
+  fromCurrency String // Base currency (EUR)
+  toCurrency   String // Target currency (USD)
   rate         Decimal  @db.Decimal(10, 6) // Exchange rate with 6 decimal precision
   fetchedAt    DateTime @default(now()) // When the rate was fetched
   expiresAt    DateTime // When the cached rate expires

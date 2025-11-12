@@ -1466,6 +1466,9 @@ export const id = {
           description: "{count} pemasok telah berhasil dihapus.",
         },
       },
+
+      // Locked message
+      locked: "Tingkatkan ke Pro untuk mengakses Manajemen Pemasok.",
     },
   },
   filters: {
@@ -1541,6 +1544,7 @@ export const id = {
     role: "Peran",
     recipe: "Resep",
     name: "Nama",
+    supplier: "Pemasok",
   },
   actions: {
     view: "Lihat",
@@ -2220,6 +2224,20 @@ export const id = {
       viewHistory: "Lihat Riwayat",
       importCSV: "Impor CSV",
       importCSVDescription: "Fitur impor CSV akan segera hadir",
+      importCSVDialog: {
+        title: "Impor Stok dari CSV",
+        description: "Unggah file CSV untuk memperbarui level stok. CSV harus memiliki kolom: SKU, Tipe (material/product), Stok Saat Ini",
+        formatTitle: "Format CSV",
+        formatDescription: "File CSV Anda harus memiliki kolom berikut: SKU, Tipe (material atau product), Stok Saat Ini",
+        selectFile: "Klik untuk memilih file CSV",
+        fileHint: "Hanya file CSV",
+        invalidFile: "Harap pilih file CSV",
+        importButton: "Impor Stok",
+        successTitle: "Impor Berhasil",
+        partialSuccessTitle: "Impor Selesai dengan Error",
+        resultsSummary: "Berhasil mengimpor {success} item, {failed} gagal dari {total} total",
+        resultsTitle: "Hasil Impor",
+      },
 
       // Adjustment Types
       adjustmentType: "Tipe Penyesuaian",
@@ -2746,6 +2764,7 @@ export const id = {
     subscriptionRequired: "Langganan aktif diperlukan untuk mengakses dasbor.",
     upgradePro: "Tingkatkan ke Pro untuk menambahkan lebih banyak toko.",
     storeLimitReached: "Anda telah mencapai batas toko paket Anda ({current}/{limit}).",
+    advancedReportsOnly: "Laporan Lanjutan hanya tersedia di paket Pro dan Enterprise",
     status: {
       active: "Aktif",
       canceled: "Dibatalkan",

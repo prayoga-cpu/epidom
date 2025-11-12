@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,21 +21,40 @@ import { toast } from "sonner";
  * Dialog for creating a new store
  * Uses shared StoreForm component (DRY principle)
  * Refactored from CreateStoreButton with proper validation and API integration
+ * 
+ * IMPORTANT: Includes debounce to prevent multiple clicks and race conditions
  */
 export function CreateStoreDialog() {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const { mutate: createStore, isPending } = useCreateStore();
+  const isSubmittingRef = useRef(false);
+
+  // Reset submitting flag when dialog closes
+  useEffect(() => {
+    if (!open) {
+      isSubmittingRef.current = false;
+    }
+  }, [open]);
 
   const handleSubmit = (data: CreateStoreInput) => {
+    // Prevent multiple submissions (debounce)
+    if (isSubmittingRef.current || isPending) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
+
     createStore(data, {
       onSuccess: () => {
         toast.success(t("stores.createSuccess") || "Store created successfully");
         setOpen(false);
+        isSubmittingRef.current = false;
         // Form will be reset when dialog closes and reopens
       },
       onError: (error) => {
         toast.error(error.message || t("stores.createError") || "Failed to create store");
+        isSubmittingRef.current = false;
       },
     });
   };
@@ -91,10 +110,12 @@ export function CreateStoreDialog() {
             <Button
               type="submit"
               form="create-store-form"
-              disabled={isPending}
+              disabled={isPending || isSubmittingRef.current}
               className="w-full sm:w-auto"
             >
-              {isPending ? t("actions.saving") || "Saving..." : t("actions.save") || "Save"}
+              {isPending || isSubmittingRef.current
+                ? t("actions.saving") || "Saving..."
+                : t("actions.save") || "Save"}
             </Button>
           </div>
         </div>

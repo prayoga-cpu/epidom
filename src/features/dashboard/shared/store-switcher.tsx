@@ -54,7 +54,7 @@ export function StoreSwitcher() {
 
   // Loading state
   if (isLoading) {
-    return <Skeleton className="h-9 w-[140px] sm:w-[160px] lg:w-[180px]" />;
+    return <Skeleton className="h-9 w-[140px] rounded-2xl sm:w-[160px] lg:w-[180px]" />;
   }
 
   // No stores available
