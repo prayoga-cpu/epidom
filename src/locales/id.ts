@@ -1857,9 +1857,9 @@ export const id = {
         logout: "Keluar",
         updateProfile: "Profil diperbarui",
         updateBusiness: "Informasi bisnis diperbarui",
-        createMaterial: "Material dibuat",
-        updateMaterial: "Material diperbarui",
-        deleteMaterial: "Material dihapus",
+        createMaterial: "Bahan baku dibuat",
+        updateMaterial: "Bahan baku diperbarui",
+        deleteMaterial: "Bahan baku dihapus",
         createRecipe: "Resep dibuat",
         updateRecipe: "Resep diperbarui",
         deleteRecipe: "Resep dihapus",
@@ -2226,9 +2226,9 @@ export const id = {
       importCSVDescription: "Fitur impor CSV akan segera hadir",
       importCSVDialog: {
         title: "Impor Stok dari CSV",
-        description: "Unggah file CSV untuk memperbarui level stok. CSV harus memiliki kolom: SKU, Tipe (material/product), Stok Saat Ini",
+        description: "Unggah file CSV untuk memperbarui level stok. CSV harus memiliki kolom: SKU, Tipe (bahan baku/product), Stok Saat Ini",
         formatTitle: "Format CSV",
-        formatDescription: "File CSV Anda harus memiliki kolom berikut: SKU, Tipe (material atau product), Stok Saat Ini",
+        formatDescription: "File CSV Anda harus memiliki kolom berikut: SKU, Tipe (bahan baku atau product), Stok Saat Ini",
         selectFile: "Klik untuk memilih file CSV",
         fileHint: "Hanya file CSV",
         invalidFile: "Harap pilih file CSV",
@@ -2511,7 +2511,7 @@ export const id = {
 
     // Table headers
     dateTime: "Tanggal & Waktu",
-    material: "Material",
+    material: "Bahan Baku",
     product: "Produk",
     type: "Tipe",
     quantity: "Jumlah",
@@ -2555,7 +2555,7 @@ export const id = {
     currentStock: "Stok Saat Ini",
 
     // Forms
-    selectMaterial: "Pilih Material",
+    selectMaterial: "Pilih Bahan Baku",
     selectProduct: "Pilih Produk",
     selectItem: "Pilih Item",
     movementType: "Tipe Pergerakan",
@@ -2564,7 +2564,7 @@ export const id = {
     additionalNotes: "Catatan Tambahan",
     referenceNumber: "Nomor Referensi",
     itemType: "Tipe Item",
-    materialType: "Material",
+    materialType: "Bahan Baku",
     productType: "Produk",
 
     // Reasons
@@ -2703,7 +2703,7 @@ export const id = {
       },
       noStock: {
         title: "Tidak ada item stok",
-        description: "Tambahkan material atau produk untuk mulai melacak inventori.",
+        description: "Tambahkan bahan baku atau produk untuk mulai melacak inventori.",
       },
     },
   },

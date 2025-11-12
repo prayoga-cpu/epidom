@@ -974,28 +974,28 @@ export const fr = {
     // Materials section
     materials: {
       pageTitle: "Matières premières",
-      addTitle: "Ajouter un Nouveau Matériau",
-      addButton: "Ajouter un Matériau",
+      addTitle: "Ajouter une Nouvelle Matière première",
+      addButton: "Ajouter une Matière première",
       addDescription:
-        "Ajoutez un nouveau matériau à votre inventaire. Remplissez tous les champs obligatoires.",
-      editTitle: "Modifier le Matériau",
-      editDescription: "Mettre à jour les informations du matériau",
-      detailsTitle: "Détails du Matériau",
-      detailsDescription: "Voir les informations complètes sur ce matériau",
-      title: "Matériaux",
-      unknownMaterial: "Matériau Inconnu",
+        "Ajoutez une nouvelle matière première à votre inventaire. Remplissez tous les champs obligatoires.",
+      editTitle: "Modifier la Matière première",
+      editDescription: "Mettre à jour les informations de la matière première",
+      detailsTitle: "Détails de la Matière première",
+      detailsDescription: "Voir les informations complètes sur cette matière première",
+      title: "Matières premières",
+      unknownMaterial: "Matière première Inconnue",
       noDescription: "Aucune description fournie",
 
       // Form fields
       form: {
-        name: "Nom du Matériau",
+        name: "Nom de la Matière première",
         namePlaceholder: "ex : Farine, Sucre, Beurre",
         category: "Catégorie",
         selectCategory: "Sélectionner une catégorie",
         supplier: "Fournisseur",
         selectSupplier: "Sélectionner un fournisseur",
         addSupplier: "Ajouter un Fournisseur",
-        noSuppliersYet: "Aucun fournisseur ajouté pour le moment. Cliquez sur \"Ajouter un Fournisseur\" pour lier des fournisseurs à ce matériau.",
+        noSuppliersYet: "Aucun fournisseur ajouté pour le moment. Cliquez sur \"Ajouter un Fournisseur\" pour lier des fournisseurs à cette matière première.",
         quantity: "Quantité",
         unit: "Unité",
         selectUnit: "Unité",
@@ -1003,9 +1003,9 @@ export const fr = {
         cost: "Coût par Unité ($)",
         costPlaceholder: "25.00",
         notes: "Notes (Optionnel)",
-        notesPlaceholder: "Informations supplémentaires sur ce matériau...",
+        notesPlaceholder: "Informations supplémentaires sur cette matière première...",
         description: "Description",
-        descriptionPlaceholder: "Informations supplémentaires sur ce matériau...",
+        descriptionPlaceholder: "Informations supplémentaires sur cette matière première...",
         categoryPlaceholder: "ex: Céréales, Produits Laitiers",
         selectSupplierPlaceholder: "Sélectionner un fournisseur...",
         unitCost: "Coût Unitaire",
@@ -1014,7 +1014,7 @@ export const fr = {
         maxStockLevel: "Niveau de Stock Maximum",
         supplierPrice: "Prix",
         preferred: "Préféré",
-        chooseSupplier: "Choisir un fournisseur pour ce matériau",
+        chooseSupplier: "Choisir un fournisseur pour cette matière première",
         alertMinStock: "Alerte lorsque le stock tombe en dessous de ce niveau",
         alertMaxStock: "Alerte lorsque le stock dépasse ce niveau",
       },
@@ -1047,28 +1047,28 @@ export const fr = {
 
       // Tooltips
       tooltips: {
-        view: "Voir le Matériau",
-        edit: "Modifier le Matériau",
-        delete: "Supprimer le Matériau",
+        view: "Voir la Matière première",
+        edit: "Modifier la Matière première",
+        delete: "Supprimer la Matière première",
       },
 
       // Toasts
       toasts: {
         added: {
-          title: "Matériau Ajouté avec Succès",
+          title: "Matière première Ajoutée avec Succès",
           description: "{name} a été ajouté à votre inventaire.",
         },
         updated: {
-          title: "Matériau Mis à Jour avec Succès",
+          title: "Matière première Mise à Jour avec Succès",
           description: "{name} a été mis à jour.",
         },
         deleted: {
-          title: "Matériau Supprimé",
+          title: "Matière première Supprimée",
           description: "{name} a été supprimé avec succès.",
         },
         bulkDeleted: {
-          title: "Matériaux Supprimés",
-          description: "{count} matériaux ont été supprimés avec succès.",
+          title: "Matières premières Supprimées",
+          description: "{count} Matières premières ont été supprimées avec succès.",
         },
       },
       details: {
@@ -1089,7 +1089,7 @@ export const fr = {
         lastUpdated: "Dernière Mise à Jour",
       },
       deleteConfirm: {
-        title: "Supprimer le Matériau",
+        title: "Supprimer la Matière première",
         description: "Êtes-vous sûr de vouloir supprimer \"{name}\" ? Cette action ne peut pas être annulée.",
       },
     },
@@ -1148,12 +1148,12 @@ export const fr = {
       // Ingredients
       ingredients: {
         title: "Ingrédients",
-        description: "Ajouter les matériaux nécessaires pour cette recette",
+        description: "Ajouter les Matières premières nécessaires pour cette recette",
         addIngredient: "Ajouter un Ingrédient",
         noIngredients:
           'Aucun ingrédient ajouté. Cliquez sur "Ajouter un Ingrédient" pour commencer.',
-        material: "Matériau",
-        selectMaterial: "Sélectionner un matériau",
+        material: "Matière première",
+        selectMaterial: "Sélectionner une matière première",
         quantity: "Quantité",
         unit: "Unité",
         notes: "Notes (optionnel)",
@@ -1592,15 +1592,15 @@ export const fr = {
     registrationFailed: "L'inscription a échoué. Veuillez réessayer.",
     noMatchingFilters:
       "Aucun élément ne correspond à vos filtres. Essayez d'ajuster votre recherche.",
-    noMaterialsFound: "Aucun matériau trouvé",
+    noMaterialsFound: "Aucune matière première trouvée",
     noRecipesFound: "Aucune recette trouvée",
     noProductsFound: "Aucun produit trouvé",
     noSuppliersFound: "Aucun fournisseur trouvé",
-    getStartedMaterial: "Commencez par ajouter votre premier matériau",
+    getStartedMaterial: "Commencez par ajouter votre première matière première",
     getStartedRecipe: "Commencez par créer votre première recette",
     getStartedProduct: "Commencez par ajouter votre premier produit",
     getStartedSupplier: "Commencez par ajouter votre premier fournisseur",
-    errorLoadingMaterials: "Erreur lors du chargement des matériaux",
+    errorLoadingMaterials: "Erreur lors du chargement des Matières premières",
     errorLoadingRecipes: "Erreur lors du chargement des recettes",
     errorLoadingProducts: "Erreur lors du chargement des produits",
     errorLoadingSuppliers: "Erreur lors du chargement des fournisseurs",
@@ -1611,11 +1611,11 @@ export const fr = {
     exportSuccessful: "Exportation réussie",
     exportFailed: "L'exportation a échoué",
     exportFailedDesc: "Une erreur s'est produite lors de l'exportation des données.",
-    failedToDeleteMaterial: "Échec de la suppression du matériau",
-    failedToDeleteMaterials: "Échec de la suppression des matériaux",
+    failedToDeleteMaterial: "Échec de la suppression de la matière première",
+    failedToDeleteMaterials: "Échec de la suppression des Matières premières",
     failedToDeleteSupplier: "Échec de la suppression du fournisseur",
     failedToDeleteSuppliers: "Échec de la suppression des fournisseurs",
-    failedToUpdateMaterial: "Échec de la mise à jour du matériau",
+    failedToUpdateMaterial: "Échec de la mise à jour de la matière première",
     failedToUpdateOrder: "Échec de la mise à jour de la commande",
     orderPlaced: "Commande marquée comme passée",
     orderPlacedError: "Échec du marquage de la commande comme passée",
@@ -1635,7 +1635,7 @@ export const fr = {
 
     // Table headers
     table: {
-      material: "Matériau",
+      material: "Matière première",
       currentStock: "Stock Actuel",
       minStock: "Stock Min",
       stockLevel: "Niveau de Stock",
@@ -1670,7 +1670,7 @@ export const fr = {
       title: "Détails de l'Alerte",
       description: "Voir les informations détaillées sur cette alerte de stock",
       alertInfo: "Informations sur l'Alerte",
-      materialInfo: "Informations sur le Matériau",
+      materialInfo: "Informations sur la Matière première",
       supplierInfo: "Informations sur le Fournisseur",
       stockLevel: "Niveau de Stock",
       ofMinimum: "du minimum",
@@ -1688,11 +1688,11 @@ export const fr = {
     // Create Order Dialog
     createOrderDialog: {
       title: "Créer un Rappel de Commande",
-      description: "Créer un rappel pour commander des matériaux auprès du fournisseur",
+      description: "Créer un rappel pour commander des Matières premières auprès du fournisseur",
       supplier: "Fournisseur",
       selectSupplier: "Sélectionner le fournisseur",
-      material: "Matériau",
-      selectMaterial: "Sélectionner le matériau",
+      material: "Matière première",
+      selectMaterial: "Sélectionner la matière première",
       quantity: "Quantité",
       suggested: "Suggéré",
       expectedDelivery: "Date de Livraison Prévue",
@@ -1706,7 +1706,7 @@ export const fr = {
 
     // Orders view
     contactInfo: "Informations de Contact",
-    materialsToOrder: "Matériaux à Commander",
+    materialsToOrder: "Matières premières à Commander",
     item: "article",
     items: "articles",
     current: "Actuel",
@@ -1868,9 +1868,9 @@ export const fr = {
         logout: "Déconnecté",
         updateProfile: "Profil mis à jour",
         updateBusiness: "Informations d'entreprise mises à jour",
-        createMaterial: "Matériau créé",
-        updateMaterial: "Matériau mis à jour",
-        deleteMaterial: "Matériau supprimé",
+        createMaterial: "Matière première créée",
+        updateMaterial: "Matière première mise à jour",
+        deleteMaterial: "Matière première supprimée",
         createRecipe: "Recette créée",
         updateRecipe: "Recette mise à jour",
         deleteRecipe: "Recette supprimée",
@@ -2352,16 +2352,16 @@ export const fr = {
       costPerBatch: "Coût par Lot",
       costPerUnit: "Coût par Unité",
       startProduction: "Démarrer la Production",
-      insufficientMaterials: "Matériaux insuffisants pour démarrer la production",
-      insufficientMaterialsWarning: "Certains matériaux sont en dessous des niveaux requis",
+      insufficientMaterials: "Matières premières insuffisantes pour démarrer la production",
+      insufficientMaterialsWarning: "Certaines Matières premières sont en dessous des niveaux requis",
       insufficientMaterialsHint:
-        "Veuillez réapprovisionner les matériaux insuffisants avant de commencer la production",
+        "Veuillez réapprovisionner les Matières premières insuffisantes avant de commencer la production",
 
       // Material Availability
-      materialAvailability: "Disponibilité des Matériaux",
+      materialAvailability: "Disponibilité des Matières premières",
       materialAvailabilityDescription:
         "Vérifier la disponibilité des ingrédients pour cette recette",
-      material: "Matériau",
+      material: "Matière première",
       required: "Requis",
       available: "Disponible",
       status: "Statut",
@@ -2495,7 +2495,7 @@ export const fr = {
       expectedTime: "Temps Prévu",
 
       ingredientConsumption: "Consommation d'Ingrédients",
-      material: "Matériau",
+      material: "Matière première",
       quantityUsed: "Quantité Utilisée",
       costPerUnit: "Coût/Unité",
       totalCost: "Coût Total",
