@@ -145,7 +145,7 @@ try {
 ```
 Request 1: Check limit → 0 stores → allowed ✅
            Create store → commit → 1 store
-           
+
 Request 2: Check limit → 0 stores → allowed ✅ (BUG: masih 0)
            Create store → commit → 2 stores ❌
 ```

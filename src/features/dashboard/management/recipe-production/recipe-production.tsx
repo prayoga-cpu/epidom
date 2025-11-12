@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/utils/formatting";
 import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import { useProductionBatches } from "./hooks/use-production-batches";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { hasMaterialStockChanged } from "./utils/recipe-helpers";
 
 export function RecipeProductionCard() {
   const { t } = useI18n();
@@ -35,29 +36,22 @@ export function RecipeProductionCard() {
     take: 100,
   });
 
-  // Update selectedRecipe when recipesData updates (e.g., after material stock changes)
+  // Memoize the updated recipe to avoid unnecessary recalculations
+  const updatedRecipe = useMemo(() => {
+    if (selectedRecipe?.id && recipesData?.recipes) {
+      return recipesData.recipes.find((r) => r.id === selectedRecipe.id);
+    }
+    return null;
+  }, [selectedRecipe?.id, recipesData?.recipes]);
+
+  // Update selectedRecipe when material stock changes
   // This ensures the selected recipe always has the latest material stock data
   useEffect(() => {
-    if (selectedRecipe?.id && recipesData?.recipes) {
-      const updatedRecipe = recipesData.recipes.find((r) => r.id === selectedRecipe.id);
-      if (updatedRecipe) {
-        // Only update if material stock data has actually changed
-        // Compare currentStock values to avoid unnecessary updates
-        const hasStockChanged = updatedRecipe.ingredients.some((ing, idx) => {
-          const oldIng = selectedRecipe.ingredients?.[idx];
-          return (
-            oldIng &&
-            Number(oldIng.material.currentStock) !== Number(ing.material.currentStock)
-          );
-        });
-
-        if (hasStockChanged) {
-          setSelectedRecipe(updatedRecipe);
-        }
-      }
+    if (updatedRecipe && hasMaterialStockChanged(selectedRecipe, updatedRecipe)) {
+      setSelectedRecipe(updatedRecipe);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipesData?.recipes]);
+  }, [updatedRecipe]); // Only depend on updatedRecipe to avoid infinite loops
 
   // Fetch active production batches for selected recipe
   const { data: batchesData, isLoading: batchesLoading } = useProductionBatches(storeId, {

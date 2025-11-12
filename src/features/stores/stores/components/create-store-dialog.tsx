@@ -21,7 +21,7 @@ import { toast } from "sonner";
  * Dialog for creating a new store
  * Uses shared StoreForm component (DRY principle)
  * Refactored from CreateStoreButton with proper validation and API integration
- * 
+ *
  * IMPORTANT: Includes debounce to prevent multiple clicks and race conditions
  */
 export function CreateStoreDialog() {

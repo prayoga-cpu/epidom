@@ -4,15 +4,11 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import type { ProfileData } from "../types";
-
-interface UpdateProfilePayload {
-  name?: string;
-  phone?: string;
-  locale?: string;
-  timezone?: string;
-  currency?: string;
-  image?: string;
-}
+import {
+  getProfileUpdateType,
+  buildSessionUpdate,
+  type UpdateProfilePayload,
+} from "../utils/profile-helpers";
 
 interface UpdateBusinessPayload {
   name?: string;
@@ -120,68 +116,50 @@ export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: updateProfile,
     onSuccess: async (data, variables) => {
-      console.log("[useUpdateProfile] Profile updated successfully:", data);
-      console.log("[useUpdateProfile] Profile image:", data.image);
-
-      // Determine if this is an avatar update (only image field changed, no other fields)
-      const hasImageUpdate = variables.image !== undefined;
-      const hasOtherUpdates =
-        variables.name !== undefined ||
-        variables.phone !== undefined ||
-        variables.locale !== undefined ||
-        variables.timezone !== undefined ||
-        variables.currency !== undefined;
-
-      const isAvatarOnlyUpdate = hasImageUpdate && !hasOtherUpdates;
-      const isAvatarRemoval = isAvatarOnlyUpdate && (variables.image === "" || variables.image === null);
+      // Determine update type for appropriate toast notification
+      const updateType = getProfileUpdateType(variables);
 
       // Invalidate the profile query to trigger refetch
       await queryClient.invalidateQueries({
         queryKey: ["profile", user?.id],
       });
 
-      // Update the NextAuth session to reflect new currency/locale/image
-      const sessionUpdate: Record<string, any> = {};
-
-      if (data.currency) sessionUpdate.currency = data.currency;
-      if (data.locale) sessionUpdate.locale = data.locale;
-      if (data.timezone) sessionUpdate.timezone = data.timezone;
-      if (data.name) sessionUpdate.name = data.name;
-      if (data.phone) sessionUpdate.phone = data.phone;
-
-      // Handle image: include null or empty string to remove image from session
-      if (data.image !== undefined) {
-        sessionUpdate.image = data.image || null; // Convert empty string to null
-      }
+      // Build session update object (only includes changed fields)
+      const sessionUpdate = buildSessionUpdate(data);
 
       // Only update session if there are changes
       if (Object.keys(sessionUpdate).length > 0) {
-        console.log("[useUpdateProfile] Session update payload:", sessionUpdate);
         await updateSession(sessionUpdate);
-        console.log("[useUpdateProfile] Session updated successfully");
       }
 
       // Show toast notification based on update type
       // Only show toast once in the mutation hook to prevent duplicates
-      if (isAvatarRemoval) {
-        toast.success(t("profile.toasts.avatarRemoved.title"), {
-          description: t("profile.toasts.avatarRemoved.description"),
-        });
-      } else if (isAvatarOnlyUpdate) {
-        toast.success(t("profile.toasts.avatarUpdated.title"), {
-          description: t("profile.toasts.avatarUpdated.description"),
-        });
-      } else {
-        // General profile update (name, phone, locale, etc.) or mixed update
-        toast.success(t("profile.toasts.profileUpdated.title"), {
-          description: t("profile.toasts.profileUpdated.description"),
-        });
+      switch (updateType) {
+        case "avatar-removal":
+          toast.success(t("profile.toasts.avatarRemoved.title"), {
+            description: t("profile.toasts.avatarRemoved.description"),
+          });
+          break;
+        case "avatar":
+          toast.success(t("profile.toasts.avatarUpdated.title"), {
+            description: t("profile.toasts.avatarUpdated.description"),
+          });
+          break;
+        case "profile":
+        default:
+          toast.success(t("profile.toasts.profileUpdated.title"), {
+            description: t("profile.toasts.profileUpdated.description"),
+          });
+          break;
       }
     },
     onError: (error) => {
       // Error toast is handled in the component that calls the mutation
       // This prevents duplicate error toasts
-      console.error("[useUpdateProfile] Profile update failed:", error);
+      // Only log in development to avoid console noise in production
+      if (process.env.NODE_ENV === "development") {
+        console.error("[useUpdateProfile] Profile update failed:", error);
+      }
     },
   });
 };

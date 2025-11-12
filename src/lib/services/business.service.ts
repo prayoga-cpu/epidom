@@ -129,7 +129,7 @@ export class BusinessService {
    * Create a store for a business
    * Uses transaction with lock to prevent race condition when checking store limit
    * This ensures that concurrent requests cannot create more stores than allowed
-   * 
+   *
    * IMPORTANT: This method performs the store limit check within the transaction
    * to prevent race conditions where multiple requests check the limit simultaneously
    * and both pass validation before either creates a store.

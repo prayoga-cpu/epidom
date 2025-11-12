@@ -204,7 +204,10 @@ export function useRecipes(storeId: string, filters: RecipeFilterInput) {
     queryKey: ["recipes", storeId, filters],
     queryFn: () => fetchRecipes(storeId, filters),
     enabled: !!storeId,
+    staleTime: 30 * 1000, // 30 seconds - reduce unnecessary refetches
+    gcTime: 5 * 60 * 1000, // 5 minutes
     // Refetch on window focus to ensure latest material stock data
+    // But only if data is stale (staleTime helps prevent excessive refetches)
     refetchOnWindowFocus: true,
   });
 }
