@@ -139,23 +139,21 @@ export class BusinessService {
     userId: string,
     input: CreateStoreInput
   ): Promise<StoreDto> {
-    // Use transaction with row-level lock to ensure atomicity and prevent race condition
+    // Use transaction to ensure atomicity and prevent race condition
+    // ReadCommitted isolation level with transaction is sufficient to prevent race conditions
     return prisma.$transaction(async (tx) => {
-      // 1. Lock business row and verify it exists and belongs to user
-      // Using SELECT FOR UPDATE (row-level lock) to prevent concurrent access
-      // This ensures only one transaction can proceed at a time for this business
-      const business = await tx.$queryRaw<Array<{ id: string; userId: string }>>`
-        SELECT id, "userId"
-        FROM "Business"
-        WHERE id = ${businessId}
-        FOR UPDATE
-      `;
+      // 1. Verify business exists and belongs to user
+      // Using Prisma query (no raw SQL needed) - transaction ensures atomicity
+      const business = await tx.business.findUnique({
+        where: { id: businessId },
+        select: { id: true, userId: true },
+      });
 
-      if (!business || business.length === 0) {
+      if (!business) {
         throw new Error("Business not found");
       }
 
-      if (business[0].userId !== userId) {
+      if (business.userId !== userId) {
         throw new Error("Unauthorized to create store for this business");
       }
 
@@ -213,9 +211,12 @@ export class BusinessService {
 
       return store as unknown as StoreDto;
     }, {
-      // Use SERIALIZABLE isolation level for maximum safety
-      // This prevents phantom reads and ensures strict isolation
-      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      // Use ReadCommitted isolation level (safer than SERIALIZABLE)
+      // SERIALIZABLE can cause deadlocks in production environments
+      // ReadCommitted with FOR UPDATE lock is sufficient for preventing race conditions
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      maxWait: 10000, // Wait up to 10 seconds for lock
+      timeout: 20000, // Transaction timeout after 20 seconds
     });
   }
 

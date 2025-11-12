@@ -11,7 +11,7 @@ export interface UpdateProfilePayload {
 
 /**
  * Determine the type of profile update for appropriate toast notification
- * 
+ *
  * @param variables - The update payload
  * @returns Update type: 'avatar' | 'avatar-removal' | 'profile'
  */
@@ -47,7 +47,7 @@ export function getProfileUpdateType(
 /**
  * Build session update object from profile data
  * Only includes fields that have values to avoid unnecessary updates
- * 
+ *
  * @param data - Updated profile data
  * @returns Session update object with only changed fields
  */

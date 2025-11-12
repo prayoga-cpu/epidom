@@ -16,7 +16,7 @@ export interface Recipe {
 /**
  * Check if material stock has changed between two recipes
  * Performs shallow comparison of currentStock values
- * 
+ *
  * @param oldRecipe - Previous recipe state
  * @param newRecipe - Updated recipe state
  * @returns true if stock has changed, false otherwise
