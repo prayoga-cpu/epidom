@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supplierService } from "@/lib/services/supplier.service";
+import { subscriptionService } from "@/lib/services";
 import { bulkDeleteSchema } from "@/lib/validation/inventory.schemas";
+import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
 
 /**
@@ -15,6 +17,22 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    if (!hasAccess) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
+          "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
+          {
+            feature: "supplierManagement",
+            upgradeRequired: true,
+          }
+        ),
+        { status: 403 }
+      );
     }
 
     const { id: storeId } = await params;

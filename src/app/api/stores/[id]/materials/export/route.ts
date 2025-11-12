@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { materialService } from "@/lib/services/material.service";
-import { businessService } from "@/lib/services";
+import { businessService, subscriptionService } from "@/lib/services";
 import { materialFilterSchema } from "@/lib/validation/inventory.schemas";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
@@ -24,6 +24,22 @@ export async function GET(
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
         { status: 401 }
+      );
+    }
+
+    // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
+    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(session.user.id);
+    if (!hasAccess) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
+          "Advanced Reports (Export) is only available in Pro and Enterprise plans. Upgrade to access this feature.",
+          {
+            feature: "advancedReports",
+            upgradeRequired: true,
+          }
+        ),
+        { status: 403 }
       );
     }
 
