@@ -8,7 +8,7 @@ import { QueryClient } from "@tanstack/react-query";
 /**
  * Invalidate multiple related queries efficiently
  * Uses Promise.all for parallel invalidation (better performance than sequential)
- * 
+ *
  * @param queryClient - TanStack Query client
  * @param queries - Array of query keys to invalidate
  */
@@ -30,7 +30,7 @@ export async function invalidateQueriesBatch(
 /**
  * Invalidate store-related queries after material changes
  * Optimized to batch all invalidations in parallel for better performance
- * 
+ *
  * @param queryClient - TanStack Query client
  * @param storeId - Store ID
  */

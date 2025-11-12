@@ -145,10 +145,35 @@ export async function POST(request: Request) {
         );
       }
 
-      console.error("Error creating store:", error.message);
+      // Check if it's a business not found or unauthorized error
+      if (error.message.includes("Business not found") || error.message.includes("Unauthorized")) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.UNAUTHORIZED, error.message),
+          { status: 403 }
+        );
+      }
+
+      // Check if it's a transaction timeout or deadlock error
+      if (
+        error.message.includes("timeout") ||
+        error.message.includes("deadlock") ||
+        error.message.includes("lock") ||
+        error.message.includes("P2034") // Prisma transaction timeout error code
+      ) {
+        console.error("Transaction error creating store:", error.message, error);
+        return NextResponse.json(
+          createErrorResponse(
+            ApiErrorCode.INTERNAL_ERROR,
+            "The request is taking too long. Please try again in a moment."
+          ),
+          { status: 503 } // Service Unavailable
+        );
+      }
+
+      console.error("Error creating store:", error.message, error);
     }
 
-    console.error("Error creating store:", error);
+    console.error("Unexpected error creating store:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
