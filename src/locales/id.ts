@@ -986,6 +986,8 @@ export const id = {
       form: {
         name: "Nama Bahan",
         namePlaceholder: "contoh: Tepung, Gula, Mentega",
+        sku: "SKU",
+        skuPlaceholder: "contoh: FLR-T55-25KG",
         category: "Kategori",
         selectCategory: "Pilih kategori",
         supplier: "Pemasok",

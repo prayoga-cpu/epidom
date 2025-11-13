@@ -990,6 +990,8 @@ export const fr = {
       form: {
         name: "Nom de la Matière première",
         namePlaceholder: "ex : Farine, Sucre, Beurre",
+        sku: "SKU",
+        skuPlaceholder: "ex : FLR-T55-25KG",
         category: "Catégorie",
         selectCategory: "Sélectionner une catégorie",
         supplier: "Fournisseur",
