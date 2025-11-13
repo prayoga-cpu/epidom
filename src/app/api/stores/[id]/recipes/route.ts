@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { recipeService } from "@/lib/services/recipe.service";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 // Validation schema for creating recipe
 const createRecipeSchema = z.object({
@@ -43,13 +43,17 @@ const recipeFilterSchema = z.object({
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId } = await params;
+    const { store } = result;
+    const storeId = store.id;
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -65,21 +69,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const filters = recipeFilterSchema.parse(filterParams);
 
     // Get recipes from service
-    const result = await recipeService.getRecipes(storeId, filters);
+    const recipesData = await recipeService.getRecipes(storeId, filters);
 
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(createSuccessResponse(recipesData), { status: 200 });
   } catch (error) {
     console.error("Error fetching recipes:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid filter parameters",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch recipes" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to fetch recipes"
+      ),
       { status: 500 }
     );
   }
@@ -91,13 +105,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId } = await params;
+    const { store } = result;
+    const storeId = store.id;
     const body = await request.json();
 
     // Validate request body
@@ -109,13 +127,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ...validatedData,
     });
 
-    return NextResponse.json(recipe, { status: 201 });
+    return NextResponse.json(createSuccessResponse(recipe), { status: 201 });
   } catch (error) {
     console.error("Error creating recipe:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid input data",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
@@ -123,15 +148,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (error instanceof Error) {
       // Handle specific business logic errors
       if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 409 }
+        );
       }
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create recipe" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to create recipe"
+      ),
       { status: 500 }
     );
   }

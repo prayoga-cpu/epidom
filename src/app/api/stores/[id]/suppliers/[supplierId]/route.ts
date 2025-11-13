@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { supplierService } from "@/lib/services/supplier.service";
 import { subscriptionService } from "@/lib/services";
 import { updateSupplierSchema } from "@/lib/validation/inventory.schemas";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * GET /api/stores/[id]/suppliers/[supplierId]
@@ -16,14 +15,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string; supplierId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
+    const { store, userId: verifiedUserId } = result;
+    const { id: storeId, supplierId } = resolvedParams;
+
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    // Note: This check is separate from store access verification because it's a feature-level
+    // permission that applies to the user, not the store. Even if the user has access to the store,
+    // they need the appropriate subscription plan to use supplier management features.
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(verifiedUserId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
@@ -38,26 +47,33 @@ export async function GET(
       );
     }
 
-    const { id: storeId, supplierId } = await params;
-
     // Get supplier from service
     const supplier = await supplierService.getSupplierById(supplierId);
 
     if (!supplier) {
-      return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Supplier not found"),
+        { status: 404 }
+      );
     }
 
     // Verify supplier belongs to store
     if (supplier.storeId !== storeId) {
-      return NextResponse.json({ error: "Supplier does not belong to this store" }, { status: 403 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Supplier does not belong to this store"),
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(supplier, { status: 200 });
+    return NextResponse.json(createSuccessResponse(supplier), { status: 200 });
   } catch (error) {
     console.error("Error fetching supplier:", error);
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch supplier" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to fetch supplier"
+      ),
       { status: 500 }
     );
   }
@@ -72,16 +88,24 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; supplierId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
+    const { store, userId: verifiedUserId } = result;
+    const { id: storeId, supplierId } = resolvedParams;
+
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    // Note: This check is separate from store access verification because it's a feature-level
+    // permission that applies to the user, not the store. Even if the user has access to the store,
+    // they need the appropriate subscription plan to use supplier management features.
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(verifiedUserId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
@@ -95,8 +119,6 @@ export async function PATCH(
         { status: 403 }
       );
     }
-
-    const { id: storeId, supplierId } = await params;
     const body = await request.json();
 
     // Validate request body
@@ -115,13 +137,20 @@ export async function PATCH(
       isActive: validatedData.isActive,
     });
 
-    return NextResponse.json(supplier, { status: 200 });
+    return NextResponse.json(createSuccessResponse(supplier), { status: 200 });
   } catch (error) {
     console.error("Error updating supplier:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid input data",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
@@ -129,18 +158,30 @@ export async function PATCH(
     if (error instanceof Error) {
       // Handle specific business logic errors
       if (error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
       if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 409 }
+        );
       }
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update supplier" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to update supplier"
+      ),
       { status: 500 }
     );
   }
@@ -156,16 +197,24 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; supplierId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
+    const { store, userId: verifiedUserId } = result;
+    const { id: storeId, supplierId } = resolvedParams;
+
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    // Note: This check is separate from store access verification because it's a feature-level
+    // permission that applies to the user, not the store. Even if the user has access to the store,
+    // they need the appropriate subscription plan to use supplier management features.
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(verifiedUserId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
@@ -180,26 +229,36 @@ export async function DELETE(
       );
     }
 
-    const { id: storeId, supplierId } = await params;
-
     // Delete supplier via service
     await supplierService.deleteSupplier(supplierId, storeId);
 
-    return NextResponse.json({ message: "Supplier deleted successfully" }, { status: 200 });
+    return NextResponse.json(
+      createSuccessResponse({ message: "Supplier deleted successfully" }),
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error deleting supplier:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete supplier" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to delete supplier"
+      ),
       { status: 500 }
     );
   }

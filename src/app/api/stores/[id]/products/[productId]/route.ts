@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { productService } from "@/lib/services/product.service";
 import { updateProductSchema } from "@/lib/validation/inventory.schemas";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * GET /api/stores/[id]/products/[productId]
@@ -14,32 +14,45 @@ export async function GET(
   { params }: { params: Promise<{ id: string; productId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, productId } = await params;
+    const { id: storeId, productId } = resolvedParams;
 
     // Get product from service
     const product = await productService.getProductById(productId);
 
     if (!product) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Product not found"),
+        { status: 404 }
+      );
     }
 
     // Verify product belongs to store
     if (product.storeId !== storeId) {
-      return NextResponse.json({ error: "Product does not belong to this store" }, { status: 403 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Product does not belong to this store"),
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(product, { status: 200 });
+    return NextResponse.json(createSuccessResponse(product), { status: 200 });
   } catch (error) {
     console.error("Error fetching product:", error);
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch product" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to fetch product"
+      ),
       { status: 500 }
     );
   }
@@ -54,13 +67,17 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; productId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, productId } = await params;
+    const { id: storeId, productId } = resolvedParams;
     const body = await request.json();
 
     // Validate request body
@@ -84,13 +101,20 @@ export async function PATCH(
       isActive: validatedData.isActive,
     });
 
-    return NextResponse.json(product, { status: 200 });
+    return NextResponse.json(createSuccessResponse(product), { status: 200 });
   } catch (error) {
     console.error("Error updating product:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid input data",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
@@ -98,18 +122,30 @@ export async function PATCH(
     if (error instanceof Error) {
       // Handle specific business logic errors
       if (error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
       if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 409 }
+        );
       }
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update product" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to update product"
+      ),
       { status: 500 }
     );
   }
@@ -125,32 +161,48 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; productId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, productId } = await params;
+    const { id: storeId, productId } = resolvedParams;
 
     // Delete product via service
     await productService.deleteProduct(productId, storeId);
 
-    return NextResponse.json({ message: "Product deleted successfully" }, { status: 200 });
+    return NextResponse.json(
+      createSuccessResponse({ message: "Product deleted successfully" }),
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error deleting product:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete product" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to delete product"
+      ),
       { status: 500 }
     );
   }

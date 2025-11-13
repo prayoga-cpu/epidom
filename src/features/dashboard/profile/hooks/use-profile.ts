@@ -9,6 +9,8 @@ import {
   buildSessionUpdate,
   type UpdateProfilePayload,
 } from "../utils/profile-helpers";
+import { DEFAULT_QUERY_OPTIONS } from "@/lib/react-query/constants";
+import { fetchWithErrorHandling } from "@/lib/api/client";
 
 interface UpdateBusinessPayload {
   name?: string;
@@ -20,71 +22,44 @@ interface UpdateBusinessPayload {
   website?: string;
 }
 
+// Query Key Factory
+export const profileKeys = {
+  all: ["profile"] as const,
+  details: () => [...profileKeys.all, "detail"] as const,
+  detail: (userId: string | undefined) => [...profileKeys.details(), userId] as const,
+};
+
 /**
  * Fetch profile data from API
  */
 const fetchProfile = async (): Promise<ProfileData> => {
-  const response = await fetch("/api/user/profile");
-  if (!response.ok) {
-    throw new Error("Failed to fetch profile");
-  }
-  const result = await response.json();
-
-  if (result.success && result.data) {
-    return result.data;
-  }
-
-  throw new Error(result.error?.message || "Failed to fetch profile");
+  return fetchWithErrorHandling<ProfileData>("/api/user/profile");
 };
 
 /**
  * Update user profile
  */
 const updateProfile = async (payload: UpdateProfilePayload): Promise<ProfileData> => {
-  const response = await fetch("/api/user/profile", {
+  return fetchWithErrorHandling<ProfileData>("/api/user/profile", {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   });
-
-  if (!response.ok) {
-    throw new Error("Failed to update profile");
-  }
-
-  const result = await response.json();
-
-  if (result.success && result.data) {
-    return result.data;
-  }
-
-  throw new Error(result.error?.message || "Failed to update profile");
 };
 
 /**
  * Update business info
  */
 const updateBusiness = async (payload: UpdateBusinessPayload): Promise<ProfileData> => {
-  const response = await fetch("/api/user/business", {
+  return fetchWithErrorHandling<ProfileData>("/api/user/business", {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   });
-
-  if (!response.ok) {
-    throw new Error("Failed to update business");
-  }
-
-  const result = await response.json();
-
-  if (result.success && result.data) {
-    return result.data;
-  }
-
-  throw new Error(result.error?.message || "Failed to update business");
 };
 
 /**
@@ -94,13 +69,10 @@ export const useProfile = () => {
   const { data: session, status } = useSession();
 
   return useQuery<ProfileData>({
-    queryKey: ["profile", session?.user?.id],
+    queryKey: profileKeys.detail(session?.user?.id),
     queryFn: fetchProfile,
     enabled: status === "authenticated" && !!session?.user?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-    refetchOnWindowFocus: false, // Prevent refetch on window focus
-    refetchOnMount: false, // Prevent refetch on mount if data exists
+    ...DEFAULT_QUERY_OPTIONS.profile,
   });
 };
 
@@ -121,7 +93,7 @@ export const useUpdateProfile = () => {
 
       // Invalidate the profile query to trigger refetch
       await queryClient.invalidateQueries({
-        queryKey: ["profile", user?.id],
+        queryKey: profileKeys.detail(user?.id),
       });
 
       // Build session update object (only includes changed fields)
@@ -176,7 +148,7 @@ export const useUpdateBusiness = () => {
     onSuccess: async (data) => {
       // Invalidate the profile query to trigger refetch
       await queryClient.invalidateQueries({
-        queryKey: ["profile", user?.id],
+        queryKey: profileKeys.detail(user?.id),
       });
     },
   });

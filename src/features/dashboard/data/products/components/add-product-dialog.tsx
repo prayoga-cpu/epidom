@@ -1,17 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { DialogWrapper } from "@/features/dashboard/shared/components/dialog-wrapper";
+import { useDialogForm } from "@/features/dashboard/shared/hooks/use-dialog-form";
 import {
   Form,
   FormControl,
@@ -31,14 +23,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateProduct } from "../hooks/use-products";
 import { useRecipes } from "../../recipes/hooks/use-recipes";
 import { useProductUsage } from "../hooks/use-product-usage";
-import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -77,7 +67,6 @@ interface AddProductDialogProps {
 
 export default function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
-  const { toast } = useToast();
   const { t } = useI18n();
   const { currency, convertToBase } = useCurrency();
   const createProduct = useCreateProduct(storeId);
@@ -98,24 +87,13 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
 
   const productSchema = createProductSchema(t);
 
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
-    mode: "onSubmit", // Validate only on submit to allow undefined values during editing
+  const { form, handleSubmit, isSubmitting } = useDialogForm({
+    schema: productSchema,
     defaultValues: {
       ...FORM_DEFAULTS.product,
       recipeId: "none",
     },
-  });
-
-  const costPrice = form.watch("costPrice");
-
-  // Auto-suggest retail price based on 2.5x markup
-  const suggestedRetailPrice = costPrice && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
-
-  const isSubmitting = createProduct.isPending;
-
-  const onSubmit = async (data: ProductFormValues) => {
-    try {
+    onSubmit: async (data) => {
       // Validate required number fields (convert undefined to defaults and validate)
       const costPrice = data.costPrice ?? 0;
       const retailPrice = data.retailPrice ?? 0;
@@ -129,7 +107,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
           type: "manual",
           message: t("common.validation.pricePositive"),
         });
-        return;
+        throw new Error(t("common.validation.pricePositive"));
       }
 
       if (retailPrice <= 0) {
@@ -137,7 +115,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
           type: "manual",
           message: t("common.validation.pricePositive"),
         });
-        return;
+        throw new Error(t("common.validation.pricePositive"));
       }
 
       if (maxStock <= 0) {
@@ -145,7 +123,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
           type: "manual",
           message: t("common.validation.maxStockPositive"),
         });
-        return;
+        throw new Error(t("common.validation.maxStockPositive"));
       }
 
       // Map form fields to API schema
@@ -167,45 +145,50 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
       };
 
       await createProduct.mutateAsync(apiData);
-
-      sonnerToast.success(t("data.products.toasts.added.title"), {
-        description: t("data.products.toasts.added.description")?.replace("{name}", data.name) || "",
-      });
-
-      form.reset();
+    },
+    onSuccess: () => {
       setOpen(false);
-    } catch (error) {
-      sonnerToast.error(t("common.error"), {
-        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
-      });
-    }
-  };
+    },
+    successMessage: t("data.products.toasts.added.title"),
+    successDescription: (data) =>
+      t("data.products.toasts.added.description")?.replace("{name}", data.name) || "",
+    errorMessage: t("messages.registrationFailed"),
+  });
+
+  const costPrice = form.watch("costPrice");
+
+  // Auto-suggest retail price based on 2.5x markup
+  const suggestedRetailPrice = costPrice && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
+    <DialogWrapper
+      open={open}
+      onOpenChange={setOpen}
+      title={t("data.products.addTitle")}
+      description={t("data.products.addDescription")}
+      trigger={
+        children || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
             {t("data.products.addButton")}
           </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl [&>button]:hidden">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
-          <DialogTitle className="text-lg font-bold sm:text-xl">
-            {t("data.products.addTitle")}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            {t("data.products.addDescription")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
-          <Form {...form}>
-            <form id="add-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
+        )
+      }
+      size="large"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
+            {t("common.actions.cancel")}
+          </Button>
+          <Button type="submit" form="add-product-form" disabled={isSubmitting || productLimitReached}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("data.products.addButton")}
+          </Button>
+        </div>
+      }
+    >
+      <Form {...form}>
+        <form id="add-product-form" onSubmit={handleSubmit} className="space-y-1.5">
             {/* Product Limit Warning */}
             {productLimitReached && productUsage && productUsage.limit !== null && (
               <Alert variant="destructive">
@@ -481,32 +464,8 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                 />
               </div>
             </div>
-            </form>
-          </Form>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-1.5">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isSubmitting}
-            >
-              {t("common.actions.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="add-product-form"
-              disabled={isSubmitting || productLimitReached}
-            >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("data.products.addButton")}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </form>
+      </Form>
+    </DialogWrapper>
   );
 }

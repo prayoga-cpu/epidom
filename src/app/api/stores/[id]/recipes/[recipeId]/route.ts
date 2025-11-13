@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { recipeService } from "@/lib/services/recipe.service";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
 import { cuidSchema } from "@/lib/validation/common.schemas";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 // Validation schema for updating recipe
 const recipeIngredientSchema = z.object({
@@ -41,27 +41,37 @@ export async function GET(
   { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { recipeId } = await params;
+    const { recipeId } = resolvedParams;
 
     // Get recipe from service
     const recipe = await recipeService.getRecipeById(recipeId);
 
     if (!recipe) {
-      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Recipe not found"),
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(recipe, { status: 200 });
+    return NextResponse.json(createSuccessResponse(recipe), { status: 200 });
   } catch (error) {
     console.error("Error fetching recipe:", error);
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch recipe" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to fetch recipe"
+      ),
       { status: 500 }
     );
   }
@@ -76,13 +86,17 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, recipeId } = await params;
+    const { id: storeId, recipeId } = resolvedParams;
     const body = await request.json();
 
     // Validate request body
@@ -91,13 +105,20 @@ export async function PATCH(
     // Update recipe via service
     const recipe = await recipeService.updateRecipe(recipeId, storeId, validatedData);
 
-    return NextResponse.json(recipe, { status: 200 });
+    return NextResponse.json(createSuccessResponse(recipe), { status: 200 });
   } catch (error) {
     console.error("Error updating recipe:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid input data",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
@@ -105,15 +126,24 @@ export async function PATCH(
     if (error instanceof Error) {
       // Handle specific business logic errors
       if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 409 }
+        );
       }
       if (error.message.includes("not found") || error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update recipe" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to update recipe"
+      ),
       { status: 500 }
     );
   }
@@ -128,29 +158,48 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, recipeId } = await params;
+    const { id: storeId, recipeId } = resolvedParams;
 
     // Delete recipe via service
     await recipeService.deleteRecipe(recipeId, storeId);
 
-    return NextResponse.json({ message: "Recipe deleted successfully" }, { status: 200 });
+    return NextResponse.json(
+      createSuccessResponse({ message: "Recipe deleted successfully" }),
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error deleting recipe:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("not found") || error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
+      }
+      if (error.message.includes("used in")) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 409 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete recipe" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to delete recipe"
+      ),
       { status: 500 }
     );
   }

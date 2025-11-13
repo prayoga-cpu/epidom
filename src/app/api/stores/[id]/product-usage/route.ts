@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { subscriptionService } from "@/lib/services";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * GET /api/stores/[id]/product-usage
@@ -16,32 +16,39 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
+    const { store, userId: verifiedUserId } = result;
     const { id: storeId } = await params;
 
     // Get product usage check
-    const productCheck = await subscriptionService.canCreateProduct(session.user.id, storeId);
+    const productCheck = await subscriptionService.canCreateProduct(verifiedUserId, storeId);
 
     // Convert Infinity to null for JSON serialization (unlimited plans)
     const limit = productCheck.limit === Infinity ? null : productCheck.limit;
 
     return NextResponse.json(
-      {
+      createSuccessResponse({
         current: productCheck.current,
         limit: limit,
         canCreateMore: productCheck.allowed,
-      },
+      }),
       { status: 200 }
     );
   } catch (error: any) {
     console.error("[API] Product usage error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to get product usage" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error.message || "Failed to get product usage"
+      ),
       { status: 500 }
     );
   }

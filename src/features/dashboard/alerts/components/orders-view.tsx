@@ -26,7 +26,7 @@ export function OrdersView() {
   const [placingOrder, setPlacingOrder] = useState<string | null>(null);
   const { supplierManagementAccess, isLoading: isLoadingAccess } = useFeatureAccess();
 
-  const { data, isLoading, error } = useSupplierOrders(storeId);
+  const { data, isLoading, error, refetch } = useSupplierOrders(storeId);
 
   // Handler to mark order as placed
   const handleMarkAsPlaced = async (orderId: string) => {
@@ -43,7 +43,7 @@ export function OrdersView() {
       toast.success(t("messages.orderPlaced"));
 
       // Refresh the data
-      window.location.reload();
+      refetch();
     } catch (error) {
       toast.error(t("messages.orderPlacedError"));
     } finally {

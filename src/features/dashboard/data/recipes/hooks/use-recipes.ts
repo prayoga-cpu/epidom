@@ -4,6 +4,11 @@ import {
   UpdateRecipeFormInput,
   RecipeFilterInput,
 } from "@/lib/validation/inventory.schemas";
+import { invalidateRecipeRelatedQueries } from "@/lib/react-query/cache-utils";
+import { DEFAULT_QUERY_OPTIONS } from "@/lib/react-query/constants";
+import { buildQueryParams } from "@/lib/utils/query-params";
+import { fetchWithErrorHandling } from "@/lib/api/client";
+import { exportToCSV } from "@/lib/utils/export";
 
 // Types
 export interface RecipeWithIngredients {
@@ -53,54 +58,37 @@ export interface RecipesResponse {
   total: number;
 }
 
+// Query Key Factory
+export const recipeKeys = {
+  all: (storeId: string) => ["recipes", storeId] as const,
+  lists: (storeId: string) => [...recipeKeys.all(storeId), "list"] as const,
+  list: (storeId: string, filters?: RecipeFilterInput) =>
+    [...recipeKeys.lists(storeId), filters] as const,
+  details: (storeId: string) => [...recipeKeys.all(storeId), "detail"] as const,
+  detail: (storeId: string, id: string) => [...recipeKeys.details(storeId), id] as const,
+};
+
 // API Functions
 async function fetchRecipes(storeId: string, filters: RecipeFilterInput): Promise<RecipesResponse> {
-  const params = new URLSearchParams();
-
-  if (filters.search) params.append("search", filters.search);
-  if (filters.category) params.append("category", filters.category);
-  if (filters.sortBy) params.append("sortBy", filters.sortBy);
-  if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
-  if (filters.skip !== undefined) params.append("skip", filters.skip.toString());
-  if (filters.take !== undefined) params.append("take", filters.take.toString());
-
-  const response = await fetch(`/api/stores/${storeId}/recipes?${params.toString()}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch recipes");
-  }
-
-  return response.json();
+  const params = buildQueryParams(filters as Record<string, unknown>);
+  const url = `/api/stores/${storeId}/recipes${params.toString() ? `?${params.toString()}` : ""}`;
+  // Use fetchWithErrorHandling to properly unwrap ApiSuccessResponse wrapper
+  return fetchWithErrorHandling<RecipesResponse>(url);
 }
 
 async function fetchRecipeById(storeId: string, recipeId: string): Promise<RecipeWithIngredients> {
-  const response = await fetch(`/api/stores/${storeId}/recipes/${recipeId}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch recipe");
-  }
-
-  return response.json();
+  return fetchWithErrorHandling<RecipeWithIngredients>(`/api/stores/${storeId}/recipes/${recipeId}`);
 }
 
 async function createRecipe(
   storeId: string,
   data: CreateRecipeFormInput
 ): Promise<RecipeWithIngredients> {
-  const response = await fetch(`/api/stores/${storeId}/recipes`, {
+  return fetchWithErrorHandling<RecipeWithIngredients>(`/api/stores/${storeId}/recipes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create recipe");
-  }
-
-  return response.json();
 }
 
 async function updateRecipe(
@@ -108,44 +96,25 @@ async function updateRecipe(
   recipeId: string,
   data: UpdateRecipeFormInput
 ): Promise<RecipeWithIngredients> {
-  const response = await fetch(`/api/stores/${storeId}/recipes/${recipeId}`, {
+  return fetchWithErrorHandling<RecipeWithIngredients>(`/api/stores/${storeId}/recipes/${recipeId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to update recipe");
-  }
-
-  return response.json();
 }
 
 async function deleteRecipe(storeId: string, recipeId: string): Promise<void> {
-  const response = await fetch(`/api/stores/${storeId}/recipes/${recipeId}`, {
+  await fetchWithErrorHandling<void>(`/api/stores/${storeId}/recipes/${recipeId}`, {
     method: "DELETE",
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to delete recipe");
-  }
 }
 
 async function bulkDeleteRecipes(storeId: string, recipeIds: string[]): Promise<{ count: number }> {
-  const response = await fetch(`/api/stores/${storeId}/recipes/bulk`, {
+  return fetchWithErrorHandling<{ count: number }>(`/api/stores/${storeId}/recipes/bulk`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids: recipeIds }),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to delete recipes");
-  }
-
-  return response.json();
 }
 
 async function duplicateRecipe(
@@ -153,45 +122,18 @@ async function duplicateRecipe(
   recipeId: string,
   newName: string
 ): Promise<RecipeWithIngredients> {
-  const response = await fetch(`/api/stores/${storeId}/recipes/${recipeId}/duplicate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ newName }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to duplicate recipe");
-  }
-
-  return response.json();
+  return fetchWithErrorHandling<RecipeWithIngredients>(
+    `/api/stores/${storeId}/recipes/${recipeId}/duplicate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newName }),
+    }
+  );
 }
 
 async function exportRecipes(storeId: string, filters: RecipeFilterInput): Promise<void> {
-  const params = new URLSearchParams();
-
-  if (filters.search) params.append("search", filters.search);
-  if (filters.category) params.append("category", filters.category);
-  if (filters.sortBy) params.append("sortBy", filters.sortBy);
-  if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
-
-  const response = await fetch(`/api/stores/${storeId}/recipes/export?${params.toString()}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to export recipes");
-  }
-
-  // Download CSV file
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `recipes-export-${new Date().toISOString().split("T")[0]}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
+  await exportToCSV(`/api/stores/${storeId}/recipes/export`, "export", "recipes", filters as Record<string, unknown>);
 }
 
 // React Query Hooks
@@ -201,14 +143,10 @@ async function exportRecipes(storeId: string, filters: RecipeFilterInput): Promi
  */
 export function useRecipes(storeId: string, filters: RecipeFilterInput) {
   return useQuery({
-    queryKey: ["recipes", storeId, filters],
+    queryKey: recipeKeys.list(storeId, filters),
     queryFn: () => fetchRecipes(storeId, filters),
     enabled: !!storeId,
-    staleTime: 30 * 1000, // 30 seconds - reduce unnecessary refetches
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    // Refetch on window focus to ensure latest material stock data
-    // But only if data is stale (staleTime helps prevent excessive refetches)
-    refetchOnWindowFocus: true,
+    ...DEFAULT_QUERY_OPTIONS.inventory,
   });
 }
 
@@ -217,9 +155,10 @@ export function useRecipes(storeId: string, filters: RecipeFilterInput) {
  */
 export function useRecipe(storeId: string, recipeId: string | null) {
   return useQuery({
-    queryKey: ["recipes", storeId, recipeId],
+    queryKey: recipeKeys.detail(storeId, recipeId!),
     queryFn: () => fetchRecipeById(storeId, recipeId!),
     enabled: !!storeId && !!recipeId,
+    ...DEFAULT_QUERY_OPTIONS.inventory,
   });
 }
 
@@ -231,8 +170,22 @@ export function useCreateRecipe(storeId: string) {
 
   return useMutation({
     mutationFn: (data: CreateRecipeFormInput) => createRecipe(storeId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: async (newRecipe) => {
+      // Invalidate and refetch all recipe queries
+      await invalidateRecipeRelatedQueries(queryClient, storeId, newRecipe.id);
+
+      // Additional safety: explicitly refetch all recipe list queries
+      // This ensures UI updates even if query keys don't match exactly
+      await queryClient.refetchQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            key[0] === "recipes" &&
+            key[1] === storeId
+          );
+        },
+      });
     },
   });
 }
@@ -245,9 +198,8 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
 
   return useMutation({
     mutationFn: (data: UpdateRecipeFormInput) => updateRecipe(storeId, recipeId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId, recipeId] });
+    onSuccess: async () => {
+      await invalidateRecipeRelatedQueries(queryClient, storeId, recipeId);
     },
   });
 }
@@ -260,8 +212,8 @@ export function useDeleteRecipe(storeId: string) {
 
   return useMutation({
     mutationFn: (recipeId: string) => deleteRecipe(storeId, recipeId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: async () => {
+      await invalidateRecipeRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -274,8 +226,8 @@ export function useBulkDeleteRecipes(storeId: string) {
 
   return useMutation({
     mutationFn: (recipeIds: string[]) => bulkDeleteRecipes(storeId, recipeIds),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: async () => {
+      await invalidateRecipeRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -289,8 +241,8 @@ export function useDuplicateRecipe(storeId: string) {
   return useMutation({
     mutationFn: ({ recipeId, newName }: { recipeId: string; newName: string }) =>
       duplicateRecipe(storeId, recipeId, newName),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: async () => {
+      await invalidateRecipeRelatedQueries(queryClient, storeId);
     },
   });
 }

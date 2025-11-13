@@ -135,7 +135,8 @@ export function useUpdateStore(id: string) {
 }
 
 /**
- * Delete (deactivate) a store with cache invalidation
+ * Delete (hard delete) a store with cache invalidation
+ * WARNING: This will permanently delete the store and all related data
  */
 export function useDeleteStore() {
   const queryClient = useQueryClient();

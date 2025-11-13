@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { recipeService } from "@/lib/services/recipe.service";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 // Validation schema for duplicating recipe
 const duplicateRecipeSchema = z.object({
@@ -18,13 +18,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, recipeId } = await params;
+    const { id: storeId, recipeId } = resolvedParams;
     const body = await request.json();
 
     // Validate request body
@@ -33,13 +37,20 @@ export async function POST(
     // Duplicate recipe via service
     const recipe = await recipeService.duplicateRecipe(recipeId, newName, storeId);
 
-    return NextResponse.json(recipe, { status: 201 });
+    return NextResponse.json(createSuccessResponse(recipe), { status: 201 });
   } catch (error) {
     console.error("Error duplicating recipe:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid input data",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
@@ -47,15 +58,24 @@ export async function POST(
     if (error instanceof Error) {
       // Handle specific business logic errors
       if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 409 }
+        );
       }
       if (error.message.includes("not found") || error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to duplicate recipe" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to duplicate recipe"
+      ),
       { status: 500 }
     );
   }

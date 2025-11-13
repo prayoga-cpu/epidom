@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,12 +18,14 @@ import {
   SectionHeader,
   ActionButtons,
   ActionButton,
-  SectionLoadingState,
   FilterSection,
   type FilterField,
   ItemCardGrid,
   BaseItemCard,
 } from "../../components";
+import { SectionLoadingSkeleton } from "@/features/dashboard/shared/components/loading-states";
+import { SectionErrorState } from "@/features/dashboard/shared/components/error-states";
+import { EmptyState } from "@/features/dashboard/shared/components/empty-states";
 import { responsive, responsiveText } from "@/lib/utils/responsive";
 import {
   Eye,
@@ -76,6 +79,10 @@ export function MaterialsSection() {
   const params = useParams();
   const storeId = params.storeId as string;
 
+  // Search input state (for immediate UI feedback)
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
+
   // Filters state
   const [filters, setFilters] = useState({
     search: "",
@@ -87,6 +94,11 @@ export function MaterialsSection() {
     skip: 0,
     take: 50,
   });
+
+  // Update filters when debounced search changes
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, search: debouncedSearch, skip: 0 }));
+  }, [debouncedSearch]);
 
   // UI state
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialWithSuppliers | null>(null);
@@ -154,7 +166,7 @@ export function MaterialsSection() {
 
   // Filter handlers
   const handleSearch = (value: string) => {
-    setFilters((prev) => ({ ...prev, search: value, skip: 0 }));
+    setSearchInput(value);
   };
 
   const handleCategoryFilter = (value: string) => {
@@ -265,7 +277,7 @@ export function MaterialsSection() {
   // Loading state
   if (isLoading) {
     return (
-      <SectionLoadingState
+      <SectionLoadingSkeleton
         title={t("data.materials.title")}
         exportLabel={t("common.actions.export")}
         addLabel={t("data.materials.addButton")}
@@ -277,35 +289,29 @@ export function MaterialsSection() {
   // Error state
   if (error) {
     return (
-      <div className="border-destructive rounded-lg border p-4">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="text-destructive h-5 w-5" />
-          <p className="text-destructive text-sm">
-            {t("messages.errorLoadingMaterials")}: {error.message}
-          </p>
-        </div>
-        <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-2">
-          {t("common.actions.retry")}
-        </Button>
-      </div>
+      <SectionErrorState
+        error={error}
+        onRetry={() => refetch()}
+        title={t("common.error")}
+        description={t("messages.errorLoadingMaterials")}
+      />
     );
   }
 
   return (
     <>
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">{t("data.materials.title")}</CardTitle>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
+      <Card className={responsive.cardWrapper}>
+        <CardHeader className={responsive.cardHeader}>
+          <div className={responsive.header}>
+            <CardTitle className={responsiveText.title}>{t("data.materials.title")}</CardTitle>
+            <ActionButtons>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
+                  <ActionButton
                     variant="outline"
                     size="sm"
                     onClick={handleExport}
                     disabled={exportMaterials.isPending || !advancedReportsAccess}
-                    className="w-full md:w-auto"
                   >
                     {exportMaterials.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -313,7 +319,7 @@ export function MaterialsSection() {
                       <Download className="mr-2 h-4 w-4" />
                     )}
                     {t("common.actions.export")}
-                  </Button>
+                  </ActionButton>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -322,22 +328,21 @@ export function MaterialsSection() {
                 )}
               </Tooltip>
               <AddMaterialDialog trigger={
-                <Button size="sm" className="w-full md:w-auto">
+                <ActionButton size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   {t("data.materials.addButton")}
-                </Button>
+                </ActionButton>
               } />
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full md:w-auto">
+                <ActionButton variant="destructive" size="sm" onClick={handleBulkDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t("actions.delete")} ({selectedIds.size})
-                </Button>
+                </ActionButton>
               )}
-              <Button
+              <ActionButton
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
-                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -350,15 +355,15 @@ export function MaterialsSection() {
                     {t("common.actions.select")}
                   </>
                 )}
-              </Button>
-            </div>
+              </ActionButton>
+            </ActionButtons>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4 pb-6">
           {/* Search and Filters */}
           <FilterSection
-            searchValue={filters.search}
+            searchValue={searchInput}
             onSearchChange={handleSearch}
             searchPlaceholder={t("actions.searchPlaceholder")}
             filters={[
@@ -420,9 +425,32 @@ export function MaterialsSection() {
             </p>
           </div>
 
-          {/* Materials Grid */}
-          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
-            {processedMaterials.map((material) => {
+          {/* Materials Grid or Empty State */}
+          {processedMaterials.length === 0 ? (
+            <div className="col-span-full py-12">
+              <EmptyState
+                icon={PackageOpen}
+                title={t("messages.noMaterialsFound")}
+                description={
+                  hasActiveFilters
+                    ? t("messages.noMatchingFilters")
+                    : t("messages.getStartedMaterial")
+                }
+                action={
+                  hasActiveFilters ? (
+                    <Button variant="outline" onClick={clearFilters}>
+                      {t("common.actions.clearFilters")}
+                    </Button>
+                  ) : (
+                    <AddMaterialDialog />
+                  )
+                }
+                className="min-h-0 shadow-none"
+              />
+            </div>
+          ) : (
+            <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
+              {processedMaterials.map((material) => {
               const currentStock = Number(material.currentStock);
               const minStock = Number(material.minStock);
               const maxStock = Number(material.maxStock);
@@ -553,28 +581,8 @@ export function MaterialsSection() {
                 </BaseItemCard>
               );
             })}
-            {/* Empty State */}
-            {processedMaterials.length === 0 && (
-              <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
-                <h3 className="mb-2 text-lg font-semibold">
-                  {t("messages.noMaterialsFound")}
-                </h3>
-                <p className="text-muted-foreground mb-4 text-sm">
-                  {hasActiveFilters
-                    ? t("messages.noMatchingFilters")
-                    : t("messages.getStartedMaterial")}
-                </p>
-                {hasActiveFilters ? (
-                  <Button variant="outline" onClick={clearFilters}>
-                    {t("common.actions.clearFilters")}
-                  </Button>
-                ) : (
-                  <AddMaterialDialog />
-                )}
-              </div>
-            )}
-          </ItemCardGrid>
+            </ItemCardGrid>
+          )}
         </CardContent>
       </Card>
 

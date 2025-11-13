@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { DEFAULT_QUERY_OPTIONS } from "@/lib/react-query/constants";
+import { fetchJson } from "@/lib/api/client";
 
 export interface Alert {
   id: string;
@@ -25,10 +27,11 @@ interface AlertsResponse {
   alerts: Alert[];
 }
 
-// Query keys
+// Query Key Factory
 export const alertKeys = {
   all: ["alerts"] as const,
   lists: (storeId: string) => [...alertKeys.all, "list", storeId] as const,
+  list: (storeId: string) => alertKeys.lists(storeId), // Alias for consistency
 };
 
 /**
@@ -36,16 +39,9 @@ export const alertKeys = {
  */
 export function useAlerts(storeId: string) {
   return useQuery<AlertsResponse>({
-    queryKey: alertKeys.lists(storeId),
-    queryFn: async () => {
-      const response = await fetch(`/api/stores/${storeId}/alerts`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch alerts");
-      }
-      return response.json();
-    },
+    queryKey: alertKeys.list(storeId),
+    queryFn: () => fetchJson<AlertsResponse>(`/api/stores/${storeId}/alerts`),
     enabled: !!storeId,
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    refetchInterval: 60000, // Auto-refetch every minute
+    ...DEFAULT_QUERY_OPTIONS.realTime,
   });
 }

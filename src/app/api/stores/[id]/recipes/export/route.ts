@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { recipeService } from "@/lib/services/recipe.service";
 import { subscriptionService } from "@/lib/services";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 // Validation schema for filtering recipes (same as main route)
 const recipeFilterSchema = z.object({
@@ -25,14 +24,23 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
+    const { store, userId: verifiedUserId } = result;
+    const { id: storeId } = await params;
+
     // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(session.user.id);
+    // Note: This check is separate from store access verification because it's a feature-level
+    // permission that applies to the user, not the store. Even if the user has access to the store,
+    // they need the appropriate subscription plan to use export features.
+    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(verifiedUserId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
@@ -46,8 +54,6 @@ export async function GET(
         { status: 403 }
       );
     }
-
-    const { id: storeId } = await params;
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -76,13 +82,23 @@ export async function GET(
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid filter parameters",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to export recipes" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to export recipes"
+      ),
       { status: 500 }
     );
   }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cuidSchema, priceSchema, decimalSchema } from "./common.schemas";
+import { cuidSchema, optionalCuidSchema, priceSchema, decimalSchema } from "./common.schemas";
 
 /**
  * Inventory management validation schemas (Products & Ingredients)
@@ -18,7 +18,7 @@ const baseProductSchema = z.object({
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").default("piece"),
   minStock: decimalSchema.default(0),
   maxStock: decimalSchema.default(1000),
-  recipeId: cuidSchema.optional(),
+  recipeId: optionalCuidSchema,
   productionTime: z.number().int().nonnegative("Production time must be non-negative").optional(),
   shelfLife: z.number().int().positive("Shelf life must be positive").optional(),
   isActive: z.boolean().default(true),

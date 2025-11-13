@@ -102,12 +102,6 @@ export class SubscriptionService {
       // Duplicate subscriptions will be handled by:
       // - Webhook handler: Cancel old subscription when new one is confirmed
       // - Audit function: Clean up any duplicates as safety measure
-      console.log(
-        `[Subscription] User has existing subscription. Will keep it active until new payment confirms.`
-      );
-      console.log(
-        `[Subscription] Current plan: ${subscription.plan}, Status: ${subscription.status}`
-      );
     } else {
       // Create new Stripe customer
       const customer = await stripe.customers.create({
@@ -377,10 +371,6 @@ export class SubscriptionService {
 
     // If we have more than one active subscription, cancel the old ones
     if (activeSubscriptions.length > 1) {
-      console.log(
-        `[Subscription Audit] Found ${activeSubscriptions.length} active subscriptions for user ${userId}`
-      );
-
       // Keep the newest subscription (highest created timestamp)
       const sortedByDate = activeSubscriptions.sort((a, b) => b.created - a.created);
       const keepSubscription = sortedByDate[0];
@@ -388,7 +378,6 @@ export class SubscriptionService {
 
       // Cancel old subscriptions IMMEDIATELY
       for (const sub of toCancel) {
-        console.log(`[Subscription Audit] Canceling duplicate subscription IMMEDIATELY: ${sub.id}`);
         await stripe.subscriptions.cancel(sub.id, {
           prorate: false, // No refund for unused time
         });
@@ -397,9 +386,6 @@ export class SubscriptionService {
 
       // Ensure database reflects the kept subscription
       if (subscription.stripeSubscriptionId !== keepSubscription.id) {
-        console.log(
-          `[Subscription Audit] Updating database to use subscription ${keepSubscription.id}`
-        );
         await this.subscriptionRepo.update(userId, {
           stripeSubscriptionId: keepSubscription.id,
         });

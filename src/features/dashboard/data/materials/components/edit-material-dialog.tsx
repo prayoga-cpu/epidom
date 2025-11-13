@@ -1,16 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useFieldArray } from "react-hook-form";
 import { useParams } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogWrapper } from "@/features/dashboard/shared/components/dialog-wrapper";
+import { useDialogForm } from "@/features/dashboard/shared/hooks/use-dialog-form";
 import {
   Form,
   FormControl,
@@ -32,7 +26,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
 import { Loader2, Plus, X, Star } from "lucide-react";
 import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -76,9 +69,8 @@ export default function EditMaterialDialog({
   });
   const suppliers = suppliersData?.suppliers || [];
 
-  const form = useForm<UpdateIngredientFormInput>({
-    resolver: zodResolver(updateIngredientFormSchema) as any,
-    mode: "onSubmit", // Validate only on submit to allow undefined values during editing
+  const { form, handleSubmit, isSubmitting } = useDialogForm({
+    schema: updateIngredientFormSchema,
     defaultValues: {
       name: "",
       sku: "",
@@ -91,6 +83,38 @@ export default function EditMaterialDialog({
       maxStock: undefined,
       suppliers: [],
     },
+    onSubmit: async (data) => {
+      if (!material) return;
+
+      // Filter out invalid suppliers (those with "none" or empty supplierId)
+      const validSuppliers =
+        data.suppliers?.filter((s: any) => s.supplierId && s.supplierId !== "none") || [];
+
+      const payload = {
+        ...data,
+        unitCost: convertToBase(data.unitCost ?? 0), // Convert back to EUR before saving, default to 0 if undefined
+        currentStock: data.currentStock ?? 0, // Default to 0 if undefined
+        minStock: data.minStock ?? 0, // Default to 0 if undefined
+        maxStock: data.maxStock ?? 0, // Default to 0 if undefined
+        // Always send suppliers array, even if empty, to allow removing all suppliers
+        suppliers: validSuppliers.map((s: any) => ({
+          ...s,
+          price: convertToBase(s.price ?? 0), // Convert supplier prices back to EUR
+        })),
+      };
+
+      await updateMaterial.mutateAsync(payload);
+    },
+    onSuccess: () => {
+      onOpenChange(false);
+    },
+    successMessage: t("data.materials.toasts.updated.title") || "Material updated",
+    successDescription: (data) =>
+      t("data.materials.toasts.updated.description")?.replace(
+        "{name}",
+        data.name || material?.name || ""
+      ) || "",
+    errorMessage: t("messages.failedToUpdateMaterial"),
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -126,60 +150,29 @@ export default function EditMaterialDialog({
     }
   }, [material, open, form, convertPrice]);
 
-  const onSubmit = async (data: UpdateIngredientFormInput) => {
-    if (!material) return;
-
-    try {
-      // Filter out invalid suppliers (those with "none" or empty supplierId)
-      const validSuppliers =
-        data.suppliers?.filter((s: any) => s.supplierId && s.supplierId !== "none") || [];
-
-      const payload = {
-        ...data,
-        unitCost: convertToBase(data.unitCost ?? 0), // Convert back to EUR before saving, default to 0 if undefined
-        currentStock: data.currentStock ?? 0, // Default to 0 if undefined
-        minStock: data.minStock ?? 0, // Default to 0 if undefined
-        maxStock: data.maxStock ?? 0, // Default to 0 if undefined
-        // Always send suppliers array, even if empty, to allow removing all suppliers
-        suppliers: validSuppliers.map((s: any) => ({
-          ...s,
-          price: convertToBase(s.price ?? 0), // Convert supplier prices back to EUR
-        })),
-      };
-
-      await updateMaterial.mutateAsync(payload);
-      toast.success(
-        t("data.materials.toasts.updated.description")?.replace(
-          "{name}",
-          data.name || material.name
-        ) || ""
-      );
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("messages.failedToUpdateMaterial"));
-    }
-  };
-
   if (!material) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[600px]">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
-          <DialogTitle className="text-lg font-bold sm:text-xl">
-            {t("data.materials.editTitle")}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            {t("data.materials.editDescription") ||
-              "Update material information. Fields marked with * are required."}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
-          <Form {...form}>
-            <form id="edit-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
+    <DialogWrapper
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("data.materials.editTitle")}
+      description={t("data.materials.editDescription") || "Update material information. Fields marked with * are required."}
+      size="medium"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+            {t("common.actions.cancel")}
+          </Button>
+          <Button type="submit" form="edit-material-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("common.actions.save")}
+          </Button>
+        </div>
+      }
+    >
+      <Form {...form}>
+        <form id="edit-material-form" onSubmit={handleSubmit} className="space-y-1.5">
             {/* Basic Information */}
             <div className="space-y-1">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.materials.sections.basicInfo")}</h3>
@@ -500,34 +493,8 @@ export default function EditMaterialDialog({
                 </div>
               ))}
             </div>
-            </form>
-          </Form>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-1.5">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={updateMaterial.isPending}
-            >
-              {t("common.actions.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="edit-material-form"
-              disabled={updateMaterial.isPending}
-            >
-              {updateMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {updateMaterial.isPending
-                ? t("common.actions.saving")
-                : t("common.actions.saveChanges")}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </form>
+      </Form>
+    </DialogWrapper>
   );
 }

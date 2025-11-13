@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { businessService } from "@/lib/services";
 import { createStoreSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * GET /api/stores/[id]
@@ -14,45 +13,16 @@ import { Prisma } from "@prisma/client";
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const session = await getServerSession(authOptions);
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
 
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    // Get user's business
-    const business = await businessService.getBusinessByUserId(session.user.id);
-
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Get store by ID
-    const store = await businessService.getStoreById(id);
-
-    if (!store) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.STORE_NOT_FOUND, "Store not found"),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to user's business
-    if (store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.FORBIDDEN,
-          "You don't have permission to access this store"
-        ),
-        { status: 403 }
-      );
-    }
+    const { store } = result;
 
     return NextResponse.json(createSuccessResponse(store));
   } catch (error) {
@@ -71,51 +41,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const session = await getServerSession(authOptions);
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
 
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    // Get user's business
-    const business = await businessService.getBusinessByUserId(session.user.id);
-
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Check if store exists and belongs to user's business
-    const existingStore = await businessService.getStoreById(id);
-
-    if (!existingStore) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.STORE_NOT_FOUND, "Store not found"),
-        { status: 404 }
-      );
-    }
-
-    if (existingStore.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.FORBIDDEN,
-          "You don't have permission to update this store"
-        ),
-        { status: 403 }
-      );
-    }
+    const { store, business, userId: verifiedUserId } = result;
+    const storeId = store.id;
 
     // Parse and validate request body
     const body = await request.json();
     const input = createStoreSchema.partial().parse(body);
 
     // Update store via service
-    const updatedStore = await businessService.updateStore(id, business.id, session.user.id, input);
+    const updatedStore = await businessService.updateStore(storeId, business.id, verifiedUserId, input);
 
     return NextResponse.json(createSuccessResponse(updatedStore));
   } catch (error) {
@@ -170,47 +113,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
  */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const session = await getServerSession(authOptions);
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
 
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    // Get user's business
-    const business = await businessService.getBusinessByUserId(session.user.id);
-
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Check if store exists and belongs to user's business
-    const existingStore = await businessService.getStoreById(id);
-
-    if (!existingStore) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.STORE_NOT_FOUND, "Store not found"),
-        { status: 404 }
-      );
-    }
-
-    if (existingStore.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.FORBIDDEN,
-          "You don't have permission to delete this store"
-        ),
-        { status: 403 }
-      );
-    }
+    const { store, business, userId: verifiedUserId } = result;
+    const storeId = store.id;
 
     // Hard delete store via service (also deletes image from Blob)
-    await businessService.deleteStore(id, business.id, session.user.id);
+    await businessService.deleteStore(storeId, business.id, verifiedUserId);
 
     return NextResponse.json(createSuccessResponse({ message: "Store deleted successfully" }));
   } catch (error) {

@@ -37,10 +37,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      `[Sync] Current DB status: ${dbSubscription.plan} - ${dbSubscription.status}`
-    );
-
     // Get all active subscriptions from Stripe for this customer
     const stripeSubscriptions = await stripe.subscriptions.list({
       customer: dbSubscription.stripeCustomerId,
@@ -48,12 +44,9 @@ export async function POST(request: NextRequest) {
       limit: 10,
     });
 
-    console.log(`[Sync] Found ${stripeSubscriptions.data.length} active subscriptions in Stripe`);
-
     if (stripeSubscriptions.data.length === 0) {
       // No active subscriptions in Stripe
       if (dbSubscription.status !== SubscriptionStatus.CANCELED) {
-        console.log("[Sync] No active Stripe subscription, marking as CANCELED");
         await subscriptionRepository.update(userId, {
           status: SubscriptionStatus.CANCELED,
         });
@@ -69,15 +62,11 @@ export async function POST(request: NextRequest) {
     // Get the newest active subscription
     const activeSubscription = stripeSubscriptions.data.sort((a, b) => b.created - a.created)[0];
 
-    console.log(`[Sync] Newest Stripe subscription: ${activeSubscription.id}`);
-
     // Cancel any duplicate subscriptions
     if (stripeSubscriptions.data.length > 1) {
-      console.log(`[Sync] Found ${stripeSubscriptions.data.length - 1} duplicate subscriptions`);
       const duplicates = stripeSubscriptions.data.slice(1);
 
       for (const dup of duplicates) {
-        console.log(`[Sync] Canceling duplicate subscription: ${dup.id}`);
         await stripe.subscriptions.cancel(dup.id, { prorate: false });
       }
     }
@@ -114,8 +103,6 @@ export async function POST(request: NextRequest) {
       currentPeriodEnd: new Date((activeSubscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: (activeSubscription as any).cancel_at_period_end,
     });
-
-    console.log(`[Sync] Updated database to: ${plan} - ACTIVE`);
 
     return NextResponse.json({
       message: "Subscription synced successfully with Stripe",

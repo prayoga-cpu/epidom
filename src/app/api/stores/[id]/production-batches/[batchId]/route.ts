@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { productionBatchService } from "@/lib/services/production-batch.service";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
 import { updateProductionBatchSchema } from "@/lib/validation/production.schemas";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * GET /api/stores/[id]/production-batches/[batchId]
@@ -14,35 +14,45 @@ export async function GET(
   { params }: { params: Promise<{ id: string; batchId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, batchId } = await params;
+    const { id: storeId, batchId } = resolvedParams;
 
     // Get batch from service
     const batch = await productionBatchService.getProductionBatchById(batchId);
 
     if (!batch) {
-      return NextResponse.json({ error: "Production batch not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Production batch not found"),
+        { status: 404 }
+      );
     }
 
     // Verify batch belongs to store
     if (batch.storeId !== storeId) {
       return NextResponse.json(
-        { error: "Production batch does not belong to this store" },
-        { status: 403 }
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Production batch does not belong to this store"),
+        { status: 404 }
       );
     }
 
-    return NextResponse.json(batch, { status: 200 });
+    return NextResponse.json(createSuccessResponse(batch), { status: 200 });
   } catch (error) {
     console.error("Error fetching production batch:", error);
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch production batch" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to fetch production batch"
+      ),
       { status: 500 }
     );
   }
@@ -57,13 +67,17 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; batchId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, batchId } = await params;
+    const { id: storeId, batchId } = resolvedParams;
     const body = await request.json();
 
     // Validate request body
@@ -76,25 +90,38 @@ export async function PATCH(
       validatedData
     );
 
-    return NextResponse.json(batch, { status: 200 });
+    return NextResponse.json(createSuccessResponse(batch), { status: 200 });
   } catch (error) {
     console.error("Error updating production batch:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid input data",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
 
     if (error instanceof Error) {
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update production batch" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to update production batch"
+      ),
       { status: 500 }
     );
   }
@@ -109,32 +136,48 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; batchId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, batchId } = await params;
+    const { id: storeId, batchId } = resolvedParams;
 
     // Delete batch via service
     await productionBatchService.deleteProductionBatch(batchId, storeId);
 
-    return NextResponse.json({ message: "Production batch deleted successfully" }, { status: 200 });
+    return NextResponse.json(
+      createSuccessResponse({ message: "Production batch deleted successfully" }),
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error deleting production batch:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
       if (error.message.includes("Can only delete planned batches")) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 400 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete production batch" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to delete production batch"
+      ),
       { status: 500 }
     );
   }

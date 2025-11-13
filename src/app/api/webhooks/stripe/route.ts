@@ -50,8 +50,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  console.log(`[Webhook] Received event: ${event.type}`);
-
   try {
     switch (event.type) {
       case "checkout.session.completed":
@@ -79,7 +77,8 @@ export async function POST(request: NextRequest) {
         break;
 
       default:
-        console.log(`[Webhook] Unhandled event type: ${event.type}`);
+        // Unhandled event type - silently ignore
+        break;
     }
 
     return NextResponse.json({ received: true });
@@ -120,13 +119,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   // Cast to access properties TypeScript doesn't recognize
   const subscriptionData = stripeSubscription as any;
 
-  console.log("[Webhook] Retrieved subscription:", {
-    id: stripeSubscription.id,
-    status: stripeSubscription.status,
-    current_period_start: subscriptionData.current_period_start,
-    current_period_end: subscriptionData.current_period_end,
-  });
-
   // Convert Unix timestamps (seconds) to JavaScript Date (milliseconds)
   const currentPeriodStart = new Date(subscriptionData.current_period_start * 1000);
   const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000);
@@ -137,9 +129,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       start: subscriptionData.current_period_start,
       end: subscriptionData.current_period_end,
     });
-    console.log(
-      "[Webhook] Skipping checkout.session.completed, will be handled by subscription.created"
-    );
     return; // Don't fail, let subscription.created handle it
   }
 
@@ -148,10 +137,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   if (existingSubscription) {
     // User is upgrading/downgrading
-    console.log(
-      `[Webhook] Upgrading subscription for user ${userId}: ${existingSubscription.plan} -> ${plan}`
-    );
-
     // The old subscription should have been canceled by subscription.service.ts
     // But let's double-check and cancel if it somehow still exists in Stripe
     if (
@@ -166,19 +151,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         // If old subscription is still active in Stripe, cancel it
         if (oldStripeSubscription.status === "active") {
           await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
-          console.log(
-            `[Webhook] Canceled old Stripe subscription: ${existingSubscription.stripeSubscriptionId}`
-          );
-        } else {
-          console.log(
-            `[Webhook] Old subscription already canceled in Stripe: ${existingSubscription.stripeSubscriptionId}`
-          );
         }
       } catch (error: any) {
         // Subscription might already be deleted, that's fine
-        console.log(
-          `[Webhook] Old subscription not found in Stripe (already deleted): ${error.message}`
-        );
       }
     }
 
@@ -192,12 +167,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       currentPeriodEnd,
       cancelAtPeriodEnd: false,
     });
-
-    console.log(`[Webhook] Subscription updated successfully for user ${userId}`);
   } else {
     // New subscription
-    console.log(`[Webhook] Creating new subscription for user ${userId}: ${plan}`);
-
     await subscriptionRepository.create({
       userId,
       stripeCustomerId: session.customer as string,
@@ -208,8 +179,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       currentPeriodStart,
       currentPeriodEnd,
     });
-
-    console.log(`[Webhook] Subscription created successfully for user ${userId}`);
   }
 
   // Note: The 80/20 split transfer happens automatically via Stripe
@@ -226,13 +195,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const plan = subscription.metadata?.plan as "STARTER" | "PRO";
 
   if (!userId || !plan) {
-    console.log(
-      "[Webhook] No userId/plan metadata in subscription.created, skipping (created via checkout)"
-    );
-    return;
+    return; // No metadata - likely created via checkout, will be handled by checkout.session.completed
   }
-
-  console.log(`[Webhook] Processing subscription.created for user ${userId}: ${plan}`);
 
   // Cast to access properties
   const subscriptionData = subscription as any;
@@ -257,12 +221,9 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
         if (oldStripeSubscription.status === "active") {
           await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
-          console.log(
-            `[Webhook] Canceled old subscription: ${existingSubscription.stripeSubscriptionId}`
-          );
         }
       } catch (error: any) {
-        console.log(`[Webhook] Old subscription already deleted: ${error.message}`);
+        // Old subscription might already be deleted, that's fine
       }
     }
 
@@ -276,8 +237,6 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       currentPeriodEnd,
       cancelAtPeriodEnd: false,
     });
-
-    console.log(`[Webhook] Updated subscription via subscription.created for user ${userId}`);
   } else {
     // Create new
     await subscriptionRepository.create({
@@ -290,8 +249,6 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       currentPeriodStart,
       currentPeriodEnd,
     });
-
-    console.log(`[Webhook] Created subscription via subscription.created for user ${userId}`);
   }
 }
 
@@ -324,26 +281,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const status = mapStripeStatus(subscription.status);
   const subscriptionData = subscription as any;
 
-  // Log the raw Stripe subscription data for debugging
-  console.log(`[Webhook] Raw subscription data:`, {
-    id: subscription.id,
-    status: subscription.status,
-    cancel_at_period_end: subscriptionData.cancel_at_period_end,
-    cancel_at: subscriptionData.cancel_at,
-  });
-
   // Check if subscription is scheduled for cancellation
   // Either cancel_at_period_end is true OR cancel_at is set (future timestamp)
   const cancelAtPeriodEnd = Boolean(
     subscriptionData.cancel_at_period_end || subscriptionData.cancel_at
   );
-
-  console.log(`[Webhook] Updating subscription ${subscription.id}:`, {
-    stripeStatus: subscription.status,
-    mappedStatus: status,
-    cancelAtPeriodEnd,
-    cancelAt: subscriptionData.cancel_at,
-  });
 
   // Update subscription
   await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
@@ -352,10 +294,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     currentPeriodEnd,
     cancelAtPeriodEnd,
   });
-
-  console.log(
-    `[Webhook] Subscription updated: ${subscription.id}, status: ${status}, cancelAtPeriodEnd: ${cancelAtPeriodEnd}`
-  );
 }
 
 /**
@@ -377,8 +315,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     status: SubscriptionStatus.CANCELED,
     cancelAtPeriodEnd: true,
   });
-
-  console.log(`[Webhook] Subscription canceled: ${subscription.id}`);
 }
 
 /**
@@ -405,8 +341,6 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       status: SubscriptionStatus.ACTIVE,
     });
   }
-
-  console.log(`[Webhook] Payment succeeded for subscription: ${subscriptionId}`);
 }
 
 /**
@@ -431,8 +365,6 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
     status: SubscriptionStatus.PAST_DUE,
   });
-
-  console.log(`[Webhook] Payment failed for subscription: ${subscriptionId}, user locked out`);
 
   // TODO: Send email notification to user
   // TODO: Consider grace period vs. immediate lockout based on business requirements

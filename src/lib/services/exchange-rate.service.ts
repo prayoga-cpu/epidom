@@ -30,18 +30,11 @@ export interface ExchangeRateData {
  */
 export async function getExchangeRate(): Promise<ExchangeRateData> {
   try {
-    console.log("[ExchangeRate] getExchangeRate called");
-
     // Try to get cached rate
     const cachedRate = await getCachedExchangeRate();
-    console.log(
-      "[ExchangeRate] Cached rate:",
-      cachedRate ? `${cachedRate.rate} (expires: ${cachedRate.expiresAt})` : "none"
-    );
 
     if (cachedRate && new Date() < cachedRate.expiresAt) {
       logger.info("Using cached exchange rate", { rate: cachedRate.rate });
-      console.log("[ExchangeRate] Using cached rate:", cachedRate.rate);
       return {
         fromCurrency: cachedRate.fromCurrency,
         toCurrency: cachedRate.toCurrency,
@@ -53,14 +46,10 @@ export async function getExchangeRate(): Promise<ExchangeRateData> {
 
     // Fetch fresh rate from API
     logger.info("Fetching fresh exchange rate from API");
-    console.log("[ExchangeRate] Fetching fresh rate from API...");
     const freshRate = await fetchExchangeRateFromAPI();
-    console.log("[ExchangeRate] Fresh rate fetched:", freshRate.rate);
 
     // Cache the new rate
-    console.log("[ExchangeRate] Caching rate to database...");
     await cacheExchangeRate(freshRate);
-    console.log("[ExchangeRate] Rate cached successfully");
 
     return freshRate;
   } catch (error) {
@@ -95,15 +84,11 @@ export async function getExchangeRate(): Promise<ExchangeRateData> {
  * Fetch exchange rate from exchangerate-api.io
  */
 async function fetchExchangeRateFromAPI(): Promise<ExchangeRateData> {
-  console.log("[ExchangeRate] API_KEY configured:", !!API_KEY);
-
   if (!API_KEY) {
-    console.error("[ExchangeRate] EXCHANGE_RATE_API_KEY is not set!");
     throw new Error("EXCHANGE_RATE_API_KEY environment variable is not set");
   }
 
   const url = `${EXCHANGE_RATE_API_URL}/${API_KEY}/pair/${BASE_CURRENCY}/${TARGET_CURRENCY}`;
-  console.log("[ExchangeRate] Calling API:", url.replace(API_KEY, "***"));
 
   const response = await fetch(url, {
     method: "GET",
@@ -112,14 +97,11 @@ async function fetchExchangeRateFromAPI(): Promise<ExchangeRateData> {
     },
   });
 
-  console.log("[ExchangeRate] API response status:", response.status);
-
   if (!response.ok) {
     throw new Error(`Exchange rate API returned status ${response.status}`);
   }
 
   const data = await response.json();
-  console.log("[ExchangeRate] API response:", data);
 
   if (data.result !== "success") {
     throw new Error(`Exchange rate API error: ${data["error-type"]}`);
@@ -156,8 +138,6 @@ async function getCachedExchangeRate() {
  * Cache exchange rate in database
  */
 async function cacheExchangeRate(rateData: ExchangeRateData) {
-  console.log("[ExchangeRate] Upserting to database:", rateData);
-
   const result = await prisma.exchangeRate.upsert({
     where: {
       fromCurrency_toCurrency: {
@@ -180,7 +160,6 @@ async function cacheExchangeRate(rateData: ExchangeRateData) {
     },
   });
 
-  console.log("[ExchangeRate] Database upsert result:", result);
   return result;
 }
 

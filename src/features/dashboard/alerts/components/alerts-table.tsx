@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlerts, type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
-import { AlertCircle, Loader2, ShoppingCart, Package2 } from "lucide-react";
+import { AlertCircle, ShoppingCart, Package2 } from "lucide-react";
+import { SimpleLoadingSpinner } from "@/features/dashboard/shared/components/loading-states";
+import { InlineErrorState } from "@/features/dashboard/shared/components/error-states";
+import { InlineEmptyState } from "@/features/dashboard/shared/components/empty-states";
 import { useParams } from "next/navigation";
 import BulkOrderDialog from "./bulk-order-dialog";
 
@@ -21,7 +24,7 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
   const params = useParams();
   const storeId = params?.storeId as string;
 
-  const { data, isLoading, error } = useAlerts(storeId);
+  const { data, isLoading, error, refetch } = useAlerts(storeId);
 
   // Bulk order dialog state
   const [isBulkOrderOpen, setIsBulkOrderOpen] = useState(false);
@@ -93,39 +96,27 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
   }, [data, t]);
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center">
-        <Loader2 className="text-muted-foreground mb-4 h-8 w-8 animate-spin" />
-        <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
-      </div>
-    );
+    return <SimpleLoadingSpinner message={t("common.loading")} />;
   }
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-destructive/10 mb-4 rounded-full p-3">
-            <AlertCircle className="text-destructive h-6 w-6" />
-          </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
-          <p className="text-muted-foreground text-sm">{error.message || t("alerts.errorLoading")}</p>
-        </CardContent>
-      </Card>
+      <InlineErrorState
+        error={error}
+        onRetry={() => refetch()}
+        title={t("common.error")}
+        description={error instanceof Error ? error.message : t("alerts.errorLoading")}
+      />
     );
   }
 
   if (alertsBySupplier.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-primary/10 mb-4 rounded-full p-3">
-            <AlertCircle className="text-primary h-6 w-6" />
-          </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("alerts.noActiveAlerts")}</h3>
-          <p className="text-muted-foreground text-sm">{t("alerts.noActiveAlertsDescription")}</p>
-        </CardContent>
-      </Card>
+      <InlineEmptyState
+        icon={AlertCircle}
+        title={t("alerts.noActiveAlerts")}
+        description={t("alerts.noActiveAlertsDescription")}
+      />
     );
   }
 

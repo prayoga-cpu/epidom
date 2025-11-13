@@ -1,190 +1,99 @@
 /**
- * Utility functions for exporting data to various formats (CSV, Excel, PDF)
+ * Export Utilities
+ *
+ * Centralized utilities for CSV export functionality.
+ * Following DRY principle to avoid code duplication across hooks.
  */
 
 /**
- * Convert an array of objects to CSV string
+ * Download a CSV file from a blob response
+ *
+ * @param blob - Blob response from API
+ * @param filename - Filename for the downloaded file (without extension)
+ * @param prefix - Optional prefix for the filename (e.g., "materials", "products")
+ *
+ * @example
+ * const response = await fetch(url);
+ * const blob = await response.blob();
+ * downloadCSV(blob, "export", "materials");
+ * // Downloads: materials-export-2024-01-01.csv
  */
-export function convertToCSV<T extends Record<string, any>>(
-  data: T[],
-  columns?: Array<{ key: keyof T; header: string }>
-): string {
-  if (data.length === 0) return "";
+export function downloadCSV(blob: Blob, filename: string, prefix?: string): void {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
 
-  // If no columns specified, use all keys from first object
-  const cols = columns || Object.keys(data[0]).map((key) => ({ key: key as keyof T, header: key }));
+  // Build filename with optional prefix
+  const date = new Date().toISOString().split("T")[0];
+  const fullFilename = prefix ? `${prefix}-${filename}-${date}.csv` : `${filename}-${date}.csv`;
+  a.download = fullFilename;
 
-  // Create header row
-  const headers = cols.map((col) => col.header).join(",");
+  // Trigger download
+  document.body.appendChild(a);
+  a.click();
 
-  // Create data rows
-  const rows = data.map((row) => {
-    return cols
-      .map((col) => {
-        const value = row[col.key];
-        // Handle different data types
-        if (value === null || value === undefined) return "";
-        // Check for Date objects
-        if (value && typeof value === "object" && "toISOString" in value) {
-          return (value as Date).toISOString();
-        }
-        if (
-          typeof value === "string" &&
-          (value.includes(",") || value.includes('"') || value.includes("\n"))
-        ) {
-          // Escape quotes and wrap in quotes
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return String(value);
-      })
-      .join(",");
-  });
-
-  return [headers, ...rows].join("\n");
+  // Cleanup
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
 }
 
 /**
- * Download CSV file
+ * Export data to CSV via API endpoint
+ * Handles the full flow: fetch, error handling, and download
+ *
+ * @param url - API endpoint URL
+ * @param filename - Filename for the downloaded file
+ * @param prefix - Optional prefix for the filename
+ * @param filters - Optional filters to append as query params
+ *
+ * @example
+ * await exportToCSV(
+ *   `/api/stores/${storeId}/materials/export`,
+ *   "export",
+ *   "materials",
+ *   { search: "test", sortBy: "name" }
+ * );
  */
-export function downloadCSV(csv: string, filename: string): void {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-
-  link.setAttribute("href", url);
-  link.setAttribute("download", `${filename}.csv`);
-  link.style.visibility = "hidden";
-
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  URL.revokeObjectURL(url);
-}
-
-/**
- * Export data to CSV file
- */
-export function exportToCSV<T extends Record<string, any>>(
-  data: T[],
+export async function exportToCSV(
+  url: string,
   filename: string,
-  columns?: Array<{ key: keyof T; header: string }>
-): void {
-  const csv = convertToCSV(data, columns);
-  downloadCSV(csv, filename);
-}
-
-/**
- * Export data to Excel
- * Note: This is a simplified version. For full Excel support, use a library like 'xlsx'
- */
-export async function exportToExcel<T extends Record<string, any>>(
-  data: T[],
-  filename: string,
-  columns?: Array<{ key: keyof T; header: string }>
+  prefix?: string,
+  filters?: Record<string, unknown>
 ): Promise<void> {
-  // Check if xlsx library is available
-  if (typeof window === "undefined") {
-    console.error("Excel export only works in browser environment");
-    return;
-  }
-
-  try {
-    // Dynamic import of xlsx library
-    const XLSX = await import("xlsx");
-
-    const cols =
-      columns || Object.keys(data[0]).map((key) => ({ key: key as keyof T, header: key }));
-
-    // Prepare data for Excel
-    const worksheetData = [
-      cols.map((col) => col.header), // Headers
-      ...data.map((row) =>
-        cols.map((col) => {
-          const value = row[col.key];
-          if ((value as any) instanceof Date) {
-            return (value as Date).toISOString();
-          }
-          return value;
-        })
-      ),
-    ];
-
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-
-    // Write to file
-    XLSX.writeFile(workbook, `${filename}.xlsx`);
-  } catch (error) {
-    console.error("Failed to export to Excel:", error);
-    // Fallback to CSV
-    exportToCSV(data, filename, columns);
-  }
-}
-
-/**
- * Export data to PDF
- * Note: This requires a PDF library like jsPDF
- */
-export async function exportToPDF<T extends Record<string, any>>(
-  data: T[],
-  filename: string,
-  columns?: Array<{ key: keyof T; header: string }>,
-  title?: string
-): Promise<void> {
-  try {
-    // Dynamic import of jsPDF
-    const { default: jsPDF } = await import("jspdf");
-    const autoTable = (await import("jspdf-autotable")).default;
-
-    const doc = new jsPDF();
-
-    // Add title if provided
-    if (title) {
-      doc.setFontSize(16);
-      doc.text(title, 14, 15);
-    }
-
-    const cols =
-      columns || Object.keys(data[0]).map((key) => ({ key: key as keyof T, header: key }));
-
-    // Prepare table data
-    const headers = cols.map((col) => col.header);
-    const body = data.map((row) =>
-      cols.map((col) => {
-        const value = row[col.key];
-        if ((value as any) instanceof Date) {
-          return (value as Date).toLocaleDateString();
-        }
-        if (value === null || value === undefined) {
-          return "";
-        }
-        return String(value);
-      })
-    );
-
-    // Add table to PDF
-    autoTable(doc, {
-      head: [headers],
-      body: body,
-      startY: title ? 25 : 10,
-      theme: "grid",
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [66, 139, 202] },
+  // Build query string from filters if provided
+  let fullUrl = url;
+  if (filters && Object.keys(filters).length > 0) {
+    const queryString = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        queryString.append(key, String(value));
+      }
     });
-
-    // Save PDF
-    doc.save(`${filename}.pdf`);
-  } catch (error) {
-    console.error("Failed to export to PDF:", error);
-    // Fallback to CSV
-    exportToCSV(data, filename, columns);
+    fullUrl = `${url}?${queryString.toString()}`;
   }
+
+  // Fetch the CSV file
+  const response = await fetch(fullUrl);
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || "Failed to export data");
+  }
+
+  // Download the blob
+  const blob = await response.blob();
+  downloadCSV(blob, filename, prefix);
 }
 
 /**
- * Generic export function that handles all formats
+ * Export data to CSV/Excel/PDF format
+ * Client-side export utility for ExportButton component
+ *
+ * @param data - Array of data objects to export
+ * @param format - Export format: "csv" | "excel" | "pdf"
+ * @param filename - Base filename (without extension)
+ * @param columns - Optional column definitions for custom headers
+ * @param title - Optional title for PDF exports
  */
 export async function exportData<T extends Record<string, any>>(
   data: T[],
@@ -193,46 +102,58 @@ export async function exportData<T extends Record<string, any>>(
   columns?: Array<{ key: keyof T; header: string }>,
   title?: string
 ): Promise<void> {
-  switch (format) {
-    case "csv":
-      exportToCSV(data, filename, columns);
-      break;
-    case "excel":
-      await exportToExcel(data, filename, columns);
-      break;
-    case "pdf":
-      await exportToPDF(data, filename, columns, title);
-      break;
-    default:
-      console.error(`Unsupported export format: ${format}`);
+  if (data.length === 0) {
+    throw new Error("No data to export");
   }
-}
 
-/**
- * Copy data to clipboard as CSV
- */
-export async function copyToClipboard<T extends Record<string, any>>(
-  data: T[],
-  columns?: Array<{ key: keyof T; header: string }>
-): Promise<void> {
-  const csv = convertToCSV(data, columns);
+  // Get headers from columns or use object keys
+  const headers = columns
+    ? columns.map((col) => col.header)
+    : Object.keys(data[0]);
 
-  try {
-    await navigator.clipboard.writeText(csv);
-  } catch (error) {
-    console.error("Failed to copy to clipboard:", error);
-    // Fallback for older browsers
-    const textArea = document.createElement("textarea");
-    textArea.value = csv;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-999999px";
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-      document.execCommand("copy");
-    } catch (err) {
-      console.error("Fallback copy failed:", err);
+  // Get data rows
+  const rows = data.map((item) => {
+    if (columns) {
+      return columns.map((col) => {
+        const value = item[col.key];
+        return value !== null && value !== undefined ? String(value) : "";
+      });
     }
-    document.body.removeChild(textArea);
+    return Object.values(item).map((value) =>
+      value !== null && value !== undefined ? String(value) : ""
+    );
+  });
+
+  // Build CSV content
+  const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+
+  // Add BOM for Excel compatibility
+  const BOM = "\uFEFF";
+  const csvWithBOM = BOM + csvContent;
+
+  // Create blob
+  let blob: Blob;
+  let extension: string;
+
+  if (format === "csv" || format === "excel") {
+    blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
+    extension = format === "excel" ? "xlsx" : "csv";
+  } else {
+    // PDF export - for now, just export as CSV
+    // TODO: Implement proper PDF generation if needed
+    blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
+    extension = "csv";
   }
+
+  // Download file
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const date = new Date().toISOString().split("T")[0];
+  a.download = `${filename}-${date}.${extension}`;
+
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
 }

@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateSupplierInput, UpdateSupplierInput } from "@/lib/validation/inventory.schemas";
 import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
+import type { ApiSuccessResponse } from "@/types/api/responses";
+import { DEFAULT_QUERY_OPTIONS } from "@/lib/react-query/constants";
+import { fetchWithErrorHandling, ApiError } from "@/lib/api/client";
+import { exportToCSV } from "@/lib/utils/export";
+import { buildQueryParams } from "@/lib/utils/query-params";
 
 // Response interfaces
 export interface SuppliersResponse {
@@ -31,32 +36,18 @@ async function fetchSupplierById(
   storeId: string,
   supplierId: string
 ): Promise<SupplierWithRelations> {
-  const response = await fetch(`/api/stores/${storeId}/suppliers/${supplierId}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch supplier");
-  }
-
-  return response.json();
+  return fetchWithErrorHandling<SupplierWithRelations>(`/api/stores/${storeId}/suppliers/${supplierId}`);
 }
 
 async function createSupplier(
   storeId: string,
   data: CreateSupplierInput
 ): Promise<SupplierWithRelations> {
-  const response = await fetch(`/api/stores/${storeId}/suppliers`, {
+  return fetchWithErrorHandling<SupplierWithRelations>(`/api/stores/${storeId}/suppliers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create supplier");
-  }
-
-  return response.json();
 }
 
 async function updateSupplier(
@@ -64,73 +55,32 @@ async function updateSupplier(
   supplierId: string,
   data: UpdateSupplierInput
 ): Promise<SupplierWithRelations> {
-  const response = await fetch(`/api/stores/${storeId}/suppliers/${supplierId}`, {
+  return fetchWithErrorHandling<SupplierWithRelations>(`/api/stores/${storeId}/suppliers/${supplierId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to update supplier");
-  }
-
-  return response.json();
 }
 
 async function deleteSupplier(storeId: string, supplierId: string): Promise<void> {
-  const response = await fetch(`/api/stores/${storeId}/suppliers/${supplierId}`, {
+  await fetchWithErrorHandling<void>(`/api/stores/${storeId}/suppliers/${supplierId}`, {
     method: "DELETE",
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to delete supplier");
-  }
 }
 
 async function bulkDeleteSuppliers(
   storeId: string,
   supplierIds: string[]
 ): Promise<{ deletedCount: number }> {
-  const response = await fetch(`/api/stores/${storeId}/suppliers/bulk`, {
+  return fetchWithErrorHandling<{ deletedCount: number }>(`/api/stores/${storeId}/suppliers/bulk`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids: supplierIds }),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to delete suppliers");
-  }
-
-  return response.json();
 }
 
 async function exportSuppliers(storeId: string, filters: SupplierFilterInput): Promise<void> {
-  const params = new URLSearchParams();
-
-  if (filters.search) params.append("search", filters.search);
-  if (filters.sortBy) params.append("sortBy", filters.sortBy);
-  if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
-
-  const response = await fetch(`/api/stores/${storeId}/suppliers/export?${params.toString()}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to export suppliers");
-  }
-
-  // Download CSV file
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `suppliers-export-${new Date().toISOString().split("T")[0]}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
+  await exportToCSV(`/api/stores/${storeId}/suppliers/export`, "export", "suppliers", filters as Record<string, unknown>);
 }
 
 // React Query Hooks
@@ -142,40 +92,13 @@ export function useSuppliers(storeId: string, filters: SupplierFilterInput) {
   return useQuery<SuppliersResponse>({
     queryKey: supplierKeys.list(storeId, filters),
     queryFn: async () => {
-      // Build query string
-      const params = new URLSearchParams();
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== "") {
-            params.append(key, String(value));
-          }
-        });
-      }
-
-      const queryString = params.toString();
-      const url = `/api/stores/${storeId}/suppliers${queryString ? `?${queryString}` : ""}`;
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        const error = await response.json();
-
-        // Handle 403 Forbidden (subscription feature locked)
-        if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
-          const customError = new Error(error.message || "Supplier Management is only available in Pro and Enterprise plans");
-          (customError as any).code = "SUBSCRIPTION_FEATURE_LOCKED";
-          (customError as any).status = 403;
-          (customError as any).upgradeRequired = true;
-          throw customError;
-        }
-
-        throw new Error(error.error || "Failed to fetch suppliers");
-      }
-
-      return response.json();
+      const params = buildQueryParams(filters as Record<string, unknown>);
+      const url = `/api/stores/${storeId}/suppliers${params.toString() ? `?${params.toString()}` : ""}`;
+      // fetchWithErrorHandling already handles ApiError properly
+      return fetchWithErrorHandling<SuppliersResponse>(url);
     },
     enabled: !!storeId,
-    staleTime: 30000, // 30 seconds
+    ...DEFAULT_QUERY_OPTIONS.inventory,
   });
 }
 
@@ -187,7 +110,7 @@ export function useSupplier(storeId: string, supplierId: string | null) {
     queryKey: supplierKeys.detail(storeId, supplierId!),
     queryFn: () => fetchSupplierById(storeId, supplierId!),
     enabled: !!storeId && !!supplierId,
-    staleTime: 60000, // 1 minute
+    ...DEFAULT_QUERY_OPTIONS.inventory,
   });
 }
 

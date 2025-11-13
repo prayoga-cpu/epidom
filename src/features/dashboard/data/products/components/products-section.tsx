@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,12 @@ import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-
 import {
   ItemCardGrid,
   BaseItemCard,
+  ActionButtons,
+  ActionButton,
 } from "../../components";
+import { SectionLoadingSkeleton } from "@/features/dashboard/shared/components/loading-states";
+import { SectionErrorState } from "@/features/dashboard/shared/components/error-states";
+import { responsive, responsiveText } from "@/lib/utils/responsive";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
@@ -61,6 +67,10 @@ export function ProductsSection() {
   const params = useParams();
   const { advancedReportsAccess } = useFeatureAccess();
   const storeId = params.storeId as string;
+
+  // Search input state (for immediate UI feedback)
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
 
   // Filters and pagination state
   const [filters, setFilters] = useState({
@@ -72,6 +82,11 @@ export function ProductsSection() {
     take: 20,
   });
 
+  // Update filters when debounced search changes
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, search: debouncedSearch, skip: 0 }));
+  }, [debouncedSearch]);
+
   // UI state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -81,7 +96,7 @@ export function ProductsSection() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // API hooks
-  const { data, isLoading, error } = useProducts(storeId, filters);
+  const { data, isLoading, error, refetch } = useProducts(storeId, filters);
   const deleteProduct = useDeleteProduct(storeId);
   const bulkDeleteProducts = useBulkDeleteProducts(storeId);
   const exportProducts = useExportProducts();
@@ -226,72 +241,51 @@ export function ProductsSection() {
 
   const hasActiveFilters = filters.search || filters.category;
 
-  // Show loading state - keep card structure for consistent layout
+  // Show loading state
   if (isLoading) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <Download className="mr-2 h-4 w-4" />
-                {t("common.actions.export")}
-              </Button>
-              <Button size="sm" disabled className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                {t("data.products.addButton")}
-              </Button>
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {t("common.actions.view")}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-        </CardContent>
-      </Card>
+      <SectionLoadingSkeleton
+        title={t("data.products.pageTitle")}
+        exportLabel={t("common.actions.export")}
+        addLabel={t("data.products.addButton")}
+        selectLabel={t("common.actions.view")}
+      />
     );
   }
 
   // Show error state
   if (error) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
-          <p className="text-destructive">Error loading products</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        error={error}
+        onRetry={() => refetch()}
+        title={t("common.error")}
+        description={t("messages.errorLoadingProducts") || "Error loading products"}
+      />
     );
   }
 
   return (
     <>
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <Card className={responsive.cardWrapper}>
+        <CardHeader className={responsive.cardHeader}>
+          <div className={responsive.header}>
             <div className="flex items-center gap-3">
-              <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
+              <CardTitle className={responsiveText.title}>{t("data.products.pageTitle")}</CardTitle>
               {showLimitBadge && productUsage?.limit !== null && (
                 <Badge variant="outline" className="text-xs">
                   {productUsage.current} / {productUsage.limit} {t("data.products.limitBadge") || "products"}
                 </Badge>
               )}
             </div>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
+            <ActionButtons>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
+                  <ActionButton
                     variant="outline"
                     size="sm"
                     onClick={handleExport}
                     disabled={exportProducts.isPending || !advancedReportsAccess}
-                    className="w-full md:w-auto"
                   >
                     {exportProducts.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -299,7 +293,7 @@ export function ProductsSection() {
                       <Download className="mr-2 h-4 w-4" />
                     )}
                     {t("common.actions.export")}
-                  </Button>
+                  </ActionButton>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -311,14 +305,13 @@ export function ProductsSection() {
                 <TooltipTrigger asChild>
                   <div>
                     <AddProductDialog storeId={storeId}>
-                      <Button
+                      <ActionButton
                         size="sm"
-                        className="w-full sm:w-auto"
                         disabled={productLimitReached}
                       >
                         <Plus className="mr-2 h-4 w-4" />
                         {t("data.products.addButton")}
-                      </Button>
+                      </ActionButton>
                     </AddProductDialog>
                   </div>
                 </TooltipTrigger>
@@ -334,16 +327,15 @@ export function ProductsSection() {
                 )}
               </Tooltip>
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
+                <ActionButton variant="destructive" size="sm" onClick={handleBulkDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t("actions.delete")} ({selectedIds.size})
-                </Button>
+                </ActionButton>
               )}
-              <Button
+              <ActionButton
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
-                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -356,8 +348,8 @@ export function ProductsSection() {
                     {t("common.actions.view")}
                   </>
                 )}
-              </Button>
-            </div>
+              </ActionButton>
+            </ActionButtons>
           </div>
         </CardHeader>
 
@@ -369,10 +361,8 @@ export function ProductsSection() {
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder={t("actions.searchPlaceholder")}
-                value={filters.search}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
-                }
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full pl-9"
               />
             </div>
@@ -420,10 +410,10 @@ export function ProductsSection() {
 
               {/* Clear Filters */}
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
+                <ActionButton variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
                   {t("common.actions.clearFilters")}
-                </Button>
+                </ActionButton>
               )}
             </div>
 

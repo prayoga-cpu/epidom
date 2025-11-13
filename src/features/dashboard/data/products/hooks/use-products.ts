@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateProductInput, UpdateProductInput } from "@/lib/validation/inventory.schemas";
 import type { Product } from "@prisma/client";
-import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
-import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
+import { invalidateProductRelatedQueries } from "@/lib/react-query/cache-utils";
+import type { ApiSuccessResponse } from "@/types/api/responses";
+import { DEFAULT_QUERY_OPTIONS } from "@/lib/react-query/constants";
+import { buildQueryParams } from "@/lib/utils/query-params";
+import { fetchWithErrorHandling } from "@/lib/api/client";
+import { exportToCSV } from "@/lib/utils/export";
 
 // Re-export for convenience
 export type { Product };
@@ -28,54 +32,36 @@ export interface ProductFilterInput {
   take?: number;
 }
 
+// Query Key Factory
+export const productKeys = {
+  all: (storeId: string) => ["products", storeId] as const,
+  lists: (storeId: string) => [...productKeys.all(storeId), "list"] as const,
+  list: (storeId: string, filters?: ProductFilterInput) =>
+    [...productKeys.lists(storeId), filters] as const,
+  details: (storeId: string) => [...productKeys.all(storeId), "detail"] as const,
+  detail: (storeId: string, id: string) => [...productKeys.details(storeId), id] as const,
+};
+
 // API Functions
 async function fetchProducts(
   storeId: string,
   filters: ProductFilterInput
 ): Promise<ProductsResponse> {
-  const params = new URLSearchParams();
-
-  if (filters.search) params.append("search", filters.search);
-  if (filters.category) params.append("category", filters.category);
-  if (filters.sortBy) params.append("sortBy", filters.sortBy);
-  if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
-  if (filters.skip !== undefined) params.append("skip", filters.skip.toString());
-  if (filters.take !== undefined) params.append("take", filters.take.toString());
-
-  const response = await fetch(`/api/stores/${storeId}/products?${params.toString()}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch products");
-  }
-
-  return response.json();
+  const params = buildQueryParams(filters as Record<string, unknown>);
+  const url = `/api/stores/${storeId}/products${params.toString() ? `?${params.toString()}` : ""}`;
+  return fetchWithErrorHandling<ProductsResponse>(url);
 }
 
 async function fetchProductById(storeId: string, productId: string): Promise<Product> {
-  const response = await fetch(`/api/stores/${storeId}/products/${productId}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch product");
-  }
-
-  return response.json();
+  return fetchWithErrorHandling<Product>(`/api/stores/${storeId}/products/${productId}`);
 }
 
 async function createProduct(storeId: string, data: CreateProductInput): Promise<Product> {
-  const response = await fetch(`/api/stores/${storeId}/products`, {
+  return fetchWithErrorHandling<Product>(`/api/stores/${storeId}/products`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create product");
-  }
-
-  return response.json();
 }
 
 async function updateProduct(
@@ -83,74 +69,32 @@ async function updateProduct(
   productId: string,
   data: UpdateProductInput
 ): Promise<Product> {
-  const response = await fetch(`/api/stores/${storeId}/products/${productId}`, {
+  return fetchWithErrorHandling<Product>(`/api/stores/${storeId}/products/${productId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to update product");
-  }
-
-  return response.json();
 }
 
 async function deleteProduct(storeId: string, productId: string): Promise<void> {
-  const response = await fetch(`/api/stores/${storeId}/products/${productId}`, {
+  await fetchWithErrorHandling<void>(`/api/stores/${storeId}/products/${productId}`, {
     method: "DELETE",
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to delete product");
-  }
 }
 
 async function bulkDeleteProducts(
   storeId: string,
   productIds: string[]
 ): Promise<{ deletedCount: number }> {
-  const response = await fetch(`/api/stores/${storeId}/products/bulk`, {
+  return fetchWithErrorHandling<{ deletedCount: number }>(`/api/stores/${storeId}/products/bulk`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids: productIds }),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to delete products");
-  }
-
-  return response.json();
 }
 
 async function exportProducts(storeId: string, filters: ProductFilterInput): Promise<void> {
-  const params = new URLSearchParams();
-
-  if (filters.search) params.append("search", filters.search);
-  if (filters.category) params.append("category", filters.category);
-  if (filters.sortBy) params.append("sortBy", filters.sortBy);
-  if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
-
-  const response = await fetch(`/api/stores/${storeId}/products/export?${params.toString()}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to export products");
-  }
-
-  // Download CSV file
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `products-export-${new Date().toISOString().split("T")[0]}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
+  await exportToCSV(`/api/stores/${storeId}/products/export`, "export", "products", filters as Record<string, unknown>);
 }
 
 // React Query Hooks
@@ -160,9 +104,10 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
  */
 export function useProducts(storeId: string, filters: ProductFilterInput) {
   return useQuery({
-    queryKey: ["products", storeId, filters],
+    queryKey: productKeys.list(storeId, filters),
     queryFn: () => fetchProducts(storeId, filters),
     enabled: !!storeId,
+    ...DEFAULT_QUERY_OPTIONS.inventory,
   });
 }
 
@@ -171,9 +116,11 @@ export function useProducts(storeId: string, filters: ProductFilterInput) {
  */
 export function useProduct(storeId: string, productId: string | null) {
   return useQuery({
-    queryKey: ["products", storeId, productId],
+    queryKey: productKeys.detail(storeId, productId!),
     queryFn: () => fetchProductById(storeId, productId!),
     enabled: !!storeId && !!productId,
+    staleTime: 60 * 1000, // 1 minute - data considered fresh for 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes - cache kept for 5 minutes after unmount
   });
 }
 
@@ -185,14 +132,8 @@ export function useCreateProduct(storeId: string) {
 
   return useMutation({
     mutationFn: (data: CreateProductInput) => createProduct(storeId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      // Invalidate product usage cache (product count has changed)
-      queryClient.invalidateQueries({ queryKey: ["product-usage", storeId] });
-      // Invalidate alerts (new product may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
-      // Invalidate stock movements (initial stock movement may have been created)
-      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+    onSuccess: async () => {
+      await invalidateProductRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -205,13 +146,8 @@ export function useUpdateProduct(storeId: string, productId: string) {
 
   return useMutation({
     mutationFn: (data: UpdateProductInput) => updateProduct(storeId, productId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["products", storeId, productId] });
-      // Invalidate alerts (stock changes may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
-      // Invalidate stock movements (new movement may have been created)
-      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+    onSuccess: async () => {
+      await invalidateProductRelatedQueries(queryClient, storeId, productId);
     },
   });
 }
@@ -224,10 +160,8 @@ export function useDeleteProduct(storeId: string) {
 
   return useMutation({
     mutationFn: (productId: string) => deleteProduct(storeId, productId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      // Invalidate alerts (deleted product may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+    onSuccess: async () => {
+      await invalidateProductRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -240,10 +174,8 @@ export function useBulkDeleteProducts(storeId: string) {
 
   return useMutation({
     mutationFn: (productIds: string[]) => bulkDeleteProducts(storeId, productIds),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      // Invalidate alerts (deleted products may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+    onSuccess: async () => {
+      await invalidateProductRelatedQueries(queryClient, storeId);
     },
   });
 }

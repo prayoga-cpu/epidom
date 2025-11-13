@@ -46,12 +46,8 @@ export async function POST(request: NextRequest) {
       limit: 100,
     });
 
-    console.log(`[Cleanup] Found ${allSubscriptions.data.length} total subscriptions`);
-
     // Filter to only active ones
     const activeSubscriptions = allSubscriptions.data.filter((sub) => sub.status === "active");
-
-    console.log(`[Cleanup] Found ${activeSubscriptions.length} active subscriptions`);
 
     if (activeSubscriptions.length === 0) {
       return NextResponse.json({
@@ -99,8 +95,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Multiple active subscriptions - need to clean up
-    console.log(`[Cleanup] Multiple active subscriptions detected: ${activeSubscriptions.length}`);
-
     // Prioritize: PRO > STARTER, then by creation date (newest first)
     const sorted = activeSubscriptions.sort((a, b) => {
       const planA = determinePlan(a);
@@ -118,9 +112,6 @@ export async function POST(request: NextRequest) {
     const toCancel = sorted.slice(1);
 
     const keepPlan = determinePlan(keepSubscription);
-
-    console.log(`[Cleanup] Keeping: ${keepSubscription.id} (${keepPlan})`);
-    console.log(`[Cleanup] Canceling: ${toCancel.length} subscriptions`);
 
     if (dryRun) {
       return NextResponse.json({
@@ -142,7 +133,6 @@ export async function POST(request: NextRequest) {
     // Cancel all duplicates
     const canceledIds: string[] = [];
     for (const sub of toCancel) {
-      console.log(`[Cleanup] Canceling subscription: ${sub.id}`);
       try {
         await stripe.subscriptions.cancel(sub.id, { prorate: false });
         canceledIds.push(sub.id);
@@ -161,8 +151,6 @@ export async function POST(request: NextRequest) {
       currentPeriodEnd: new Date((keepSubscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: (keepSubscription as any).cancel_at_period_end || false,
     });
-
-    console.log(`[Cleanup] Database updated to: ${keepPlan} - ACTIVE`);
 
     return NextResponse.json({
       message: `Successfully cleaned up ${canceledIds.length} duplicate subscriptions`,
@@ -198,6 +186,5 @@ function determinePlan(subscription: any): SubscriptionPlan {
   if (amount === 4900) return SubscriptionPlan.PRO; // $49/month
 
   // Default to STARTER if can't determine
-  console.warn(`[Cleanup] Could not determine plan for subscription, defaulting to STARTER`);
   return SubscriptionPlan.STARTER;
 }

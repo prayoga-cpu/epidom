@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { productionBatchService } from "@/lib/services/production-batch.service";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
 import { cancelProductionSchema } from "@/lib/validation/production.schemas";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * POST /api/stores/[id]/production-batches/[batchId]/cancel
@@ -14,13 +14,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string; batchId: string }> }
 ) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const resolvedParams = await params;
+    const result = await verifyStoreAccessFromRequest(userId, { id: resolvedParams.id });
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId, batchId } = await params;
+    const { id: storeId, batchId } = resolvedParams;
     const body = await request.json();
 
     // Validate request body
@@ -29,31 +33,47 @@ export async function POST(
     // Cancel production via service
     const batch = await productionBatchService.cancelProduction(batchId, storeId, restoreMaterials);
 
-    return NextResponse.json(batch, { status: 200 });
+    return NextResponse.json(createSuccessResponse(batch), { status: 200 });
   } catch (error) {
     console.error("Error canceling production:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid input data",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
 
     if (error instanceof Error) {
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
       if (
         error.message.includes("Cannot cancel completed batches") ||
         error.message.includes("already cancelled")
       ) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 400 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to cancel production" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to cancel production"
+      ),
       { status: 500 }
     );
   }

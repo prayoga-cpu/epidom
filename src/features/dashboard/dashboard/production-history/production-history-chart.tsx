@@ -1,26 +1,37 @@
 "use client";
+import { memo, useMemo } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ExportButton } from "@/components/ui/export-button";
 import DashboardCard from "../_components/dashboard-card";
 import Chart from "./components/chart";
-import { useMemo } from "react";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { useProductionBatches } from "@/features/dashboard/management/recipe-production/hooks/use-production-batches";
+import { useProductionBatches, type ProductionBatchesResponse } from "@/features/dashboard/management/recipe-production/hooks/use-production-batches";
 import { exportData } from "@/features/dashboard/dashboard/production-history/utils/export";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
-import { Loader2 } from "lucide-react";
+import { SimpleLoadingSpinner } from "@/features/dashboard/shared/components/loading-states";
+import { InlineErrorState } from "@/features/dashboard/shared/components/error-states";
 
-export default function ProductionHistoryChart() {
+interface ProductionHistoryChartProps {
+  data?: ProductionBatchesResponse | null;
+  isLoading?: boolean;
+  error?: Error | null;
+}
+
+const ProductionHistoryChart = memo(function ProductionHistoryChart({ data: propsData, isLoading: propsIsLoading, error: propsError }: ProductionHistoryChartProps = {}) {
   const { t, locale } = useI18n();
   const { storeId } = useCurrentStore();
   const { advancedReportsAccess } = useFeatureAccess();
 
-  const { data, isLoading, error } = useProductionBatches(storeId || "", {
+  // Use props if provided, otherwise fetch from API (backward compatibility)
+  const productionBatchesQuery = useProductionBatches(storeId || "", {
     sortBy: "scheduledDate",
     sortOrder: "desc",
     skip: 0,
     take: 10, // Just get 10 most recent batches
   });
+  const data = propsData !== undefined ? propsData : productionBatchesQuery.data;
+  const isLoading = propsIsLoading !== undefined ? propsIsLoading : productionBatchesQuery.isLoading;
+  const error = propsError !== undefined ? propsError : productionBatchesQuery.error;
 
   // Transform production batches into chart data
   const chartData = useMemo(() => {
@@ -75,44 +86,77 @@ export default function ProductionHistoryChart() {
     });
   }, [data, locale]);
 
+  const cardOther = (
+    <ExportButton
+      data={exportData({ chartData })}
+      filename="production-history"
+      variant="outline"
+      size="sm"
+      disabled={!advancedReportsAccess}
+      title={
+        !advancedReportsAccess
+          ? "Advanced Reports is only available in Pro and Enterprise plans"
+          : undefined
+      }
+    />
+  );
+
+  // Early returns for loading/error states using shared components
+  if (!storeId) {
+    return (
+      <DashboardCard
+        cardTitle={t("pages.prodHistory")}
+        cardDescription={t("pages.prodHistoryDesc")}
+        cardOther={cardOther}
+        cardContent={
+          <SimpleLoadingSpinner message={t("common.loading")} className="min-h-[300px]" />
+        }
+      />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardCard
+        cardTitle={t("pages.prodHistory")}
+        cardDescription={t("pages.prodHistoryDesc")}
+        cardOther={cardOther}
+        cardContent={
+          <SimpleLoadingSpinner message={t("common.loading")} className="min-h-[300px]" />
+        }
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardCard
+        cardTitle={t("pages.prodHistory")}
+        cardDescription={t("pages.prodHistoryDesc")}
+        cardOther={cardOther}
+        cardContent={
+          <InlineErrorState
+            error={error}
+            title={t("common.error")}
+            className="min-h-[300px]"
+          />
+        }
+      />
+    );
+  }
+
   return (
     <DashboardCard
       cardTitle={t("pages.prodHistory")}
       cardDescription={t("pages.prodHistoryDesc")}
-      cardOther={
-        <ExportButton
-          data={exportData({ chartData })}
-          filename="production-history"
-          variant="outline"
-          size="sm"
-          disabled={!advancedReportsAccess}
-          title={
-            !advancedReportsAccess
-              ? "Advanced Reports is only available in Pro and Enterprise plans"
-              : undefined
-          }
-        />
-      }
+      cardOther={cardOther}
       cardContent={
-        !storeId ? (
-          <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center">
-            <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
-          </div>
-        ) : isLoading ? (
-          <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center">
-            <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
-            <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
-          </div>
-        ) : error ? (
-          <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center">
-            <p className="text-muted-foreground text-sm">{t("common.error")}</p>
-          </div>
-        ) : (
-          <div className="flex min-h-[300px] flex-1">
+        <div className="flex min-h-[300px] flex-1">
           <Chart chartData={chartData} />
-          </div>
-        )
+        </div>
       }
     />
   );
-}
+});
+
+export default ProductionHistoryChart;

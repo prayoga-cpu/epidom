@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,7 +53,12 @@ import { useRouter } from "next/navigation";
 import {
   ItemCardGrid,
   BaseItemCard,
+  ActionButtons,
+  ActionButton,
 } from "../../components";
+import { SectionLoadingSkeleton } from "@/features/dashboard/shared/components/loading-states";
+import { SectionErrorState } from "@/features/dashboard/shared/components/error-states";
+import { responsive, responsiveText } from "@/lib/utils/responsive";
 
 export function SuppliersSection() {
   const { t } = useI18n();
@@ -61,6 +67,10 @@ export function SuppliersSection() {
   const storeId = params.storeId as string;
   const { supplierManagementAccess, advancedReportsAccess, isLoading: isLoadingAccess } =
     useFeatureAccess();
+
+  // Search input state (for immediate UI feedback)
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
 
   // Filters and pagination state
   const [filters, setFilters] = useState({
@@ -71,6 +81,11 @@ export function SuppliersSection() {
     take: 20,
   });
 
+  // Update filters when debounced search changes
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, search: debouncedSearch, skip: 0 }));
+  }, [debouncedSearch]);
+
   // UI state
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierWithRelations | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -80,7 +95,7 @@ export function SuppliersSection() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // API hooks
-  const { data, isLoading, error } = useSuppliers(storeId, filters);
+  const { data, isLoading, error, refetch } = useSuppliers(storeId, filters);
   const deleteSupplier = useDeleteSupplier(storeId);
   const bulkDeleteSuppliers = useBulkDeleteSuppliers(storeId);
   const exportSuppliers = useExportSuppliers();
@@ -187,35 +202,15 @@ export function SuppliersSection() {
 
   const hasActiveFilters = filters.search;
 
-  // Show loading state - keep card structure for consistent layout
-  if (isLoading) {
+  // Show loading state
+  if (isLoading || isLoadingAccess) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">
-              {t("data.suppliers.pageTitle")}
-            </CardTitle>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <Download className="mr-2 h-4 w-4" />
-                {t("common.actions.export")}
-              </Button>
-              <Button size="sm" disabled className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                {t("data.suppliers.addButton")}
-              </Button>
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {t("common.actions.select")}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-        </CardContent>
-      </Card>
+      <SectionLoadingSkeleton
+        title={t("data.suppliers.pageTitle")}
+        exportLabel={t("common.actions.export")}
+        addLabel={t("data.suppliers.addButton")}
+        selectLabel={t("common.actions.select")}
+      />
     );
   }
 
@@ -251,34 +246,31 @@ export function SuppliersSection() {
   // Show error state for other errors
   if (error) {
     return (
-      <Card className="overflow-hidden shadow-md">
-        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
-          <p className="text-destructive">{t("messages.errorLoadingSuppliers")}</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            {t("common.actions.retry")}
-          </Button>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        error={error}
+        onRetry={() => refetch()}
+        title={t("common.error")}
+        description={t("messages.errorLoadingSuppliers")}
+      />
     );
   }
 
   return (
     <>
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">
+      <Card className={responsive.cardWrapper}>
+        <CardHeader className={responsive.cardHeader}>
+          <div className={responsive.header}>
+            <CardTitle className={responsiveText.title}>
               {t("data.suppliers.pageTitle")}
             </CardTitle>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
+            <ActionButtons>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
+                  <ActionButton
                     variant="outline"
                     size="sm"
                     onClick={handleExport}
                     disabled={exportSuppliers.isPending || !advancedReportsAccess}
-                    className="w-full md:w-auto"
                   >
                     {exportSuppliers.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -286,7 +278,7 @@ export function SuppliersSection() {
                       <Download className="mr-2 h-4 w-4" />
                     )}
                     {t("common.actions.export")}
-                  </Button>
+                  </ActionButton>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -295,22 +287,21 @@ export function SuppliersSection() {
                 )}
               </Tooltip>
               <AddSupplierDialog>
-                <Button size="sm" className="w-full sm:w-auto">
+                <ActionButton size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   {t("data.suppliers.addButton")}
-                </Button>
+                </ActionButton>
               </AddSupplierDialog>
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
+                <ActionButton variant="destructive" size="sm" onClick={handleBulkDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t("common.actions.delete")} ({selectedIds.size})
-                </Button>
+                </ActionButton>
               )}
-              <Button
+              <ActionButton
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
-                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -323,8 +314,8 @@ export function SuppliersSection() {
                     {t("common.actions.select")}
                   </>
                 )}
-              </Button>
-            </div>
+              </ActionButton>
+            </ActionButtons>
           </div>
         </CardHeader>
 
@@ -336,10 +327,8 @@ export function SuppliersSection() {
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder={t("data.suppliers.searchPlaceholder")}
-                value={filters.search}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
-                }
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full pl-9"
               />
             </div>
@@ -381,10 +370,10 @@ export function SuppliersSection() {
 
               {/* Clear Filters */}
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
+                <ActionButton variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
                   {t("common.actions.clearFilters")}
-                </Button>
+                </ActionButton>
               )}
             </div>
 

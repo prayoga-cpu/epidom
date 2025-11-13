@@ -26,7 +26,7 @@ export function BillingContainer() {
   const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data, isLoading: loading, error: subscriptionError } = useSubscriptionStatus();
+  const { data, isLoading: loading, error: subscriptionError, refetch } = useSubscriptionStatus();
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,8 +73,8 @@ export function BillingContainer() {
         throw new Error(result.error || "Failed to cancel subscription");
       }
 
-      // Refresh page to update subscription status
-      window.location.reload();
+      // Refresh subscription status
+      refetch();
     } catch (err: any) {
       setError(err.message);
       setActionLoading(false);

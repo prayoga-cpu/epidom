@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { subscriptionService } from "@/lib/services";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * GET /api/stores/[id]/supplier-orders
@@ -12,13 +11,11 @@ import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
@@ -33,21 +30,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       );
     }
 
-    const storeId = (await params).id;
+    const result = await verifyStoreAccessFromRequest(userId, params);
 
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
+
+    const { store } = result;
+    const storeId = store.id;
 
     const orders = await prisma.supplierOrder.findMany({
       where: {
@@ -66,10 +57,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       },
     });
 
-    return NextResponse.json({ orders });
+    return NextResponse.json(createSuccessResponse({ orders }));
   } catch (error) {
     console.error("Error fetching supplier orders:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Internal server error"
+      ),
+      { status: 500 }
+    );
   }
 }
 
@@ -79,13 +76,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
@@ -100,21 +95,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
     }
 
-    const storeId = (await params).id;
+    const result = await verifyStoreAccessFromRequest(userId, params);
 
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
+
+    const { store } = result;
+    const storeId = store.id;
 
     const body = await request.json();
     const { supplierId, items, expectedDate, notes, tax, shipping } = body;
@@ -129,12 +118,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
 
     if (!supplier) {
-      return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Supplier not found"),
+        { status: 404 }
+      );
     }
 
     // Validate items
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: "Order must have at least one item" }, { status: 400 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "Order must have at least one item"),
+        { status: 400 }
+      );
     }
 
     // Calculate totals
@@ -151,7 +146,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
       if (!material) {
         return NextResponse.json(
-          { error: `Material ${item.materialId} not found` },
+          createErrorResponse(ApiErrorCode.NOT_FOUND, `Material ${item.materialId} not found`),
           { status: 404 }
         );
       }
@@ -209,9 +204,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
     });
 
-    return NextResponse.json({ order }, { status: 201 });
+    return NextResponse.json(createSuccessResponse({ order }), { status: 201 });
   } catch (error) {
     console.error("Error creating supplier order:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Internal server error"
+      ),
+      { status: 500 }
+    );
   }
 }

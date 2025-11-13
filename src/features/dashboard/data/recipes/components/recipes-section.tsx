@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,13 +40,16 @@ import {
 } from "../hooks/use-recipes";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import {
-  SectionLoadingState,
   FilterSection,
   ItemCardGrid,
   BaseItemCard,
+  ActionButtons,
+  ActionButton,
   type FilterField,
 } from "../../components";
-import LoadingPage from "@/features/loading/loading-page";
+import { SectionLoadingSkeleton } from "@/features/dashboard/shared/components/loading-states";
+import { SectionErrorState } from "@/features/dashboard/shared/components/error-states";
+import { responsive, responsiveText } from "@/lib/utils/responsive";
 
 type SortField =
   | "name"
@@ -74,6 +78,10 @@ export function RecipesSection() {
   const params = useParams();
   const storeId = params.storeId as string;
 
+  // Search input state (for immediate UI feedback)
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
+
   // State
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
@@ -87,11 +95,17 @@ export function RecipesSection() {
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Update searchQuery when debounced search changes
+  useEffect(() => {
+    setSearchQuery(debouncedSearch);
+  }, [debouncedSearch]);
+
   // API hooks
   const {
     data: recipesData,
     isLoading,
     error,
+    refetch,
   } = useRecipes(storeId, {
     search: searchQuery || undefined,
     category: categoryFilter,
@@ -215,7 +229,7 @@ export function RecipesSection() {
 
   // Clear all filters
   const clearFilters = () => {
-    setSearchQuery("");
+      setSearchInput("");
     setCategoryFilter(undefined);
     setSortField("createdAt");
     setSortOrder("desc");
@@ -226,7 +240,7 @@ export function RecipesSection() {
   // Loading state
   if (isLoading) {
     return (
-      <SectionLoadingState
+      <SectionLoadingSkeleton
         title={t("data.recipes.pageTitle")}
         exportLabel={t("common.actions.export")}
         addLabel={t("data.recipes.addButton")}
@@ -237,32 +251,29 @@ export function RecipesSection() {
 
   if (error) {
     return (
-      <Card className="overflow-hidden shadow-md">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-destructive font-semibold">{t("messages.errorLoadingRecipes")}</p>
-          <p className="text-muted-foreground text-sm">
-            {error instanceof Error ? error.message : t("common.validation.unexpectedError")}
-          </p>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        error={error}
+        onRetry={() => refetch()}
+        title={t("common.error")}
+        description={t("messages.errorLoadingRecipes")}
+      />
     );
   }
 
   return (
     <>
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">{t("data.recipes.pageTitle")}</CardTitle>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
+      <Card className={responsive.cardWrapper}>
+        <CardHeader className={responsive.cardHeader}>
+          <div className={responsive.header}>
+            <CardTitle className={responsiveText.title}>{t("data.recipes.pageTitle")}</CardTitle>
+            <ActionButtons>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
+                  <ActionButton
                     variant="outline"
                     size="sm"
                     onClick={handleExport}
                     disabled={exportRecipes.isPending || recipes.length === 0 || !advancedReportsAccess}
-                    className="w-full md:w-auto"
                   >
                     {exportRecipes.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -270,7 +281,7 @@ export function RecipesSection() {
                       <Download className="mr-2 h-4 w-4" />
                     )}
                     {t("common.actions.export")}
-                  </Button>
+                  </ActionButton>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -279,18 +290,17 @@ export function RecipesSection() {
                 )}
               </Tooltip>
               <AddRecipeDialog trigger={
-                <Button size="sm" className="w-full md:w-auto">
+                <ActionButton size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   {t("data.recipes.addButton")}
-                </Button>
+                </ActionButton>
               } />
               {bulkSelectMode && selectedIds.size > 0 && (
-                <Button
+                <ActionButton
                   variant="destructive"
                   size="sm"
                   onClick={handleBulkDelete}
                   disabled={bulkDeleteRecipes.isPending}
-                  className="w-full md:w-auto"
                 >
                   {bulkDeleteRecipes.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -298,13 +308,12 @@ export function RecipesSection() {
                     <Trash2 className="mr-2 h-4 w-4" />
                   )}
                   {t("actions.delete")} ({selectedIds.size})
-                </Button>
+                </ActionButton>
               )}
-              <Button
+              <ActionButton
                 variant={bulkSelectMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleBulkSelect}
-                className="w-full md:w-auto"
               >
                 {bulkSelectMode ? (
                   <>
@@ -317,16 +326,16 @@ export function RecipesSection() {
                     {t("common.actions.view")}
                   </>
                 )}
-              </Button>
-            </div>
+              </ActionButton>
+            </ActionButtons>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
           {/* Search and Filters */}
           <FilterSection
-            searchValue={searchQuery}
-            onSearchChange={setSearchQuery}
+            searchValue={searchInput}
+            onSearchChange={setSearchInput}
             searchPlaceholder={t("actions.searchPlaceholder")}
             filters={[
               {

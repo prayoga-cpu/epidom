@@ -12,7 +12,11 @@ import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
 import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
-import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
+import { invalidateMaterialRelatedQueries } from "@/lib/react-query/cache-utils";
+import { DEFAULT_QUERY_OPTIONS } from "@/lib/react-query/constants";
+import { buildQueryParams } from "@/lib/utils/query-params";
+import { fetchWithErrorHandling } from "@/lib/api/client";
+import { exportToCSV } from "@/lib/utils/export";
 
 export interface MaterialsResponse {
   materials: MaterialWithSuppliers[];
@@ -36,30 +40,12 @@ export function useMaterials(storeId: string, filters?: MaterialFilterInput) {
   return useQuery<MaterialsResponse>({
     queryKey: materialKeys.list(storeId, filters),
     queryFn: async () => {
-      // Build query string
-      const params = new URLSearchParams();
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== "") {
-            params.append(key, String(value));
-          }
-        });
-      }
-
-      const queryString = params.toString();
-      const url = `/api/stores/${storeId}/materials${queryString ? `?${queryString}` : ""}`;
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to fetch materials");
-      }
-
-      const data: ApiSuccessResponse<MaterialsResponse> = await response.json();
-      return data.data;
+      const params = buildQueryParams(filters || {});
+      const url = `/api/stores/${storeId}/materials${params.toString() ? `?${params.toString()}` : ""}`;
+      return fetchWithErrorHandling<MaterialsResponse>(url);
     },
     enabled: !!storeId,
+    ...DEFAULT_QUERY_OPTIONS.inventory,
   });
 }
 
@@ -69,18 +55,9 @@ export function useMaterials(storeId: string, filters?: MaterialFilterInput) {
 export function useMaterial(storeId: string, id: string) {
   return useQuery<MaterialWithSuppliers>({
     queryKey: materialKeys.detail(storeId, id),
-    queryFn: async () => {
-      const response = await fetch(`/api/stores/${storeId}/materials/${id}`);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to fetch material");
-      }
-
-      const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
-      return data.data;
-    },
+    queryFn: () => fetchWithErrorHandling<MaterialWithSuppliers>(`/api/stores/${storeId}/materials/${id}`),
     enabled: !!storeId && !!id,
+    ...DEFAULT_QUERY_OPTIONS.inventory,
   });
 }
 
@@ -91,23 +68,14 @@ export function useCreateMaterial(storeId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<MaterialWithSuppliers, Error, Omit<CreateIngredientInput, "storeId">>({
-    mutationFn: async (input) => {
-      const response = await fetch(`/api/stores/${storeId}/materials`, {
+    mutationFn: (input) =>
+      fetchWithErrorHandling<MaterialWithSuppliers>(`/api/stores/${storeId}/materials`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(input),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to create material");
-      }
-
-      const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
-      return data.data;
-    },
+      }),
     onSuccess: async () => {
       // Batch invalidate all related queries in parallel for better performance
       await invalidateMaterialRelatedQueries(queryClient, storeId);
@@ -122,23 +90,14 @@ export function useUpdateMaterial(storeId: string, id: string) {
   const queryClient = useQueryClient();
 
   return useMutation<MaterialWithSuppliers, Error, UpdateIngredientInput>({
-    mutationFn: async (input) => {
-      const response = await fetch(`/api/stores/${storeId}/materials/${id}`, {
+    mutationFn: (input) =>
+      fetchWithErrorHandling<MaterialWithSuppliers>(`/api/stores/${storeId}/materials/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(input),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to update material");
-      }
-
-      const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
-      return data.data;
-    },
+      }),
     onSuccess: async (updatedMaterial) => {
       // Update cache for specific material (optimistic update)
       queryClient.setQueryData(materialKeys.detail(storeId, id), updatedMaterial);
@@ -155,19 +114,10 @@ export function useDeleteMaterial(storeId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, Error, string>({
-    mutationFn: async (id) => {
-      const response = await fetch(`/api/stores/${storeId}/materials/${id}`, {
+    mutationFn: (id) =>
+      fetchWithErrorHandling<{ message: string }>(`/api/stores/${storeId}/materials/${id}`, {
         method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to delete material");
-      }
-
-      const data: ApiSuccessResponse<{ message: string }> = await response.json();
-      return data.data;
-    },
+      }),
     onSuccess: async (_, deletedId) => {
       // Remove from cache
       queryClient.removeQueries({ queryKey: materialKeys.detail(storeId, deletedId) });
@@ -184,24 +134,17 @@ export function useBulkDeleteMaterials(storeId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string; deletedCount: number }, Error, BulkDeleteInput>({
-    mutationFn: async (input) => {
-      const response = await fetch(`/api/stores/${storeId}/materials/bulk`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(input),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to delete materials");
-      }
-
-      const data: ApiSuccessResponse<{ message: string; deletedCount: number }> =
-        await response.json();
-      return data.data;
-    },
+    mutationFn: (input) =>
+      fetchWithErrorHandling<{ message: string; deletedCount: number }>(
+        `/api/stores/${storeId}/materials/bulk`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(input),
+        }
+      ),
     onSuccess: async (_, { ids }) => {
       // Remove all deleted items from cache
       ids.forEach((id) => {
@@ -217,40 +160,8 @@ export function useBulkDeleteMaterials(storeId: string) {
  * Export materials to CSV
  */
 export function useExportMaterials(storeId: string) {
-  return useMutation<Blob, Error, MaterialFilterInput | undefined>({
-    mutationFn: async (filters) => {
-      // Build query string
-      const params = new URLSearchParams();
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== "") {
-            params.append(key, String(value));
-          }
-        });
-      }
-
-      const queryString = params.toString();
-      const url = `/api/stores/${storeId}/materials/export${queryString ? `?${queryString}` : ""}`;
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to export materials");
-      }
-
-      return response.blob();
-    },
-    onSuccess: (blob) => {
-      // Trigger download
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `materials-${storeId}-${new Date().toISOString().split("T")[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    },
+  return useMutation<void, Error, MaterialFilterInput | undefined>({
+    mutationFn: (filters) =>
+      exportToCSV(`/api/stores/${storeId}/materials/export`, "export", "materials", filters),
   });
 }

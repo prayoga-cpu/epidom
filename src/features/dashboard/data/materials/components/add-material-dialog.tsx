@@ -1,16 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { useFieldArray } from "react-hook-form";
+import { DialogWrapper } from "@/features/dashboard/shared/components/dialog-wrapper";
+import { useDialogForm } from "@/features/dashboard/shared/hooks/use-dialog-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,7 +23,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { toast } from "sonner";
 import { Plus, Loader2, X, Star } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -75,18 +67,10 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   });
   const suppliers = suppliersData?.suppliers || [];
 
-  const form = useForm({
-    resolver: zodResolver(formSchema) as any,
-    defaultValues: FORM_DEFAULTS.material,
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control as any,
-    name: "suppliers" as any,
-  });
-
-  async function onSubmit(data: any) {
-    try {
+  const { form, handleSubmit, isSubmitting, reset } = useDialogForm({
+    schema: formSchema,
+    defaultValues: { ...FORM_DEFAULTS.material, suppliers: [...FORM_DEFAULTS.material.suppliers] },
+    onSubmit: async (data) => {
       // Filter out invalid suppliers (those with "none" or empty supplierId)
       const validSuppliers =
         data.suppliers?.filter((s: any) => s.supplierId && s.supplierId !== "none") || [];
@@ -111,43 +95,50 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
       };
 
       await createMaterial.mutateAsync(payload);
-
-      toast.success(t("data.materials.toasts.added.title"), {
-        description: t("data.materials.toasts.added.description")?.replace("{name}", data.name) || "",
-      });
-
-      form.reset();
+    },
+    onSuccess: () => {
       setOpen(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingMaterials"));
-    }
-  }
+    },
+    successMessage: t("data.materials.toasts.added.title"),
+    successDescription: (data) =>
+      t("data.materials.toasts.added.description")?.replace("{name}", data.name) || "",
+    errorMessage: t("messages.errorLoadingMaterials"),
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control as any,
+    name: "suppliers" as any,
+  });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
+    <DialogWrapper
+      open={open}
+      onOpenChange={setOpen}
+      title={t("data.materials.addTitle")}
+      description={t("data.materials.addDescription")}
+      trigger={
+        trigger || (
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
             {t("data.materials.addButton")}
           </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px]">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
-          <DialogTitle className="text-lg font-bold sm:text-xl">
-            {t("data.materials.addTitle")}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            {t("data.materials.addDescription")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
-          <Form {...form}>
-            <form id="add-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
+        )
+      }
+      size="large"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
+            {t("common.actions.cancel")}
+          </Button>
+          <Button type="submit" form="add-material-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("data.materials.addButton")}
+          </Button>
+        </div>
+      }
+    >
+      <Form {...form}>
+        <form id="add-material-form" onSubmit={handleSubmit} className="space-y-1.5">
             {/* Basic Information */}
             <div className="space-y-1">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.materials.sections.basicInfo")}</h3>
@@ -463,32 +454,8 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 </div>
               ))}
             </div>
-            </form>
-          </Form>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-1.5">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={createMaterial.isPending}
-            >
-              {t("common.actions.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="add-material-form"
-              disabled={createMaterial.isPending}
-            >
-              {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("data.materials.addButton")}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </form>
+      </Form>
+    </DialogWrapper>
   );
 }

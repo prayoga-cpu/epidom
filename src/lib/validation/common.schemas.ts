@@ -63,6 +63,19 @@ export const cuidSchema = z
   .string()
   .regex(/^c[a-z0-9]{24}$/, "Invalid ID format");
 
+// Optional CUID validation - handles empty strings and undefined
+// Transforms empty strings to undefined before validation
+export const optionalCuidSchema = z.preprocess(
+  (val) => {
+    // Transform empty string, null, or undefined to undefined
+    if (val === "" || val === null || val === undefined) {
+      return undefined;
+    }
+    return val;
+  },
+  z.union([cuidSchema, z.undefined()]).optional()
+);
+
 // Decimal/numeric validation
 export const decimalSchema = z
   .number()

@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { materialService } from "@/lib/services/material.service";
-import { businessService } from "@/lib/services";
 import { createIngredientSchema, materialFilterSchema } from "@/lib/validation/inventory.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * GET /api/stores/[id]/materials
@@ -15,36 +13,17 @@ import { ZodError } from "zod";
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
 
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId } = await params;
-
-    // Verify user owns the business that owns this store
-    const business = await businessService.getBusinessByUserId(session.user.id);
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to business
-    const store = await businessService.getStoreById(storeId);
-    if (!store || store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Store not found or does not belong to your business"
-        ),
-        { status: 404 }
-      );
-    }
+    const { store } = result;
+    const storeId = store.id;
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -60,9 +39,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     });
 
     // Get materials with filters
-    const result = await materialService.getMaterials(storeId, filters);
+    const materialsData = await materialService.getMaterials(storeId, filters);
 
-    return NextResponse.json(createSuccessResponse(result));
+    return NextResponse.json(createSuccessResponse(materialsData));
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
@@ -93,36 +72,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
 
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId } = await params;
-
-    // Verify user owns the business that owns this store
-    const business = await businessService.getBusinessByUserId(session.user.id);
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to business
-    const store = await businessService.getStoreById(storeId);
-    if (!store || store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Store not found or does not belong to your business"
-        ),
-        { status: 404 }
-      );
-    }
+    const { store } = result;
+    const storeId = store.id;
 
     // Parse and validate request body
     const body = await request.json();

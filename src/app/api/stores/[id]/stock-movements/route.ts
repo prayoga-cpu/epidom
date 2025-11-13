@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * GET /api/stores/[id]/stock-movements
@@ -9,9 +9,13 @@ import { prisma } from "@/lib/prisma";
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
     const { id: storeId } = await params;
@@ -25,20 +29,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const dateTo = searchParams.get("dateTo");
     const type = searchParams.get("type"); // movement type filter
 
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
-
     // Build where clause
     const where: any = {};
 
@@ -50,7 +40,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         where: { id: materialId, storeId },
       });
       if (!material) {
-        return NextResponse.json({ error: "Material not found" }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, "Material not found"),
+          { status: 404 }
+        );
       }
     } else if (itemType === "product" && productId) {
       where.productId = productId;
@@ -59,7 +52,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         where: { id: productId, storeId },
       });
       if (!product) {
-        return NextResponse.json({ error: "Product not found" }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, "Product not found"),
+          { status: 404 }
+        );
       }
     }
 
@@ -118,12 +114,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       take: 100, // Limit to recent 100 movements
     });
 
-    return NextResponse.json({
-      movements,
-      total: movements.length,
-    });
+    return NextResponse.json(
+      createSuccessResponse({
+        movements,
+        total: movements.length,
+      })
+    );
   } catch (error) {
     console.error("Error fetching stock movements:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Internal server error"),
+      { status: 500 }
+    );
   }
 }

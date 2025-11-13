@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { supplierService } from "@/lib/services/supplier.service";
 import { subscriptionService } from "@/lib/services";
 import { bulkDeleteSchema } from "@/lib/validation/inventory.schemas";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * DELETE /api/stores/[id]/suppliers/bulk
@@ -14,14 +13,23 @@ import { z } from "zod";
  */
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
+    const { store, userId: verifiedUserId } = result;
+    const storeId = store.id;
+
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    // Note: This check is separate from store access verification because it's a feature-level
+    // permission that applies to the user, not the store. Even if the user has access to the store,
+    // they need the appropriate subscription plan to use supplier management features.
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(verifiedUserId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
@@ -35,21 +43,19 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         { status: 403 }
       );
     }
-
-    const { id: storeId } = await params;
     const body = await request.json();
 
     // Validate request body
     const validatedData = bulkDeleteSchema.parse(body);
 
     // Bulk delete suppliers via service
-    const result = await supplierService.bulkDeleteSuppliers(validatedData.ids, storeId);
+    const deleteResult = await supplierService.bulkDeleteSuppliers(validatedData.ids, storeId);
 
     return NextResponse.json(
-      {
+      createSuccessResponse({
         message: "Suppliers deleted successfully",
-        deletedCount: result.deletedCount
-      },
+        deletedCount: deleteResult.deletedCount
+      }),
       { status: 200 }
     );
   } catch (error) {
@@ -57,19 +63,32 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid input data",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
 
     if (error instanceof Error) {
       if (error.message.includes("do not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete suppliers" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to delete suppliers"
+      ),
       { status: 500 }
     );
   }

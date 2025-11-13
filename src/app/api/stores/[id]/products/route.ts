@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { productService } from "@/lib/services/product.service";
 import { subscriptionService } from "@/lib/services";
 import { createProductSchema } from "@/lib/validation/inventory.schemas";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 // Validation schema for filtering products
 const productFilterSchema = z.object({
@@ -25,13 +24,17 @@ const productFilterSchema = z.object({
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId } = await params;
+    const { store } = result;
+    const storeId = store.id;
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -47,21 +50,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const filters = productFilterSchema.parse(filterParams);
 
     // Get products from service
-    const result = await productService.getProducts(storeId, filters);
+    const productsData = await productService.getProducts(storeId, filters);
 
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(createSuccessResponse(productsData), { status: 200 });
   } catch (error) {
     console.error("Error fetching products:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid filter parameters",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch products" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to fetch products"
+      ),
       { status: 500 }
     );
   }
@@ -73,16 +86,23 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const { id: storeId } = await params;
+    const { store, userId: verifiedUserId } = result;
+    const storeId = store.id;
 
     // Check subscription plan limits (Starter = 500 products per store, Pro/Enterprise = unlimited)
-    const productCheck = await subscriptionService.canCreateProduct(session.user.id, storeId);
+    // Note: This check is separate from store access verification because it's a feature-level
+    // limit that applies per store. Even if the user has access to the store, they need to
+    // stay within their subscription plan's product limit.
+    const productCheck = await subscriptionService.canCreateProduct(verifiedUserId, storeId);
 
     if (!productCheck.allowed) {
       return NextResponse.json(
@@ -123,13 +143,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       isActive: validatedData.isActive,
     });
 
-    return NextResponse.json(product, { status: 201 });
+    return NextResponse.json(createSuccessResponse(product), { status: 201 });
   } catch (error) {
     console.error("Error creating product:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid input data",
+          error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          }))
+        ),
         { status: 400 }
       );
     }
@@ -137,15 +164,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (error instanceof Error) {
       // Handle specific business logic errors
       if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
+          { status: 409 }
+        );
       }
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
+          { status: 404 }
+        );
       }
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create product" },
+      createErrorResponse(
+        ApiErrorCode.INTERNAL_ERROR,
+        error instanceof Error ? error.message : "Failed to create product"
+      ),
       { status: 500 }
     );
   }

@@ -30,7 +30,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import type { Product } from "@prisma/client";
@@ -78,7 +77,6 @@ export default function EditProductDialog({
   open,
   onOpenChange,
 }: EditProductDialogProps) {
-  const { toast } = useToast();
   const { t } = useI18n();
   const { currency, convertPrice, convertToBase } = useCurrency();
   const updateProduct = useUpdateProduct(storeId, product.id);

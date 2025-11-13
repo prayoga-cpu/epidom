@@ -28,8 +28,9 @@ interface DeleteStoreDialogProps {
 }
 
 /**
- * Alert dialog for confirming store deletion (soft delete/deactivation)
+ * Alert dialog for confirming store deletion (hard delete)
  * Uses AlertDialog for better UX on destructive actions (KISS principle)
+ * WARNING: This will permanently delete the store and all related data
  */
 export function DeleteStoreDialog({ store, trigger }: DeleteStoreDialogProps) {
   const [open, setOpen] = useState(false);
@@ -66,9 +67,9 @@ export function DeleteStoreDialog({ store, trigger }: DeleteStoreDialogProps) {
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will deactivate <strong>{store.name}</strong>. This action can
-            be reversed by contacting support. All data associated with this
-            store will be preserved but the store will no longer be accessible.
+            This will permanently delete <strong>{store.name}</strong> and all
+            associated data (products, materials, recipes, orders, etc.). This
+            action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -80,31 +80,40 @@ export class MaterialRepository extends BaseRepository {
       [sortBy]: sortOrder,
     };
 
-    // Fetch materials with includes
-    let materials = await this.db.material.findMany({
-      where,
-      include: {
-        materialSuppliers: {
-          include: {
-            supplier: {
-              select: {
-                id: true,
-                name: true,
+    // Optimize pagination based on whether stockStatus filter is used
+    // Stock status filtering requires column comparisons (currentStock <= minStock),
+    // which Prisma doesn't support well at database level, so we filter in-memory
+    if (stockStatus) {
+      // If stockStatus filter is used, we need to fetch materials and filter in-memory
+      // To optimize, we fetch a reasonable batch size (max 1000) for filtering
+      // This prevents fetching all materials from large datasets
+      const maxFetchForFiltering = Math.min(take * 10, 1000); // Fetch up to 10 pages or 1000 records
+
+      // Fetch materials with includes (limited batch for filtering)
+      let materials = await this.db.material.findMany({
+        where,
+        include: {
+          materialSuppliers: {
+            include: {
+              supplier: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
+            orderBy: { isPreferred: "desc" },
           },
-          orderBy: { isPreferred: "desc" },
         },
-      },
-      orderBy,
-    });
+        orderBy,
+        take: maxFetchForFiltering, // Limit fetch size
+      });
 
-    // Apply stock status filter in-memory (Prisma doesn't support column comparisons)
-    if (stockStatus) {
+      // Apply stock status filter in-memory (Prisma doesn't support column comparisons)
       materials = materials.filter((material) => {
         const current = Number(material.currentStock);
-        const min = Number(material.minStock);
-        const max = Number(material.maxStock);
+        const min = Number(material.minStock) || 0;
+        const max = Number(material.maxStock) || Infinity;
 
         switch (stockStatus) {
           case "out_of_stock":
@@ -119,16 +128,46 @@ export class MaterialRepository extends BaseRepository {
             return true;
         }
       });
+
+      // Get total after filtering (limited to fetched batch)
+      const total = materials.length;
+
+      // Apply pagination after filtering
+      const paginatedMaterials = materials.slice(skip, skip + take);
+
+      return {
+        materials: paginatedMaterials as MaterialWithSuppliers[],
+        total,
+      };
     }
 
-    // Get total before pagination
-    const total = materials.length;
-
-    // Apply pagination after filtering
-    const paginatedMaterials = materials.slice(skip, skip + take);
+    // If no stockStatus filter, apply pagination at database level (optimal)
+    // This is much more efficient for large datasets
+    const [materials, total] = await Promise.all([
+      this.db.material.findMany({
+        where,
+        include: {
+          materialSuppliers: {
+            include: {
+              supplier: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+            orderBy: { isPreferred: "desc" },
+          },
+        },
+        orderBy,
+        skip,
+        take, // Apply pagination at database level
+      }),
+      this.db.material.count({ where }), // Get total count from database
+    ]);
 
     return {
-      materials: paginatedMaterials as MaterialWithSuppliers[],
+      materials: materials as MaterialWithSuppliers[],
       total,
     };
   }

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateProductionRelatedQueries } from "@/lib/react-query/cache-utils";
 import {
   CreateProductionBatchFormInput,
   UpdateProductionBatchInput,
@@ -6,8 +7,17 @@ import {
   CompleteProductionInput,
   CancelProductionInput,
 } from "@/lib/validation/production.schemas";
-import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
-import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
+import type { ApiSuccessResponse } from "@/types/api/responses";
+
+// Query Key Factory
+export const productionBatchKeys = {
+  all: (storeId: string) => ["production-batches", storeId] as const,
+  lists: (storeId: string) => [...productionBatchKeys.all(storeId), "list"] as const,
+  list: (storeId: string, filters?: ProductionBatchFilterInput) =>
+    [...productionBatchKeys.lists(storeId), filters] as const,
+  details: (storeId: string) => [...productionBatchKeys.all(storeId), "detail"] as const,
+  detail: (storeId: string, id: string) => [...productionBatchKeys.details(storeId), id] as const,
+};
 
 // Types
 export interface ProductionBatchWithRelations {
@@ -92,11 +102,12 @@ async function fetchProductionBatches(
   const response = await fetch(`/api/stores/${storeId}/production-batches?${params.toString()}`);
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch production batches");
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || "Failed to fetch production batches");
   }
 
-  return response.json();
+  const data: ApiSuccessResponse<ProductionBatchesResponse> = await response.json();
+  return data.data;
 }
 
 async function fetchProductionBatchById(
@@ -106,11 +117,12 @@ async function fetchProductionBatchById(
   const response = await fetch(`/api/stores/${storeId}/production-batches/${batchId}`);
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch production batch");
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || "Failed to fetch production batch");
   }
 
-  return response.json();
+  const data: ApiSuccessResponse<ProductionBatchWithRelations> = await response.json();
+  return data.data;
 }
 
 async function createProductionBatch(
@@ -124,11 +136,12 @@ async function createProductionBatch(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to start production");
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || "Failed to start production");
   }
 
-  return response.json();
+  const result: ApiSuccessResponse<ProductionBatchWithRelations> = await response.json();
+  return result.data;
 }
 
 async function updateProductionBatch(
@@ -143,11 +156,12 @@ async function updateProductionBatch(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to update production batch");
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || "Failed to update production batch");
   }
 
-  return response.json();
+  const result: ApiSuccessResponse<ProductionBatchWithRelations> = await response.json();
+  return result.data;
 }
 
 async function completeProduction(
@@ -162,11 +176,12 @@ async function completeProduction(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to complete production");
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || "Failed to complete production");
   }
 
-  return response.json();
+  const result: ApiSuccessResponse<ProductionBatchWithRelations> = await response.json();
+  return result.data;
 }
 
 async function cancelProduction(
@@ -181,11 +196,12 @@ async function cancelProduction(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to cancel production");
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || "Failed to cancel production");
   }
 
-  return response.json();
+  const result: ApiSuccessResponse<ProductionBatchWithRelations> = await response.json();
+  return result.data;
 }
 
 async function deleteProductionBatch(storeId: string, batchId: string): Promise<void> {
@@ -194,8 +210,8 @@ async function deleteProductionBatch(storeId: string, batchId: string): Promise<
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to delete production batch");
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || "Failed to delete production batch");
   }
 }
 
@@ -206,9 +222,11 @@ async function deleteProductionBatch(storeId: string, batchId: string): Promise<
  */
 export function useProductionBatches(storeId: string, filters: ProductionBatchFilterInput) {
   return useQuery({
-    queryKey: ["production-batches", storeId, filters],
+    queryKey: productionBatchKeys.list(storeId, filters),
     queryFn: () => fetchProductionBatches(storeId, filters),
     enabled: !!storeId,
+    staleTime: 60 * 1000, // 1 minute - data considered fresh for 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes - cache kept for 5 minutes after unmount
   });
 }
 
@@ -217,9 +235,11 @@ export function useProductionBatches(storeId: string, filters: ProductionBatchFi
  */
 export function useProductionBatch(storeId: string, batchId: string | null) {
   return useQuery({
-    queryKey: ["production-batches", storeId, batchId],
+    queryKey: productionBatchKeys.detail(storeId, batchId!),
     queryFn: () => fetchProductionBatchById(storeId, batchId!),
     enabled: !!storeId && !!batchId,
+    staleTime: 60 * 1000, // 1 minute - data considered fresh for 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes - cache kept for 5 minutes after unmount
   });
 }
 
@@ -231,13 +251,8 @@ export function useStartProduction(storeId: string) {
 
   return useMutation({
     mutationFn: (data: CreateProductionBatchFormInput) => createProductionBatch(storeId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["materials", storeId] });
-      // Invalidate alerts (material stock may have changed)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
-      // Invalidate stock movements (materials were consumed)
-      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+    onSuccess: async () => {
+      await invalidateProductionRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -250,9 +265,8 @@ export function useUpdateProductionBatch(storeId: string, batchId: string) {
 
   return useMutation({
     mutationFn: (data: UpdateProductionBatchInput) => updateProductionBatch(storeId, batchId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["production-batches", storeId, batchId] });
+    onSuccess: async () => {
+      await invalidateProductionRelatedQueries(queryClient, storeId, batchId);
     },
   });
 }
@@ -266,13 +280,8 @@ export function useCompleteProduction(storeId: string) {
   return useMutation({
     mutationFn: ({ batchId, data }: { batchId: string; data: CompleteProductionInput }) =>
       completeProduction(storeId, batchId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      // Invalidate alerts (product stock increased)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
-      // Invalidate stock movements (product was added)
-      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+    onSuccess: async () => {
+      await invalidateProductionRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -286,13 +295,8 @@ export function useCancelProduction(storeId: string) {
   return useMutation({
     mutationFn: ({ batchId, data }: { batchId: string; data: CancelProductionInput }) =>
       cancelProduction(storeId, batchId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["materials", storeId] });
-      // Invalidate alerts (material stock may have been refunded)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
-      // Invalidate stock movements (materials may have been returned)
-      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+    onSuccess: async () => {
+      await invalidateProductionRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -305,8 +309,8 @@ export function useDeleteProductionBatch(storeId: string) {
 
   return useMutation({
     mutationFn: (batchId: string) => deleteProductionBatch(storeId, batchId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
+    onSuccess: async () => {
+      await invalidateProductionRelatedQueries(queryClient, storeId);
     },
   });
 }

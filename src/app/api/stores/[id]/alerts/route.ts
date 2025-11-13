@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreAccessFromRequest, getAuthenticatedUserId } from "@/lib/api/auth-helpers";
 
 /**
  * GET /api/stores/[id]/alerts
@@ -9,26 +9,16 @@ import { prisma } from "@/lib/prisma";
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify authentication and store access
+    const userId = await getAuthenticatedUserId();
+    const result = await verifyStoreAccessFromRequest(userId, params);
+
+    // If result is NextResponse, it's an error - return it
+    if (result instanceof NextResponse) {
+      return result;
     }
 
-    const storeId = (await params).id;
-
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
+    const { id: storeId } = await params;
 
     // Get all active materials for the store
     const allMaterials = await prisma.material.findMany({
@@ -97,9 +87,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       };
     });
 
-    return NextResponse.json({ alerts });
+    return NextResponse.json(createSuccessResponse({ alerts }));
   } catch (error) {
     console.error("Error fetching alerts:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Internal server error"),
+      { status: 500 }
+    );
   }
 }
