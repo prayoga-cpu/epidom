@@ -243,16 +243,6 @@ pnpm install
 pnpm prisma generate
 ```
 
-## Contributing
-
-1. Create feature branch: `git checkout -b feat/feature-name`
-2. Make changes and test locally: `pnpm dev`
-3. Run type check: `pnpm lint`
-4. Commit: `git commit -m "feat: description"`
-5. Push and create Pull Request
-
-## Support
-
 For detailed documentation:
 
 - [Next.js Documentation](https://nextjs.org/docs)
