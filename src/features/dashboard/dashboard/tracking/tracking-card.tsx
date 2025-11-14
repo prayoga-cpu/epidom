@@ -1,5 +1,4 @@
 "use client";
-import { useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -7,38 +6,31 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { ArrowRight, Package, Loader2 } from "lucide-react";
 import DashboardCard from "../_components/dashboard-card";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
+import { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
+import { UseQueryResult } from "@tanstack/react-query";
 
-export default function TrackingCard() {
+interface ProcessedMaterial {
+  id: string;
+  name: string;
+  currentStock: number;
+  minStock: number;
+  maxStock: number;
+  unit: string;
+  stockPercentage: number;
+}
+
+interface TrackingCardProps {
+  materialsQuery: UseQueryResult<MaterialsResponse, Error>;
+  processedData: ProcessedMaterial[];
+}
+
+export default function TrackingCard({ materialsQuery, processedData }: TrackingCardProps) {
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
 
-  // Fetch materials from API
-  const { data, isLoading, error } = useMaterials(storeId || "");
-
-  // Get materials with stock data, sorted by stock percentage
-  const stockLevels = useMemo(() => {
-    if (!data?.materials) return [];
-
-    return data.materials
-      .map((material) => {
-        const currentStock = Number(material.currentStock);
-        const minStock = Number(material.minStock);
-        const maxStock = Number(material.maxStock);
-        const stockPercentage = maxStock > 0 ? (currentStock / maxStock) * 100 : 0;
-        return {
-          id: material.id,
-          name: material.name,
-          currentStock,
-          minStock,
-          maxStock,
-          unit: material.unit,
-          stockPercentage,
-        };
-      })
-      .sort((a, b) => a.stockPercentage - b.stockPercentage) // Low stock first
-      .slice(0, 5); // Show max 5 items
-  }, [data]);
+  // Receive pre-processed data from parent (eliminates heavy computation)
+  const { isLoading, error } = materialsQuery;
+  const stockLevels = processedData;
 
   const cardContent = (
     <div className="h-full overflow-auto">
