@@ -11,17 +11,20 @@ import {
   useSupplierOrders,
   useUpdateSupplierOrder,
 } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
-import { Phone, Mail, MapPin, Package, Loader2, AlertCircle, CheckCircle } from "lucide-react";
-import { useParams } from "next/navigation";
+import { Phone, Mail, MapPin, Package, Loader2, AlertCircle, CheckCircle, ArrowRight } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 
 export function OrdersView() {
   const { t } = useI18n();
+  const router = useRouter();
   const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params?.storeId as string;
   const [placingOrder, setPlacingOrder] = useState<string | null>(null);
+  const { supplierManagementAccess, isLoading: isLoadingAccess } = useFeatureAccess();
 
   const { data, isLoading, error } = useSupplierOrders(storeId);
 
@@ -78,12 +81,38 @@ export function OrdersView() {
     });
   }, [data]);
 
-  if (isLoading) {
+  // Check if subscription is locked (STARTER plan)
+  const isSubscriptionLocked =
+    (!isLoadingAccess && !supplierManagementAccess) ||
+    (error && ((error as any).code === "SUBSCRIPTION_FEATURE_LOCKED" || (error as any).status === 403));
+
+  if (isLoading || isLoadingAccess) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Loader2 className="text-muted-foreground mb-4 h-8 w-8 animate-spin" />
         <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
       </div>
+    );
+  }
+
+  if (isSubscriptionLocked) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="bg-primary/10 mb-4 rounded-full p-3">
+            <AlertCircle className="text-primary h-6 w-6" />
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">{t("data.suppliers.locked")}</h3>
+          <Button
+            onClick={() => router.push("/pricing")}
+            className="mt-4 bg-[var(--color-brand-primary)] hover:opacity-90"
+            size="sm"
+          >
+            {t("billing.upgradeToPro")}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 

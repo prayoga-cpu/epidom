@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/table";
 import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { useProducts } from "@/features/dashboard/data/products/hooks/use-products";
+import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 function getStockStatus(currentStock: number, minStock: number, maxStock: number) {
   if (currentStock === 0) {
@@ -63,6 +65,7 @@ export function StockLevelsTab() {
   const { t } = useI18n();
   const params = useParams();
   const storeId = params.storeId as string;
+  const { advancedReportsAccess } = useFeatureAccess();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
@@ -172,13 +175,25 @@ export function StockLevelsTab() {
                 className="w-full pl-9"
               />
             </div>
-            <ExportButton
-              data={stockExportData}
-              filename="stock-levels"
-              variant="outline"
-              size="sm"
-              className="w-full md:w-auto"
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <ExportButton
+                    data={stockExportData}
+                    filename="stock-levels"
+                    variant="outline"
+                    size="sm"
+                    disabled={!advancedReportsAccess}
+                    className="w-full md:w-auto"
+                  />
+                </div>
+              </TooltipTrigger>
+              {!advancedReportsAccess && (
+                <TooltipContent>
+                  <p>{t("billing.advancedReportsOnly")}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
           </div>
         </div>
 

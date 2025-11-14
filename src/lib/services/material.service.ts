@@ -85,6 +85,13 @@ export class MaterialService {
   }
 
   /**
+   * Get material by SKU and storeId
+   */
+  async getMaterialBySku(storeId: string, sku: string): Promise<MaterialWithSuppliers | null> {
+    return this.materialRepo.findBySku(storeId, sku);
+  }
+
+  /**
    * Get materials with low stock
    */
   async getLowStockMaterials(storeId: string): Promise<MaterialWithSuppliers[]> {

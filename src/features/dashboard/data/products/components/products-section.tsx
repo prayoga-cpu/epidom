@@ -47,6 +47,7 @@ import {
   type Product,
 } from "../hooks/use-products";
 import { useProductUsage } from "../hooks/use-product-usage";
+import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import {
   ItemCardGrid,
   BaseItemCard,
@@ -58,6 +59,7 @@ export function ProductsSection() {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const params = useParams();
+  const { advancedReportsAccess } = useFeatureAccess();
   const storeId = params.storeId as string;
 
   // Filters and pagination state
@@ -282,20 +284,29 @@ export function ProductsSection() {
               )}
             </div>
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                disabled={exportProducts.isPending}
-                className="w-full md:w-auto"
-              >
-                {exportProducts.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExport}
+                    disabled={exportProducts.isPending || !advancedReportsAccess}
+                    className="w-full md:w-auto"
+                  >
+                    {exportProducts.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {t("common.actions.export")}
+                  </Button>
+                </TooltipTrigger>
+                {!advancedReportsAccess && (
+                  <TooltipContent>
+                    <p>{t("billing.advancedReportsOnly")}</p>
+                  </TooltipContent>
                 )}
-                {t("common.actions.export")}
-              </Button>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
@@ -525,6 +536,12 @@ export function ProductsSection() {
                           }`}
                         >
                           {profitMargin.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t("tables.supplier")}:</span>
+                        <span className="text-foreground font-medium">
+                          {t("common.notAvailable")}
                         </span>
                       </div>
                     </div>

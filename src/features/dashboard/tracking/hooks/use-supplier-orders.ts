@@ -90,7 +90,18 @@ export function useSupplierOrders(storeId: string) {
     queryFn: async () => {
       const response = await fetch(`/api/stores/${storeId}/supplier-orders`);
       if (!response.ok) {
-        throw new Error("Failed to fetch supplier orders");
+        const errorData = await response.json().catch(() => ({}));
+
+        // Check if it's a subscription feature locked error
+        if (response.status === 403 && errorData.code === "SUBSCRIPTION_FEATURE_LOCKED") {
+          const customError: any = new Error(errorData.message || "Supplier Management is only available in Pro and Enterprise plans");
+          customError.code = "SUBSCRIPTION_FEATURE_LOCKED";
+          customError.status = 403;
+          customError.upgradeRequired = true;
+          throw customError;
+        }
+
+        throw new Error(errorData.message || "Failed to fetch supplier orders");
       }
       return response.json();
     },

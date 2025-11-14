@@ -7,6 +7,41 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { ZodError } from "zod";
 
 /**
+ * GET /api/user/business
+ *
+ * Get current user's business.
+ */
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
+    }
+
+    // Get business via service
+    const business = await businessService.getBusinessByUserId(session.user.id);
+
+    if (!business) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(createSuccessResponse(business));
+  } catch (error) {
+    console.error("Error fetching business:", error);
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * POST /api/user/business
  *
  * Create a new business for the current user.

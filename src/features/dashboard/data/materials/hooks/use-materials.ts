@@ -12,6 +12,7 @@ import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
 import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
+import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
 
 export interface MaterialsResponse {
   materials: MaterialWithSuppliers[];
@@ -107,15 +108,9 @@ export function useCreateMaterial(storeId: string) {
       const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
       return data.data;
     },
-    onSuccess: () => {
-      // Invalidate all material lists for this store
-      queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
-      // Invalidate supplier lists to update material counts in supplier cards
-      queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
-      // Invalidate alerts (new material may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
-      // Invalidate stock movements (initial stock movement may have been created)
-      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+    onSuccess: async () => {
+      // Batch invalidate all related queries in parallel for better performance
+      await invalidateMaterialRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -144,17 +139,11 @@ export function useUpdateMaterial(storeId: string, id: string) {
       const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
       return data.data;
     },
-    onSuccess: (updatedMaterial) => {
-      // Update cache for specific material
+    onSuccess: async (updatedMaterial) => {
+      // Update cache for specific material (optimistic update)
       queryClient.setQueryData(materialKeys.detail(storeId, id), updatedMaterial);
-      // Invalidate material lists to refetch
-      queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
-      // Invalidate supplier lists to update material counts in supplier cards
-      queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
-      // Invalidate alerts (stock changes may affect low stock alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
-      // Invalidate stock movements (new movement may have been created)
-      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+      // Batch invalidate all related queries in parallel for better performance
+      await invalidateMaterialRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -179,13 +168,11 @@ export function useDeleteMaterial(storeId: string) {
       const data: ApiSuccessResponse<{ message: string }> = await response.json();
       return data.data;
     },
-    onSuccess: (_, deletedId) => {
+    onSuccess: async (_, deletedId) => {
       // Remove from cache
       queryClient.removeQueries({ queryKey: materialKeys.detail(storeId, deletedId) });
-      // Invalidate material lists to refetch
-      queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
-      // Invalidate alerts (deleted material may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Batch invalidate all related queries in parallel for better performance
+      await invalidateMaterialRelatedQueries(queryClient, storeId);
     },
   });
 }
@@ -215,15 +202,13 @@ export function useBulkDeleteMaterials(storeId: string) {
         await response.json();
       return data.data;
     },
-    onSuccess: (_, { ids }) => {
+    onSuccess: async (_, { ids }) => {
       // Remove all deleted items from cache
       ids.forEach((id) => {
         queryClient.removeQueries({ queryKey: materialKeys.detail(storeId, id) });
       });
-      // Invalidate material lists to refetch
-      queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
-      // Invalidate alerts (deleted materials may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      // Batch invalidate all related queries in parallel for better performance
+      await invalidateMaterialRelatedQueries(queryClient, storeId);
     },
   });
 }

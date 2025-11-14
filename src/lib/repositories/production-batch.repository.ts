@@ -446,30 +446,60 @@ export class ProductionBatchRepository extends BaseRepository {
   }
 
   /**
-   * Generate unique batch number
+   * Generate unique batch number with retry logic to prevent collisions
    */
-  async generateBatchNumber(storeId: string, prefix: string = "BATCH"): Promise<string> {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
+  async generateBatchNumber(
+    storeId: string,
+    prefix: string = "BATCH",
+    maxRetries: number = 5
+  ): Promise<string> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
 
-    // Get count of batches created today
-    const startOfDay = new Date(year, today.getMonth(), today.getDate());
-    const endOfDay = new Date(year, today.getMonth(), today.getDate() + 1);
+      // Get count of batches created today
+      const startOfDay = new Date(year, today.getMonth(), today.getDate());
+      const endOfDay = new Date(year, today.getMonth(), today.getDate() + 1);
 
-    const todayCount = await this.db.productionBatch.count({
-      where: {
-        storeId,
-        createdAt: {
-          gte: startOfDay,
-          lt: endOfDay,
+      const todayCount = await this.db.productionBatch.count({
+        where: {
+          storeId,
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
         },
-      },
-    });
+      });
 
-    const sequence = String(todayCount + 1).padStart(4, "0");
-    return `${prefix}-${year}${month}${day}-${sequence}`;
+      // Add attempt number to sequence to handle race conditions
+      const sequence = String(todayCount + 1 + attempt).padStart(4, "0");
+
+      // Add random suffix to prevent collisions in high-concurrency scenarios
+      const random = Math.floor(Math.random() * 1000)
+        .toString()
+        .padStart(3, "0");
+
+      const batchNumber = `${prefix}-${year}${month}${day}-${sequence}-${random}`;
+
+      // Check if batch number already exists
+      const exists = await this.existsByBatchNumber(batchNumber);
+
+      if (!exists) {
+        return batchNumber;
+      }
+
+      // If exists, log warning and retry
+      console.warn(
+        `[Batch Number Collision] Attempt ${attempt + 1}/${maxRetries}: ${batchNumber} already exists, retrying...`
+      );
+    }
+
+    // If all retries fail, throw error
+    throw new Error(
+      `Failed to generate unique batch number after ${maxRetries} attempts. Please try again.`
+    );
   }
 }
 

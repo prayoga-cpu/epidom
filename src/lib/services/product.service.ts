@@ -31,10 +31,10 @@ export class ProductService {
   }
 
   /**
-   * Get product by SKU
+   * Get product by SKU and storeId
    */
-  async getProductBySku(sku: string): Promise<ProductWithRelations | null> {
-    return productRepository.findBySku(sku);
+  async getProductBySku(storeId: string, sku: string): Promise<ProductWithRelations | null> {
+    return productRepository.findBySku(storeId, sku);
   }
 
   /**
@@ -57,10 +57,10 @@ export class ProductService {
     shelfLife?: number;
     isActive?: boolean;
   }): Promise<ProductWithRelations> {
-    // Validate SKU uniqueness
-    const skuExists = await productRepository.existsBySku(data.sku);
+    // Validate SKU uniqueness within store
+    const skuExists = await productRepository.existsBySku(data.storeId, data.sku);
     if (skuExists) {
-      throw new Error(`Product with SKU "${data.sku}" already exists`);
+      throw new Error(`Product with SKU "${data.sku}" already exists in this store`);
     }
 
     // Validate product name uniqueness within store
@@ -118,22 +118,27 @@ export class ProductService {
       isActive?: boolean;
     }
   ): Promise<ProductWithRelations> {
+    // Get current product to check if values are actually changing
+    const currentProduct = await productRepository.findById(productId);
+    if (!currentProduct) {
+      throw new Error("Product not found");
+    }
+
     // Verify product belongs to store
-    const belongsToStore = await productRepository.belongsToStore(productId, storeId);
-    if (!belongsToStore) {
+    if (currentProduct.storeId !== storeId) {
       throw new Error("Product does not belong to this store");
     }
 
-    // If SKU is being updated, validate uniqueness
-    if (data.sku) {
+    // If SKU is being updated and is different from current SKU, validate uniqueness
+    if (data.sku && data.sku !== currentProduct.sku) {
       const skuExists = await productRepository.existsBySku(data.sku, productId);
       if (skuExists) {
-        throw new Error(`Product with SKU "${data.sku}" already exists`);
+        throw new Error(`Product with SKU "${data.sku}" already exists in this store`);
       }
     }
 
-    // If name is being updated, validate uniqueness within store
-    if (data.name) {
+    // If name is being updated and is different from current name, validate uniqueness within store
+    if (data.name && data.name !== currentProduct.name) {
       const nameExists = await productRepository.existsByName(storeId, data.name, productId);
       if (nameExists) {
         throw new Error(`Product with name "${data.name}" already exists in this store`);
@@ -151,7 +156,8 @@ export class ProductService {
   }
 
   /**
-   * Delete product (soft delete)
+   * Delete product (hard delete)
+   * Note: Related records (OrderItem, ProductionBatch, StockMovement) will be cascade deleted
    */
   async deleteProduct(productId: string, storeId: string): Promise<void> {
     // Verify product belongs to store
@@ -164,7 +170,8 @@ export class ProductService {
   }
 
   /**
-   * Bulk delete products (soft delete)
+   * Bulk delete products (hard delete)
+   * Note: Related records will be cascade deleted
    */
   async bulkDeleteProducts(
     productIds: string[],

@@ -72,12 +72,15 @@ export async function PATCH(
       name: validatedData.name,
       description: validatedData.description,
       category: validatedData.category,
-      costPrice: validatedData.costPrice ? Number(validatedData.costPrice) : undefined,
-      sellingPrice: validatedData.sellingPrice ? Number(validatedData.sellingPrice) : undefined,
-      currentStock: validatedData.currentStock ? Number(validatedData.currentStock) : undefined,
+      costPrice:
+        validatedData.costPrice !== undefined ? Number(validatedData.costPrice) : undefined,
+      sellingPrice:
+        validatedData.sellingPrice !== undefined ? Number(validatedData.sellingPrice) : undefined,
+      currentStock:
+        validatedData.currentStock !== undefined ? Number(validatedData.currentStock) : undefined,
       unit: validatedData.unit,
-      minStock: validatedData.minStock ? Number(validatedData.minStock) : undefined,
-      maxStock: validatedData.maxStock ? Number(validatedData.maxStock) : undefined,
+      minStock: validatedData.minStock !== undefined ? Number(validatedData.minStock) : undefined,
+      maxStock: validatedData.maxStock !== undefined ? Number(validatedData.maxStock) : undefined,
       recipeId: validatedData.recipeId,
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
@@ -117,7 +120,8 @@ export async function PATCH(
 
 /**
  * DELETE /api/stores/[id]/products/[productId]
- * Delete a product (soft delete)
+ * Delete a product (hard delete)
+ * Note: Related records (OrderItem, ProductionBatch, StockMovement) will be cascade deleted
  */
 export async function DELETE(
   request: NextRequest,

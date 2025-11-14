@@ -13,6 +13,9 @@ import LoadingPage from "@/features/loading/loading-page";
 export const metadata: Metadata = {
   title: "Epidom - Admin Dashboard",
   description: "an open source ERP for small food manufacturers",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function Layout({

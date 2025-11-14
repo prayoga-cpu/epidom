@@ -1472,6 +1472,9 @@ export const fr = {
           description: "{count} fournisseurs ont été supprimés avec succès.",
         },
       },
+
+      // Locked message
+      locked: "Passez au Pro pour accéder à la gestion des fournisseurs.",
     },
   },
   filters: {
@@ -1547,6 +1550,7 @@ export const fr = {
     role: "Rôle",
     recipe: "Recette",
     name: "Nom",
+    supplier: "Fournisseur",
   },
   actions: {
     view: "Voir",
@@ -2237,6 +2241,20 @@ export const fr = {
       viewHistory: "Voir l'Historique",
       importCSV: "Importer CSV",
       importCSVDescription: "Fonctionnalité d'importation CSV à venir",
+      importCSVDialog: {
+        title: "Importer le Stock depuis CSV",
+        description: "Téléchargez un fichier CSV pour mettre à jour les niveaux de stock. Le CSV doit avoir les colonnes: SKU, Type (material/product), Stock Actuel",
+        formatTitle: "Format CSV",
+        formatDescription: "Votre fichier CSV doit avoir les colonnes suivantes: SKU, Type (material ou product), Stock Actuel",
+        selectFile: "Cliquez pour sélectionner un fichier CSV",
+        fileHint: "Fichiers CSV uniquement",
+        invalidFile: "Veuillez sélectionner un fichier CSV",
+        importButton: "Importer le Stock",
+        successTitle: "Importation Réussie",
+        partialSuccessTitle: "Importation Terminée avec des Erreurs",
+        resultsSummary: "Importation réussie de {success} articles, {failed} échoués sur {total} au total",
+        resultsTitle: "Résultats de l'Importation",
+      },
 
       // Adjustment Types
       adjustmentType: "Type d'Ajustement",
@@ -2769,6 +2787,7 @@ export const fr = {
     subscriptionActivated: "Abonnement activé avec succès ! Bienvenue au forfait {plan}.",
     subscriptionRequired: "Un abonnement actif est requis pour accéder au tableau de bord.",
     upgradePro: "Passez au Pro pour ajouter plus de magasins.",
+    advancedReportsOnly: "Les rapports avancés ne sont disponibles que dans les forfaits Pro et Enterprise",
     storeLimitReached: "Vous avez atteint la limite de magasins de votre forfait ({current}/{limit}).",
     status: {
       active: "Actif",

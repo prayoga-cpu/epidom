@@ -9,7 +9,8 @@ import { z } from "zod";
 
 /**
  * DELETE /api/stores/[id]/suppliers/bulk
- * Bulk delete suppliers (soft delete)
+ * Bulk delete suppliers (hard delete)
+ * WARNING: This will permanently delete suppliers and cascade delete related records
  */
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

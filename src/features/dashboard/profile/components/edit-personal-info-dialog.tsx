@@ -90,10 +90,8 @@ export function EditPersonalInfoDialog({
     try {
       await updateProfile.mutateAsync(data);
 
-      toast.success(t("profile.toasts.profileUpdated.title"), {
-        description: t("profile.toasts.profileUpdated.description"),
-      });
-
+      // Note: Toast notification is now handled in useUpdateProfile hook
+      // to prevent duplicate notifications
       onUpdate?.();
       onOpenChange(false);
     } catch (error) {

@@ -7,7 +7,8 @@ import { z } from "zod";
 
 /**
  * DELETE /api/stores/[id]/products/bulk
- * Bulk delete products (soft delete)
+ * Bulk delete products (hard delete)
+ * Note: Related records will be cascade deleted
  */
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

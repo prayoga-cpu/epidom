@@ -37,6 +37,7 @@ import {
   useExportRecipes,
   type RecipeWithIngredients,
 } from "../hooks/use-recipes";
+import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import {
   SectionLoadingState,
   FilterSection,
@@ -67,6 +68,7 @@ const getRecipeCategories = (t: (key: string) => string) => [
 ];
 
 export function RecipesSection() {
+  const { advancedReportsAccess } = useFeatureAccess();
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const params = useParams();
@@ -253,20 +255,29 @@ export function RecipesSection() {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg font-bold">{t("data.recipes.pageTitle")}</CardTitle>
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                disabled={exportRecipes.isPending || recipes.length === 0}
-                className="w-full md:w-auto"
-              >
-                {exportRecipes.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExport}
+                    disabled={exportRecipes.isPending || recipes.length === 0 || !advancedReportsAccess}
+                    className="w-full md:w-auto"
+                  >
+                    {exportRecipes.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {t("common.actions.export")}
+                  </Button>
+                </TooltipTrigger>
+                {!advancedReportsAccess && (
+                  <TooltipContent>
+                    <p>{t("billing.advancedReportsOnly")}</p>
+                  </TooltipContent>
                 )}
-                {t("common.actions.export")}
-              </Button>
+              </Tooltip>
               <AddRecipeDialog trigger={
                 <Button size="sm" className="w-full md:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
