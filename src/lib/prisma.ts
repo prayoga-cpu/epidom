@@ -11,12 +11,13 @@ function getDatabaseUrl(): string {
   // Check if URL already has query parameters
   const separator = baseUrl.includes("?") ? "&" : "?";
 
-  // Add connection pool settings optimized for Neon
-  // connection_limit: Lower limit for serverless (10 is safer than 15)
-  // pool_timeout: Time in seconds to wait for a connection
+  // Add connection pool settings optimized for Neon with transaction support
+  // connection_limit: Increased to 20 for better concurrency under load
+  // pool_timeout: Increased to 30s to accommodate longer transactions
   // connect_timeout: Time to establish initial connection (important for Neon)
+  // statement_timeout: 25s max query time to prevent hung queries (5s buffer before pool timeout)
   // pgbouncer: Set to true if using Neon's connection pooler
-  return `${baseUrl}${separator}connection_limit=10&pool_timeout=20&connect_timeout=10&pgbouncer=true`;
+  return `${baseUrl}${separator}connection_limit=20&pool_timeout=30&connect_timeout=10&statement_timeout=25000&pgbouncer=true`;
 }
 
 export const prisma =

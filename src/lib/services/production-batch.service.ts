@@ -133,99 +133,137 @@ export class ProductionBatchService {
     // Generate batch number
     const batchNumber = await productionBatchRepository.generateBatchNumber(data.storeId, "BATCH");
 
-    // Start transaction
-    return prisma.$transaction(async (tx) => {
-      // 1. Create production batch
-      const batch = await tx.productionBatch.create({
-        data: {
-          storeId: data.storeId,
-          batchNumber,
-          productId: data.productId,
-          recipeId: data.recipeId,
-          plannedQuantity: data.plannedQuantity,
-          unit: recipe.yieldUnit,
-          status: ProductionStatus.IN_PROGRESS,
-          scheduledDate: data.scheduledDate,
-          notes: data.notes || null,
-        },
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              unit: true,
-            },
+    // Start transaction with enhanced error handling
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // 1. Create production batch
+        const batch = await tx.productionBatch.create({
+          data: {
+            storeId: data.storeId,
+            batchNumber,
+            productId: data.productId,
+            recipeId: data.recipeId,
+            plannedQuantity: data.plannedQuantity,
+            unit: recipe.yieldUnit,
+            status: ProductionStatus.IN_PROGRESS,
+            scheduledDate: data.scheduledDate,
+            notes: data.notes || null,
           },
-          recipe: {
-            select: {
-              id: true,
-              name: true,
-              yieldQuantity: true,
-              yieldUnit: true,
-              ingredients: {
-                include: {
-                  material: {
-                    select: {
-                      id: true,
-                      name: true,
-                      currentStock: true,
-                      unit: true,
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                unit: true,
+              },
+            },
+            recipe: {
+              select: {
+                id: true,
+                name: true,
+                yieldQuantity: true,
+                yieldUnit: true,
+                ingredients: {
+                  include: {
+                    material: {
+                      select: {
+                        id: true,
+                        name: true,
+                        currentStock: true,
+                        unit: true,
+                      },
                     },
                   },
                 },
               },
             },
-          },
-          stockMovements: {
-            select: {
-              id: true,
-              type: true,
-              quantity: true,
-              unit: true,
-              createdAt: true,
+            stockMovements: {
+              select: {
+                id: true,
+                type: true,
+                quantity: true,
+                unit: true,
+                createdAt: true,
+              },
             },
           },
-        },
-      });
-
-      // 2. Deduct materials from stock and create stock movements
-      for (const ingredient of recipe.ingredients) {
-        const deductionAmount = Number(ingredient.quantity) * batchMultiplier;
-        const material = await tx.material.findUnique({
-          where: { id: ingredient.materialId },
         });
 
-        if (!material) {
-          throw new Error(`Material ${ingredient.materialId} not found`);
+        // 2. Deduct materials from stock and create stock movements
+        for (const ingredient of recipe.ingredients) {
+          const deductionAmount = Number(ingredient.quantity) * batchMultiplier;
+          const material = await tx.material.findUnique({
+            where: { id: ingredient.materialId },
+          });
+
+          if (!material) {
+            throw new Error(
+              `Cannot start production: Material '${ingredient.material?.name || ingredient.materialId}' not found. Please check your recipe ingredients.`
+            );
+          }
+
+          const newBalance = Number(material.currentStock) - deductionAmount;
+
+          // Update material stock
+          await tx.material.update({
+            where: { id: ingredient.materialId },
+            data: {
+              currentStock: newBalance,
+            },
+          });
+
+          // Create stock movement record (PRODUCTION_OUT for materials)
+          await tx.stockMovement.create({
+            data: {
+              materialId: ingredient.materialId,
+              productionBatchId: batch.id,
+              type: MovementType.PRODUCTION_OUT,
+              quantity: deductionAmount,
+              unit: ingredient.unit,
+              balanceAfter: newBalance,
+              notes: `Production batch ${batchNumber} - ${recipe.name}`,
+            },
+          });
         }
 
-        const newBalance = Number(material.currentStock) - deductionAmount;
+        return batch as ProductionBatchWithRelations;
+      });
+    } catch (error) {
+      // Handle transaction-specific errors with user-friendly messages
+      if (error instanceof Error) {
+        // Prisma transaction timeout error
+        if (error.message.includes("Transaction") && error.message.includes("not found")) {
+          throw new Error(
+            `Production start failed due to database timeout. This may be caused by high server load. Please try again in a moment.`
+          );
+        }
 
-        // Update material stock
-        await tx.material.update({
-          where: { id: ingredient.materialId },
-          data: {
-            currentStock: newBalance,
-          },
-        });
+        // Connection pool exhaustion
+        if (error.message.includes("Connection") || error.message.includes("pool")) {
+          throw new Error(
+            `Database connection unavailable. The server is currently busy. Please try again shortly.`
+          );
+        }
 
-        // Create stock movement record (PRODUCTION_OUT for materials)
-        await tx.stockMovement.create({
-          data: {
-            materialId: ingredient.materialId,
-            productionBatchId: batch.id,
-            type: MovementType.PRODUCTION_OUT,
-            quantity: deductionAmount,
-            unit: ingredient.unit,
-            balanceAfter: newBalance,
-            notes: `Production batch ${batchNumber} - ${recipe.name}`,
-          },
-        });
+        // Statement timeout
+        if (error.message.includes("statement timeout")) {
+          throw new Error(
+            `Production start took too long to complete. Please try again or contact support if the issue persists.`
+          );
+        }
+
+        // Re-throw with original message if it's already a user-friendly error
+        if (error.message.includes("Cannot start production") || error.message.includes("Insufficient materials")) {
+          throw error;
+        }
       }
 
-      return batch as ProductionBatchWithRelations;
-    });
+      // Generic fallback error
+      throw new Error(
+        `Failed to start production batch. Please check your materials and try again. If the problem continues, contact support.`
+      );
+    }
   }
 
   /**
