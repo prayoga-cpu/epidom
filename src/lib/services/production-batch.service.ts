@@ -133,89 +133,105 @@ export class ProductionBatchService {
     // Generate batch number
     const batchNumber = await productionBatchRepository.generateBatchNumber(data.storeId, "BATCH");
 
-    // Start transaction with enhanced error handling
+    // Start transaction with enhanced error handling and timeout
     try {
-      return await prisma.$transaction(async (tx) => {
-        // 1. Create production batch
-        const batch = await tx.productionBatch.create({
-          data: {
-            storeId: data.storeId,
-            batchNumber,
-            productId: data.productId,
-            recipeId: data.recipeId,
-            plannedQuantity: data.plannedQuantity,
-            unit: recipe.yieldUnit,
-            status: ProductionStatus.IN_PROGRESS,
-            scheduledDate: data.scheduledDate,
-            notes: data.notes || null,
-          },
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                sku: true,
-                unit: true,
-              },
+      return await prisma.$transaction(
+        async (tx) => {
+          // 1. Create production batch
+          const batch = await tx.productionBatch.create({
+            data: {
+              storeId: data.storeId,
+              batchNumber,
+              productId: data.productId,
+              recipeId: data.recipeId,
+              plannedQuantity: data.plannedQuantity,
+              unit: recipe.yieldUnit,
+              status: ProductionStatus.IN_PROGRESS,
+              scheduledDate: data.scheduledDate,
+              notes: data.notes || null,
             },
-            recipe: {
-              select: {
-                id: true,
-                name: true,
-                yieldQuantity: true,
-                yieldUnit: true,
-                ingredients: {
-                  include: {
-                    material: {
-                      select: {
-                        id: true,
-                        name: true,
-                        currentStock: true,
-                        unit: true,
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                  unit: true,
+                },
+              },
+              recipe: {
+                select: {
+                  id: true,
+                  name: true,
+                  yieldQuantity: true,
+                  yieldUnit: true,
+                  ingredients: {
+                    include: {
+                      material: {
+                        select: {
+                          id: true,
+                          name: true,
+                          currentStock: true,
+                          unit: true,
+                        },
                       },
                     },
                   },
                 },
               },
-            },
-            stockMovements: {
-              select: {
-                id: true,
-                type: true,
-                quantity: true,
-                unit: true,
-                createdAt: true,
+              stockMovements: {
+                select: {
+                  id: true,
+                  type: true,
+                  quantity: true,
+                  unit: true,
+                  createdAt: true,
+                },
               },
             },
-          },
-        });
-
-        // 2. Deduct materials from stock and create stock movements
-        for (const ingredient of recipe.ingredients) {
-          const deductionAmount = Number(ingredient.quantity) * batchMultiplier;
-          const material = await tx.material.findUnique({
-            where: { id: ingredient.materialId },
           });
 
-          if (!material) {
-            throw new Error(
-              `Cannot start production: Material '${ingredient.material?.name || ingredient.materialId}' not found. Please check your recipe ingredients.`
-            );
-          }
+          // 2. Prepare batch operations for materials (optimize from N queries to 2 queries)
+          const materialUpdates: Array<{ id: string; newStock: number }> = [];
+          const stockMovements: Array<{
+            materialId: string;
+            productionBatchId: string;
+            type: MovementType;
+            quantity: number;
+            unit: string;
+            balanceAfter: number;
+            notes: string;
+          }> = [];
 
-          const newBalance = Number(material.currentStock) - deductionAmount;
-
-          // Update material stock
-          await tx.material.update({
-            where: { id: ingredient.materialId },
-            data: {
-              currentStock: newBalance,
-            },
+          // Fetch all materials in one query to validate existence
+          const materialIds = recipe.ingredients.map((ing) => ing.materialId);
+          const materials = await tx.material.findMany({
+            where: { id: { in: materialIds } },
+            select: { id: true, currentStock: true, name: true },
           });
 
-          // Create stock movement record (PRODUCTION_OUT for materials)
-          await tx.stockMovement.create({
-            data: {
+          // Create a map for quick lookup
+          const materialMap = new Map(materials.map((m) => [m.id, m]));
+
+          // Validate all materials exist and prepare updates
+          for (const ingredient of recipe.ingredients) {
+            const material = materialMap.get(ingredient.materialId);
+
+            if (!material) {
+              throw new Error(
+                `Cannot start production: Material '${ingredient.material?.name || ingredient.materialId}' not found. Please check your recipe ingredients.`
+              );
+            }
+
+            const deductionAmount = Number(ingredient.quantity) * batchMultiplier;
+            const newBalance = Number(material.currentStock) - deductionAmount;
+
+            materialUpdates.push({
+              id: ingredient.materialId,
+              newStock: newBalance,
+            });
+
+            stockMovements.push({
               materialId: ingredient.materialId,
               productionBatchId: batch.id,
               type: MovementType.PRODUCTION_OUT,
@@ -223,12 +239,31 @@ export class ProductionBatchService {
               unit: ingredient.unit,
               balanceAfter: newBalance,
               notes: `Production batch ${batchNumber} - ${recipe.name}`,
-            },
-          });
-        }
+            });
+          }
 
-        return batch as ProductionBatchWithRelations;
-      });
+          // 3. Batch update all materials (1 query per material, but parallel)
+          await Promise.all(
+            materialUpdates.map((update) =>
+              tx.material.update({
+                where: { id: update.id },
+                data: { currentStock: update.newStock },
+              })
+            )
+          );
+
+          // 4. Batch create all stock movements (1 query)
+          await tx.stockMovement.createMany({
+            data: stockMovements,
+          });
+
+          return batch as ProductionBatchWithRelations;
+        },
+        {
+          maxWait: 10000, // Maximum time to wait for transaction to start (10s)
+          timeout: 20000, // Maximum time for transaction to complete (20s)
+        }
+      );
     } catch (error) {
       // Handle transaction-specific errors with user-friendly messages
       if (error instanceof Error) {
@@ -291,52 +326,58 @@ export class ProductionBatchService {
       throw new Error("Only batches in progress can be completed");
     }
 
-    // Start transaction
-    return prisma.$transaction(async (tx) => {
-      // 1. Get current product stock
-      const product = await tx.product.findUnique({
-        where: { id: batch.productId },
-      });
+    // Start transaction with timeout
+    return prisma.$transaction(
+      async (tx) => {
+        // 1. Get current product stock
+        const product = await tx.product.findUnique({
+          where: { id: batch.productId },
+        });
 
-      if (!product) {
-        throw new Error("Product not found");
+        if (!product) {
+          throw new Error("Product not found");
+        }
+
+        const newBalance = Number(product.currentStock) + actualQuantity;
+
+        // 2. Update product stock
+        await tx.product.update({
+          where: { id: batch.productId },
+          data: {
+            currentStock: newBalance,
+          },
+        });
+
+        // 3. Create stock movement record (PRODUCTION_IN for products)
+        await tx.stockMovement.create({
+          data: {
+            productId: batch.productId,
+            productionBatchId: batchId,
+            type: MovementType.PRODUCTION_IN,
+            quantity: actualQuantity,
+            unit: batch.unit,
+            balanceAfter: newBalance,
+            notes: `Production batch ${batch.batchNumber} completed`,
+          },
+        });
+
+        // 4. Update batch status
+        const updatedBatch = await tx.productionBatch.update({
+          where: { id: batchId },
+          data: {
+            status: ProductionStatus.COMPLETED,
+            actualQuantity,
+            completedDate: new Date(),
+          },
+        });
+
+        return updatedBatch;
+      },
+      {
+        maxWait: 10000,
+        timeout: 20000,
       }
-
-      const newBalance = Number(product.currentStock) + actualQuantity;
-
-      // 2. Update product stock
-      await tx.product.update({
-        where: { id: batch.productId },
-        data: {
-          currentStock: newBalance,
-        },
-      });
-
-      // 3. Create stock movement record (PRODUCTION_IN for products)
-      await tx.stockMovement.create({
-        data: {
-          productId: batch.productId,
-          productionBatchId: batchId,
-          type: MovementType.PRODUCTION_IN,
-          quantity: actualQuantity,
-          unit: batch.unit,
-          balanceAfter: newBalance,
-          notes: `Production batch ${batch.batchNumber} completed`,
-        },
-      });
-
-      // 4. Update batch status
-      const updatedBatch = await tx.productionBatch.update({
-        where: { id: batchId },
-        data: {
-          status: ProductionStatus.COMPLETED,
-          actualQuantity,
-          completedDate: new Date(),
-        },
-      });
-
-      return updatedBatch;
-    });
+    );
   }
 
   /**
@@ -368,33 +409,48 @@ export class ProductionBatchService {
       throw new Error("Batch is already cancelled");
     }
 
-    // Start transaction
-    return prisma.$transaction(async (tx) => {
-      // 1. If restoring materials, add them back to stock
-      if (restoreMaterials && batch.recipe) {
-        const batchMultiplier = Number(batch.plannedQuantity) / Number(batch.recipe.yieldQuantity);
+    // Start transaction with timeout
+    return prisma.$transaction(
+      async (tx) => {
+        // 1. If restoring materials, add them back to stock (optimized)
+        if (restoreMaterials && batch.recipe) {
+          const batchMultiplier = Number(batch.plannedQuantity) / Number(batch.recipe.yieldQuantity);
 
-        for (const ingredient of batch.recipe.ingredients) {
-          const restorationAmount = Number(ingredient.quantity) * batchMultiplier;
-          const material = await tx.material.findUnique({
-            where: { id: ingredient.materialId },
+          // Prepare batch operations
+          const materialUpdates: Array<{ id: string; newStock: number }> = [];
+          const stockMovements: Array<{
+            materialId: string;
+            productionBatchId: string;
+            type: MovementType;
+            quantity: number;
+            unit: string;
+            balanceAfter: number;
+            notes: string;
+          }> = [];
+
+          // Fetch all materials in one query
+          const materialIds = batch.recipe.ingredients.map((ing) => ing.materialId);
+          const materials = await tx.material.findMany({
+            where: { id: { in: materialIds } },
+            select: { id: true, currentStock: true },
           });
 
-          if (!material) continue;
+          const materialMap = new Map(materials.map((m) => [m.id, m]));
 
-          const newBalance = Number(material.currentStock) + restorationAmount;
+          // Prepare restoration data
+          for (const ingredient of batch.recipe.ingredients) {
+            const material = materialMap.get(ingredient.materialId);
+            if (!material) continue; // Skip if material no longer exists
 
-          // Update material stock
-          await tx.material.update({
-            where: { id: ingredient.materialId },
-            data: {
-              currentStock: newBalance,
-            },
-          });
+            const restorationAmount = Number(ingredient.quantity) * batchMultiplier;
+            const newBalance = Number(material.currentStock) + restorationAmount;
 
-          // Create stock movement record (ADJUSTMENT for material restoration)
-          await tx.stockMovement.create({
-            data: {
+            materialUpdates.push({
+              id: ingredient.materialId,
+              newStock: newBalance,
+            });
+
+            stockMovements.push({
               materialId: ingredient.materialId,
               productionBatchId: batchId,
               type: MovementType.ADJUSTMENT,
@@ -402,21 +458,42 @@ export class ProductionBatchService {
               unit: ingredient.unit,
               balanceAfter: newBalance,
               notes: `Production batch ${batch.batchNumber} cancelled - materials restored`,
-            },
-          });
+            });
+          }
+
+          // Batch update materials (parallel)
+          await Promise.all(
+            materialUpdates.map((update) =>
+              tx.material.update({
+                where: { id: update.id },
+                data: { currentStock: update.newStock },
+              })
+            )
+          );
+
+          // Batch create stock movements
+          if (stockMovements.length > 0) {
+            await tx.stockMovement.createMany({
+              data: stockMovements,
+            });
+          }
         }
+
+        // 2. Update batch status
+        const updatedBatch = await tx.productionBatch.update({
+          where: { id: batchId },
+          data: {
+            status: ProductionStatus.CANCELLED,
+          },
+        });
+
+        return updatedBatch;
+      },
+      {
+        maxWait: 10000,
+        timeout: 20000,
       }
-
-      // 2. Update batch status
-      const updatedBatch = await tx.productionBatch.update({
-        where: { id: batchId },
-        data: {
-          status: ProductionStatus.CANCELLED,
-        },
-      });
-
-      return updatedBatch;
-    });
+    );
   }
 
   /**
