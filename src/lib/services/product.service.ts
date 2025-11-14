@@ -118,22 +118,27 @@ export class ProductService {
       isActive?: boolean;
     }
   ): Promise<ProductWithRelations> {
+    // Get current product to check if values are actually changing
+    const currentProduct = await productRepository.findById(productId);
+    if (!currentProduct) {
+      throw new Error("Product not found");
+    }
+
     // Verify product belongs to store
-    const belongsToStore = await productRepository.belongsToStore(productId, storeId);
-    if (!belongsToStore) {
+    if (currentProduct.storeId !== storeId) {
       throw new Error("Product does not belong to this store");
     }
 
-    // If SKU is being updated, validate uniqueness within store
-    if (data.sku) {
-      const skuExists = await productRepository.existsBySku(storeId, data.sku, productId);
+    // If SKU is being updated and is different from current SKU, validate uniqueness
+    if (data.sku && data.sku !== currentProduct.sku) {
+      const skuExists = await productRepository.existsBySku(data.sku, productId);
       if (skuExists) {
         throw new Error(`Product with SKU "${data.sku}" already exists in this store`);
       }
     }
 
-    // If name is being updated, validate uniqueness within store
-    if (data.name) {
+    // If name is being updated and is different from current name, validate uniqueness within store
+    if (data.name && data.name !== currentProduct.name) {
       const nameExists = await productRepository.existsByName(storeId, data.name, productId);
       if (nameExists) {
         throw new Error(`Product with name "${data.name}" already exists in this store`);
