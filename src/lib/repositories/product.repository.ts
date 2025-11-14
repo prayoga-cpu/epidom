@@ -98,12 +98,10 @@ export class ProductRepository extends BaseRepository {
    * Find product by SKU and storeId
    */
   async findBySku(storeId: string, sku: string): Promise<ProductWithRelations | null> {
-    return this.db.product.findUnique({
+    return this.db.product.findFirst({
       where: {
-        storeId_sku: {
-          storeId,
-          sku,
-        },
+        storeId,
+        sku,
       },
       include: {
         recipe: true,

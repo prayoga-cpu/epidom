@@ -446,17 +446,6 @@ export class ProductionBatchRepository extends BaseRepository {
   }
 
   /**
-   * Check if batch number already exists
-   */
-  async existsByBatchNumber(batchNumber: string): Promise<boolean> {
-    const batch = await this.db.productionBatch.findUnique({
-      where: { batchNumber },
-      select: { id: true },
-    });
-    return !!batch;
-  }
-
-  /**
    * Generate unique batch number with retry logic to prevent collisions
    */
   async generateBatchNumber(
