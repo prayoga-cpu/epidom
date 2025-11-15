@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { ProductionHistoryData } from "@/types/entities";
 import {
   Area,
@@ -11,6 +12,7 @@ import {
   AreaChart,
 } from "recharts";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { createDayMap, createMonthMap, formatDateValue } from "@/lib/utils/date-translations";
 import type { TooltipProps } from "recharts";
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
 
@@ -28,58 +30,13 @@ function getMaxYValue(data: ProductionHistoryData[]): number {
 function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
   const { t } = useI18n();
 
+  // Memoize translation maps to avoid recreation on every render
+  const dayMap = useMemo(() => createDayMap(t), [t]);
+  const monthMap = useMemo(() => createMonthMap(t), [t]);
+
   if (active && payload && payload.length) {
     const data = payload[0].payload as ProductionHistoryData;
-
-    // Translate the date value
-    const formatDateValue = (dateValue: string): string => {
-      // Check if it's a day name (Mon, Tue, etc.)
-      const dayMap: Record<string, string> = {
-        Mon: t("chart.days.mon"),
-        Tue: t("chart.days.tue"),
-        Wed: t("chart.days.wed"),
-        Thu: t("chart.days.thu"),
-        Fri: t("chart.days.fri"),
-        Sat: t("chart.days.sat"),
-        Sun: t("chart.days.sun"),
-      };
-
-      if (dayMap[dateValue]) {
-        return dayMap[dateValue];
-      }
-
-      // Check if it's a month name
-      const monthMap: Record<string, string> = {
-        Jan: t("chart.months.jan"),
-        Feb: t("chart.months.feb"),
-        Mar: t("chart.months.mar"),
-        Apr: t("chart.months.apr"),
-        May: t("chart.months.may"),
-        Jun: t("chart.months.jun"),
-        Jul: t("chart.months.jul"),
-        Aug: t("chart.months.aug"),
-        Sep: t("chart.months.sep"),
-        Oct: t("chart.months.oct"),
-        Nov: t("chart.months.nov"),
-        Dec: t("chart.months.dec"),
-      };
-
-      if (monthMap[dateValue]) {
-        return monthMap[dateValue];
-      }
-
-      // Check if it's a week format (Week 1, Week 2, etc.)
-      // Support both English "Week " and translated week prefix
-      const weekPrefix = t("chart.week");
-      const weekPrefixEn = "Week "; // English fallback for parsing legacy data
-      if (dateValue.startsWith(weekPrefixEn) || dateValue.startsWith(weekPrefix)) {
-        const weekNum = dateValue.replace(weekPrefixEn, "").replace(weekPrefix, "").trim();
-        return `${weekPrefix} ${weekNum}`;
-      }
-
-      // Return as is if no translation found
-      return dateValue;
-    };
+    const translatedDate = formatDateValue(data.date, t, dayMap, monthMap);
 
     return (
       <div
@@ -90,7 +47,7 @@ function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
           padding: "0.5rem",
         }}
       >
-        <p style={{ margin: 0, marginBottom: "0.25rem" }}>{formatDateValue(data.date)}</p>
+        <p style={{ margin: 0, marginBottom: "0.25rem" }}>{translatedDate}</p>
         <p style={{ margin: 0, paddingLeft: "0.5rem" }}>
           {t("chart.quantity")}: {payload[0].value}
         </p>
@@ -106,55 +63,15 @@ export default function Chart({ chartData }: Chart) {
   const maxQty = getMaxYValue(chartData);
   const yAxisDomain = [0, maxQty + 10];
 
-  // Custom tick formatter for XAxis
-  const formatXAxisTick = (value: string) => {
-    // Check if it's a day name (Mon, Tue, etc.)
-    const dayMap: Record<string, string> = {
-      Mon: t("chart.days.mon"),
-      Tue: t("chart.days.tue"),
-      Wed: t("chart.days.wed"),
-      Thu: t("chart.days.thu"),
-      Fri: t("chart.days.fri"),
-      Sat: t("chart.days.sat"),
-      Sun: t("chart.days.sun"),
-    };
+  // Memoize translation maps to avoid recreation on every render
+  const dayMap = useMemo(() => createDayMap(t), [t]);
+  const monthMap = useMemo(() => createMonthMap(t), [t]);
 
-    if (dayMap[value]) {
-      return dayMap[value];
-    }
-
-    // Check if it's a month name
-    const monthMap: Record<string, string> = {
-      Jan: t("chart.months.jan"),
-      Feb: t("chart.months.feb"),
-      Mar: t("chart.months.mar"),
-      Apr: t("chart.months.apr"),
-      May: t("chart.months.may"),
-      Jun: t("chart.months.jun"),
-      Jul: t("chart.months.jul"),
-      Aug: t("chart.months.aug"),
-      Sep: t("chart.months.sep"),
-      Oct: t("chart.months.oct"),
-      Nov: t("chart.months.nov"),
-      Dec: t("chart.months.dec"),
-    };
-
-    if (monthMap[value]) {
-      return monthMap[value];
-    }
-
-    // Check if it's a week format (Week 1, Week 2, etc.)
-    // Support both English "Week " and translated week prefix
-    const weekPrefix = t("chart.week");
-    const weekPrefixEn = "Week "; // English fallback for parsing legacy data
-    if (value.startsWith(weekPrefixEn) || value.startsWith(weekPrefix)) {
-      const weekNum = value.replace(weekPrefixEn, "").replace(weekPrefix, "").trim();
-      return `${weekPrefix} ${weekNum}`;
-    }
-
-    // Return as is if no translation found
-    return value;
-  };
+  // Custom tick formatter for XAxis (memoized to avoid recreation)
+  const formatXAxisTick = useMemo(
+    () => (value: string) => formatDateValue(value, t, dayMap, monthMap),
+    [t, dayMap, monthMap]
+  );
 
   return (
     <ResponsiveContainer width="100%" height="100%">

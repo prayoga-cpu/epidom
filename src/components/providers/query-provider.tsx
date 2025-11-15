@@ -29,19 +29,20 @@ export function QueryProvider({ children }: QueryProviderProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Time before data is considered stale
-            staleTime: 60 * 1000, // 1 minute
+            // Time before data is considered stale (increased for better caching)
+            // Dashboard data doesn't change frequently, so we can cache longer
+            staleTime: 2 * 60 * 1000, // 2 minutes (optimized for dashboard)
 
             // Time before inactive queries are garbage collected
-            gcTime: 5 * 60 * 1000, // 5 minutes (renamed from cacheTime)
+            gcTime: 10 * 60 * 1000, // 10 minutes (increased for better cache persistence)
 
             // Retry failed requests
             retry: 1,
 
-            // Refetch on window focus (useful for keeping data fresh)
+            // Refetch on window focus disabled to avoid unnecessary requests
             refetchOnWindowFocus: false,
 
-            // Refetch on reconnect
+            // Refetch on reconnect to ensure data freshness after connection loss
             refetchOnReconnect: true,
           },
           mutations: {
