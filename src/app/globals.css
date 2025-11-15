@@ -545,3 +545,77 @@ body.dialog-open {
    *
    * All images use: rounded-lg overflow-hidden for consistent styling
    */
+
+/* ========================================
+   VIEW TRANSITIONS (Instant Navigation)
+   ======================================== */
+
+/* Enable smooth view transitions for browsers that support it */
+@supports (view-transition-name: none) {
+  /* Preserve sidebar and topbar during transitions */
+  aside,
+  header[role="banner"],
+  .sidebar-container,
+  .topbar-container {
+    view-transition-name: persistent-nav;
+  }
+
+  /* Animate only the main content area */
+  main,
+  .page-content {
+    view-transition-name: main-content;
+  }
+
+  /* Smooth fade transition for content */
+  ::view-transition-old(main-content),
+  ::view-transition-new(main-content) {
+    animation-duration: 150ms;
+    animation-timing-function: ease-in-out;
+  }
+
+  ::view-transition-old(main-content) {
+    animation-name: fade-out;
+  }
+
+  ::view-transition-new(main-content) {
+    animation-name: fade-in;
+  }
+
+  /* Keep nav elements static (no animation) */
+  ::view-transition-old(persistent-nav),
+  ::view-transition-new(persistent-nav) {
+    animation: none;
+  }
+}
+
+/* Fade animations */
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Page content transition optimization */
+.page-content {
+  /* Hardware acceleration for smooth transitions */
+  will-change: contents;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(main-content),
+  ::view-transition-new(main-content) {
+    animation: none !important;
+  }
+
+  .page-content {
+    will-change: auto;
+    transform: none;
+  }
+}

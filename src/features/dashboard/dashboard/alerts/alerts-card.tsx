@@ -4,43 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
+import { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import DashboardCard from "../_components/dashboard-card";
-import { useMemo } from "react";
+import { UseQueryResult } from "@tanstack/react-query";
 
-export default function AlertsCard() {
+interface ProcessedMaterial {
+  id: string;
+  name: string;
+  currentStock: number;
+  minStock: number;
+  maxStock: number;
+  unit: string;
+  stockPercentage: number;
+}
+
+interface AlertsCardProps {
+  materialsQuery: UseQueryResult<MaterialsResponse, Error>;
+  processedData: ProcessedMaterial[];
+}
+
+export default function AlertsCard({ materialsQuery, processedData }: AlertsCardProps) {
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
 
-  // Fetch materials from API
-  const { data, isLoading, error } = useMaterials(storeId || "");
-
-  // Get low stock materials (currentStock <= minStock) and limit to 5
-  const lowStockMaterials = useMemo(() => {
-    if (!data?.materials) return [];
-
-    return data.materials
-      .map((material) => {
-        const currentStock = Number(material.currentStock);
-        const minStock = Number(material.minStock);
-        const maxStock = Number(material.maxStock);
-        const stockPercentage = maxStock > 0 ? (currentStock / maxStock) * 100 : 0;
-
-        return {
-          id: material.id,
-          name: material.name,
-          currentStock,
-          minStock,
-          maxStock,
-          unit: material.unit,
-          stockPercentage,
-        };
-      })
-      .filter((material) => material.currentStock <= material.minStock) // Only low stock
-      .sort((a, b) => a.stockPercentage - b.stockPercentage) // Lowest first
-      .slice(0, 5); // Show max 5 items
-  }, [data]);
+  // Receive pre-processed data from parent (eliminates heavy computation)
+  const { isLoading, error } = materialsQuery;
+  const lowStockMaterials = processedData;
 
   const cardContent = (
     <div className="flex min-h-[300px] flex-1 flex-col">

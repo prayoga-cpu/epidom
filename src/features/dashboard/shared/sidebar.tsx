@@ -85,6 +85,7 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                     <li key={item.href}>
                       <Link
                         href={fullHref}
+                        prefetch={true}
                         className={cn(
                           "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition",
                           active
