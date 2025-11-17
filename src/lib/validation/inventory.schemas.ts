@@ -288,6 +288,8 @@ export const createStockMovementSchema = z
     orderId: cuidSchema.optional(),
     productionBatchId: cuidSchema.optional(),
     notes: z.string().max(500, "Notes are too long").optional(),
+    reason: z.string().max(200, "Reason is too long").optional(),
+    referenceId: z.string().max(100, "Reference ID is too long").optional(),
   })
   .refine((data) => data.productId || data.materialId, {
     message: "Either productId or materialId must be provided",
@@ -295,6 +297,24 @@ export const createStockMovementSchema = z
   });
 
 export type CreateStockMovementInput = z.infer<typeof createStockMovementSchema>;
+
+// Stock adjustment schema (specific for manual adjustments)
+export const stockAdjustmentSchema = z
+  .object({
+    materialId: cuidSchema.optional(),
+    productId: cuidSchema.optional(),
+    adjustmentType: z.enum(["IN", "OUT"]),
+    quantity: decimalSchema.positive("Quantity must be positive"),
+    reason: z.string().min(1, "Reason is required").max(200, "Reason is too long"),
+    notes: z.string().max(500, "Notes are too long").optional(),
+    referenceId: z.string().max(100, "Reference ID is too long").optional(),
+  })
+  .refine((data) => data.productId || data.materialId, {
+    message: "Either productId or materialId must be provided",
+    path: ["productId"],
+  });
+
+export type StockAdjustmentInput = z.infer<typeof stockAdjustmentSchema>;
 
 // Supplier schemas
 export const createSupplierSchema = z.object({

@@ -15,6 +15,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { logger } from "@/lib/logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export function ContactSalesForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [phone, setPhone] = useState<string>("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -42,7 +44,7 @@ export function ContactSalesForm() {
         lastName: (formData.get("lastName") as string)?.trim() || "",
         email: (formData.get("email") as string)?.trim() || "",
         company: (formData.get("company") as string)?.trim() || "",
-        phone: (formData.get("phone") as string)?.trim() || "",
+        phone: phone?.trim() || "",
         requirements: (formData.get("requirements") as string)?.trim() || "",
       };
 
@@ -69,6 +71,7 @@ export function ContactSalesForm() {
 
       // Reset form after success
       e.currentTarget.reset();
+      setPhone("");
     } catch (err: unknown) {
       logger.error("Form submission error:", err);
       setError(t("payments.enterprise.form.error"));
@@ -218,14 +221,16 @@ export function ContactSalesForm() {
                 <Label htmlFor="phone" className="text-sm font-medium">
                   {t("payments.enterprise.form.phone")}
                 </Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
+                <PhoneInput
+                  value={phone}
+                  onChange={(value) => setPhone(value || "")}
                   placeholder={t("payments.enterprise.form.phonePlaceholder")}
+                  defaultCountry="FR"
                   className="h-10 sm:h-11"
                   required
                 />
+                {/* Hidden input for form submission */}
+                <input type="hidden" name="phone" value={phone} />
               </div>
             </div>
 

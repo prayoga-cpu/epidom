@@ -9,13 +9,17 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   useSupplierOrders,
-  useUpdateSupplierOrder,
+  supplierOrderKeys,
 } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
+import { materialKeys } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { Phone, Mail, MapPin, Package, Loader2, AlertCircle, CheckCircle, ArrowRight } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function OrdersView() {
   const { t } = useI18n();
@@ -25,10 +29,11 @@ export function OrdersView() {
   const storeId = params?.storeId as string;
   const [placingOrder, setPlacingOrder] = useState<string | null>(null);
   const { supplierManagementAccess, isLoading: isLoadingAccess } = useFeatureAccess();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useSupplierOrders(storeId);
 
-  // Handler to mark order as placed
+  // Handler to mark order as placed - with proper cache invalidation
   const handleMarkAsPlaced = async (orderId: string) => {
     setPlacingOrder(orderId);
     try {
@@ -40,12 +45,30 @@ export function OrdersView() {
 
       if (!response.ok) throw new Error(t("messages.failedToUpdateOrder"));
 
-      toast.success(t("messages.orderPlaced"));
+      // ✅ Invalidate all related caches to update alerts immediately
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: supplierOrderKeys.lists(storeId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: supplierOrderKeys.detail(storeId, orderId),
+        }),
+        // ✅ Invalidate alerts - this is the key fix!
+        queryClient.invalidateQueries({
+          queryKey: alertKeys.lists(storeId),
+        }),
+        // Also invalidate materials and stock movements
+        queryClient.invalidateQueries({
+          queryKey: materialKeys.lists(storeId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: stockMovementKeys.all(storeId),
+        }),
+      ]);
 
-      // Refresh the data
-      window.location.reload();
+      toast.success(t("messages.orderPlaced") || "Order marked as placed");
     } catch (error) {
-      toast.error(t("messages.orderPlacedError"));
+      toast.error(t("messages.orderPlacedError") || "Failed to mark order as placed");
     } finally {
       setPlacingOrder(null);
     }

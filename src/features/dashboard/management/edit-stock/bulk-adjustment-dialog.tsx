@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -36,7 +37,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useStockAdjustment } from "./hooks/use-stock-adjustment";
 import { Loader2, Plus, Trash2, TrendingUp, TrendingDown } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -68,14 +71,14 @@ const bulkAdjustmentSchema = z.object({
           .positive("Quantity must be positive")
           .min(0.01, "Quantity must be at least 0.01"),
         adjustmentType: z.nativeEnum(AdjustmentType),
-        reason: z.string().optional(),
+        reason: z.string().min(1, "Reason is required when not using global reason").optional(),
         currentStock: z.number(),
         unit: z.string(),
       })
     )
     .min(1, "At least one item is required"),
   useSameReason: z.boolean(),
-  globalReason: z.string().optional(),
+  globalReason: z.string().min(1, "Reason is required when using same reason").optional(),
   globalAdjustmentType: z.nativeEnum(AdjustmentType),
   referenceId: z.string().optional(),
   notes: z.string().optional(),
@@ -98,8 +101,10 @@ export function BulkAdjustmentDialog({
 }: BulkAdjustmentDialogProps) {
   const { t } = useI18n();
   const { toast } = useToast();
+  const params = useParams();
+  const storeId = params?.storeId as string;
   const [internalOpen, setInternalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const adjustStockMutation = useStockAdjustment(storeId);
 
   // Use controlled or internal state
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
@@ -159,50 +164,104 @@ export function BulkAdjustmentDialog({
   };
 
   const onSubmit = async (data: BulkAdjustmentFormData) => {
-    setIsSubmitting(true);
-
     try {
-      // TODO: Replace with TanStack Query mutation
-      // const mutation = useMutation({
-      //   mutationFn: createBulkAdjustments,
-      //   onSuccess: () => {
-      //     queryClient.invalidateQueries({ queryKey: ['stock-levels'] });
-      //     queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      //     toast({
-      //       title: t("management.editStock.toasts.bulkAdjustmentRecorded.title"),
-      //       description: t("management.editStock.toasts.bulkAdjustmentRecorded.description", { count: data.items.length }),
-      //     });
-      //     form.reset();
-      //     setOpen(false);
-      //   },
-      //   onError: (error) => {
-      //     toast({
-      //       title: "Error",
-      //       description: error.message,
-      //       variant: "destructive",
-      //     });
-      //   },
-      // });
-      // await mutation.mutateAsync(data);
+      // Determine reason for each item
+      const globalReason = data.useSameReason ? data.globalReason : undefined;
+      if (data.useSameReason && !globalReason) {
+        toast({
+          variant: "destructive",
+          title: t("common.error"),
+          description: t("management.editStock.reasonRequired"),
+        });
+        return;
+      }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Process all adjustments
+      const adjustments = data.items.map((item) => {
+        const reason = data.useSameReason ? globalReason! : item.reason;
+        if (!reason) {
+          throw new Error(`Reason is required for ${item.itemName}`);
+        }
 
-      toast({
-        title: t("management.editStock.toasts.bulkAdjustmentRecorded.title"),
-        description: `${data.items.length} ${t("management.editStock.toasts.bulkAdjustmentRecorded.description")}`,
+        const isIncrease = item.adjustmentType === AdjustmentType.IN;
+
+        return {
+          materialId: item.itemType === "material" ? item.itemId : undefined,
+          productId: item.itemType === "product" ? item.itemId : undefined,
+          adjustmentType: isIncrease ? ("IN" as const) : ("OUT" as const),
+          quantity: item.quantity,
+          reason: reason,
+          notes: data.notes || undefined,
+          referenceId: data.referenceId || undefined,
+        };
       });
 
-      form.reset();
-      setOpen(false);
+      // Execute all adjustments sequentially (to maintain order and handle errors properly)
+      const results = [];
+      const errors = [];
+
+      for (const adjustment of adjustments) {
+        try {
+          const result = await adjustStockMutation.mutateAsync(adjustment);
+          results.push(result);
+        } catch (error) {
+          const itemName = data.items.find(
+            (item) =>
+              (adjustment.materialId && item.itemId === adjustment.materialId) ||
+              (adjustment.productId && item.itemId === adjustment.productId)
+          )?.itemName;
+
+          errors.push({
+            item: itemName || "Unknown",
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      }
+
+      // Show results
+      if (errors.length === 0) {
+        sonnerToast.success(
+          t("management.editStock.toasts.bulkAdjustmentRecorded.title") ||
+            "Bulk Adjustment Successful",
+          {
+            description: `${results.length} ${t("management.editStock.toasts.bulkAdjustmentRecorded.description") || "items adjusted successfully"}`,
+          }
+        );
+        form.reset();
+        setOpen(false);
+      } else if (results.length > 0) {
+        sonnerToast.warning("Bulk Adjustment Partially Successful", {
+          description: `${results.length} succeeded, ${errors.length} failed`,
+        });
+        // Show errors
+        errors.forEach((err) => {
+          sonnerToast.error(`Failed: ${err.item}`, {
+            description: err.error,
+          });
+        });
+      } else {
+        // All failed
+        toast({
+          variant: "destructive",
+          title: t("common.error"),
+          description: t("management.editStock.toasts.bulkAdjustmentFailed.description"),
+        });
+        errors.forEach((err) => {
+          sonnerToast.error(`Failed: ${err.item}`, {
+            description: err.error,
+          });
+        });
+      }
     } catch (error) {
+      console.error("Error in bulk adjustment:", error);
       toast({
         variant: "destructive",
         title: t("common.error"),
-        description: t("management.editStock.toasts.bulkAdjustmentFailed.description"),
+        description:
+          error instanceof Error
+            ? error.message
+            : t("management.editStock.toasts.bulkAdjustmentFailed.description"),
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -476,12 +535,17 @@ export function BulkAdjustmentDialog({
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
-                disabled={isSubmitting}
+                disabled={adjustStockMutation.isPending}
               >
                 {t("common.cancel")}
               </Button>
-              <Button type="submit" disabled={isSubmitting || fields.length === 0}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button
+                type="submit"
+                disabled={adjustStockMutation.isPending || fields.length === 0}
+              >
+                {adjustStockMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 {t("management.editStock.recordAdjustments")} ({fields.length})
               </Button>
             </DialogFooter>

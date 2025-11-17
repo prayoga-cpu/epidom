@@ -92,6 +92,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           name: ms.supplier.name,
           price: ms.price,
           isPreferred: ms.isPreferred,
+          phone: ms.supplier.phone || null,
         })),
         createdAt: new Date().toISOString(),
       };

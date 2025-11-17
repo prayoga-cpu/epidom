@@ -13,6 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Button } from "@/components/ui/button";
 import { Store } from "../hooks/use-stores";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -235,11 +236,11 @@ export function StoreForm({
             <FormItem>
               <FormLabel>{t("common.phone")}</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  value={field.value || ""}
-                  type="tel"
+                <PhoneInput
                   placeholder={t("stores.phonePlaceholder") || "e.g., +33 1 23 45 67 89"}
+                  value={field.value || ""}
+                  onChange={field.onChange}
+                  defaultCountry="FR"
                   disabled={isLoading}
                 />
               </FormControl>

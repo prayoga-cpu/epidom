@@ -37,10 +37,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
-import {
-  useMaterials,
-  useUpdateMaterial,
-} from "@/features/dashboard/data/materials/hooks/use-materials";
+import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
+import { useStockAdjustment } from "./hooks/use-stock-adjustment";
 import { Loader2, Plus, TrendingUp, TrendingDown } from "lucide-react";
 
 // Adjustment types (IN = increase stock, OUT = decrease stock)
@@ -87,7 +85,7 @@ export function StockAdjustmentDialog({
 
   // Fetch materials
   const { data: materialsData } = useMaterials(storeId);
-  const updateMaterialMutation = useUpdateMaterial(storeId, itemId || "");
+  const adjustStockMutation = useStockAdjustment(storeId);
 
   const form = useForm<StockAdjustmentFormData>({
     resolver: zodResolver(stockAdjustmentSchema),
@@ -149,21 +147,17 @@ export function StockAdjustmentDialog({
     setIsSubmitting(true);
 
     try {
-      const currentStock = Number(String(selectedItem.currentStock));
       const adjustmentQuantity = data.quantity;
       const isIncrease = data.adjustmentType === AdjustmentType.IN;
 
-      const newStock = isIncrease
-        ? currentStock + adjustmentQuantity
-        : currentStock - adjustmentQuantity;
-
-      if (newStock < 0) {
-        throw new Error("Stock cannot be negative");
-      }
-
-      // Update material stock
-      await updateMaterialMutation.mutateAsync({
-        currentStock: newStock,
+      // ✅ Send all data to the new adjustment endpoint
+      await adjustStockMutation.mutateAsync({
+        materialId: selectedItem.id,
+        adjustmentType: isIncrease ? "IN" : "OUT",
+        quantity: adjustmentQuantity,
+        reason: data.reason,
+        notes: data.notes || undefined,
+        referenceId: data.referenceId || undefined,
       });
 
       sonnerToast.success(
@@ -418,8 +412,10 @@ export function StockAdjustmentDialog({
               >
                 {t("common.cancel")}
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={isSubmitting || adjustStockMutation.isPending}>
+                {(isSubmitting || adjustStockMutation.isPending) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 {t("management.editStock.recordAdjustment")}
               </Button>
             </DialogFooter>
