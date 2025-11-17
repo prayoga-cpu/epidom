@@ -96,7 +96,7 @@ export class ProductRepository extends BaseRepository {
     return this.db.product.findUnique({
       where: { id: productId },
       include: {
-        productRecipes: {
+        recipeProducts: {
           include: {
             recipe: true,
           },
@@ -118,7 +118,7 @@ export class ProductRepository extends BaseRepository {
         sku,
       },
       include: {
-        productRecipes: {
+        recipeProducts: {
           include: {
             recipe: true,
           },
@@ -192,7 +192,7 @@ export class ProductRepository extends BaseRepository {
       where: { id: productId },
       data,
       include: {
-        productRecipes: {
+        recipeProducts: {
           include: {
             recipe: true,
           },
