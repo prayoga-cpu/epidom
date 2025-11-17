@@ -6,11 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams } from "next/navigation";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Form,
   FormControl,
@@ -164,20 +161,33 @@ export default function EditMaterialDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[600px]">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
-          <DialogTitle className="text-lg font-bold sm:text-xl">
-            {t("data.materials.editTitle")}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            {t("data.materials.editDescription") ||
-              "Update material information. Fields marked with * are required."}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
+      <FormDialogLayout
+        title={t("data.materials.editTitle")}
+        description={t("data.materials.editDescription") || "Update material information. Fields marked with * are required."}
+        maxWidth="xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={updateMaterial.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="edit-material-form"
+              disabled={updateMaterial.isPending}
+            >
+              {updateMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {updateMaterial.isPending
+                ? t("common.actions.saving")
+                : t("common.actions.saveChanges")}
+            </Button>
+          </>
+        }
+      >
           <Form {...form}>
             <form id="edit-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
             {/* Basic Information */}
@@ -502,32 +512,7 @@ export default function EditMaterialDialog({
             </div>
             </form>
           </Form>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-1.5">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={updateMaterial.isPending}
-            >
-              {t("common.actions.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="edit-material-form"
-              disabled={updateMaterial.isPending}
-            >
-              {updateMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {updateMaterial.isPending
-                ? t("common.actions.saving")
-                : t("common.actions.saveChanges")}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

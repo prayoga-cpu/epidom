@@ -7,13 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -190,16 +186,35 @@ export function StockAdjustmentDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>{t("management.editStock.adjustmentDialog.title")}</DialogTitle>
-          <DialogDescription>
-            {t("management.editStock.adjustmentDialog.description")}
-          </DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={t("management.editStock.adjustmentDialog.title")}
+        description={t("management.editStock.adjustmentDialog.description")}
+        maxWidth="lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isSubmitting || adjustStockMutation.isPending}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" disabled={isSubmitting || adjustStockMutation.isPending}>
+              {(isSubmitting || adjustStockMutation.isPending) && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {t("management.editStock.recordAdjustment")}
+            </Button>
+          </>
+        }
+      >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            id="stock-adjustment-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4"
+          >
             {/* Item Type Selection (if not pre-selected) */}
             {!itemId && (
               <FormField
@@ -402,26 +417,9 @@ export function StockAdjustmentDialog({
                 </FormItem>
               )}
             />
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button type="submit" disabled={isSubmitting || adjustStockMutation.isPending}>
-                {(isSubmitting || adjustStockMutation.isPending) && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {t("management.editStock.recordAdjustment")}
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

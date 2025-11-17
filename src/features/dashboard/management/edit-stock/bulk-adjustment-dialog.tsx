@@ -7,13 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -268,17 +264,39 @@ export function BulkAdjustmentDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {triggerButton && <DialogTrigger asChild>{triggerButton}</DialogTrigger>}
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle>{t("management.editStock.bulkAdjustmentDialog.title")}</DialogTitle>
-          <DialogDescription>
-            {t("management.editStock.bulkAdjustmentDialog.description")} (
-            {selectedItems.length} {t("management.editStock.items")})
-          </DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={t("management.editStock.bulkAdjustmentDialog.title")}
+        description={`${t("management.editStock.bulkAdjustmentDialog.description")} (${selectedItems.length} ${t("management.editStock.items")})`}
+        maxWidth="xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={adjustStockMutation.isPending}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="bulk-adjustment-form"
+              disabled={adjustStockMutation.isPending || fields.length === 0}
+            >
+              {adjustStockMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {t("management.editStock.recordAdjustments")} ({fields.length})
+            </Button>
+          </>
+        }
+      >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            id="bulk-adjustment-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6"
+          >
             {/* Global Settings */}
             <Card className="p-4">
               <h3 className="mb-4 text-sm font-semibold">
@@ -530,28 +548,9 @@ export function BulkAdjustmentDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={adjustStockMutation.isPending}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                disabled={adjustStockMutation.isPending || fields.length === 0}
-              >
-                {adjustStockMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {t("management.editStock.recordAdjustments")} ({fields.length})
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

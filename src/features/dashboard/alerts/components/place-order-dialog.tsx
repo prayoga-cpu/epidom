@@ -6,12 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -152,14 +148,33 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[550px]">
-        <DialogHeader>
-          <DialogTitle>{t("alerts.createOrderDialog.title")}</DialogTitle>
-          <DialogDescription>{t("alerts.createOrderDialog.description")}</DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={t("alerts.createOrderDialog.title")}
+        description={t("alerts.createOrderDialog.description")}
+        maxWidth="lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={createOrder.isPending}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" form="place-order-form" disabled={createOrder.isPending}>
+              {createOrder.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("alerts.createOrderDialog.submit")}
+            </Button>
+          </>
+        }
+      >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            id="place-order-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4"
+          >
             {/* Alert Info (if from alert) */}
             {alert && (
               <div className="bg-muted/50 space-y-2 rounded-lg p-3">
@@ -365,25 +380,9 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
                 </FormItem>
               )}
             />
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={createOrder.isPending}
-              >
-                {t("common.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={createOrder.isPending}>
-                {createOrder.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                {t("alerts.createOrderDialog.submit")}
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

@@ -5,12 +5,9 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -133,19 +130,31 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px]">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
-          <DialogTitle className="text-lg font-bold sm:text-xl">
-            {t("data.materials.addTitle")}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            {t("data.materials.addDescription")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
+      <FormDialogLayout
+        title={t("data.materials.addTitle")}
+        description={t("data.materials.addDescription")}
+        maxWidth="xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createMaterial.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-material-form"
+              disabled={createMaterial.isPending}
+            >
+              {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.materials.addButton")}
+            </Button>
+          </>
+        }
+      >
           <Form {...form}>
             <form id="add-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
             {/* Basic Information */}
@@ -463,32 +472,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 </div>
               ))}
             </div>
-            </form>
-          </Form>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-1.5">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={createMaterial.isPending}
-            >
-              {t("common.actions.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="add-material-form"
-              disabled={createMaterial.isPending}
-            >
-              {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("data.materials.addButton")}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
+          </form>
+        </Form>
+      </FormDialogLayout>
     </Dialog>
   );
 }
