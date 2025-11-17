@@ -966,7 +966,7 @@ export const en = {
     materials: {
       pageTitle: "Materials",
       addTitle: "Add New Material",
-      addButton: "Add Material",
+      addButton: "Add Raw Material",
       addDescription: "Add a new material to your inventory. Fill in all required fields.",
       editTitle: "Edit Material",
       editDescription: "Update material information",
