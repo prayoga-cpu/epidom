@@ -53,15 +53,18 @@ export function RecipeProductionCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updatedRecipe]); // Only depend on updatedRecipe to avoid infinite loops
 
-  // Fetch active production batches for selected recipe
-  const { data: batchesData, isLoading: batchesLoading } = useProductionBatches(storeId, {
-    status: ["IN_PROGRESS", "PLANNED"],
+  // Memoize filters to prevent unnecessary cache invalidation
+  const batchFilters = useMemo(() => ({
+    status: ["IN_PROGRESS", "PLANNED"] as const,
     recipeId: selectedRecipe?.id,
-    sortBy: "scheduledDate",
-    sortOrder: "asc",
+    sortBy: "scheduledDate" as const,
+    sortOrder: "asc" as const,
     skip: 0,
     take: 50,
-  });
+  }), [selectedRecipe?.id]);
+
+  // Fetch active production batches for selected recipe
+  const { data: batchesData, isLoading: batchesLoading } = useProductionBatches(storeId, batchFilters);
 
   // Filter recipes based on search
   const filteredRecipes = useMemo(() => {
@@ -76,9 +79,11 @@ export function RecipeProductionCard() {
   }, [recipesData?.recipes, searchQuery]);
 
   // Get active batches for selected recipe
+  // Filter batches to ensure they match the selected recipe (defensive filtering)
   const activeBatches = useMemo(() => {
     if (!selectedRecipe || !batchesData?.batches) return [];
-    return batchesData.batches;
+    // Additional client-side filter to ensure batches match selected recipe
+    return batchesData.batches.filter(batch => batch.recipeId === selectedRecipe.id);
   }, [selectedRecipe, batchesData?.batches]);
 
   // Get recipe ingredients with current stock availability

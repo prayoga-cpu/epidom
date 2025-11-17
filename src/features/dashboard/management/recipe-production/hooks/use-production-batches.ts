@@ -232,7 +232,11 @@ export function useStartProduction(storeId: string) {
   return useMutation({
     mutationFn: (data: CreateProductionBatchFormInput) => createProductionBatch(storeId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
+      // Use refetchQueries to force immediate refetch of active queries
+      queryClient.refetchQueries({
+        queryKey: ["production-batches", storeId],
+        type: 'active' // Only refetch active queries
+      });
       queryClient.invalidateQueries({ queryKey: ["materials", storeId] });
       // Invalidate alerts (material stock may have changed)
       queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
