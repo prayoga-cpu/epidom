@@ -81,7 +81,7 @@ export async function PATCH(
       unit: validatedData.unit,
       minStock: validatedData.minStock !== undefined ? Number(validatedData.minStock) : undefined,
       maxStock: validatedData.maxStock !== undefined ? Number(validatedData.maxStock) : undefined,
-      recipeId: validatedData.recipeId,
+      recipeIds: validatedData.recipeIds,
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
       isActive: validatedData.isActive,

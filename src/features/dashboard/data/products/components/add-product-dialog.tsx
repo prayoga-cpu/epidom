@@ -21,6 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { RecipeSelector } from "./recipe-selector";
 import {
   Select,
   SelectContent,
@@ -36,7 +37,6 @@ import { Plus, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateProduct } from "../hooks/use-products";
-import { useRecipes } from "../../recipes/hooks/use-recipes";
 import { useProductUsage } from "../hooks/use-product-usage";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -64,7 +64,7 @@ function createProductSchema(t: (key: string) => string) {
     currentStock: z.union([z.number().min(0, t("common.validation.stockNonNegative")), z.undefined()]),
     minStock: z.union([z.number().min(0, t("common.validation.minStockNonNegative")), z.undefined()]),
     maxStock: z.union([z.number().positive(t("common.validation.maxStockPositive")), z.undefined()]),
-    recipeId: z.string().optional(),
+    recipeIds: z.array(z.string()).optional(),
   });
 }
 
@@ -83,15 +83,6 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
   const createProduct = useCreateProduct(storeId);
   const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
 
-  // Fetch recipes for selection
-  const { data: recipesData } = useRecipes(storeId, {
-    sortBy: "name" as const,
-    sortOrder: "asc" as const,
-    skip: 0,
-    take: 100,
-  });
-  const recipes = recipesData?.recipes || [];
-
   // Check if user can create more products
   const canCreateMore = productUsage?.canCreateMore ?? true;
   const productLimitReached = !isLoadingUsage && !canCreateMore;
@@ -103,7 +94,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
     mode: "onSubmit", // Validate only on submit to allow undefined values during editing
     defaultValues: {
       ...FORM_DEFAULTS.product,
-      recipeId: "none",
+      recipeIds: [],
     },
   });
 
@@ -161,7 +152,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
         unit: data.unit,
         minStock: minStock,
         maxStock: maxStock,
-        recipeId: data.recipeId || undefined,
+        recipeIds: data.recipeIds && data.recipeIds.length > 0 ? data.recipeIds : undefined,
         storeId,
         isActive: true,
       };
@@ -288,31 +279,16 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
 
               <FormField
                 control={form.control}
-                name="recipeId"
+                name="recipeIds"
                 render={({ field }) => (
                   <FormItem className="space-y-0.5">
-                    <FormLabel className="text-sm">{t("data.products.form.linkedRecipe")}</FormLabel>
-                    <Select
-                      onValueChange={(value) =>
-                        field.onChange(value === "none" ? undefined : value)
-                      }
-                      value={field.value || "none"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("data.products.form.selectRecipe")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">{t("data.products.form.noRecipe")}</SelectItem>
-                        {recipes.map((recipe) => (
-                          <SelectItem key={recipe.id} value={recipe.id}>
-                            {recipe.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-xs">{t("data.products.form.recipeHint")}</FormDescription>
+                    <FormControl>
+                      <RecipeSelector
+                        storeId={storeId}
+                        selectedRecipeIds={field.value || []}
+                        onSelectionChange={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

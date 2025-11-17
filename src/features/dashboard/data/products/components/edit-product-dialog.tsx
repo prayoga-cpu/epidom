@@ -20,6 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { RecipeSelector } from "./recipe-selector";
 import {
   Select,
   SelectContent,
@@ -33,10 +34,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import type { Product } from "@prisma/client";
+import type { Product, RecipeProduct, Recipe } from "@prisma/client";
+
+type ProductWithRecipes = Product & {
+  recipeProducts?: Array<RecipeProduct & { recipe: Recipe }>;
+};
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUpdateProduct } from "../hooks/use-products";
-import { useRecipes } from "../../recipes/hooks/use-recipes";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 import {
@@ -59,7 +63,7 @@ function createProductSchema(t: (key: string) => string) {
     currentStock: z.union([z.number().min(0, t("common.validation.stockNonNegative")), z.undefined()]),
     minStock: z.union([z.number().min(0, t("common.validation.minStockNonNegative")), z.undefined()]),
     maxStock: z.union([z.number().positive(t("common.validation.maxStockPositive")), z.undefined()]),
-    recipeId: z.string().optional(),
+    recipeIds: z.array(z.string()).optional(),
   });
 }
 
@@ -67,7 +71,7 @@ type ProductFormValues = z.infer<ReturnType<typeof createProductSchema>>;
 
 interface EditProductDialogProps {
   storeId: string;
-  product: Product;
+  product: ProductWithRecipes;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -82,15 +86,6 @@ export default function EditProductDialog({
   const { t } = useI18n();
   const { currency, convertPrice, convertToBase } = useCurrency();
   const updateProduct = useUpdateProduct(storeId, product.id);
-
-  // Fetch recipes for selection
-  const { data: recipesData } = useRecipes(storeId, {
-    sortBy: "name" as const,
-    sortOrder: "asc" as const,
-    skip: 0,
-    take: 100,
-  });
-  const recipes = recipesData?.recipes || [];
 
   const productSchema = createProductSchema(t);
 
@@ -108,7 +103,7 @@ export default function EditProductDialog({
       currentStock: undefined,
       minStock: undefined,
       maxStock: undefined,
-      recipeId: "none",
+      recipeIds: [],
     },
   });
 
@@ -121,6 +116,9 @@ export default function EditProductDialog({
       const minStock = Number(product.minStock) || 0;
       const maxStock = Number(product.maxStock) || 0;
 
+      // Extract recipe IDs from recipeProducts
+      const recipeIds = product.recipeProducts?.map((rp) => rp.recipeId) || [];
+
       form.reset({
         name: product.name || "",
         sku: product.sku || "",
@@ -132,7 +130,7 @@ export default function EditProductDialog({
         currentStock: currentStock > 0 ? currentStock : undefined,
         minStock: minStock > 0 ? minStock : undefined,
         maxStock: maxStock > 0 ? maxStock : undefined,
-        recipeId: product.recipeId || "none",
+        recipeIds: recipeIds,
       });
     }
   }, [product, open, form, convertPrice]);
@@ -189,7 +187,7 @@ export default function EditProductDialog({
         unit: data.unit,
         minStock: minStock,
         maxStock: maxStock,
-        recipeId: data.recipeId || undefined,
+        recipeIds: data.recipeIds && data.recipeIds.length > 0 ? data.recipeIds : undefined,
       };
 
       await updateProduct.mutateAsync(apiData);
@@ -297,31 +295,16 @@ export default function EditProductDialog({
 
               <FormField
                 control={form.control}
-                name="recipeId"
+                name="recipeIds"
                 render={({ field }) => (
                   <FormItem className="space-y-0.5">
-                    <FormLabel className="text-sm">{t("data.products.form.linkedRecipe")}</FormLabel>
-                    <Select
-                      onValueChange={(value) =>
-                        field.onChange(value === "none" ? undefined : value)
-                      }
-                      value={field.value || "none"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("data.products.form.selectRecipe")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">{t("data.products.form.noRecipe")}</SelectItem>
-                        {recipes.map((recipe) => (
-                          <SelectItem key={recipe.id} value={recipe.id}>
-                            {recipe.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-xs">{t("data.products.form.recipeHint")}</FormDescription>
+                    <FormControl>
+                      <RecipeSelector
+                        storeId={storeId}
+                        selectedRecipeIds={field.value || []}
+                        onSelectionChange={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

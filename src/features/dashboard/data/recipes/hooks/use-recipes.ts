@@ -34,17 +34,23 @@ export interface RecipeWithIngredients {
       currentStock: number;
     };
   }>;
-  products?: Array<{
+  recipeProducts?: Array<{
     id: string;
-    name: string;
-    sku: string | null;
-    category: string | null;
-    unit: string;
-    currentStock: number;
-    minStock: number;
-    maxStock: number;
-    costPrice: number;
-    sellingPrice: number;
+    recipeId: string;
+    productId: string;
+    isDefault: boolean;
+    product: {
+      id: string;
+      name: string;
+      sku: string;
+      category: string | null;
+      unit: string;
+      currentStock: number;
+      minStock: number;
+      maxStock: number;
+      costPrice: number;
+      sellingPrice: number;
+    };
   }>;
 }
 

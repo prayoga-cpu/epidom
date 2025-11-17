@@ -99,8 +99,9 @@ export function StartProductionDialog({
   // Check if there are any insufficient materials
   const hasInsufficientMaterials = validIngredients.some((ing) => ing.status === "insufficient");
 
-  // Get products linked to this recipe
-  const linkedProducts = recipe?.products || [];
+  // Get products linked to this recipe (from Many-to-Many relationship)
+  const linkedProducts =
+    recipe?.recipeProducts?.map((rp: { product: { id: string; name: string; sku: string } }) => rp.product) || [];
   const defaultProductId = linkedProducts[0]?.id || "";
 
   // Initialize form
@@ -222,7 +223,7 @@ export function StartProductionDialog({
             )}
 
             {/* Product Selection */}
-            {linkedProducts.length > 0 && (
+            {linkedProducts.length > 0 ? (
               <FormField
                 control={form.control}
                 name="productId"
@@ -255,6 +256,22 @@ export function StartProductionDialog({
                   </FormItem>
                 )}
               />
+            ) : (
+              <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4 dark:border-yellow-700 dark:bg-yellow-900/20">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                      {t("management.recipeProduction.noLinkedProducts") ||
+                        "No products linked to this recipe"}
+                    </p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                      {t("management.recipeProduction.noLinkedProductsHint") ||
+                        "Please link a product to this recipe before starting production."}
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Planned Quantity */}

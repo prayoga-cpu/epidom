@@ -77,10 +77,36 @@ export class SubscriptionService {
     // Get Epidom owner's Stripe Connect account (for receiving 80%)
     // NOTE: For MVP, this should be a configuration.
     // You'll need to set up the Epidom owner's Connect account first
-    const epidomOwner = await this.getEpidomOwner();
-    if (!epidomOwner || !epidomOwner.stripeConnectAccountId) {
-      throw new Error(
-        "Payment system not configured. Epidom owner must complete Stripe Connect onboarding first."
+    // For development/testing, you can skip this by setting SKIP_STRIPE_CONNECT=true
+    const skipConnect = process.env.SKIP_STRIPE_CONNECT === "true";
+    let epidomOwner = null;
+
+    if (!skipConnect) {
+      try {
+        epidomOwner = await this.getEpidomOwner();
+        if (!epidomOwner || !epidomOwner.stripeConnectAccountId) {
+          throw new Error(
+            "Payment system not configured. Epidom owner must complete Stripe Connect onboarding first."
+          );
+        }
+      } catch (error: any) {
+        // Allow checkout without Connect for development if:
+        // 1. EPIDOM_OWNER_EMAIL not set, OR
+        // 2. Owner not found, OR
+        // 3. Owner doesn't have Connect account yet
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            `[Subscription] Development mode: ${error.message}. Allowing checkout without Stripe Connect.`
+          );
+          epidomOwner = null;
+        } else {
+          // In production, throw the error
+          throw error;
+        }
+      }
+    } else {
+      console.warn(
+        "[Subscription] SKIP_STRIPE_CONNECT=true. Running without Stripe Connect (development mode)."
       );
     }
 
@@ -147,11 +173,14 @@ export class SubscriptionService {
           plan: plan,
         },
         // Application fee: 20% goes to platform (you), 80% to connected account
-        application_fee_percent: STRIPE_CONFIG.PLATFORM_FEE_PERCENT,
-        // Transfer 80% to Epidom owner
-        transfer_data: {
-          destination: epidomOwner.stripeConnectAccountId,
-        },
+        // Only set if Epidom owner has Connect account configured
+        ...(epidomOwner?.stripeConnectAccountId && {
+          application_fee_percent: STRIPE_CONFIG.PLATFORM_FEE_PERCENT,
+          // Transfer 80% to Epidom owner
+          transfer_data: {
+            destination: epidomOwner.stripeConnectAccountId,
+          },
+        }),
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -429,16 +458,35 @@ export class SubscriptionService {
 
     // Option 1: Use environment variable
     const ownerEmail = process.env.EPIDOM_OWNER_EMAIL;
-    if (ownerEmail) {
-      return await this.userRepo.findByEmail(ownerEmail);
+    if (!ownerEmail) {
+      throw new Error(
+        "EPIDOM_OWNER_EMAIL environment variable not set. " +
+          "Please set this to the email of the Epidom business owner."
+      );
     }
 
-    // Option 2: Find first user with completed onboarding (temporary)
-    // This is NOT production-ready, just for initial setup
-    throw new Error(
-      "EPIDOM_OWNER_EMAIL environment variable not set. " +
-        "Please set this to the email of the Epidom business owner."
-    );
+    console.log(`[Subscription] Looking for Epidom owner with email: ${ownerEmail}`);
+
+    const owner = await this.userRepo.findByEmail(ownerEmail);
+
+    if (!owner) {
+      throw new Error(
+        `Epidom owner not found. User with email "${ownerEmail}" does not exist. ` +
+          "Please create the owner account first or update EPIDOM_OWNER_EMAIL in .env file."
+      );
+    }
+
+    console.log(`[Subscription] Found owner: ${owner.id}, Connect Account ID: ${owner.stripeConnectAccountId || "NOT SET"}`);
+
+    if (!owner.stripeConnectAccountId) {
+      throw new Error(
+        `Epidom owner found but Stripe Connect account not configured. ` +
+          `User "${ownerEmail}" must complete Stripe Connect onboarding first. ` +
+          `Go to Profile page and complete the Payment Setup.`
+      );
+    }
+
+    return owner;
   }
 }
 

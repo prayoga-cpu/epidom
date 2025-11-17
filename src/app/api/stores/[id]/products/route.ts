@@ -117,7 +117,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       unit: validatedData.unit,
       minStock: validatedData.minStock ? Number(validatedData.minStock) : 0,
       maxStock: validatedData.maxStock ? Number(validatedData.maxStock) : undefined,
-      recipeId: validatedData.recipeId,
+      recipeIds: validatedData.recipeIds,
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
       isActive: validatedData.isActive,

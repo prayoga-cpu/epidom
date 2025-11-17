@@ -52,7 +52,7 @@ export class ProductService {
     unit?: string;
     minStock?: number;
     maxStock?: number;
-    recipeId?: string;
+    recipeIds?: string[]; // Changed from recipeId to recipeIds (array)
     productionTime?: number;
     shelfLife?: number;
     isActive?: boolean;
@@ -74,7 +74,8 @@ export class ProductService {
       throw new Error("Selling price cannot be less than cost price");
     }
 
-    return productRepository.create({
+    // Create product first
+    const product = await productRepository.create({
       sku: data.sku,
       name: data.name,
       description: data.description,
@@ -85,7 +86,6 @@ export class ProductService {
       unit: data.unit ?? "piece",
       minStock: data.minStock ?? 0,
       maxStock: data.maxStock ?? 1000,
-      recipe: data.recipeId ? { connect: { id: data.recipeId } } : undefined,
       productionTime: data.productionTime,
       shelfLife: data.shelfLife,
       isActive: data.isActive ?? true,
@@ -93,6 +93,15 @@ export class ProductService {
         connect: { id: data.storeId },
       },
     });
+
+    // Then link recipes if provided
+    if (data.recipeIds && data.recipeIds.length > 0) {
+      await productRepository.updateRecipes(product.id, data.recipeIds);
+      // Return updated product with recipes
+      return (await productRepository.findById(product.id))!;
+    }
+
+    return product;
   }
 
   /**
@@ -112,7 +121,7 @@ export class ProductService {
       unit?: string;
       minStock?: number;
       maxStock?: number;
-      recipeId?: string;
+      recipeIds?: string[]; // Changed from recipeId to recipeIds (array)
       productionTime?: number;
       shelfLife?: number;
       isActive?: boolean;
@@ -131,7 +140,7 @@ export class ProductService {
 
     // If SKU is being updated and is different from current SKU, validate uniqueness
     if (data.sku && data.sku !== currentProduct.sku) {
-      const skuExists = await productRepository.existsBySku(data.sku, productId);
+      const skuExists = await productRepository.existsBySku(storeId, data.sku, productId);
       if (skuExists) {
         throw new Error(`Product with SKU "${data.sku}" already exists in this store`);
       }
@@ -152,7 +161,31 @@ export class ProductService {
       }
     }
 
-    return productRepository.update(productId, data);
+    // Update basic product fields
+    const updatedProduct = await productRepository.update(productId, {
+      ...(data.sku && { sku: data.sku }),
+      ...(data.name && { name: data.name }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.category !== undefined && { category: data.category }),
+      ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
+      ...(data.sellingPrice !== undefined && { sellingPrice: data.sellingPrice }),
+      ...(data.currentStock !== undefined && { currentStock: data.currentStock }),
+      ...(data.unit && { unit: data.unit }),
+      ...(data.minStock !== undefined && { minStock: data.minStock }),
+      ...(data.maxStock !== undefined && { maxStock: data.maxStock }),
+      ...(data.productionTime !== undefined && { productionTime: data.productionTime }),
+      ...(data.shelfLife !== undefined && { shelfLife: data.shelfLife }),
+      ...(data.isActive !== undefined && { isActive: data.isActive }),
+    });
+
+    // Update recipes if provided
+    if (data.recipeIds !== undefined) {
+      await productRepository.updateRecipes(productId, data.recipeIds);
+      // Return updated product with recipes
+      return (await productRepository.findById(productId))!;
+    }
+
+    return updatedProduct;
   }
 
   /**
