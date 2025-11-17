@@ -9,7 +9,7 @@ import { BaseRepository } from "./base.repository";
  */
 
 export type ProductWithRelations = Product & {
-  recipeProducts?: Array<RecipeProduct & { recipe: Recipe }>;
+  productRecipes?: Array<RecipeProduct & { recipe: Recipe }>;
 };
 
 export interface ProductFilters {
@@ -73,7 +73,7 @@ export class ProductRepository extends BaseRepository {
         skip,
         take,
         include: {
-          recipeProducts: {
+          productRecipes: {
             include: {
               recipe: true,
             },
@@ -96,7 +96,7 @@ export class ProductRepository extends BaseRepository {
     return this.db.product.findUnique({
       where: { id: productId },
       include: {
-        recipeProducts: {
+        productRecipes: {
           include: {
             recipe: true,
           },
@@ -118,7 +118,7 @@ export class ProductRepository extends BaseRepository {
         sku,
       },
       include: {
-        recipeProducts: {
+        productRecipes: {
           include: {
             recipe: true,
           },
@@ -175,7 +175,7 @@ export class ProductRepository extends BaseRepository {
     return this.db.product.create({
       data,
       include: {
-        recipeProducts: {
+        productRecipes: {
           include: {
             recipe: true,
           },
@@ -192,7 +192,7 @@ export class ProductRepository extends BaseRepository {
       where: { id: productId },
       data,
       include: {
-        recipeProducts: {
+        productRecipes: {
           include: {
             recipe: true,
           },
