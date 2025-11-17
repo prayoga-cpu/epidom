@@ -847,7 +847,7 @@ export const en = {
     ordersToPrepare: "Orders to Prepare",
     alertsTitle: "Alerts",
     ordersTitle: "Orders to Place",
-    materialsList: "Materials List",
+    materialsList: "Raw Materials List",
     recipesList: "Recipes List",
     productsList: "Products List",
     suppliersList: "Suppliers List",
@@ -897,17 +897,17 @@ export const en = {
       description: "Stock alerts requiring immediate attention",
       viewAll: "View All",
       noCriticalAlerts: "No critical alerts",
-      material: "Material",
+      material: "Raw Material",
       stockLevel: "Stock Level",
       current: "Current",
-      unknownMaterial: "Unknown Material",
+      unknownMaterial: "Unknown Raw Material",
     },
     trackingCard: {
       title: "Stock Levels",
       description: "Current inventory status",
       viewAll: "View All",
       noStockData: "No stock data",
-      material: "Material",
+      material: "Raw Material",
       stockLevel: "Stock Level",
       current: "Current",
     },
@@ -964,21 +964,21 @@ export const en = {
 
     // Materials section
     materials: {
-      pageTitle: "Materials",
-      addTitle: "Add New Material",
+      pageTitle: "Raw Materials",
+      addTitle: "Add New Raw Material",
       addButton: "Add Raw Material",
-      addDescription: "Add a new material to your inventory. Fill in all required fields.",
-      editTitle: "Edit Material",
-      editDescription: "Update material information",
-      detailsTitle: "Material Details",
-      detailsDescription: "View complete information about this material",
-      title: "Materials",
-      unknownMaterial: "Unknown Material",
+      addDescription: "Add a new raw material to your inventory. Fill in all required fields.",
+      editTitle: "Edit Raw Material",
+      editDescription: "Update raw material information",
+      detailsTitle: "Raw Material Details",
+      detailsDescription: "View complete information about this raw material",
+      title: "Raw Materials",
+      unknownMaterial: "Unknown Raw Material",
       noDescription: "No description provided",
 
       // Form fields
       form: {
-        name: "Material Name",
+        name: "Raw Material Name",
         namePlaceholder: "e.g., Flour, Sugar, Butter",
         sku: "SKU",
         skuPlaceholder: "e.g., FLR-T55-25KG",
@@ -990,7 +990,7 @@ export const en = {
         selectSupplierPlaceholder: "Select a supplier...",
         addSupplier: "Add Supplier",
         noSuppliersYet:
-          'No suppliers added yet. Click "Add Supplier" to link suppliers to this material.',
+          'No suppliers added yet. Click "Add Supplier" to link suppliers to this raw material.',
         quantity: "Quantity",
         unit: "Unit",
         selectUnit: "Unit",
@@ -1006,12 +1006,12 @@ export const en = {
         barcode: "Barcode/Product Code",
         barcodePlaceholder: "Barcode",
         notes: "Notes (Optional)",
-        notesPlaceholder: "Additional information about this material...",
+        notesPlaceholder: "Additional information about this raw material...",
         description: "Description",
-        descriptionPlaceholder: "Additional information about this material...",
+        descriptionPlaceholder: "Additional information about this raw material...",
         supplierPrice: "Price",
         preferred: "Preferred",
-        chooseSupplier: "Choose a supplier for this material",
+        chooseSupplier: "Choose a supplier for this raw material",
         alertMinStock: "Alert when stock falls below this level",
         alertMaxStock: "Alert when stock exceeds this level",
       },
@@ -1044,28 +1044,28 @@ export const en = {
 
       // Tooltips
       tooltips: {
-        view: "View Material",
-        edit: "Edit Material",
-        delete: "Delete Material",
+        view: "View Raw Material",
+        edit: "Edit Raw Material",
+        delete: "Delete Raw Material",
       },
 
       // Toasts
       toasts: {
         added: {
-          title: "Material Added Successfully",
+          title: "Raw Material Added Successfully",
           description: "{name} has been added to your inventory.",
         },
         updated: {
-          title: "Material Updated Successfully",
+          title: "Raw Material Updated Successfully",
           description: "{name} has been updated.",
         },
         deleted: {
-          title: "Material Deleted",
+          title: "Raw Material Deleted",
           description: "{name} has been deleted successfully.",
         },
         bulkDeleted: {
-          title: "Materials Deleted",
-          description: "{count} materials have been deleted successfully.",
+          title: "Raw Materials Deleted",
+          description: "{count} raw materials have been deleted successfully.",
         },
       },
       details: {
@@ -1086,7 +1086,7 @@ export const en = {
         lastUpdated: "Last Updated",
       },
       deleteConfirm: {
-        title: "Delete Material",
+        title: "Delete Raw Material",
         description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
       },
     },
@@ -1145,11 +1145,11 @@ export const en = {
       // Ingredients
       ingredients: {
         title: "Ingredients",
-        description: "Add materials needed for this recipe",
+        description: "Add raw materials needed for this recipe",
         addIngredient: "Add Ingredient",
         noIngredients: 'No ingredients added yet. Click "Add Ingredient" to start.',
-        material: "Material",
-        selectMaterial: "Select material",
+        material: "Raw Material",
+        selectMaterial: "Select raw material",
         quantity: "Quantity",
         unit: "Unit",
         notes: "Notes (optional)",
@@ -1553,7 +1553,7 @@ export const en = {
     save: "Save",
     backToAlerts: "Back to Alerts",
     ordersToPlace: "Orders to Place",
-    addMaterial: "Add Material",
+    addMaterial: "Add Raw Material",
     archive: "Archive",
     details: "Details",
     editProfile: "Edit Profile",
@@ -1584,15 +1584,15 @@ export const en = {
     userAlreadyExists: "User with this email already exists.",
     registrationFailed: "Registration failed. Please try again.",
     noMatchingFilters: "No items match your filters. Try adjusting your search.",
-    noMaterialsFound: "No materials found",
+    noMaterialsFound: "No raw materials found",
     noRecipesFound: "No recipes found",
     noProductsFound: "No products found",
     noSuppliersFound: "No suppliers found",
-    getStartedMaterial: "Get started by adding your first material",
+    getStartedMaterial: "Get started by adding your first raw material",
     getStartedRecipe: "Get started by creating your first recipe",
     getStartedProduct: "Get started by adding your first product",
     getStartedSupplier: "Get started by adding your first supplier",
-    errorLoadingMaterials: "Error loading materials",
+    errorLoadingMaterials: "Error loading raw materials",
     errorLoadingRecipes: "Error loading recipes",
     errorLoadingProducts: "Error loading products",
     errorLoadingSuppliers: "Error loading suppliers",
@@ -1603,11 +1603,11 @@ export const en = {
     exportSuccessful: "Export successful",
     exportFailed: "Export failed",
     exportFailedDesc: "An error occurred while exporting the data.",
-    failedToDeleteMaterial: "Failed to delete material",
-    failedToDeleteMaterials: "Failed to delete materials",
+    failedToDeleteMaterial: "Failed to delete raw material",
+    failedToDeleteMaterials: "Failed to delete raw materials",
     failedToDeleteSupplier: "Failed to delete supplier",
     failedToDeleteSuppliers: "Failed to delete suppliers",
-    failedToUpdateMaterial: "Failed to update material",
+    failedToUpdateMaterial: "Failed to update raw material",
     failedToUpdateOrder: "Failed to update order",
     orderPlaced: "Order marked as placed",
     orderPlacedError: "Failed to mark order as placed",
@@ -1626,7 +1626,7 @@ export const en = {
 
     // Table headers
     table: {
-      material: "Material",
+      material: "Raw Material",
       currentStock: "Current Stock",
       minStock: "Min Stock",
       stockLevel: "Stock Level",
@@ -1661,7 +1661,7 @@ export const en = {
       title: "Alert Details",
       description: "View detailed information about this stock alert",
       alertInfo: "Alert Information",
-      materialInfo: "Material Information",
+      materialInfo: "Raw Material Information",
       supplierInfo: "Supplier Information",
       stockLevel: "Stock Level",
       ofMinimum: "of minimum",
@@ -1679,11 +1679,11 @@ export const en = {
     // Create Order Dialog
     createOrderDialog: {
       title: "Create Order Reminder",
-      description: "Create a reminder to order materials from supplier",
+      description: "Create a reminder to order raw materials from supplier",
       supplier: "Supplier",
       selectSupplier: "Select supplier",
-      material: "Material",
-      selectMaterial: "Select material",
+      material: "Raw Material",
+      selectMaterial: "Select raw material",
       quantity: "Quantity",
       suggested: "Suggested",
       expectedDelivery: "Expected Delivery Date",
@@ -1697,7 +1697,7 @@ export const en = {
 
     // Orders view
     contactInfo: "Contact Information",
-    materialsToOrder: "Materials to Order",
+    materialsToOrder: "Raw Materials to Order",
     item: "item",
     items: "items",
     current: "Current",
@@ -1857,9 +1857,9 @@ export const en = {
         logout: "Logged out",
         updateProfile: "Updated profile",
         updateBusiness: "Updated business information",
-        createMaterial: "Created material",
-        updateMaterial: "Updated material",
-        deleteMaterial: "Deleted material",
+        createMaterial: "Created raw material",
+        updateMaterial: "Updated raw material",
+        deleteMaterial: "Deleted raw material",
         createRecipe: "Created recipe",
         updateRecipe: "Updated recipe",
         deleteRecipe: "Deleted recipe",
@@ -2072,7 +2072,7 @@ export const en = {
         expected: "Expected",
         received: "Received",
         items: "Items",
-        material: "Material",
+        material: "Raw Material",
         quantity: "Quantity",
         unit: "Unit",
         notes: "Notes",
@@ -2084,7 +2084,7 @@ export const en = {
         printDelivery: "Print Delivery",
         created: "Created",
         updated: "Updated",
-        unknownMaterial: "Unknown Material",
+        unknownMaterial: "Unknown Raw Material",
         systemNotes: {
           deliveryScheduled: "Delivery scheduled",
           shipmentDeparted: "Shipment departed from supplier warehouse",
@@ -2130,7 +2130,7 @@ export const en = {
           supplierDeliveryNote: "Supplier Delivery Note",
           expectedDate: "Expected Date",
           receivedDate: "Received Date",
-          materials: "Materials",
+          materials: "Raw Materials",
           downloadPDF: "Export PDF",
           print: "Print",
           contactPerson: "Contact Person",
@@ -2152,9 +2152,9 @@ export const en = {
           selectExpectedDate: "Select expected date",
           items: "Items",
           addItem: "Add Item",
-          noItemsYet: 'No items added yet. Click "Add Item" to add materials.',
-          material: "Material",
-          selectMaterial: "Select material",
+          noItemsYet: 'No items added yet. Click "Add Item" to add raw materials.',
+          material: "Raw Material",
+          selectMaterial: "Select raw material",
           quantity: "Quantity",
           unit: "Unit",
           notes: "Notes",
@@ -2172,7 +2172,7 @@ export const en = {
             supplierRequired: "Please select a supplier",
             expectedDateRequired: "Expected date is required",
             atLeastOneItem: "Please add at least one item",
-            itemsMustHaveMaterial: "All items must have a material and quantity greater than 0",
+            itemsMustHaveMaterial: "All items must have a raw material and quantity greater than 0",
             addModeNotImplemented:
               "Add mode is not implemented yet. Orders should be created from alerts.",
           },
@@ -2206,9 +2206,9 @@ export const en = {
       // Item Types
       itemType: "Item Type",
       selectItemType: "Select item type",
-      material: "Material",
+      material: "Raw Material",
       product: "Product",
-      selectMaterial: "Select Material",
+      selectMaterial: "Select Raw Material",
       selectProduct: "Select Product",
 
       // Stock Status
@@ -2276,7 +2276,7 @@ export const en = {
       // Dialogs
       adjustmentDialog: {
         title: "Record Stock Adjustment",
-        description: "Adjust stock levels for materials or products",
+        description: "Adjust stock levels for raw materials or products",
       },
       bulkAdjustmentDialog: {
         title: "Bulk Stock Adjustment",
@@ -2342,14 +2342,14 @@ export const en = {
       costPerBatch: "Cost per Batch",
       costPerUnit: "Cost per Unit",
       startProduction: "Start Production",
-      insufficientMaterials: "Insufficient materials to start production",
-      insufficientMaterialsWarning: "Some materials are below required levels",
-      insufficientMaterialsHint: "Please restock insufficient materials before starting production",
+      insufficientMaterials: "Insufficient raw materials to start production",
+      insufficientMaterialsWarning: "Some raw materials are below required levels",
+      insufficientMaterialsHint: "Please restock insufficient raw materials before starting production",
 
       // Material Availability
-      materialAvailability: "Material Availability",
+      materialAvailability: "Raw Material Availability",
       materialAvailabilityDescription: "Check ingredient availability for this recipe",
-      material: "Material",
+      material: "Raw Material",
       required: "Required",
       available: "Available",
       status: "Status",
@@ -2482,7 +2482,7 @@ export const en = {
       expectedTime: "Expected Time",
 
       ingredientConsumption: "Ingredient Consumption",
-      material: "Material",
+      material: "Raw Material",
       quantityUsed: "Quantity Used",
       costPerUnit: "Cost/Unit",
       totalCost: "Total Cost",
@@ -2519,7 +2519,7 @@ export const en = {
 
     // Table headers
     dateTime: "Date & Time",
-    material: "Material",
+    material: "Raw Material",
     product: "Product",
     type: "Type",
     quantity: "Quantity",
@@ -2564,7 +2564,7 @@ export const en = {
     currentStock: "Current Stock",
 
     // Forms
-    selectMaterial: "Select Material",
+    selectMaterial: "Select Raw Material",
     selectProduct: "Select Product",
     selectItem: "Select Item",
     movementType: "Movement Type",
@@ -2573,7 +2573,7 @@ export const en = {
     additionalNotes: "Additional Notes",
     referenceNumber: "Reference Number",
     itemType: "Item Type",
-    materialType: "Material",
+    materialType: "Raw Material",
     productType: "Product",
 
     // Reasons
@@ -2712,7 +2712,7 @@ export const en = {
       },
       noStock: {
         title: "No stock items",
-        description: "Add materials or products to start tracking inventory.",
+        description: "Add raw materials or products to start tracking inventory.",
       },
     },
   },
