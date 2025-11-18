@@ -175,37 +175,39 @@ export const fr = {
     waitlistText: "Soyez le premier à savoir quand nous lançons!",
   },
   services: {
-    heroTitle: "Une solution pour votre gestion de stock alimentaire",
+    heroTitle: "Solution innovante de gestion des stocks de matières premières",
     heroDesc:
-      "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés. Cette démarche est essentielle pour éviter toute perte et optimiser votre activité de restauration.",
+      "Epidom est une solution innovante dédiée à la gestion des stocks de matières premières, conçue pour accompagner les professionnels de la restauration, de l'agroalimentaire et de la production. Grâce à une interface intuitive et moderne, le logiciel permet de centraliser toutes les informations essentielles afin de garantir une maîtrise totale des flux d'ingrédients. Epidom facilite ainsi le quotidien des équipes tout en améliorant l'efficacité opérationnelle.",
     featureBlock: { management: "Gestion", tracking: "Suivi", data: "Données" },
     dashboard: {
       subtitle:
-        "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés.",
+        "Vue d'ensemble du tableau de bord complet",
       description:
-        "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés. Cette démarche est essentielle pour éviter toute perte et optimiser votre activité de restauration.",
+        "Avec son tableau de bord complet, Epidom fournit une vision globale et instantanée de l'état du stock et de l'activité. Les utilisateurs peuvent consulter facilement les commandes à passer, les matières critiques ou encore les performances globales. Cette approche orientée données aide les responsables à prendre des décisions plus rapides et mieux informées.",
     },
     management: {
-      title: "Gestion efficace",
+      title: "Modules flexibles et gestion avancée des permissions",
       subtitle:
-        "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés.",
+        "Adapté aux besoins de chaque structure",
       description:
-        "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés. Cette démarche est essentielle pour éviter toute perte et optimiser votre activité de restauration.",
+        "Enfin, Epidom s'adapte aux besoins de chaque structure grâce à ses modules flexibles et à sa gestion des permissions. La plateforme favorise la collaboration entre les différents services, améliore la communication interne et s'intègre parfaitement dans les processus existants. Epidom est ainsi un allié essentiel pour toute entreprise souhaitant professionnaliser la gestion de ses matières premières.",
     },
     tracking: {
-      title: "Un suivi des stocks actifs",
+      title: "Suivi en temps réel des matières premières",
+      description:
+        "Le logiciel offre un suivi en temps réel des matières premières, depuis leur réception jusqu'à leur utilisation. Grâce à une visualisation claire de l'historique des stocks, des alertes de seuil et des consommations, Epidom permet d'éviter les ruptures tout comme les surstocks. Les entreprises peuvent ainsi planifier leurs achats de manière plus intelligente et mieux anticiper les besoins.",
     },
     data: {
-      title: "Un suivi des données complet",
+      title: "Outils dédiés à la production et traçabilité",
       description1:
-        "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés. Cette démarche est essentielle pour éviter toute perte et optimiser votre activité de restauration.",
+        "Epidom intègre également un ensemble d'outils dédiés à la production, permettant par exemple de suivre l'évolution des recettes, les pertes, ou encore les quantités utilisées par période. Ces fonctionnalités assurent une meilleure traçabilité et permettent une meilleure compréhension des cycles de consommation.",
       description2:
-        "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés.",
+        "Elles contribuent à optimiser les coûts et à limiter le gaspillage alimentaire.",
     },
     alerts: {
-      title: "Alertes visibles et accessibles",
+      title: "Alertes de seuil et analyses de consommation",
       description:
-        "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés. Cette démarche est essentielle pour éviter toute perte et optimiser votre activité de restauration.",
+        "Grâce à une visualisation claire de l'historique des stocks, des alertes de seuil et des consommations, Epidom permet d'éviter les ruptures tout comme les surstocks. Les entreprises peuvent ainsi planifier leurs achats de manière plus intelligente et mieux anticiper les besoins.",
     },
     dashboardDesc1:
       "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés.",
