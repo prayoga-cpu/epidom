@@ -62,7 +62,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Return CSV file using utility
     return createCSVResponse(csv, "suppliers-export");
   } catch (error) {
-    console.error("Error exporting suppliers:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -35,7 +35,6 @@ export async function POST(
 
     return NextResponse.json(recipe, { status: 201 });
   } catch (error) {
-    console.error("Error duplicating recipe:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

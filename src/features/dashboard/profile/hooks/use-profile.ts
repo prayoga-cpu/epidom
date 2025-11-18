@@ -156,10 +156,6 @@ export const useUpdateProfile = () => {
     onError: (error) => {
       // Error toast is handled in the component that calls the mutation
       // This prevents duplicate error toasts
-      // Only log in development to avoid console noise in production
-      if (process.env.NODE_ENV === "development") {
-        console.error("[useUpdateProfile] Profile update failed:", error);
-      }
     },
   });
 };

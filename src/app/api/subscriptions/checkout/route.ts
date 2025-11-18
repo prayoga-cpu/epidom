@@ -63,8 +63,6 @@ export async function POST(request: NextRequest) {
       message: "Checkout session created successfully",
     });
   } catch (error: any) {
-    console.error("[API] Checkout session error:", error);
-
     // Handle specific error messages
     if (error.message.includes("already have the")) {
       return NextResponse.json(

@@ -39,7 +39,6 @@ export async function GET(
       { status: 200 }
     );
   } catch (error: any) {
-    console.error("[API] Product usage error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to get product usage" },
       { status: 500 }

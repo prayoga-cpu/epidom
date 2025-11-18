@@ -18,6 +18,7 @@ import {
   ActionButtons,
   ActionButton,
   SectionLoadingState,
+  SectionErrorState,
   FilterSection,
   type FilterField,
   ItemCardGrid,
@@ -277,17 +278,12 @@ export function MaterialsSection() {
   // Error state
   if (error) {
     return (
-      <div className="border-destructive rounded-lg border p-4">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="text-destructive h-5 w-5" />
-          <p className="text-destructive text-sm">
-            {t("messages.errorLoadingMaterials")}: {error.message}
-          </p>
-        </div>
-        <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-2">
-          {t("common.actions.retry")}
-        </Button>
-      </div>
+      <SectionErrorState
+        title={t("common.error")}
+        message={error.message || t("messages.errorLoadingMaterials")}
+        onRetry={() => refetch()}
+        retryLabel={t("common.actions.retry")}
+      />
     );
   }
 

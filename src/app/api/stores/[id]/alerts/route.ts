@@ -41,11 +41,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           include: {
             supplier: true,
           },
-          where: {
-            supplier: {
-              isActive: true,
-            },
-          },
         },
       },
     });
@@ -87,20 +82,28 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         minStock: material.minStock,
         unit: material.unit,
         stockPercentage,
-        suppliers: material.materialSuppliers.map((ms) => ({
-          id: ms.supplier.id,
-          name: ms.supplier.name,
-          price: ms.price,
-          isPreferred: ms.isPreferred,
-          phone: ms.supplier.phone || null,
-        })),
+        suppliers: material.materialSuppliers
+          .filter((ms) => ms.supplier && ms.supplier.isActive)
+          .map((ms) => ({
+            id: ms.supplier.id,
+            name: ms.supplier.name,
+            price: ms.price,
+            isPreferred: ms.isPreferred,
+            phone: ms.supplier.phone || null,
+          })),
         createdAt: new Date().toISOString(),
       };
     });
 
     return NextResponse.json({ alerts });
   } catch (error) {
-    console.error("Error fetching alerts:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("[API] Alerts error:", error);
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }

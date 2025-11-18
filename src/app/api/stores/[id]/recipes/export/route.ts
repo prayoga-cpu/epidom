@@ -72,7 +72,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error exporting recipes:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

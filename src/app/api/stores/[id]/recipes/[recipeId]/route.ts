@@ -58,7 +58,6 @@ export async function GET(
 
     return NextResponse.json(recipe, { status: 200 });
   } catch (error) {
-    console.error("Error fetching recipe:", error);
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch recipe" },
@@ -93,7 +92,6 @@ export async function PATCH(
 
     return NextResponse.json(recipe, { status: 200 });
   } catch (error) {
-    console.error("Error updating recipe:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -141,7 +139,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Recipe deleted successfully" }, { status: 200 });
   } catch (error) {
-    console.error("Error deleting recipe:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("not found") || error.message.includes("does not belong")) {

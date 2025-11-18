@@ -166,7 +166,6 @@ export function StockAdjustmentDialog({
       form.reset();
       setOpen(false);
     } catch (error) {
-      console.error("Error adjusting stock:", error);
       sonnerToast.error(t("management.editStock.toasts.adjustmentError.title") || "Error", {
         description:
           error instanceof Error ? error.message : "Failed to adjust stock. Please try again.",
@@ -198,7 +197,7 @@ export function StockAdjustmentDialog({
               onClick={() => setOpen(false)}
               disabled={isSubmitting || adjustStockMutation.isPending}
             >
-              {t("common.cancel")}
+              {t("common.actions.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting || adjustStockMutation.isPending}>
               {(isSubmitting || adjustStockMutation.isPending) && (

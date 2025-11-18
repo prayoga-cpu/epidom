@@ -5,13 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Building2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -104,7 +99,6 @@ export function EditBusinessInfoDialog({
       onUpdate?.();
       onOpenChange(false);
     } catch (error) {
-      console.error("Error updating business:", error);
       toast.error(t("common.error"), {
         description:
           error instanceof Error ? error.message : t("profile.errors.businessUpdateFailed"),
@@ -114,20 +108,36 @@ export function EditBusinessInfoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {business ? t("profile.forms.editBusinessInfo") : t("profile.business.addBusinessInfo")}
-          </DialogTitle>
-          <DialogDescription>
-            {business
-              ? t("profile.forms.editBusinessInfoDescription")
-              : t("profile.forms.addBusinessInfoDescription")}
-          </DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={
+          business ? t("profile.forms.editBusinessInfo") : t("profile.business.addBusinessInfo")
+        }
+        description={
+          business
+            ? t("profile.forms.editBusinessInfoDescription")
+            : t("profile.forms.addBusinessInfoDescription")
+        }
+        maxWidth="2xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={updateBusiness.isPending}
+              className="flex-1"
+            >
+              {t("profile.actions.cancel")}
+            </Button>
+            <Button type="submit" form="edit-business-info-form" disabled={updateBusiness.isPending} className="flex-1">
+              {updateBusiness.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isCreating ? t("profile.business.addBusinessInfo") : t("profile.actions.save")}
+            </Button>
+          </>
+        }
+      >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form id="edit-business-info-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -266,25 +276,9 @@ export function EditBusinessInfoDialog({
                 )}
               />
             </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={updateBusiness.isPending}
-                className="flex-1"
-              >
-                {t("profile.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={updateBusiness.isPending} className="flex-1">
-                {updateBusiness.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isCreating ? t("profile.business.addBusinessInfo") : t("profile.actions.save")}
-              </Button>
-            </div>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

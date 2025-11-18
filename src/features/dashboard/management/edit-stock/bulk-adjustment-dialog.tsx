@@ -249,7 +249,6 @@ export function BulkAdjustmentDialog({
         });
       }
     } catch (error) {
-      console.error("Error in bulk adjustment:", error);
       toast({
         variant: "destructive",
         title: t("common.error"),
@@ -276,7 +275,7 @@ export function BulkAdjustmentDialog({
               onClick={() => setOpen(false)}
               disabled={adjustStockMutation.isPending}
             >
-              {t("common.cancel")}
+              {t("common.actions.cancel")}
             </Button>
             <Button
               type="submit"

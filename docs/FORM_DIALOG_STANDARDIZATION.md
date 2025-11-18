@@ -141,20 +141,44 @@ Untuk mengupdate form dialog yang sudah ada:
 - ✅ `src/features/stores/stores/components/edit-store-dialog.tsx` (already using similar pattern)
 - ✅ `src/features/dashboard/data/products/components/add-product-dialog.tsx` (already using similar pattern)
 
+## Files yang Sudah Diupdate
+
+- ✅ `src/features/dashboard/management/edit-stock/stock-adjustment-dialog.tsx`
+- ✅ `src/features/dashboard/management/edit-stock/bulk-adjustment-dialog.tsx`
+- ✅ `src/features/dashboard/alerts/components/place-order-dialog.tsx`
+- ✅ `src/features/dashboard/data/materials/components/add-material-dialog.tsx`
+- ✅ `src/features/dashboard/data/materials/components/edit-material-dialog.tsx`
+- ✅ `src/features/dashboard/data/products/components/add-product-dialog.tsx`
+- ✅ `src/features/dashboard/data/products/components/edit-product-dialog.tsx`
+- ✅ `src/features/dashboard/data/suppliers/components/add-supplier-dialog.tsx`
+- ✅ `src/features/dashboard/data/suppliers/components/edit-supplier-dialog.tsx`
+- ✅ `src/features/dashboard/data/recipes/components/add-recipe-dialog.tsx`
+- ✅ `src/features/dashboard/data/recipes/components/edit-recipe-dialog.tsx`
+- ✅ `src/features/dashboard/management/recipe-production/start-production-dialog.tsx`
+- ✅ `src/features/dashboard/management/recipe-production/production-batch-card.tsx` (complete & cancel dialogs)
+- ✅ `src/features/dashboard/alerts/components/bulk-order-dialog.tsx`
+- ✅ `src/features/stores/stores/components/create-store-dialog.tsx` (already using similar pattern)
+- ✅ `src/features/stores/stores/components/edit-store-dialog.tsx` (already using similar pattern)
+
+## Files yang Sudah Diupdate (Profile)
+
+- ✅ `src/features/dashboard/profile/components/edit-personal-info-dialog.tsx`
+- ✅ `src/features/dashboard/profile/components/edit-business-info-dialog.tsx`
+- ✅ `src/features/dashboard/profile/components/edit-avatar-dialog.tsx`
+
+## Files yang Sudah Diupdate (Delivery & Import)
+
+- ✅ `src/features/dashboard/management/delivery/add-edit-delivery-dialog.tsx`
+- ✅ `src/features/dashboard/management/delivery/update-delivery-status-dialog.tsx`
+- ✅ `src/features/dashboard/management/edit-stock/csv-import-dialog.tsx`
+
+## Files yang Sudah Diupdate (Marketing)
+
+- ✅ `src/features/marketing/shared/components/waitlist-dialog.tsx`
+
 ## Files yang Perlu Diupdate
 
-- ⏳ `src/features/dashboard/alerts/components/place-order-dialog.tsx`
-- ⏳ `src/features/dashboard/data/materials/components/add-material-dialog.tsx`
-- ⏳ `src/features/dashboard/data/materials/components/edit-material-dialog.tsx`
-- ⏳ `src/features/dashboard/data/products/components/edit-product-dialog.tsx`
-- ⏳ `src/features/dashboard/data/suppliers/components/add-supplier-dialog.tsx`
-- ⏳ `src/features/dashboard/data/suppliers/components/edit-supplier-dialog.tsx`
-- ⏳ `src/features/dashboard/data/recipes/components/add-recipe-dialog.tsx`
-- ⏳ `src/features/dashboard/data/recipes/components/edit-recipe-dialog.tsx`
-- ⏳ `src/features/dashboard/management/recipe-production/start-production-dialog.tsx`
-- ⏳ `src/features/dashboard/alerts/components/bulk-order-dialog.tsx`
-- ⏳ `src/features/marketing/shared/components/waitlist-dialog.tsx`
-- ⏳ Dan form dialog lainnya...
+- ⏳ Tidak ada lagi! Semua form dialogs sudah diupdate.
 
 ## Benefits
 

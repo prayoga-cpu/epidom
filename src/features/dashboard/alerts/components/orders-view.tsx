@@ -20,6 +20,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { useQueryClient } from "@tanstack/react-query";
+import { SubscriptionLockedState } from "@/features/dashboard/shared/components/subscription-locked-state";
+import { SectionErrorState } from "@/features/dashboard/data/components/section-error-state";
 
 export function OrdersView() {
   const { t } = useI18n();
@@ -31,7 +33,7 @@ export function OrdersView() {
   const { supplierManagementAccess, isLoading: isLoadingAccess } = useFeatureAccess();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useSupplierOrders(storeId);
+  const { data, isLoading, error, refetch } = useSupplierOrders(storeId);
 
   // Handler to mark order as placed - with proper cache invalidation
   const handleMarkAsPlaced = async (orderId: string) => {
@@ -120,38 +122,21 @@ export function OrdersView() {
 
   if (isSubscriptionLocked) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-primary/10 mb-4 rounded-full p-3">
-            <AlertCircle className="text-primary h-6 w-6" />
-          </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("data.suppliers.locked")}</h3>
-          <Button
-            onClick={() => router.push("/pricing")}
-            className="mt-4 bg-[var(--color-brand-primary)] hover:opacity-90"
-            size="sm"
-          >
-            {t("billing.upgradeToPro")}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </CardContent>
-      </Card>
+      <SubscriptionLockedState
+        title={t("data.suppliers.locked")}
+        className="min-h-[400px]"
+      />
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-destructive/10 mb-4 rounded-full p-3">
-            <AlertCircle className="text-destructive h-6 w-6" />
-          </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
-          <p className="text-muted-foreground text-sm">
-            {error.message || t("alerts.errorLoadingOrders")}
-          </p>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        title={t("common.error")}
+        message={error.message || t("alerts.errorLoadingOrders")}
+        onRetry={() => refetch()}
+        retryLabel={t("common.actions.retry")}
+      />
     );
   }
 

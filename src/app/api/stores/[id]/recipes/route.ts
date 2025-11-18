@@ -69,7 +69,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.error("Error fetching recipes:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -111,7 +110,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(recipe, { status: 201 });
   } catch (error) {
-    console.error("Error creating recipe:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

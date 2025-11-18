@@ -108,7 +108,6 @@ export async function GET(
       );
     }
 
-    console.error("Error exporting materials:", error);
     return NextResponse.json(
       createErrorResponse(
         ApiErrorCode.INTERNAL_ERROR,

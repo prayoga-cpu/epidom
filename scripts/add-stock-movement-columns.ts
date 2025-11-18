@@ -13,14 +13,14 @@ async function main() {
   try {
     // Add reason column
     await prisma.$executeRaw`
-      ALTER TABLE "stock_movements" 
+      ALTER TABLE "stock_movements"
       ADD COLUMN IF NOT EXISTS "reason" TEXT;
     `;
     console.log("✅ Added 'reason' column");
 
     // Add referenceId column
     await prisma.$executeRaw`
-      ALTER TABLE "stock_movements" 
+      ALTER TABLE "stock_movements"
       ADD COLUMN IF NOT EXISTS "referenceId" TEXT;
     `;
     console.log("✅ Added 'referenceId' column");

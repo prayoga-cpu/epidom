@@ -67,7 +67,6 @@ export async function GET(
       });
     }
 
-    console.error("Error fetching material:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -142,7 +141,6 @@ export async function PATCH(
 
     // Handle business logic errors
     if (error instanceof Error) {
-      console.error("Error updating material:", error.message);
 
       if (error.message.includes("not found")) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
@@ -158,7 +156,6 @@ export async function PATCH(
       }
     }
 
-    console.error("Error updating material:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -214,7 +211,6 @@ export async function DELETE(
   } catch (error) {
     // Handle business logic errors
     if (error instanceof Error) {
-      console.error("Error deleting material:", error.message);
 
       if (error.message.includes("not found") || error.message.includes("does not belong")) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
@@ -230,7 +226,6 @@ export async function DELETE(
       }
     }
 
-    console.error("Error deleting material:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

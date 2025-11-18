@@ -95,19 +95,12 @@ export class SubscriptionService {
         // 2. Owner not found, OR
         // 3. Owner doesn't have Connect account yet
         if (process.env.NODE_ENV === "development") {
-          console.warn(
-            `[Subscription] Development mode: ${error.message}. Allowing checkout without Stripe Connect.`
-          );
           epidomOwner = null;
         } else {
           // In production, throw the error
           throw error;
         }
       }
-    } else {
-      console.warn(
-        "[Subscription] SKIP_STRIPE_CONNECT=true. Running without Stripe Connect (development mode)."
-      );
     }
 
     let stripeCustomerId: string;
@@ -128,12 +121,6 @@ export class SubscriptionService {
       // Duplicate subscriptions will be handled by:
       // - Webhook handler: Cancel old subscription when new one is confirmed
       // - Audit function: Clean up any duplicates as safety measure
-      console.log(
-        `[Subscription] User has existing subscription. Will keep it active until new payment confirms.`
-      );
-      console.log(
-        `[Subscription] Current plan: ${subscription.plan}, Status: ${subscription.status}`
-      );
     } else {
       // Create new Stripe customer
       const customer = await stripe.customers.create({
@@ -406,10 +393,6 @@ export class SubscriptionService {
 
     // If we have more than one active subscription, cancel the old ones
     if (activeSubscriptions.length > 1) {
-      console.log(
-        `[Subscription Audit] Found ${activeSubscriptions.length} active subscriptions for user ${userId}`
-      );
-
       // Keep the newest subscription (highest created timestamp)
       const sortedByDate = activeSubscriptions.sort((a, b) => b.created - a.created);
       const keepSubscription = sortedByDate[0];
@@ -417,7 +400,6 @@ export class SubscriptionService {
 
       // Cancel old subscriptions IMMEDIATELY
       for (const sub of toCancel) {
-        console.log(`[Subscription Audit] Canceling duplicate subscription IMMEDIATELY: ${sub.id}`);
         await stripe.subscriptions.cancel(sub.id, {
           prorate: false, // No refund for unused time
         });
@@ -426,9 +408,6 @@ export class SubscriptionService {
 
       // Ensure database reflects the kept subscription
       if (subscription.stripeSubscriptionId !== keepSubscription.id) {
-        console.log(
-          `[Subscription Audit] Updating database to use subscription ${keepSubscription.id}`
-        );
         await this.subscriptionRepo.update(userId, {
           stripeSubscriptionId: keepSubscription.id,
         });
@@ -465,8 +444,6 @@ export class SubscriptionService {
       );
     }
 
-    console.log(`[Subscription] Looking for Epidom owner with email: ${ownerEmail}`);
-
     const owner = await this.userRepo.findByEmail(ownerEmail);
 
     if (!owner) {
@@ -475,8 +452,6 @@ export class SubscriptionService {
           "Please create the owner account first or update EPIDOM_OWNER_EMAIL in .env file."
       );
     }
-
-    console.log(`[Subscription] Found owner: ${owner.id}, Connect Account ID: ${owner.stripeConnectAccountId || "NOT SET"}`);
 
     if (!owner.stripeConnectAccountId) {
       throw new Error(

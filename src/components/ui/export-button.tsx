@@ -56,7 +56,6 @@ export function ExportButton<T extends Record<string, any>>({
         description: `${t("common.actions.export") || "Export"} ${format.toUpperCase()}`,
       });
     } catch (error) {
-      console.error("Export failed:", error);
       toast({
         title: t("messages.exportFailed") || "Export failed",
         description: t("messages.exportFailedDesc") || "An error occurred while exporting the data.",

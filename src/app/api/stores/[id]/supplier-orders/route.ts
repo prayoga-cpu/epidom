@@ -68,7 +68,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ orders });
   } catch (error) {
-    console.error("Error fetching supplier orders:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -211,7 +210,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ order }, { status: 201 });
   } catch (error) {
-    console.error("Error creating supplier order:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

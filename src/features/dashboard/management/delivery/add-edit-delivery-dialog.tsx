@@ -2,14 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -243,24 +237,37 @@ export default function AddEditDeliveryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[800px]">
-        <DialogHeader>
-          <DialogTitle>
-            {mode === "add"
-              ? t("management.delivery.dialogs.addEditDelivery.addTitle")
-              : t("management.delivery.dialogs.addEditDelivery.editTitle")}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === "add"
-              ? t("management.delivery.dialogs.addEditDelivery.addDescription")
-              : t("management.delivery.dialogs.addEditDelivery.editDescription")?.replace(
-                  "{reference}",
-                  delivery?.deliveryReference || ""
-                ) || ""}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <FormDialogLayout
+        title={
+          mode === "add"
+            ? t("management.delivery.dialogs.addEditDelivery.addTitle")
+            : t("management.delivery.dialogs.addEditDelivery.editTitle")
+        }
+        description={
+          mode === "add"
+            ? t("management.delivery.dialogs.addEditDelivery.addDescription")
+            : t("management.delivery.dialogs.addEditDelivery.editDescription")?.replace(
+                "{reference}",
+                delivery?.deliveryReference || ""
+              ) || ""
+        }
+        maxWidth="2xl"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {t("common.actions.cancel")}
+            </Button>
+            <Button type="submit" form="add-edit-delivery-form" disabled={mode === "edit" && updateMutation.isPending}>
+              {mode === "edit" && updateMutation.isPending
+                ? t("management.delivery.dialogs.addEditDelivery.updating")
+                : mode === "add"
+                  ? t("management.delivery.dialogs.addEditDelivery.createDelivery")
+                  : t("management.delivery.dialogs.addEditDelivery.updateDelivery")}
+            </Button>
+          </>
+        }
+      >
+        <form id="add-edit-delivery-form" onSubmit={handleSubmit} className="space-y-4">
           {/* Delivery Reference */}
           <div className="space-y-2">
             <Label htmlFor="deliveryReference">
@@ -503,21 +510,8 @@ export default function AddEditDeliveryDialog({
               rows={3}
             />
           </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              {t("common.actions.cancel")}
-            </Button>
-            <Button type="submit" disabled={mode === "edit" && updateMutation.isPending}>
-              {mode === "edit" && updateMutation.isPending
-                ? t("management.delivery.dialogs.addEditDelivery.updating")
-                : mode === "add"
-                  ? t("management.delivery.dialogs.addEditDelivery.createDelivery")
-                  : t("management.delivery.dialogs.addEditDelivery.updateDelivery")}
-            </Button>
-          </DialogFooter>
         </form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

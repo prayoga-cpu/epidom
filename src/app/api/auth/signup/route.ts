@@ -55,7 +55,6 @@ export async function POST(request: Request) {
     }
 
     // Handle unexpected errors
-    console.error("Signup error:", error);
     return NextResponse.json(
       createErrorResponse(
         ApiErrorCode.INTERNAL_ERROR,

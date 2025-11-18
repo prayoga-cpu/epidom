@@ -123,7 +123,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       total: movements.length,
     });
   } catch (error) {
-    console.error("Error fetching stock movements:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

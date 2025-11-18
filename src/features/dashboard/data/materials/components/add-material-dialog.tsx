@@ -72,6 +72,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   });
   const suppliers = suppliersData?.suppliers || [];
 
+  // Note: Type assertions (as any) are required due to TypeScript limitations
+  // with React Hook Form's useFieldArray when using dynamic field names.
+  // This is a known issue: https://github.com/react-hook-form/react-hook-form/issues/7764
   const form = useForm({
     resolver: zodResolver(formSchema) as any,
     defaultValues: FORM_DEFAULTS.material,
@@ -79,9 +82,11 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
   const { fields, append, remove } = useFieldArray({
     control: form.control as any,
-    name: "suppliers" as any,
+    name: "suppliers" as any, // Type assertion needed for dynamic field arrays
   });
 
+  // Note: data type is any due to React Hook Form's useFieldArray type limitations
+  // The actual data structure is validated by Zod schema before reaching this function
   async function onSubmit(data: any) {
     try {
       // Filter out invalid suppliers (those with "none" or empty supplierId)
@@ -416,7 +421,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                     <div className="grid items-start grid-cols-2 gap-1.5">
                       <FormField
                         control={form.control}
-                        name={`suppliers.${index}.price` as any}
+                        name={`suppliers.${index}.price` as any} // Type assertion needed for dynamic field paths
                         render={({ field }) => (
                           <FormItem className="space-y-0.5">
                             <FormLabel className="text-sm">{t("data.materials.form.supplierPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
@@ -439,7 +444,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
                       <FormField
                         control={form.control}
-                        name={`suppliers.${index}.isPreferred` as any}
+                        name={`suppliers.${index}.isPreferred` as any} // Type assertion needed for dynamic field paths
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center space-y-0 space-x-2 pt-8">
                             <FormControl>

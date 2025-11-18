@@ -26,7 +26,6 @@ export function formatDate(
   try {
     return format(dateObj, formatStr, { locale: locales[locale] });
   } catch (error) {
-    console.error("Error formatting date:", error);
     return "";
   }
 }
@@ -78,7 +77,6 @@ export function formatRelativeTime(
       locale: locales[locale],
     });
   } catch (error) {
-    console.error("Error formatting relative time:", error);
     return "";
   }
 }
@@ -108,7 +106,6 @@ export function formatDateForInput(date: Date | string | null | undefined): stri
   try {
     return format(dateObj, "yyyy-MM-dd");
   } catch (error) {
-    console.error("Error formatting date for input:", error);
     return "";
   }
 }
@@ -124,7 +121,6 @@ export function formatDateTimeForInput(date: Date | string | null | undefined): 
   try {
     return format(dateObj, "yyyy-MM-dd'T'HH:mm");
   } catch (error) {
-    console.error("Error formatting datetime for input:", error);
     return "";
   }
 }

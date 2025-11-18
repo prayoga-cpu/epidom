@@ -45,8 +45,6 @@ export async function POST(request: NextRequest) {
       message: "Portal link created successfully",
     });
   } catch (error: any) {
-    console.error("[API] Billing portal error:", error);
-
     // Handle missing portal configuration
     if (error.type === "StripeInvalidRequestError" && error.code === "resource_missing") {
       return NextResponse.json(

@@ -60,17 +60,6 @@ export async function compressImage(file: File, options?: ImageCompressionOption
 
     // Log compression results
     const originalSize = (file.size / 1024 / 1024).toFixed(2);
-    const compressedSize = (compressedFile.size / 1024 / 1024).toFixed(2);
-    const reduction = (((file.size - compressedFile.size) / file.size) * 100).toFixed(1);
-
-    console.log("Image compression results:", {
-      original: `${originalSize} MB`,
-      compressed: `${compressedSize} MB`,
-      reduction: `${reduction}%`,
-      originalType: file.type,
-      compressedType: compressedFile.type,
-    });
-
     return compressedFile;
   } catch (error) {
     if (error instanceof Error) {
@@ -176,10 +165,7 @@ export async function deleteBlobImage(url: string): Promise<void> {
       const error = await response.json();
       throw new Error(error.message || "Failed to delete image");
     }
-
-    console.log("Image deleted from storage:", url);
   } catch (error) {
-    console.warn("Failed to delete image from storage:", error);
     // Re-throw to allow caller to handle the error
     throw error;
   }

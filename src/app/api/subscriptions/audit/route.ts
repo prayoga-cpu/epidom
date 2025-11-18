@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
       canceledSubscriptionIds: [],
     });
   } catch (error: any) {
-    console.error("[API] Subscription audit error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to audit subscriptions" },
       { status: 500 }

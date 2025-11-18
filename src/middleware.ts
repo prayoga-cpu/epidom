@@ -106,7 +106,6 @@ export default async function middleware(req: NextRequest) {
           }
         }
       } catch (error) {
-        console.error("[Middleware] Error checking subscription:", error);
         // Allow access if subscription check fails (fail open for now)
         // In production, you might want to fail closed
       }

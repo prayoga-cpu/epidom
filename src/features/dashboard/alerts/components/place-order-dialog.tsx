@@ -160,7 +160,7 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
               onClick={() => onOpenChange(false)}
               disabled={createOrder.isPending}
             >
-              {t("common.cancel")}
+              {t("common.actions.cancel")}
             </Button>
             <Button type="submit" form="place-order-form" disabled={createOrder.isPending}>
               {createOrder.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

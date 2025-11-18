@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
       message: "Subscription will be canceled at the end of the billing period",
     });
   } catch (error: any) {
-    console.error("[API] Cancel subscription error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to cancel subscription" },
       { status: 500 }

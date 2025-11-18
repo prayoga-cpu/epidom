@@ -40,6 +40,7 @@ import {
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import {
   SectionLoadingState,
+  SectionErrorState,
   FilterSection,
   ItemCardGrid,
   BaseItemCard,
@@ -92,6 +93,7 @@ export function RecipesSection() {
     data: recipesData,
     isLoading,
     error,
+    refetch,
   } = useRecipes(storeId, {
     search: searchQuery || undefined,
     category: categoryFilter,
@@ -237,14 +239,12 @@ export function RecipesSection() {
 
   if (error) {
     return (
-      <Card className="overflow-hidden shadow-md">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-destructive font-semibold">{t("messages.errorLoadingRecipes")}</p>
-          <p className="text-muted-foreground text-sm">
-            {error instanceof Error ? error.message : t("common.validation.unexpectedError")}
-          </p>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        title={t("common.error")}
+        message={error.message || t("messages.errorLoadingRecipes")}
+        onRetry={() => refetch()}
+        retryLabel={t("common.actions.retry")}
+      />
     );
   }
 

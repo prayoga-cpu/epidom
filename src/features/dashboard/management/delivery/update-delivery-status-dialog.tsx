@@ -1,14 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -181,20 +175,31 @@ export default function UpdateDeliveryStatusDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
-            {t("management.delivery.updateStatus.title") || "Update Delivery Status"}
-          </DialogTitle>
-          <DialogDescription>
-            {(
-              t("management.delivery.updateStatus.description") ||
-              "Update delivery status for {reference}"
-            ).replace("{reference}", delivery?.deliveryReference || "")}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <FormDialogLayout
+        title={t("management.delivery.updateStatus.title") || "Update Delivery Status"}
+        description={(
+          t("management.delivery.updateStatus.description") ||
+          "Update delivery status for {reference}"
+        ).replace("{reference}", delivery?.deliveryReference || "")}
+        maxWidth="md"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {t("common.actions.cancel") || "Cancel"}
+            </Button>
+            <Button
+              type="submit"
+              form="update-delivery-status-form"
+              disabled={updateMutation.isPending || availableStatuses.length === 0}
+            >
+              {updateMutation.isPending
+                ? t("management.delivery.updateStatus.updating") || "Updating..."
+                : t("management.delivery.updateStatus.updateStatus") || "Update Status"}
+            </Button>
+          </>
+        }
+      >
+        <form id="update-delivery-status-form" onSubmit={handleSubmit} className="space-y-4">
           {/* Current Status */}
           <div className="space-y-2">
             <Label>{t("management.delivery.updateStatus.currentStatus") || "Current Status"}</Label>
@@ -278,22 +283,8 @@ export default function UpdateDeliveryStatusDialog({
               rows={3}
             />
           </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              {t("common.actions.cancel") || "Cancel"}
-            </Button>
-            <Button
-              type="submit"
-              disabled={updateMutation.isPending || availableStatuses.length === 0}
-            >
-              {updateMutation.isPending
-                ? t("management.delivery.updateStatus.updating") || "Updating..."
-                : t("management.delivery.updateStatus.updateStatus") || "Update Status"}
-            </Button>
-          </DialogFooter>
         </form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

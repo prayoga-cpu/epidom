@@ -51,6 +51,8 @@ import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-
 import {
   ItemCardGrid,
   BaseItemCard,
+  SectionErrorState,
+  SectionLoadingState,
 } from "../../components";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
@@ -81,7 +83,7 @@ export function ProductsSection() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // API hooks
-  const { data, isLoading, error } = useProducts(storeId, filters);
+  const { data, isLoading, error, refetch } = useProducts(storeId, filters);
   const deleteProduct = useDeleteProduct(storeId);
   const bulkDeleteProducts = useBulkDeleteProducts(storeId);
   const exportProducts = useExportProducts();
@@ -226,47 +228,27 @@ export function ProductsSection() {
 
   const hasActiveFilters = filters.search || filters.category;
 
-  // Show loading state - keep card structure for consistent layout
+  // Show loading state
   if (isLoading) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <Download className="mr-2 h-4 w-4" />
-                {t("common.actions.export")}
-              </Button>
-              <Button size="sm" disabled className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                {t("data.products.addButton")}
-              </Button>
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {t("common.actions.view")}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-        </CardContent>
-      </Card>
+      <SectionLoadingState
+        title={t("data.products.pageTitle")}
+        exportLabel={t("common.actions.export")}
+        addLabel={t("data.products.addButton")}
+        selectLabel={t("common.actions.view")}
+      />
     );
   }
 
   // Show error state
   if (error) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
-          <p className="text-destructive">Error loading products</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        title={t("common.error")}
+        message={error.message || t("messages.errorLoadingProducts")}
+        onRetry={() => refetch()}
+        retryLabel={t("common.actions.retry")}
+      />
     );
   }
 

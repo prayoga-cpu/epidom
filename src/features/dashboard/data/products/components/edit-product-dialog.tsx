@@ -4,13 +4,8 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Form,
   FormControl,
@@ -212,19 +207,31 @@ export default function EditProductDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
-          <DialogTitle className="text-lg font-bold sm:text-xl">
-            {t("data.products.editTitle") || "Edit Product"}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            Update product information. Changes will be saved to your inventory.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
+      <FormDialogLayout
+        title={t("data.products.editTitle") || "Edit Product"}
+        description="Update product information. Changes will be saved to your inventory."
+        maxWidth="2xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              {t("actions.cancel") || "Cancel"}
+            </Button>
+            <Button
+              type="submit"
+              form="edit-product-form"
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("data.products.update") || "Update Product"}
+            </Button>
+          </>
+        }
+      >
           <Form {...form}>
             <form id="edit-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
             {/* Basic Information */}
@@ -475,30 +482,7 @@ export default function EditProductDialog({
             </div>
             </form>
           </Form>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-1.5">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              {t("actions.cancel") || "Cancel"}
-            </Button>
-            <Button
-              type="submit"
-              form="edit-product-form"
-              disabled={isSubmitting}
-            >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("data.products.update") || "Update Product"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }
