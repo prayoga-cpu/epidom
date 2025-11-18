@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import {
   Form,
   FormControl,
@@ -189,19 +190,12 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
         description={t("data.recipes.editDescription")}
         maxWidth="xl"
         footer={
-          <>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              {t("common.actions.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="edit-recipe-form"
-              disabled={updateRecipe.isPending}
-            >
-              {updateRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("data.recipes.update")}
-            </Button>
-          </>
+          <FormDialogFooter
+            formId="edit-recipe-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={t("data.recipes.update")}
+            isPending={updateRecipe.isPending}
+          />
         }
       >
           <Form {...form}>

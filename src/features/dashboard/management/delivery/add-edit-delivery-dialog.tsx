@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -253,18 +254,18 @@ export default function AddEditDeliveryDialog({
         }
         maxWidth="2xl"
         footer={
-          <>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              {t("common.actions.cancel")}
-            </Button>
-            <Button type="submit" form="add-edit-delivery-form" disabled={mode === "edit" && updateMutation.isPending}>
-              {mode === "edit" && updateMutation.isPending
+          <FormDialogFooter
+            formId="add-edit-delivery-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={
+              mode === "edit" && updateMutation.isPending
                 ? t("management.delivery.dialogs.addEditDelivery.updating")
                 : mode === "add"
                   ? t("management.delivery.dialogs.addEditDelivery.createDelivery")
-                  : t("management.delivery.dialogs.addEditDelivery.updateDelivery")}
-            </Button>
-          </>
+                  : t("management.delivery.dialogs.addEditDelivery.updateDelivery")
+            }
+            isPending={mode === "edit" && updateMutation.isPending}
+          />
         }
       >
         <form id="add-edit-delivery-form" onSubmit={handleSubmit} className="space-y-4">

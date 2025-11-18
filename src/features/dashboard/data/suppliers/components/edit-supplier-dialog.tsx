@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import {
   Form,
   FormControl,
@@ -102,24 +103,12 @@ export default function EditSupplierDialog({
         description="Update supplier information. Changes will be saved to your contacts."
         maxWidth="2xl"
         footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={updateSupplier.isPending}
-            >
-              {t("actions.cancel") || "Cancel"}
-            </Button>
-            <Button
-              type="submit"
-              form="edit-supplier-form"
-              disabled={updateSupplier.isPending}
-            >
-              {updateSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("data.suppliers.update") || "Update Supplier"}
-            </Button>
-          </>
+          <FormDialogFooter
+            formId="edit-supplier-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={t("data.suppliers.update") || "Update Supplier"}
+            isPending={updateSupplier.isPending}
+          />
         }
       >
           <Form {...form}>

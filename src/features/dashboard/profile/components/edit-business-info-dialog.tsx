@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Loader2, Building2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -119,21 +120,13 @@ export function EditBusinessInfoDialog({
         }
         maxWidth="2xl"
         footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={updateBusiness.isPending}
-              className="flex-1"
-            >
-              {t("profile.actions.cancel")}
-            </Button>
-            <Button type="submit" form="edit-business-info-form" disabled={updateBusiness.isPending} className="flex-1">
-              {updateBusiness.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isCreating ? t("profile.business.addBusinessInfo") : t("profile.actions.save")}
-            </Button>
-          </>
+          <FormDialogFooter
+            formId="edit-business-info-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={isCreating ? t("profile.business.addBusinessInfo") : t("profile.actions.save")}
+            isPending={updateBusiness.isPending}
+            variant="full-width"
+          />
         }
       >
         <Form {...form}>

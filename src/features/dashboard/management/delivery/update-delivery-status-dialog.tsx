@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -183,20 +184,17 @@ export default function UpdateDeliveryStatusDialog({
         ).replace("{reference}", delivery?.deliveryReference || "")}
         maxWidth="md"
         footer={
-          <>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              {t("common.actions.cancel") || "Cancel"}
-            </Button>
-            <Button
-              type="submit"
-              form="update-delivery-status-form"
-              disabled={updateMutation.isPending || availableStatuses.length === 0}
-            >
-              {updateMutation.isPending
+          <FormDialogFooter
+            formId="update-delivery-status-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={
+              updateMutation.isPending
                 ? t("management.delivery.updateStatus.updating") || "Updating..."
-                : t("management.delivery.updateStatus.updateStatus") || "Update Status"}
-            </Button>
-          </>
+                : t("management.delivery.updateStatus.updateStatus") || "Update Status"
+            }
+            isPending={updateMutation.isPending}
+            disabled={availableStatuses.length === 0}
+          />
         }
       >
         <form id="update-delivery-status-form" onSubmit={handleSubmit} className="space-y-4">

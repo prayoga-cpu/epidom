@@ -8,6 +8,7 @@ import {
   Dialog,
 } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -153,20 +154,12 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
         description={t("alerts.createOrderDialog.description")}
         maxWidth="lg"
         footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={createOrder.isPending}
-            >
-              {t("common.actions.cancel")}
-            </Button>
-            <Button type="submit" form="place-order-form" disabled={createOrder.isPending}>
-              {createOrder.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("alerts.createOrderDialog.submit")}
-            </Button>
-          </>
+          <FormDialogFooter
+            formId="place-order-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={t("alerts.createOrderDialog.submit")}
+            isPending={createOrder.isPending}
+          />
         }
       >
         <Form {...form}>

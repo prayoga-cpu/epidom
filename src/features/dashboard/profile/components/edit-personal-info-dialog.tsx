@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -103,21 +104,13 @@ export function EditPersonalInfoDialog({
         description={t("profile.forms.editPersonalInfoDescription")}
         maxWidth="md"
         footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={updateProfile.isPending}
-              className="flex-1"
-            >
-              {t("profile.actions.cancel")}
-            </Button>
-            <Button type="submit" form="edit-personal-info-form" disabled={updateProfile.isPending} className="flex-1">
-              {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("profile.actions.save")}
-            </Button>
-          </>
+          <FormDialogFooter
+            formId="edit-personal-info-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={t("profile.actions.save")}
+            isPending={updateProfile.isPending}
+            variant="full-width"
+          />
         }
       >
         <Form {...form}>

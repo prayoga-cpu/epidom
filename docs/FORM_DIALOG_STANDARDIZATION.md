@@ -26,6 +26,71 @@ interface FormDialogLayoutProps {
 }
 ```
 
+## Komponen: FormDialogFooter
+
+**Location:** `src/components/ui/form-dialog-footer.tsx`
+
+Standardized footer buttons untuk form dialogs. Mengikuti prinsip DRY dengan menghilangkan duplikasi footer button patterns.
+
+### Props
+
+```typescript
+interface FormDialogFooterProps {
+  formId: string;                    // Required: Form ID untuk submit button
+  onCancel: () => void;              // Required: Cancel handler
+  submitText: string;                // Required: Submit button text
+  cancelText?: string;              // Optional: Custom cancel text
+  isPending?: boolean;               // Optional: Loading state
+  disabled?: boolean;                // Optional: Disable buttons
+  variant?: "default" | "full-width"; // Optional: Button layout variant
+  additionalButtons?: React.ReactNode; // Optional: Additional buttons (e.g., remove button)
+  showCancel?: boolean;              // Optional: Show/hide cancel button (default: true)
+}
+```
+
+### Usage Example
+
+```tsx
+<FormDialogLayout
+  footer={
+    <FormDialogFooter
+      formId="edit-product-form"
+      onCancel={() => onOpenChange(false)}
+      submitText={t("data.products.update")}
+      isPending={isPending}
+    />
+  }
+>
+```
+
+### With Full-Width Buttons
+
+```tsx
+<FormDialogFooter
+  formId="edit-profile-form"
+  onCancel={() => onOpenChange(false)}
+  submitText={t("profile.actions.save")}
+  isPending={isPending}
+  variant="full-width" // Buttons akan menggunakan flex-1
+/>
+```
+
+### With Additional Buttons
+
+```tsx
+<FormDialogFooter
+  formId="edit-avatar-form"
+  onCancel={() => onOpenChange(false)}
+  submitText={t("profile.actions.save")}
+  isPending={isPending}
+  additionalButtons={
+    <Button variant="destructive" onClick={handleRemove}>
+      {t("profile.actions.removeAvatar")}
+    </Button>
+  }
+/>
+```
+
 ## Pattern Penggunaan
 
 ### Basic Example
@@ -72,13 +137,43 @@ export function MyFormDialog() {
 }
 ```
 
-### Dengan React Hook Form
+### Dengan React Hook Form (Recommended - Using FormDialogFooter)
 
 ```tsx
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
+
 <FormDialogLayout
   title={t("form.title")}
   description={t("form.description")}
   maxWidth="lg"
+  footer={
+    <FormDialogFooter
+      formId="my-form-id"
+      onCancel={() => setOpen(false)}
+      submitText={t("common.save")}
+      isPending={isPending}
+    />
+  }
+>
+  <Form {...form}>
+    <form
+      id="my-form-id"
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-4"
+    >
+      {/* Form fields */}
+    </form>
+  </Form>
+</FormDialogLayout>
+```
+
+### Manual Footer (Jika Perlu Custom Content)
+
+Jika submit button memerlukan custom content (icon, dll), bisa menggunakan manual footer:
+
+```tsx
+<FormDialogLayout
   footer={
     <>
       <Button
@@ -95,21 +190,12 @@ export function MyFormDialog() {
         disabled={isPending}
       >
         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <ShoppingCart className="mr-2 h-4 w-4" />
         {t("common.save")}
       </Button>
     </>
   }
 >
-  <Form {...form}>
-    <form
-      id="my-form-id"
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="space-y-4"
-    >
-      {/* Form fields */}
-    </form>
-  </Form>
-</FormDialogLayout>
 ```
 
 ## MaxWidth Guidelines
