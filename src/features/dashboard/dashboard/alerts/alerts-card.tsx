@@ -6,7 +6,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
-import DashboardCard from "../_components/dashboard-card";
+import { DashboardCard } from "../components/dashboard-card";
 import { UseQueryResult } from "@tanstack/react-query";
 
 interface ProcessedMaterial {
