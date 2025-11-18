@@ -170,9 +170,9 @@ export const id = {
     waitlistText: "Jadilah yang pertama tahu saat kami meluncur!",
   },
   services: {
-    heroTitle: "Solusi untuk manajemen stok makanan Anda",
+    heroTitle: "Manajemen Inventori Bahan Baku yang Inovatif",
     heroDesc:
-      "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+      "Epidom adalah solusi perangkat lunak inovatif yang dirancang untuk mengelola inventori bahan baku, disesuaikan untuk profesional di bidang layanan makanan, produksi makanan, dan manufaktur. Dengan antarmuka yang bersih dan intuitif, platform ini memusatkan semua informasi kunci untuk memastikan kontrol penuh atas alur bahan. Epidom merampingkan operasi harian sambil secara signifikan meningkatkan produktivitas keseluruhan.",
     featureBlock: {
       management: "Manajemen",
       tracking: "Pelacakan",
@@ -180,31 +180,33 @@ export const id = {
     },
     dashboard: {
       subtitle:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi.",
+        "Ringkasan Dashboard Komprehensif",
       description:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+        "Dengan dashboard komprehensifnya, Epidom memberikan gambaran instan dan global tentang status inventori dan aktivitas. Pengguna dapat dengan mudah meninjau pesanan pembelian yang tertunda, bahan kritis, dan indikator kinerja keseluruhan. Pendekatan berbasis data ini mendukung pengambilan keputusan yang lebih cepat, lebih cerdas, dan lebih akurat bagi para manajer.",
     },
     management: {
-      title: "Manajemen Efisien",
+      title: "Modul Fleksibel dan Manajemen Izin Lanjutan",
       subtitle:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi.",
+        "Dapat Disesuaikan dengan Kebutuhan Organisasi Anda",
       description:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+        "Terakhir, Epidom beradaptasi dengan kebutuhan setiap organisasi melalui modul fleksibel dan manajemen izin lanjutan. Platform ini mempromosikan kolaborasi antar tim, memperkuat komunikasi internal, dan terintegrasi dengan mulus ke dalam alur kerja yang ada. Epidom dengan demikian merupakan alat penting bagi setiap perusahaan yang ingin memprofesionalkan dan mengoptimalkan manajemen bahan baku.",
     },
     tracking: {
-      title: "Pelacakan Stok Aktif",
+      title: "Pelacakan Bahan Baku Waktu Nyata",
+      description:
+        "Perangkat lunak ini menyediakan pelacakan waktu nyata bahan baku, dari kedatangan hingga penggunaan aktualnya. Melalui riwayat stok yang jelas, peringatan ambang batas, dan analitik konsumsi, Epidom membantu mencegah kekurangan serta kelebihan stok. Bisnis dapat merencanakan pembelian mereka dengan lebih efisien dan lebih baik mengantisipasi kebutuhan yang akan datang.",
     },
     data: {
-      title: "Pelacakan Data Lengkap",
+      title: "Alat Produksi Khusus dan Ketertelusuran",
       description1:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+        "Epidom juga mencakup alat produksi khusus, memungkinkan pengguna untuk memantau evolusi resep, tingkat limbah, dan kuantitas yang digunakan selama periode tertentu. Fitur-fitur ini meningkatkan ketertelusuran dan memberikan pemahaman mendalam tentang pola konsumsi.",
       description2:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi.",
+        "Mereka berkontribusi pada optimasi biaya dan membantu mengurangi limbah makanan.",
     },
     alerts: {
-      title: "Peringatan yang Terlihat dan Dapat Diakses",
+      title: "Peringatan Ambang Batas dan Analitik Konsumsi",
       description:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+        "Melalui riwayat stok yang jelas, peringatan ambang batas, dan analitik konsumsi, Epidom membantu mencegah kekurangan serta kelebihan stok. Bisnis dapat merencanakan pembelian mereka dengan lebih efisien dan lebih baik mengantisipasi kebutuhan yang akan datang.",
     },
     dashboardDesc1:
       "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi.",

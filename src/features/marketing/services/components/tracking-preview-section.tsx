@@ -23,6 +23,13 @@ export function TrackingPreviewSection() {
           {t("services.tracking.title")}
         </h2>
 
+        {/* Description - Centered */}
+        {t("services.tracking.description") && (
+          <p className="text-description mb-6 text-center md:mb-8 lg:mb-12 text-brand-primary max-w-4xl mx-auto">
+            {t("services.tracking.description")}
+          </p>
+        )}
+
         {/* Large Mockup - Almost full width */}
         <div className="relative aspect-video w-full overflow-hidden rounded-lg">
           <Image
