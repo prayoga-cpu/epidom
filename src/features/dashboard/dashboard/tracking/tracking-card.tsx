@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ArrowRight, Package, Loader2 } from "lucide-react";
-import DashboardCard from "../_components/dashboard-card";
+import { DashboardCard } from "../components/dashboard-card";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { UseQueryResult } from "@tanstack/react-query";

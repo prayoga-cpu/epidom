@@ -9,7 +9,7 @@ interface DashboardCardProps {
   cardClassName?: string;
 }
 
-export default function DashboardCard({
+export function DashboardCard({
   cardTitle,
   cardDescription,
   cardOther,

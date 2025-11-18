@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import DashboardCard from "./dashboard-card";
+import { DashboardCard } from "./dashboard-card";
 
 interface CardSkeletonProps {
   title?: string;

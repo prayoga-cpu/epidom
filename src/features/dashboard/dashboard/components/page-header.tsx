@@ -5,7 +5,7 @@ interface PageHeaderProps {
   pageDescription: string;
 }
 
-export default function PageHeader({
+export function PageHeader({
   pageTitle,
   pageDescription,
 }: PageHeaderProps) {

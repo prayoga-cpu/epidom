@@ -54,6 +54,8 @@ import {
   SectionErrorState,
   SectionLoadingState,
 } from "../../components";
+import { useBulkSelection } from "../../hooks/use-bulk-selection";
+import { useDialogState } from "../../hooks/use-dialog-state";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
@@ -74,14 +76,6 @@ export function ProductsSection() {
     take: 20,
   });
 
-  // UI state
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bulkSelectMode, setBulkSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
   // API hooks
   const { data, isLoading, error, refetch } = useProducts(storeId, filters);
   const deleteProduct = useDeleteProduct(storeId);
@@ -99,6 +93,32 @@ export function ProductsSection() {
   const productLimitReached = !isLoadingUsage && !canCreateMore;
   // Only show badge if limit exists and is not unlimited (null or Infinity means unlimited)
   const showLimitBadge = productUsage && productUsage.limit !== null && productUsage.limit !== Infinity;
+
+  // Use reusable hooks for dialog and bulk selection state
+  const {
+    selectedItem: selectedProduct,
+    viewDialogOpen,
+    editDialogOpen,
+    deleteDialogOpen,
+    setViewDialogOpen,
+    setEditDialogOpen,
+    setDeleteDialogOpen,
+    setSelectedItem: setSelectedProduct,
+    handleView,
+    handleEdit,
+    handleDeleteClick: handleDeleteClickDialog,
+  } = useDialogState<Product>();
+
+  const {
+    bulkSelectMode,
+    selectedIds,
+    selectedCount,
+    toggleBulkSelect,
+    toggleSelectAll,
+    toggleSelectItem,
+    clearSelection,
+    isSelected,
+  } = useBulkSelection(products);
 
   // Helper function to determine stock status
   const getStockStatus = (product: Product): StockFilter => {
@@ -130,37 +150,7 @@ export function ProductsSection() {
     return ((selling - cost) / selling) * 100;
   };
 
-  // Bulk selection handlers
-  const toggleBulkSelect = () => {
-    setBulkSelectMode(!bulkSelectMode);
-    setSelectedIds(new Set());
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === products.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(products.map((p) => p.id)));
-    }
-  };
-
-
   // Action handlers
-  const handleView = (product: Product) => {
-    setSelectedProduct(product);
-    setViewDialogOpen(true);
-  };
-
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product);
-    setEditDialogOpen(true);
-  };
-
-  const handleDeleteClick = (product: Product) => {
-    setSelectedProduct(product);
-    setDeleteDialogOpen(true);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!selectedProduct) return;
 
@@ -182,8 +172,7 @@ export function ProductsSection() {
       toast.success(
         t("data.products.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
       );
-      setSelectedIds(new Set());
-      setBulkSelectMode(false);
+      clearSelection();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete products");
     }
@@ -315,10 +304,10 @@ export function ProductsSection() {
                   </TooltipContent>
                 )}
               </Tooltip>
-              {bulkSelectMode && selectedIds.size > 0 && (
+              {bulkSelectMode && selectedCount > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete")} ({selectedIds.size})
+                  {t("actions.delete")} ({selectedCount})
                 </Button>
               )}
               <Button
@@ -413,11 +402,11 @@ export function ProductsSection() {
             {bulkSelectMode && (
               <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
                 <Checkbox
-                  checked={selectedIds.size === products.length && products.length > 0}
+                  checked={selectedCount === products.length && products.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {products.length}{" "}
+                  {t("common.selectAll")} ({selectedCount} {t("common.of")} {products.length}{" "}
                   {t("common.selected")})
                 </span>
               </div>
@@ -437,24 +426,13 @@ export function ProductsSection() {
             {products.map((product) => {
               const stockStatus = getStockStatus(product);
               const profitMargin = getProfitMargin(product);
-              const isSelected = selectedIds.has(product.id);
 
               return (
                 <BaseItemCard
                   key={product.id}
-                  isSelected={isSelected}
+                  isSelected={isSelected(product.id)}
                   bulkSelectMode={bulkSelectMode}
-                  onSelect={(checked) => {
-                    if (checked) {
-                      setSelectedIds((prev) => new Set(prev).add(product.id));
-                    } else {
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        next.delete(product.id);
-                        return next;
-                      });
-                    }
-                  }}
+                  onSelect={() => toggleSelectItem(product.id)}
                   contentClassName="!px-4"
                 >
                     <div className="mb-2 flex items-start justify-between">
@@ -567,7 +545,7 @@ export function ProductsSection() {
                               variant="ghost"
                               size="sm"
                               className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDeleteClick(product)}
+                              onClick={() => handleDeleteClickDialog(product)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>

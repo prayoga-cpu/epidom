@@ -56,6 +56,8 @@ import {
   SectionLoadingState,
 } from "../../components";
 import { SubscriptionLockedState } from "@/features/dashboard/shared/components/subscription-locked-state";
+import { useBulkSelection } from "../../hooks/use-bulk-selection";
+import { useDialogState } from "../../hooks/use-dialog-state";
 
 export function SuppliersSection() {
   const { t } = useI18n();
@@ -74,14 +76,6 @@ export function SuppliersSection() {
     take: 20,
   });
 
-  // UI state
-  const [selectedSupplier, setSelectedSupplier] = useState<SupplierWithRelations | null>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bulkSelectMode, setBulkSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
   // API hooks
   const { data, isLoading, error, refetch } = useSuppliers(storeId, filters);
   const deleteSupplier = useDeleteSupplier(storeId);
@@ -93,37 +87,33 @@ export function SuppliersSection() {
   const currentPage = Math.floor(filters.skip / filters.take) + 1;
   const totalPages = Math.ceil(totalSuppliers / filters.take);
 
-  // Bulk selection handlers
-  const toggleBulkSelect = () => {
-    setBulkSelectMode(!bulkSelectMode);
-    setSelectedIds(new Set());
-  };
+  // Use reusable hooks for dialog and bulk selection state
+  const {
+    selectedItem: selectedSupplier,
+    viewDialogOpen,
+    editDialogOpen,
+    deleteDialogOpen,
+    setViewDialogOpen,
+    setEditDialogOpen,
+    setDeleteDialogOpen,
+    setSelectedItem: setSelectedSupplier,
+    handleView,
+    handleEdit,
+    handleDeleteClick: handleDeleteClickDialog,
+  } = useDialogState<SupplierWithRelations>();
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === suppliers.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(suppliers.map((s) => s.id)));
-    }
-  };
-
+  const {
+    bulkSelectMode,
+    selectedIds,
+    selectedCount,
+    toggleBulkSelect,
+    toggleSelectAll,
+    toggleSelectItem,
+    clearSelection,
+    isSelected,
+  } = useBulkSelection(suppliers);
 
   // Action handlers
-  const handleView = (supplier: SupplierWithRelations) => {
-    setSelectedSupplier(supplier);
-    setViewDialogOpen(true);
-  };
-
-  const handleEdit = (supplier: SupplierWithRelations) => {
-    setSelectedSupplier(supplier);
-    setEditDialogOpen(true);
-  };
-
-  const handleDeleteClick = (supplier: SupplierWithRelations) => {
-    setSelectedSupplier(supplier);
-    setDeleteDialogOpen(true);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!selectedSupplier) return;
 
@@ -145,8 +135,7 @@ export function SuppliersSection() {
       toast.success(
         t("data.suppliers.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
       );
-      setSelectedIds(new Set());
-      setBulkSelectMode(false);
+      clearSelection();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteSuppliers"));
     }
@@ -270,10 +259,10 @@ export function SuppliersSection() {
                   {t("data.suppliers.addButton")}
                 </Button>
               </AddSupplierDialog>
-              {bulkSelectMode && selectedIds.size > 0 && (
+              {bulkSelectMode && selectedCount > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {t("common.actions.delete")} ({selectedIds.size})
+                  {t("common.actions.delete")} ({selectedCount})
                 </Button>
               )}
               <Button
@@ -362,11 +351,11 @@ export function SuppliersSection() {
             {bulkSelectMode && (
               <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
                 <Checkbox
-                  checked={selectedIds.size === suppliers.length && suppliers.length > 0}
+                  checked={selectedCount === suppliers.length && suppliers.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll")} ({selectedIds.size}{" "}
+                  {t("common.selectAll")} ({selectedCount}{" "}
                   {t("common.of")} {suppliers.length} {t("common.selected")})
                 </span>
               </div>
@@ -383,25 +372,12 @@ export function SuppliersSection() {
 
           {/* Suppliers Grid */}
           <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
-            {suppliers.map((supplier) => {
-              const isSelected = selectedIds.has(supplier.id);
-
-              return (
+            {suppliers.map((supplier) => (
                 <BaseItemCard
                   key={supplier.id}
-                  isSelected={isSelected}
+                  isSelected={isSelected(supplier.id)}
                   bulkSelectMode={bulkSelectMode}
-                  onSelect={(checked) => {
-                    if (checked) {
-                      setSelectedIds((prev) => new Set(prev).add(supplier.id));
-                    } else {
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        next.delete(supplier.id);
-                        return next;
-                      });
-                    }
-                  }}
+                  onSelect={() => toggleSelectItem(supplier.id)}
                   contentClassName="!px-4"
                 >
                     <div className="mb-2 flex items-start justify-between">
@@ -486,7 +462,7 @@ export function SuppliersSection() {
                               variant="ghost"
                               size="sm"
                               className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDeleteClick(supplier)}
+                              onClick={() => handleDeleteClickDialog(supplier)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -498,8 +474,7 @@ export function SuppliersSection() {
                       </div>
                     )}
                 </BaseItemCard>
-              );
-            })}
+            ))}
           </ItemCardGrid>
 
           {/* Empty State */}
