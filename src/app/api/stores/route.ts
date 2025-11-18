@@ -39,7 +39,6 @@ export async function GET() {
 
     return NextResponse.json(createSuccessResponse(stores));
   } catch (error) {
-    console.error("Error fetching stores:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -160,7 +159,6 @@ export async function POST(request: Request) {
         error.message.includes("lock") ||
         error.message.includes("P2034") // Prisma transaction timeout error code
       ) {
-        console.error("Transaction error creating store:", error.message, error);
         return NextResponse.json(
           createErrorResponse(
             ApiErrorCode.INTERNAL_ERROR,
@@ -169,11 +167,7 @@ export async function POST(request: Request) {
           { status: 503 } // Service Unavailable
         );
       }
-
-      console.error("Error creating store:", error.message, error);
     }
-
-    console.error("Unexpected error creating store:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

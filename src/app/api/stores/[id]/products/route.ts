@@ -51,7 +51,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.error("Error fetching products:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -117,7 +116,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       unit: validatedData.unit,
       minStock: validatedData.minStock ? Number(validatedData.minStock) : 0,
       maxStock: validatedData.maxStock ? Number(validatedData.maxStock) : undefined,
-      recipeId: validatedData.recipeId,
+      recipeIds: validatedData.recipeIds,
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
       isActive: validatedData.isActive,
@@ -125,7 +124,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
-    console.error("Error creating product:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

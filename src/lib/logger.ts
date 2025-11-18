@@ -1,18 +1,20 @@
+/**
+ * Logger utility
+ *
+ * Note: Console statements removed for production.
+ * In the future, integrate with error tracking service (e.g., Sentry, LogRocket).
+ */
 export const logger = {
   info: (message: string, ...args: unknown[]) => {
-    if (process.env.NODE_ENV === "development") {
-      console.log(message, ...args);
-    }
+    // Logging disabled for production
+    // TODO: Integrate with error tracking service
   },
   warn: (message: string, ...args: unknown[]) => {
-    if (process.env.NODE_ENV === "development") {
-      console.warn(message, ...args);
-    }
+    // Logging disabled for production
+    // TODO: Integrate with error tracking service
   },
   error: (message: string, error?: unknown) => {
-    if (process.env.NODE_ENV === "development") {
-      console.error(message, error);
-    }
-    // TODO: Send to error tracking service in production
+    // Logging disabled for production
+    // TODO: Send to error tracking service (e.g., Sentry, LogRocket)
   },
 };

@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
       message: "Dashboard link created successfully",
     });
   } catch (error: any) {
-    console.error("[API] Stripe Connect dashboard error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to create dashboard link" },
       { status: 500 }

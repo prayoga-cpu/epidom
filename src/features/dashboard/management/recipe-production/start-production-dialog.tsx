@@ -6,14 +6,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Form,
   FormControl,
@@ -99,8 +93,9 @@ export function StartProductionDialog({
   // Check if there are any insufficient materials
   const hasInsufficientMaterials = validIngredients.some((ing) => ing.status === "insufficient");
 
-  // Get products linked to this recipe
-  const linkedProducts = recipe?.products || [];
+  // Get products linked to this recipe (from Many-to-Many relationship)
+  const linkedProducts =
+    recipe?.recipeProducts?.map((rp: { product: { id: string; name: string; sku: string } }) => rp.product) || [];
   const defaultProductId = linkedProducts[0]?.id || "";
 
   // Initialize form
@@ -141,7 +136,6 @@ export function StartProductionDialog({
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to start production:", error);
       sonnerToast.error(t("management.recipeProduction.toasts.productionFailed.title") || "Error", {
         description:
           error instanceof Error
@@ -154,18 +148,41 @@ export function StartProductionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] min-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {t("management.recipeProduction.dialogs.startProduction.title")}
-          </DialogTitle>
-          <DialogDescription>
-            {t("management.recipeProduction.dialogs.startProduction.description")}
-          </DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={t("management.recipeProduction.dialogs.startProduction.title")}
+        description={t("management.recipeProduction.dialogs.startProduction.description")}
+        maxWidth="xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={startProduction.isPending}
+            >
+              {t("common.actions.cancel") || "Cancel"}
+            </Button>
+            <Button
+              type="submit"
+              form="start-production-form"
+              disabled={
+                startProduction.isPending ||
+                hasInsufficientMaterials ||
+                linkedProducts.length === 0
+              }
+            >
+              {startProduction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("management.recipeProduction.startProduction") || "Start Production"}
+            </Button>
+          </>
+        }
+      >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            id="start-production-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6"
+          >
             {/* Recipe Information Card */}
             <Card>
               <CardContent className="pt-6">
@@ -222,7 +239,7 @@ export function StartProductionDialog({
             )}
 
             {/* Product Selection */}
-            {linkedProducts.length > 0 && (
+            {linkedProducts.length > 0 ? (
               <FormField
                 control={form.control}
                 name="productId"
@@ -255,6 +272,22 @@ export function StartProductionDialog({
                   </FormItem>
                 )}
               />
+            ) : (
+              <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4 dark:border-yellow-700 dark:bg-yellow-900/20">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                      {t("management.recipeProduction.noLinkedProducts") ||
+                        "No products linked to this recipe"}
+                    </p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                      {t("management.recipeProduction.noLinkedProductsHint") ||
+                        "Please link a product to this recipe before starting production."}
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Planned Quantity */}
@@ -418,30 +451,9 @@ export function StartProductionDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={startProduction.isPending}
-              >
-                {t("common.actions.cancel") || "Cancel"}
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  startProduction.isPending ||
-                  hasInsufficientMaterials ||
-                  linkedProducts.length === 0
-                }
-              >
-                {startProduction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("management.recipeProduction.startProduction") || "Start Production"}
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

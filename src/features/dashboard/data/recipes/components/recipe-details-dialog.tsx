@@ -240,62 +240,66 @@ export default function RecipeDetailsDialog({
             </Card>
 
             {/* Linked Products Section */}
-            {recipe.products && recipe.products.length > 0 && (
+            {recipe.recipeProducts && recipe.recipeProducts.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Box className="h-5 w-5" />
-                    Linked Products ({recipe.products.length})
+                    Linked Products ({recipe.recipeProducts.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {recipe.products.map((product, index) => (
-                      <div key={product.id}>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-muted-foreground text-sm">
-                              {product.category && (
-                                <Badge variant="secondary" className="mr-2 text-xs">
-                                  {product.category}
-                                </Badge>
-                              )}
-                              {product.sku && <span className="text-xs">SKU: {product.sku}</span>}
-                            </p>
-                            <div className="mt-1 flex items-center gap-4 text-xs">
-                              <span className="text-muted-foreground">
-                                Stock: {formatNumber(Number(product.currentStock))} {product.unit}
-                              </span>
-                              <span className="text-muted-foreground">
-                                Price: {formatPrice(Number(product.sellingPrice))}
-                              </span>
+                    {recipe.recipeProducts.map((recipeProduct, index) => {
+                      const product = recipeProduct.product;
+                      return (
+                        <div key={recipeProduct.id}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{product.name}</p>
+                              </div>
+                              <p className="text-muted-foreground text-sm">
+                                {product.category && (
+                                  <Badge variant="secondary" className="mr-2 text-xs">
+                                    {product.category}
+                                  </Badge>
+                                )}
+                                {product.sku && <span className="text-xs">SKU: {product.sku}</span>}
+                              </p>
+                              <div className="mt-1 flex items-center gap-4 text-xs">
+                                <span className="text-muted-foreground">
+                                  Stock: {formatNumber(Number(product.currentStock))} {product.unit}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  Price: {formatPrice(Number(product.sellingPrice))}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge
+                                variant={
+                                  Number(product.currentStock) > Number(product.minStock)
+                                    ? "default"
+                                    : "destructive"
+                                }
+                              >
+                                {Number(product.currentStock) > Number(product.minStock)
+                                  ? t("common.stockStatus.inStock")
+                                  : t("common.stockStatus.lowStock")}
+                              </Badge>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <Badge
-                              variant={
-                                Number(product.currentStock) > Number(product.minStock)
-                                  ? "default"
-                                  : "destructive"
-                              }
-                            >
-                              {Number(product.currentStock) > Number(product.minStock)
-                                ? t("common.stockStatus.inStock")
-                                : t("common.stockStatus.lowStock")}
-                            </Badge>
-                          </div>
+                          {index < (recipe.recipeProducts?.length ?? 0) - 1 && (
+                            <Separator className="mt-3" />
+                          )}
                         </div>
-                        {index < (recipe.products?.length ?? 0) - 1 && (
-                          <Separator className="mt-3" />
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div className="bg-muted/50 mt-4 rounded-lg p-3">
                     <p className="text-muted-foreground text-xs">
-                      💡 These products are created using this recipe. Changes to the recipe will
-                      affect the production cost of these products.
+                      💡 These products can be produced using this recipe. A product can be linked to multiple recipes (e.g., 10 baguettes or 50 baguettes).
                     </p>
                   </div>
                 </CardContent>

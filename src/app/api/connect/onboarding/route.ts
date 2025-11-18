@@ -37,13 +37,6 @@ export async function POST(request: NextRequest) {
       message: "Onboarding link created successfully",
     });
   } catch (error: any) {
-    console.error("[API] Stripe Connect onboarding error:", error);
-    console.error("[API] Error details:", {
-      message: error.message,
-      code: error.code,
-      type: error.type,
-      stack: error.stack,
-    });
     return NextResponse.json(
       {
         error: error.message || "Failed to create onboarding link",

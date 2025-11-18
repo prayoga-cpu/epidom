@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { StockMovement } from "@prisma/client";
 
 export interface StockMovementWithRelations extends StockMovement {
+  // reason and referenceId are already in StockMovement from Prisma
   material?: {
     id: string;
     name: string;

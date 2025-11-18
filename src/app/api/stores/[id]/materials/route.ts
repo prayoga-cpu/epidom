@@ -78,7 +78,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       );
     }
 
-    console.error("Error fetching materials:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -152,8 +151,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     // Handle business logic errors
     if (error instanceof Error) {
-      console.error("Error creating material:", error.message);
-
       // Check for specific error messages
       if (error.message.includes("SKU already exists")) {
         return NextResponse.json(
@@ -162,8 +159,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         );
       }
     }
-
-    console.error("Error creating material:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

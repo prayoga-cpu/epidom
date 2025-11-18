@@ -39,7 +39,6 @@ export async function GET(
 
     return NextResponse.json(batch, { status: 200 });
   } catch (error) {
-    console.error("Error fetching production batch:", error);
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch production batch" },
@@ -78,7 +77,6 @@ export async function PATCH(
 
     return NextResponse.json(batch, { status: 200 });
   } catch (error) {
-    console.error("Error updating production batch:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -122,7 +120,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Production batch deleted successfully" }, { status: 200 });
   } catch (error) {
-    console.error("Error deleting production batch:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("not found")) {

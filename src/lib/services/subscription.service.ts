@@ -77,11 +77,30 @@ export class SubscriptionService {
     // Get Epidom owner's Stripe Connect account (for receiving 80%)
     // NOTE: For MVP, this should be a configuration.
     // You'll need to set up the Epidom owner's Connect account first
-    const epidomOwner = await this.getEpidomOwner();
-    if (!epidomOwner || !epidomOwner.stripeConnectAccountId) {
-      throw new Error(
-        "Payment system not configured. Epidom owner must complete Stripe Connect onboarding first."
-      );
+    // For development/testing, you can skip this by setting SKIP_STRIPE_CONNECT=true
+    const skipConnect = process.env.SKIP_STRIPE_CONNECT === "true";
+    let epidomOwner = null;
+
+    if (!skipConnect) {
+      try {
+        epidomOwner = await this.getEpidomOwner();
+        if (!epidomOwner || !epidomOwner.stripeConnectAccountId) {
+          throw new Error(
+            "Payment system not configured. Epidom owner must complete Stripe Connect onboarding first."
+          );
+        }
+      } catch (error: any) {
+        // Allow checkout without Connect for development if:
+        // 1. EPIDOM_OWNER_EMAIL not set, OR
+        // 2. Owner not found, OR
+        // 3. Owner doesn't have Connect account yet
+        if (process.env.NODE_ENV === "development") {
+          epidomOwner = null;
+        } else {
+          // In production, throw the error
+          throw error;
+        }
+      }
     }
 
     let stripeCustomerId: string;
@@ -102,12 +121,6 @@ export class SubscriptionService {
       // Duplicate subscriptions will be handled by:
       // - Webhook handler: Cancel old subscription when new one is confirmed
       // - Audit function: Clean up any duplicates as safety measure
-      console.log(
-        `[Subscription] User has existing subscription. Will keep it active until new payment confirms.`
-      );
-      console.log(
-        `[Subscription] Current plan: ${subscription.plan}, Status: ${subscription.status}`
-      );
     } else {
       // Create new Stripe customer
       const customer = await stripe.customers.create({
@@ -147,11 +160,14 @@ export class SubscriptionService {
           plan: plan,
         },
         // Application fee: 20% goes to platform (you), 80% to connected account
-        application_fee_percent: STRIPE_CONFIG.PLATFORM_FEE_PERCENT,
-        // Transfer 80% to Epidom owner
-        transfer_data: {
-          destination: epidomOwner.stripeConnectAccountId,
-        },
+        // Only set if Epidom owner has Connect account configured
+        ...(epidomOwner?.stripeConnectAccountId && {
+          application_fee_percent: STRIPE_CONFIG.PLATFORM_FEE_PERCENT,
+          // Transfer 80% to Epidom owner
+          transfer_data: {
+            destination: epidomOwner.stripeConnectAccountId,
+          },
+        }),
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -377,10 +393,6 @@ export class SubscriptionService {
 
     // If we have more than one active subscription, cancel the old ones
     if (activeSubscriptions.length > 1) {
-      console.log(
-        `[Subscription Audit] Found ${activeSubscriptions.length} active subscriptions for user ${userId}`
-      );
-
       // Keep the newest subscription (highest created timestamp)
       const sortedByDate = activeSubscriptions.sort((a, b) => b.created - a.created);
       const keepSubscription = sortedByDate[0];
@@ -388,7 +400,6 @@ export class SubscriptionService {
 
       // Cancel old subscriptions IMMEDIATELY
       for (const sub of toCancel) {
-        console.log(`[Subscription Audit] Canceling duplicate subscription IMMEDIATELY: ${sub.id}`);
         await stripe.subscriptions.cancel(sub.id, {
           prorate: false, // No refund for unused time
         });
@@ -397,9 +408,6 @@ export class SubscriptionService {
 
       // Ensure database reflects the kept subscription
       if (subscription.stripeSubscriptionId !== keepSubscription.id) {
-        console.log(
-          `[Subscription Audit] Updating database to use subscription ${keepSubscription.id}`
-        );
         await this.subscriptionRepo.update(userId, {
           stripeSubscriptionId: keepSubscription.id,
         });
@@ -429,16 +437,31 @@ export class SubscriptionService {
 
     // Option 1: Use environment variable
     const ownerEmail = process.env.EPIDOM_OWNER_EMAIL;
-    if (ownerEmail) {
-      return await this.userRepo.findByEmail(ownerEmail);
+    if (!ownerEmail) {
+      throw new Error(
+        "EPIDOM_OWNER_EMAIL environment variable not set. " +
+          "Please set this to the email of the Epidom business owner."
+      );
     }
 
-    // Option 2: Find first user with completed onboarding (temporary)
-    // This is NOT production-ready, just for initial setup
-    throw new Error(
-      "EPIDOM_OWNER_EMAIL environment variable not set. " +
-        "Please set this to the email of the Epidom business owner."
-    );
+    const owner = await this.userRepo.findByEmail(ownerEmail);
+
+    if (!owner) {
+      throw new Error(
+        `Epidom owner not found. User with email "${ownerEmail}" does not exist. ` +
+          "Please create the owner account first or update EPIDOM_OWNER_EMAIL in .env file."
+      );
+    }
+
+    if (!owner.stripeConnectAccountId) {
+      throw new Error(
+        `Epidom owner found but Stripe Connect account not configured. ` +
+          `User "${ownerEmail}" must complete Stripe Connect onboarding first. ` +
+          `Go to Profile page and complete the Payment Setup.`
+      );
+    }
+
+    return owner;
   }
 }
 

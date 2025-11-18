@@ -1,13 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ImageUpload } from "@/components/shared/image-upload";
@@ -79,7 +74,6 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
       setTempImageUrl(preview);
       setMode("crop");
     } catch (error) {
-      console.error("Error creating preview:", error);
       toast.error(t("common.error"), {
         description: t("profile.errors.loadImageFailed") || t("profile.forms.loadImageFailed"),
       });
@@ -166,7 +160,6 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
       // to prevent duplicate notifications
       handleOpenChange(false);
     } catch (error) {
-      console.error("Error updating avatar:", error);
       toast.error(t("common.error"), {
         description: error instanceof Error ? error.message : t("profile.errors.updateFailed"),
       });
@@ -181,7 +174,6 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
           await deleteBlobImage(originalImageUrl);
         } catch (error) {
           // Continue with removal even if delete fails
-          console.warn("Failed to delete avatar from storage:", error);
         }
       }
 
@@ -195,7 +187,6 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
       // to prevent duplicate notifications
       handleOpenChange(false);
     } catch (error) {
-      console.error("Error removing avatar:", error);
       toast.error(t("common.error"), {
         description: error instanceof Error ? error.message : t("profile.errors.updateFailed"),
       });
@@ -206,18 +197,80 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
     fileInputRef.current?.click();
   };
 
+  // Get footer buttons based on mode
+  const getFooterButtons = () => {
+    if (mode === "upload") {
+      return (
+        <>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={updateProfile.isPending}
+            className="flex-1"
+          >
+            {t("common.actions.cancel")}
+          </Button>
+          {originalImageUrl && (
+            <Button
+              variant="destructive"
+              onClick={handleRemove}
+              disabled={updateProfile.isPending}
+            >
+              {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("profile.actions.removeAvatar")}
+            </Button>
+          )}
+          <Button
+            onClick={openFilePicker}
+            disabled={updateProfile.isPending}
+            className="flex-1"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {t("profile.actions.uploadAvatar")}
+          </Button>
+        </>
+      );
+    }
+    if (mode === "preview") {
+      return (
+        <>
+          <Button
+            variant="outline"
+            onClick={handleCancelCrop}
+            disabled={updateProfile.isPending}
+            className="flex-1"
+          >
+            {t("common.actions.back")}
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={updateProfile.isPending}
+            className="flex-1"
+          >
+            {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("common.actions.save")}
+          </Button>
+        </>
+      );
+    }
+    // crop mode - no footer buttons (handled by AvatarCropper)
+    return null;
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t("profile.forms.editAvatar")}</DialogTitle>
-          <DialogDescription>
-            {mode === "upload" && t("profile.forms.editAvatarDescription")}
-            {mode === "crop" && t("profile.forms.cropAvatarDescription")}
-            {mode === "preview" && t("profile.forms.previewAvatarDescription")}
-          </DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={t("profile.forms.editAvatar")}
+        description={
+          mode === "upload"
+            ? t("profile.forms.editAvatarDescription")
+            : mode === "crop"
+              ? t("profile.forms.cropAvatarDescription")
+              : t("profile.forms.previewAvatarDescription")
+        }
+        maxWidth="md"
+        footer={getFooterButtons()}
+      >
         <div className="space-y-4">
           {/* Upload Mode */}
           {mode === "upload" && (
@@ -257,35 +310,6 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
                 className="hidden"
                 aria-hidden="true"
               />
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleOpenChange(false)}
-                  disabled={updateProfile.isPending}
-                  className="flex-1"
-                >
-                  {t("common.actions.cancel")}
-                </Button>
-                {originalImageUrl && (
-                  <Button
-                    variant="destructive"
-                    onClick={handleRemove}
-                    disabled={updateProfile.isPending}
-                  >
-                    {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t("profile.actions.removeAvatar")}
-                  </Button>
-                )}
-                <Button
-                  onClick={openFilePicker}
-                  disabled={updateProfile.isPending}
-                  className="flex-1"
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  {t("profile.actions.uploadAvatar")}
-                </Button>
-              </div>
             </>
           )}
 
@@ -312,29 +336,10 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
                   className="h-full w-full object-cover"
                 />
               </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleCancelCrop}
-                  disabled={updateProfile.isPending}
-                  className="flex-1"
-                >
-                  {t("common.actions.back")}
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={updateProfile.isPending}
-                  className="flex-1"
-                >
-                  {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t("common.actions.save")}
-                </Button>
-              </div>
             </>
           )}
         </div>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

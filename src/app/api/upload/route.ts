@@ -76,7 +76,6 @@ export async function POST(request: NextRequest) {
 
     // Check if storage is configured
     if (!storage.isConfigured()) {
-      console.error("Storage is not configured");
       return NextResponse.json(
         {
           success: false,
@@ -112,8 +111,6 @@ export async function POST(request: NextRequest) {
       contentType: result.contentType,
     });
   } catch (error) {
-    console.error("Upload error:", error);
-
     const message =
       error instanceof Error ? error.message : "An error occurred while uploading the file";
 
@@ -159,8 +156,6 @@ export async function DELETE(request: NextRequest) {
       message: "File deleted successfully",
     });
   } catch (error) {
-    console.error("Delete error:", error);
-
     const message =
       error instanceof Error ? error.message : "An error occurred while deleting the file";
 

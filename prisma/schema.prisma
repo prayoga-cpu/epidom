@@ -139,17 +139,15 @@ model Product {
   storeId           String
   maxStock          Decimal           @default(1000) @db.Decimal(10, 2)
   minStock          Decimal           @default(0) @db.Decimal(10, 2)
-  recipeId          String?
   orderItems        OrderItem[]
   productionBatches ProductionBatch[]
-  recipe            Recipe?           @relation(fields: [recipeId], references: [id])
   store             Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
   stockMovements    StockMovement[]
+  recipeProducts    RecipeProduct[]
 
   @@unique([storeId, sku])
   @@index([storeId])
   @@index([category])
-  @@index([recipeId])
   @@index([isActive])
   @@map("products")
 }
@@ -213,8 +211,8 @@ model Recipe {
   yieldQuantity         Decimal            @db.Decimal(10, 2)
   yieldUnit             String
   productionBatches     ProductionBatch[]
-  products              Product[]
   ingredients           RecipeIngredient[]
+  recipeProducts        RecipeProduct[]
   store                 Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([storeId])
@@ -236,6 +234,22 @@ model RecipeIngredient {
 
   @@unique([recipeId, materialId])
   @@map("recipe_ingredients")
+}
+
+model RecipeProduct {
+  id        String   @id @default(cuid())
+  recipeId  String
+  productId String
+  isDefault Boolean  @default(false) // Indicates if this is the default recipe for this product
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, productId])
+  @@index([recipeId])
+  @@index([productId])
+  @@map("recipe_products")
 }
 
 model ProductionBatch {
@@ -275,6 +289,8 @@ model StockMovement {
   orderId           String?
   productionBatchId String?
   notes             String?
+  reason            String?          // Reason for adjustment (e.g., "Count Correction", "Found Items")
+  referenceId       String?          // External reference ID (e.g., invoice number, inventory check ID)
   createdAt         DateTime         @default(now())
   materialId        String?
   material          Material?        @relation(fields: [materialId], references: [id], onDelete: Cascade)

@@ -148,6 +148,81 @@ export class MaterialService {
   }
 
   /**
+   * Adjust stock for a material or product
+   * Creates a stock movement record with reason, notes, and referenceId
+   */
+  async adjustStock(
+    storeId: string,
+    input: {
+      materialId?: string;
+      productId?: string;
+      adjustmentType: "IN" | "OUT";
+      quantity: number;
+      reason: string;
+      notes?: string;
+      referenceId?: string;
+    }
+  ): Promise<{ material?: Material; product?: any; movement: any }> {
+    if (!input.materialId && !input.productId) {
+      throw new Error("Either materialId or productId must be provided");
+    }
+
+    // For now, only support materials (products can be added later)
+    if (!input.materialId) {
+      throw new Error("Product stock adjustment not yet implemented");
+    }
+
+    const material = await this.materialRepo.findById(input.materialId);
+    if (!material) {
+      throw new Error("Material not found");
+    }
+
+    const belongsToStore = await this.materialRepo.belongsToStore(input.materialId, storeId);
+    if (!belongsToStore) {
+      throw new Error("Material does not belong to this store");
+    }
+
+    const oldStock = Number(material.currentStock);
+    const adjustmentQuantity = input.quantity;
+    const isIncrease = input.adjustmentType === "IN";
+    const newStock = isIncrease ? oldStock + adjustmentQuantity : oldStock - adjustmentQuantity;
+
+    if (newStock < 0) {
+      throw new Error("Stock cannot be negative");
+    }
+
+    // Use transaction to ensure atomicity
+    return await prisma.$transaction(async (tx) => {
+      // Create stock movement with all adjustment data
+      const movement = await tx.stockMovement.create({
+        data: {
+          materialId: input.materialId,
+          type: MovementType.ADJUSTMENT,
+          quantity: isIncrease ? adjustmentQuantity : -adjustmentQuantity, // Signed quantity
+          unit: material.unit,
+          balanceAfter: newStock,
+          notes: input.notes || undefined,
+          reason: input.reason,
+          referenceId: input.referenceId || undefined,
+        },
+      });
+
+      // Update material stock
+      const updatedMaterial = await tx.material.update({
+        where: { id: input.materialId },
+        data: {
+          currentStock: newStock as any,
+        },
+      });
+
+      return {
+        material: updatedMaterial,
+        movement,
+      };
+    });
+  }
+
+  /**
    * Update material
    */
   async updateMaterial(

@@ -109,9 +109,12 @@ export function RecipeProductionCard() {
     });
   }, [selectedRecipe]);
 
-  // Check if production can start (all materials have sufficient quantity)
+  // Check if production can start (all materials have sufficient quantity and recipe has linked products)
   const canStartProduction = useMemo(() => {
     if (!selectedRecipe || recipeIngredients.length === 0) return false;
+    // Check if recipe has linked products
+    const hasLinkedProducts = selectedRecipe.recipeProducts && selectedRecipe.recipeProducts.length > 0;
+    if (!hasLinkedProducts) return false;
     // Only allow production if all materials have available >= required
     return recipeIngredients.every(
       (ing: { available: number; required: number }) => ing.available >= ing.required

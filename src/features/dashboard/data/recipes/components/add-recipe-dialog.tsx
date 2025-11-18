@@ -6,12 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Form,
   FormControl,
@@ -343,20 +340,63 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px] [&>button]:hidden">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
-          <DialogTitle className="text-lg font-bold sm:text-xl">
-            {t("data.recipes.addTitle")}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            {t("data.recipes.addDescription")
-              .replace("{step}", currentStep.toString())
-              .replace("{total}", STEPS.length.toString())}
-          </DialogDescription>
-
-          {/* Step Indicator */}
-          <div className="mt-2 flex w-full items-center justify-between">
+      <FormDialogLayout
+        title={t("data.recipes.addTitle")}
+        description={t("data.recipes.addDescription")
+          .replace("{step}", currentStep.toString())
+          .replace("{total}", STEPS.length.toString())}
+        maxWidth="xl"
+        contentClassName="space-y-4"
+        footer={
+          <div className="flex w-full items-center justify-between gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (currentStep > 1) {
+                  setCurrentStep(currentStep - 1);
+                } else {
+                  setOpen(false);
+                }
+              }}
+              disabled={createRecipe.isPending}
+            >
+              {currentStep > 1 ? (
+                <>
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  {t("common.actions.previous")}
+                </>
+              ) : (
+                t("common.actions.cancel")
+              )}
+            </Button>
+            {currentStep < STEPS.length ? (
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextStep(e);
+                }}
+              >
+                {t("common.actions.next")}
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleCreateRecipe}
+                disabled={createRecipe.isPending}
+              >
+                {createRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t("data.recipes.create")}
+              </Button>
+            )}
+          </div>
+        }
+      >
+        {/* Step Indicator */}
+        <div className="mb-4 flex w-full items-center justify-between border-b border-border pb-4">
           {STEPS.map((step, index) => {
             const Icon = step.icon;
             const isActive = currentStep === step.id;
@@ -397,12 +437,8 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
               </React.Fragment>
             );
           })}
-          </div>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
-          <Form {...form}>
+        </div>
+        <Form {...form}>
             <form
               id="add-recipe-form"
               onSubmit={(e) => {
@@ -893,52 +929,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
             )}
             </form>
           </Form>
-        </div>
-
-        {/* Fixed Footer with Navigation Buttons */}
-        <div className="shrink-0 border-t border-border px-6 py-1.5">
-          <div className="flex justify-between gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={createRecipe.isPending}
-            >
-              {t("actions.cancel")}
-            </Button>
-            <div className="flex gap-2">
-              {currentStep > 1 && (
-                <Button type="button" variant="outline" onClick={prevStep}>
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  {t("common.actions.previous")}
-                </Button>
-              )}
-              {currentStep < 4 ? (
-                <Button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    nextStep(e);
-                  }}
-                >
-                  {t("common.actions.next")}
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleCreateRecipe}
-                  disabled={createRecipe.isPending}
-                >
-                  {createRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t("data.recipes.create")}
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

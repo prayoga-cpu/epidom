@@ -17,6 +17,7 @@ export interface Alert {
     name: string;
     price: number;
     isPreferred: boolean;
+    phone: string | null;
   }>;
   createdAt: string;
 }

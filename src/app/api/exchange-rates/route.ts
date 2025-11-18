@@ -33,7 +33,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error fetching exchange rate:", error);
     return NextResponse.json(
       {
         success: false,
@@ -74,7 +73,6 @@ export async function POST() {
       },
     });
   } catch (error) {
-    console.error("Error refreshing exchange rate:", error);
     return NextResponse.json(
       {
         success: false,

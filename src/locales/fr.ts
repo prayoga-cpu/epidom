@@ -1,10 +1,10 @@
 export const fr = {
-    common: {
-      brand: "EPIDOM",
-      item: "Article",
-      ingredient: "Ingrédient",
-      uncategorized: "Non Catégorisé",
-      stockStatus: {
+  common: {
+    brand: "EPIDOM",
+    item: "Article",
+    ingredient: "Ingrédient",
+    uncategorized: "Non Catégorisé",
+    stockStatus: {
       outOfStock: "Rupture de Stock",
       lowStock: "Stock Faible",
       inStock: "En Stock",
@@ -472,12 +472,14 @@ export const fr = {
     form: {
       authRequiredPrefix: "Vous devez",
       authRequiredBold: "vous inscrire ou vous connecter",
-      authRequiredSuffix: "avant de souscrire à un forfait. Cliquez sur le bouton ci-dessous pour continuer.",
+      authRequiredSuffix:
+        "avant de souscrire à un forfait. Cliquez sur le bouton ci-dessous pour continuer.",
       termsAgreement: "En procédant, vous acceptez nos",
       termsOfService: "Conditions d'Utilisation",
       and: "et",
       refundPolicy: "Politique de Remboursement",
-      agreeToTermsError: "Veuillez accepter les Conditions d'Utilisation et la Politique de Remboursement pour continuer.",
+      agreeToTermsError:
+        "Veuillez accepter les Conditions d'Utilisation et la Politique de Remboursement pour continuer.",
       redirecting: "Redirection vers le checkout...",
       signUpLogin: "S'Inscrire / Se Connecter pour Continuer",
       proceedToCheckout: "Procéder au Checkout Sécurisé",
@@ -906,17 +908,17 @@ export const fr = {
       description: "Alertes de stock nécessitant une attention immédiate",
       viewAll: "Voir Tout",
       noCriticalAlerts: "Aucune alerte critique",
-      material: "Matière",
+      material: "Matière Première",
       stockLevel: "Niveau de Stock",
       current: "Actuel",
-      unknownMaterial: "Matière Inconnue",
+      unknownMaterial: "Matière Première Inconnue",
     },
     trackingCard: {
       title: "Niveaux de Stock",
       description: "État actuel de l'inventaire",
       viewAll: "Voir Tout",
       noStockData: "Aucune donnée de stock",
-      material: "Matière",
+      material: "Matière Première",
       stockLevel: "Niveau de Stock",
       current: "Actuel",
     },
@@ -973,29 +975,30 @@ export const fr = {
 
     // Materials section
     materials: {
-      pageTitle: "Matières premières",
-      addTitle: "Ajouter un Nouveau Matériau",
-      addButton: "Ajouter un Matériau",
+      pageTitle: "Matières Premières",
+      addTitle: "Ajouter une Nouvelle Matière Première",
+      addButton: "Ajouter une Matière Première",
       addDescription:
-        "Ajoutez un nouveau matériau à votre inventaire. Remplissez tous les champs obligatoires.",
-      editTitle: "Modifier le Matériau",
-      editDescription: "Mettre à jour les informations du matériau",
-      detailsTitle: "Détails du Matériau",
-      detailsDescription: "Voir les informations complètes sur ce matériau",
-      title: "Matériaux",
-      unknownMaterial: "Matériau Inconnu",
+        "Ajoutez une nouvelle matière première à votre inventaire. Remplissez tous les champs obligatoires.",
+      editTitle: "Modifier la Matière Première",
+      editDescription: "Mettre à jour les informations de la matière première",
+      detailsTitle: "Détails de la Matière Première",
+      detailsDescription: "Voir les informations complètes sur cette matière première",
+      title: "Matières Premières",
+      unknownMaterial: "Matière Première Inconnue",
       noDescription: "Aucune description fournie",
 
       // Form fields
       form: {
-        name: "Nom du Matériau",
+        name: "Nom de la Matière Première",
         namePlaceholder: "ex : Farine, Sucre, Beurre",
         category: "Catégorie",
         selectCategory: "Sélectionner une catégorie",
         supplier: "Fournisseur",
         selectSupplier: "Sélectionner un fournisseur",
         addSupplier: "Ajouter un Fournisseur",
-        noSuppliersYet: "Aucun fournisseur ajouté pour le moment. Cliquez sur \"Ajouter un Fournisseur\" pour lier des fournisseurs à ce matériau.",
+        noSuppliersYet:
+          'Aucun fournisseur ajouté pour le moment. Cliquez sur "Ajouter un Fournisseur" pour lier des fournisseurs à cette matière première.',
         quantity: "Quantité",
         unit: "Unité",
         selectUnit: "Unité",
@@ -1003,9 +1006,9 @@ export const fr = {
         cost: "Coût par Unité ($)",
         costPlaceholder: "25.00",
         notes: "Notes (Optionnel)",
-        notesPlaceholder: "Informations supplémentaires sur ce matériau...",
+        notesPlaceholder: "Informations supplémentaires sur cette matière première...",
         description: "Description",
-        descriptionPlaceholder: "Informations supplémentaires sur ce matériau...",
+        descriptionPlaceholder: "Informations supplémentaires sur cette matière première...",
         categoryPlaceholder: "ex: Céréales, Produits Laitiers",
         selectSupplierPlaceholder: "Sélectionner un fournisseur...",
         unitCost: "Coût Unitaire",
@@ -1014,7 +1017,7 @@ export const fr = {
         maxStockLevel: "Niveau de Stock Maximum",
         supplierPrice: "Prix",
         preferred: "Préféré",
-        chooseSupplier: "Choisir un fournisseur pour ce matériau",
+        chooseSupplier: "Choisir un fournisseur pour cette matière première",
         alertMinStock: "Alerte lorsque le stock tombe en dessous de ce niveau",
         alertMaxStock: "Alerte lorsque le stock dépasse ce niveau",
       },
@@ -1047,28 +1050,28 @@ export const fr = {
 
       // Tooltips
       tooltips: {
-        view: "Voir le Matériau",
-        edit: "Modifier le Matériau",
-        delete: "Supprimer le Matériau",
+        view: "Voir la Matière Première",
+        edit: "Modifier la Matière Première",
+        delete: "Supprimer la Matière Première",
       },
 
       // Toasts
       toasts: {
         added: {
-          title: "Matériau Ajouté avec Succès",
-          description: "{name} a été ajouté à votre inventaire.",
+          title: "Matière Première Ajoutée avec Succès",
+          description: "{name} a été ajoutée à votre inventaire.",
         },
         updated: {
-          title: "Matériau Mis à Jour avec Succès",
-          description: "{name} a été mis à jour.",
+          title: "Matière Première Mise à Jour avec Succès",
+          description: "{name} a été mise à jour.",
         },
         deleted: {
-          title: "Matériau Supprimé",
-          description: "{name} a été supprimé avec succès.",
+          title: "Matière Première Supprimée",
+          description: "{name} a été supprimée avec succès.",
         },
         bulkDeleted: {
-          title: "Matériaux Supprimés",
-          description: "{count} matériaux ont été supprimés avec succès.",
+          title: "Matières Premières Supprimées",
+          description: "{count} matières premières ont été supprimées avec succès.",
         },
       },
       details: {
@@ -1089,8 +1092,9 @@ export const fr = {
         lastUpdated: "Dernière Mise à Jour",
       },
       deleteConfirm: {
-        title: "Supprimer le Matériau",
-        description: "Êtes-vous sûr de vouloir supprimer \"{name}\" ? Cette action ne peut pas être annulée.",
+        title: "Supprimer la Matière Première",
+        description:
+          'Êtes-vous sûr de vouloir supprimer "{name}" ? Cette action ne peut pas être annulée.',
       },
     },
 
@@ -1148,12 +1152,12 @@ export const fr = {
       // Ingredients
       ingredients: {
         title: "Ingrédients",
-        description: "Ajouter les matériaux nécessaires pour cette recette",
+        description: "Ajouter les matières premières nécessaires pour cette recette",
         addIngredient: "Ajouter un Ingrédient",
         noIngredients:
           'Aucun ingrédient ajouté. Cliquez sur "Ajouter un Ingrédient" pour commencer.',
-        material: "Matériau",
-        selectMaterial: "Sélectionner un matériau",
+        material: "Matière Première",
+        selectMaterial: "Sélectionner une matière première",
         quantity: "Quantité",
         unit: "Unité",
         notes: "Notes (optionnel)",
@@ -1311,9 +1315,16 @@ export const fr = {
         description: "Description",
         descriptionPlaceholder: "Description du produit...",
         linkedRecipe: "Recette Liée",
+        linkedRecipes: "Recettes Liées",
         selectRecipe: "Sélectionner une recette (optionnel)",
+        selectRecipes: "Sélectionner une recette...",
         noRecipe: "Aucune recette",
         recipeHint: "Lier à une recette de production",
+        recipeHintMultiple: "Un produit peut être produit par plusieurs recettes (ex: 10 baguettes ou 50 baguettes)",
+        addNewRecipe: "Ajouter une Nouvelle Recette",
+        selectedRecipes: "Recettes Sélectionnées",
+        noRecipesAvailable: "Aucune recette disponible",
+        removeRecipe: "Retirer la recette",
         category: "Catégorie",
         categoryPlaceholder: "ex : Pain, Pâtisserie",
         imageUrl: "URL de l'Image",
@@ -1592,15 +1603,15 @@ export const fr = {
     registrationFailed: "L'inscription a échoué. Veuillez réessayer.",
     noMatchingFilters:
       "Aucun élément ne correspond à vos filtres. Essayez d'ajuster votre recherche.",
-    noMaterialsFound: "Aucun matériau trouvé",
+    noMaterialsFound: "Aucune matière première trouvée",
     noRecipesFound: "Aucune recette trouvée",
     noProductsFound: "Aucun produit trouvé",
     noSuppliersFound: "Aucun fournisseur trouvé",
-    getStartedMaterial: "Commencez par ajouter votre premier matériau",
+    getStartedMaterial: "Commencez par ajouter votre première matière première",
     getStartedRecipe: "Commencez par créer votre première recette",
     getStartedProduct: "Commencez par ajouter votre premier produit",
     getStartedSupplier: "Commencez par ajouter votre premier fournisseur",
-    errorLoadingMaterials: "Erreur lors du chargement des matériaux",
+    errorLoadingMaterials: "Erreur lors du chargement des matières premières",
     errorLoadingRecipes: "Erreur lors du chargement des recettes",
     errorLoadingProducts: "Erreur lors du chargement des produits",
     errorLoadingSuppliers: "Erreur lors du chargement des fournisseurs",
@@ -1611,11 +1622,11 @@ export const fr = {
     exportSuccessful: "Exportation réussie",
     exportFailed: "L'exportation a échoué",
     exportFailedDesc: "Une erreur s'est produite lors de l'exportation des données.",
-    failedToDeleteMaterial: "Échec de la suppression du matériau",
-    failedToDeleteMaterials: "Échec de la suppression des matériaux",
+    failedToDeleteMaterial: "Échec de la suppression de la matière première",
+    failedToDeleteMaterials: "Échec de la suppression des matières premières",
     failedToDeleteSupplier: "Échec de la suppression du fournisseur",
     failedToDeleteSuppliers: "Échec de la suppression des fournisseurs",
-    failedToUpdateMaterial: "Échec de la mise à jour du matériau",
+    failedToUpdateMaterial: "Échec de la mise à jour de la matière première",
     failedToUpdateOrder: "Échec de la mise à jour de la commande",
     orderPlaced: "Commande marquée comme passée",
     orderPlacedError: "Échec du marquage de la commande comme passée",
@@ -1635,7 +1646,7 @@ export const fr = {
 
     // Table headers
     table: {
-      material: "Matériau",
+      material: "Matière Première",
       currentStock: "Stock Actuel",
       minStock: "Stock Min",
       stockLevel: "Niveau de Stock",
@@ -1670,7 +1681,7 @@ export const fr = {
       title: "Détails de l'Alerte",
       description: "Voir les informations détaillées sur cette alerte de stock",
       alertInfo: "Informations sur l'Alerte",
-      materialInfo: "Informations sur le Matériau",
+      materialInfo: "Informations sur la Matière Première",
       supplierInfo: "Informations sur le Fournisseur",
       stockLevel: "Niveau de Stock",
       ofMinimum: "du minimum",
@@ -1688,11 +1699,14 @@ export const fr = {
     // Create Order Dialog
     createOrderDialog: {
       title: "Créer un Rappel de Commande",
-      description: "Créer un rappel pour commander des matériaux auprès du fournisseur",
+      description: "Créer un rappel pour commander des matières premières auprès du fournisseur",
       supplier: "Fournisseur",
       selectSupplier: "Sélectionner le fournisseur",
-      material: "Matériau",
-      selectMaterial: "Sélectionner le matériau",
+      supplierPhone: "Numéro de Téléphone",
+      callSupplier: "Appeler le Fournisseur",
+      noPhoneAvailable: "Aucun numéro de téléphone disponible",
+      material: "Matière Première",
+      selectMaterial: "Sélectionner la matière première",
       quantity: "Quantité",
       suggested: "Suggéré",
       expectedDelivery: "Date de Livraison Prévue",
@@ -1706,7 +1720,7 @@ export const fr = {
 
     // Orders view
     contactInfo: "Informations de Contact",
-    materialsToOrder: "Matériaux à Commander",
+    materialsToOrder: "Matières Premières à Commander",
     item: "article",
     items: "articles",
     current: "Actuel",
@@ -1868,9 +1882,9 @@ export const fr = {
         logout: "Déconnecté",
         updateProfile: "Profil mis à jour",
         updateBusiness: "Informations d'entreprise mises à jour",
-        createMaterial: "Matériau créé",
-        updateMaterial: "Matériau mis à jour",
-        deleteMaterial: "Matériau supprimé",
+        createMaterial: "Matière première créée",
+        updateMaterial: "Matière première mise à jour",
+        deleteMaterial: "Matière première supprimée",
         createRecipe: "Recette créée",
         updateRecipe: "Recette mise à jour",
         deleteRecipe: "Recette supprimée",
@@ -1890,7 +1904,8 @@ export const fr = {
       addBusinessInfoDescription:
         "Ajoutez les informations de votre entreprise pour compléter votre profil",
       editAvatar: "Modifier la Photo de Profil",
-      editAvatarDescription: "Téléchargez une nouvelle photo de profil ou supprimez celle en cours.",
+      editAvatarDescription:
+        "Téléchargez une nouvelle photo de profil ou supprimez celle en cours.",
       cropAvatarDescription: "Recadrez et ajustez votre photo de profil.",
       previewAvatarDescription: "Aperçu de votre nouvelle photo de profil.",
       uploadAvatar: "Cliquez pour télécharger",
@@ -1995,7 +2010,8 @@ export const fr = {
     upgradePlan: "Passer à un plan supérieur",
     editStore: "Modifier la boutique",
     updateStore: "Mettre à jour la boutique",
-    editDescription: "Mettez à jour les informations de votre boutique. Tous les champs sauf le nom sont optionnels.",
+    editDescription:
+      "Mettez à jour les informations de votre boutique. Tous les champs sauf le nom sont optionnels.",
     storeName: "Nom de la Boutique",
     storeNamePlaceholder: "ex. Boulangerie Artisanale Paris",
     city: "Ville",
@@ -2138,7 +2154,7 @@ export const fr = {
           supplierDeliveryNote: "Bon de Livraison Fournisseur",
           expectedDate: "Date Prévue",
           receivedDate: "Date de Réception",
-          materials: "Matières",
+          materials: "Matières Premières",
           downloadPDF: "Exporter PDF",
           print: "Imprimer",
           contactPerson: "Personne de Contact",
@@ -2184,7 +2200,8 @@ export const fr = {
             atLeastOneItem: "Veuillez ajouter au moins un article",
             itemsMustHaveMaterial:
               "Tous les articles doivent avoir une matière et une quantité supérieure à 0",
-            addModeNotImplemented: "Le mode d'ajout n'est pas encore implémenté. Les commandes doivent être créées à partir des alertes.",
+            addModeNotImplemented:
+              "Le mode d'ajout n'est pas encore implémenté. Les commandes doivent être créées à partir des alertes.",
           },
           toasts: {
             created: {
@@ -2243,16 +2260,19 @@ export const fr = {
       importCSVDescription: "Fonctionnalité d'importation CSV à venir",
       importCSVDialog: {
         title: "Importer le Stock depuis CSV",
-        description: "Téléchargez un fichier CSV pour mettre à jour les niveaux de stock. Le CSV doit avoir les colonnes: SKU, Type (material/product), Stock Actuel",
+        description:
+          "Téléchargez un fichier CSV pour mettre à jour les niveaux de stock. Le CSV doit avoir les colonnes: SKU, Type (material/product), Stock Actuel",
         formatTitle: "Format CSV",
-        formatDescription: "Votre fichier CSV doit avoir les colonnes suivantes: SKU, Type (material ou product), Stock Actuel",
+        formatDescription:
+          "Votre fichier CSV doit avoir les colonnes suivantes: SKU, Type (material ou product), Stock Actuel",
         selectFile: "Cliquez pour sélectionner un fichier CSV",
         fileHint: "Fichiers CSV uniquement",
         invalidFile: "Veuillez sélectionner un fichier CSV",
         importButton: "Importer le Stock",
         successTitle: "Importation Réussie",
         partialSuccessTitle: "Importation Terminée avec des Erreurs",
-        resultsSummary: "Importation réussie de {success} articles, {failed} échoués sur {total} au total",
+        resultsSummary:
+          "Importation réussie de {success} articles, {failed} échoués sur {total} au total",
         resultsTitle: "Résultats de l'Importation",
       },
 
@@ -2352,16 +2372,18 @@ export const fr = {
       costPerBatch: "Coût par Lot",
       costPerUnit: "Coût par Unité",
       startProduction: "Démarrer la Production",
-      insufficientMaterials: "Matériaux insuffisants pour démarrer la production",
-      insufficientMaterialsWarning: "Certains matériaux sont en dessous des niveaux requis",
+      insufficientMaterials: "Matières premières insuffisantes pour démarrer la production",
+      noLinkedProducts: "Aucun produit lié à cette recette",
+      noLinkedProductsHint: "Veuillez lier un produit à cette recette avant de démarrer la production.",
+      insufficientMaterialsWarning: "Certaines matières premières sont en dessous des niveaux requis",
       insufficientMaterialsHint:
-        "Veuillez réapprovisionner les matériaux insuffisants avant de commencer la production",
+        "Veuillez réapprovisionner les matières premières insuffisantes avant de commencer la production",
 
       // Material Availability
-      materialAvailability: "Disponibilité des Matériaux",
+      materialAvailability: "Disponibilité des Matières Premières",
       materialAvailabilityDescription:
         "Vérifier la disponibilité des ingrédients pour cette recette",
-      material: "Matériau",
+      material: "Matière Première",
       required: "Requis",
       available: "Disponible",
       status: "Statut",
@@ -2495,7 +2517,7 @@ export const fr = {
       expectedTime: "Temps Prévu",
 
       ingredientConsumption: "Consommation d'Ingrédients",
-      material: "Matériau",
+      material: "Matière Première",
       quantityUsed: "Quantité Utilisée",
       costPerUnit: "Coût/Unité",
       totalCost: "Coût Total",
@@ -2532,7 +2554,7 @@ export const fr = {
 
     // Table headers
     dateTime: "Date et Heure",
-    material: "Matériel",
+    material: "Matière Première",
     product: "Produit",
     type: "Type",
     quantity: "Quantité",
@@ -2576,7 +2598,7 @@ export const fr = {
     currentStock: "Stock Actuel",
 
     // Forms
-    selectMaterial: "Sélectionner le Matériel",
+    selectMaterial: "Sélectionner la Matière Première",
     selectProduct: "Sélectionner le Produit",
     selectItem: "Sélectionner l'Article",
     movementType: "Type de Mouvement",
@@ -2585,7 +2607,7 @@ export const fr = {
     additionalNotes: "Notes Additionnelles",
     referenceNumber: "Numéro de Référence",
     itemType: "Type d'Article",
-    materialType: "Matériel",
+    materialType: "Matière Première",
     productType: "Produit",
 
     // Reasons
@@ -2727,7 +2749,7 @@ export const fr = {
       noStock: {
         title: "Aucun article en stock",
         description:
-          "Ajoutez des matériels ou des produits pour commencer le suivi de l'inventaire.",
+          "Ajoutez des matières premières ou des produits pour commencer le suivi de l'inventaire.",
       },
     },
   },
@@ -2749,18 +2771,22 @@ export const fr = {
     back: "Retour",
     save: "Enregistrer les préférences",
     settingsTitle: "Préférences de cookies",
-    settingsDescription: "Choisissez les cookies que vous souhaitez autoriser. Les cookies essentiels sont toujours activés car ils sont nécessaires au fonctionnement du site web.",
+    settingsDescription:
+      "Choisissez les cookies que vous souhaitez autoriser. Les cookies essentiels sont toujours activés car ils sont nécessaires au fonctionnement du site web.",
     essential: {
       title: "Cookies essentiels",
-      description: "Nécessaires au bon fonctionnement du site web. Ces cookies ne peuvent pas être désactivés.",
+      description:
+        "Nécessaires au bon fonctionnement du site web. Ces cookies ne peuvent pas être désactivés.",
     },
     analytics: {
       title: "Cookies analytiques",
-      description: "Si accepté: Nous suivons les pages vues et le comportement des utilisateurs pour améliorer notre site. Si refusé: Aucune donnée de suivi n'est collectée.",
+      description:
+        "Si accepté: Nous suivons les pages vues et le comportement des utilisateurs pour améliorer notre site. Si refusé: Aucune donnée de suivi n'est collectée.",
     },
     marketing: {
       title: "Cookies marketing",
-      description: "Si accepté: Nous suivons les conversions et les événements à des fins marketing. Si refusé: Aucun suivi marketing n'est effectué.",
+      description:
+        "Si accepté: Nous suivons les conversions et les événements à des fins marketing. Si refusé: Aucun suivi marketing n'est effectué.",
     },
   },
   billing: {
@@ -2778,17 +2804,22 @@ export const fr = {
     upgradeToPro: "Passer au Pro",
     viewPlans: "Voir les Forfaits et Tarifs",
     noSubscription: "Aucun Abonnement Actif",
-    noSubscriptionDesc: "Abonnez-vous à un forfait pour commencer à gérer votre entreprise avec Epidom.",
+    noSubscriptionDesc:
+      "Abonnez-vous à un forfait pour commencer à gérer votre entreprise avec Epidom.",
     currentPlanLabel: "Forfait Actuel",
     availablePlans: "Forfaits Disponibles",
     comparePlans: "Comparez les fonctionnalités et mettez à niveau à tout moment",
-    subscriptionWillCancel: "Votre abonnement sera annulé le {date}. Vous conserverez l'accès jusque-là.",
-    confirmCancel: "Êtes-vous sûr de vouloir annuler votre abonnement ? Vous conserverez l'accès jusqu'à la fin de votre période de facturation.",
+    subscriptionWillCancel:
+      "Votre abonnement sera annulé le {date}. Vous conserverez l'accès jusque-là.",
+    confirmCancel:
+      "Êtes-vous sûr de vouloir annuler votre abonnement ? Vous conserverez l'accès jusqu'à la fin de votre période de facturation.",
     subscriptionActivated: "Abonnement activé avec succès ! Bienvenue au forfait {plan}.",
     subscriptionRequired: "Un abonnement actif est requis pour accéder au tableau de bord.",
     upgradePro: "Passez au Pro pour ajouter plus de magasins.",
-    advancedReportsOnly: "Les rapports avancés ne sont disponibles que dans les forfaits Pro et Enterprise",
-    storeLimitReached: "Vous avez atteint la limite de magasins de votre forfait ({current}/{limit}).",
+    advancedReportsOnly:
+      "Les rapports avancés ne sont disponibles que dans les forfaits Pro et Enterprise",
+    storeLimitReached:
+      "Vous avez atteint la limite de magasins de votre forfait ({current}/{limit}).",
     status: {
       active: "Actif",
       canceled: "Annulé",
@@ -2801,7 +2832,8 @@ export const fr = {
     description: "Recevez 80% des revenus d'abonnement via Stripe Connect",
     connected: "Connecté",
     setupComplete: "Configuration des paiements terminée",
-    setupCompleteDesc: "Vous êtes prêt à recevoir des paiements. 80% de tous les revenus d'abonnement seront automatiquement transférés sur votre compte Stripe.",
+    setupCompleteDesc:
+      "Vous êtes prêt à recevoir des paiements. 80% de tous les revenus d'abonnement seront automatiquement transférés sur votre compte Stripe.",
     accountStatus: "Statut du Compte",
     charges: "Charges",
     payouts: "Paiements",
@@ -2809,12 +2841,14 @@ export const fr = {
     enabled: "Activé",
     disabled: "Désactivé",
     viewEarnings: "Voir les Revenus dans le Tableau de Bord Stripe",
-    completeOnboarding: "Complétez l'intégration Stripe Connect pour commencer à recevoir 80% des paiements d'abonnement. Ceci est requis pour que le système de paiement fonctionne.",
+    completeOnboarding:
+      "Complétez l'intégration Stripe Connect pour commencer à recevoir 80% des paiements d'abonnement. Ceci est requis pour que le système de paiement fonctionne.",
     whatYouNeed: "Ce dont vous aurez besoin :",
     needBusiness: "Informations sur l'entreprise (nom, adresse, numéro fiscal)",
     needBank: "Coordonnées bancaires pour les paiements",
     needIdentity: "Vérification d'identité (peut nécessiter des documents)",
-    processTime: "Ce processus est géré de manière sécurisée par Stripe et prend généralement 5 à 10 minutes.",
+    processTime:
+      "Ce processus est géré de manière sécurisée par Stripe et prend généralement 5 à 10 minutes.",
     completeSetup: "Terminer la Configuration des Paiements",
     redirectingToStripe: "Redirection vers Stripe...",
     secureOnboarding: "Vous serez redirigé vers la page d'intégration sécurisée de Stripe",
@@ -2854,12 +2888,12 @@ export const fr = {
     },
     section5: {
       title: "5. Responsabilités de l'Utilisateur",
-      content:
-        "Vous acceptez d'utiliser EPIDOM de manière légale et êtes responsable de :",
+      content: "Vous acceptez d'utiliser EPIDOM de manière légale et êtes responsable de :",
       item1: "Assurer l'exactitude des données saisies dans le système",
       item2: "Ne pas utiliser le service à des fins illégales ou non autorisées",
       item3: "Ne pas tenter d'accéder non autorisé au système",
-      item4: "Respecter les droits de propriété intellectuelle et ne pas porter atteinte aux droits d'autrui",
+      item4:
+        "Respecter les droits de propriété intellectuelle et ne pas porter atteinte aux droits d'autrui",
     },
     section6: {
       title: "6. Propriété Intellectuelle",
@@ -2898,16 +2932,18 @@ export const fr = {
       "Chez EPIDOM, nous nous efforçons de fournir un excellent service. Cette Politique de Remboursement décrit les termes et conditions pour les remboursements et annulations de nos services d'abonnement.",
     section1: {
       title: "1. Admissibilité au Remboursement",
-      content:
-        "Vous pouvez être admissible à un remboursement dans les circonstances suivantes :",
+      content: "Vous pouvez être admissible à un remboursement dans les circonstances suivantes :",
       item1: "Vous annulez votre abonnement dans les 14 jours suivant l'achat initial",
-      item2: "Vous rencontrez des problèmes techniques qui vous empêchent d'utiliser le service, et nous ne pouvons pas les résoudre",
-      item3: "Vous avez été facturé incorrectement en raison d'une erreur de facturation de notre part",
+      item2:
+        "Vous rencontrez des problèmes techniques qui vous empêchent d'utiliser le service, et nous ne pouvons pas les résoudre",
+      item3:
+        "Vous avez été facturé incorrectement en raison d'une erreur de facturation de notre part",
     },
     section2: {
       title: "2. Processus de Remboursement",
       content: "Pour demander un remboursement, veuillez suivre ces étapes :",
-      step1: "Contactez notre équipe de support à support@epidom.com avec votre demande de remboursement",
+      step1:
+        "Contactez notre équipe de support à support@epidom.com avec votre demande de remboursement",
       step2: "Fournissez votre e-mail de compte et les détails de l'abonnement",
       step3: "Expliquez la raison de votre demande de remboursement",
       step4: "Nous examinerons votre demande et répondrons dans les 5 à 7 jours ouvrables",

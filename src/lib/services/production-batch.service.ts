@@ -6,6 +6,7 @@ import {
 } from "../repositories/production-batch.repository";
 import { recipeRepository } from "../repositories/recipe.repository";
 import { materialRepository } from "../repositories/material.repository";
+import { productRepository } from "../repositories/product.repository";
 import { prisma } from "../prisma";
 
 /**
@@ -111,6 +112,26 @@ export class ProductionBatchService {
     const recipe = await recipeRepository.findById(data.recipeId);
     if (!recipe || recipe.storeId !== data.storeId) {
       throw new Error("Recipe not found or does not belong to this store");
+    }
+
+    // Validate product exists and belongs to store
+    const product = await productRepository.findById(data.productId);
+    if (!product || product.storeId !== data.storeId) {
+      throw new Error("Product not found or does not belong to this store");
+    }
+
+    // Validate product and recipe are linked through RecipeProduct junction table
+    const isLinked = await prisma.recipeProduct.findFirst({
+      where: {
+        productId: data.productId,
+        recipeId: data.recipeId,
+      },
+    });
+
+    if (!isLinked) {
+      throw new Error(
+        "Product and recipe are not linked. Please link the product to this recipe first."
+      );
     }
 
     // Calculate batch multiplier

@@ -243,49 +243,58 @@ export default function ProductDetailsDialog({
           </div>
 
           {/* Recipe Information */}
-          {product.recipe && (
+          {product.recipeProducts && product.recipeProducts.length > 0 && (
             <>
               <Separator />
               <div>
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
                   <ChefHat className="h-5 w-5" />
-                  Recipe Information
+                  Linked Recipes ({product.recipeProducts.length})
                 </h3>
-                <Card className="bg-muted/30">
-                  <CardContent className="pt-6">
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-muted-foreground text-sm font-medium">
-                          Recipe Name
-                        </label>
-                        <p className="mt-1 text-base font-semibold">{product.recipe.name}</p>
-                      </div>
-                      {product.recipe.description && (
-                        <div>
-                          <label className="text-muted-foreground text-sm font-medium">
-                            Description
-                          </label>
-                          <p className="text-muted-foreground mt-1 text-sm">
-                            {product.recipe.description}
-                          </p>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Category: </span>
-                          <Badge variant="outline">{product.recipe.category}</Badge>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Yield: </span>
-                          <span className="font-medium">
-                            {formatNumber(Number(product.recipe.yieldQuantity))}{" "}
-                            {product.recipe.yieldUnit}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="space-y-3">
+                  {product.recipeProducts.map((recipeProduct) => {
+                    const recipe = recipeProduct.recipe;
+                    return (
+                      <Card key={recipeProduct.id} className="bg-muted/30">
+                        <CardContent className="pt-6">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <label className="text-muted-foreground text-sm font-medium">
+                                  Recipe Name
+                                </label>
+                                <p className="mt-1 text-base font-semibold">{recipe.name}</p>
+                              </div>
+                            </div>
+                            {recipe.description && (
+                              <div>
+                                <label className="text-muted-foreground text-sm font-medium">
+                                  Description
+                                </label>
+                                <p className="text-muted-foreground mt-1 text-sm">
+                                  {recipe.description}
+                                </p>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Category: </span>
+                                <Badge variant="outline">{recipe.category || "N/A"}</Badge>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Yield: </span>
+                                <span className="font-medium">
+                                  {formatNumber(Number(recipe.yieldQuantity))}{" "}
+                                  {recipe.yieldUnit}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}

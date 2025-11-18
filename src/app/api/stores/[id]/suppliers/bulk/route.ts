@@ -53,7 +53,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error bulk deleting suppliers:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

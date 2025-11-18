@@ -38,7 +38,6 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error bulk deleting recipes:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -45,8 +45,6 @@ export class StripeConnectService {
         ? process.env.NEXT_PUBLIC_APP_URL || "https://epidom.app"
         : "https://epidom.app";
 
-    console.log("[StripeConnect] Creating account with business URL:", businessUrl);
-
     const account = await stripe.accounts.create({
       type: STRIPE_CONFIG.CONNECT.ACCOUNT_TYPE,
       country: STRIPE_CONFIG.CONNECT.COUNTRY,
@@ -105,11 +103,6 @@ export class StripeConnectService {
     const refreshUrl_final = refreshUrl || `${appUrl}/profile?connect=refresh`;
     const returnUrl_final = returnUrl || `${appUrl}/profile?connect=success`;
 
-    console.log("[StripeConnect] Creating account link with:", {
-      refreshUrl: refreshUrl_final,
-      returnUrl: returnUrl_final,
-    });
-
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: refreshUrl_final,
@@ -148,7 +141,6 @@ export class StripeConnectService {
 
       return isComplete;
     } catch (error) {
-      console.error("[StripeConnect] Error checking onboarding status:", error);
       return false;
     }
   }
@@ -168,7 +160,6 @@ export class StripeConnectService {
     try {
       return await stripe.accounts.retrieve(user.stripeConnectAccountId);
     } catch (error) {
-      console.error("[StripeConnect] Error retrieving account:", error);
       return null;
     }
   }
@@ -207,7 +198,6 @@ export class StripeConnectService {
         stripeAccount: user.stripeConnectAccountId,
       });
     } catch (error) {
-      console.error("[StripeConnect] Error retrieving balance:", error);
       return null;
     }
   }

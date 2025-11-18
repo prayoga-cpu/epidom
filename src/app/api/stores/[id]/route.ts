@@ -56,7 +56,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     return NextResponse.json(createSuccessResponse(store));
   } catch (error) {
-    console.error("Error fetching store:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -155,7 +154,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
     }
 
-    console.error("Error updating store:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -214,7 +212,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     return NextResponse.json(createSuccessResponse({ message: "Store deleted successfully" }));
   } catch (error) {
-    console.error("Error deleting store:", error);
 
     // Handle Prisma-specific errors
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

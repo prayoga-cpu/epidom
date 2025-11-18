@@ -1,4 +1,4 @@
-import { Product, Prisma, Recipe } from "@prisma/client";
+import { Product, Prisma, Recipe, RecipeProduct } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
 
 /**
@@ -9,7 +9,7 @@ import { BaseRepository } from "./base.repository";
  */
 
 export type ProductWithRelations = Product & {
-  recipe?: Recipe | null;
+  recipeProducts?: Array<RecipeProduct & { recipe: Recipe }>;
 };
 
 export interface ProductFilters {
@@ -73,7 +73,14 @@ export class ProductRepository extends BaseRepository {
         skip,
         take,
         include: {
-          recipe: true,
+          recipeProducts: {
+            include: {
+              recipe: true,
+            },
+            orderBy: {
+              createdAt: "asc", // Order by creation date
+            },
+          },
         },
       }),
       this.db.product.count({ where }),
@@ -89,7 +96,14 @@ export class ProductRepository extends BaseRepository {
     return this.db.product.findUnique({
       where: { id: productId },
       include: {
-        recipe: true,
+        recipeProducts: {
+          include: {
+            recipe: true,
+          },
+          orderBy: {
+            createdAt: "asc", // Order by creation date
+          },
+        },
       },
     });
   }
@@ -104,7 +118,14 @@ export class ProductRepository extends BaseRepository {
         sku,
       },
       include: {
-        recipe: true,
+        recipeProducts: {
+          include: {
+            recipe: true,
+          },
+          orderBy: {
+            createdAt: "asc", // Order by creation date
+          },
+        },
       },
     });
   }
@@ -153,6 +174,13 @@ export class ProductRepository extends BaseRepository {
   async create(data: Prisma.ProductCreateInput): Promise<ProductWithRelations> {
     return this.db.product.create({
       data,
+      include: {
+        recipeProducts: {
+          include: {
+            recipe: true,
+          },
+        },
+      },
     });
   }
 
@@ -163,7 +191,44 @@ export class ProductRepository extends BaseRepository {
     return this.db.product.update({
       where: { id: productId },
       data,
+      include: {
+        recipeProducts: {
+          include: {
+            recipe: true,
+          },
+          orderBy: {
+            createdAt: "asc", // Order by creation date
+          },
+        },
+      },
     });
+  }
+
+  /**
+   * Update product recipes (Many-to-Many relationship)
+   */
+  async updateRecipes(
+    productId: string,
+    recipeIds: string[]
+  ): Promise<ProductWithRelations> {
+    // First, delete all existing recipe-product relationships
+    await this.db.recipeProduct.deleteMany({
+      where: { productId },
+    });
+
+    // Then, create new relationships
+    if (recipeIds.length > 0) {
+      await this.db.recipeProduct.createMany({
+        data: recipeIds.map((recipeId) => ({
+          productId,
+          recipeId,
+          isDefault: false, // No default recipes anymore
+        })),
+      });
+    }
+
+    // Return updated product with recipes
+    return this.findById(productId) as Promise<ProductWithRelations>;
   }
 
   /**

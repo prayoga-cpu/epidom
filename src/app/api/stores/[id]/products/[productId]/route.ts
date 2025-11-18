@@ -36,7 +36,6 @@ export async function GET(
 
     return NextResponse.json(product, { status: 200 });
   } catch (error) {
-    console.error("Error fetching product:", error);
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch product" },
@@ -81,7 +80,7 @@ export async function PATCH(
       unit: validatedData.unit,
       minStock: validatedData.minStock !== undefined ? Number(validatedData.minStock) : undefined,
       maxStock: validatedData.maxStock !== undefined ? Number(validatedData.maxStock) : undefined,
-      recipeId: validatedData.recipeId,
+      recipeIds: validatedData.recipeIds,
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
       isActive: validatedData.isActive,
@@ -89,7 +88,6 @@ export async function PATCH(
 
     return NextResponse.json(product, { status: 200 });
   } catch (error) {
-    console.error("Error updating product:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -141,7 +139,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Product deleted successfully" }, { status: 200 });
   } catch (error) {
-    console.error("Error deleting product:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("does not belong")) {

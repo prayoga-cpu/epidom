@@ -120,12 +120,11 @@ Table products {
   storeId String [not null]
   maxStock Decimal [not null, default: 1000]
   minStock Decimal [not null, default: 0]
-  recipeId String
   orderItems order_items [not null]
   productionBatches production_batches [not null]
-  recipe recipes
   store stores [not null]
   stockMovements stock_movements [not null]
+  recipeProducts recipe_products [not null]
 
   indexes {
     (storeId, sku) [unique]
@@ -188,8 +187,8 @@ Table recipes {
   yieldQuantity Decimal [not null]
   yieldUnit String [not null]
   productionBatches production_batches [not null]
-  products products [not null]
   ingredients recipe_ingredients [not null]
+  recipeProducts recipe_products [not null]
   store stores [not null]
 }
 
@@ -207,6 +206,21 @@ Table recipe_ingredients {
 
   indexes {
     (recipeId, materialId) [unique]
+  }
+}
+
+Table recipe_products {
+  id String [pk]
+  recipeId String [not null]
+  productId String [not null]
+  isDefault Boolean [not null, default: false]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  recipe recipes [not null]
+  product products [not null]
+
+  indexes {
+    (recipeId, productId) [unique]
   }
 }
 
@@ -241,6 +255,8 @@ Table stock_movements {
   orderId String
   productionBatchId String
   notes String
+  reason String
+  referenceId String
   createdAt DateTime [default: `now()`, not null]
   materialId String
   material ingredients
@@ -437,8 +453,6 @@ Ref: stores.businessId > businesses.id [delete: Cascade]
 
 Ref: subscriptions.userId - users.id [delete: Cascade]
 
-Ref: products.recipeId > recipes.id
-
 Ref: products.storeId > stores.id [delete: Cascade]
 
 Ref: ingredients.storeId > stores.id [delete: Cascade]
@@ -452,6 +466,10 @@ Ref: recipes.storeId > stores.id [delete: Cascade]
 Ref: recipe_ingredients.materialId > ingredients.id [delete: Cascade]
 
 Ref: recipe_ingredients.recipeId > recipes.id [delete: Cascade]
+
+Ref: recipe_products.recipeId > recipes.id [delete: Cascade]
+
+Ref: recipe_products.productId > products.id [delete: Cascade]
 
 Ref: production_batches.productId > products.id [delete: Cascade]
 

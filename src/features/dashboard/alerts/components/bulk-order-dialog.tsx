@@ -4,14 +4,8 @@ import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -198,16 +192,30 @@ export default function BulkOrderDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle>Bulk Order - {supplierName}</DialogTitle>
-          <DialogDescription>
-            Select multiple items to create a bulk order. You can adjust quantities for each item.
-          </DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={`Bulk Order - ${supplierName}`}
+        description="Select multiple items to create a bulk order. You can adjust quantities for each item."
+        maxWidth="xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={createOrder.isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" form="bulk-order-form" disabled={createOrder.isPending}>
+              {createOrder.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Create Bulk Order ({selectedItems.length})
+            </Button>
+          </>
+        }
+      >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form id="bulk-order-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Supplier Info */}
             <div className="bg-muted/50 rounded-lg p-3">
               <p className="text-sm font-medium">Supplier: {supplierName}</p>
@@ -364,25 +372,9 @@ export default function BulkOrderDialog({
                 </FormItem>
               )}
             />
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={createOrder.isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={createOrder.isPending}>
-                {createOrder.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Create Bulk Order ({selectedItems.length})
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

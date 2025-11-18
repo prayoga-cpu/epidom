@@ -13,6 +13,7 @@ import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
 import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
+import { useErrorHandler } from "@/hooks/use-error-handler";
 
 export interface MaterialsResponse {
   materials: MaterialWithSuppliers[];

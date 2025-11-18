@@ -7,14 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast as sonnerToast } from "sonner";
@@ -213,19 +207,37 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
 
       {/* Complete Production Dialog */}
       <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {t("management.recipeProduction.dialogs.complete.title") ||
-                "Complete Production"}
-            </DialogTitle>
-            <DialogDescription>
-              {t("management.recipeProduction.dialogs.complete.description") ||
-                "Enter the actual quantity produced for this batch"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
+        <FormDialogLayout
+          title={
+            t("management.recipeProduction.dialogs.complete.title") ||
+            "Complete Production"
+          }
+          description={
+            t("management.recipeProduction.dialogs.complete.description") ||
+            "Enter the actual quantity produced for this batch"
+          }
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setCompleteDialogOpen(false)}
+                disabled={completeProduction.isPending}
+              >
+                {t("common.actions.cancel") || "Cancel"}
+              </Button>
+              <Button
+                onClick={handleComplete}
+                disabled={completeProduction.isPending || actualQuantity <= 0}
+              >
+                {completeProduction.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {t("common.actions.complete") || "Complete"}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="actualQuantity">
                 {t("management.recipeProduction.actualQuantity") ||
@@ -247,43 +259,43 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
               </p>
             </div>
           </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCompleteDialogOpen(false)}
-              disabled={completeProduction.isPending}
-            >
-              {t("common.actions.cancel") || "Cancel"}
-            </Button>
-            <Button
-              onClick={handleComplete}
-              disabled={completeProduction.isPending || actualQuantity <= 0}
-            >
-              {completeProduction.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {t("common.actions.complete") || "Complete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+        </FormDialogLayout>
       </Dialog>
 
       {/* Cancel Production Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {t("management.recipeProduction.dialogs.cancel.title") ||
-                "Cancel Production"}
-            </DialogTitle>
-            <DialogDescription>
-              {t("management.recipeProduction.dialogs.cancel.description") ||
-                "Are you sure you want to cancel this production batch?"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
+        <FormDialogLayout
+          title={
+            t("management.recipeProduction.dialogs.cancel.title") ||
+            "Cancel Production"
+          }
+          description={
+            t("management.recipeProduction.dialogs.cancel.description") ||
+            "Are you sure you want to cancel this production batch?"
+          }
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setCancelDialogOpen(false)}
+                disabled={cancelProduction.isPending}
+              >
+                {t("common.actions.back") || "Back"}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleCancel}
+                disabled={cancelProduction.isPending}
+              >
+                {cancelProduction.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {t("common.actions.cancelBatch") || "Cancel Batch"}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="restoreMaterials"
@@ -302,27 +314,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
                 "Materials used for this batch will be added back to your inventory"}
             </p>
           </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCancelDialogOpen(false)}
-              disabled={cancelProduction.isPending}
-            >
-              {t("common.actions.back") || "Back"}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancel}
-              disabled={cancelProduction.isPending}
-            >
-              {cancelProduction.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {t("common.actions.cancelBatch") || "Cancel Batch"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+        </FormDialogLayout>
       </Dialog>
     </>
   );

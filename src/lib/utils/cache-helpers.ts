@@ -1,4 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
+import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 
 /**
  * Cache invalidation utilities
@@ -49,12 +51,14 @@ export async function invalidateMaterialRelatedQueries(
       queryKey: ["suppliers", storeId],
       exact: false,
     }),
+    // ✅ Fixed: Use alertKeys for consistent cache invalidation
     queryClient.invalidateQueries({
-      queryKey: ["alerts", storeId],
+      queryKey: alertKeys.lists(storeId),
       exact: false,
     }),
+    // ✅ Fixed: Use stockMovementKeys for consistent cache invalidation
     queryClient.invalidateQueries({
-      queryKey: ["stockMovements", storeId],
+      queryKey: stockMovementKeys.all(storeId),
       exact: false,
     }),
     queryClient.invalidateQueries({
