@@ -13,4 +13,5 @@ export { SectionLoadingState } from "./section-loading-state";
 export { SectionErrorState } from "./section-error-state";
 export { FilterSection, type FilterField, type FilterOption } from "./filter-section";
 export { BaseItemCard, ItemCardGrid } from "./base-item-card";
+export { EmptyState } from "./empty-state";
 
