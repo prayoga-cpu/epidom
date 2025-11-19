@@ -97,6 +97,9 @@ export function useCreateStore() {
     onSuccess: () => {
       // Invalidate stores list to refetch
       queryClient.invalidateQueries({ queryKey: storeKeys.list() });
+      // Invalidate subscription status to update storeUsage (canCreateMore)
+      // This ensures the "Create Store" button updates immediately after creating a store
+      queryClient.invalidateQueries({ queryKey: ["subscription-status"] });
     },
   });
 }

@@ -216,7 +216,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
               onClick={handleRemove}
               disabled={updateProfile.isPending}
             >
-              {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {updateProfile.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
               {t("profile.actions.removeAvatar")}
             </Button>
           )}
@@ -225,7 +225,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
             disabled={updateProfile.isPending}
             className="flex-1"
           >
-            <Upload className="mr-2 h-4 w-4" />
+            <Upload className="mr-1 h-4 w-4 hidden sm:inline" />
             {t("profile.actions.uploadAvatar")}
           </Button>
         </>
@@ -247,7 +247,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
             disabled={updateProfile.isPending}
             className="flex-1"
           >
-            {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {updateProfile.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
             {t("common.actions.save")}
           </Button>
         </>

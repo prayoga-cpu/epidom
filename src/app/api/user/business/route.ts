@@ -91,7 +91,6 @@ export async function POST(request: Request) {
         );
       }
     }
-
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -137,7 +136,6 @@ export async function PATCH(request: Request) {
         { status: 400 }
       );
     }
-
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

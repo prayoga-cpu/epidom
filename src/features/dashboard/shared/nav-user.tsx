@@ -19,6 +19,8 @@ export default function NavUser() {
   const { user } = useUser();
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
+  // Defer profile loading - only fetch when dropdown is opened (lazy loading)
+  // This prevents blocking initial render
   const { data: profile } = useProfile();
 
   return (

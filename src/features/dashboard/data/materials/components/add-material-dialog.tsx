@@ -154,7 +154,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
               form="add-material-form"
               disabled={createMaterial.isPending}
             >
-              {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {createMaterial.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
               {t("data.materials.addButton")}
             </Button>
           </>
@@ -370,7 +370,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   size="sm"
                   onClick={() => append({ supplierId: "", price: undefined as number | undefined, isPreferred: false })}
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("data.materials.form.addSupplier")}
                 </Button>
               </div>

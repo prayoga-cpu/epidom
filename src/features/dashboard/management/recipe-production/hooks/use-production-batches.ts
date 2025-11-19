@@ -8,6 +8,7 @@ import {
 } from "@/lib/validation/production.schemas";
 import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
+import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 
 // Types
 export interface ProductionBatchWithRelations {
@@ -203,12 +204,25 @@ async function deleteProductionBatch(storeId: string, batchId: string): Promise<
 
 /**
  * Fetch all production batches with filters
+ * Real-time enabled: Polls every 30 seconds when tab is active
  */
 export function useProductionBatches(storeId: string, filters: ProductionBatchFilterInput) {
+  // Normalize filters untuk consistent query keys (prevent cache fragmentation)
+  const normalizedFilters = normalizeFilters(filters);
+
   return useQuery({
-    queryKey: ["production-batches", storeId, filters],
-    queryFn: () => fetchProductionBatches(storeId, filters),
+    queryKey: ["production-batches", storeId, normalizedFilters],
+    queryFn: () => fetchProductionBatches(storeId, normalizedFilters || filters),
     enabled: !!storeId,
+    // Real-time configuration: Active data polling
+    staleTime: 20 * 1000, // 20 seconds
+    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    refetchIntervalInBackground: false, // Only poll when tab is active
+    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnWindowFocus: true, // Refetch on window focus if stale
+    meta: {
+      refetchInterval: 30 * 1000, // Store in meta for smart polling
+    },
   });
 }
 

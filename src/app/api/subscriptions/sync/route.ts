@@ -36,14 +36,12 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
     // Get all active subscriptions from Stripe for this customer
     const stripeSubscriptions = await stripe.subscriptions.list({
       customer: dbSubscription.stripeCustomerId,
       status: "active",
       limit: 10,
     });
-
     if (stripeSubscriptions.data.length === 0) {
       // No active subscriptions in Stripe
       if (dbSubscription.status !== SubscriptionStatus.CANCELED) {
@@ -61,7 +59,6 @@ export async function POST(request: NextRequest) {
 
     // Get the newest active subscription
     const activeSubscription = stripeSubscriptions.data.sort((a, b) => b.created - a.created)[0];
-
     // Cancel any duplicate subscriptions
     if (stripeSubscriptions.data.length > 1) {
       const duplicates = stripeSubscriptions.data.slice(1);
@@ -103,7 +100,6 @@ export async function POST(request: NextRequest) {
       currentPeriodEnd: new Date((activeSubscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: (activeSubscription as any).cancel_at_period_end,
     });
-
     return NextResponse.json({
       message: "Subscription synced successfully with Stripe",
       before: {

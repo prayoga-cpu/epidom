@@ -34,6 +34,7 @@ export const alertKeys = {
 
 /**
  * Hook to fetch alerts for a store
+ * Real-time enabled: Critical data - polls every 15 seconds when tab is active
  */
 export function useAlerts(storeId: string) {
   return useQuery<AlertsResponse>({
@@ -46,7 +47,14 @@ export function useAlerts(storeId: string) {
       return response.json();
     },
     enabled: !!storeId,
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    refetchInterval: 60000, // Auto-refetch every minute
+    // Real-time configuration: Critical data - faster polling
+    staleTime: 10 * 1000, // 10 seconds - data considered fresh
+    refetchInterval: 15 * 1000, // Poll every 15 seconds (critical data)
+    refetchIntervalInBackground: true, // Poll even when tab is not active (critical)
+    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnWindowFocus: true, // Always refetch on focus for critical data
+    meta: {
+      refetchInterval: 15 * 1000, // Store in meta for smart polling
+    },
   });
 }

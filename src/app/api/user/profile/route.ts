@@ -26,7 +26,6 @@ export async function GET() {
 
     return NextResponse.json(createSuccessResponse(profile));
   } catch (error) {
-
     if (error instanceof Error && error.message === "User not found") {
       return NextResponse.json(createErrorResponse(ApiErrorCode.USER_NOT_FOUND, "User not found"), {
         status: 404,
@@ -85,7 +84,6 @@ export async function PATCH(request: Request) {
         status: 404,
       });
     }
-
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

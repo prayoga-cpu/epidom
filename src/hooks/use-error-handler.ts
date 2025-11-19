@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useErrorHandler Hook
  *
  * Provides consistent error handling for TanStack Query mutations and queries.

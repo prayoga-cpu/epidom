@@ -47,10 +47,8 @@ export async function getExchangeRate(): Promise<ExchangeRateData> {
     // Fetch fresh rate from API
     logger.info("Fetching fresh exchange rate from API");
     const freshRate = await fetchExchangeRateFromAPI();
-
     // Cache the new rate
     await cacheExchangeRate(freshRate);
-
     return freshRate;
   } catch (error) {
     logger.error("Error getting exchange rate", error);
@@ -96,13 +94,11 @@ async function fetchExchangeRateFromAPI(): Promise<ExchangeRateData> {
       Accept: "application/json",
     },
   });
-
   if (!response.ok) {
     throw new Error(`Exchange rate API returned status ${response.status}`);
   }
 
   const data = await response.json();
-
   if (data.result !== "success") {
     throw new Error(`Exchange rate API error: ${data["error-type"]}`);
   }
@@ -159,7 +155,6 @@ async function cacheExchangeRate(rateData: ExchangeRateData) {
       expiresAt: rateData.expiresAt,
     },
   });
-
   return result;
 }
 

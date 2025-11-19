@@ -232,6 +232,7 @@ export function SuppliersSection() {
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Tooltip>
                 <TooltipTrigger asChild>
+                  <div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -240,12 +241,13 @@ export function SuppliersSection() {
                     className="w-full md:w-auto"
                   >
                     {exportSuppliers.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
                     ) : (
-                      <Download className="mr-2 h-4 w-4" />
+                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
                     )}
                     {t("common.actions.export")}
                   </Button>
+                  </div>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -255,13 +257,13 @@ export function SuppliersSection() {
               </Tooltip>
               <AddSupplierDialog>
                 <Button size="sm" className="w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("data.suppliers.addButton")}
                 </Button>
               </AddSupplierDialog>
               {bulkSelectMode && selectedCount > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("common.actions.delete")} ({selectedCount})
                 </Button>
               )}
@@ -273,12 +275,12 @@ export function SuppliersSection() {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("common.actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-2 h-4 w-4" />
+                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("common.actions.select")}
                   </>
                 )}
@@ -317,7 +319,7 @@ export function SuppliersSection() {
                 }}
               >
                 <SelectTrigger className="w-full md:w-[180px]">
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                  <ArrowUpDown className="mr-1 h-4 w-4 hidden sm:inline" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -341,7 +343,7 @@ export function SuppliersSection() {
               {/* Clear Filters */}
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
-                  <X className="mr-2 h-4 w-4" />
+                  <X className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("common.actions.clearFilters")}
                 </Button>
               )}

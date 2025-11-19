@@ -257,20 +257,22 @@ export function ProductsSection() {
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={exportProducts.isPending || !advancedReportsAccess}
-                    className="w-full md:w-auto"
-                  >
-                    {exportProducts.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    {t("common.actions.export")}
-                  </Button>
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      disabled={exportProducts.isPending || !advancedReportsAccess}
+                      className="w-full md:w-auto"
+                    >
+                      {exportProducts.isPending ? (
+                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                      ) : (
+                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+                      )}
+                      {t("common.actions.export")}
+                    </Button>
+                  </div>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -287,7 +289,7 @@ export function ProductsSection() {
                         className="w-full sm:w-auto"
                         disabled={productLimitReached}
                       >
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                         {t("data.products.addButton")}
                       </Button>
                     </AddProductDialog>
@@ -306,7 +308,7 @@ export function ProductsSection() {
               </Tooltip>
               {bulkSelectMode && selectedCount > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("actions.delete")} ({selectedCount})
                 </Button>
               )}
@@ -318,12 +320,12 @@ export function ProductsSection() {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-2 h-4 w-4" />
+                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("common.actions.view")}
                   </>
                 )}
@@ -362,7 +364,7 @@ export function ProductsSection() {
                 }}
               >
                 <SelectTrigger className="w-full md:w-[180px]">
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                  <ArrowUpDown className="mr-1 h-4 w-4 hidden sm:inline" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -392,7 +394,7 @@ export function ProductsSection() {
               {/* Clear Filters */}
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
-                  <X className="mr-2 h-4 w-4" />
+                  <X className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("common.actions.clearFilters")}
                 </Button>
               )}
@@ -441,7 +443,9 @@ export function ProductsSection() {
                           {product.name}
                         </h3>
                         {product.sku && (
-                          <p className="text-muted-foreground text-xs">SKU: {product.sku}</p>
+                          <p className="text-muted-foreground text-xs">
+                            SKU: {product.sku}
+                          </p>
                         )}
                       </div>
 

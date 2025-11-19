@@ -443,7 +443,6 @@ export class SubscriptionService {
           "Please set this to the email of the Epidom business owner."
       );
     }
-
     const owner = await this.userRepo.findByEmail(ownerEmail);
 
     if (!owner) {
@@ -452,7 +451,6 @@ export class SubscriptionService {
           "Please create the owner account first or update EPIDOM_OWNER_EMAIL in .env file."
       );
     }
-
     if (!owner.stripeConnectAccountId) {
       throw new Error(
         `Epidom owner found but Stripe Connect account not configured. ` +

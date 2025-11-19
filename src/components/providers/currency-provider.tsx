@@ -54,7 +54,6 @@ export function CurrencyProvider({ children }: CurrencyProviderProps) {
     if (userLoading) {
       return;
     }
-
     // If user prefers EUR, no need to fetch exchange rate
     if (currency === "EUR") {
       setExchangeRate(1.0);
@@ -72,9 +71,7 @@ export function CurrencyProvider({ children }: CurrencyProviderProps) {
       setError(null);
 
       const response = await fetch("/api/exchange-rates");
-
       const result = await response.json();
-
       if (!response.ok || !result.success) {
         throw new Error(result.error || "Failed to fetch exchange rate");
       }

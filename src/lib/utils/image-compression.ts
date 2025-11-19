@@ -60,6 +60,8 @@ export async function compressImage(file: File, options?: ImageCompressionOption
 
     // Log compression results
     const originalSize = (file.size / 1024 / 1024).toFixed(2);
+    const compressedSize = (compressedFile.size / 1024 / 1024).toFixed(2);
+    const reduction = (((file.size - compressedFile.size) / file.size) * 100).toFixed(1);
     return compressedFile;
   } catch (error) {
     if (error instanceof Error) {

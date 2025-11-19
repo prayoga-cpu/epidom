@@ -9,6 +9,8 @@ export const id = {
       lowStock: "Stok Rendah",
       inStock: "Tersedia",
       overstocked: "Stok Berlebih",
+      critical: "Kritis",
+      unknown: "Tidak Diketahui",
     },
     nav: {
       home: "Beranda",
@@ -51,6 +53,8 @@ export const id = {
     payment: "Pembayaran",
     delivery: "Pengiriman",
     name: "Nama",
+    material: "Material",
+    product: "Produk",
     notAvailable: "T/A",
     type: "Tipe",
     date: "Tanggal",
@@ -124,6 +128,7 @@ export const id = {
       exportAsCsv: "Ekspor sebagai CSV",
       exportAsExcel: "Ekspor sebagai Excel",
       exportAsPdf: "Ekspor sebagai PDF",
+      update: "Perbarui",
       logout: "Keluar",
       login: "Masuk",
       searchPlaceholder: "Cari...",
@@ -170,9 +175,9 @@ export const id = {
     waitlistText: "Jadilah yang pertama tahu saat kami meluncur!",
   },
   services: {
-    heroTitle: "Solusi untuk manajemen stok makanan Anda",
+    heroTitle: "Manajemen Inventori Bahan Baku yang Inovatif",
     heroDesc:
-      "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+      "Epidom adalah solusi perangkat lunak inovatif yang dirancang untuk mengelola inventori bahan baku, disesuaikan untuk profesional di bidang layanan makanan, produksi makanan, dan manufaktur. Dengan antarmuka yang bersih dan intuitif, platform ini memusatkan semua informasi kunci untuk memastikan kontrol penuh atas alur bahan. Epidom merampingkan operasi harian sambil secara signifikan meningkatkan produktivitas keseluruhan.",
     featureBlock: {
       management: "Manajemen",
       tracking: "Pelacakan",
@@ -180,31 +185,33 @@ export const id = {
     },
     dashboard: {
       subtitle:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi.",
+        "Ringkasan Dashboard Komprehensif",
       description:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+        "Dengan dashboard komprehensifnya, Epidom memberikan gambaran instan dan global tentang status inventori dan aktivitas. Pengguna dapat dengan mudah meninjau pesanan pembelian yang tertunda, bahan kritis, dan indikator kinerja keseluruhan. Pendekatan berbasis data ini mendukung pengambilan keputusan yang lebih cepat, lebih cerdas, dan lebih akurat bagi para manajer.",
     },
     management: {
-      title: "Manajemen Efisien",
+      title: "Modul Fleksibel dan Manajemen Izin Lanjutan",
       subtitle:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi.",
+        "Dapat Disesuaikan dengan Kebutuhan Organisasi Anda",
       description:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+        "Terakhir, Epidom beradaptasi dengan kebutuhan setiap organisasi melalui modul fleksibel dan manajemen izin lanjutan. Platform ini mempromosikan kolaborasi antar tim, memperkuat komunikasi internal, dan terintegrasi dengan mulus ke dalam alur kerja yang ada. Epidom dengan demikian merupakan alat penting bagi setiap perusahaan yang ingin memprofesionalkan dan mengoptimalkan manajemen bahan baku.",
     },
     tracking: {
-      title: "Pelacakan Stok Aktif",
+      title: "Pelacakan Bahan Baku Waktu Nyata",
+      description:
+        "Perangkat lunak ini menyediakan pelacakan waktu nyata bahan baku, dari kedatangan hingga penggunaan aktualnya. Melalui riwayat stok yang jelas, peringatan ambang batas, dan analitik konsumsi, Epidom membantu mencegah kekurangan serta kelebihan stok. Bisnis dapat merencanakan pembelian mereka dengan lebih efisien dan lebih baik mengantisipasi kebutuhan yang akan datang.",
     },
     data: {
-      title: "Pelacakan Data Lengkap",
+      title: "Alat Produksi Khusus dan Ketertelusuran",
       description1:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+        "Epidom juga mencakup alat produksi khusus, memungkinkan pengguna untuk memantau evolusi resep, tingkat limbah, dan kuantitas yang digunakan selama periode tertentu. Fitur-fitur ini meningkatkan ketertelusuran dan memberikan pemahaman mendalam tentang pola konsumsi.",
       description2:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi.",
+        "Mereka berkontribusi pada optimasi biaya dan membantu mengurangi limbah makanan.",
     },
     alerts: {
-      title: "Peringatan yang Terlihat dan Dapat Diakses",
+      title: "Peringatan Ambang Batas dan Analitik Konsumsi",
       description:
-        "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi. Pendekatan ini penting untuk menghindari kerugian dan mengoptimalkan aktivitas katering Anda.",
+        "Melalui riwayat stok yang jelas, peringatan ambang batas, dan analitik konsumsi, Epidom membantu mencegah kekurangan serta kelebihan stok. Bisnis dapat merencanakan pembelian mereka dengan lebih efisien dan lebih baik mengantisipasi kebutuhan yang akan datang.",
     },
     dashboardDesc1:
       "Manajemen stok makanan adalah proses pelacakan produk makanan yang dibeli dan belum dikonsumsi.",
@@ -657,6 +664,11 @@ export const id = {
     businessInfo: "Informasi Bisnis",
     businessName: "Nama Bisnis",
     address: "Alamat",
+    // Placeholders
+    emailPlaceholder: "anda@toko.com",
+    namePlaceholder: "Siti",
+    businessNamePlaceholder: "Toko Epidom",
+    accountCreatedSuccess: "Akun berhasil dibuat! Silakan masuk untuk melanjutkan.",
     // Nested structure for detailed auth flows
     fields: {
       email: { label: "Email", placeholder: "anda@example.com" },
@@ -816,6 +828,14 @@ export const id = {
     },
   },
   waitlist: {
+    errors: {
+      validationTitle: "Kesalahan Validasi",
+      validationDesc: "Silakan periksa formulir dan coba lagi.",
+      tooManyAttemptsTitle: "Terlalu Banyak Percobaan",
+      tooManyAttemptsDesc: "Silakan tunggu {minutes} menit sebelum mencoba lagi.",
+      submitErrorTitle: "Kesalahan",
+      submitErrorDesc: "Gagal mengirim. Silakan coba lagi.",
+    },
     openButtonAria: "Gabung daftar tunggu EPIDOM",
     openButton: "Gabung daftar tunggu",
     title: "Gabung daftar tunggu EPIDOM",
@@ -831,6 +851,7 @@ export const id = {
       company: "Bisnis Anda",
     },
     submit: "Minta akses",
+    submitting: "Mengirim...",
     successTitle: "Anda masuk daftar!",
     successDesc: "Kami akan segera menghubungi dengan detail akses awal.",
   },
@@ -986,6 +1007,8 @@ export const id = {
       form: {
         name: "Nama Bahan Mentah",
         namePlaceholder: "contoh: Tepung, Gula, Mentega",
+        sku: "SKU",
+        skuPlaceholder: "contoh: FLR-T55-25KG",
         category: "Kategori",
         selectCategory: "Pilih kategori",
         supplier: "Pemasok",
@@ -1266,6 +1289,38 @@ export const id = {
       update: "Perbarui Resep",
       duplicate: "Duplikasi Resep",
 
+      // Delete confirmation
+      deleteConfirm: {
+        title: "Hapus Resep",
+        description: 'Apakah Anda yakin ingin menghapus "{name}"? Tindakan ini tidak dapat dibatalkan.',
+      },
+
+      // Details section
+      details: {
+        costPerBatch: "Biaya per Batch",
+        totalMaterialsCost: "Total Biaya Bahan",
+        costAnalysisPricing: "Analisis Biaya & Harga",
+        costPerUnit: "Biaya per {unit}",
+        suggestedPrice: "Harga Saran (markup 2,5x)",
+        profitPerUnit: "Laba per {unit}",
+        costBreakdown: "Rincian Biaya",
+        productionMetrics: "Metrik Produksi",
+        costPerMinute: "Biaya per Menit",
+        outputPerHour: "Output per Jam",
+        laborCost: "Biaya Tenaga Kerja (perkiraan)",
+        laborCostEstimate: "@ $15/jam: {price}",
+        laborCostEstimate20: "@ $20/jam: {price}",
+        breakEvenUnits: "Unit Break-even/Hari",
+        breakEvenWithOverhead: "Dengan overhead $200: {units} {unit}",
+        linkedProducts: "Produk Terkait ({count})",
+        linkedProductsHint:
+          "💡 Produk-produk ini dapat diproduksi menggunakan resep ini. Produk dapat dihubungkan ke beberapa resep (mis: 10 baguette atau 50 baguette).",
+        pricingRecommendations: "Rekomendasi Harga",
+        wholesalePricing: "Grosir (margin 30%): {price}",
+        retailPricing: "Eceran (margin 60%): {price}",
+        premiumPricing: "Premium (margin 70%): {price}",
+      },
+
       // Legacy keys (for backward compatibility)
       productsUsingRecipe: {
         title: "Produk yang Menggunakan Resep Ini",
@@ -1377,6 +1432,25 @@ export const id = {
           title: "Produk Berhasil Dihapus",
           description: "{count} produk telah berhasil dihapus.",
         },
+      },
+
+      // Details section
+      details: {
+        profitMargin: "Margin Laba",
+        onRetailSales: "pada penjualan eceran",
+        atCostPrice: "pada harga pokok",
+        sellingPrice: "Harga Jual",
+        margin: "margin",
+        pricingFinancial: "Analisis Harga & Keuangan",
+        financialSummary: "Ringkasan Keuangan",
+        stockValueAtCost: "Nilai Stok (pada harga pokok)",
+        potentialRevenue: "Pendapatan Potensial (eceran)",
+        potentialProfit: "Laba Potensial",
+        profitPerUnit: "Laba per satuan",
+        criticalStockAlert: "⚠️ Tingkat stok kritis! Pengisian ulang segera diperlukan.",
+        lowStockAlert: "⚠️ Stok mulai menipis. Pertimbangkan untuk mengisi ulang segera.",
+        overstockedAlert:
+          "ℹ️ Tingkat stok melebihi maksimum. Pertimbangkan promosi atau menyesuaikan produksi.",
       },
     },
 
@@ -1730,6 +1804,16 @@ export const id = {
     // Toasts
     toasts: {
       orderCreated: "Pengingat pesanan berhasil dibuat",
+    },
+
+    // Bulk Order Dialog
+    bulkOrder: {
+      lowStockItemsAvailable: "{count} item stok rendah tersedia",
+      selectItemsToOrder: "Pilih Item untuk Dipesan",
+      itemsSelected: "{count} item dipilih",
+      orderNotes: "Catatan Pesanan",
+      orderNotesPlaceholder: "Tambahkan instruksi khusus atau catatan untuk pesanan ini...",
+      orderNotesHint: "Catatan opsional untuk pesanan massal ini",
     },
   },
   labels: {

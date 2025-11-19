@@ -38,7 +38,7 @@ export function LoginForm() {
   useEffect(() => {
     if (registered === "true" && !toastShownRef.current) {
       toastShownRef.current = true;
-      toast.success("Account created successfully! Please log in to continue.");
+      toast.success(t("auth.accountCreatedSuccess") || "Account created successfully! Please log in to continue.");
 
       // Remove the 'registered' query param to prevent toast from showing again
       // on component re-render or browser back/forward
@@ -102,7 +102,7 @@ export function LoginForm() {
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="you@bakery.com"
+                          placeholder={t("auth.emailPlaceholder") || "you@bakery.com"}
                       disabled={isPending}
                       autoComplete="email"
                       {...field}

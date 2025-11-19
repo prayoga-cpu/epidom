@@ -337,7 +337,8 @@ export class BusinessService {
         store._count.orders +
         store._count.productionBatches;
 
-      // Note: Deleting store will cascade delete all related records
+      if (totalRelatedRecords > 0) {
+      }
 
       // Delete the store (cascade will handle related data)
       await tx.store.delete({

@@ -281,20 +281,22 @@ export function MaterialsSection() {
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={exportMaterials.isPending || !advancedReportsAccess}
-                    className="w-full md:w-auto"
-                  >
-                    {exportMaterials.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    {t("common.actions.export")}
-                  </Button>
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      disabled={exportMaterials.isPending || !advancedReportsAccess}
+                      className="w-full md:w-auto"
+                    >
+                      {exportMaterials.isPending ? (
+                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                      ) : (
+                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+                      )}
+                      {t("common.actions.export")}
+                    </Button>
+                  </div>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -304,13 +306,13 @@ export function MaterialsSection() {
               </Tooltip>
               <AddMaterialDialog trigger={
                 <Button size="sm" className="w-full md:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("data.materials.addButton")}
                 </Button>
               } />
               {bulkSelectMode && selectedCount > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full md:w-auto">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("actions.delete")} ({selectedCount})
                 </Button>
               )}
@@ -322,12 +324,12 @@ export function MaterialsSection() {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-2 h-4 w-4" />
+                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("common.actions.select")}
                   </>
                 )}
@@ -427,7 +429,9 @@ export function MaterialsSection() {
                           {material.name}
                         </h3>
                         {material.sku && (
-                          <p className="text-muted-foreground text-xs">SKU: {material.sku}</p>
+                          <p className="text-muted-foreground text-xs">
+                            SKU: {material.sku}
+                          </p>
                         )}
                       </div>
 

@@ -230,7 +230,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
                 disabled={completeProduction.isPending || actualQuantity <= 0}
               >
                 {completeProduction.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
                 )}
                 {t("common.actions.complete") || "Complete"}
               </Button>
@@ -288,7 +288,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
                 disabled={cancelProduction.isPending}
               >
                 {cancelProduction.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
                 )}
                 {t("common.actions.cancelBatch") || "Cancel Batch"}
               </Button>

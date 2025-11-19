@@ -207,8 +207,8 @@ export default function BulkOrderDialog({
               Cancel
             </Button>
             <Button type="submit" form="bulk-order-form" disabled={createOrder.isPending}>
-              {createOrder.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <ShoppingCart className="mr-2 h-4 w-4" />
+              {createOrder.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+              <ShoppingCart className="mr-1 h-4 w-4 hidden sm:inline" />
               Create Bulk Order ({selectedItems.length})
             </Button>
           </>
@@ -218,15 +218,20 @@ export default function BulkOrderDialog({
           <form id="bulk-order-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Supplier Info */}
             <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-sm font-medium">Supplier: {supplierName}</p>
+              <p className="text-sm font-medium">
+                {t("alerts.createOrderDialog.supplier")}: {supplierName}
+              </p>
               <p className="text-muted-foreground text-xs">
-                {alerts.length} low stock item(s) available
+                {t("alerts.bulkOrder.lowStockItemsAvailable")?.replace("{count}", alerts.length.toString()) ||
+                  `${alerts.length} low stock item(s) available`}
               </p>
             </div>
 
             {/* Items Selection */}
             <div className="space-y-2">
-              <FormLabel>Select Items to Order *</FormLabel>
+              <FormLabel>
+                {t("alerts.bulkOrder.selectItemsToOrder") || "Select Items to Order"} *
+              </FormLabel>
               <div className="border rounded-lg">
                 <div className="max-h-[300px] overflow-y-auto">
                   {form.watch("items")?.map((item, index) => (
@@ -256,23 +261,34 @@ export default function BulkOrderDialog({
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <p className="font-medium">{item.materialName}</p>
-                              <p className="text-muted-foreground text-xs">SKU: {item.materialSku}</p>
+                              <p className="text-muted-foreground text-xs">
+                                {t("data.materials.form.sku")}: {item.materialSku}
+                              </p>
                             </div>
                             <Badge variant="destructive" className="text-xs">
-                              Low Stock
+                              {t("common.stockStatus.lowStock")}
                             </Badge>
                           </div>
 
                           {/* Stock Info */}
                           <div className="flex items-center gap-4 text-xs">
                             <span className="text-muted-foreground">
-                              Current: <span className="font-semibold text-red-600">{item.currentStock} {item.unit}</span>
+                              {t("alerts.detailsDialog.current")}:{" "}
+                              <span className="font-semibold text-red-600">
+                                {item.currentStock} {item.unit}
+                              </span>
                             </span>
                             <span className="text-muted-foreground">
-                              Min: <span className="font-semibold text-emerald-600">{item.minStock} {item.unit}</span>
+                              {t("alerts.detailsDialog.minimum")}:{" "}
+                              <span className="font-semibold text-emerald-600">
+                                {item.minStock} {item.unit}
+                              </span>
                             </span>
                             <span className="text-muted-foreground">
-                              Price: <span className="font-semibold">{formatPrice(item.unitPrice)}/{item.unit}</span>
+                              {t("alerts.price")}:{" "}
+                              <span className="font-semibold">
+                                {formatPrice(item.unitPrice)}/{item.unit}
+                              </span>
                             </span>
                           </div>
 
@@ -284,7 +300,7 @@ export default function BulkOrderDialog({
                               render={({ field }) => (
                                 <FormItem>
                                   <div className="flex items-center gap-2">
-                                    <FormLabel className="text-xs">Quantity:</FormLabel>
+                                    <FormLabel className="text-xs">{t("alerts.createOrderDialog.quantity")}:</FormLabel>
                                     <FormControl>
                                       <Input
                                         type="number"
@@ -297,7 +313,10 @@ export default function BulkOrderDialog({
                                     </FormControl>
                                     <span className="text-muted-foreground text-xs">{item.unit}</span>
                                     <span className="text-muted-foreground ml-auto text-xs">
-                                      Total: <span className="font-semibold">{formatPrice(field.value * item.unitPrice)}</span>
+                                      {t("alerts.total")}:{" "}
+                                      <span className="font-semibold">
+                                        {formatPrice(field.value * item.unitPrice)}
+                                      </span>
                                     </span>
                                   </div>
                                   <FormMessage className="text-xs" />
@@ -318,11 +337,14 @@ export default function BulkOrderDialog({
                   <div className="flex items-center gap-2">
                     <Package className="text-primary h-4 w-4" />
                     <span className="text-sm font-medium">
-                      {selectedItems.length} item(s) selected
+                      {t("alerts.bulkOrder.itemsSelected")?.replace(
+                        "{count}",
+                        selectedItems.length.toString()
+                      ) || `${selectedItems.length} item(s) selected`}
                     </span>
                   </div>
                   <span className="text-sm font-semibold">
-                    Total: {formatPrice(totalCost)}
+                    {t("alerts.orderTotal")}: {formatPrice(totalCost)}
                   </span>
                 </div>
               )}
@@ -341,12 +363,14 @@ export default function BulkOrderDialog({
               name="expectedDeliveryDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Expected Delivery Date *</FormLabel>
+                  <FormLabel>
+                    {t("alerts.createOrderDialog.expectedDelivery")} *
+                  </FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
                   <FormDescription>
-                    When do you expect this order to arrive?
+                    {t("alerts.createOrderDialog.expectedDeliveryHint")}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -359,15 +383,23 @@ export default function BulkOrderDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Order Notes</FormLabel>
+                  <FormLabel>
+                    {t("alerts.bulkOrder.orderNotes") || "Order Notes"}
+                  </FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Add any special instructions or notes for this order..."
+                      placeholder={
+                        t("alerts.bulkOrder.orderNotesPlaceholder") ||
+                        "Add any special instructions or notes for this order..."
+                      }
                       rows={3}
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>Optional notes for this bulk order</FormDescription>
+                  <FormDescription>
+                    {t("alerts.bulkOrder.orderNotesHint") ||
+                      "Optional notes for this bulk order"}
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

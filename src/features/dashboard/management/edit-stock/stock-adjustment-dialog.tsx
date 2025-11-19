@@ -180,7 +180,7 @@ export function StockAdjustmentDialog({
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
             {t("management.editStock.adjustStock")}
           </Button>
         )}
@@ -201,7 +201,7 @@ export function StockAdjustmentDialog({
             </Button>
             <Button type="submit" disabled={isSubmitting || adjustStockMutation.isPending}>
               {(isSubmitting || adjustStockMutation.isPending) && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
               )}
               {t("management.editStock.recordAdjustment")}
             </Button>

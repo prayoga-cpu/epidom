@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-
   try {
     switch (event.type) {
       case "checkout.session.completed":
@@ -75,8 +74,6 @@ export async function POST(request: NextRequest) {
         break;
 
       default:
-        // Unhandled event type
-        break;
     }
 
     return NextResponse.json({ received: true });
@@ -113,15 +110,13 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   // Cast to access properties TypeScript doesn't recognize
   const subscriptionData = stripeSubscription as any;
-
   // Convert Unix timestamps (seconds) to JavaScript Date (milliseconds)
   const currentPeriodStart = new Date(subscriptionData.current_period_start * 1000);
   const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000);
 
   // Validate dates
   if (isNaN(currentPeriodStart.getTime()) || isNaN(currentPeriodEnd.getTime())) {
-    // Don't fail, let subscription.created handle it
-    return;
+    return; // Don't fail, let subscription.created handle it
   }
 
   // Check if user already has a subscription (upgrade/downgrade scenario)
@@ -143,6 +138,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         // If old subscription is still active in Stripe, cancel it
         if (oldStripeSubscription.status === "active") {
           await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
+        } else {
         }
       } catch (error: any) {
         // Subscription might already be deleted, that's fine
@@ -187,10 +183,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const plan = subscription.metadata?.plan as "STARTER" | "PRO";
 
   if (!userId || !plan) {
-    // No userId/plan metadata in subscription.created, skipping (created via checkout)
     return;
   }
-
   // Cast to access properties
   const subscriptionData = subscription as any;
 
@@ -216,7 +210,6 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
           await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
         }
       } catch (error: any) {
-        // Old subscription already deleted
       }
     }
 
@@ -272,12 +265,12 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const status = mapStripeStatus(subscription.status);
   const subscriptionData = subscription as any;
 
+  // Log the raw Stripe subscription data for debugging
   // Check if subscription is scheduled for cancellation
   // Either cancel_at_period_end is true OR cancel_at is set (future timestamp)
   const cancelAtPeriodEnd = Boolean(
     subscriptionData.cancel_at_period_end || subscriptionData.cancel_at
   );
-
   // Update subscription
   await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
     status,
@@ -353,7 +346,6 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
     status: SubscriptionStatus.PAST_DUE,
   });
-
   // TODO: Send email notification to user
   // TODO: Consider grace period vs. immediate lockout based on business requirements
 }

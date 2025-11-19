@@ -9,6 +9,8 @@ export const en = {
       lowStock: "Low Stock",
       inStock: "In Stock",
       overstocked: "Overstocked",
+      critical: "Critical",
+      unknown: "Unknown",
     },
     nav: {
       home: "Home",
@@ -51,6 +53,8 @@ export const en = {
     payment: "Payment",
     delivery: "Delivery",
     name: "Name",
+    material: "Material",
+    product: "Product",
     actions: {
       cancel: "Cancel",
       save: "Save",
@@ -174,9 +178,9 @@ export const en = {
     waitlistText: "Be the first to know when we launch!",
   },
   services: {
-    heroTitle: "A solution for your food stock management",
+    heroTitle: "Innovative Raw Material Inventory Management",
     heroDesc:
-      "Food stock management is the process of tracking purchased and unconsumed food products. This approach is essential to avoid any loss and optimize your catering activity.",
+      "Epidom is an innovative software solution designed to manage raw material inventory, tailored for professionals in food service, food production, and manufacturing. With its clean and intuitive interface, the platform centralizes all key information to ensure full control over ingredient flow. Epidom streamlines daily operations while significantly increasing overall productivity.",
     featureBlock: {
       management: "Management",
       tracking: "Tracking",
@@ -184,31 +188,33 @@ export const en = {
     },
     dashboard: {
       subtitle:
-        "Food stock management is the process of tracking purchased and unconsumed food products.",
+        "Comprehensive Dashboard Overview",
       description:
-        "Food stock management is the process of tracking purchased and unconsumed food products. This approach is essential to avoid any loss and optimize your catering activity.",
+        "With its comprehensive dashboard, Epidom delivers an instant and global overview of inventory status and activity. Users can easily review pending purchase orders, critical materials, and overall performance indicators. This data-driven approach supports faster, smarter, and more accurate decision-making for managers.",
     },
     management: {
-      title: "Efficient Management",
+      title: "Flexible Modules and Advanced Permissions",
       subtitle:
-        "Food stock management is the process of tracking purchased and unconsumed food products.",
+        "Adaptable to Your Organization's Needs",
       description:
-        "Food stock management is the process of tracking purchased and unconsumed food products. This approach is essential to avoid any loss and optimize your catering activity.",
+        "Finally, Epidom adapts to the needs of each organization through flexible modules and advanced permission management. The platform promotes collaboration across teams, strengthens internal communication, and integrates seamlessly into existing workflows. Epidom is therefore an essential tool for any company looking to professionalize and optimize raw material management.",
     },
     tracking: {
-      title: "Active Stock Tracking",
+      title: "Real-Time Raw Material Tracking",
+      description:
+        "The software provides real-time tracking of raw materials, from their arrival to their actual use. Through clear stock history, threshold alerts, and consumption analytics, Epidom helps prevent shortages as well as overstocking. Businesses can plan their purchases more efficiently and better anticipate upcoming needs.",
     },
     data: {
-      title: "Complete Data Tracking",
+      title: "Dedicated Production Tools and Traceability",
       description1:
-        "Food stock management is the process of tracking purchased and unconsumed food products. This approach is essential to avoid any loss and optimize your catering activity.",
+        "Epidom also includes dedicated production tools, allowing users to monitor recipe evolution, waste levels, and quantities used over specific periods. These features enhance traceability and provide a deep understanding of consumption patterns.",
       description2:
-        "Food stock management is the process of tracking purchased and unconsumed food products.",
+        "They contribute to cost optimization and help reduce food waste.",
     },
     alerts: {
-      title: "Visible and Accessible Alerts",
+      title: "Threshold Alerts and Consumption Analytics",
       description:
-        "Food stock management is the process of tracking purchased and unconsumed food products. This approach is essential to avoid any loss and optimize your catering activity.",
+        "Through clear stock history, threshold alerts, and consumption analytics, Epidom helps prevent shortages as well as overstocking. Businesses can plan their purchases more efficiently and better anticipate upcoming needs.",
     },
     dashboardDesc1:
       "Food stock management is the process of tracking purchased and unconsumed food products.",
@@ -657,6 +663,11 @@ export const en = {
     businessInfo: "Business Information",
     businessName: "Business Name",
     address: "Address",
+    // Placeholders
+    emailPlaceholder: "you@bakery.com",
+    namePlaceholder: "Jane Baker",
+    businessNamePlaceholder: "Epidom Bakery",
+    accountCreatedSuccess: "Account created successfully! Please log in to continue.",
     // Nested structure for detailed auth flows
     fields: {
       email: { label: "Email", placeholder: "you@example.com" },
@@ -810,6 +821,14 @@ export const en = {
     },
   },
   waitlist: {
+    errors: {
+      validationTitle: "Validation Error",
+      validationDesc: "Please check the form and try again.",
+      tooManyAttemptsTitle: "Too Many Attempts",
+      tooManyAttemptsDesc: "Please wait {minutes} minutes before trying again.",
+      submitErrorTitle: "Error",
+      submitErrorDesc: "Failed to submit. Please try again.",
+    },
     openButtonAria: "Join the EPIDOM waitlist",
     openButton: "Join the waitlist",
     title: "Join the EPIDOM waitlist",
@@ -825,6 +844,7 @@ export const en = {
       company: "Your business",
     },
     submit: "Request access",
+    submitting: "Submitting...",
     successTitle: "You're on the list!",
     successDesc: "We'll reach out with early access details soon.",
   },
@@ -1267,6 +1287,38 @@ export const en = {
       create: "Create Recipe",
       update: "Update Recipe",
       duplicate: "Duplicate Recipe",
+
+      // Delete confirmation
+      deleteConfirm: {
+        title: "Delete Recipe",
+        description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
+      },
+
+      // Details section
+      details: {
+        costPerBatch: "Cost per Batch",
+        totalMaterialsCost: "Total Materials Cost",
+        costAnalysisPricing: "Cost Analysis & Pricing",
+        costPerUnit: "Cost per {unit}",
+        suggestedPrice: "Suggested Price (2.5x markup)",
+        profitPerUnit: "Profit per {unit}",
+        costBreakdown: "Cost Breakdown",
+        productionMetrics: "Production Metrics",
+        costPerMinute: "Cost per Minute",
+        outputPerHour: "Output per Hour",
+        laborCost: "Labor Cost (estimate)",
+        laborCostEstimate: "@ $15/hr: {price}",
+        laborCostEstimate20: "@ $20/hr: {price}",
+        breakEvenUnits: "Break-even Units/Day",
+        breakEvenWithOverhead: "With $200 overhead: {units} {unit}",
+        linkedProducts: "Linked Products ({count})",
+        linkedProductsHint:
+          "💡 These products can be produced using this recipe. A product can be linked to multiple recipes (e.g., 10 baguettes or 50 baguettes).",
+        pricingRecommendations: "Pricing Recommendations",
+        wholesalePricing: "Wholesale (30% margin): {price}",
+        retailPricing: "Retail (60% margin): {price}",
+        premiumPricing: "Premium (70% margin): {price}",
+      },
     },
 
     // Products section
@@ -1370,6 +1422,31 @@ export const en = {
           title: "Products Deleted",
           description: "{count} products have been deleted successfully.",
         },
+      },
+
+      // Details section
+      details: {
+        profitMargin: "Profit Margin",
+        onRetailSales: "on retail sales",
+        atCostPrice: "at cost price",
+        sellingPrice: "Selling Price",
+        margin: "margin",
+        pricingFinancial: "Pricing & Financial Analysis",
+        financialSummary: "Financial Summary",
+        stockValueAtCost: "Stock Value (at cost)",
+        potentialRevenue: "Potential Revenue (retail)",
+        potentialProfit: "Potential Profit",
+        profitPerUnit: "Profit per unit",
+        criticalStockAlert: "⚠️ Critical stock level! Immediate restocking required.",
+        lowStockAlert: "⚠️ Stock is running low. Consider restocking soon.",
+        overstockedAlert:
+          "ℹ️ Stock level exceeds maximum. Consider promotions or adjusting production.",
+      },
+
+      // Delete confirmation
+      deleteConfirm: {
+        title: "Delete Product",
+        description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
       },
     },
 
@@ -1729,6 +1806,16 @@ export const en = {
     // Toasts
     toasts: {
       orderCreated: "Order reminder created successfully",
+    },
+
+    // Bulk Order Dialog
+    bulkOrder: {
+      lowStockItemsAvailable: "{count} low stock item(s) available",
+      selectItemsToOrder: "Select Items to Order",
+      itemsSelected: "{count} item(s) selected",
+      orderNotes: "Order Notes",
+      orderNotesPlaceholder: "Add any special instructions or notes for this order...",
+      orderNotesHint: "Optional notes for this bulk order",
     },
   },
   labels: {

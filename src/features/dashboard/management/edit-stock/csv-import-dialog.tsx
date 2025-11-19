@@ -74,7 +74,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
             onClick={handleImport}
             disabled={!selectedFile || importStock.isPending}
           >
-            {importStock.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {importStock.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
             {t("management.editStock.importCSVDialog.importButton") || "Import Stock"}
           </Button>
         </>

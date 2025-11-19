@@ -201,8 +201,6 @@ export async function exportData<T extends Record<string, any>>(
       await exportToPDF(data, filename, columns, title);
       break;
     default:
-      // Unsupported export format
-      break;
   }
 }
 
@@ -228,7 +226,6 @@ export async function copyToClipboard<T extends Record<string, any>>(
     try {
       document.execCommand("copy");
     } catch (err) {
-      // Fallback copy failed
     }
     document.body.removeChild(textArea);
   }

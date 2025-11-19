@@ -45,10 +45,8 @@ export async function POST(request: NextRequest) {
       customer: dbSubscription.stripeCustomerId,
       limit: 100,
     });
-
     // Filter to only active ones
     const activeSubscriptions = allSubscriptions.data.filter((sub) => sub.status === "active");
-
     if (activeSubscriptions.length === 0) {
       return NextResponse.json({
         message: "No active subscriptions found",
@@ -137,7 +135,6 @@ export async function POST(request: NextRequest) {
         await stripe.subscriptions.cancel(sub.id, { prorate: false });
         canceledIds.push(sub.id);
       } catch (error: any) {
-        // Failed to cancel subscription
       }
     }
 
@@ -151,7 +148,6 @@ export async function POST(request: NextRequest) {
       currentPeriodEnd: new Date((keepSubscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: (keepSubscription as any).cancel_at_period_end || false,
     });
-
     return NextResponse.json({
       message: `Successfully cleaned up ${canceledIds.length} duplicate subscriptions`,
       kept: {

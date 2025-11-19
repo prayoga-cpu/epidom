@@ -36,7 +36,6 @@ export function getStorageAdapter(): StorageAdapter {
     //   return new UploadThingAdapter();
 
     default:
-      // Unknown storage provider, fallback to Vercel Blob
       return new VercelBlobAdapter();
   }
 }

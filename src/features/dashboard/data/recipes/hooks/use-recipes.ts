@@ -4,6 +4,7 @@ import {
   UpdateRecipeFormInput,
   RecipeFilterInput,
 } from "@/lib/validation/inventory.schemas";
+import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 
 // Types
 export interface RecipeWithIngredients {
@@ -204,17 +205,26 @@ async function exportRecipes(storeId: string, filters: RecipeFilterInput): Promi
 
 /**
  * Fetch all recipes with filters
+ * Real-time enabled: Polls every 30 seconds when tab is active
  */
 export function useRecipes(storeId: string, filters: RecipeFilterInput) {
+  // Normalize filters untuk consistent query keys (prevent cache fragmentation)
+  const normalizedFilters = normalizeFilters(filters);
+
   return useQuery({
-    queryKey: ["recipes", storeId, filters],
-    queryFn: () => fetchRecipes(storeId, filters),
+    queryKey: ["recipes", storeId, normalizedFilters],
+    queryFn: () => fetchRecipes(storeId, normalizedFilters || filters),
     enabled: !!storeId,
-    staleTime: 30 * 1000, // 30 seconds - reduce unnecessary refetches
+    // Real-time configuration: Active data polling
+    staleTime: 20 * 1000, // 20 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
-    // Refetch on window focus to ensure latest material stock data
-    // But only if data is stale (staleTime helps prevent excessive refetches)
-    refetchOnWindowFocus: true,
+    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    refetchIntervalInBackground: false, // Only poll when tab is active
+    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnWindowFocus: true, // Refetch on window focus if stale
+    meta: {
+      refetchInterval: 30 * 1000, // Store in meta for smart polling
+    },
   });
 }
 

@@ -3,6 +3,7 @@ import { CreateProductInput, UpdateProductInput } from "@/lib/validation/invento
 import type { Product } from "@prisma/client";
 import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
+import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 
 // Re-export for convenience
 export type { Product };
@@ -157,12 +158,25 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
 
 /**
  * Fetch all products with filters
+ * Real-time enabled: Polls every 30 seconds when tab is active
  */
 export function useProducts(storeId: string, filters: ProductFilterInput) {
+  // Normalize filters untuk consistent query keys (prevent cache fragmentation)
+  const normalizedFilters = normalizeFilters(filters);
+
   return useQuery({
-    queryKey: ["products", storeId, filters],
-    queryFn: () => fetchProducts(storeId, filters),
+    queryKey: ["products", storeId, normalizedFilters],
+    queryFn: () => fetchProducts(storeId, normalizedFilters || filters),
     enabled: !!storeId,
+    // Real-time configuration: Active data polling
+    staleTime: 20 * 1000, // 20 seconds
+    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    refetchIntervalInBackground: false, // Only poll when tab is active
+    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnWindowFocus: true, // Refetch on window focus if stale
+    meta: {
+      refetchInterval: 30 * 1000, // Store in meta for smart polling
+    },
   });
 }
 

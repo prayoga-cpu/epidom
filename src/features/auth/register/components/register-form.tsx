@@ -66,7 +66,7 @@ export function RegisterForm() {
                       <FormLabel>{t("auth.name")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Jane Baker"
+                          placeholder={t("auth.namePlaceholder") || "Jane Baker"}
                           disabled={isPending}
                           autoComplete="name"
                           {...field}
@@ -86,7 +86,7 @@ export function RegisterForm() {
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="you@bakery.com"
+                          placeholder={t("auth.emailPlaceholder") || "you@bakery.com"}
                           disabled={isPending}
                           autoComplete="email"
                           {...field}
@@ -150,7 +150,7 @@ export function RegisterForm() {
                       <FormLabel>{t("auth.businessName")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Epidom Bakery"
+                          placeholder={t("auth.businessNamePlaceholder") || "Epidom Bakery"}
                           disabled={isPending}
                           autoComplete="organization"
                           {...field}

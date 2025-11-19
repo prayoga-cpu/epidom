@@ -33,8 +33,23 @@ export function StoresContainer() {
     }
 
     const hasSubscription = subscriptionStatus?.hasSubscription ?? false;
-    const canCreateMore = subscriptionStatus?.storeUsage?.canCreateMore ?? false;
     const subscription = subscriptionStatus?.subscription;
+    const storeUsage = subscriptionStatus?.storeUsage;
+
+    // Calculate canCreateMore from both subscription status and current stores count
+    // This provides real-time check even if subscription-status cache is stale
+    const canCreateMoreFromSubscription = storeUsage?.canCreateMore ?? false;
+    const storeLimit = storeUsage?.limit;
+    const currentStoreCount = stores?.length ?? 0;
+
+    // If we have store limit info, calculate directly from current stores
+    // This ensures button updates immediately after creating a store
+    // For PRO/ENTERPRISE (limit = Infinity), always allow creating
+    const canCreateMore = storeLimit === Infinity || storeLimit === null
+      ? true // PRO/ENTERPRISE: unlimited stores
+      : storeLimit !== undefined
+        ? currentStoreCount < storeLimit // Calculate from current count
+        : canCreateMoreFromSubscription; // Fallback to subscription status
 
     // No subscription - show "Subscribe to Create Store" button
     if (!hasSubscription || subscription?.status !== "ACTIVE") {
@@ -147,20 +162,34 @@ export function StoresContainer() {
           {/* Stores Grid */}
           {!isLoading && !error && stores && stores.length > 0 && (
             <div className="animate-slide-up-delayed grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:gap-6 xl:gap-8">
-              {stores.map((store) => {
-                // Check if subscription is not active to block store access
-                const hasActiveSubscription = subscriptionStatus?.hasSubscription &&
-                  subscriptionStatus?.subscription?.status === "ACTIVE";
-                const isBlocked = !hasActiveSubscription;
+              {/* Show loading skeleton for store cards while subscription status is loading */}
+              {isLoadingSubscription ? (
+                [...Array(stores.length)].map((_, i) => (
+                  <div key={`skeleton-${i}`} className="space-y-2 sm:space-y-3">
+                    <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+                    <Skeleton className="h-5 w-3/4 sm:h-6" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ))
+              ) : (
+                stores.map((store) => {
+                  // Only block stores if subscription status is loaded and not active
+                  // Don't block during loading to prevent false "upgrade" messages
+                  const hasActiveSubscription = subscriptionStatus?.hasSubscription &&
+                    subscriptionStatus?.subscription?.status === "ACTIVE";
+                  // Only set blocked if subscription status is loaded (not undefined)
+                  // This prevents showing blocked state during loading
+                  const isBlocked = subscriptionStatus !== undefined && !hasActiveSubscription;
 
-                return (
-                  <StoreCard
-                    key={store.id}
-                    store={store}
-                    isBlocked={isBlocked}
-                  />
-                );
-              })}
+                  return (
+                    <StoreCard
+                      key={store.id}
+                      store={store}
+                      isBlocked={isBlocked}
+                    />
+                  );
+                })
+              )}
             </div>
           )}
         </div>

@@ -198,7 +198,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
               form="add-product-form"
               disabled={createProduct.isPending || productLimitReached}
             >
-              {createProduct.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {createProduct.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
               {t("data.products.addButton")}
             </Button>
           </>

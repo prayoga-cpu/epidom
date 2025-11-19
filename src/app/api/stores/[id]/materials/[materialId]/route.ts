@@ -6,6 +6,7 @@ import { businessService } from "@/lib/services";
 import { updateIngredientSchema } from "@/lib/validation/inventory.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/stores/[id]/materials/[materialId]
@@ -67,6 +68,7 @@ export async function GET(
       });
     }
 
+    logger.error("Error fetching material", error, { endpoint: "GET /api/stores/[id]/materials/[materialId]" });
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -141,7 +143,6 @@ export async function PATCH(
 
     // Handle business logic errors
     if (error instanceof Error) {
-
       if (error.message.includes("not found")) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
           status: 404,
@@ -156,6 +157,7 @@ export async function PATCH(
       }
     }
 
+    logger.error("Error updating material", error, { endpoint: "PATCH /api/stores/[id]/materials/[materialId]" });
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -211,7 +213,6 @@ export async function DELETE(
   } catch (error) {
     // Handle business logic errors
     if (error instanceof Error) {
-
       if (error.message.includes("not found") || error.message.includes("does not belong")) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
           status: 404,
@@ -226,6 +227,7 @@ export async function DELETE(
       }
     }
 
+    logger.error("Error deleting material", error, { endpoint: "DELETE /api/stores/[id]/materials/[materialId]" });
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

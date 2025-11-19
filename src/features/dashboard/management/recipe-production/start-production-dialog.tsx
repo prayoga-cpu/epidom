@@ -171,7 +171,7 @@ export function StartProductionDialog({
                 linkedProducts.length === 0
               }
             >
-              {startProduction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {startProduction.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
               {t("management.recipeProduction.startProduction") || "Start Production"}
             </Button>
           </>

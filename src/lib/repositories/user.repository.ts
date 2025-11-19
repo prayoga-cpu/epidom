@@ -95,7 +95,6 @@ export class UserRepository extends BaseRepository {
       },
       {} as Record<string, any>
     );
-
     return this.db.user.update({
       where: { id: userId },
       data: processedData,

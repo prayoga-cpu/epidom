@@ -44,7 +44,6 @@ export class StripeConnectService {
       process.env.NODE_ENV === "production"
         ? process.env.NEXT_PUBLIC_APP_URL || "https://epidom.app"
         : "https://epidom.app";
-
     const account = await stripe.accounts.create({
       type: STRIPE_CONFIG.CONNECT.ACCOUNT_TYPE,
       country: STRIPE_CONFIG.CONNECT.COUNTRY,
@@ -102,7 +101,6 @@ export class StripeConnectService {
       process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://epidom.app";
     const refreshUrl_final = refreshUrl || `${appUrl}/profile?connect=refresh`;
     const returnUrl_final = returnUrl || `${appUrl}/profile?connect=success`;
-
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: refreshUrl_final,

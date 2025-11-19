@@ -87,8 +87,8 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       setErrors(validation.errors);
       setIsSubmitting(false);
       toast({
-        title: "Validation Error",
-        description: "Please check the form and try again.",
+        title: t("waitlist.errors.validationTitle") || t("common.validation.error"),
+        description: t("waitlist.errors.validationDesc") || "Please check the form and try again.",
         variant: "destructive",
       });
       return;
@@ -100,8 +100,10 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       const remainingTime = Math.ceil(waitlistRateLimiter.getRemainingTime(clientId) / 60000);
       setIsSubmitting(false);
       toast({
-        title: "Too Many Attempts",
-        description: `Please wait ${remainingTime} minutes before trying again.`,
+        title: t("waitlist.errors.tooManyAttemptsTitle") || "Too Many Attempts",
+        description:
+          t("waitlist.errors.tooManyAttemptsDesc")?.replace("{minutes}", remainingTime.toString()) ||
+          `Please wait ${remainingTime} minutes before trying again.`,
         variant: "destructive",
       });
       return;
@@ -162,8 +164,11 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       setOpen(false);
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit. Please try again.",
+        title: t("waitlist.errors.submitErrorTitle") || "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : t("waitlist.errors.submitErrorDesc") || "Failed to submit. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -206,7 +211,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
             className="btn-smooth rounded-full px-6 font-semibold bg-brand-primary text-white"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Submitting..." : t("waitlist.submit")}
+            {isSubmitting ? t("waitlist.submitting") || "Submitting..." : t("waitlist.submit")}
           </Button>
         }
       >

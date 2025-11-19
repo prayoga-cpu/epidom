@@ -62,7 +62,10 @@ export function useSubscriptionStatus() {
       return data;
     },
     retry: false,
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes (subscription doesn't change often)
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus (subscription is stable)
+    refetchOnMount: false, // Don't refetch if data exists in cache
   });
 }
 

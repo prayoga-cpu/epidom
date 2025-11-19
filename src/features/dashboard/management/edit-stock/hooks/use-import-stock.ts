@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
+import { stockMovementKeys } from "./use-stock-movements";
 
 export interface StockImportResult {
   sku: string;
@@ -47,11 +49,16 @@ export function useImportStock(storeId: string) {
 
   return useMutation<StockImportResponse, Error, File>({
     mutationFn: (file) => importStock(storeId, file),
-    onSuccess: (data) => {
-      // Invalidate queries to refresh stock data
-      queryClient.invalidateQueries({ queryKey: ["materials", storeId] });
+    onSuccess: async (data) => {
+      // Batch invalidate all related queries for better performance
+      await invalidateMaterialRelatedQueries(queryClient, storeId);
+
+      // Also invalidate products and stock movements
       queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["stock-movements", storeId] });
+      queryClient.invalidateQueries({
+        queryKey: stockMovementKeys.all(storeId),
+        exact: false,
+      });
 
       // Show success toast
       if (data.summary.failed === 0) {

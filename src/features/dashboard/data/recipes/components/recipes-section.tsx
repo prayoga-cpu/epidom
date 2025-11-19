@@ -240,20 +240,22 @@ export function RecipesSection() {
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={exportRecipes.isPending || recipes.length === 0 || !advancedReportsAccess}
-                    className="w-full md:w-auto"
-                  >
-                    {exportRecipes.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    {t("common.actions.export")}
-                  </Button>
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      disabled={exportRecipes.isPending || recipes.length === 0 || !advancedReportsAccess}
+                      className="w-full md:w-auto"
+                    >
+                      {exportRecipes.isPending ? (
+                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                      ) : (
+                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+                      )}
+                      {t("common.actions.export")}
+                    </Button>
+                  </div>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -263,7 +265,7 @@ export function RecipesSection() {
               </Tooltip>
               <AddRecipeDialog trigger={
                 <Button size="sm" className="w-full md:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("data.recipes.addButton")}
                 </Button>
               } />
@@ -276,9 +278,9 @@ export function RecipesSection() {
                   className="w-full md:w-auto"
                 >
                   {bulkDeleteRecipes.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
                   ) : (
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
                   )}
                   {t("actions.delete")} ({selectedCount})
                 </Button>
@@ -291,12 +293,12 @@ export function RecipesSection() {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-2 h-4 w-4" />
+                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("common.actions.view")}
                   </>
                 )}

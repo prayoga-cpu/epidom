@@ -141,7 +141,7 @@ export function Topbar() {
               className="text-muted-foreground relative h-9 w-80 max-w-xl justify-start rounded-full bg-white text-sm font-normal sm:max-w-2xl"
               onClick={() => setSearchOpen(true)}
             >
-              <Search className="mr-2 size-4 shrink-0" />
+              <Search className="mr-1 size-4 shrink-0 hidden sm:inline" />
               <span>{t("actions.searchPlaceholder")}</span>
               <KbdGroup className="absolute right-3 hidden md:flex">
                 <Kbd>⌘</Kbd>

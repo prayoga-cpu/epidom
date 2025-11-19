@@ -363,7 +363,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
             >
               {currentStep > 1 ? (
                 <>
-                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  <ChevronLeft className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("common.actions.previous")}
                 </>
               ) : (
@@ -388,7 +388,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                 onClick={handleCreateRecipe}
                 disabled={createRecipe.isPending}
               >
-                {createRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {createRecipe.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
                 {t("data.recipes.create")}
               </Button>
             )}
@@ -607,7 +607,7 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                     </p>
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={addIngredient}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("data.recipes.ingredients.addIngredient")}
                   </Button>
                 </div>

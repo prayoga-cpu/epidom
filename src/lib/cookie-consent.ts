@@ -96,7 +96,6 @@ export function setCookiePreferences(preferences: Partial<CookiePreferences>): v
       })
     );
   } catch (error) {
-    // Error saving cookie preferences - silently fail
   }
 }
 

@@ -84,7 +84,6 @@ export async function POST(
 
     // Handle business logic errors
     if (error instanceof Error) {
-
       if (error.message.includes("not found")) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
           status: 404,

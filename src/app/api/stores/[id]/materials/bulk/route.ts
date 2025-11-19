@@ -88,7 +88,6 @@ export async function DELETE(
 
     // Handle business logic errors
     if (error instanceof Error) {
-
       if (error.message.includes("do not belong")) {
         return NextResponse.json(
           createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),

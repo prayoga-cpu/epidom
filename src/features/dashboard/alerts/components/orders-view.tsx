@@ -281,20 +281,26 @@ export function OrdersView() {
                               <div className="flex items-center justify-between text-xs">
                                 <div className="flex gap-3">
                                   <div>
-                                    <span className="text-muted-foreground">Qty:</span>
+                                    <span className="text-muted-foreground">
+                                      {t("alerts.quantity") || "Qty"}:
+                                    </span>
                                     <span className="ml-1 font-semibold text-blue-600">
                                       {item.quantity} {item.unit}
                                     </span>
                                   </div>
                                   <div>
-                                    <span className="text-muted-foreground">Price:</span>
+                                    <span className="text-muted-foreground">
+                                      {t("alerts.price")}:
+                                    </span>
                                     <span className="ml-1 font-semibold text-green-600">
                                       {formatPrice(Number(item.unitPrice))}/{item.unit}
                                     </span>
                                   </div>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground">Total:</span>
+                                  <span className="text-muted-foreground">
+                                    {t("alerts.total")}:
+                                  </span>
                                   <span className="ml-1 font-semibold text-orange-600">
                                     {formatPrice(Number(item.total))}
                                   </span>
@@ -313,12 +319,12 @@ export function OrdersView() {
                         >
                           {placingOrder === order.id ? (
                             <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
                               {t("alerts.placing")}
                             </>
                           ) : (
                             <>
-                              <CheckCircle className="mr-2 h-4 w-4" />
+                              <CheckCircle className="mr-1 h-4 w-4 hidden sm:inline" />
                               {t("alerts.markAsPlaced")}
                             </>
                           )}

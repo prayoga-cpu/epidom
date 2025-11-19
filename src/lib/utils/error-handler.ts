@@ -185,11 +185,6 @@ export function showErrorToast(error: unknown, customTitle?: string) {
 
   // Log error for debugging (only in development)
   if (process.env.NODE_ENV === "development") {
-    console.error("[Error Handler]", {
-      error,
-      message,
-      code: errorCode,
-    });
   }
 }
 

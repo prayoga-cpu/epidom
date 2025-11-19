@@ -30,7 +30,6 @@ export const authOptions: NextAuthOptions = {
           if (!isValid) {
             return null;
           }
-
           // Return user object with all fields needed
           return {
             id: user.id,
@@ -131,7 +130,6 @@ export const authOptions: NextAuthOptions = {
             token.image = dbUser.image;
           }
         } catch (error) {
-          // Error refreshing token - continue with existing token
         }
       }
 

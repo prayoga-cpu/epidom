@@ -2,19 +2,21 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
+import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
  * GET /api/stores/[id]/alerts
  * Get low stock materials for a store
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: storeId } = await params;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const storeId = (await params).id;
 
     // Verify user has access to this store
     const store = await prisma.store.findFirst({
@@ -40,6 +42,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         materialSuppliers: {
           include: {
             supplier: true,
+          },
+          where: {
+            supplier: {
+              isActive: true,
+            },
           },
         },
       },
@@ -82,27 +89,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         minStock: material.minStock,
         unit: material.unit,
         stockPercentage,
-        suppliers: material.materialSuppliers
-          .filter((ms) => ms.supplier && ms.supplier.isActive)
-          .map((ms) => ({
-            id: ms.supplier.id,
-            name: ms.supplier.name,
-            price: ms.price,
-            isPreferred: ms.isPreferred,
-            phone: ms.supplier.phone || null,
-          })),
+        suppliers: material.materialSuppliers.map((ms) => ({
+          id: ms.supplier.id,
+          name: ms.supplier.name,
+          price: ms.price,
+          isPreferred: ms.isPreferred,
+          phone: ms.supplier.phone || null,
+        })),
         createdAt: new Date().toISOString(),
       };
     });
 
     return NextResponse.json({ alerts });
   } catch (error) {
-    console.error("[API] Alerts error:", error);
+    logger.error("Error fetching alerts", error, { endpoint: "GET /api/stores/[id]/alerts", storeId });
     return NextResponse.json(
-      {
-        error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Failed to fetch alerts. Please try again."),
       { status: 500 }
     );
   }

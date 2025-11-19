@@ -81,26 +81,32 @@ export default function ProductDetailsDialog({
     const minStock = Number(product.minStock) || 0;
     const maxStock = Number(product.maxStock) || 0;
 
-    if (!currentStock && currentStock !== 0) return "Unknown";
-    if (currentStock === 0) return "Out of Stock";
-    if (minStock && currentStock < minStock * 0.5) return "Critical";
-    if (minStock && currentStock <= minStock) return "Low Stock";
-    if (maxStock && currentStock >= maxStock) return "Overstocked";
-    return "In Stock";
+    if (!currentStock && currentStock !== 0) return t("common.stockStatus.unknown") || "Unknown";
+    if (currentStock === 0) return t("common.stockStatus.outOfStock");
+    if (minStock && currentStock < minStock * 0.5) return t("common.stockStatus.critical") || "Critical";
+    if (minStock && currentStock <= minStock) return t("common.stockStatus.lowStock");
+    if (maxStock && currentStock >= maxStock) return t("common.stockStatus.overstocked");
+    return t("common.stockStatus.inStock");
   };
 
   // Get stock status color
   const getStockStatusColor = () => {
     const status = getStockStatus();
+    const outOfStock = t("common.stockStatus.outOfStock");
+    const critical = t("common.stockStatus.critical") || "Critical";
+    const lowStock = t("common.stockStatus.lowStock");
+    const overstocked = t("common.stockStatus.overstocked");
+    const inStock = t("common.stockStatus.inStock");
+
     switch (status) {
-      case "Out of Stock":
-      case "Critical":
+      case outOfStock:
+      case critical:
         return "destructive";
-      case "Low Stock":
+      case lowStock:
         return "default";
-      case "Overstocked":
+      case overstocked:
         return "default";
-      case "In Stock":
+      case inStock:
         return "default";
       default:
         return "secondary";
@@ -126,7 +132,7 @@ export default function ProductDetailsDialog({
             <div className="flex gap-2">
               {onEdit && (
                 <Button variant="outline" size="sm" onClick={onEdit}>
-                  <Edit className="mr-2 h-4 w-4" />
+                  <Edit className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("actions.edit") || "Edit"}
                 </Button>
               )}
@@ -134,9 +140,15 @@ export default function ProductDetailsDialog({
                 <ConfirmationDialog
                   open={showDeleteConfirm}
                   onOpenChange={setShowDeleteConfirm}
-                  title="Delete Product"
-                  description={`Are you sure you want to delete "${product.name}"? This action cannot be undone.`}
-                  confirmText="Delete Product"
+                  title={t("data.products.deleteConfirm.title") || "Delete Product"}
+                  description={
+                    t("data.products.deleteConfirm.description")?.replace(
+                      "{name}",
+                      product.name
+                    ) ||
+                    `Are you sure you want to delete "${product.name}"? This action cannot be undone.`
+                  }
+                  confirmText={t("data.products.deleteConfirm.title") || "Delete Product"}
                   onConfirm={onDelete}
                   variant="destructive"
                 />
@@ -150,7 +162,7 @@ export default function ProductDetailsDialog({
           <div className="grid gap-4 sm:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Stock</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("common.stock")}</CardTitle>
                 <Package className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
@@ -166,20 +178,26 @@ export default function ProductDetailsDialog({
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Retail Price</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {t("data.products.form.retailPrice")}
+                </CardTitle>
                 <DollarSign className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {formatPrice(Number(product.sellingPrice) || 0)}
                 </div>
-                <p className="text-muted-foreground text-xs">per {product.unit}</p>
+                <p className="text-muted-foreground text-xs">
+                  {t("common.per")} {product.unit}
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Profit Margin</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {t("data.products.details.profitMargin") || "Profit Margin"}
+                </CardTitle>
                 <TrendingUp className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
@@ -194,18 +212,24 @@ export default function ProductDetailsDialog({
                 >
                   {retailMargin.toFixed(1)}%
                 </div>
-                <p className="text-muted-foreground text-xs">on retail sales</p>
+                <p className="text-muted-foreground text-xs">
+                  {t("data.products.details.onRetailSales") || "on retail sales"}
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Stock Value</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {t("data.materials.details.totalValue") || "Stock Value"}
+                </CardTitle>
                 <BarChart3 className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatPrice(stockValue)}</div>
-                <p className="text-muted-foreground text-xs">at cost price</p>
+                <p className="text-muted-foreground text-xs">
+                  {t("data.products.details.atCostPrice") || "at cost price"}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -216,27 +240,33 @@ export default function ProductDetailsDialog({
           <div>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
               <Tag className="h-5 w-5" />
-              Basic Information
+              {t("data.products.sections.basicInfo")}
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-3">
                 <div>
-                  <label className="text-muted-foreground text-sm font-medium">SKU</label>
-                  <p className="text-sm">{product.sku || "N/A"}</p>
+                  <label className="text-muted-foreground text-sm font-medium">
+                    SKU
+                  </label>
+                  <p className="text-sm">{product.sku || t("common.notAvailable")}</p>
                 </div>
                 <div>
-                  <label className="text-muted-foreground text-sm font-medium">Category</label>
+                  <label className="text-muted-foreground text-sm font-medium">
+                    {t("data.products.form.category")}
+                  </label>
                   <p className="text-sm">
                     {product.category ? (
                       <Badge variant="secondary">{product.category}</Badge>
                     ) : (
-                      "N/A"
+                      t("common.notAvailable")
                     )}
                   </p>
                 </div>
                 <div>
-                  <label className="text-muted-foreground text-sm font-medium">Unit</label>
-                  <p className="text-sm">{product.unit || "N/A"}</p>
+                  <label className="text-muted-foreground text-sm font-medium">
+                    {t("data.products.form.unit")}
+                  </label>
+                  <p className="text-sm">{product.unit || t("common.notAvailable")}</p>
                 </div>
               </div>
             </div>
@@ -249,7 +279,7 @@ export default function ProductDetailsDialog({
               <div>
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
                   <ChefHat className="h-5 w-5" />
-                  Linked Recipes ({product.recipeProducts.length})
+                  {t("data.products.form.linkedRecipes")} ({product.recipeProducts.length})
                 </h3>
                 <div className="space-y-3">
                   {product.recipeProducts.map((recipeProduct) => {
@@ -261,7 +291,7 @@ export default function ProductDetailsDialog({
                             <div className="flex items-center justify-between">
                               <div>
                                 <label className="text-muted-foreground text-sm font-medium">
-                                  Recipe Name
+                                  {t("data.recipes.form.name")}
                                 </label>
                                 <p className="mt-1 text-base font-semibold">{recipe.name}</p>
                               </div>
@@ -269,7 +299,7 @@ export default function ProductDetailsDialog({
                             {recipe.description && (
                               <div>
                                 <label className="text-muted-foreground text-sm font-medium">
-                                  Description
+                                  {t("data.recipes.form.description")}
                                 </label>
                                 <p className="text-muted-foreground mt-1 text-sm">
                                   {recipe.description}
@@ -278,11 +308,17 @@ export default function ProductDetailsDialog({
                             )}
                             <div className="flex items-center gap-4 text-sm">
                               <div>
-                                <span className="text-muted-foreground">Category: </span>
-                                <Badge variant="outline">{recipe.category || "N/A"}</Badge>
+                                <span className="text-muted-foreground">
+                                  {t("data.recipes.form.category")}:{" "}
+                                </span>
+                                <Badge variant="outline">
+                                  {recipe.category || t("common.notAvailable")}
+                                </Badge>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Yield: </span>
+                                <span className="text-muted-foreground">
+                                  {t("data.recipes.cards.yield")}:{" "}
+                                </span>
                                 <span className="font-medium">
                                   {formatNumber(Number(recipe.yieldQuantity))}{" "}
                                   {recipe.yieldUnit}
@@ -305,30 +341,36 @@ export default function ProductDetailsDialog({
           <div>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
               <Package className="h-5 w-5" />
-              Stock Information
+              {t("data.materials.details.stockInfo")}
             </h3>
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="text-muted-foreground text-sm font-medium">Current Stock</label>
+                  <label className="text-muted-foreground text-sm font-medium">
+                    {t("data.products.form.currentStock")}
+                  </label>
                   <p className="text-lg font-semibold">
                     {formatNumber(Number(product.currentStock) || 0)} {product.unit}
                   </p>
                 </div>
                 <div>
-                  <label className="text-muted-foreground text-sm font-medium">Minimum Stock</label>
+                  <label className="text-muted-foreground text-sm font-medium">
+                    {t("data.products.form.minStock")}
+                  </label>
                   <p className="text-lg font-semibold">
                     {product.minStock !== undefined
                       ? `${formatNumber(Number(product.minStock))} ${product.unit}`
-                      : "Not set"}
+                      : t("common.notAvailable")}
                   </p>
                 </div>
                 <div>
-                  <label className="text-muted-foreground text-sm font-medium">Maximum Stock</label>
+                  <label className="text-muted-foreground text-sm font-medium">
+                    {t("data.products.form.maxStock")}
+                  </label>
                   <p className="text-lg font-semibold">
                     {product.maxStock !== undefined
                       ? `${formatNumber(Number(product.maxStock))} ${product.unit}`
-                      : "Not set"}
+                      : t("common.notAvailable")}
                   </p>
                 </div>
               </div>
@@ -337,7 +379,9 @@ export default function ProductDetailsDialog({
               {product.minStock !== undefined && product.maxStock !== undefined && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Stock Level</span>
+                    <span className="text-muted-foreground">
+                      {t("alerts.detailsDialog.stockLevel") || "Stock Level"}
+                    </span>
                     <span className="font-medium">
                       {(
                         ((Number(product.currentStock) || 0) / Number(product.maxStock)) *
@@ -349,11 +393,12 @@ export default function ProductDetailsDialog({
                   <div className="bg-muted h-2 overflow-hidden rounded-full">
                     <div
                       className={`h-full transition-all ${
-                        stockStatus === "Critical" || stockStatus === "Out of Stock"
+                        stockStatus === t("common.stockStatus.critical") ||
+                        stockStatus === t("common.stockStatus.outOfStock")
                           ? "bg-destructive"
-                          : stockStatus === "Low Stock"
+                          : stockStatus === t("common.stockStatus.lowStock")
                             ? "bg-orange-500"
-                            : stockStatus === "Overstocked"
+                            : stockStatus === t("common.stockStatus.overstocked")
                               ? "bg-blue-500"
                               : "bg-primary"
                       }`}
@@ -366,18 +411,21 @@ export default function ProductDetailsDialog({
               )}
 
               {/* Stock Alerts */}
-              {(stockStatus === "Critical" ||
-                stockStatus === "Low Stock" ||
-                stockStatus === "Overstocked") && (
+              {(stockStatus === t("common.stockStatus.critical") ||
+                stockStatus === t("common.stockStatus.lowStock") ||
+                stockStatus === t("common.stockStatus.overstocked")) && (
                 <Card className="border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950">
                   <CardContent className="pt-4">
                     <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                      {stockStatus === "Critical" &&
-                        "⚠️ Critical stock level! Immediate restocking required."}
-                      {stockStatus === "Low Stock" &&
-                        "⚠️ Stock is running low. Consider restocking soon."}
-                      {stockStatus === "Overstocked" &&
-                        "ℹ️ Stock level exceeds maximum. Consider promotions or adjusting production."}
+                      {stockStatus === t("common.stockStatus.critical") &&
+                        (t("data.products.details.criticalStockAlert") ||
+                          "⚠️ Critical stock level! Immediate restocking required.")}
+                      {stockStatus === t("common.stockStatus.lowStock") &&
+                        (t("data.products.details.lowStockAlert") ||
+                          "⚠️ Stock is running low. Consider restocking soon.")}
+                      {stockStatus === t("common.stockStatus.overstocked") &&
+                        (t("data.products.details.overstockedAlert") ||
+                          "ℹ️ Stock level exceeds maximum. Consider promotions or adjusting production.")}
                     </p>
                   </CardContent>
                 </Card>
@@ -391,33 +439,41 @@ export default function ProductDetailsDialog({
           <div>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
               <DollarSign className="h-5 w-5" />
-              Pricing & Financial Analysis
+              {t("data.products.details.pricingFinancial") || "Pricing & Financial Analysis"}
             </h3>
             <div className="space-y-4">
               {/* Pricing Breakdown */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Cost Price</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      {t("data.products.form.costPrice")}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-xl font-bold">
                       {formatPrice(Number(product.costPrice) || 0)}
                     </p>
-                    <p className="text-muted-foreground text-xs">per {product.unit}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("common.per")} {product.unit}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Selling Price</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      {t("data.products.details.sellingPrice") || "Selling Price"}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-xl font-bold">
                       {formatPrice(Number(product.sellingPrice) || 0)}
                     </p>
-                    <p className="text-muted-foreground text-xs">per {product.unit}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("common.per")} {product.unit}
+                    </p>
                     <p className="mt-1 text-xs font-medium text-green-600">
-                      {retailMargin.toFixed(1)}% margin
+                      {retailMargin.toFixed(1)}% {t("data.products.details.margin") || "margin"}
                     </p>
                   </CardContent>
                 </Card>
@@ -426,28 +482,38 @@ export default function ProductDetailsDialog({
               {/* Financial Summary */}
               <Card className="bg-muted/50">
                 <CardHeader>
-                  <CardTitle className="text-sm font-medium">Financial Summary</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    {t("data.products.details.financialSummary") || "Financial Summary"}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">Stock Value (at cost):</span>
+                    <span className="text-muted-foreground text-sm">
+                      {t("data.products.details.stockValueAtCost") ||
+                        "Stock Value (at cost):"}
+                    </span>
                     <span className="font-semibold">{formatPrice(stockValue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">
-                      Potential Revenue (retail):
+                      {t("data.products.details.potentialRevenue") ||
+                        "Potential Revenue (retail):"}
                     </span>
                     <span className="font-semibold">{formatPrice(potentialRevenue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">Potential Profit:</span>
+                    <span className="text-muted-foreground text-sm">
+                      {t("data.products.details.potentialProfit") || "Potential Profit:"}
+                    </span>
                     <span className="font-semibold text-green-600">
                       {formatPrice(potentialRevenue - stockValue)}
                     </span>
                   </div>
                   {product.sellingPrice && product.costPrice && (
                     <div className="flex items-center justify-between border-t pt-2">
-                      <span className="text-muted-foreground text-sm">Profit per unit:</span>
+                      <span className="text-muted-foreground text-sm">
+                        {t("data.products.details.profitPerUnit") || "Profit per unit:"}
+                      </span>
                       <span className="font-semibold">
                         {formatPrice(
                           (Number(product.sellingPrice) || 0) - (Number(product.costPrice) || 0)
@@ -465,11 +531,17 @@ export default function ProductDetailsDialog({
           <div className="text-muted-foreground flex items-center justify-between text-xs">
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              <span>Created: {formatDate(product.createdAt)}</span>
+              <span>
+                {t("data.materials.details.created") || "Created"}:{" "}
+                {formatDate(product.createdAt)}
+              </span>
             </div>
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              <span>Updated: {formatDate(product.updatedAt)}</span>
+              <span>
+                {t("data.materials.details.lastUpdated") || "Updated"}:{" "}
+                {formatDate(product.updatedAt)}
+              </span>
             </div>
           </div>
         </div>

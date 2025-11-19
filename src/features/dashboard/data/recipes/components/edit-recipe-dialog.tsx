@@ -359,7 +359,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                   {t("data.recipes.ingredients.title")}
                 </h3>
                 <Button type="button" variant="outline" size="sm" onClick={addIngredient}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("data.recipes.ingredients.addIngredient")}
                 </Button>
               </div>
