@@ -9,6 +9,8 @@ export const en = {
       lowStock: "Low Stock",
       inStock: "In Stock",
       overstocked: "Overstocked",
+      critical: "Critical",
+      unknown: "Unknown",
     },
     nav: {
       home: "Home",
@@ -51,6 +53,8 @@ export const en = {
     payment: "Payment",
     delivery: "Delivery",
     name: "Name",
+    material: "Material",
+    product: "Product",
     actions: {
       cancel: "Cancel",
       save: "Save",
@@ -657,6 +661,11 @@ export const en = {
     businessInfo: "Business Information",
     businessName: "Business Name",
     address: "Address",
+    // Placeholders
+    emailPlaceholder: "you@bakery.com",
+    namePlaceholder: "Jane Baker",
+    businessNamePlaceholder: "Epidom Bakery",
+    accountCreatedSuccess: "Account created successfully! Please log in to continue.",
     // Nested structure for detailed auth flows
     fields: {
       email: { label: "Email", placeholder: "you@example.com" },
@@ -810,6 +819,14 @@ export const en = {
     },
   },
   waitlist: {
+    errors: {
+      validationTitle: "Validation Error",
+      validationDesc: "Please check the form and try again.",
+      tooManyAttemptsTitle: "Too Many Attempts",
+      tooManyAttemptsDesc: "Please wait {minutes} minutes before trying again.",
+      submitErrorTitle: "Error",
+      submitErrorDesc: "Failed to submit. Please try again.",
+    },
     openButtonAria: "Join the EPIDOM waitlist",
     openButton: "Join the waitlist",
     title: "Join the EPIDOM waitlist",
@@ -825,6 +842,7 @@ export const en = {
       company: "Your business",
     },
     submit: "Request access",
+    submitting: "Submitting...",
     successTitle: "You're on the list!",
     successDesc: "We'll reach out with early access details soon.",
   },
@@ -1267,6 +1285,38 @@ export const en = {
       create: "Create Recipe",
       update: "Update Recipe",
       duplicate: "Duplicate Recipe",
+
+      // Delete confirmation
+      deleteConfirm: {
+        title: "Delete Recipe",
+        description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
+      },
+
+      // Details section
+      details: {
+        costPerBatch: "Cost per Batch",
+        totalMaterialsCost: "Total Materials Cost",
+        costAnalysisPricing: "Cost Analysis & Pricing",
+        costPerUnit: "Cost per {unit}",
+        suggestedPrice: "Suggested Price (2.5x markup)",
+        profitPerUnit: "Profit per {unit}",
+        costBreakdown: "Cost Breakdown",
+        productionMetrics: "Production Metrics",
+        costPerMinute: "Cost per Minute",
+        outputPerHour: "Output per Hour",
+        laborCost: "Labor Cost (estimate)",
+        laborCostEstimate: "@ $15/hr: {price}",
+        laborCostEstimate20: "@ $20/hr: {price}",
+        breakEvenUnits: "Break-even Units/Day",
+        breakEvenWithOverhead: "With $200 overhead: {units} {unit}",
+        linkedProducts: "Linked Products ({count})",
+        linkedProductsHint:
+          "💡 These products can be produced using this recipe. A product can be linked to multiple recipes (e.g., 10 baguettes or 50 baguettes).",
+        pricingRecommendations: "Pricing Recommendations",
+        wholesalePricing: "Wholesale (30% margin): {price}",
+        retailPricing: "Retail (60% margin): {price}",
+        premiumPricing: "Premium (70% margin): {price}",
+      },
     },
 
     // Products section
@@ -1370,6 +1420,31 @@ export const en = {
           title: "Products Deleted",
           description: "{count} products have been deleted successfully.",
         },
+      },
+
+      // Details section
+      details: {
+        profitMargin: "Profit Margin",
+        onRetailSales: "on retail sales",
+        atCostPrice: "at cost price",
+        sellingPrice: "Selling Price",
+        margin: "margin",
+        pricingFinancial: "Pricing & Financial Analysis",
+        financialSummary: "Financial Summary",
+        stockValueAtCost: "Stock Value (at cost)",
+        potentialRevenue: "Potential Revenue (retail)",
+        potentialProfit: "Potential Profit",
+        profitPerUnit: "Profit per unit",
+        criticalStockAlert: "⚠️ Critical stock level! Immediate restocking required.",
+        lowStockAlert: "⚠️ Stock is running low. Consider restocking soon.",
+        overstockedAlert:
+          "ℹ️ Stock level exceeds maximum. Consider promotions or adjusting production.",
+      },
+
+      // Delete confirmation
+      deleteConfirm: {
+        title: "Delete Product",
+        description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
       },
     },
 
@@ -1729,6 +1804,16 @@ export const en = {
     // Toasts
     toasts: {
       orderCreated: "Order reminder created successfully",
+    },
+
+    // Bulk Order Dialog
+    bulkOrder: {
+      lowStockItemsAvailable: "{count} low stock item(s) available",
+      selectItemsToOrder: "Select Items to Order",
+      itemsSelected: "{count} item(s) selected",
+      orderNotes: "Order Notes",
+      orderNotesPlaceholder: "Add any special instructions or notes for this order...",
+      orderNotesHint: "Optional notes for this bulk order",
     },
   },
   labels: {

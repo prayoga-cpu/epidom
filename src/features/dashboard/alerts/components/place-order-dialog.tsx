@@ -185,8 +185,9 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
                   </Badge>
                 </div>
                 <p className="text-muted-foreground text-xs">
-                  Current stock: {alert.currentStock} {alert.unit} / Min: {alert.minStock}{" "}
-                  {alert.unit} ({alert.stockPercentage}%)
+                  {t("alerts.detailsDialog.current")} {t("common.stock").toLowerCase()}:{" "}
+                  {alert.currentStock} {alert.unit} / {t("alerts.detailsDialog.minimum")}:{" "}
+                  {alert.minStock} {alert.unit} ({alert.stockPercentage}%)
                 </p>
               </div>
             )}
@@ -271,7 +272,9 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
             {alert && (
               <div className="rounded-md border p-3">
                 <p className="text-sm font-medium">{alert.materialName}</p>
-                <p className="text-muted-foreground text-xs">SKU: {alert.materialSku}</p>
+                <p className="text-muted-foreground text-xs">
+                  {t("data.materials.form.sku")}: {alert.materialSku}
+                </p>
               </div>
             )}
 

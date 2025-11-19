@@ -18,11 +18,15 @@ import {
   ActionButtons,
   ActionButton,
   SectionLoadingState,
+  SectionErrorState,
   FilterSection,
   type FilterField,
   ItemCardGrid,
   BaseItemCard,
+  EmptyState,
 } from "../../components";
+import { useBulkSelection } from "../../hooks/use-bulk-selection";
+import { useDialogState } from "../../hooks/use-dialog-state";
 import { responsive, responsiveText } from "@/lib/utils/responsive";
 import {
   Eye,
@@ -88,14 +92,6 @@ export function MaterialsSection() {
     take: 50,
   });
 
-  // UI state
-  const [selectedMaterial, setSelectedMaterial] = useState<MaterialWithSuppliers | null>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bulkSelectMode, setBulkSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
   // Data fetching
   const { data, isLoading, error, refetch } = useMaterials(storeId, filters);
   const materials = data?.materials || [];
@@ -152,6 +148,34 @@ export function MaterialsSection() {
     return filtered;
   }, [materials, filters.search, filters.category, filters.stockStatus]);
 
+  // Use reusable hooks for dialog and bulk selection state
+  const {
+    selectedItem: selectedMaterial,
+    viewDialogOpen,
+    editDialogOpen,
+    deleteDialogOpen,
+    setViewDialogOpen,
+    setEditDialogOpen,
+    setDeleteDialogOpen,
+    setSelectedItem: setSelectedMaterial,
+    handleView,
+    handleEdit,
+    handleDeleteClick: handleDeleteClickDialog,
+  } = useDialogState<MaterialWithSuppliers>();
+
+  const {
+    bulkSelectMode,
+    selectedIds,
+    selectedCount,
+    toggleBulkSelect,
+    toggleSelectAll,
+    toggleSelectItem,
+    clearSelection,
+    isSelected,
+    setSelectedIds,
+    setBulkSelectMode,
+  } = useBulkSelection(processedMaterials);
+
   // Filter handlers
   const handleSearch = (value: string) => {
     setFilters((prev) => ({ ...prev, search: value, skip: 0 }));
@@ -169,21 +193,8 @@ export function MaterialsSection() {
     }));
   };
 
-  // Actions
-  const handleView = (material: MaterialWithSuppliers) => {
-    setSelectedMaterial(material);
-    setViewDialogOpen(true);
-  };
-
-  const handleEdit = (material: MaterialWithSuppliers) => {
-    setSelectedMaterial(material);
-    setEditDialogOpen(true);
-  };
-
-  const handleDeleteClick = (material: MaterialWithSuppliers) => {
-    setSelectedMaterial(material);
-    setDeleteDialogOpen(true);
-  };
+  // handleDeleteClick is provided by useDialogState hook
+  const handleDeleteClick = handleDeleteClickDialog;
 
   const handleDeleteConfirm = async () => {
     if (!selectedMaterial) return;
@@ -199,15 +210,14 @@ export function MaterialsSection() {
   };
 
   const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
+    if (selectedCount === 0) return;
 
     try {
       await bulkDelete.mutateAsync({ ids: Array.from(selectedIds) });
       toast.success(
-        t("data.materials.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
+        t("data.materials.toasts.bulkDeleted.description")?.replace("{count}", selectedCount.toString()) || ""
       );
-      setSelectedIds(new Set());
-      setBulkSelectMode(false);
+      clearSelection();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteMaterials"));
     }
@@ -220,30 +230,6 @@ export function MaterialsSection() {
     } catch (error) {
       toast.error(t("messages.errorLoadingMaterials"));
     }
-  };
-
-  // Bulk selection handlers
-  const toggleBulkSelect = () => {
-    setBulkSelectMode(!bulkSelectMode);
-    setSelectedIds(new Set());
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === processedMaterials.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(processedMaterials.map((m) => m.id)));
-    }
-  };
-
-  const toggleSelectItem = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
   };
 
   // Clear filters
@@ -277,17 +263,12 @@ export function MaterialsSection() {
   // Error state
   if (error) {
     return (
-      <div className="border-destructive rounded-lg border p-4">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="text-destructive h-5 w-5" />
-          <p className="text-destructive text-sm">
-            {t("messages.errorLoadingMaterials")}: {error.message}
-          </p>
-        </div>
-        <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-2">
-          {t("common.actions.retry")}
-        </Button>
-      </div>
+      <SectionErrorState
+        title={t("common.error")}
+        message={error.message || t("messages.errorLoadingMaterials")}
+        onRetry={() => refetch()}
+        retryLabel={t("common.actions.retry")}
+      />
     );
   }
 
@@ -300,20 +281,22 @@ export function MaterialsSection() {
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={exportMaterials.isPending || !advancedReportsAccess}
-                    className="w-full md:w-auto"
-                  >
-                    {exportMaterials.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    {t("common.actions.export")}
-                  </Button>
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      disabled={exportMaterials.isPending || !advancedReportsAccess}
+                      className="w-full md:w-auto"
+                    >
+                      {exportMaterials.isPending ? (
+                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                      ) : (
+                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+                      )}
+                      {t("common.actions.export")}
+                    </Button>
+                  </div>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -323,14 +306,14 @@ export function MaterialsSection() {
               </Tooltip>
               <AddMaterialDialog trigger={
                 <Button size="sm" className="w-full md:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("data.materials.addButton")}
                 </Button>
               } />
-              {bulkSelectMode && selectedIds.size > 0 && (
+              {bulkSelectMode && selectedCount > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full md:w-auto">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete")} ({selectedIds.size})
+                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
+                  {t("actions.delete")} ({selectedCount})
                 </Button>
               )}
               <Button
@@ -341,12 +324,12 @@ export function MaterialsSection() {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-2 h-4 w-4" />
+                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("common.actions.select")}
                   </>
                 )}
@@ -401,12 +384,12 @@ export function MaterialsSection() {
             <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
               <Checkbox
                 checked={
-                  selectedIds.size === processedMaterials.length && processedMaterials.length > 0
+                  selectedCount === processedMaterials.length && processedMaterials.length > 0
                 }
                 onCheckedChange={toggleSelectAll}
               />
               <span className="text-sm font-medium">
-                {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {processedMaterials.length}{" "}
+                {t("common.selectAll")} ({selectedCount} {t("common.of")} {processedMaterials.length}{" "}
                 {t("common.selected")})
               </span>
             </div>
@@ -427,7 +410,7 @@ export function MaterialsSection() {
               const minStock = Number(material.minStock);
               const maxStock = Number(material.maxStock);
               const stockStatusKey = getStockStatusKey(currentStock, minStock, maxStock);
-              const isSelected = selectedIds.has(material.id);
+              const materialIsSelected = isSelected(material.id);
               const primarySupplier =
                 material.materialSuppliers?.find((s) => s.isPreferred) ||
                 material.materialSuppliers?.[0];
@@ -435,19 +418,9 @@ export function MaterialsSection() {
               return (
                 <BaseItemCard
                   key={material.id}
-                  isSelected={isSelected}
+                  isSelected={materialIsSelected}
                   bulkSelectMode={bulkSelectMode}
-                  onSelect={(checked) => {
-                    if (checked) {
-                      setSelectedIds((prev) => new Set(prev).add(material.id));
-                    } else {
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        next.delete(material.id);
-                        return next;
-                      });
-                    }
-                  }}
+                  onSelect={() => toggleSelectItem(material.id)}
                   contentClassName="!px-4"
                 >
                     <div className="mb-2 flex items-start justify-between">
@@ -456,7 +429,9 @@ export function MaterialsSection() {
                           {material.name}
                         </h3>
                         {material.sku && (
-                          <p className="text-muted-foreground text-xs">SKU: {material.sku}</p>
+                          <p className="text-muted-foreground text-xs">
+                            SKU: {material.sku}
+                          </p>
                         )}
                       </div>
 
@@ -555,24 +530,24 @@ export function MaterialsSection() {
             })}
             {/* Empty State */}
             {processedMaterials.length === 0 && (
-              <div className="col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
-                <h3 className="mb-2 text-lg font-semibold">
-                  {t("messages.noMaterialsFound")}
-                </h3>
-                <p className="text-muted-foreground mb-4 text-sm">
-                  {hasActiveFilters
+              <EmptyState
+                icon={PackageOpen}
+                title={t("messages.noMaterialsFound")}
+                description={
+                  hasActiveFilters
                     ? t("messages.noMatchingFilters")
-                    : t("messages.getStartedMaterial")}
-                </p>
-                {hasActiveFilters ? (
-                  <Button variant="outline" onClick={clearFilters}>
-                    {t("common.actions.clearFilters")}
-                  </Button>
-                ) : (
-                  <AddMaterialDialog />
-                )}
-              </div>
+                    : t("messages.getStartedMaterial")
+                }
+                action={
+                  hasActiveFilters ? (
+                    <Button variant="outline" onClick={clearFilters}>
+                      {t("common.actions.clearFilters")}
+                    </Button>
+                  ) : (
+                    <AddMaterialDialog />
+                  )
+                }
+              />
             )}
           </ItemCardGrid>
         </CardContent>
@@ -610,16 +585,6 @@ export function MaterialsSection() {
         variant="destructive"
       />
 
-      <ConfirmationDialog
-        open={bulkSelectMode && selectedIds.size > 0 && false}
-        onOpenChange={() => {}}
-        onConfirm={handleBulkDelete}
-        title="Delete Multiple Materials"
-        description={`Are you sure you want to delete ${selectedIds.size} material(s)? This action cannot be undone.`}
-        confirmText="Delete All"
-        cancelText="Cancel"
-        variant="destructive"
-      />
     </>
   );
 }

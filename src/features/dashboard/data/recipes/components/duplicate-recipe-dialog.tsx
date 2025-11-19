@@ -386,7 +386,7 @@ export default function DuplicateRecipeDialog({
                   onClick={handleBack}
                   disabled={duplicateRecipe.isPending}
                 >
-                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  <ChevronLeft className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("common.actions.previous")}
                 </Button>
               )}
@@ -403,7 +403,7 @@ export default function DuplicateRecipeDialog({
                   form="duplicate-recipe-form"
                   disabled={duplicateRecipe.isPending}
                 >
-                  {duplicateRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {duplicateRecipe.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
                   {t("data.recipes.duplicate")}
                 </Button>
               )}

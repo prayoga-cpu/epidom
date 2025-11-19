@@ -73,12 +73,12 @@ export function ExportButton<T extends Record<string, any>>({
         <Button variant={variant} size={size} disabled={disabled || loading} className={className}>
           {loading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-1 h-4 w-4 hidden animate-spin sm:inline" />
               {t("common.actions.exporting") || "Exporting..."}
             </>
           ) : (
             <>
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="mr-1 h-4 w-4 hidden sm:inline" />
               {t("common.actions.export") || "Export"}
             </>
           )}

@@ -13,6 +13,8 @@ import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
 import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
+import { useErrorHandler } from "@/hooks/use-error-handler";
+import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 
 export interface MaterialsResponse {
   materials: MaterialWithSuppliers[];
@@ -31,15 +33,19 @@ export const materialKeys = {
 
 /**
  * Fetch all materials for a store with optional filtering
+ * Real-time enabled: Polls every 30 seconds when tab is active
  */
 export function useMaterials(storeId: string, filters?: MaterialFilterInput) {
+  // Normalize filters untuk consistent query keys (prevent cache fragmentation)
+  const normalizedFilters = normalizeFilters(filters);
+
   return useQuery<MaterialsResponse>({
-    queryKey: materialKeys.list(storeId, filters),
+    queryKey: materialKeys.list(storeId, normalizedFilters),
     queryFn: async () => {
       // Build query string
       const params = new URLSearchParams();
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
+      if (normalizedFilters) {
+        Object.entries(normalizedFilters).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== "") {
             params.append(key, String(value));
           }
@@ -60,6 +66,15 @@ export function useMaterials(storeId: string, filters?: MaterialFilterInput) {
       return data.data;
     },
     enabled: !!storeId,
+    // Real-time configuration: Active data polling
+    staleTime: 20 * 1000, // 20 seconds
+    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    refetchIntervalInBackground: false, // Only poll when tab is active
+    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnWindowFocus: true, // Refetch on window focus if stale
+    meta: {
+      refetchInterval: 30 * 1000, // Store in meta for smart polling
+    },
   });
 }
 
@@ -86,11 +101,17 @@ export function useMaterial(storeId: string, id: string) {
 
 /**
  * Create a new material with optimistic updates
+ * Real-time: Updates UI immediately, syncs with server in background
  */
 export function useCreateMaterial(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<MaterialWithSuppliers, Error, Omit<CreateIngredientInput, "storeId">>({
+  return useMutation<
+    MaterialWithSuppliers,
+    Error,
+    Omit<CreateIngredientInput, "storeId">,
+    { previousMaterials: MaterialsResponse | undefined }
+  >({
     mutationFn: async (input) => {
       const response = await fetch(`/api/stores/${storeId}/materials`, {
         method: "POST",
@@ -108,9 +129,65 @@ export function useCreateMaterial(storeId: string) {
       const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
       return data.data;
     },
-    onSuccess: async () => {
+    onMutate: async (newMaterial) => {
+      // Cancel outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: materialKeys.lists(storeId) });
+
+      // Snapshot previous value
+      const previousMaterials = queryClient.getQueryData<MaterialsResponse>(
+        materialKeys.list(storeId)
+      );
+
+      // Optimistically update cache
+      if (previousMaterials) {
+        // Create optimistic material with proper structure
+        // Note: Using type assertion because this is temporary data that will be replaced
+        // with real server data in onSuccess. Decimal fields will be converted by server.
+        const optimisticMaterial = {
+          ...newMaterial,
+          id: `temp-${Date.now()}`, // Temporary ID
+          storeId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          currentStock: newMaterial.currentStock ?? 0,
+          minStock: newMaterial.minStock ?? 0,
+          maxStock: newMaterial.maxStock ?? 1000,
+          materialSuppliers: [], // Use materialSuppliers, not suppliers
+        } as unknown as MaterialWithSuppliers;
+
+        queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
+          ...previousMaterials,
+          materials: [...previousMaterials.materials, optimisticMaterial],
+          total: previousMaterials.total + 1,
+        });
+      }
+
+      return { previousMaterials };
+    },
+    onSuccess: async (newMaterial) => {
+      // Update with real data from server
+      const currentData = queryClient.getQueryData<MaterialsResponse>(
+        materialKeys.list(storeId)
+      );
+
+      if (currentData) {
+        // Replace optimistic material with real one
+        queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
+          ...currentData,
+          materials: currentData.materials.map((m) =>
+            m.id.startsWith("temp-") ? newMaterial : m
+          ),
+        });
+      }
+
       // Batch invalidate all related queries in parallel for better performance
       await invalidateMaterialRelatedQueries(queryClient, storeId);
+    },
+    onError: (error, newMaterial, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousMaterials) {
+        queryClient.setQueryData(materialKeys.list(storeId), context.previousMaterials);
+      }
     },
   });
 }

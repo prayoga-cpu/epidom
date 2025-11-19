@@ -6,14 +6,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Form,
   FormControl,
@@ -142,7 +136,6 @@ export function StartProductionDialog({
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to start production:", error);
       sonnerToast.error(t("management.recipeProduction.toasts.productionFailed.title") || "Error", {
         description:
           error instanceof Error
@@ -155,18 +148,41 @@ export function StartProductionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] min-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {t("management.recipeProduction.dialogs.startProduction.title")}
-          </DialogTitle>
-          <DialogDescription>
-            {t("management.recipeProduction.dialogs.startProduction.description")}
-          </DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={t("management.recipeProduction.dialogs.startProduction.title")}
+        description={t("management.recipeProduction.dialogs.startProduction.description")}
+        maxWidth="xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={startProduction.isPending}
+            >
+              {t("common.actions.cancel") || "Cancel"}
+            </Button>
+            <Button
+              type="submit"
+              form="start-production-form"
+              disabled={
+                startProduction.isPending ||
+                hasInsufficientMaterials ||
+                linkedProducts.length === 0
+              }
+            >
+              {startProduction.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+              {t("management.recipeProduction.startProduction") || "Start Production"}
+            </Button>
+          </>
+        }
+      >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            id="start-production-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6"
+          >
             {/* Recipe Information Card */}
             <Card>
               <CardContent className="pt-6">
@@ -435,30 +451,9 @@ export function StartProductionDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={startProduction.isPending}
-              >
-                {t("common.actions.cancel") || "Cancel"}
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  startProduction.isPending ||
-                  hasInsufficientMaterials ||
-                  linkedProducts.length === 0
-                }
-              >
-                {startProduction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("management.recipeProduction.startProduction") || "Start Production"}
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

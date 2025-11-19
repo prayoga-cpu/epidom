@@ -83,6 +83,7 @@ export const supplierOrderKeys = {
 
 /**
  * Hook to fetch all supplier orders for a store
+ * Real-time enabled: Polls every 60 seconds when tab is active
  */
 export function useSupplierOrders(storeId: string) {
   return useQuery<SupplierOrdersResponse>({
@@ -106,6 +107,15 @@ export function useSupplierOrders(storeId: string) {
       return response.json();
     },
     enabled: !!storeId,
+    // Real-time configuration: Normal data polling
+    staleTime: 60 * 1000, // 1 minute
+    refetchInterval: 60 * 1000, // Poll every 60 seconds
+    refetchIntervalInBackground: false, // Only poll when tab is active
+    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnWindowFocus: true, // Refetch on window focus if stale
+    meta: {
+      refetchInterval: 60 * 1000, // Store in meta for smart polling
+    },
   });
 }
 

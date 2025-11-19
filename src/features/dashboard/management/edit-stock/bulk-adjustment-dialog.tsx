@@ -284,7 +284,7 @@ export function BulkAdjustmentDialog({
               disabled={adjustStockMutation.isPending || fields.length === 0}
             >
               {adjustStockMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
               )}
               {t("management.editStock.recordAdjustments")} ({fields.length})
             </Button>

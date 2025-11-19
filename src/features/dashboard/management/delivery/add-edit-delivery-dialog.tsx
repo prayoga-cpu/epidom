@@ -344,7 +344,7 @@ export default function AddEditDeliveryDialog({
                   variant="outline"
                   className="w-full justify-start text-left font-normal"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-1 h-4 w-4 hidden sm:inline" />
                   {expectedDate
                     ? formatDate(expectedDate)
                     : t("management.delivery.dialogs.addEditDelivery.selectExpectedDate")}
@@ -367,7 +367,7 @@ export default function AddEditDeliveryDialog({
               <Label>{t("management.delivery.dialogs.addEditDelivery.items")} *</Label>
               {mode === "add" && (
                 <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("management.delivery.dialogs.addEditDelivery.addItem")}
                 </Button>
               )}

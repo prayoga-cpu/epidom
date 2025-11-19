@@ -238,11 +238,11 @@ export default function MaterialDetailsDialog({
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={handleEdit}>
-              <Edit className="mr-2 h-4 w-4" />
+              <Edit className="mr-1 h-4 w-4 hidden sm:inline" />
               {t("common.actions.edit")}
             </Button>
             <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
               {t("common.actions.delete")}
             </Button>
           </div>

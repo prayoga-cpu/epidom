@@ -150,7 +150,9 @@ export default function RecipeDetailsDialog({
                     <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Production Time</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("data.recipes.form.productionTime")}
+                    </p>
                     <p className="font-semibold">{formatDuration(recipe.productionTimeMinutes)}</p>
                   </div>
                 </CardContent>
@@ -162,7 +164,9 @@ export default function RecipeDetailsDialog({
                     <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Cost per Batch</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("data.recipes.details.costPerBatch") || "Cost per Batch"}
+                    </p>
                     <p className="font-semibold">{formatPrice(totalCost)}</p>
                   </div>
                 </CardContent>
@@ -233,7 +237,9 @@ export default function RecipeDetailsDialog({
                 <Separator className="my-4" />
 
                 <div className="flex justify-between font-semibold">
-                  <span>Total Materials Cost</span>
+                  <span>
+                    {t("data.recipes.details.totalMaterialsCost") || "Total Materials Cost"}
+                  </span>
                   <span>{formatPrice(totalCost)}</span>
                 </div>
               </CardContent>
@@ -245,7 +251,10 @@ export default function RecipeDetailsDialog({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Box className="h-5 w-5" />
-                    Linked Products ({recipe.recipeProducts.length})
+                    {t("data.recipes.details.linkedProducts")?.replace(
+                      "{count}",
+                      recipe.recipeProducts.length.toString()
+                    ) || `Linked Products (${recipe.recipeProducts.length})`}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -265,14 +274,19 @@ export default function RecipeDetailsDialog({
                                     {product.category}
                                   </Badge>
                                 )}
-                                {product.sku && <span className="text-xs">SKU: {product.sku}</span>}
+                                {product.sku && (
+                                  <span className="text-xs">
+                                    SKU: {product.sku}
+                                  </span>
+                                )}
                               </p>
                               <div className="mt-1 flex items-center gap-4 text-xs">
                                 <span className="text-muted-foreground">
-                                  Stock: {formatNumber(Number(product.currentStock))} {product.unit}
+                                  {t("common.stock")}: {formatNumber(Number(product.currentStock))}{" "}
+                                  {product.unit}
                                 </span>
                                 <span className="text-muted-foreground">
-                                  Price: {formatPrice(Number(product.sellingPrice))}
+                                  {t("alerts.price")}: {formatPrice(Number(product.sellingPrice))}
                                 </span>
                               </div>
                             </div>
@@ -299,7 +313,8 @@ export default function RecipeDetailsDialog({
                   </div>
                   <div className="bg-muted/50 mt-4 rounded-lg p-3">
                     <p className="text-muted-foreground text-xs">
-                      💡 These products can be produced using this recipe. A product can be linked to multiple recipes (e.g., 10 baguettes or 50 baguettes).
+                      {t("data.recipes.details.linkedProductsHint") ||
+                        "💡 These products can be produced using this recipe. A product can be linked to multiple recipes (e.g., 10 baguettes or 50 baguettes)."}
                     </p>
                   </div>
                 </CardContent>
@@ -311,17 +326,23 @@ export default function RecipeDetailsDialog({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Calculator className="h-5 w-5" />
-                  Cost Analysis & Pricing
+                  {t("data.recipes.details.costAnalysisPricing") || "Cost Analysis & Pricing"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-muted-foreground text-sm">Cost per {recipe.yieldUnit}</p>
+                    <p className="text-muted-foreground text-sm">
+                      {t("data.recipes.details.costPerUnit")?.replace("{unit}", recipe.yieldUnit) ||
+                        `Cost per ${recipe.yieldUnit}`}
+                    </p>
                     <p className="text-2xl font-bold">{formatPrice(costPerUnit)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Suggested Price (2.5x markup)</p>
+                    <p className="text-muted-foreground text-sm">
+                      {t("data.recipes.details.suggestedPrice") ||
+                        "Suggested Price (2.5x markup)"}
+                    </p>
                     <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                       {formatPrice(suggestedPrice)}
                     </p>
@@ -332,19 +353,26 @@ export default function RecipeDetailsDialog({
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Profit per {recipe.yieldUnit}</span>
+                    <span className="text-muted-foreground">
+                      {t("data.recipes.details.profitPerUnit")?.replace("{unit}", recipe.yieldUnit) ||
+                        `Profit per ${recipe.yieldUnit}`}
+                    </span>
                     <span className="font-semibold text-green-600 dark:text-green-400">
                       {formatPrice(profit)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Profit Margin</span>
+                    <span className="text-muted-foreground">
+                      {t("data.products.details.profitMargin") || "Profit Margin"}
+                    </span>
                     <span className="font-semibold text-green-600 dark:text-green-400">
                       {margin.toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cost Breakdown</span>
+                    <span className="text-muted-foreground">
+                      {t("data.recipes.details.costBreakdown") || "Cost Breakdown"}
+                    </span>
                     <span className="font-semibold">
                       {((costPerUnit / suggestedPrice) * 100).toFixed(1)}% COGS
                     </span>
@@ -354,12 +382,27 @@ export default function RecipeDetailsDialog({
                 <div className="bg-background rounded-lg p-3">
                   <div className="mb-2 flex items-center gap-2 text-sm font-medium">
                     <TrendingUp className="h-4 w-4 text-green-600" />
-                    Pricing Recommendations
+                    {t("data.recipes.details.pricingRecommendations") || "Pricing Recommendations"}
                   </div>
                   <div className="text-muted-foreground space-y-1 text-sm">
-                    <p>• Wholesale (30% margin): {formatPrice(costPerUnit * 1.43)}</p>
-                    <p>• Retail (60% margin): {formatPrice(costPerUnit * 2.5)}</p>
-                    <p>• Premium (70% margin): {formatPrice(costPerUnit * 3.33)}</p>
+                    <p>
+                      • {t("data.recipes.details.wholesalePricing")?.replace(
+                          "{price}",
+                          formatPrice(costPerUnit * 1.43)
+                        ) || `Wholesale (30% margin): ${formatPrice(costPerUnit * 1.43)}`}
+                    </p>
+                    <p>
+                      • {t("data.recipes.details.retailPricing")?.replace(
+                          "{price}",
+                          formatPrice(costPerUnit * 2.5)
+                        ) || `Retail (60% margin): ${formatPrice(costPerUnit * 2.5)}`}
+                    </p>
+                    <p>
+                      • {t("data.recipes.details.premiumPricing")?.replace(
+                          "{price}",
+                          formatPrice(costPerUnit * 3.33)
+                        ) || `Premium (70% margin): ${formatPrice(costPerUnit * 3.33)}`}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -385,37 +428,53 @@ export default function RecipeDetailsDialog({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <ChefHat className="h-5 w-5" />
-                  Production Metrics
+                  {t("data.recipes.details.productionMetrics") || "Production Metrics"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-muted-foreground text-sm">Cost per Minute</p>
+                    <p className="text-muted-foreground text-sm">
+                      {t("data.recipes.details.costPerMinute") || "Cost per Minute"}
+                    </p>
                     <p className="font-semibold">
                       {formatPrice(totalCost / recipe.productionTimeMinutes)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Output per Hour</p>
+                    <p className="text-muted-foreground text-sm">
+                      {t("data.recipes.details.outputPerHour") || "Output per Hour"}
+                    </p>
                     <p className="font-semibold">
                       {((60 / recipe.productionTimeMinutes) * recipe.yieldQuantity).toFixed(2)}{" "}
                       {recipe.yieldUnit}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Labor Cost (estimate)</p>
-                    <p className="text-muted-foreground text-xs">
-                      @ $15/hr: {formatPrice((15 / 60) * recipe.productionTimeMinutes)}
+                    <p className="text-muted-foreground text-sm">
+                      {t("data.recipes.details.laborCost") || "Labor Cost (estimate)"}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      @ $20/hr: {formatPrice((20 / 60) * recipe.productionTimeMinutes)}
+                      {t("data.recipes.details.laborCostEstimate") ||
+                        `@ $15/hr: ${formatPrice((15 / 60) * recipe.productionTimeMinutes)}`}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("data.recipes.details.laborCostEstimate20")?.replace(
+                        "{price}",
+                        formatPrice((20 / 60) * recipe.productionTimeMinutes)
+                      ) || `@ $20/hr: ${formatPrice((20 / 60) * recipe.productionTimeMinutes)}`}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Break-even Units/Day</p>
+                    <p className="text-muted-foreground text-sm">
+                      {t("data.recipes.details.breakEvenUnits") || "Break-even Units/Day"}
+                    </p>
                     <p className="text-muted-foreground text-xs">
-                      With $200 overhead: {Math.ceil(200 / profit)} {recipe.yieldUnit}
+                      {t("data.recipes.details.breakEvenWithOverhead")?.replace(
+                        "{units}",
+                        Math.ceil(200 / profit).toString()
+                      )?.replace("{unit}", recipe.yieldUnit) ||
+                        `With $200 overhead: ${Math.ceil(200 / profit)} ${recipe.yieldUnit}`}
                     </p>
                   </div>
                 </div>
@@ -426,11 +485,17 @@ export default function RecipeDetailsDialog({
             <div className="text-muted-foreground grid gap-4 text-sm sm:grid-cols-2">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>Created: {formatDate(recipe.createdAt)}</span>
+                <span>
+                  {t("data.materials.details.created") || "Created"}:{" "}
+                  {formatDate(recipe.createdAt)}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>Updated: {formatDate(recipe.updatedAt)}</span>
+                <span>
+                  {t("data.materials.details.lastUpdated") || "Updated"}:{" "}
+                  {formatDate(recipe.updatedAt)}
+                </span>
               </div>
             </div>
           </div>
@@ -441,9 +506,12 @@ export default function RecipeDetailsDialog({
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDelete}
-        title="Delete Recipe"
-        description={`Are you sure you want to delete "${recipe.name}"? This action cannot be undone.`}
-        confirmText="Delete"
+        title={t("data.recipes.deleteConfirm.title") || "Delete Recipe"}
+        description={
+          t("data.recipes.deleteConfirm.description")?.replace("{name}", recipe.name) ||
+          `Are you sure you want to delete "${recipe.name}"? This action cannot be undone.`
+        }
+        confirmText={t("actions.delete") || "Delete"}
         variant="destructive"
       />
     </>

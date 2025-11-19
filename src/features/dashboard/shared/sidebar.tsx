@@ -13,9 +13,12 @@ import { StoreSwitcher } from "./store-switcher";
 
 /**
  * Get badge count for a navigation item
+ * Deferred loading: Alerts count is loaded lazily to avoid blocking initial render
  */
 function useBadgeCount(badgeKey?: string): number | null {
-  const alertsCount = useAlertsCount();
+  // Only load alerts count if badgeKey is "alerts" (lazy loading)
+  // This prevents blocking the sidebar render on initial load
+  const alertsCount = badgeKey === "alerts" ? useAlertsCount() : 0;
 
   if (!badgeKey) return null;
 

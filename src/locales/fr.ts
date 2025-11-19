@@ -9,6 +9,8 @@ export const fr = {
       lowStock: "Stock Faible",
       inStock: "En Stock",
       overstocked: "Surstocké",
+      critical: "Critique",
+      unknown: "Inconnu",
     },
     nav: {
       home: "Accueil",
@@ -51,6 +53,8 @@ export const fr = {
     payment: "Paiement",
     delivery: "Livraison",
     name: "Nom",
+    material: "Matériau",
+    product: "Produit",
     notAvailable: "N/A",
     type: "Type",
     date: "Date",
@@ -124,6 +128,7 @@ export const fr = {
       exportAsCsv: "Exporter en CSV",
       exportAsExcel: "Exporter en Excel",
       exportAsPdf: "Exporter en PDF",
+      update: "Mettre à jour",
       logout: "Déconnexion",
       login: "Connexion",
       searchPlaceholder: "Rechercher...",
@@ -656,6 +661,11 @@ export const fr = {
     businessInfo: "Informations de l'entreprise",
     businessName: "Nom de l'entreprise",
     address: "Adresse",
+    // Placeholders
+    emailPlaceholder: "vous@boulangerie.com",
+    namePlaceholder: "Jean Dupont",
+    businessNamePlaceholder: "Boulangerie EPIDOM",
+    accountCreatedSuccess: "Compte créé avec succès ! Veuillez vous connecter pour continuer.",
     // Nested structure for detailed auth flows
     fields: {
       email: { label: "Email", placeholder: "vous@example.com" },
@@ -821,6 +831,14 @@ export const fr = {
     },
   },
   waitlist: {
+    errors: {
+      validationTitle: "Erreur de Validation",
+      validationDesc: "Veuillez vérifier le formulaire et réessayer.",
+      tooManyAttemptsTitle: "Trop de Tentatives",
+      tooManyAttemptsDesc: "Veuillez attendre {minutes} minutes avant de réessayer.",
+      submitErrorTitle: "Erreur",
+      submitErrorDesc: "Échec de l'envoi. Veuillez réessayer.",
+    },
     openButtonAria: "Rejoindre la liste d'attente EPIDOM",
     openButton: "Rejoindre la liste d'attente",
     title: "Rejoindre la liste d'attente EPIDOM",
@@ -836,6 +854,7 @@ export const fr = {
       company: "Votre entreprise",
     },
     submit: "Demander l'accès",
+    submitting: "Envoi en cours...",
     successTitle: "Vous êtes inscrit !",
     successDesc: "Nous vous contacterons bientôt avec les détails d'accès anticipé.",
   },
@@ -992,6 +1011,8 @@ export const fr = {
       form: {
         name: "Nom de la Matière Première",
         namePlaceholder: "ex : Farine, Sucre, Beurre",
+        sku: "SKU",
+        skuPlaceholder: "ex : FLR-T55-25KG",
         category: "Catégorie",
         selectCategory: "Sélectionner une catégorie",
         supplier: "Fournisseur",
@@ -1276,6 +1297,38 @@ export const fr = {
       update: "Mettre à Jour la Recette",
       duplicate: "Dupliquer la Recette",
 
+      // Delete confirmation
+      deleteConfirm: {
+        title: "Supprimer la Recette",
+        description: 'Êtes-vous sûr de vouloir supprimer "{name}"? Cette action ne peut pas être annulée.',
+      },
+
+      // Details section
+      details: {
+        costPerBatch: "Coût par Lot",
+        totalMaterialsCost: "Coût Total des Matières",
+        costAnalysisPricing: "Analyse des Coûts et Tarification",
+        costPerUnit: "Coût par {unit}",
+        suggestedPrice: "Prix Suggéré (marge de 2,5x)",
+        profitPerUnit: "Profit par {unit}",
+        costBreakdown: "Répartition des Coûts",
+        productionMetrics: "Métriques de Production",
+        costPerMinute: "Coût par Minute",
+        outputPerHour: "Production par Heure",
+        laborCost: "Coût de la Main-d'œuvre (estimation)",
+        laborCostEstimate: "@ 15$/h: {price}",
+        laborCostEstimate20: "@ 20$/h: {price}",
+        breakEvenUnits: "Unités de Seuil de Rentabilité/Jour",
+        breakEvenWithOverhead: "Avec 200$ de frais généraux: {units} {unit}",
+        linkedProducts: "Produits Liés ({count})",
+        linkedProductsHint:
+          "💡 Ces produits peuvent être produits en utilisant cette recette. Un produit peut être lié à plusieurs recettes (ex: 10 baguettes ou 50 baguettes).",
+        pricingRecommendations: "Recommandations de Prix",
+        wholesalePricing: "Gros (marge de 30%): {price}",
+        retailPricing: "Détail (marge de 60%): {price}",
+        premiumPricing: "Premium (marge de 70%): {price}",
+      },
+
       // Legacy keys (for backward compatibility)
       productsUsingRecipe: {
         title: "Produits Utilisant Cette Recette",
@@ -1387,6 +1440,31 @@ export const fr = {
           title: "Produits Supprimés",
           description: "{count} produits ont été supprimés avec succès.",
         },
+      },
+
+      // Details section
+      details: {
+        profitMargin: "Marge Bénéficiaire",
+        onRetailSales: "sur les ventes au détail",
+        atCostPrice: "au prix de revient",
+        sellingPrice: "Prix de Vente",
+        margin: "marge",
+        pricingFinancial: "Analyse des Prix et Financière",
+        financialSummary: "Résumé Financier",
+        stockValueAtCost: "Valeur du Stock (au prix de revient)",
+        potentialRevenue: "Revenu Potentiel (détail)",
+        potentialProfit: "Profit Potentiel",
+        profitPerUnit: "Profit par unité",
+        criticalStockAlert: "⚠️ Niveau de stock critique ! Réapprovisionnement immédiat requis.",
+        lowStockAlert: "⚠️ Le stock est faible. Envisagez de réapprovisionner bientôt.",
+        overstockedAlert:
+          "ℹ️ Le niveau de stock dépasse le maximum. Envisagez des promotions ou ajustez la production.",
+      },
+
+      // Delete confirmation
+      deleteConfirm: {
+        title: "Supprimer le Produit",
+        description: 'Êtes-vous sûr de vouloir supprimer "{name}"? Cette action ne peut pas être annulée.',
       },
     },
 
@@ -1742,6 +1820,16 @@ export const fr = {
     // Toasts
     toasts: {
       orderCreated: "Rappel de commande créé avec succès",
+    },
+
+    // Bulk Order Dialog
+    bulkOrder: {
+      lowStockItemsAvailable: "{count} article(s) à stock faible disponible(s)",
+      selectItemsToOrder: "Sélectionner les Articles à Commander",
+      itemsSelected: "{count} article(s) sélectionné(s)",
+      orderNotes: "Notes de Commande",
+      orderNotesPlaceholder: "Ajoutez des instructions spéciales ou des notes pour cette commande...",
+      orderNotesHint: "Notes optionnelles pour cette commande groupée",
     },
   },
   labels: {

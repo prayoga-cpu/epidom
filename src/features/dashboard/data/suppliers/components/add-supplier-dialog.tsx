@@ -115,7 +115,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
               form="add-supplier-form"
               disabled={createSupplier.isPending}
             >
-              {createSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {createSupplier.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
               {t("data.suppliers.addButton")}
             </Button>
           </>

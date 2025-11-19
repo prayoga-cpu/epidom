@@ -440,12 +440,12 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
           {/* Actions */}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="mr-1 h-4 w-4 hidden sm:inline" />
               {t("common.actions.export")}
             </Button>
             {batch.status !== "COMPLETED" && batch.status !== "CANCELLED" && (
               <Button>
-                <Edit className="mr-2 h-4 w-4" />
+                <Edit className="mr-1 h-4 w-4 hidden sm:inline" />
                 {t("common.actions.update")}
               </Button>
             )}

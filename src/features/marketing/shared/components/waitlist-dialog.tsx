@@ -18,13 +18,9 @@ import * as React from "react";
 import { memo } from "react";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -91,8 +87,8 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       setErrors(validation.errors);
       setIsSubmitting(false);
       toast({
-        title: "Validation Error",
-        description: "Please check the form and try again.",
+        title: t("waitlist.errors.validationTitle") || t("common.validation.error"),
+        description: t("waitlist.errors.validationDesc") || "Please check the form and try again.",
         variant: "destructive",
       });
       return;
@@ -104,8 +100,10 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       const remainingTime = Math.ceil(waitlistRateLimiter.getRemainingTime(clientId) / 60000);
       setIsSubmitting(false);
       toast({
-        title: "Too Many Attempts",
-        description: `Please wait ${remainingTime} minutes before trying again.`,
+        title: t("waitlist.errors.tooManyAttemptsTitle") || "Too Many Attempts",
+        description:
+          t("waitlist.errors.tooManyAttemptsDesc")?.replace("{minutes}", remainingTime.toString()) ||
+          `Please wait ${remainingTime} minutes before trying again.`,
         variant: "destructive",
       });
       return;
@@ -166,8 +164,11 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       setOpen(false);
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit. Please try again.",
+        title: t("waitlist.errors.submitErrorTitle") || "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : t("waitlist.errors.submitErrorDesc") || "Failed to submit. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -199,20 +200,22 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           <span className="text-sm md:text-sm lg:text-base">{t("waitlist.openButton")}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent aria-describedby="waitlist-description" className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl text-brand-primary">
-            {t("waitlist.title")}
-          </DialogTitle>
-          <DialogDescription
-            id="waitlist-description"
-            className="text-base text-brand-primary"
+      <FormDialogLayout
+        title={t("waitlist.title")}
+        description={t("waitlist.description")}
+        maxWidth="md"
+        footer={
+          <Button
+            type="submit"
+            form="waitlist-form"
+            className="btn-smooth rounded-full px-6 font-semibold bg-brand-primary text-white"
+            disabled={isSubmitting}
           >
-            {t("waitlist.description")}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form ref={formRef} onSubmit={handleSubmit} className="grid gap-5 py-4">
+            {isSubmitting ? t("waitlist.submitting") || "Submitting..." : t("waitlist.submit")}
+          </Button>
+        }
+      >
+        <form id="waitlist-form" ref={formRef} onSubmit={handleSubmit} className="grid gap-5">
           <div className="grid gap-2">
             <Label
               htmlFor="name"
@@ -286,18 +289,8 @@ export const WaitlistDialog = memo(function WaitlistDialog({
               </p>
             )}
           </div>
-
-          <DialogFooter className="mt-4">
-            <Button
-              type="submit"
-              className="btn-smooth rounded-full px-6 font-semibold bg-brand-primary text-white"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Submitting..." : t("waitlist.submit")}
-            </Button>
-          </DialogFooter>
         </form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 });

@@ -62,13 +62,13 @@ export default function SupplierDetailsDialog({
             <div className="flex gap-2">
               {onEdit && (
                 <Button variant="outline" size="sm" onClick={onEdit}>
-                  <Edit className="mr-2 h-4 w-4" />
+                  <Edit className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("common.actions.edit")}
                 </Button>
               )}
               {onDelete && (
                 <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("common.actions.delete")}
                 </Button>
               )}

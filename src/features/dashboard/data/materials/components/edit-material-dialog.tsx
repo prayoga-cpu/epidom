@@ -403,7 +403,7 @@ export default function EditMaterialDialog({
                   size="sm"
                   onClick={() => append({ supplierId: "", price: undefined as number | undefined, isPreferred: false })}
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("data.materials.form.addSupplier")}
                 </Button>
               </div>
