@@ -275,7 +275,7 @@ export function BulkAdjustmentDialog({
               onClick={() => setOpen(false)}
               disabled={adjustStockMutation.isPending}
             >
-              {t("common.cancel")}
+              {t("common.actions.cancel")}
             </Button>
             <Button
               type="submit"

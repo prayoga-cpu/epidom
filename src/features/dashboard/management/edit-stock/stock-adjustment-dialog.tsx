@@ -197,7 +197,7 @@ export function StockAdjustmentDialog({
               onClick={() => setOpen(false)}
               disabled={isSubmitting || adjustStockMutation.isPending}
             >
-              {t("common.cancel")}
+              {t("common.actions.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting || adjustStockMutation.isPending}>
               {(isSubmitting || adjustStockMutation.isPending) && (

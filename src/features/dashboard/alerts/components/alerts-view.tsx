@@ -4,7 +4,6 @@ import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertsTable } from "./alerts-table";
-import { AlertDetailsDialog } from "./alert-details-dialog";
 import PlaceOrderDialog from "./place-order-dialog";
 import { OrdersView } from "./orders-view";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -22,7 +21,6 @@ export function AlertsView() {
 
   // Dialog states
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
 
   const handleToggle = useCallback(() => {
@@ -38,12 +36,6 @@ export function AlertsView() {
   // Handle create order from alert
   const handleCreateOrder = (alert: Alert) => {
     setSelectedAlert(alert);
-    setIsOrderDialogOpen(true);
-  };
-
-  // Handle create order from details dialog (deprecated - details dialog removed)
-  const handleCreateOrderFromDetails = () => {
-    setIsDetailsDialogOpen(false);
     setIsOrderDialogOpen(true);
   };
 
@@ -72,16 +64,6 @@ export function AlertsView() {
           {isOrders ? <OrdersView /> : <AlertsTable onCreateOrder={handleCreateOrder} />}
         </CardContent>
       </Card>
-
-      {/* Alert Details Dialog - Deprecated, details now shown inline */}
-      {selectedAlert && isDetailsDialogOpen && (
-        <AlertDetailsDialog
-          open={isDetailsDialogOpen}
-          onOpenChange={setIsDetailsDialogOpen}
-          alert={selectedAlert as any}
-          onCreateOrder={handleCreateOrderFromDetails}
-        />
-      )}
 
       {/* Place Order Dialog */}
       <PlaceOrderDialog

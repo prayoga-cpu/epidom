@@ -1,0 +1,6 @@
+# Test results
+test-results/
+*.png
+*.jpg
+*.jpeg
+

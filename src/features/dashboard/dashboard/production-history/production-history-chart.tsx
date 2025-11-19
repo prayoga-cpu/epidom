@@ -1,7 +1,7 @@
 "use client";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ExportButton } from "@/components/ui/export-button";
-import DashboardCard from "../_components/dashboard-card";
+import { DashboardCard } from "../components/dashboard-card";
 import Chart from "./components/chart";
 import { useMemo } from "react";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";

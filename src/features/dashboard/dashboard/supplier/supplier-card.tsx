@@ -9,7 +9,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { useSuppliers } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
-import DashboardCard from "../_components/dashboard-card";
+import { DashboardCard } from "../components/dashboard-card";
 
 export default function SupplierCard() {
   const { t } = useI18n();

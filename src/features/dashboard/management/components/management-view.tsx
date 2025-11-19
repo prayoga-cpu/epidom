@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecipeProductionCard } from "../recipe-production/recipe-production";
 import { ProductionHistoryCard } from "../production-history/production-history";
@@ -97,11 +97,11 @@ export function ManagementView() {
   const [deliveryToEdit, setDeliveryToEdit] = useState<SupplierDelivery | null>(null);
 
   // Set first delivery as selected when data loads
-  useState(() => {
+  useEffect(() => {
     if (deliveries.length > 0 && !selectedDelivery) {
       setSelectedDelivery(deliveries[0]);
     }
-  });
+  }, [deliveries, selectedDelivery]);
 
   // Handler for updating status
   const handleUpdateStatus = (delivery: SupplierDelivery) => {

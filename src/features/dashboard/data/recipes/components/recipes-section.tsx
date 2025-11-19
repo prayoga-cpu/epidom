@@ -40,12 +40,15 @@ import {
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import {
   SectionLoadingState,
+  SectionErrorState,
   FilterSection,
   ItemCardGrid,
   BaseItemCard,
   type FilterField,
 } from "../../components";
 import LoadingPage from "@/features/loading/loading-page";
+import { useBulkSelection } from "../../hooks/use-bulk-selection";
+import { useDialogState } from "../../hooks/use-dialog-state";
 
 type SortField =
   | "name"
@@ -79,19 +82,15 @@ export function RecipesSection() {
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [selectedRecipe, setSelectedRecipe] = useState<RecipeWithIngredients | null>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  // Duplicate dialog is not part of useDialogState, handle separately
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bulkSelectMode, setBulkSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // API hooks
   const {
     data: recipesData,
     isLoading,
     error,
+    refetch,
   } = useRecipes(storeId, {
     search: searchQuery || undefined,
     category: categoryFilter,
@@ -108,49 +107,36 @@ export function RecipesSection() {
   const recipes = recipesData?.recipes || [];
   const total = recipesData?.total || 0;
 
-  // Bulk selection handlers
-  const toggleBulkSelect = () => {
-    setBulkSelectMode(!bulkSelectMode);
-    setSelectedIds(new Set());
-  };
+  // Use reusable hooks for dialog and bulk selection state
+  const {
+    selectedItem: selectedRecipe,
+    viewDialogOpen,
+    editDialogOpen,
+    deleteDialogOpen,
+    setViewDialogOpen,
+    setEditDialogOpen,
+    setDeleteDialogOpen,
+    setSelectedItem: setSelectedRecipe,
+    handleView,
+    handleEdit,
+    handleDeleteClick: handleDeleteClickDialog,
+  } = useDialogState<RecipeWithIngredients>();
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === recipes.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(recipes.map((r) => r.id)));
-    }
-  };
-
-  const toggleSelectItem = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
+  const {
+    bulkSelectMode,
+    selectedIds,
+    selectedCount,
+    toggleBulkSelect,
+    toggleSelectAll,
+    toggleSelectItem,
+    clearSelection,
+    isSelected,
+  } = useBulkSelection(recipes);
 
   // Action handlers
-  const handleView = (recipe: RecipeWithIngredients) => {
-    setSelectedRecipe(recipe);
-    setViewDialogOpen(true);
-  };
-
-  const handleEdit = (recipe: RecipeWithIngredients) => {
-    setSelectedRecipe(recipe);
-    setEditDialogOpen(true);
-  };
-
   const handleDuplicate = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
     setDuplicateDialogOpen(true);
-  };
-
-  const handleDeleteClick = (recipe: RecipeWithIngredients) => {
-    setSelectedRecipe(recipe);
-    setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -181,8 +167,7 @@ export function RecipesSection() {
           selectedIds.size.toString()
         ) || "",
       });
-      setSelectedIds(new Set());
-      setBulkSelectMode(false);
+      clearSelection();
     } catch (error) {
       toast.error(t("common.error"), {
         description: error instanceof Error ? error.message : t("messages.registrationFailed"),
@@ -237,14 +222,12 @@ export function RecipesSection() {
 
   if (error) {
     return (
-      <Card className="overflow-hidden shadow-md">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-destructive font-semibold">{t("messages.errorLoadingRecipes")}</p>
-          <p className="text-muted-foreground text-sm">
-            {error instanceof Error ? error.message : t("common.validation.unexpectedError")}
-          </p>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        title={t("common.error")}
+        message={error.message || t("messages.errorLoadingRecipes")}
+        onRetry={() => refetch()}
+        retryLabel={t("common.actions.retry")}
+      />
     );
   }
 
@@ -286,7 +269,7 @@ export function RecipesSection() {
                   {t("data.recipes.addButton")}
                 </Button>
               } />
-              {bulkSelectMode && selectedIds.size > 0 && (
+              {bulkSelectMode && selectedCount > 0 && (
                 <Button
                   variant="destructive"
                   size="sm"
@@ -299,7 +282,7 @@ export function RecipesSection() {
                   ) : (
                     <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
                   )}
-                  {t("actions.delete")} ({selectedIds.size})
+                  {t("actions.delete")} ({selectedCount})
                 </Button>
               )}
               <Button
@@ -378,11 +361,11 @@ export function RecipesSection() {
           {bulkSelectMode && (
             <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
               <Checkbox
-                checked={selectedIds.size === recipes.length && recipes.length > 0}
+                checked={selectedCount === recipes.length && recipes.length > 0}
                 onCheckedChange={toggleSelectAll}
               />
               <span className="text-sm font-medium">
-                {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {recipes.length}{" "}
+                {t("common.selectAll")} ({selectedCount} {t("common.of")} {recipes.length}{" "}
                 {t("common.selected")})
               </span>
             </div>
@@ -399,25 +382,14 @@ export function RecipesSection() {
           {/* Recipes Grid */}
           <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }}>
             {recipes.map((recipe) => {
-              const isSelected = selectedIds.has(recipe.id);
               const costPerUnit = recipe.costPerBatch / recipe.yieldQuantity;
 
               return (
                 <BaseItemCard
                   key={recipe.id}
-                  isSelected={isSelected}
+                  isSelected={isSelected(recipe.id)}
                   bulkSelectMode={bulkSelectMode}
-                  onSelect={(checked) => {
-                    if (checked) {
-                      setSelectedIds((prev) => new Set(prev).add(recipe.id));
-                    } else {
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        next.delete(recipe.id);
-                        return next;
-                      });
-                    }
-                  }}
+                  onSelect={() => toggleSelectItem(recipe.id)}
                   contentClassName="!px-4"
                 >
                     <div className="mb-2 flex items-start justify-between">
@@ -537,7 +509,7 @@ export function RecipesSection() {
                               variant="ghost"
                               size="sm"
                               className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDeleteClick(recipe)}
+                              onClick={() => handleDeleteClickDialog(recipe)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -584,7 +556,7 @@ export function RecipesSection() {
             }}
             onDelete={(recipeId) => {
               setViewDialogOpen(false);
-              handleDeleteClick(selectedRecipe);
+              handleDeleteClickDialog(selectedRecipe);
             }}
           />
           <EditRecipeDialog

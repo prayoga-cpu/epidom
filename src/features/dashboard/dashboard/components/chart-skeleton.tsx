@@ -1,4 +1,4 @@
-import DashboardCard from "./dashboard-card";
+import { DashboardCard } from "./dashboard-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/components/lang/i18n-provider";
 
