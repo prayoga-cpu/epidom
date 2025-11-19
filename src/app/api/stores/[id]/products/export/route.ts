@@ -64,7 +64,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Return CSV file using utility
     return createCSVResponse(csv, "products-export");
   } catch (error) {
-    console.error("Error exporting products:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

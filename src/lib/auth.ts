@@ -30,15 +30,6 @@ export const authOptions: NextAuthOptions = {
           if (!isValid) {
             return null;
           }
-
-          console.log("[NextAuth Authorize] User from DB:", {
-            id: user.id,
-            email: user.email,
-            currency: user.currency,
-            locale: user.locale,
-            timezone: user.timezone,
-          });
-
           // Return user object with all fields needed
           return {
             id: user.id,
@@ -51,7 +42,6 @@ export const authOptions: NextAuthOptions = {
             phone: user.phone,
           };
         } catch (error) {
-          console.error("Auth error:", error);
           return null;
         }
       },
@@ -83,7 +73,6 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        console.log("[NextAuth JWT] Initial user login:", user);
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
@@ -96,11 +85,8 @@ export const authOptions: NextAuthOptions = {
 
       // Update token on session update (e.g., when user changes currency in profile)
       if (trigger === "update" && session) {
-        console.log("[NextAuth JWT] Session update triggered with:", session);
-
         if (session.currency !== undefined) {
           token.currency = session.currency;
-          console.log("[NextAuth JWT] Updated token.currency to:", token.currency);
         }
         if (session.locale !== undefined) {
           token.locale = session.locale;
@@ -117,13 +103,11 @@ export const authOptions: NextAuthOptions = {
         if (session.image !== undefined) {
           // Allow null to remove image
           token.image = session.image === "" ? null : session.image;
-          console.log("[NextAuth JWT] Updated token.image to:", token.image);
         }
       }
 
       // Refresh token from database if fields are missing (for existing sessions)
       if (!token.currency || !token.locale) {
-        console.log("[NextAuth JWT] Missing fields in token, refreshing from database...");
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
@@ -144,10 +128,8 @@ export const authOptions: NextAuthOptions = {
             token.phone = dbUser.phone;
             token.name = dbUser.name;
             token.image = dbUser.image;
-            console.log("[NextAuth JWT] Token refreshed from DB with currency:", token.currency);
           }
         } catch (error) {
-          console.error("[NextAuth JWT] Error refreshing token from DB:", error);
         }
       }
 

@@ -63,15 +63,12 @@ export function ContactMap() {
             shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
           });
         } catch (error) {
-          console.warn("[ContactMap] Error setting up Leaflet icons:", error);
           setMapError(true);
         }
       }).catch((error) => {
-        console.warn("[ContactMap] Error loading Leaflet:", error);
         setMapError(true);
       });
     } catch (error) {
-      console.warn("[ContactMap] Error in useEffect:", error);
       setMapError(true);
     }
   }, []);

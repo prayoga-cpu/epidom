@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
       detailsSubmitted: accountDetails?.details_submitted || false,
     });
   } catch (error: any) {
-    console.error("[API] Stripe Connect status error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to check onboarding status" },
       { status: 500 }

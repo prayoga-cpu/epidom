@@ -158,7 +158,6 @@ export const useUpdateProfile = () => {
       // This prevents duplicate error toasts
       // Only log in development to avoid console noise in production
       if (process.env.NODE_ENV === "development") {
-        console.error("[useUpdateProfile] Profile update failed:", error);
       }
     },
   });

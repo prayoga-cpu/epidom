@@ -132,7 +132,6 @@ export function AvatarCropper({
       const croppedImageUrl = await createCroppedImage(imageSrc, croppedAreaPixels);
       onCropComplete(croppedImageUrl);
     } catch (error) {
-      console.error("Error cropping image:", error);
       // Fallback: use original image if cropping fails
       onCropComplete(imageSrc);
     } finally {

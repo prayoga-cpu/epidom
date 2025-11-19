@@ -95,7 +95,6 @@ export function EditPersonalInfoDialog({
       onUpdate?.();
       onOpenChange(false);
     } catch (error) {
-      console.error("Error updating profile:", error);
       toast.error(t("common.error"), {
         description: error instanceof Error ? error.message : t("profile.errors.updateFailed"),
       });

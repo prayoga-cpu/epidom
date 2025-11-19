@@ -84,8 +84,6 @@ export async function POST(
 
     // Handle business logic errors
     if (error instanceof Error) {
-      console.error("Error adjusting stock:", error.message);
-
       if (error.message.includes("not found")) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
           status: 404,
@@ -100,7 +98,6 @@ export async function POST(
       }
     }
 
-    console.error("Error adjusting stock:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

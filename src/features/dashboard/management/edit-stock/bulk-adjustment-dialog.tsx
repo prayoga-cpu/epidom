@@ -249,7 +249,6 @@ export function BulkAdjustmentDialog({
         });
       }
     } catch (error) {
-      console.error("Error in bulk adjustment:", error);
       toast({
         variant: "destructive",
         title: t("common.error"),

@@ -36,7 +36,6 @@ export function getStorageAdapter(): StorageAdapter {
     //   return new UploadThingAdapter();
 
     default:
-      console.warn(`Unknown storage provider: ${provider}. Falling back to Vercel Blob.`);
       return new VercelBlobAdapter();
   }
 }

@@ -104,7 +104,6 @@ export function EditBusinessInfoDialog({
       onUpdate?.();
       onOpenChange(false);
     } catch (error) {
-      console.error("Error updating business:", error);
       toast.error(t("common.error"), {
         description:
           error instanceof Error ? error.message : t("profile.errors.businessUpdateFailed"),

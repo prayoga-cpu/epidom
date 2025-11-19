@@ -6,6 +6,7 @@ import { businessService } from "@/lib/services";
 import { createIngredientSchema, materialFilterSchema } from "@/lib/validation/inventory.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/stores/[id]/materials
@@ -78,7 +79,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       );
     }
 
-    console.error("Error fetching materials:", error);
+    logger.error("Error fetching materials", error, { endpoint: "GET /api/stores/[id]/materials" });
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -152,8 +153,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     // Handle business logic errors
     if (error instanceof Error) {
-      console.error("Error creating material:", error.message);
-
       // Check for specific error messages
       if (error.message.includes("SKU already exists")) {
         return NextResponse.json(
@@ -163,7 +162,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
     }
 
-    console.error("Error creating material:", error);
+    logger.error("Error creating material", error, { endpoint: "POST /api/stores/[id]/materials" });
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

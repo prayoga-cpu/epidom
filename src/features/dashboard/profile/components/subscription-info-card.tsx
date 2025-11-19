@@ -51,7 +51,6 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
       // Redirect to Stripe customer portal
       window.location.href = data.url;
     } catch (error: any) {
-      console.error("Billing portal error:", error);
       setPortalError(error.message || "Failed to open billing portal");
       setIsLoadingPortal(false);
     }

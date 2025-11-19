@@ -85,7 +85,6 @@ export async function exportToExcel<T extends Record<string, any>>(
 ): Promise<void> {
   // Check if xlsx library is available
   if (typeof window === "undefined") {
-    console.error("Excel export only works in browser environment");
     return;
   }
 
@@ -117,7 +116,6 @@ export async function exportToExcel<T extends Record<string, any>>(
     // Write to file
     XLSX.writeFile(workbook, `${filename}.xlsx`);
   } catch (error) {
-    console.error("Failed to export to Excel:", error);
     // Fallback to CSV
     exportToCSV(data, filename, columns);
   }
@@ -177,7 +175,6 @@ export async function exportToPDF<T extends Record<string, any>>(
     // Save PDF
     doc.save(`${filename}.pdf`);
   } catch (error) {
-    console.error("Failed to export to PDF:", error);
     // Fallback to CSV
     exportToCSV(data, filename, columns);
   }
@@ -204,7 +201,6 @@ export async function exportData<T extends Record<string, any>>(
       await exportToPDF(data, filename, columns, title);
       break;
     default:
-      console.error(`Unsupported export format: ${format}`);
   }
 }
 
@@ -220,7 +216,6 @@ export async function copyToClipboard<T extends Record<string, any>>(
   try {
     await navigator.clipboard.writeText(csv);
   } catch (error) {
-    console.error("Failed to copy to clipboard:", error);
     // Fallback for older browsers
     const textArea = document.createElement("textarea");
     textArea.value = csv;
@@ -231,7 +226,6 @@ export async function copyToClipboard<T extends Record<string, any>>(
     try {
       document.execCommand("copy");
     } catch (err) {
-      console.error("Fallback copy failed:", err);
     }
     document.body.removeChild(textArea);
   }
