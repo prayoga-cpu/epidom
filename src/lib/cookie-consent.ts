@@ -55,7 +55,6 @@ export function getCookiePreferences(): CookiePreferences | null {
       timestamp: preferences.timestamp ?? Date.now(),
     };
   } catch (error) {
-    console.error("Error reading cookie preferences:", error);
     return null;
   }
 }
@@ -97,7 +96,6 @@ export function setCookiePreferences(preferences: Partial<CookiePreferences>): v
       })
     );
   } catch (error) {
-    console.error("Error saving cookie preferences:", error);
   }
 }
 

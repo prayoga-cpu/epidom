@@ -5,12 +5,9 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -75,6 +72,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   });
   const suppliers = suppliersData?.suppliers || [];
 
+  // Note: Type assertions (as any) are required due to TypeScript limitations
+  // with React Hook Form's useFieldArray when using dynamic field names.
+  // This is a known issue: https://github.com/react-hook-form/react-hook-form/issues/7764
   const form = useForm({
     resolver: zodResolver(formSchema) as any,
     defaultValues: FORM_DEFAULTS.material,
@@ -82,9 +82,11 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
   const { fields, append, remove } = useFieldArray({
     control: form.control as any,
-    name: "suppliers" as any,
+    name: "suppliers" as any, // Type assertion needed for dynamic field arrays
   });
 
+  // Note: data type is any due to React Hook Form's useFieldArray type limitations
+  // The actual data structure is validated by Zod schema before reaching this function
   async function onSubmit(data: any) {
     try {
       // Filter out invalid suppliers (those with "none" or empty supplierId)
@@ -133,19 +135,31 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px]">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-1.5">
-          <DialogTitle className="text-lg font-bold sm:text-xl">
-            {t("data.materials.addTitle")}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            {t("data.materials.addDescription")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-1.5">
+      <FormDialogLayout
+        title={t("data.materials.addTitle")}
+        description={t("data.materials.addDescription")}
+        maxWidth="xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createMaterial.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-material-form"
+              disabled={createMaterial.isPending}
+            >
+              {createMaterial.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+              {t("data.materials.addButton")}
+            </Button>
+          </>
+        }
+      >
           <Form {...form}>
             <form id="add-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
             {/* Basic Information */}
@@ -356,7 +370,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   size="sm"
                   onClick={() => append({ supplierId: "", price: undefined as number | undefined, isPreferred: false })}
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("data.materials.form.addSupplier")}
                 </Button>
               </div>
@@ -407,7 +421,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                     <div className="grid items-start grid-cols-2 gap-1.5">
                       <FormField
                         control={form.control}
-                        name={`suppliers.${index}.price` as any}
+                        name={`suppliers.${index}.price` as any} // Type assertion needed for dynamic field paths
                         render={({ field }) => (
                           <FormItem className="space-y-0.5">
                             <FormLabel className="text-sm">{t("data.materials.form.supplierPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
@@ -430,7 +444,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
                       <FormField
                         control={form.control}
-                        name={`suppliers.${index}.isPreferred` as any}
+                        name={`suppliers.${index}.isPreferred` as any} // Type assertion needed for dynamic field paths
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center space-y-0 space-x-2 pt-8">
                             <FormControl>
@@ -463,32 +477,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 </div>
               ))}
             </div>
-            </form>
-          </Form>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-1.5">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={createMaterial.isPending}
-            >
-              {t("common.actions.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="add-material-form"
-              disabled={createMaterial.isPending}
-            >
-              {createMaterial.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("data.materials.addButton")}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
+          </form>
+        </Form>
+      </FormDialogLayout>
     </Dialog>
   );
 }

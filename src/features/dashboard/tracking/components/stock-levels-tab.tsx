@@ -149,11 +149,11 @@ export function StockLevelsTab() {
   // Export data
   const stockExportData = finalFilteredItems.map((item) => ({
     Name: item.name,
-    Type: item.type === "material" ? "Material" : "Product",
-    "Current Stock": item.currentStock,
-    Unit: item.unit,
-    "Min Stock": item.minStock,
-    "Max Stock": item.maxStock,
+    Type: item.type === "material" ? t("common.material") : t("common.product"),
+    [t("data.products.form.currentStock") || "Current Stock"]: item.currentStock,
+    [t("data.products.form.unit") || "Unit"]: item.unit,
+    [t("data.products.form.minStock") || "Min Stock"]: item.minStock,
+    [t("data.products.form.maxStock") || "Max Stock"]: item.maxStock,
   }));
 
   return (

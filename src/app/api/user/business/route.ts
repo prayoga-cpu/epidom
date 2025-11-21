@@ -33,7 +33,6 @@ export async function GET() {
 
     return NextResponse.json(createSuccessResponse(business));
   } catch (error) {
-    console.error("Error fetching business:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -92,8 +91,6 @@ export async function POST(request: Request) {
         );
       }
     }
-
-    console.error("Error creating business:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -139,8 +136,6 @@ export async function PATCH(request: Request) {
         { status: 400 }
       );
     }
-
-    console.error("Error updating business:", error);
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

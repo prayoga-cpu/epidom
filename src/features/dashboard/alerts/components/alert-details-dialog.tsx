@@ -241,7 +241,7 @@ export function AlertDetailsDialog({
           </Button>
           {onCreateOrder && (
             <Button onClick={onCreateOrder}>
-              <ShoppingCart className="mr-2 h-4 w-4" />
+              <ShoppingCart className="mr-1 h-4 w-4 hidden sm:inline" />
               {t("alerts.actions.createOrder")}
             </Button>
           )}

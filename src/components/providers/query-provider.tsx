@@ -2,7 +2,8 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
+import { shouldPoll } from "@/lib/config/realtime.config";
 
 /**
  * Query Provider
@@ -14,6 +15,8 @@ import { useState, type ReactNode } from "react";
  * - Automatic caching and background refetching
  * - Request deduplication
  * - Optimistic updates
+ * - Smart polling (hanya jika tab aktif & online)
+ * - Real-time updates dengan tiered polling strategy
  * - DevTools for debugging (development only)
  */
 
@@ -29,9 +32,8 @@ export function QueryProvider({ children }: QueryProviderProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Time before data is considered stale (increased for better caching)
-            // Dashboard data doesn't change frequently, so we can cache longer
-            staleTime: 2 * 60 * 1000, // 2 minutes (optimized for dashboard)
+            // Default stale time - akan di-override oleh individual queries
+            staleTime: 30 * 1000, // 30 seconds (reduced untuk real-time)
 
             // Time before inactive queries are garbage collected
             gcTime: 10 * 60 * 1000, // 10 minutes (increased for better cache persistence)
@@ -39,11 +41,25 @@ export function QueryProvider({ children }: QueryProviderProps) {
             // Retry failed requests
             retry: 1,
 
-            // Refetch on window focus disabled to avoid unnecessary requests
-            refetchOnWindowFocus: false,
+            // Smart refetch on window focus - hanya jika data stale
+            refetchOnWindowFocus: true,
 
             // Refetch on reconnect to ensure data freshness after connection loss
             refetchOnReconnect: true,
+
+            // Smart polling - hanya jika tab aktif dan online
+            refetchInterval: (query) => {
+              // Get polling interval from query meta
+              const interval = query.meta?.refetchInterval as number | false | undefined;
+
+              // Jika interval false atau undefined, tidak poll
+              if (interval === false || interval === undefined) {
+                return false;
+              }
+
+              // Hanya poll jika tab aktif dan online
+              return shouldPoll() ? interval : false;
+            },
           },
           mutations: {
             // Retry failed mutations once
@@ -52,6 +68,22 @@ export function QueryProvider({ children }: QueryProviderProps) {
         },
       })
   );
+
+  // Listen to visibility changes untuk smart polling
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // Trigger refetch check when tab becomes visible
+      if (document.visibilityState === "visible") {
+        // TanStack Query akan otomatis check refetchInterval
+        // ketika visibility berubah
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

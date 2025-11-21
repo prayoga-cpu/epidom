@@ -175,7 +175,13 @@ export function useSuppliers(storeId: string, filters: SupplierFilterInput) {
       return response.json();
     },
     enabled: !!storeId,
-    staleTime: 30000, // 30 seconds
+    // Real-time configuration: Static data - no polling, longer stale time
+    staleTime: 5 * 60 * 1000, // 5 minutes (suppliers don't change often)
+    refetchInterval: false, // No polling for static data
+    refetchOnWindowFocus: true, // Refetch on window focus if stale
+    meta: {
+      refetchInterval: false, // Store in meta for smart polling
+    },
   });
 }
 

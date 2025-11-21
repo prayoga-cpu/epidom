@@ -6,12 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -38,7 +35,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { useCreateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
-import { ShoppingCart, Loader2, Package } from "lucide-react";
+import { ShoppingCart, Loader2, Package, Phone } from "lucide-react";
 import { useParams } from "next/navigation";
 
 // Zod validation schema
@@ -152,14 +149,25 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[550px]">
-        <DialogHeader>
-          <DialogTitle>{t("alerts.createOrderDialog.title")}</DialogTitle>
-          <DialogDescription>{t("alerts.createOrderDialog.description")}</DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={t("alerts.createOrderDialog.title")}
+        description={t("alerts.createOrderDialog.description")}
+        maxWidth="lg"
+        footer={
+          <FormDialogFooter
+            formId="place-order-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={t("alerts.createOrderDialog.submit")}
+            isPending={createOrder.isPending}
+          />
+        }
+      >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            id="place-order-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4"
+          >
             {/* Alert Info (if from alert) */}
             {alert && (
               <div className="bg-muted/50 space-y-2 rounded-lg p-3">
@@ -170,8 +178,9 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
                   </Badge>
                 </div>
                 <p className="text-muted-foreground text-xs">
-                  Current stock: {alert.currentStock} {alert.unit} / Min: {alert.minStock}{" "}
-                  {alert.unit} ({alert.stockPercentage}%)
+                  {t("alerts.detailsDialog.current")} {t("common.stock").toLowerCase()}:{" "}
+                  {alert.currentStock} {alert.unit} / {t("alerts.detailsDialog.minimum")}:{" "}
+                  {alert.minStock} {alert.unit} ({alert.stockPercentage}%)
                 </p>
               </div>
             )}
@@ -214,6 +223,41 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
               )}
             />
 
+            {/* Supplier Phone Number Display */}
+            {(() => {
+              const selectedSupplierId = form.watch("supplierId");
+              const selectedSupplier = alert?.suppliers?.find((s) => s.id === selectedSupplierId);
+              const phoneNumber = selectedSupplier?.phone;
+
+              if (!selectedSupplierId || !selectedSupplier) return null;
+
+              return (
+                <div className="bg-muted/30 rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Phone className="text-muted-foreground h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {t("alerts.createOrderDialog.supplierPhone")}:
+                      </span>
+                    </div>
+                    {phoneNumber ? (
+                      <a
+                        href={`tel:${phoneNumber}`}
+                        className="text-primary hover:text-primary/80 flex items-center gap-2 text-sm font-medium underline transition-colors"
+                        aria-label={t("alerts.createOrderDialog.callSupplier")}
+                      >
+                        {phoneNumber}
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground text-sm italic">
+                        {t("alerts.createOrderDialog.noPhoneAvailable")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Material - Hidden field since we already have materialId from alert */}
             <input type="hidden" {...form.register("materialId")} />
 
@@ -221,7 +265,9 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
             {alert && (
               <div className="rounded-md border p-3">
                 <p className="text-sm font-medium">{alert.materialName}</p>
-                <p className="text-muted-foreground text-xs">SKU: {alert.materialSku}</p>
+                <p className="text-muted-foreground text-xs">
+                  {t("data.materials.form.sku")}: {alert.materialSku}
+                </p>
               </div>
             )}
 
@@ -330,25 +376,9 @@ export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrd
                 </FormItem>
               )}
             />
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={createOrder.isPending}
-              >
-                {t("common.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={createOrder.isPending}>
-                {createOrder.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                {t("alerts.createOrderDialog.submit")}
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

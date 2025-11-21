@@ -112,7 +112,6 @@ export function ImageUpload({
             await deleteBlobImage(oldImageUrl);
           } catch (error) {
             // Continue with upload even if delete fails
-            console.warn("Failed to delete old image:", error);
           }
         }
 
@@ -175,8 +174,6 @@ export function ImageUpload({
           description: message,
           variant: "destructive",
         });
-
-        console.error("Upload error:", error);
       } finally {
         setIsUploading(false);
       }
@@ -263,7 +260,6 @@ export function ImageUpload({
         await deleteBlobImage(currentUrl);
       } catch (error) {
         // Continue with removal even if delete fails
-        console.warn("Failed to delete image from storage:", error);
       }
     }
 

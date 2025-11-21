@@ -88,8 +88,6 @@ export async function DELETE(
 
     // Handle business logic errors
     if (error instanceof Error) {
-      console.error("Error bulk deleting materials:", error.message);
-
       if (error.message.includes("do not belong")) {
         return NextResponse.json(
           createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
@@ -108,7 +106,6 @@ export async function DELETE(
       }
     }
 
-    console.error("Error bulk deleting materials:", error);
     return NextResponse.json(
       createErrorResponse(
         ApiErrorCode.INTERNAL_ERROR,

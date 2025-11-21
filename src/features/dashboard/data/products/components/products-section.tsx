@@ -51,7 +51,11 @@ import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-
 import {
   ItemCardGrid,
   BaseItemCard,
+  SectionErrorState,
+  SectionLoadingState,
 } from "../../components";
+import { useBulkSelection } from "../../hooks/use-bulk-selection";
+import { useDialogState } from "../../hooks/use-dialog-state";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
@@ -72,16 +76,8 @@ export function ProductsSection() {
     take: 20,
   });
 
-  // UI state
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bulkSelectMode, setBulkSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
   // API hooks
-  const { data, isLoading, error } = useProducts(storeId, filters);
+  const { data, isLoading, error, refetch } = useProducts(storeId, filters);
   const deleteProduct = useDeleteProduct(storeId);
   const bulkDeleteProducts = useBulkDeleteProducts(storeId);
   const exportProducts = useExportProducts();
@@ -97,6 +93,32 @@ export function ProductsSection() {
   const productLimitReached = !isLoadingUsage && !canCreateMore;
   // Only show badge if limit exists and is not unlimited (null or Infinity means unlimited)
   const showLimitBadge = productUsage && productUsage.limit !== null && productUsage.limit !== Infinity;
+
+  // Use reusable hooks for dialog and bulk selection state
+  const {
+    selectedItem: selectedProduct,
+    viewDialogOpen,
+    editDialogOpen,
+    deleteDialogOpen,
+    setViewDialogOpen,
+    setEditDialogOpen,
+    setDeleteDialogOpen,
+    setSelectedItem: setSelectedProduct,
+    handleView,
+    handleEdit,
+    handleDeleteClick: handleDeleteClickDialog,
+  } = useDialogState<Product>();
+
+  const {
+    bulkSelectMode,
+    selectedIds,
+    selectedCount,
+    toggleBulkSelect,
+    toggleSelectAll,
+    toggleSelectItem,
+    clearSelection,
+    isSelected,
+  } = useBulkSelection(products);
 
   // Helper function to determine stock status
   const getStockStatus = (product: Product): StockFilter => {
@@ -128,37 +150,7 @@ export function ProductsSection() {
     return ((selling - cost) / selling) * 100;
   };
 
-  // Bulk selection handlers
-  const toggleBulkSelect = () => {
-    setBulkSelectMode(!bulkSelectMode);
-    setSelectedIds(new Set());
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === products.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(products.map((p) => p.id)));
-    }
-  };
-
-
   // Action handlers
-  const handleView = (product: Product) => {
-    setSelectedProduct(product);
-    setViewDialogOpen(true);
-  };
-
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product);
-    setEditDialogOpen(true);
-  };
-
-  const handleDeleteClick = (product: Product) => {
-    setSelectedProduct(product);
-    setDeleteDialogOpen(true);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!selectedProduct) return;
 
@@ -180,8 +172,7 @@ export function ProductsSection() {
       toast.success(
         t("data.products.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
       );
-      setSelectedIds(new Set());
-      setBulkSelectMode(false);
+      clearSelection();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete products");
     }
@@ -226,47 +217,27 @@ export function ProductsSection() {
 
   const hasActiveFilters = filters.search || filters.category;
 
-  // Show loading state - keep card structure for consistent layout
+  // Show loading state
   if (isLoading) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <Download className="mr-2 h-4 w-4" />
-                {t("common.actions.export")}
-              </Button>
-              <Button size="sm" disabled className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                {t("data.products.addButton")}
-              </Button>
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {t("common.actions.view")}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-        </CardContent>
-      </Card>
+      <SectionLoadingState
+        title={t("data.products.pageTitle")}
+        exportLabel={t("common.actions.export")}
+        addLabel={t("data.products.addButton")}
+        selectLabel={t("common.actions.view")}
+      />
     );
   }
 
   // Show error state
   if (error) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
-          <p className="text-destructive">Error loading products</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        title={t("common.error")}
+        message={error.message || t("messages.errorLoadingProducts")}
+        onRetry={() => refetch()}
+        retryLabel={t("common.actions.retry")}
+      />
     );
   }
 
@@ -286,20 +257,22 @@ export function ProductsSection() {
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={exportProducts.isPending || !advancedReportsAccess}
-                    className="w-full md:w-auto"
-                  >
-                    {exportProducts.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    {t("common.actions.export")}
-                  </Button>
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      disabled={exportProducts.isPending || !advancedReportsAccess}
+                      className="w-full md:w-auto"
+                    >
+                      {exportProducts.isPending ? (
+                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                      ) : (
+                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+                      )}
+                      {t("common.actions.export")}
+                    </Button>
+                  </div>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -316,7 +289,7 @@ export function ProductsSection() {
                         className="w-full sm:w-auto"
                         disabled={productLimitReached}
                       >
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                         {t("data.products.addButton")}
                       </Button>
                     </AddProductDialog>
@@ -333,10 +306,10 @@ export function ProductsSection() {
                   </TooltipContent>
                 )}
               </Tooltip>
-              {bulkSelectMode && selectedIds.size > 0 && (
+              {bulkSelectMode && selectedCount > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {t("actions.delete")} ({selectedIds.size})
+                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
+                  {t("actions.delete")} ({selectedCount})
                 </Button>
               )}
               <Button
@@ -347,12 +320,12 @@ export function ProductsSection() {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-2 h-4 w-4" />
+                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("common.actions.view")}
                   </>
                 )}
@@ -391,7 +364,7 @@ export function ProductsSection() {
                 }}
               >
                 <SelectTrigger className="w-full md:w-[180px]">
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                  <ArrowUpDown className="mr-1 h-4 w-4 hidden sm:inline" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -421,7 +394,7 @@ export function ProductsSection() {
               {/* Clear Filters */}
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
-                  <X className="mr-2 h-4 w-4" />
+                  <X className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("common.actions.clearFilters")}
                 </Button>
               )}
@@ -431,11 +404,11 @@ export function ProductsSection() {
             {bulkSelectMode && (
               <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
                 <Checkbox
-                  checked={selectedIds.size === products.length && products.length > 0}
+                  checked={selectedCount === products.length && products.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll")} ({selectedIds.size} {t("common.of")} {products.length}{" "}
+                  {t("common.selectAll")} ({selectedCount} {t("common.of")} {products.length}{" "}
                   {t("common.selected")})
                 </span>
               </div>
@@ -455,24 +428,13 @@ export function ProductsSection() {
             {products.map((product) => {
               const stockStatus = getStockStatus(product);
               const profitMargin = getProfitMargin(product);
-              const isSelected = selectedIds.has(product.id);
 
               return (
                 <BaseItemCard
                   key={product.id}
-                  isSelected={isSelected}
+                  isSelected={isSelected(product.id)}
                   bulkSelectMode={bulkSelectMode}
-                  onSelect={(checked) => {
-                    if (checked) {
-                      setSelectedIds((prev) => new Set(prev).add(product.id));
-                    } else {
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        next.delete(product.id);
-                        return next;
-                      });
-                    }
-                  }}
+                  onSelect={() => toggleSelectItem(product.id)}
                   contentClassName="!px-4"
                 >
                     <div className="mb-2 flex items-start justify-between">
@@ -481,7 +443,9 @@ export function ProductsSection() {
                           {product.name}
                         </h3>
                         {product.sku && (
-                          <p className="text-muted-foreground text-xs">SKU: {product.sku}</p>
+                          <p className="text-muted-foreground text-xs">
+                            SKU: {product.sku}
+                          </p>
                         )}
                       </div>
 
@@ -585,7 +549,7 @@ export function ProductsSection() {
                               variant="ghost"
                               size="sm"
                               className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDeleteClick(product)}
+                              onClick={() => handleDeleteClickDialog(product)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>

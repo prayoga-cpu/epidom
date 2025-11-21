@@ -66,7 +66,7 @@ export function StoreSwitcher() {
         onClick={handleCreateStore}
         className="h-9 w-[140px] text-xs sm:w-[160px] sm:text-sm lg:h-9 lg:w-auto lg:text-sm"
       >
-        <Store className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4 lg:mr-2 lg:h-4 lg:w-4" />
+        <Store className="mr-1 h-3.5 w-3.5 hidden sm:inline sm:mr-1 sm:h-4 sm:w-4 lg:mr-1 lg:h-4 lg:w-4" />
         <span className="hidden sm:inline lg:inline">{t("dashboard.storeSelector.createFirst")}</span>
         <span className="sm:hidden">Store</span>
       </Button>
@@ -132,7 +132,7 @@ export function StoreSwitcher() {
             <CommandSeparator />
             <CommandGroup>
               <CommandItem onSelect={handleCreateStore} className="cursor-pointer">
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                 {t("dashboard.storeSelector.createNew")}
               </CommandItem>
             </CommandGroup>

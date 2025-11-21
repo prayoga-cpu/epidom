@@ -295,7 +295,7 @@ export function SupplierDeliveriesTable({
                   {/* Status Filter */}
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full sm:w-[180px]">
-                      <Filter className="mr-2 h-4 w-4" />
+                      <Filter className="mr-1 h-4 w-4 hidden sm:inline" />
                       <SelectValue
                         placeholder={t("management.delivery.filters.status") || "Status"}
                       />
@@ -322,7 +322,7 @@ export function SupplierDeliveriesTable({
                   {/* Type Filter */}
                   <Select value={typeFilter} onValueChange={setTypeFilter}>
                     <SelectTrigger className="w-full sm:w-[180px]">
-                      <Package className="mr-2 h-4 w-4" />
+                      <Package className="mr-1 h-4 w-4 hidden sm:inline" />
                       <SelectValue
                         placeholder={
                           t("management.delivery.filters.deliveryType") || "Delivery Type"
@@ -348,7 +348,7 @@ export function SupplierDeliveriesTable({
                   {/* Clear Filters */}
                   {hasActiveFilters && (
                     <Button variant="ghost" size="sm" onClick={clearFilters}>
-                      <X className="mr-2 h-4 w-4" />
+                      <X className="mr-1 h-4 w-4 hidden sm:inline" />
                       {t("common.actions.clearFilters") || "Clear Filters"}
                     </Button>
                   )}

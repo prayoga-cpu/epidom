@@ -95,9 +95,6 @@ export class UserRepository extends BaseRepository {
       },
       {} as Record<string, any>
     );
-
-    console.log("[UserRepository] Updating user with processed data:", processedData);
-
     return this.db.user.update({
       where: { id: userId },
       data: processedData,

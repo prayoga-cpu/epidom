@@ -2,8 +2,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { StockMovement } from "@prisma/client";
+import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 
 export interface StockMovementWithRelations extends StockMovement {
+  // reason and referenceId are already in StockMovement from Prisma
   material?: {
     id: string;
     name: string;
@@ -50,15 +52,19 @@ export const stockMovementKeys = {
 
 /**
  * Fetch stock movements for an item
+ * Real-time enabled: Polls every 30 seconds when tab is active
  */
 export function useStockMovements(storeId: string, filters?: StockMovementFilters) {
+  // Normalize filters untuk consistent query keys (prevent cache fragmentation)
+  const normalizedFilters = normalizeFilters(filters);
+
   return useQuery<StockMovementsResponse>({
-    queryKey: stockMovementKeys.list(storeId, filters),
+    queryKey: stockMovementKeys.list(storeId, normalizedFilters),
     queryFn: async () => {
       const params = new URLSearchParams();
 
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
+      if (normalizedFilters) {
+        Object.entries(normalizedFilters).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== "") {
             params.append(key, String(value));
           }
@@ -78,5 +84,14 @@ export function useStockMovements(storeId: string, filters?: StockMovementFilter
       return response.json();
     },
     enabled: !!storeId && !!(filters?.materialId || filters?.productId),
+    // Real-time configuration: Active data polling
+    staleTime: 20 * 1000, // 20 seconds
+    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    refetchIntervalInBackground: false, // Only poll when tab is active
+    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnWindowFocus: true, // Refetch on window focus if stale
+    meta: {
+      refetchInterval: 30 * 1000, // Store in meta for smart polling
+    },
   });
 }

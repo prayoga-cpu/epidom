@@ -44,7 +44,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.error("Error fetching production batches:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -86,7 +85,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(batch, { status: 201 });
   } catch (error) {
-    console.error("Error starting production:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

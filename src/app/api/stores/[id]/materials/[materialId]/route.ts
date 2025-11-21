@@ -6,6 +6,7 @@ import { businessService } from "@/lib/services";
 import { updateIngredientSchema } from "@/lib/validation/inventory.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/stores/[id]/materials/[materialId]
@@ -67,7 +68,7 @@ export async function GET(
       });
     }
 
-    console.error("Error fetching material:", error);
+    logger.error("Error fetching material", error, { endpoint: "GET /api/stores/[id]/materials/[materialId]" });
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -142,8 +143,6 @@ export async function PATCH(
 
     // Handle business logic errors
     if (error instanceof Error) {
-      console.error("Error updating material:", error.message);
-
       if (error.message.includes("not found")) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
           status: 404,
@@ -158,7 +157,7 @@ export async function PATCH(
       }
     }
 
-    console.error("Error updating material:", error);
+    logger.error("Error updating material", error, { endpoint: "PATCH /api/stores/[id]/materials/[materialId]" });
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }
@@ -214,8 +213,6 @@ export async function DELETE(
   } catch (error) {
     // Handle business logic errors
     if (error instanceof Error) {
-      console.error("Error deleting material:", error.message);
-
       if (error.message.includes("not found") || error.message.includes("does not belong")) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
           status: 404,
@@ -230,7 +227,7 @@ export async function DELETE(
       }
     }
 
-    console.error("Error deleting material:", error);
+    logger.error("Error deleting material", error, { endpoint: "DELETE /api/stores/[id]/materials/[materialId]" });
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
       { status: 500 }

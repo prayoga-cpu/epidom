@@ -5,13 +5,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -95,7 +91,6 @@ export function EditPersonalInfoDialog({
       onUpdate?.();
       onOpenChange(false);
     } catch (error) {
-      console.error("Error updating profile:", error);
       toast.error(t("common.error"), {
         description: error instanceof Error ? error.message : t("profile.errors.updateFailed"),
       });
@@ -104,14 +99,22 @@ export function EditPersonalInfoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t("profile.forms.editPersonalInfo")}</DialogTitle>
-          <DialogDescription>{t("profile.forms.editPersonalInfoDescription")}</DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={t("profile.forms.editPersonalInfo")}
+        description={t("profile.forms.editPersonalInfoDescription")}
+        maxWidth="md"
+        footer={
+          <FormDialogFooter
+            formId="edit-personal-info-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={t("profile.actions.save")}
+            isPending={updateProfile.isPending}
+            variant="full-width"
+          />
+        }
+      >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form id="edit-personal-info-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -228,25 +231,9 @@ export function EditPersonalInfoDialog({
                 </FormItem>
               )}
             />
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={updateProfile.isPending}
-                className="flex-1"
-              >
-                {t("profile.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={updateProfile.isPending} className="flex-1">
-                {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("profile.actions.save")}
-              </Button>
-            </div>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

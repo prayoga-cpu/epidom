@@ -7,12 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Form,
   FormControl,
@@ -99,19 +96,31 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl [&>button]:hidden">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-          <DialogTitle className="text-xl font-bold sm:text-2xl">
-            {t("data.suppliers.addTitle")}
-          </DialogTitle>
-          <DialogDescription className="text-sm sm:text-base">
-            {t("data.suppliers.addDescription")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+      <FormDialogLayout
+        title={t("data.suppliers.addTitle")}
+        description={t("data.suppliers.addDescription")}
+        maxWidth="2xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createSupplier.isPending}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="add-supplier-form"
+              disabled={createSupplier.isPending}
+            >
+              {createSupplier.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+              {t("data.suppliers.addButton")}
+            </Button>
+          </>
+        }
+      >
           <Form {...form}>
             <form id="add-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
@@ -268,30 +277,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
             </div>
             </form>
           </Form>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-4">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={createSupplier.isPending}
-            >
-              {t("common.actions.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="add-supplier-form"
-              disabled={createSupplier.isPending}
-            >
-              {createSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("data.suppliers.addButton")}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

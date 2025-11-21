@@ -272,11 +272,11 @@ export default function PrintDeliveryDialog({
             {t("common.actions.close")}
           </Button>
           <Button type="button" variant="outline" onClick={handleExportPDF}>
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-1 h-4 w-4 hidden sm:inline" />
             {t("management.delivery.dialogs.printDelivery.downloadPDF")}
           </Button>
           <Button type="button" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" />
+            <Printer className="mr-1 h-4 w-4 hidden sm:inline" />
             {t("management.delivery.dialogs.printDelivery.print")}
           </Button>
         </DialogFooter>

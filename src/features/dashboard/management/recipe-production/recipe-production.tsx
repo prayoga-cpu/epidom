@@ -286,7 +286,7 @@ export function RecipeProductionCard() {
                     className="w-full"
                     size="lg"
                   >
-                    <PlayCircle className="mr-2 h-5 w-5" />
+                    <PlayCircle className="mr-1 h-5 w-5 hidden sm:inline" />
                     {t("management.recipeProduction.startProduction")}
                   </Button>
                   {!canStartProduction && (

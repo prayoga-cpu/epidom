@@ -78,7 +78,7 @@ export function FilterSection({
               onValueChange={filter.onChange}
             >
               <SelectTrigger className={responsive.select}>
-                <Filter className="mr-2 h-4 w-4" />
+                <Filter className="mr-1 h-4 w-4 hidden sm:inline" />
                 <SelectValue placeholder={filter.placeholder || filter.label} />
               </SelectTrigger>
               <SelectContent>
@@ -99,7 +99,7 @@ export function FilterSection({
               onClick={onClearFilters}
               className={responsive.button}
             >
-              <X className="mr-2 h-4 w-4" />
+              <X className="mr-1 h-4 w-4 hidden sm:inline" />
               {clearFiltersLabel}
             </Button>
           )}

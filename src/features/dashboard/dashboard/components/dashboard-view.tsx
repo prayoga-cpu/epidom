@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, lazy, Suspense } from "react";
-import PageHeader from "./page-header";
+import { PageHeader } from "./page-header";
 import { ChartSkeleton } from "./chart-skeleton";
 import { CardSkeleton } from "./card-skeleton";
 import AlertsCard from "../alerts/alerts-card";

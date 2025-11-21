@@ -3,14 +3,8 @@
 import { useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useImportStock, type StockImportResult } from "./hooks/use-import-stock";
@@ -53,7 +47,6 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
       setImportResults(result.results);
     } catch (error) {
       // Error is handled by the hook
-      console.error("Import error:", error);
     }
   };
 
@@ -69,17 +62,42 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
   const successCount = importResults?.filter((r) => r.success).length || 0;
   const failureCount = importResults?.filter((r) => !r.success).length || 0;
 
+  // Get footer buttons based on state
+  const getFooterButtons = () => {
+    if (!importResults) {
+      return (
+        <>
+          <Button variant="outline" onClick={handleClose} disabled={importStock.isPending}>
+            {t("common.actions.cancel")}
+          </Button>
+          <Button
+            onClick={handleImport}
+            disabled={!selectedFile || importStock.isPending}
+          >
+            {importStock.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+            {t("management.editStock.importCSVDialog.importButton") || "Import Stock"}
+          </Button>
+        </>
+      );
+    }
+    return (
+      <Button onClick={handleClose}>
+        {t("common.actions.close") || "Close"}
+      </Button>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t("management.editStock.importCSVDialog.title") || "Import Stock from CSV"}</DialogTitle>
-          <DialogDescription>
-            {t("management.editStock.importCSVDialog.description") ||
-              "Upload a CSV file to update stock levels. The CSV should have columns: SKU, Type (material/product), Current Stock"}
-          </DialogDescription>
-        </DialogHeader>
-
+      <FormDialogLayout
+        title={t("management.editStock.importCSVDialog.title") || "Import Stock from CSV"}
+        description={
+          t("management.editStock.importCSVDialog.description") ||
+          "Upload a CSV file to update stock levels. The CSV should have columns: SKU, Type (material/product), Current Stock"
+        }
+        maxWidth="2xl"
+        footer={getFooterButtons()}
+      >
         <div className="space-y-4">
           {/* File Upload Section */}
           {!importResults && (
@@ -170,28 +188,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
             </div>
           )}
         </div>
-
-        <DialogFooter>
-          {!importResults ? (
-            <>
-              <Button variant="outline" onClick={handleClose} disabled={importStock.isPending}>
-                {t("common.actions.cancel")}
-              </Button>
-              <Button
-                onClick={handleImport}
-                disabled={!selectedFile || importStock.isPending}
-              >
-                {importStock.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("management.editStock.importCSVDialog.importButton") || "Import Stock"}
-              </Button>
-            </>
-          ) : (
-            <Button onClick={handleClose}>
-              {t("common.actions.close") || "Close"}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

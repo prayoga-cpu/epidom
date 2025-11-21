@@ -9,13 +9,19 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   useSupplierOrders,
-  useUpdateSupplierOrder,
+  supplierOrderKeys,
 } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
+import { materialKeys } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { Phone, Mail, MapPin, Package, Loader2, AlertCircle, CheckCircle, ArrowRight } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
+import { useQueryClient } from "@tanstack/react-query";
+import { SubscriptionLockedState } from "@/features/dashboard/shared/components/subscription-locked-state";
+import { SectionErrorState } from "@/features/dashboard/data/components/section-error-state";
 
 export function OrdersView() {
   const { t } = useI18n();
@@ -25,10 +31,11 @@ export function OrdersView() {
   const storeId = params?.storeId as string;
   const [placingOrder, setPlacingOrder] = useState<string | null>(null);
   const { supplierManagementAccess, isLoading: isLoadingAccess } = useFeatureAccess();
+  const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useSupplierOrders(storeId);
+  const { data, isLoading, error, refetch } = useSupplierOrders(storeId);
 
-  // Handler to mark order as placed
+  // Handler to mark order as placed - with proper cache invalidation
   const handleMarkAsPlaced = async (orderId: string) => {
     setPlacingOrder(orderId);
     try {
@@ -40,12 +47,30 @@ export function OrdersView() {
 
       if (!response.ok) throw new Error(t("messages.failedToUpdateOrder"));
 
-      toast.success(t("messages.orderPlaced"));
+      // ✅ Invalidate all related caches to update alerts immediately
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: supplierOrderKeys.lists(storeId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: supplierOrderKeys.detail(storeId, orderId),
+        }),
+        // ✅ Invalidate alerts - this is the key fix!
+        queryClient.invalidateQueries({
+          queryKey: alertKeys.lists(storeId),
+        }),
+        // Also invalidate materials and stock movements
+        queryClient.invalidateQueries({
+          queryKey: materialKeys.lists(storeId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: stockMovementKeys.all(storeId),
+        }),
+      ]);
 
-      // Refresh the data
-      window.location.reload();
+      toast.success(t("messages.orderPlaced") || "Order marked as placed");
     } catch (error) {
-      toast.error(t("messages.orderPlacedError"));
+      toast.error(t("messages.orderPlacedError") || "Failed to mark order as placed");
     } finally {
       setPlacingOrder(null);
     }
@@ -97,38 +122,21 @@ export function OrdersView() {
 
   if (isSubscriptionLocked) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-primary/10 mb-4 rounded-full p-3">
-            <AlertCircle className="text-primary h-6 w-6" />
-          </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("data.suppliers.locked")}</h3>
-          <Button
-            onClick={() => router.push("/pricing")}
-            className="mt-4 bg-[var(--color-brand-primary)] hover:opacity-90"
-            size="sm"
-          >
-            {t("billing.upgradeToPro")}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </CardContent>
-      </Card>
+      <SubscriptionLockedState
+        title={t("data.suppliers.locked")}
+        className="min-h-[400px]"
+      />
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-destructive/10 mb-4 rounded-full p-3">
-            <AlertCircle className="text-destructive h-6 w-6" />
-          </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
-          <p className="text-muted-foreground text-sm">
-            {error.message || t("alerts.errorLoadingOrders")}
-          </p>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        title={t("common.error")}
+        message={error.message || t("alerts.errorLoadingOrders")}
+        onRetry={() => refetch()}
+        retryLabel={t("common.actions.retry")}
+      />
     );
   }
 
@@ -273,20 +281,26 @@ export function OrdersView() {
                               <div className="flex items-center justify-between text-xs">
                                 <div className="flex gap-3">
                                   <div>
-                                    <span className="text-muted-foreground">Qty:</span>
+                                    <span className="text-muted-foreground">
+                                      {t("alerts.quantity") || "Qty"}:
+                                    </span>
                                     <span className="ml-1 font-semibold text-blue-600">
                                       {item.quantity} {item.unit}
                                     </span>
                                   </div>
                                   <div>
-                                    <span className="text-muted-foreground">Price:</span>
+                                    <span className="text-muted-foreground">
+                                      {t("alerts.price")}:
+                                    </span>
                                     <span className="ml-1 font-semibold text-green-600">
                                       {formatPrice(Number(item.unitPrice))}/{item.unit}
                                     </span>
                                   </div>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground">Total:</span>
+                                  <span className="text-muted-foreground">
+                                    {t("alerts.total")}:
+                                  </span>
                                   <span className="ml-1 font-semibold text-orange-600">
                                     {formatPrice(Number(item.total))}
                                   </span>
@@ -305,12 +319,12 @@ export function OrdersView() {
                         >
                           {placingOrder === order.id ? (
                             <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
                               {t("alerts.placing")}
                             </>
                           ) : (
                             <>
-                              <CheckCircle className="mr-2 h-4 w-4" />
+                              <CheckCircle className="mr-1 h-4 w-4 hidden sm:inline" />
                               {t("alerts.markAsPlaced")}
                             </>
                           )}

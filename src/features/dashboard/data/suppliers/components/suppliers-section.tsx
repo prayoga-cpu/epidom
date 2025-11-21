@@ -52,7 +52,12 @@ import { useRouter } from "next/navigation";
 import {
   ItemCardGrid,
   BaseItemCard,
+  SectionErrorState,
+  SectionLoadingState,
 } from "../../components";
+import { SubscriptionLockedState } from "@/features/dashboard/shared/components/subscription-locked-state";
+import { useBulkSelection } from "../../hooks/use-bulk-selection";
+import { useDialogState } from "../../hooks/use-dialog-state";
 
 export function SuppliersSection() {
   const { t } = useI18n();
@@ -71,16 +76,8 @@ export function SuppliersSection() {
     take: 20,
   });
 
-  // UI state
-  const [selectedSupplier, setSelectedSupplier] = useState<SupplierWithRelations | null>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bulkSelectMode, setBulkSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
   // API hooks
-  const { data, isLoading, error } = useSuppliers(storeId, filters);
+  const { data, isLoading, error, refetch } = useSuppliers(storeId, filters);
   const deleteSupplier = useDeleteSupplier(storeId);
   const bulkDeleteSuppliers = useBulkDeleteSuppliers(storeId);
   const exportSuppliers = useExportSuppliers();
@@ -90,37 +87,33 @@ export function SuppliersSection() {
   const currentPage = Math.floor(filters.skip / filters.take) + 1;
   const totalPages = Math.ceil(totalSuppliers / filters.take);
 
-  // Bulk selection handlers
-  const toggleBulkSelect = () => {
-    setBulkSelectMode(!bulkSelectMode);
-    setSelectedIds(new Set());
-  };
+  // Use reusable hooks for dialog and bulk selection state
+  const {
+    selectedItem: selectedSupplier,
+    viewDialogOpen,
+    editDialogOpen,
+    deleteDialogOpen,
+    setViewDialogOpen,
+    setEditDialogOpen,
+    setDeleteDialogOpen,
+    setSelectedItem: setSelectedSupplier,
+    handleView,
+    handleEdit,
+    handleDeleteClick: handleDeleteClickDialog,
+  } = useDialogState<SupplierWithRelations>();
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === suppliers.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(suppliers.map((s) => s.id)));
-    }
-  };
-
+  const {
+    bulkSelectMode,
+    selectedIds,
+    selectedCount,
+    toggleBulkSelect,
+    toggleSelectAll,
+    toggleSelectItem,
+    clearSelection,
+    isSelected,
+  } = useBulkSelection(suppliers);
 
   // Action handlers
-  const handleView = (supplier: SupplierWithRelations) => {
-    setSelectedSupplier(supplier);
-    setViewDialogOpen(true);
-  };
-
-  const handleEdit = (supplier: SupplierWithRelations) => {
-    setSelectedSupplier(supplier);
-    setEditDialogOpen(true);
-  };
-
-  const handleDeleteClick = (supplier: SupplierWithRelations) => {
-    setSelectedSupplier(supplier);
-    setDeleteDialogOpen(true);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!selectedSupplier) return;
 
@@ -142,8 +135,7 @@ export function SuppliersSection() {
       toast.success(
         t("data.suppliers.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
       );
-      setSelectedIds(new Set());
-      setBulkSelectMode(false);
+      clearSelection();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteSuppliers"));
     }
@@ -187,35 +179,15 @@ export function SuppliersSection() {
 
   const hasActiveFilters = filters.search;
 
-  // Show loading state - keep card structure for consistent layout
-  if (isLoading) {
+  // Show loading state
+  if (isLoading || isLoadingAccess) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
-        <CardHeader className="border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">
-              {t("data.suppliers.pageTitle")}
-            </CardTitle>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <Download className="mr-2 h-4 w-4" />
-                {t("common.actions.export")}
-              </Button>
-              <Button size="sm" disabled className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                {t("data.suppliers.addButton")}
-              </Button>
-              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {t("common.actions.select")}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-        </CardContent>
-      </Card>
+      <SectionLoadingState
+        title={t("data.suppliers.pageTitle")}
+        exportLabel={t("common.actions.export")}
+        addLabel={t("data.suppliers.addButton")}
+        selectLabel={t("common.actions.select")}
+      />
     );
   }
 
@@ -232,18 +204,7 @@ export function SuppliersSection() {
             {t("data.suppliers.pageTitle")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-4 py-12">
-          <p className="text-muted-foreground text-center">
-            {t("data.suppliers.locked")}
-          </p>
-          <Button
-            onClick={() => router.push("/pricing")}
-            className="bg-[var(--color-brand-primary)] hover:opacity-90"
-          >
-            {t("billing.upgradeToPro")}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </CardContent>
+        <SubscriptionLockedState />
       </Card>
     );
   }
@@ -251,14 +212,12 @@ export function SuppliersSection() {
   // Show error state for other errors
   if (error) {
     return (
-      <Card className="overflow-hidden shadow-md">
-        <CardContent className="flex min-h-[400px] flex-col items-center justify-center gap-2">
-          <p className="text-destructive">{t("messages.errorLoadingSuppliers")}</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            {t("common.actions.retry")}
-          </Button>
-        </CardContent>
-      </Card>
+      <SectionErrorState
+        title={t("common.error")}
+        message={error.message || t("messages.errorLoadingSuppliers")}
+        onRetry={() => refetch()}
+        retryLabel={t("common.actions.retry")}
+      />
     );
   }
 
@@ -273,6 +232,7 @@ export function SuppliersSection() {
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Tooltip>
                 <TooltipTrigger asChild>
+                  <div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -281,12 +241,13 @@ export function SuppliersSection() {
                     className="w-full md:w-auto"
                   >
                     {exportSuppliers.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
                     ) : (
-                      <Download className="mr-2 h-4 w-4" />
+                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
                     )}
                     {t("common.actions.export")}
                   </Button>
+                  </div>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
                   <TooltipContent>
@@ -296,14 +257,14 @@ export function SuppliersSection() {
               </Tooltip>
               <AddSupplierDialog>
                 <Button size="sm" className="w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("data.suppliers.addButton")}
                 </Button>
               </AddSupplierDialog>
-              {bulkSelectMode && selectedIds.size > 0 && (
+              {bulkSelectMode && selectedCount > 0 && (
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {t("common.actions.delete")} ({selectedIds.size})
+                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
+                  {t("common.actions.delete")} ({selectedCount})
                 </Button>
               )}
               <Button
@@ -314,12 +275,12 @@ export function SuppliersSection() {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("common.actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-2 h-4 w-4" />
+                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
                     {t("common.actions.select")}
                   </>
                 )}
@@ -358,7 +319,7 @@ export function SuppliersSection() {
                 }}
               >
                 <SelectTrigger className="w-full md:w-[180px]">
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                  <ArrowUpDown className="mr-1 h-4 w-4 hidden sm:inline" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -382,7 +343,7 @@ export function SuppliersSection() {
               {/* Clear Filters */}
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
-                  <X className="mr-2 h-4 w-4" />
+                  <X className="mr-1 h-4 w-4 hidden sm:inline" />
                   {t("common.actions.clearFilters")}
                 </Button>
               )}
@@ -392,11 +353,11 @@ export function SuppliersSection() {
             {bulkSelectMode && (
               <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
                 <Checkbox
-                  checked={selectedIds.size === suppliers.length && suppliers.length > 0}
+                  checked={selectedCount === suppliers.length && suppliers.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll")} ({selectedIds.size}{" "}
+                  {t("common.selectAll")} ({selectedCount}{" "}
                   {t("common.of")} {suppliers.length} {t("common.selected")})
                 </span>
               </div>
@@ -413,25 +374,12 @@ export function SuppliersSection() {
 
           {/* Suppliers Grid */}
           <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
-            {suppliers.map((supplier) => {
-              const isSelected = selectedIds.has(supplier.id);
-
-              return (
+            {suppliers.map((supplier) => (
                 <BaseItemCard
                   key={supplier.id}
-                  isSelected={isSelected}
+                  isSelected={isSelected(supplier.id)}
                   bulkSelectMode={bulkSelectMode}
-                  onSelect={(checked) => {
-                    if (checked) {
-                      setSelectedIds((prev) => new Set(prev).add(supplier.id));
-                    } else {
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        next.delete(supplier.id);
-                        return next;
-                      });
-                    }
-                  }}
+                  onSelect={() => toggleSelectItem(supplier.id)}
                   contentClassName="!px-4"
                 >
                     <div className="mb-2 flex items-start justify-between">
@@ -516,7 +464,7 @@ export function SuppliersSection() {
                               variant="ghost"
                               size="sm"
                               className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDeleteClick(supplier)}
+                              onClick={() => handleDeleteClickDialog(supplier)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -528,8 +476,7 @@ export function SuppliersSection() {
                       </div>
                     )}
                 </BaseItemCard>
-              );
-            })}
+            ))}
           </ItemCardGrid>
 
           {/* Empty State */}

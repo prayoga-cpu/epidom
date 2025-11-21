@@ -69,7 +69,6 @@ export async function GET(request: NextRequest) {
       storeUsage,
     });
   } catch (error: any) {
-    console.error("[API] Subscription status error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to get subscription status" },
       { status: 500 }

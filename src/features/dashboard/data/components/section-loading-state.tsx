@@ -34,19 +34,19 @@ export function SectionLoadingState({
           <div className={responsive.buttonGroup}>
             {exportLabel && (
               <ActionButton variant="outline" size="sm" disabled>
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="mr-1 h-4 w-4 hidden sm:inline" />
                 {exportLabel}
               </ActionButton>
             )}
             {addLabel && (
               <ActionButton size="sm" disabled>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
                 {addLabel}
               </ActionButton>
             )}
             {selectLabel && (
               <ActionButton variant="outline" size="sm" disabled>
-                <CheckSquare className="mr-2 h-4 w-4" />
+                <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
                 {selectLabel}
               </ActionButton>
             )}

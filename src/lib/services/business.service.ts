@@ -338,14 +338,6 @@ export class BusinessService {
         store._count.productionBatches;
 
       if (totalRelatedRecords > 0) {
-        console.warn(`⚠️ Deleting store "${storeId}" will cascade delete ${totalRelatedRecords} related records:`, {
-          products: store._count.products,
-          materials: store._count.ingredients,
-          recipes: store._count.recipes,
-          suppliers: store._count.suppliers,
-          orders: store._count.orders,
-          productionBatches: store._count.productionBatches,
-        });
       }
 
       // Delete the store (cascade will handle related data)
@@ -361,9 +353,7 @@ export class BusinessService {
       try {
         const storage = getStorageAdapter();
         await storage.delete(store.image);
-        console.log("✅ Image deleted from Blob storage:", store.image);
       } catch (error) {
-        console.warn("⚠️ Failed to delete image from Blob storage:", error);
         // Continue even if image deletion fails
       }
     }

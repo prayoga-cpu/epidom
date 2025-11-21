@@ -255,6 +255,8 @@ Table stock_movements {
   orderId String
   productionBatchId String
   notes String
+  reason String
+  referenceId String
   createdAt DateTime [default: `now()`, not null]
   materialId String
   material ingredients

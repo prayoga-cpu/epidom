@@ -204,6 +204,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
       ) : (
         <Link
           href={`/store/${store.id}/dashboard`}
+          prefetch={true}
           className="flex h-full flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
         >
           {/* Store Image Container - Enhanced with overlay on hover */}

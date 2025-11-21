@@ -101,7 +101,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error("[API] Subscription debug error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to get subscription details" },
       { status: 500 }

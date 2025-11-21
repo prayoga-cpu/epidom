@@ -5,13 +5,9 @@ import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import {
   Form,
   FormControl,
@@ -102,19 +98,19 @@ export default function EditSupplierDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-2xl">
-        {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-          <DialogTitle className="text-xl font-bold sm:text-2xl">
-            {t("data.suppliers.editTitle") || "Edit Supplier"}
-          </DialogTitle>
-          <DialogDescription className="text-sm sm:text-base">
-            Update supplier information. Changes will be saved to your contacts.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Form Content */}
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
+      <FormDialogLayout
+        title={t("data.suppliers.editTitle") || "Edit Supplier"}
+        description="Update supplier information. Changes will be saved to your contacts."
+        maxWidth="2xl"
+        footer={
+          <FormDialogFooter
+            formId="edit-supplier-form"
+            onCancel={() => onOpenChange(false)}
+            submitText={t("data.suppliers.update") || "Update Supplier"}
+            isPending={updateSupplier.isPending}
+          />
+        }
+      >
           <Form {...form}>
             <form id="edit-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
@@ -271,30 +267,7 @@ export default function EditSupplierDialog({
             </div>
             </form>
           </Form>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-6 py-4">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={updateSupplier.isPending}
-            >
-              {t("actions.cancel") || "Cancel"}
-            </Button>
-            <Button
-              type="submit"
-              form="edit-supplier-form"
-              disabled={updateSupplier.isPending}
-            >
-              {updateSupplier.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("data.suppliers.update") || "Update Supplier"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }
