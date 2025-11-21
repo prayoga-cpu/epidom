@@ -135,10 +135,18 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
 
 // React Query Hooks
 
+export interface UseSuppliersOptions {
+  enabled?: boolean;
+}
+
 /**
  * Fetch all suppliers with filters
  */
-export function useSuppliers(storeId: string, filters: SupplierFilterInput) {
+export function useSuppliers(
+  storeId: string,
+  filters: SupplierFilterInput,
+  options?: UseSuppliersOptions
+) {
   return useQuery<SuppliersResponse>({
     queryKey: supplierKeys.list(storeId, filters),
     queryFn: async () => {
@@ -174,7 +182,8 @@ export function useSuppliers(storeId: string, filters: SupplierFilterInput) {
 
       return response.json();
     },
-    enabled: !!storeId,
+    // Respect external enabled option (e.g., for dialog lazy loading)
+    enabled: !!storeId && (options?.enabled ?? true),
     // Real-time configuration: Static data - no polling, longer stale time
     staleTime: 5 * 60 * 1000, // 5 minutes (suppliers don't change often)
     refetchInterval: false, // No polling for static data

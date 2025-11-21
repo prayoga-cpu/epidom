@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogTrigger,
@@ -29,19 +30,14 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Plus, Loader2, X, Star } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateMaterial } from "../hooks/use-materials";
-import { useSuppliers } from "../../suppliers/hooks/use-suppliers";
+import { useSuppliers, supplierKeys } from "../../suppliers/hooks/use-suppliers";
 import { useParams } from "next/navigation";
-import {
-  createIngredientFormSchema,
-  type CreateIngredientFormInput,
-} from "@/lib/validation/inventory.schemas";
+import { createIngredientFormSchema } from "@/lib/validation/inventory.schemas";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCurrency } from "@/components/providers/currency-provider";
 import {
-  parseNumberInput,
   formatNumberForInput,
   createNumberInputHandler,
 } from "@/lib/utils/number-input";
@@ -54,23 +50,52 @@ interface AddMaterialDialogProps {
   trigger?: React.ReactNode;
 }
 
+// Supplier filter configuration (extracted for reuse in prefetch)
+const SUPPLIER_FILTERS = {
+  sortBy: "name" as const,
+  sortOrder: "asc" as const,
+  skip: 0,
+  take: 100,
+};
+
 export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
   const { currency, convertToBase } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
+  const queryClient = useQueryClient();
 
   const createMaterial = useCreateMaterial(storeId);
 
-  // Fetch suppliers for dropdown
-  const { data: suppliersData } = useSuppliers(storeId, {
-    sortBy: "name",
-    sortOrder: "asc",
-    skip: 0,
-    take: 100,
-  });
+  // Fetch suppliers for dropdown - only when dialog is open (performance optimization)
+  const { data: suppliersData } = useSuppliers(
+    storeId,
+    SUPPLIER_FILTERS,
+    { enabled: open } // Only fetch when dialog is open
+  );
   const suppliers = suppliersData?.suppliers || [];
+
+  // Prefetch suppliers on hover for perceived performance
+  // This starts loading data before user clicks, so dialog opens faster
+  const handlePrefetchSuppliers = useCallback(() => {
+    if (!storeId) return;
+
+    queryClient.prefetchQuery({
+      queryKey: supplierKeys.list(storeId, SUPPLIER_FILTERS),
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        params.append("sortBy", SUPPLIER_FILTERS.sortBy);
+        params.append("sortOrder", SUPPLIER_FILTERS.sortOrder);
+        params.append("skip", String(SUPPLIER_FILTERS.skip));
+        params.append("take", String(SUPPLIER_FILTERS.take));
+        const response = await fetch(`/api/stores/${storeId}/suppliers?${params.toString()}`);
+        if (!response.ok) throw new Error("Failed to prefetch suppliers");
+        return response.json();
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+  }, [storeId, queryClient]);
 
   // Note: Type assertions (as any) are required due to TypeScript limitations
   // with React Hook Form's useFieldArray when using dynamic field names.
@@ -112,6 +137,8 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
             : undefined,
       };
 
+      // Wait for mutation to complete before closing dialog
+      // Material will appear in list immediately via optimistic update
       await createMaterial.mutateAsync(payload);
 
       toast.success(t("data.materials.toasts.added.title"), {
@@ -121,6 +148,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
       form.reset();
       setOpen(false);
     } catch (error) {
+      // Handle validation errors
       toast.error(error instanceof Error ? error.message : t("messages.errorLoadingMaterials"));
     }
   }
@@ -129,7 +157,12 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button size="sm" className="gap-2">
+          <Button
+            size="sm"
+            className="gap-2"
+            onMouseEnter={handlePrefetchSuppliers}
+            onFocus={handlePrefetchSuppliers}
+          >
             <Plus className="h-4 w-4" />
             {t("data.materials.addButton")}
           </Button>

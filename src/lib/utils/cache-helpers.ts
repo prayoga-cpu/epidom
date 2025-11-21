@@ -31,22 +31,32 @@ export async function invalidateQueriesBatch(
 
 /**
  * Invalidate store-related queries after material changes
- * Optimized to batch all invalidations in parallel for better performance
+ * Optimized: Materials list invalidated first (blocking),
+ * other queries invalidated in parallel (can be awaited or run in background)
  *
  * @param queryClient - TanStack Query client
  * @param storeId - Store ID
+ * @param skipMaterials - If true, skip materials list invalidation (for cases where it's already invalidated)
  */
 export async function invalidateMaterialRelatedQueries(
   queryClient: QueryClient,
-  storeId: string
+  storeId: string,
+  skipMaterials = false
 ): Promise<void> {
-  // Use prefix matching to invalidate all related queries efficiently
-  // This is more performant than individual invalidations
-  await Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: ["materials", storeId],
-      exact: false, // Invalidate all queries starting with this key
-    }),
+  const invalidations = [];
+
+  // Invalidate materials list first (most important for UX)
+  if (!skipMaterials) {
+    invalidations.push(
+      queryClient.invalidateQueries({
+        queryKey: ["materials", storeId],
+        exact: false,
+      })
+    );
+  }
+
+  // Invalidate other related queries in parallel
+  invalidations.push(
     queryClient.invalidateQueries({
       queryKey: ["suppliers", storeId],
       exact: false,
@@ -64,7 +74,9 @@ export async function invalidateMaterialRelatedQueries(
     queryClient.invalidateQueries({
       queryKey: ["recipes", storeId],
       exact: false,
-    }),
-  ]);
+    })
+  );
+
+  await Promise.all(invalidations);
 }
 
