@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -59,7 +60,11 @@ import { useDialogState } from "../../hooks/use-dialog-state";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
-export function ProductsSection() {
+interface ProductsSectionProps {
+  initialProducts?: Product[];
+}
+
+export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const params = useParams();
@@ -76,8 +81,25 @@ export function ProductsSection() {
     take: 20,
   });
 
+  // Debounce search input to reduce API calls (300ms delay)
+  const debouncedSearch = useDebounce(filters.search, 300);
+
   // API hooks
-  const { data, isLoading, error, refetch } = useProducts(storeId, filters);
+  // Use debouncedSearch instead of filters.search for API calls
+  // Use initial data from Server Component with real-time updates
+  const { data, isLoading, error, refetch } = useProducts(
+    storeId,
+    {
+      ...filters,
+      search: debouncedSearch || undefined,
+    },
+    initialProducts
+      ? {
+          products: initialProducts,
+          total: initialProducts.length,
+        }
+      : undefined
+  );
   const deleteProduct = useDeleteProduct(storeId);
   const bulkDeleteProducts = useBulkDeleteProducts(storeId);
   const exportProducts = useExportProducts();

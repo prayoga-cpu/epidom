@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +71,11 @@ const getRecipeCategories = (t: (key: string) => string) => [
   t("data.recipes.categories.other"),
 ];
 
-export function RecipesSection() {
+interface RecipesSectionProps {
+  initialRecipes?: RecipeWithIngredients[];
+}
+
+export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
   const { advancedReportsAccess } = useFeatureAccess();
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
@@ -85,20 +90,34 @@ export function RecipesSection() {
   // Duplicate dialog is not part of useDialogState, handle separately
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
 
+  // Debounce search input to reduce API calls (300ms delay)
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
   // API hooks
+  // Use debouncedSearch instead of searchQuery for API calls
+  // Use initial data from Server Component with real-time updates
   const {
     data: recipesData,
     isLoading,
     error,
     refetch,
-  } = useRecipes(storeId, {
-    search: searchQuery || undefined,
-    category: categoryFilter,
-    sortBy: sortField,
-    sortOrder: sortOrder,
-    skip: 0,
-    take: 100,
-  });
+  } = useRecipes(
+    storeId,
+    {
+      search: debouncedSearch || undefined,
+      category: categoryFilter,
+      sortBy: sortField,
+      sortOrder: sortOrder,
+      skip: 0,
+      take: 100,
+    },
+    initialRecipes
+      ? {
+          recipes: initialRecipes,
+          total: initialRecipes.length,
+        }
+      : undefined
+  );
 
   const deleteRecipe = useDeleteRecipe(storeId);
   const bulkDeleteRecipes = useBulkDeleteRecipes(storeId);

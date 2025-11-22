@@ -4,17 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { recipeService } from "@/lib/services/recipe.service";
 import { subscriptionService } from "@/lib/services";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { z } from "zod";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { recipeFilterSchema } from "@/lib/validation/inventory.schemas";
 
-// Validation schema for filtering recipes (same as main route)
-const recipeFilterSchema = z.object({
-  search: z.string().optional(),
-  category: z.string().optional(),
-  sortBy: z
-    .enum(["name", "category", "productionTimeMinutes", "costPerBatch", "createdAt", "updatedAt"])
-    .default("createdAt"),
-  sortOrder: z.enum(["asc", "desc"]).default("desc"),
-});
 
 /**
  * GET /api/stores/[id]/recipes/export
@@ -28,7 +21,10 @@ export async function GET(
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
@@ -48,6 +44,9 @@ export async function GET(
     }
 
     const { id: storeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -72,17 +71,10 @@ export async function GET(
       },
     });
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to export recipes" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/recipes/export",
+      context: { storeId },
+    });
   }
 }

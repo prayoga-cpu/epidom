@@ -44,7 +44,7 @@ export interface SupplierOrder {
   updatedAt: string;
 }
 
-interface SupplierOrdersResponse {
+export interface SupplierOrdersResponse {
   orders: SupplierOrder[];
 }
 
@@ -85,7 +85,10 @@ export const supplierOrderKeys = {
  * Hook to fetch all supplier orders for a store
  * Real-time enabled: Polls every 60 seconds when tab is active
  */
-export function useSupplierOrders(storeId: string) {
+export function useSupplierOrders(
+  storeId: string,
+  initialData?: SupplierOrdersResponse
+) {
   return useQuery<SupplierOrdersResponse>({
     queryKey: supplierOrderKeys.lists(storeId),
     queryFn: async () => {
@@ -107,6 +110,7 @@ export function useSupplierOrders(storeId: string) {
       return response.json();
     },
     enabled: !!storeId,
+    initialData, // ✅ Accept initial data from Server Component
     // Real-time configuration: Normal data polling
     staleTime: 60 * 1000, // 1 minute
     refetchInterval: 60 * 1000, // Poll every 60 seconds

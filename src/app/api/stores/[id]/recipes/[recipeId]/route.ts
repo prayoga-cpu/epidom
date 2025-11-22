@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { recipeService } from "@/lib/services/recipe.service";
+import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 import { z } from "zod";
 import { cuidSchema } from "@/lib/validation/common.schemas";
 
@@ -40,29 +43,47 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
+  let session: Session | null = null;
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
-    const { recipeId } = await params;
+    const { id: storeId, recipeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Get recipe from service
     const recipe = await recipeService.getRecipeById(recipeId);
 
     if (!recipe) {
-      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Recipe not found"),
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(recipe, { status: 200 });
-  } catch (error) {
+    // Verify recipe belongs to store
+    if (recipe.storeId !== storeId) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.FORBIDDEN, "Recipe does not belong to this store"),
+        { status: 403 }
+      );
+    }
 
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch recipe" },
-      { status: 500 }
-    );
+    return NextResponse.json(createSuccessResponse(recipe), { status: 200 });
+  } catch (error) {
+    const { id: storeId, recipeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/recipes/[recipeId]",
+      context: { storeId, recipeId, userId: session?.user?.id },
+    });
   }
 }
 
@@ -74,14 +95,22 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
+  let session: Session | null = null;
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId, recipeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     const body = await request.json();
 
     // Validate request body
@@ -90,30 +119,13 @@ export async function PATCH(
     // Update recipe via service
     const recipe = await recipeService.updateRecipe(recipeId, storeId, validatedData);
 
-    return NextResponse.json(recipe, { status: 200 });
+    return NextResponse.json(createSuccessResponse(recipe), { status: 200 });
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      // Handle specific business logic errors
-      if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
-      }
-      if (error.message.includes("not found") || error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update recipe" },
-      { status: 500 }
-    );
+    const { id: storeId, recipeId } = await params;
+    return handleApiError(error, {
+      endpoint: "PATCH /api/stores/[id]/recipes/[recipeId]",
+      context: { storeId, recipeId, userId: session?.user?.id },
+    });
   }
 }
 
@@ -125,30 +137,34 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; recipeId: string }> }
 ) {
+  let session: Session | null = null;
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId, recipeId } = await params;
 
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     // Delete recipe via service
     await recipeService.deleteRecipe(recipeId, storeId);
 
-    return NextResponse.json({ message: "Recipe deleted successfully" }, { status: 200 });
-  } catch (error) {
-
-    if (error instanceof Error) {
-      if (error.message.includes("not found") || error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
-      }
-    }
-
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete recipe" },
-      { status: 500 }
+      createSuccessResponse({ message: "Recipe deleted successfully" }),
+      { status: 200 }
     );
+  } catch (error) {
+    const { id: storeId, recipeId } = await params;
+    return handleApiError(error, {
+      endpoint: "DELETE /api/stores/[id]/recipes/[recipeId]",
+      context: { storeId, recipeId, userId: session?.user?.id },
+    });
   }
 }

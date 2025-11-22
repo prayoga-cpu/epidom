@@ -35,7 +35,11 @@ export const materialKeys = {
  * Fetch all materials for a store with optional filtering
  * Real-time enabled: Polls every 30 seconds when tab is active
  */
-export function useMaterials(storeId: string, filters?: MaterialFilterInput) {
+export function useMaterials(
+  storeId: string,
+  filters?: MaterialFilterInput,
+  initialData?: MaterialsResponse
+) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
 
@@ -66,6 +70,7 @@ export function useMaterials(storeId: string, filters?: MaterialFilterInput) {
       return data.data;
     },
     enabled: !!storeId,
+    initialData, // ✅ Accept initial data from Server Component
     // Real-time configuration: Active data polling
     staleTime: 20 * 1000, // 20 seconds
     refetchInterval: 30 * 1000, // Poll every 30 seconds

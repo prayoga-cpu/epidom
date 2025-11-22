@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateSupplierInput, UpdateSupplierInput } from "@/lib/validation/inventory.schemas";
 import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { invalidateSupplierRelatedQueries } from "@/lib/utils/cache-helpers";
+import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 
 // Response interfaces
 export interface SuppliersResponse {
@@ -17,12 +18,12 @@ export interface SupplierFilterInput {
   take?: number;
 }
 
-// Query keys for cache management
+// Query keys for cache management (DRY principle)
 export const supplierKeys = {
   all: (storeId: string) => ["suppliers", storeId] as const,
   lists: (storeId: string) => [...supplierKeys.all(storeId), "list"] as const,
   list: (storeId: string, filters?: SupplierFilterInput) =>
-    [...supplierKeys.lists(storeId), filters] as const,
+    [...supplierKeys.lists(storeId), normalizeFilters(filters)] as const,
   details: (storeId: string) => [...supplierKeys.all(storeId), "detail"] as const,
   detail: (storeId: string, id: string) => [...supplierKeys.details(storeId), id] as const,
 };
@@ -139,14 +140,21 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
 /**
  * Fetch all suppliers with filters
  */
-export function useSuppliers(storeId: string, filters: SupplierFilterInput) {
+export function useSuppliers(
+  storeId: string,
+  filters: SupplierFilterInput,
+  initialData?: SuppliersResponse
+) {
+  // Normalize filters untuk consistent query keys (prevent cache fragmentation)
+  const normalizedFilters = normalizeFilters(filters);
+
   return useQuery<SuppliersResponse>({
-    queryKey: supplierKeys.list(storeId, filters),
+    queryKey: supplierKeys.list(storeId, normalizedFilters),
     queryFn: async () => {
       // Build query string
       const params = new URLSearchParams();
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
+      if (normalizedFilters) {
+        Object.entries(normalizedFilters).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== "") {
             params.append(key, String(value));
           }
@@ -176,9 +184,11 @@ export function useSuppliers(storeId: string, filters: SupplierFilterInput) {
       return response.json();
     },
     enabled: !!storeId,
+    initialData, // ✅ Accept initial data from Server Component
     // Real-time configuration: Static data - no polling, longer stale time
     staleTime: 5 * 60 * 1000, // 5 minutes (suppliers don't change often)
     refetchInterval: false, // No polling for static data
+    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
       refetchInterval: false, // Store in meta for smart polling

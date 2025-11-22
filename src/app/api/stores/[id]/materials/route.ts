@@ -2,11 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { materialService } from "@/lib/services/material.service";
-import { businessService } from "@/lib/services";
 import { createIngredientSchema, materialFilterSchema } from "@/lib/validation/inventory.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { ZodError } from "zod";
-import { logger } from "@/lib/logger";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
 
 /**
@@ -46,26 +45,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const { id: storeId } = await params;
 
-    // Verify user owns the business that owns this store
-    const business = await businessService.getBusinessByUserId(session.user.id);
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to business
-    const store = await businessService.getStoreById(storeId);
-    if (!store || store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Store not found or does not belong to your business"
-        ),
-        { status: 404 }
-      );
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -85,25 +66,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     return NextResponse.json(createSuccessResponse(result));
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.VALIDATION_ERROR,
-          "Invalid query parameters",
-          error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          }))
-        ),
-        { status: 400 }
-      );
-    }
-
-    logger.error("Error fetching materials", error, { endpoint: "GET /api/stores/[id]/materials" });
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/materials",
+      context: { storeId },
+    });
   }
 }
 
@@ -143,26 +110,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const { id: storeId } = await params;
 
-    // Verify user owns the business that owns this store
-    const business = await businessService.getBusinessByUserId(session.user.id);
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to business
-    const store = await businessService.getStoreById(storeId);
-    if (!store || store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Store not found or does not belong to your business"
-        ),
-        { status: 404 }
-      );
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate request body
     const body = await request.json();
@@ -175,36 +124,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       status: 201,
     });
   } catch (error) {
-    // Handle validation errors
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.VALIDATION_ERROR,
-          "Invalid input data",
-          error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          }))
-        ),
-        { status: 400 }
-      );
-    }
-
-    // Handle business logic errors
-    if (error instanceof Error) {
-      // Check for specific error messages
-      if (error.message.includes("SKU already exists")) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
-          { status: 409 }
-        );
-      }
-    }
-
-    logger.error("Error creating material", error, { endpoint: "POST /api/stores/[id]/materials" });
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "POST /api/stores/[id]/materials",
+      context: { storeId },
+    });
   }
 }

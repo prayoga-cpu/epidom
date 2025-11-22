@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { productService } from "@/lib/services/product.service";
 import { bulkDeleteSchema } from "@/lib/validation/inventory.schemas";
+import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 import { z } from "zod";
 
 /**
@@ -15,10 +18,17 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     const body = await request.json();
 
     // Validate request body
@@ -28,30 +38,17 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const result = await productService.bulkDeleteProducts(validatedData.ids, storeId);
 
     return NextResponse.json(
-      {
+      createSuccessResponse({
         message: "Products deleted successfully",
         deletedCount: result.deletedCount
-      },
+      }),
       { status: 200 }
     );
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      if (error.message.includes("do not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete products" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "DELETE /api/stores/[id]/products/bulk",
+      context: { storeId },
+    });
   }
 }

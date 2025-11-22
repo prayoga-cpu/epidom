@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supplierService } from "@/lib/services/supplier.service";
 import { subscriptionService } from "@/lib/services";
 import { createSupplierSchema } from "@/lib/validation/inventory.schemas";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 import { z } from "zod";
 
 // Validation schema for filtering suppliers
@@ -21,11 +23,15 @@ const supplierFilterSchema = z.object({
  * Get all suppliers for a store with optional filtering
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -45,6 +51,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const { id: storeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -61,19 +70,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Get suppliers from service
     const result = await supplierService.getSuppliers(storeId, filters);
 
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(createSuccessResponse(result), { status: 200 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch suppliers" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/suppliers",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }
 
@@ -82,13 +85,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
  * Create a new supplier
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -108,6 +113,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const { id: storeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     const body = await request.json();
 
     // Validate request body
@@ -127,25 +136,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       isActive: validatedData.isActive,
     });
 
-    return NextResponse.json(supplier, { status: 201 });
+    return NextResponse.json(createSuccessResponse(supplier), { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      // Handle specific business logic errors
-      if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create supplier" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "POST /api/stores/[id]/suppliers",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }

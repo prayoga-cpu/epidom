@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,11 @@ function getStockStatusVariant(
   return "default";
 }
 
-export function MaterialsSection() {
+interface MaterialsSectionProps {
+  initialMaterials?: MaterialWithSuppliers[];
+}
+
+export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {}) {
   const { t } = useI18n();
   const { advancedReportsAccess } = useFeatureAccess();
   const { formatPrice } = useCurrency();
@@ -92,8 +97,24 @@ export function MaterialsSection() {
     take: 50,
   });
 
-  // Data fetching
-  const { data, isLoading, error, refetch } = useMaterials(storeId, filters);
+  // Debounce search input to reduce API calls (300ms delay)
+  const debouncedSearch = useDebounce(filters.search, 300);
+
+  // Data fetching with initial data from Server Component
+  // Use debouncedSearch instead of filters.search for API calls
+  const { data, isLoading, error, refetch } = useMaterials(
+    storeId,
+    {
+      ...filters,
+      search: debouncedSearch || undefined,
+    },
+    initialMaterials
+      ? {
+          materials: initialMaterials,
+          total: initialMaterials.length,
+        }
+      : undefined
+  );
   const materials = data?.materials || [];
   const total = data?.total || 0;
 

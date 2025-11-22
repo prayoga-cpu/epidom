@@ -65,6 +65,16 @@ export interface ProductionBatchesResponse {
   total: number;
 }
 
+// Query keys for cache management (DRY principle)
+export const productionBatchKeys = {
+  all: (storeId: string) => ["production-batches", storeId] as const,
+  lists: (storeId: string) => [...productionBatchKeys.all(storeId), "list"] as const,
+  list: (storeId: string, filters?: ProductionBatchFilterInput) =>
+    [...productionBatchKeys.lists(storeId), normalizeFilters(filters)] as const,
+  details: (storeId: string) => [...productionBatchKeys.all(storeId), "detail"] as const,
+  detail: (storeId: string, id: string) => [...productionBatchKeys.details(storeId), id] as const,
+};
+
 // API Functions
 
 async function fetchProductionBatches(
@@ -206,14 +216,19 @@ async function deleteProductionBatch(storeId: string, batchId: string): Promise<
  * Fetch all production batches with filters
  * Real-time enabled: Polls every 30 seconds when tab is active
  */
-export function useProductionBatches(storeId: string, filters: ProductionBatchFilterInput) {
+export function useProductionBatches(
+  storeId: string,
+  filters: ProductionBatchFilterInput,
+  initialData?: ProductionBatchesResponse
+) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
 
   return useQuery({
-    queryKey: ["production-batches", storeId, normalizedFilters],
+    queryKey: productionBatchKeys.list(storeId, normalizedFilters),
     queryFn: () => fetchProductionBatches(storeId, normalizedFilters || filters),
     enabled: !!storeId,
+    initialData, // ✅ Accept initial data from Server Component
     // Real-time configuration: Active data polling
     staleTime: 20 * 1000, // 20 seconds
     refetchInterval: 30 * 1000, // Poll every 30 seconds
@@ -231,7 +246,7 @@ export function useProductionBatches(storeId: string, filters: ProductionBatchFi
  */
 export function useProductionBatch(storeId: string, batchId: string | null) {
   return useQuery({
-    queryKey: ["production-batches", storeId, batchId],
+    queryKey: productionBatchKeys.detail(storeId, batchId!),
     queryFn: () => fetchProductionBatchById(storeId, batchId!),
     enabled: !!storeId && !!batchId,
   });

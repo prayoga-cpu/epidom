@@ -339,3 +339,14 @@ export type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
 export const updateSupplierSchema = createSupplierSchema.partial().omit({ storeId: true });
 
 export type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>;
+
+// Supplier filter schema (for query params)
+export const supplierFilterSchema = z.object({
+  search: z.string().optional(),
+  sortBy: z.enum(["name", "contactPerson", "email", "createdAt", "updatedAt"]).default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  skip: z.coerce.number().int().nonnegative().default(0),
+  take: z.coerce.number().int().positive().max(100).default(50),
+});
+
+export type SupplierFilterInput = z.infer<typeof supplierFilterSchema>;

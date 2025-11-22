@@ -245,21 +245,6 @@ export function buildSearchFilter(searchTerm: string, fields: string[]): Record<
   };
 }
 
-/**
- * Debounce function for search inputs
- */
-export function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  delay: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout;
-
-  return function debounced(...args: Parameters<T>) {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-}
-
 // ============================================================================
 // SORTING HELPERS
 // ============================================================================

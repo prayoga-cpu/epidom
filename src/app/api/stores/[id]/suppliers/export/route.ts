@@ -1,27 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supplierService } from "@/lib/services/supplier.service";
 import { subscriptionService } from "@/lib/services";
 import { createCSVResponse } from "@/lib/utils/csv-export";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { z } from "zod";
-
-// Validation schema for filtering suppliers (same as main route)
-const supplierFilterSchema = z.object({
-  search: z.string().optional(),
-  sortBy: z.enum(["name", "contactPerson", "email", "createdAt", "updatedAt"]).default("createdAt"),
-  sortOrder: z.enum(["asc", "desc"]).default("desc"),
-});
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { supplierFilterSchema } from "@/lib/validation/inventory.schemas";
 
 /**
  * GET /api/stores/[id]/suppliers/export
  * Export suppliers to CSV format
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
         status: 401,
@@ -46,6 +42,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const { id: storeId } = await params;
 
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
     const filterParams = {
@@ -62,17 +61,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Return CSV file using utility
     return createCSVResponse(csv, "suppliers-export");
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to export suppliers" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/suppliers/export",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }

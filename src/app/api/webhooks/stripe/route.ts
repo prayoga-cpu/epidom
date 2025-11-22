@@ -4,6 +4,8 @@ import { stripe } from "@/lib/stripe";
 import { subscriptionRepository } from "@/lib/repositories";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
  * POST /api/webhooks/stripe
@@ -33,7 +35,10 @@ export async function POST(request: NextRequest) {
   const signature = headersList.get("stripe-signature");
 
   if (!signature) {
-    return NextResponse.json({ error: "No signature" }, { status: 400 });
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "No signature"),
+      { status: 400 }
+    );
   }
 
   let event: Stripe.Event;
@@ -41,16 +46,11 @@ export async function POST(request: NextRequest) {
   try {
     // Verify webhook signature
     event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET!);
-  /**
-   * Type assertion needed because error type is unknown
-   * Actual type: Error
-   * TODO: Use proper error type guard
-   */
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: `Webhook signature verification failed: ${error.message}` },
-      { status: 400 }
-    );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/webhooks/stripe",
+      context: { step: "signature_verification" },
+    });
   }
   try {
     switch (event.type) {
@@ -81,17 +81,12 @@ export async function POST(request: NextRequest) {
       default:
     }
 
-    return NextResponse.json({ received: true });
-  /**
-   * Type assertion needed because error type is unknown
-   * Actual type: Error
-   * TODO: Use proper error type guard
-   */
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: `Webhook handler failed: ${error.message}` },
-      { status: 500 }
-    );
+    return NextResponse.json(createSuccessResponse({ received: true }));
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/webhooks/stripe",
+      context: { step: "event_handling", eventType: event.type },
+    });
   }
 }
 

@@ -61,6 +61,16 @@ export interface RecipesResponse {
   total: number;
 }
 
+// Query keys for cache management (DRY principle)
+export const recipeKeys = {
+  all: (storeId: string) => ["recipes", storeId] as const,
+  lists: (storeId: string) => [...recipeKeys.all(storeId), "list"] as const,
+  list: (storeId: string, filters?: RecipeFilterInput) =>
+    [...recipeKeys.lists(storeId), normalizeFilters(filters)] as const,
+  details: (storeId: string) => [...recipeKeys.all(storeId), "detail"] as const,
+  detail: (storeId: string, id: string) => [...recipeKeys.details(storeId), id] as const,
+};
+
 // API Functions
 async function fetchRecipes(storeId: string, filters: RecipeFilterInput): Promise<RecipesResponse> {
   const params = new URLSearchParams();
@@ -208,14 +218,19 @@ async function exportRecipes(storeId: string, filters: RecipeFilterInput): Promi
  * Fetch all recipes with filters
  * Real-time enabled: Polls every 30 seconds when tab is active
  */
-export function useRecipes(storeId: string, filters: RecipeFilterInput) {
+export function useRecipes(
+  storeId: string,
+  filters: RecipeFilterInput,
+  initialData?: RecipesResponse
+) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
 
   return useQuery({
-    queryKey: ["recipes", storeId, normalizedFilters],
+    queryKey: recipeKeys.list(storeId, normalizedFilters),
     queryFn: () => fetchRecipes(storeId, normalizedFilters || filters),
     enabled: !!storeId,
+    initialData, // ✅ Accept initial data from Server Component
     // Real-time configuration: Active data polling
     staleTime: 20 * 1000, // 20 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
@@ -234,7 +249,7 @@ export function useRecipes(storeId: string, filters: RecipeFilterInput) {
  */
 export function useRecipe(storeId: string, recipeId: string | null) {
   return useQuery({
-    queryKey: ["recipes", storeId, recipeId],
+    queryKey: recipeKeys.detail(storeId, recipeId!),
     queryFn: () => fetchRecipeById(storeId, recipeId!),
     enabled: !!storeId && !!recipeId,
   });
@@ -267,7 +282,7 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
     mutationFn: (data: UpdateRecipeFormInput) => updateRecipe(storeId, recipeId, data),
     onSuccess: () => {
       // Update cache for specific recipe (optimistic update)
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId, recipeId] });
+      queryClient.invalidateQueries({ queryKey: recipeKeys.detail(storeId, recipeId) });
       // Non-blocking cache invalidation: Only invalidate recipes immediately
       // Other queries (products, materials) will sync in background
       invalidateRecipeRelatedQueries(queryClient, storeId, false);
@@ -285,7 +300,7 @@ export function useDeleteRecipe(storeId: string) {
     mutationFn: (recipeId: string) => deleteRecipe(storeId, recipeId),
     onSuccess: (_, recipeId) => {
       // Remove from cache
-      queryClient.removeQueries({ queryKey: ["recipes", storeId, recipeId] });
+      queryClient.removeQueries({ queryKey: recipeKeys.detail(storeId, recipeId) });
       // Non-blocking cache invalidation: Only invalidate recipes immediately
       // Other queries (products, materials) will sync in background
       invalidateRecipeRelatedQueries(queryClient, storeId, false);
@@ -304,7 +319,7 @@ export function useBulkDeleteRecipes(storeId: string) {
     onSuccess: (_, recipeIds) => {
       // Remove all deleted items from cache
       recipeIds.forEach((id) => {
-        queryClient.removeQueries({ queryKey: ["recipes", storeId, id] });
+        queryClient.removeQueries({ queryKey: recipeKeys.detail(storeId, id) });
       });
       // Non-blocking cache invalidation: Only invalidate recipes immediately
       // Other queries (products, materials) will sync in background

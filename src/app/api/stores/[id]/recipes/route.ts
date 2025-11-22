@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { recipeService } from "@/lib/services/recipe.service";
+import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 import { z } from "zod";
 
 // Validation schema for creating recipe
@@ -42,14 +45,21 @@ const recipeFilterSchema = z.object({
  * Get all recipes for a store with optional filtering
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -67,20 +77,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Get recipes from service
     const result = await recipeService.getRecipes(storeId, filters);
 
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(createSuccessResponse(result), { status: 200 });
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch recipes" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/recipes",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }
 
@@ -89,14 +92,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
  * Create a new recipe
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     const body = await request.json();
 
     // Validate request body
@@ -108,29 +119,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ...validatedData,
     });
 
-    return NextResponse.json(recipe, { status: 201 });
+    return NextResponse.json(createSuccessResponse(recipe), { status: 201 });
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      // Handle specific business logic errors
-      if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
-      }
-      if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create recipe" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "POST /api/stores/[id]/recipes",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }

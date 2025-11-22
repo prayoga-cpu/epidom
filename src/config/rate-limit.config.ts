@@ -21,10 +21,106 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 10 requests per minute
   },
 
-  // General API endpoints - moderate limits
-  default: {
+  // Subscription endpoints - strict limits (payment sensitive)
+  "/api/subscriptions/checkout": {
+    limit: 5,
+    window: 60, // 5 checkout attempts per minute
+  },
+  "/api/subscriptions/cancel": {
+    limit: 5,
+    window: 60, // 5 cancellation attempts per minute
+  },
+  "/api/subscriptions/portal": {
+    limit: 10,
+    window: 60, // 10 portal sessions per minute
+  },
+  "/api/subscriptions/sync": {
+    limit: 5,
+    window: 60, // 5 sync operations per minute
+  },
+  "/api/subscriptions/cleanup": {
+    limit: 2,
+    window: 60, // 2 cleanup operations per minute
+  },
+  "/api/subscriptions/debug": {
+    limit: 10,
+    window: 60, // 10 debug requests per minute
+  },
+  "/api/subscriptions/audit": {
+    limit: 5,
+    window: 60, // 5 audit operations per minute
+  },
+  "/api/subscriptions/status": {
+    limit: 30,
+    window: 60, // 30 status checks per minute
+  },
+
+  // Billing endpoints
+  "/api/billing/portal": {
+    limit: 10,
+    window: 60, // 10 portal sessions per minute
+  },
+
+  // Connect endpoints
+  "/api/connect/onboarding": {
+    limit: 5,
+    window: 60, // 5 onboarding attempts per minute
+  },
+  "/api/connect/dashboard": {
+    limit: 10,
+    window: 60, // 10 dashboard links per minute
+  },
+  "/api/connect/status": {
+    limit: 30,
+    window: 60, // 30 status checks per minute
+  },
+
+  // Store CRUD operations - moderate limits
+  "/api/stores/[id]/materials": {
     limit: 100,
     window: 60, // 100 requests per minute
+  },
+  "/api/stores/[id]/products": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/recipes": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/suppliers": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/supplier-orders": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/production-batches": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/stock-movements": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/alerts": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/product-usage": {
+    limit: 100,
+    window: 60,
+  },
+
+  // Stock operations
+  "/api/stores/[id]/stock/adjust": {
+    limit: 50,
+    window: 60, // 50 stock adjustments per minute
+  },
+  "/api/stores/[id]/stock/import": {
+    limit: 10,
+    window: 60, // 10 imports per minute
   },
 
   // Heavy operations - strict limits
@@ -51,6 +147,32 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
   "/api/stores/[id]/products/bulk": {
     limit: 10,
     window: 60,
+  },
+  "/api/stores/[id]/recipes/bulk": {
+    limit: 10,
+    window: 60,
+  },
+  "/api/stores/[id]/suppliers/bulk": {
+    limit: 10,
+    window: 60,
+  },
+
+  // Exchange rates
+  "/api/exchange-rates": {
+    limit: 30,
+    window: 60, // 30 requests per minute
+  },
+
+  // Webhooks (no rate limit - handled by Stripe)
+  "/api/webhooks/stripe": {
+    limit: 1000,
+    window: 60, // Very high limit for webhooks
+  },
+
+  // General API endpoints - moderate limits
+  default: {
+    limit: 100,
+    window: 60, // 100 requests per minute
   },
 };
 

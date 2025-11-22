@@ -28,6 +28,16 @@ export interface ProductFilterInput {
   take?: number;
 }
 
+// Query keys for cache management (DRY principle)
+export const productKeys = {
+  all: (storeId: string) => ["products", storeId] as const,
+  lists: (storeId: string) => [...productKeys.all(storeId), "list"] as const,
+  list: (storeId: string, filters?: ProductFilterInput) =>
+    [...productKeys.lists(storeId), normalizeFilters(filters)] as const,
+  details: (storeId: string) => [...productKeys.all(storeId), "detail"] as const,
+  detail: (storeId: string, id: string) => [...productKeys.details(storeId), id] as const,
+};
+
 // API Functions
 async function fetchProducts(
   storeId: string,
@@ -159,14 +169,19 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
  * Fetch all products with filters
  * Real-time enabled: Polls every 30 seconds when tab is active
  */
-export function useProducts(storeId: string, filters: ProductFilterInput) {
+export function useProducts(
+  storeId: string,
+  filters: ProductFilterInput,
+  initialData?: ProductsResponse
+) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
 
   return useQuery({
-    queryKey: ["products", storeId, normalizedFilters],
+    queryKey: productKeys.list(storeId, normalizedFilters),
     queryFn: () => fetchProducts(storeId, normalizedFilters || filters),
     enabled: !!storeId,
+    initialData, // ✅ Accept initial data from Server Component
     // Real-time configuration: Active data polling
     staleTime: 20 * 1000, // 20 seconds
     refetchInterval: 30 * 1000, // Poll every 30 seconds
@@ -184,7 +199,7 @@ export function useProducts(storeId: string, filters: ProductFilterInput) {
  */
 export function useProduct(storeId: string, productId: string | null) {
   return useQuery({
-    queryKey: ["products", storeId, productId],
+    queryKey: productKeys.detail(storeId, productId!),
     queryFn: () => fetchProductById(storeId, productId!),
     enabled: !!storeId && !!productId,
   });
@@ -217,7 +232,7 @@ export function useUpdateProduct(storeId: string, productId: string) {
     mutationFn: (data: UpdateProductInput) => updateProduct(storeId, productId, data),
     onSuccess: () => {
       // Update cache for specific product (optimistic update)
-      queryClient.invalidateQueries({ queryKey: ["products", storeId, productId] });
+      queryClient.invalidateQueries({ queryKey: productKeys.detail(storeId, productId) });
       // Non-blocking cache invalidation: Only invalidate products immediately
       // Other queries (alerts, stock movements) will sync in background
       invalidateProductRelatedQueries(queryClient, storeId, false);
@@ -235,7 +250,7 @@ export function useDeleteProduct(storeId: string) {
     mutationFn: (productId: string) => deleteProduct(storeId, productId),
     onSuccess: (_, productId) => {
       // Remove from cache
-      queryClient.removeQueries({ queryKey: ["products", storeId, productId] });
+      queryClient.removeQueries({ queryKey: productKeys.detail(storeId, productId) });
       // Non-blocking cache invalidation: Only invalidate products immediately
       // Other queries (alerts) will sync in background
       invalidateProductRelatedQueries(queryClient, storeId, false);
@@ -254,7 +269,7 @@ export function useBulkDeleteProducts(storeId: string) {
     onSuccess: (_, productIds) => {
       // Remove all deleted items from cache
       productIds.forEach((id) => {
-        queryClient.removeQueries({ queryKey: ["products", storeId, id] });
+        queryClient.removeQueries({ queryKey: productKeys.detail(storeId, id) });
       });
       // Non-blocking cache invalidation: Only invalidate products immediately
       // Other queries (alerts) will sync in background
