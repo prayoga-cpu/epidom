@@ -216,12 +216,12 @@ export function useRecipes(storeId: string, filters: RecipeFilterInput) {
     queryKey: ["recipes", storeId, normalizedFilters],
     queryFn: () => fetchRecipes(storeId, normalizedFilters || filters),
     enabled: !!storeId,
-    // Real-time configuration: Active data polling
-    staleTime: 20 * 1000, // 20 seconds
+    // Optimized for real-time updates after mutations
+    staleTime: 5 * 1000, // 5 seconds - shorter to ensure fresh data
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: false, // Only poll when tab is active
-    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnMount: true, // Always check for updates on mount
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
       refetchInterval: 30 * 1000, // Store in meta for smart polling
@@ -248,11 +248,11 @@ export function useCreateRecipe(storeId: string) {
 
   return useMutation({
     mutationFn: (data: CreateRecipeFormInput) => createRecipe(storeId, data),
-    onSuccess: () => {
-      // Non-blocking cache invalidation: Only invalidate recipes immediately
-      // Other queries (products, materials) will sync in background
-      // This allows UI to respond faster without waiting for all invalidations
-      invalidateRecipeRelatedQueries(queryClient, storeId, false);
+    onSuccess: async () => {
+      // Invalidate and immediately refetch all recipe queries for this store
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      // Force refetch to ensure UI updates immediately
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }
@@ -265,12 +265,11 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
 
   return useMutation({
     mutationFn: (data: UpdateRecipeFormInput) => updateRecipe(storeId, recipeId, data),
-    onSuccess: () => {
-      // Update cache for specific recipe (optimistic update)
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId, recipeId] });
-      // Non-blocking cache invalidation: Only invalidate recipes immediately
-      // Other queries (products, materials) will sync in background
-      invalidateRecipeRelatedQueries(queryClient, storeId, false);
+    onSuccess: async () => {
+      // Invalidate and immediately refetch all recipe queries for this store
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId, recipeId] });
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }
@@ -283,12 +282,9 @@ export function useDeleteRecipe(storeId: string) {
 
   return useMutation({
     mutationFn: (recipeId: string) => deleteRecipe(storeId, recipeId),
-    onSuccess: (_, recipeId) => {
-      // Remove from cache
-      queryClient.removeQueries({ queryKey: ["recipes", storeId, recipeId] });
-      // Non-blocking cache invalidation: Only invalidate recipes immediately
-      // Other queries (products, materials) will sync in background
-      invalidateRecipeRelatedQueries(queryClient, storeId, false);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }
@@ -301,14 +297,9 @@ export function useBulkDeleteRecipes(storeId: string) {
 
   return useMutation({
     mutationFn: (recipeIds: string[]) => bulkDeleteRecipes(storeId, recipeIds),
-    onSuccess: (_, recipeIds) => {
-      // Remove all deleted items from cache
-      recipeIds.forEach((id) => {
-        queryClient.removeQueries({ queryKey: ["recipes", storeId, id] });
-      });
-      // Non-blocking cache invalidation: Only invalidate recipes immediately
-      // Other queries (products, materials) will sync in background
-      invalidateRecipeRelatedQueries(queryClient, storeId, false);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }
@@ -322,10 +313,9 @@ export function useDuplicateRecipe(storeId: string) {
   return useMutation({
     mutationFn: ({ recipeId, newName }: { recipeId: string; newName: string }) =>
       duplicateRecipe(storeId, recipeId, newName),
-    onSuccess: () => {
-      // Non-blocking cache invalidation: Only invalidate recipes immediately
-      // Other queries (products, materials) will sync in background
-      invalidateRecipeRelatedQueries(queryClient, storeId, false);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }

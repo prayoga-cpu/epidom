@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ import {
   useExportMaterials,
 } from "../hooks/use-materials";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
+import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
 
 type StockFilter = "in_stock" | "low_stock" | "out_of_stock" | "overstocked" | undefined;
 
@@ -73,12 +75,41 @@ function getStockStatusVariant(
   return "default";
 }
 
+// Supplier filter configuration for prefetch (must match add-material-dialog)
+const SUPPLIER_PREFETCH_FILTERS = {
+  sortBy: "name" as const,
+  sortOrder: "asc" as const,
+  skip: 0,
+  take: 100,
+};
+
 export function MaterialsSection() {
   const { t } = useI18n();
   const { advancedReportsAccess } = useFeatureAccess();
   const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
+  const queryClient = useQueryClient();
+
+  // Prefetch suppliers on mount - so AddMaterialDialog opens instantly
+  useEffect(() => {
+    if (!storeId) return;
+
+    queryClient.prefetchQuery({
+      queryKey: supplierKeys.list(storeId, SUPPLIER_PREFETCH_FILTERS),
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        params.append("sortBy", SUPPLIER_PREFETCH_FILTERS.sortBy);
+        params.append("sortOrder", SUPPLIER_PREFETCH_FILTERS.sortOrder);
+        params.append("skip", String(SUPPLIER_PREFETCH_FILTERS.skip));
+        params.append("take", String(SUPPLIER_PREFETCH_FILTERS.take));
+        const response = await fetch(`/api/stores/${storeId}/suppliers?${params.toString()}`);
+        if (!response.ok) throw new Error("Failed to prefetch suppliers");
+        return response.json();
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+  }, [storeId, queryClient]);
 
   // Filters state
   const [filters, setFilters] = useState({

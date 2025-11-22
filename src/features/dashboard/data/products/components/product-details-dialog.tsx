@@ -27,6 +27,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { getTranslatedCategory } from "../../recipes/utils/category-helpers";
 
 interface ProductDetailsDialogProps {
   open: boolean;
@@ -317,7 +318,7 @@ export function ProductDetailsDialog({
                                   {t("data.recipes.form.category")}:{" "}
                                 </span>
                                 <Badge variant="outline">
-                                  {recipe.category || t("common.notAvailable")}
+                                  {recipe.category ? getTranslatedCategory(recipe.category, t) : t("common.notAvailable")}
                                 </Badge>
                               </div>
                               <div>
