@@ -1,5 +1,3 @@
-This is a [Next.js](https://nextjs.org) 15 project with Next.js App Router, bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
 **EPIDOM** - A complete restaurant & food business management platform with Stripe payment integration, multi-language support (EN/FR/ID), and subscription-based pricing.
 
 ## Tech Stack
