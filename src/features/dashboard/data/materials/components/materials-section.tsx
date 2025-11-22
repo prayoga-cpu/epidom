@@ -12,7 +12,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { MaterialDetailsDialog } from "./material-details-dialog";
 import { EditMaterialDialog } from "./edit-material-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { AddMaterialDialog } from "./add-material-dialog";
+import AddMaterialDialog from "./add-material-dialog";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import {
   SectionHeader,

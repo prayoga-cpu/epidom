@@ -5,7 +5,6 @@ import {
   RecipeFilterInput,
 } from "@/lib/validation/inventory.schemas";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
-import { invalidateRecipeRelatedQueries } from "@/lib/utils/cache-helpers";
 
 // Types
 export interface RecipeWithIngredients {

@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { RecipeDetailsDialog } from "./recipe-details-dialog";
-import { EditRecipeDialog } from "./edit-recipe-dialog";
-import { DuplicateRecipeDialog } from "./duplicate-recipe-dialog";
+import EditRecipeDialog from "./edit-recipe-dialog";
+import DuplicateRecipeDialog from "./duplicate-recipe-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AddRecipeDialog } from "./add-recipe-dialog";
 import {
