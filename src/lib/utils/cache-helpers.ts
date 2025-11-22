@@ -39,7 +39,7 @@ export async function invalidateQueriesBatch(
  * @param storeId - Store ID
  * @param skipMaterials - If true, skip materials list invalidation (for cases where it's already invalidated)
  */
-export function invalidateMaterialQueriesImmediate(
+export async function invalidateMaterialQueriesImmediate(
   queryClient: QueryClient,
   storeId: string,
   skipMaterials = false
@@ -79,5 +79,113 @@ export function invalidateMaterialQueriesImmediate(
   );
 
   await Promise.all(invalidations);
+}
+
+/**
+ * Invalidate all store-related queries after material changes
+ * Non-critical invalidations are deferred to background for better performance
+ *
+ * @param queryClient - TanStack Query client
+ * @param storeId - Store ID
+ * @param immediate - If true, invalidate immediately (blocking). If false, defer to background (non-blocking)
+ */
+export async function invalidateMaterialRelatedQueries(
+  queryClient: QueryClient,
+  storeId: string,
+  immediate: boolean = false
+): Promise<void> {
+  if (immediate) {
+    // Blocking: Invalidate all queries immediately (for critical operations)
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["materials", storeId],
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["suppliers", storeId],
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: alertKeys.lists(storeId),
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: stockMovementKeys.all(storeId),
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["recipes", storeId],
+        exact: false,
+      }),
+    ]);
+  }
+}
+
+/**
+ * Invalidate all store-related queries after product changes
+ * Non-critical invalidations are deferred to background for better performance
+ *
+ * @param queryClient - TanStack Query client
+ * @param storeId - Store ID
+ * @param immediate - If true, invalidate immediately (blocking). If false, defer to background (non-blocking)
+ */
+export async function invalidateProductRelatedQueries(
+  queryClient: QueryClient,
+  storeId: string,
+  immediate: boolean = false
+): Promise<void> {
+  if (immediate) {
+    // Blocking: Invalidate all queries immediately (for critical operations)
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["products", storeId],
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["product-usage", storeId],
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: alertKeys.lists(storeId),
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: stockMovementKeys.all(storeId),
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["recipes", storeId],
+        exact: false,
+      }),
+    ]);
+  }
+}
+
+/**
+ * Invalidate all store-related queries after supplier changes
+ * Non-critical invalidations are deferred to background for better performance
+ *
+ * @param queryClient - TanStack Query client
+ * @param storeId - Store ID
+ * @param immediate - If true, invalidate immediately (blocking). If false, defer to background (non-blocking)
+ */
+export async function invalidateSupplierRelatedQueries(
+  queryClient: QueryClient,
+  storeId: string,
+  immediate: boolean = false
+): Promise<void> {
+  if (immediate) {
+    // Blocking: Invalidate all queries immediately (for critical operations)
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["suppliers", storeId],
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["materials", storeId],
+        exact: false,
+      }),
+    ]);
+  }
 }
 
