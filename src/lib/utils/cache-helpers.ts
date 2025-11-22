@@ -39,7 +39,7 @@ export async function invalidateQueriesBatch(
  * @param storeId - Store ID
  * @param skipMaterials - If true, skip materials list invalidation (for cases where it's already invalidated)
  */
-export function invalidateMaterialQueriesImmediate(
+export async function invalidateMaterialQueriesImmediate(
   queryClient: QueryClient,
   storeId: string,
   skipMaterials = false
