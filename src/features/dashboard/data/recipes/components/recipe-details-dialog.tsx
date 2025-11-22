@@ -36,6 +36,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useMaterials } from "../../materials/hooks/use-materials";
 import type { RecipeWithIngredients } from "../hooks/use-recipes";
+import { getTranslatedCategory } from "../utils/category-helpers";
 
 interface RecipeDetailsDialogProps {
   open: boolean;
@@ -177,7 +178,7 @@ export default function RecipeDetailsDialog({
             {recipe.category && (
               <div>
                 <Badge variant="secondary" className="text-sm">
-                  {recipe.category}
+                  {getTranslatedCategory(recipe.category, t)}
                 </Badge>
               </div>
             )}

@@ -16,6 +16,7 @@ import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes"
 import { useProductionBatches } from "./hooks/use-production-batches";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { hasMaterialStockChanged } from "./utils/recipe-helpers";
+import { getTranslatedCategory } from "@/features/dashboard/data/recipes/utils/category-helpers";
 
 export function RecipeProductionCard() {
   const { t } = useI18n();
@@ -114,17 +115,24 @@ export function RecipeProductionCard() {
     });
   }, [selectedRecipe]);
 
-  // Check if production can start (all materials have sufficient quantity and recipe has linked products)
-  const canStartProduction = useMemo(() => {
+  // Check if recipe has linked products
+  const hasLinkedProducts = useMemo(() => {
+    return selectedRecipe?.recipeProducts && selectedRecipe.recipeProducts.length > 0;
+  }, [selectedRecipe]);
+
+  // Check if all materials have sufficient quantity
+  const hasSufficientMaterials = useMemo(() => {
     if (!selectedRecipe || recipeIngredients.length === 0) return false;
-    // Check if recipe has linked products
-    const hasLinkedProducts = selectedRecipe.recipeProducts && selectedRecipe.recipeProducts.length > 0;
-    if (!hasLinkedProducts) return false;
-    // Only allow production if all materials have available >= required
     return recipeIngredients.every(
       (ing: { available: number; required: number }) => ing.available >= ing.required
     );
   }, [selectedRecipe, recipeIngredients]);
+
+  // Check if production can start (all materials have sufficient quantity and recipe has linked products)
+  const canStartProduction = useMemo(() => {
+    if (!selectedRecipe || recipeIngredients.length === 0) return false;
+    return hasLinkedProducts && hasSufficientMaterials;
+  }, [selectedRecipe, recipeIngredients, hasLinkedProducts, hasSufficientMaterials]);
 
   // Get category color - neutral gray
   const getCategoryColor = (category: string) => {
@@ -215,7 +223,7 @@ export function RecipeProductionCard() {
                           </span>
                         </div>
                         <Badge className={`mt-2 ${getCategoryColor(recipe.category ?? "")}`}>
-                          {recipe.category}
+                          {getTranslatedCategory(recipe.category, t)}
                         </Badge>
                       </div>
                     </div>
@@ -238,7 +246,7 @@ export function RecipeProductionCard() {
                     <CardDescription>{selectedRecipe.description}</CardDescription>
                   </div>
                   <Badge className={getCategoryColor(selectedRecipe.category)}>
-                    {selectedRecipe.category}
+                    {getTranslatedCategory(selectedRecipe.category, t)}
                   </Badge>
                 </div>
               </CardHeader>
@@ -289,7 +297,13 @@ export function RecipeProductionCard() {
                     <PlayCircle className="mr-1 h-5 w-5 hidden sm:inline" />
                     {t("management.recipeProduction.startProduction")}
                   </Button>
-                  {!canStartProduction && (
+                  {!canStartProduction && !hasLinkedProducts && (
+                    <p className="text-destructive mt-2 flex items-center gap-1 text-sm">
+                      <AlertCircle className="h-4 w-4" />
+                      {t("management.recipeProduction.noLinkedProducts")}
+                    </p>
+                  )}
+                  {!canStartProduction && hasLinkedProducts && !hasSufficientMaterials && (
                     <p className="text-destructive mt-2 flex items-center gap-1 text-sm">
                       <AlertCircle className="h-4 w-4" />
                       {t("management.recipeProduction.insufficientMaterials")}

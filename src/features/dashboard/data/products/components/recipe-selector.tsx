@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useRecipes } from "../../recipes/hooks/use-recipes";
+import { getTranslatedCategory } from "../../recipes/utils/category-helpers";
 
 interface RecipeSelectorProps {
   storeId: string;
@@ -136,7 +137,7 @@ export function RecipeSelector({
                   </span>
                   {recipe.category && (
                     <Badge variant="outline" className="ml-1 text-xs">
-                      {recipe.category}
+                      {getTranslatedCategory(recipe.category, t)}
                     </Badge>
                   )}
                   <button

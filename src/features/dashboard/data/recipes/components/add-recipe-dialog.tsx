@@ -57,6 +57,7 @@ import {
   createNumberInputHandler,
 } from "@/lib/utils/number-input";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
+import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
 
 type RecipeFormValues = CreateRecipeFormInput;
 
@@ -87,16 +88,6 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     { id: 4, name: t("data.recipes.steps.review"), icon: Calculator },
   ];
 
-  // Recipe categories with translation
-  const getRecipeCategories = () => [
-    t("data.recipes.categories.breadPastries"),
-    t("data.recipes.categories.cakesDesserts"),
-    t("data.recipes.categories.confectionery"),
-    t("data.recipes.categories.dairyProducts"),
-    t("data.recipes.categories.beverages"),
-    t("data.recipes.categories.saucesCondiments"),
-    t("data.recipes.categories.other"),
-  ];
 
   // Fetch real materials for dropdown
   const { data: materialsData } = useMaterials(storeId);
@@ -505,9 +496,9 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {getRecipeCategories().map((category) => (
+                          {RECIPE_CATEGORIES.map((category) => (
                             <SelectItem key={category} value={category}>
-                              {category}
+                              {getTranslatedCategory(category, t)}
                             </SelectItem>
                           ))}
                         </SelectContent>

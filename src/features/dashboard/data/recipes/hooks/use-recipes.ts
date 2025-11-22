@@ -215,12 +215,12 @@ export function useRecipes(storeId: string, filters: RecipeFilterInput) {
     queryKey: ["recipes", storeId, normalizedFilters],
     queryFn: () => fetchRecipes(storeId, normalizedFilters || filters),
     enabled: !!storeId,
-    // Real-time configuration: Active data polling
-    staleTime: 20 * 1000, // 20 seconds
+    // Optimized for real-time updates after mutations
+    staleTime: 5 * 1000, // 5 seconds - shorter to ensure fresh data
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: false, // Only poll when tab is active
-    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnMount: true, // Always check for updates on mount
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
       refetchInterval: 30 * 1000, // Store in meta for smart polling
@@ -247,8 +247,11 @@ export function useCreateRecipe(storeId: string) {
 
   return useMutation({
     mutationFn: (data: CreateRecipeFormInput) => createRecipe(storeId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: async () => {
+      // Invalidate and immediately refetch all recipe queries for this store
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      // Force refetch to ensure UI updates immediately
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }
@@ -261,9 +264,11 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
 
   return useMutation({
     mutationFn: (data: UpdateRecipeFormInput) => updateRecipe(storeId, recipeId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId, recipeId] });
+    onSuccess: async () => {
+      // Invalidate and immediately refetch all recipe queries for this store
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId, recipeId] });
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }
@@ -276,8 +281,9 @@ export function useDeleteRecipe(storeId: string) {
 
   return useMutation({
     mutationFn: (recipeId: string) => deleteRecipe(storeId, recipeId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }
@@ -290,8 +296,9 @@ export function useBulkDeleteRecipes(storeId: string) {
 
   return useMutation({
     mutationFn: (recipeIds: string[]) => bulkDeleteRecipes(storeId, recipeIds),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }
@@ -305,8 +312,9 @@ export function useDuplicateRecipe(storeId: string) {
   return useMutation({
     mutationFn: ({ recipeId, newName }: { recipeId: string; newName: string }) =>
       duplicateRecipe(storeId, recipeId, newName),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      await queryClient.refetchQueries({ queryKey: ["recipes", storeId], type: "active" });
     },
   });
 }

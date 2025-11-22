@@ -49,6 +49,7 @@ import {
 import LoadingPage from "@/features/loading/loading-page";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
+import { getTranslatedCategory } from "../utils/category-helpers";
 
 type SortField =
   | "name"
@@ -399,7 +400,7 @@ export function RecipesSection() {
                         </h3>
                         {recipe.category && (
                           <Badge variant="secondary" className="mt-1 text-xs">
-                            {recipe.category}
+                            {getTranslatedCategory(recipe.category, t)}
                           </Badge>
                         )}
                       </div>

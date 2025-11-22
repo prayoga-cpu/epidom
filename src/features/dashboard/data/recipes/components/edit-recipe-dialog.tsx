@@ -41,6 +41,8 @@ import {
   createNumberInputHandler,
 } from "@/lib/utils/number-input";
 
+import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
+
 type RecipeFormValues = UpdateRecipeFormInput;
 
 interface EditRecipeDialogProps {
@@ -48,16 +50,6 @@ interface EditRecipeDialogProps {
   onOpenChange: (open: boolean) => void;
   recipe: RecipeWithIngredients;
 }
-
-const RECIPE_CATEGORIES = [
-  "Bread & Pastries",
-  "Cakes & Desserts",
-  "Confectionery",
-  "Dairy Products",
-  "Beverages",
-  "Sauces & Condiments",
-  "Other",
-];
 
 export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialogProps) {
   const { t } = useI18n();
@@ -258,7 +250,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                       <SelectContent>
                         {RECIPE_CATEGORIES.map((category) => (
                           <SelectItem key={category} value={category}>
-                            {category}
+                            {getTranslatedCategory(category, t)}
                           </SelectItem>
                         ))}
                       </SelectContent>
