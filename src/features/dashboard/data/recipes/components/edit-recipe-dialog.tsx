@@ -59,7 +59,7 @@ const RECIPE_CATEGORIES = [
   "Other",
 ];
 
-export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialogProps) {
+export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialogProps) {
   const { t } = useI18n();
   const params = useParams();
   const storeId = params.storeId as string;
@@ -101,6 +101,12 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
         productionTimeMinutes: productionTimeMinutes > 0 ? productionTimeMinutes : undefined,
         ingredients: recipe.ingredients.map((ing) => ({
           materialId: ing.materialId,
+          /**
+           * Type assertion needed because quantity field accepts number | undefined
+           * but TypeScript requires explicit type for undefined in object literal
+           * Actual type: number | undefined
+           * TODO: Use proper type for quantity field
+           */
           quantity: (Number(ing.quantity) || undefined) as any, // Allow undefined in form state for better UX
           unit: ing.unit,
           notes: ing.notes || "",
@@ -169,6 +175,12 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
     const currentIngredients = form.getValues("ingredients") || [];
     form.setValue(
       "ingredients",
+      /**
+       * Type assertion needed because quantity field accepts number | undefined
+       * but TypeScript requires explicit type for undefined in object literal
+       * Actual type: number | undefined
+       * TODO: Use proper type for quantity field
+       */
       [...currentIngredients, { materialId: "", quantity: undefined as any, unit: "", notes: "" }],
       { shouldValidate: false, shouldDirty: true, shouldTouch: true }
     );

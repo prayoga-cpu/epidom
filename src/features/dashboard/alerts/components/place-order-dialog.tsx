@@ -58,7 +58,7 @@ interface PlaceOrderDialogProps {
   alert?: Alert | null;
 }
 
-export default function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialogProps) {
+export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialogProps) {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const { toast } = useToast();

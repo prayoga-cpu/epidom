@@ -23,7 +23,7 @@ interface PrintDeliveryDialogProps {
   delivery: SupplierDelivery | null;
 }
 
-export default function PrintDeliveryDialog({
+export function PrintDeliveryDialog({
   open,
   onOpenChange,
   delivery,

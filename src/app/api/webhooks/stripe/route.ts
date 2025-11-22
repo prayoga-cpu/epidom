@@ -41,6 +41,11 @@ export async function POST(request: NextRequest) {
   try {
     // Verify webhook signature
     event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET!);
+  /**
+   * Type assertion needed because error type is unknown
+   * Actual type: Error
+   * TODO: Use proper error type guard
+   */
   } catch (error: any) {
     return NextResponse.json(
       { error: `Webhook signature verification failed: ${error.message}` },
@@ -77,6 +82,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ received: true });
+  /**
+   * Type assertion needed because error type is unknown
+   * Actual type: Error
+   * TODO: Use proper error type guard
+   */
   } catch (error: any) {
     return NextResponse.json(
       { error: `Webhook handler failed: ${error.message}` },
@@ -108,7 +118,11 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     expand: ["latest_invoice", "customer"],
   });
 
-  // Cast to access properties TypeScript doesn't recognize
+  /**
+   * Type assertion needed because Stripe API types don't expose all properties
+   * Actual type: Stripe.Subscription with current_period_start and current_period_end
+   * TODO: Use proper Stripe type definitions or create extended type
+   */
   const subscriptionData = stripeSubscription as any;
   // Convert Unix timestamps (seconds) to JavaScript Date (milliseconds)
   const currentPeriodStart = new Date(subscriptionData.current_period_start * 1000);
@@ -185,7 +199,11 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   if (!userId || !plan) {
     return;
   }
-  // Cast to access properties
+  /**
+   * Type assertion needed because Stripe API types don't expose all properties
+   * Actual type: Stripe.Subscription with current_period_start and current_period_end
+   * TODO: Use proper Stripe type definitions or create extended type
+   */
   const subscriptionData = subscription as any;
 
   // Convert Unix timestamps
@@ -244,6 +262,11 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   // Convert Unix timestamps to Date
+  /**
+   * Type assertion needed because Stripe API types don't expose all properties
+   * Actual type: number (Unix timestamp in seconds)
+   * TODO: Use proper Stripe type definitions or create extended type
+   */
   const currentPeriodStart = new Date((subscription as any).current_period_start * 1000);
   const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
 
@@ -263,6 +286,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   // Map Stripe status to our status
   const status = mapStripeStatus(subscription.status);
+  /**
+   * Type assertion needed because Stripe API types don't expose all properties
+   * Actual type: Stripe.Subscription with cancel_at_period_end property
+   * TODO: Use proper Stripe type definitions or create extended type
+   */
   const subscriptionData = subscription as any;
 
   // Log the raw Stripe subscription data for debugging
@@ -305,6 +333,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
  * Confirm payment received (for recurring payments)
  */
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
+  /**
+   * Type assertion needed because Stripe Invoice type has subscription as string | Stripe.Subscription | null
+   * but we need to access it as string
+   * Actual type: string | null
+   * TODO: Use proper type guard or Stripe type definitions
+   */
   const subscriptionId = (invoice as any).subscription as string;
 
   if (!subscriptionId) {
@@ -330,6 +364,12 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  * Lock user out of dashboard (per requirements: immediate lockout)
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  /**
+   * Type assertion needed because Stripe Invoice type has subscription as string | Stripe.Subscription | null
+   * but we need to access it as string
+   * Actual type: string | null
+   * TODO: Use proper type guard or Stripe type definitions
+   */
   const subscriptionId = (invoice as any).subscription as string;
 
   if (!subscriptionId) {

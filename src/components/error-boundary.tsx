@@ -39,6 +39,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       errorInfo,
     });
 
+    // Error logged via logger (no external service integration)
+
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
   }

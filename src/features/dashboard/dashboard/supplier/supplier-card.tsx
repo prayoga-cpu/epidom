@@ -11,7 +11,7 @@ import { useSuppliers } from "@/features/dashboard/data/suppliers/hooks/use-supp
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { DashboardCard } from "../components/dashboard-card";
 
-export default function SupplierCard() {
+export function SupplierCard() {
   const { t } = useI18n();
   const router = useRouter();
   const { storeId } = useCurrentStore();
@@ -30,6 +30,11 @@ export default function SupplierCard() {
   }, [data]);
 
   // Check if subscription is locked (STARTER plan)
+  /**
+   * Type assertion needed because error type is unknown and may have code or status properties
+   * Actual type: Error with optional code and status properties
+   * TODO: Use proper error type guard or create error type definitions
+   */
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
     (error && ((error as any).code === "SUBSCRIPTION_FEATURE_LOCKED" || (error as any).status === 403));

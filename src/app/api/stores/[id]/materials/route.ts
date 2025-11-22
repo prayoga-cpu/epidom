@@ -7,6 +7,7 @@ import { createIngredientSchema, materialFilterSchema } from "@/lib/validation/i
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ZodError } from "zod";
 import { logger } from "@/lib/logger";
+import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
 
 /**
  * GET /api/stores/[id]/materials
@@ -16,6 +17,25 @@ import { logger } from "@/lib/logger";
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // Rate limiting check
+    const rateLimitResult = await rateLimitMiddleware(request, "/api/stores/[id]/materials");
+    if (rateLimitResult) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.RATE_LIMIT_EXCEEDED,
+          `Rate limit exceeded. Please try again in ${rateLimitResult.reset} seconds.`
+        ),
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": rateLimitResult.reset.toString(),
+          },
+        }
+      );
+    }
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -94,6 +114,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // Rate limiting check
+    const rateLimitResult = await rateLimitMiddleware(request, "/api/stores/[id]/materials");
+    if (rateLimitResult) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.RATE_LIMIT_EXCEEDED,
+          `Rate limit exceeded. Please try again in ${rateLimitResult.reset} seconds.`
+        ),
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": rateLimitResult.reset.toString(),
+          },
+        }
+      );
+    }
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {

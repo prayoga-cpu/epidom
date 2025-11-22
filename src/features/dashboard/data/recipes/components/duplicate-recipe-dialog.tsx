@@ -69,7 +69,7 @@ const RECIPE_CATEGORIES = [
   "Other",
 ];
 
-export default function DuplicateRecipeDialog({
+export function DuplicateRecipeDialog({
   open,
   onOpenChange,
   recipe,

@@ -180,8 +180,10 @@ export function useCreateMaterial(storeId: string) {
         });
       }
 
-      // Batch invalidate all related queries in parallel for better performance
-      await invalidateMaterialRelatedQueries(queryClient, storeId);
+      // Non-blocking cache invalidation: Only invalidate materials immediately
+      // Other queries (suppliers, alerts, etc.) will sync in background
+      // This allows UI to respond faster without waiting for all invalidations
+      invalidateMaterialRelatedQueries(queryClient, storeId, false);
     },
     onError: (error, newMaterial, context) => {
       // Rollback optimistic update on error

@@ -2,44 +2,143 @@
  * Logger Utility
  *
  * Provides structured logging for the application.
- * In development: logs to console
- * In production: can be extended to send to error tracking service (e.g., Sentry, LogRocket)
+ * - Development: logs to console with formatted output
+ * - Production: logs in JSON format for log aggregation services
+ * - Supports request ID tracking for distributed tracing
  */
+
+import { getRequestId } from "./utils/request-id";
 
 interface LogContext {
   [key: string]: unknown;
 }
 
+type LogLevel = "debug" | "info" | "warn" | "error";
+
+interface LogEntry {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  requestId?: string;
+  context?: LogContext;
+  error?: {
+    message: string;
+    stack?: string;
+    name?: string;
+  };
+}
+
+/**
+ * Format log entry as JSON (for production) or readable string (for development)
+ */
+function formatLogEntry(entry: LogEntry): string {
+  if (process.env.NODE_ENV === "production") {
+    return JSON.stringify(entry);
+  }
+
+  // Development format: readable string
+  const timestamp = entry.timestamp;
+  const level = entry.level.toUpperCase().padEnd(5);
+  const requestId = entry.requestId ? `[${entry.requestId}]` : "";
+  const contextStr = entry.context ? JSON.stringify(entry.context, null, 2) : "";
+  const errorStr = entry.error
+    ? `\nError: ${entry.error.message}${entry.error.stack ? `\n${entry.error.stack}` : ""}`
+    : "";
+
+  return `[${timestamp}] ${level} ${requestId} ${entry.message}${contextStr ? `\n${contextStr}` : ""}${errorStr}`;
+}
+
+/**
+ * Get current request ID from AsyncLocalStorage or generate new one
+ */
+function getCurrentRequestId(): string | undefined {
+  // Try to get from AsyncLocalStorage if available
+  // This would need to be set up in middleware or API routes
+  if (typeof global !== "undefined" && (global as any).requestId) {
+    return (global as any).requestId;
+  }
+  return undefined;
+}
+
 export const logger = {
-  info: (message: string, context?: LogContext) => {
-    if (process.env.NODE_ENV === "development") {
-      console.log(`[INFO] ${message}`, context ? JSON.stringify(context, null, 2) : "");
-    }
-    // In production, you can send to logging service
-    // Example: logService.info(message, context);
-  },
-
-  warn: (message: string, context?: LogContext) => {
-    if (process.env.NODE_ENV === "development") {
-      console.warn(`[WARN] ${message}`, context ? JSON.stringify(context, null, 2) : "");
-    }
-    // In production, you can send to logging service
-    // Example: logService.warn(message, context);
-  },
-
-  error: (message: string, error?: unknown, context?: LogContext) => {
-    const errorDetails = {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      ...context,
+  debug: (message: string, context?: LogContext) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      level: "debug",
+      message,
+      requestId: getCurrentRequestId(),
+      context,
     };
 
     if (process.env.NODE_ENV === "development") {
-      console.error(`[ERROR] ${message}`, errorDetails);
+      console.debug(formatLogEntry(entry));
+    }
+    // In production, send to logging service if needed
+  },
+
+  info: (message: string, context?: LogContext) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      level: "info",
+      message,
+      requestId: getCurrentRequestId(),
+      context,
+    };
+
+    if (process.env.NODE_ENV === "development") {
+      console.log(formatLogEntry(entry));
+    } else {
+      // In production, log as JSON
+      console.log(formatLogEntry(entry));
+    }
+  },
+
+  warn: (message: string, context?: LogContext) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      level: "warn",
+      message,
+      requestId: getCurrentRequestId(),
+      context,
+    };
+
+    if (process.env.NODE_ENV === "development") {
+      console.warn(formatLogEntry(entry));
+    } else {
+      // In production, log as JSON
+      console.warn(formatLogEntry(entry));
     }
 
-    // In production, send to error tracking service
-    // Example: Sentry.captureException(error, { extra: { message, ...context } });
-    // Example: logService.error(message, errorDetails);
+    // Warning logged (no external service integration)
+  },
+
+  error: (message: string, error?: unknown, context?: LogContext) => {
+    const errorDetails = error instanceof Error
+      ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+        }
+      : {
+          message: String(error),
+        };
+
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      level: "error",
+      message,
+      requestId: getCurrentRequestId(),
+      context,
+      error: errorDetails,
+    };
+
+    if (process.env.NODE_ENV === "development") {
+      console.error(formatLogEntry(entry));
+    } else {
+      // In production, log as JSON
+      console.error(formatLogEntry(entry));
+    }
+
+    // Error logged (no external service integration)
   },
 };

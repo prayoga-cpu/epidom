@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateSupplierInput, UpdateSupplierInput } from "@/lib/validation/inventory.schemas";
 import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
+import { invalidateSupplierRelatedQueries } from "@/lib/utils/cache-helpers";
 
 // Response interfaces
 export interface SuppliersResponse {
@@ -162,11 +163,11 @@ export function useSuppliers(storeId: string, filters: SupplierFilterInput) {
 
         // Handle 403 Forbidden (subscription feature locked)
         if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
-          const customError = new Error(error.message || "Supplier Management is only available in Pro and Enterprise plans");
-          (customError as any).code = "SUBSCRIPTION_FEATURE_LOCKED";
-          (customError as any).status = 403;
-          (customError as any).upgradeRequired = true;
-          throw customError;
+          const { createSubscriptionError } = await import("@/types/errors");
+          throw createSubscriptionError(
+            error.message || "Supplier Management is only available in Pro and Enterprise plans",
+            true
+          );
         }
 
         throw new Error(error.error || "Failed to fetch suppliers");
@@ -206,7 +207,10 @@ export function useCreateSupplier(storeId: string) {
   return useMutation({
     mutationFn: (data: CreateSupplierInput) => createSupplier(storeId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
+      // Non-blocking cache invalidation: Only invalidate suppliers immediately
+      // Other queries (materials) will sync in background
+      // This allows UI to respond faster without waiting for all invalidations
+      invalidateSupplierRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -220,8 +224,11 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
   return useMutation({
     mutationFn: (data: UpdateSupplierInput) => updateSupplier(storeId, supplierId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
+      // Update cache for specific supplier (optimistic update)
       queryClient.invalidateQueries({ queryKey: supplierKeys.detail(storeId, supplierId) });
+      // Non-blocking cache invalidation: Only invalidate suppliers immediately
+      // Other queries (materials) will sync in background
+      invalidateSupplierRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -234,8 +241,12 @@ export function useDeleteSupplier(storeId: string) {
 
   return useMutation({
     mutationFn: (supplierId: string) => deleteSupplier(storeId, supplierId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
+    onSuccess: (_, supplierId) => {
+      // Remove from cache
+      queryClient.removeQueries({ queryKey: supplierKeys.detail(storeId, supplierId) });
+      // Non-blocking cache invalidation: Only invalidate suppliers immediately
+      // Other queries (materials) will sync in background
+      invalidateSupplierRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -248,8 +259,14 @@ export function useBulkDeleteSuppliers(storeId: string) {
 
   return useMutation({
     mutationFn: (supplierIds: string[]) => bulkDeleteSuppliers(storeId, supplierIds),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: supplierKeys.lists(storeId) });
+    onSuccess: (_, supplierIds) => {
+      // Remove all deleted items from cache
+      supplierIds.forEach((id) => {
+        queryClient.removeQueries({ queryKey: supplierKeys.detail(storeId, id) });
+      });
+      // Non-blocking cache invalidation: Only invalidate suppliers immediately
+      // Other queries (materials) will sync in background
+      invalidateSupplierRelatedQueries(queryClient, storeId, false);
     },
   });
 }

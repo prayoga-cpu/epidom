@@ -14,7 +14,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "./hooks/use-current-store";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 
-export default function NavUser() {
+export function NavUser() {
   const router = useRouter();
   const { user } = useUser();
   const { t } = useI18n();

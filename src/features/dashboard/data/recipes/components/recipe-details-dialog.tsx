@@ -45,7 +45,7 @@ interface RecipeDetailsDialogProps {
   onDelete?: (recipeId: string) => void;
 }
 
-export default function RecipeDetailsDialog({
+export function RecipeDetailsDialog({
   open,
   onOpenChange,
   recipe,

@@ -56,9 +56,29 @@ export async function GET(request: NextRequest) {
       amount: sub.items.data[0]?.price.unit_amount,
       currency: sub.items.data[0]?.price.currency,
       created: new Date(sub.created * 1000).toISOString(),
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: number (Unix timestamp in seconds)
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       currentPeriodStart: new Date((sub as any).current_period_start * 1000).toISOString(),
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: number (Unix timestamp in seconds)
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       currentPeriodEnd: new Date((sub as any).current_period_end * 1000).toISOString(),
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: boolean
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       cancelAtPeriodEnd: (sub as any).cancel_at_period_end || false,
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: number | null (Unix timestamp in seconds)
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       canceledAt: (sub as any).canceled_at
         ? new Date((sub as any).canceled_at * 1000).toISOString()
         : null,

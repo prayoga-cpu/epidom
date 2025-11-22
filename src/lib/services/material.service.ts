@@ -119,32 +119,39 @@ export class MaterialService {
     }
 
     // Use transaction to ensure atomicity
-    return await prisma.$transaction(async (tx) => {
-      // Create material with suppliers
-      const material = await this.materialRepo.create({
-        storeId,
-        sku,
-        currentStock,
-        suppliers,
-        ...rest,
-      });
-
-      // If initial stock > 0, create initial stock movement
-      if (currentStock > 0) {
-        await tx.stockMovement.create({
-          data: {
-            materialId: material.id,
-            type: MovementType.ADJUSTMENT,
-            quantity: currentStock,
-            unit: material.unit,
-            balanceAfter: currentStock,
-            notes: "Initial stock",
-          },
+    // Add timeout to prevent hanging on slow database connections
+    return await prisma.$transaction(
+      async (tx) => {
+        // Create material with suppliers
+        const material = await this.materialRepo.create({
+          storeId,
+          sku,
+          currentStock,
+          suppliers,
+          ...rest,
         });
-      }
 
-      return material;
-    });
+        // If initial stock > 0, create initial stock movement
+        if (currentStock > 0) {
+          await tx.stockMovement.create({
+            data: {
+              materialId: material.id,
+              type: MovementType.ADJUSTMENT,
+              quantity: currentStock,
+              unit: material.unit,
+              balanceAfter: currentStock,
+              notes: "Initial stock",
+            },
+          });
+        }
+
+        return material;
+      },
+      {
+        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+        timeout: 10000, // Maximum time for transaction to complete (10s)
+      }
+    );
   }
 
   /**
@@ -192,8 +199,9 @@ export class MaterialService {
     }
 
     // Use transaction to ensure atomicity
-    return await prisma.$transaction(async (tx) => {
-      // Create stock movement with all adjustment data
+    return await prisma.$transaction(
+      async (tx) => {
+        // Create stock movement with all adjustment data
       const movement = await tx.stockMovement.create({
         data: {
           materialId: input.materialId,
@@ -208,6 +216,11 @@ export class MaterialService {
       });
 
       // Update material stock
+      /**
+       * Type assertion needed because Prisma Decimal type requires conversion from number
+       * Actual type: Prisma.Decimal
+       * TODO: Create type helper for Decimal conversion to avoid `as any`
+       */
       const updatedMaterial = await tx.material.update({
         where: { id: input.materialId },
         data: {
@@ -219,7 +232,12 @@ export class MaterialService {
         material: updatedMaterial,
         movement,
       };
-    });
+    },
+    {
+      maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+      timeout: 10000, // Maximum time for transaction to complete (10s)
+    }
+    );
   }
 
   /**
@@ -262,7 +280,8 @@ export class MaterialService {
       (input.currentStock !== undefined && input.currentStock !== Number(material.currentStock)) ||
       input.suppliers !== undefined
     ) {
-      return await prisma.$transaction(async (tx) => {
+      return await prisma.$transaction(
+        async (tx) => {
         // Handle stock changes
         if (
           input.currentStock !== undefined &&
@@ -312,9 +331,29 @@ export class MaterialService {
         if (input.description !== undefined) updateData.description = input.description;
         if (input.category !== undefined) updateData.category = input.category;
         if (input.unit !== undefined) updateData.unit = input.unit;
+        /**
+         * Type assertion needed because Prisma Decimal type requires conversion from number
+         * Actual type: Prisma.Decimal
+         * TODO: Create type helper for Decimal conversion to avoid `as any`
+         */
         if (input.unitCost !== undefined) updateData.unitCost = input.unitCost as any;
+        /**
+         * Type assertion needed because Prisma Decimal type requires conversion from number
+         * Actual type: Prisma.Decimal
+         * TODO: Create type helper for Decimal conversion to avoid `as any`
+         */
         if (input.currentStock !== undefined) updateData.currentStock = input.currentStock as any;
+        /**
+         * Type assertion needed because Prisma Decimal type requires conversion from number
+         * Actual type: Prisma.Decimal
+         * TODO: Create type helper for Decimal conversion to avoid `as any`
+         */
         if (input.minStock !== undefined) updateData.minStock = input.minStock as any;
+        /**
+         * Type assertion needed because Prisma Decimal type requires conversion from number
+         * Actual type: Prisma.Decimal
+         * TODO: Create type helper for Decimal conversion to avoid `as any`
+         */
         if (input.maxStock !== undefined) updateData.maxStock = input.maxStock as any;
 
         // Update material
@@ -322,7 +361,12 @@ export class MaterialService {
           where: { id: materialId },
           data: updateData,
         });
-      });
+      },
+      {
+        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+        timeout: 10000, // Maximum time for transaction to complete (10s)
+      }
+    );
     }
 
     // No stock change and no suppliers update, just update basic properties
@@ -333,9 +377,29 @@ export class MaterialService {
     if (input.description !== undefined) updateData.description = input.description;
     if (input.category !== undefined) updateData.category = input.category;
     if (input.unit !== undefined) updateData.unit = input.unit;
+    /**
+     * Type assertion needed because Prisma Decimal type requires conversion from number
+     * Actual type: Prisma.Decimal
+     * TODO: Create type helper for Decimal conversion to avoid `as any`
+     */
     if (input.unitCost !== undefined) updateData.unitCost = input.unitCost as any;
+    /**
+     * Type assertion needed because Prisma Decimal type requires conversion from number
+     * Actual type: Prisma.Decimal
+     * TODO: Create type helper for Decimal conversion to avoid `as any`
+     */
     if (input.currentStock !== undefined) updateData.currentStock = input.currentStock as any;
+    /**
+     * Type assertion needed because Prisma Decimal type requires conversion from number
+     * Actual type: Prisma.Decimal
+     * TODO: Create type helper for Decimal conversion to avoid `as any`
+     */
     if (input.minStock !== undefined) updateData.minStock = input.minStock as any;
+    /**
+     * Type assertion needed because Prisma Decimal type requires conversion from number
+     * Actual type: Prisma.Decimal
+     * TODO: Create type helper for Decimal conversion to avoid `as any`
+     */
     if (input.maxStock !== undefined) updateData.maxStock = input.maxStock as any;
 
     return this.materialRepo.update(materialId, updateData);
@@ -552,8 +616,9 @@ export class MaterialService {
       throw new Error("Material not found");
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Update stock
+    await prisma.$transaction(
+      async (tx) => {
+        // Update stock
       const newStock = Number(material.currentStock) + quantity;
       await tx.material.update({
         where: { id: materialId },
@@ -571,7 +636,12 @@ export class MaterialService {
           notes: notes || `Purchase${supplierId ? " from supplier" : ""}`,
         },
       });
-    });
+    },
+    {
+      maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+      timeout: 10000, // Maximum time for transaction to complete (10s)
+    }
+    );
   }
 }
 

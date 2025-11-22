@@ -58,7 +58,7 @@ function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
   return null;
 }
 
-export default function Chart({ chartData }: Chart) {
+export function Chart({ chartData }: Chart) {
   const { t } = useI18n();
   const maxQty = getMaxYValue(chartData);
   const yAxisDomain = [0, maxQty + 10];

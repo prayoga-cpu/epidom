@@ -5,6 +5,7 @@ import {
   RecipeFilterInput,
 } from "@/lib/validation/inventory.schemas";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
+import { invalidateRecipeRelatedQueries } from "@/lib/utils/cache-helpers";
 
 // Types
 export interface RecipeWithIngredients {
@@ -248,7 +249,10 @@ export function useCreateRecipe(storeId: string) {
   return useMutation({
     mutationFn: (data: CreateRecipeFormInput) => createRecipe(storeId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      // Non-blocking cache invalidation: Only invalidate recipes immediately
+      // Other queries (products, materials) will sync in background
+      // This allows UI to respond faster without waiting for all invalidations
+      invalidateRecipeRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -262,8 +266,11 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
   return useMutation({
     mutationFn: (data: UpdateRecipeFormInput) => updateRecipe(storeId, recipeId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      // Update cache for specific recipe (optimistic update)
       queryClient.invalidateQueries({ queryKey: ["recipes", storeId, recipeId] });
+      // Non-blocking cache invalidation: Only invalidate recipes immediately
+      // Other queries (products, materials) will sync in background
+      invalidateRecipeRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -276,8 +283,12 @@ export function useDeleteRecipe(storeId: string) {
 
   return useMutation({
     mutationFn: (recipeId: string) => deleteRecipe(storeId, recipeId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: (_, recipeId) => {
+      // Remove from cache
+      queryClient.removeQueries({ queryKey: ["recipes", storeId, recipeId] });
+      // Non-blocking cache invalidation: Only invalidate recipes immediately
+      // Other queries (products, materials) will sync in background
+      invalidateRecipeRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -290,8 +301,14 @@ export function useBulkDeleteRecipes(storeId: string) {
 
   return useMutation({
     mutationFn: (recipeIds: string[]) => bulkDeleteRecipes(storeId, recipeIds),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+    onSuccess: (_, recipeIds) => {
+      // Remove all deleted items from cache
+      recipeIds.forEach((id) => {
+        queryClient.removeQueries({ queryKey: ["recipes", storeId, id] });
+      });
+      // Non-blocking cache invalidation: Only invalidate recipes immediately
+      // Other queries (products, materials) will sync in background
+      invalidateRecipeRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -306,7 +323,9 @@ export function useDuplicateRecipe(storeId: string) {
     mutationFn: ({ recipeId, newName }: { recipeId: string; newName: string }) =>
       duplicateRecipe(storeId, recipeId, newName),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
+      // Non-blocking cache invalidation: Only invalidate recipes immediately
+      // Other queries (products, materials) will sync in background
+      invalidateRecipeRelatedQueries(queryClient, storeId, false);
     },
   });
 }

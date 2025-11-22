@@ -7,9 +7,9 @@ import { ProductionHistoryCard } from "../production-history/production-history"
 import { EditStockCard } from "../edit-stock/edit-stock";
 import { SupplierDeliveriesTable } from "../delivery/supplier-deliveries-table";
 import { SupplierDeliveryDetails } from "../delivery/supplier-delivery-details";
-import UpdateDeliveryStatusDialog from "../delivery/update-delivery-status-dialog";
-import PrintDeliveryDialog from "../delivery/print-delivery-dialog";
-import AddEditDeliveryDialog from "../delivery/add-edit-delivery-dialog";
+import { UpdateDeliveryStatusDialog } from "../delivery/update-delivery-status-dialog";
+import { PrintDeliveryDialog } from "../delivery/print-delivery-dialog";
+import { AddEditDeliveryDialog } from "../delivery/add-edit-delivery-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
 import {
   useSupplierOrders,

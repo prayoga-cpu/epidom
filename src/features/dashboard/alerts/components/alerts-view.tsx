@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertsTable } from "./alerts-table";
-import PlaceOrderDialog from "./place-order-dialog";
+import { PlaceOrderDialog } from "./place-order-dialog";
 import { OrdersView } from "./orders-view";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";

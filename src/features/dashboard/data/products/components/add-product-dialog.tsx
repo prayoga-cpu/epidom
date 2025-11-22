@@ -72,7 +72,7 @@ interface AddProductDialogProps {
   children?: React.ReactNode;
 }
 
-export default function AddProductDialog({ storeId, children }: AddProductDialogProps) {
+export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useI18n();

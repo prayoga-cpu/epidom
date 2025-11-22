@@ -9,7 +9,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlerts, type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { AlertCircle, Loader2, ShoppingCart, Package2 } from "lucide-react";
 import { useParams } from "next/navigation";
-import BulkOrderDialog from "./bulk-order-dialog";
+import { BulkOrderDialog } from "./bulk-order-dialog";
 
 interface AlertsTableProps {
   onViewDetails?: (alert: Alert) => void;

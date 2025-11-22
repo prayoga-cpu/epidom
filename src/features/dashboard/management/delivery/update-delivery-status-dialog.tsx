@@ -32,7 +32,7 @@ interface UpdateDeliveryStatusDialogProps {
   delivery: SupplierDelivery | null;
 }
 
-export default function UpdateDeliveryStatusDialog({
+export function UpdateDeliveryStatusDialog({
   open,
   onOpenChange,
   delivery,

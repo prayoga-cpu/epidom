@@ -72,7 +72,7 @@ interface EditProductDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export default function EditProductDialog({
+export function EditProductDialog({
   storeId,
   product,
   open,

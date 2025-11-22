@@ -51,7 +51,7 @@ interface EditSupplierDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export default function EditSupplierDialog({
+export function EditSupplierDialog({
   supplier,
   open,
   onOpenChange,

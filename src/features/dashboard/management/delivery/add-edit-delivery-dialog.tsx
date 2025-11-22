@@ -50,7 +50,7 @@ interface DeliveryItemForm {
   notes: string;
 }
 
-export default function AddEditDeliveryDialog({
+export function AddEditDeliveryDialog({
   open,
   onOpenChange,
   delivery,

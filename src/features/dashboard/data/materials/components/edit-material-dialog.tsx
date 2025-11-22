@@ -52,7 +52,7 @@ interface EditMaterialDialogProps {
   material: MaterialWithSuppliers | null;
 }
 
-export default function EditMaterialDialog({
+export function EditMaterialDialog({
   open,
   onOpenChange,
   material,
@@ -74,6 +74,12 @@ export default function EditMaterialDialog({
   });
   const suppliers = suppliersData?.suppliers || [];
 
+  /**
+   * Type assertion needed because React Hook Form's zodResolver has type incompatibility
+   * with complex nested schemas
+   * Actual type: Resolver<UpdateIngredientFormInput>
+   * Known issue: https://github.com/react-hook-form/react-hook-form/issues/7764
+   */
   const form = useForm<UpdateIngredientFormInput>({
     resolver: zodResolver(updateIngredientFormSchema) as any,
     mode: "onSubmit", // Validate only on submit to allow undefined values during editing
@@ -91,8 +97,19 @@ export default function EditMaterialDialog({
     },
   });
 
+  /**
+   * Type assertion needed because React Hook Form's useFieldArray has type limitations
+   * with dynamic field arrays
+   * Actual type: Control<UpdateIngredientFormInput>
+   * Known issue: https://github.com/react-hook-form/react-hook-form/issues/7764
+   */
   const { fields, append, remove } = useFieldArray({
     control: form.control as any,
+    /**
+     * Type assertion needed for dynamic field array names
+     * Actual type: "suppliers"
+     * Known issue: TypeScript cannot infer dynamic field paths
+     */
     name: "suppliers" as any,
   });
 
@@ -410,6 +427,12 @@ export default function EditMaterialDialog({
                   <div className="flex-1 space-y-1">
                     <FormField
                       control={form.control}
+                      /**
+                       * Type assertion needed because TypeScript cannot infer dynamic field paths
+                       * in React Hook Form's useFieldArray
+                       * Actual type: `suppliers.${number}.supplierId`
+                       * Known limitation: Dynamic field paths require type assertion
+                       */
                       name={`suppliers.${index}.supplierId` as any}
                       render={({ field }) => (
                         <FormItem className="space-y-0.5">
@@ -445,6 +468,12 @@ export default function EditMaterialDialog({
                     <div className="grid items-start grid-cols-2 gap-1.5">
                       <FormField
                         control={form.control}
+                        /**
+                         * Type assertion needed because TypeScript cannot infer dynamic field paths
+                         * in React Hook Form's useFieldArray
+                         * Actual type: `suppliers.${number}.price`
+                         * Known limitation: Dynamic field paths require type assertion
+                         */
                         name={`suppliers.${index}.price` as any}
                         render={({ field }) => (
                           <FormItem className="space-y-0.5">
@@ -468,6 +497,12 @@ export default function EditMaterialDialog({
 
                       <FormField
                         control={form.control}
+                        /**
+                         * Type assertion needed because TypeScript cannot infer dynamic field paths
+                         * in React Hook Form's useFieldArray
+                         * Actual type: `suppliers.${number}.isPreferred`
+                         * Known limitation: Dynamic field paths require type assertion
+                         */
                         name={`suppliers.${index}.isPreferred` as any}
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center space-y-0 space-x-2 pt-8">
