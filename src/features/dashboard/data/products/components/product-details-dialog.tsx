@@ -27,6 +27,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { getTranslatedCategory } from "../../recipes/utils/category-helpers";
 
 interface ProductDetailsDialogProps {
   open: boolean;
@@ -36,7 +37,7 @@ interface ProductDetailsDialogProps {
   onDelete?: () => void;
 }
 
-export default function ProductDetailsDialog({
+export function ProductDetailsDialog({
   open,
   onOpenChange,
   product,
@@ -170,6 +171,11 @@ export default function ProductDetailsDialog({
                   {formatNumber(Number(product.currentStock) || 0)}
                 </div>
                 <p className="text-muted-foreground text-xs">{product.unit}</p>
+                {/**
+                 * Type assertion needed because Badge variant type doesn't include all possible values
+                 * Actual type: "default" | "secondary" | "destructive" | "outline"
+                 * TODO: Update Badge component to accept all variant types or use type guard
+                 */}
                 <Badge variant={getStockStatusColor() as any} className="mt-2 text-xs">
                   {stockStatus}
                 </Badge>
@@ -312,7 +318,7 @@ export default function ProductDetailsDialog({
                                   {t("data.recipes.form.category")}:{" "}
                                 </span>
                                 <Badge variant="outline">
-                                  {recipe.category || t("common.notAvailable")}
+                                  {recipe.category ? getTranslatedCategory(recipe.category, t) : t("common.notAvailable")}
                                 </Badge>
                               </div>
                               <div>

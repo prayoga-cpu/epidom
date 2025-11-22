@@ -295,4 +295,3 @@ export const WaitlistDialog = memo(function WaitlistDialog({
   );
 });
 
-export default WaitlistDialog;

@@ -101,6 +101,11 @@ export async function exportToExcel<T extends Record<string, any>>(
       ...data.map((row) =>
         cols.map((col) => {
           const value = row[col.key];
+          /**
+           * Type assertion needed because TypeScript cannot narrow union types for instanceof check
+           * Actual type: Date | unknown
+           * TODO: Use type guard function instead of instanceof check
+           */
           if ((value as any) instanceof Date) {
             return (value as Date).toISOString();
           }
@@ -152,6 +157,11 @@ export async function exportToPDF<T extends Record<string, any>>(
     const body = data.map((row) =>
       cols.map((col) => {
         const value = row[col.key];
+        /**
+         * Type assertion needed because TypeScript cannot narrow union types for instanceof check
+         * Actual type: Date | unknown
+         * TODO: Use type guard function instead of instanceof check
+         */
         if ((value as any) instanceof Date) {
           return (value as Date).toLocaleDateString();
         }

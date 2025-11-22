@@ -37,7 +37,7 @@ interface SupplierDetailsDialogProps {
   onDelete?: () => void;
 }
 
-export default function SupplierDetailsDialog({
+export function SupplierDetailsDialog({
   open,
   onOpenChange,
   supplier,

@@ -57,6 +57,7 @@ import {
   createNumberInputHandler,
 } from "@/lib/utils/number-input";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
+import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
 
 type RecipeFormValues = CreateRecipeFormInput;
 
@@ -64,7 +65,7 @@ interface AddRecipeDialogProps {
   trigger?: React.ReactNode;
 }
 
-export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
+export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   // Use ref to track current step to avoid stale closure issues
@@ -87,16 +88,6 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     { id: 4, name: t("data.recipes.steps.review"), icon: Calculator },
   ];
 
-  // Recipe categories with translation
-  const getRecipeCategories = () => [
-    t("data.recipes.categories.breadPastries"),
-    t("data.recipes.categories.cakesDesserts"),
-    t("data.recipes.categories.confectionery"),
-    t("data.recipes.categories.dairyProducts"),
-    t("data.recipes.categories.beverages"),
-    t("data.recipes.categories.saucesCondiments"),
-    t("data.recipes.categories.other"),
-  ];
 
   // Fetch real materials for dropdown
   const { data: materialsData } = useMaterials(storeId);
@@ -287,6 +278,12 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     }
 
     // Validate only text fields (skip number fields)
+    /**
+     * Type assertion needed because React Hook Form's trigger method has type limitations
+     * with dynamic field arrays
+     * Actual type: FieldPath<RecipeFormValues>[]
+     * Known issue: TypeScript cannot infer dynamic field paths
+     */
     const isValid = await form.trigger(fieldsToValidate as any);
     if (isValid && step < 4) {
       // Update both state and ref
@@ -309,6 +306,12 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     const currentIngredients = form.watch("ingredients") || [];
     form.setValue("ingredients", [
       ...currentIngredients,
+      /**
+       * Type assertion needed because quantity field accepts number | undefined
+       * but TypeScript requires explicit type for undefined in object literal
+       * Actual type: number | undefined
+       * TODO: Use proper type for quantity field
+       */
       { materialId: "", quantity: undefined as any, unit: "", notes: "" },
     ]);
   };
@@ -505,9 +508,9 @@ export default function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {getRecipeCategories().map((category) => (
+                          {RECIPE_CATEGORIES.map((category) => (
                             <SelectItem key={category} value={category}>
-                              {category}
+                              {getTranslatedCategory(category, t)}
                             </SelectItem>
                           ))}
                         </SelectContent>

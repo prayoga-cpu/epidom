@@ -41,6 +41,8 @@ import {
   createNumberInputHandler,
 } from "@/lib/utils/number-input";
 
+import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
+
 type RecipeFormValues = UpdateRecipeFormInput;
 
 interface EditRecipeDialogProps {
@@ -48,16 +50,6 @@ interface EditRecipeDialogProps {
   onOpenChange: (open: boolean) => void;
   recipe: RecipeWithIngredients;
 }
-
-const RECIPE_CATEGORIES = [
-  "Bread & Pastries",
-  "Cakes & Desserts",
-  "Confectionery",
-  "Dairy Products",
-  "Beverages",
-  "Sauces & Condiments",
-  "Other",
-];
 
 export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialogProps) {
   const { t } = useI18n();
@@ -101,6 +93,12 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
         productionTimeMinutes: productionTimeMinutes > 0 ? productionTimeMinutes : undefined,
         ingredients: recipe.ingredients.map((ing) => ({
           materialId: ing.materialId,
+          /**
+           * Type assertion needed because quantity field accepts number | undefined
+           * but TypeScript requires explicit type for undefined in object literal
+           * Actual type: number | undefined
+           * TODO: Use proper type for quantity field
+           */
           quantity: (Number(ing.quantity) || undefined) as any, // Allow undefined in form state for better UX
           unit: ing.unit,
           notes: ing.notes || "",
@@ -169,6 +167,12 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
     const currentIngredients = form.getValues("ingredients") || [];
     form.setValue(
       "ingredients",
+      /**
+       * Type assertion needed because quantity field accepts number | undefined
+       * but TypeScript requires explicit type for undefined in object literal
+       * Actual type: number | undefined
+       * TODO: Use proper type for quantity field
+       */
       [...currentIngredients, { materialId: "", quantity: undefined as any, unit: "", notes: "" }],
       { shouldValidate: false, shouldDirty: true, shouldTouch: true }
     );
@@ -258,7 +262,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                       <SelectContent>
                         {RECIPE_CATEGORIES.map((category) => (
                           <SelectItem key={category} value={category}>
-                            {category}
+                            {getTranslatedCategory(category, t)}
                           </SelectItem>
                         ))}
                       </SelectContent>

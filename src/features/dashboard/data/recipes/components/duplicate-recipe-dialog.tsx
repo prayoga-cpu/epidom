@@ -50,6 +50,7 @@ import { useDuplicateRecipe, type RecipeWithIngredients } from "../hooks/use-rec
 import { useMaterials } from "../../materials/hooks/use-materials";
 import { duplicateRecipeSchema } from "@/lib/validation/inventory.schemas";
 import type { DuplicateRecipeInput } from "@/lib/validation/inventory.schemas";
+import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
 
 type DuplicateRecipeFormValues = DuplicateRecipeInput;
 
@@ -58,16 +59,6 @@ interface DuplicateRecipeDialogProps {
   onOpenChange: (open: boolean) => void;
   recipe: RecipeWithIngredients;
 }
-
-const RECIPE_CATEGORIES = [
-  "Bread & Pastries",
-  "Cakes & Desserts",
-  "Confectionery",
-  "Dairy Products",
-  "Beverages",
-  "Sauces & Condiments",
-  "Other",
-];
 
 export default function DuplicateRecipeDialog({
   open,
@@ -272,7 +263,7 @@ export default function DuplicateRecipeDialog({
                         {t("data.recipes.form.category")}
                       </p>
                       <Badge variant="outline" className="mt-1">
-                        {recipe.category}
+                        {getTranslatedCategory(recipe.category, t)}
                       </Badge>
                     </div>
                   </CardContent>

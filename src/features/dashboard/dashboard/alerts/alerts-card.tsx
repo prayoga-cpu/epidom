@@ -24,7 +24,7 @@ interface AlertsCardProps {
   processedData: ProcessedMaterial[];
 }
 
-export default function AlertsCard({ materialsQuery, processedData }: AlertsCardProps) {
+export function AlertsCard({ materialsQuery, processedData }: AlertsCardProps) {
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
 

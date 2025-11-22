@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
-import SupplierDetailsDialog from "./supplier-details-dialog";
-import EditSupplierDialog from "./edit-supplier-dialog";
-import AddSupplierDialog from "./add-supplier-dialog";
+import { SupplierDetailsDialog } from "./supplier-details-dialog";
+import { EditSupplierDialog } from "./edit-supplier-dialog";
+import { AddSupplierDialog } from "./add-supplier-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Search,
@@ -192,6 +192,11 @@ export function SuppliersSection() {
   }
 
   // Show upgrade prompt if no access (from hook or from API error 403)
+  /**
+   * Type assertion needed because error type is unknown and may have code or status properties
+   * Actual type: Error with optional code and status properties
+   * TODO: Use proper error type guard or create error type definitions
+   */
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
     (error && ((error as any).code === "SUBSCRIPTION_FEATURE_LOCKED" || (error as any).status === 403));

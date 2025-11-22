@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateProductInput, UpdateProductInput } from "@/lib/validation/inventory.schemas";
 import type { Product } from "@prisma/client";
-import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
-import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
+import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
 
 // Re-export for convenience
 export type { Product };
@@ -200,13 +199,10 @@ export function useCreateProduct(storeId: string) {
   return useMutation({
     mutationFn: (data: CreateProductInput) => createProduct(storeId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      // Invalidate product usage cache (product count has changed)
-      queryClient.invalidateQueries({ queryKey: ["product-usage", storeId] });
-      // Invalidate alerts (new product may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
-      // Invalidate stock movements (initial stock movement may have been created)
-      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+      // Non-blocking cache invalidation: Only invalidate products immediately
+      // Other queries (product-usage, alerts, etc.) will sync in background
+      // This allows UI to respond faster without waiting for all invalidations
+      invalidateProductRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -220,12 +216,11 @@ export function useUpdateProduct(storeId: string, productId: string) {
   return useMutation({
     mutationFn: (data: UpdateProductInput) => updateProduct(storeId, productId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
+      // Update cache for specific product (optimistic update)
       queryClient.invalidateQueries({ queryKey: ["products", storeId, productId] });
-      // Invalidate alerts (stock changes may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
-      // Invalidate stock movements (new movement may have been created)
-      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+      // Non-blocking cache invalidation: Only invalidate products immediately
+      // Other queries (alerts, stock movements) will sync in background
+      invalidateProductRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -238,10 +233,12 @@ export function useDeleteProduct(storeId: string) {
 
   return useMutation({
     mutationFn: (productId: string) => deleteProduct(storeId, productId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      // Invalidate alerts (deleted product may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+    onSuccess: (_, productId) => {
+      // Remove from cache
+      queryClient.removeQueries({ queryKey: ["products", storeId, productId] });
+      // Non-blocking cache invalidation: Only invalidate products immediately
+      // Other queries (alerts) will sync in background
+      invalidateProductRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -254,10 +251,14 @@ export function useBulkDeleteProducts(storeId: string) {
 
   return useMutation({
     mutationFn: (productIds: string[]) => bulkDeleteProducts(storeId, productIds),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products", storeId] });
-      // Invalidate alerts (deleted products may affect alerts)
-      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+    onSuccess: (_, productIds) => {
+      // Remove all deleted items from cache
+      productIds.forEach((id) => {
+        queryClient.removeQueries({ queryKey: ["products", storeId, id] });
+      });
+      // Non-blocking cache invalidation: Only invalidate products immediately
+      // Other queries (alerts) will sync in background
+      invalidateProductRelatedQueries(queryClient, storeId, false);
     },
   });
 }

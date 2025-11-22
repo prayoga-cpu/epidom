@@ -28,6 +28,7 @@ import {
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { getTranslatedCategory } from "@/features/dashboard/data/recipes/utils/category-helpers";
 
 interface Material {
   id: string;
@@ -286,7 +287,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                   <p className="text-muted-foreground">
                     {t("management.productionHistory.category")}
                   </p>
-                  <p className="font-medium">{recipe.category}</p>
+                  <p className="font-medium">{getTranslatedCategory(recipe.category, t)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">

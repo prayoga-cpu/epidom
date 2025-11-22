@@ -50,7 +50,7 @@ interface AddSupplierDialogProps {
   children?: React.ReactNode;
 }
 
-export default function AddSupplierDialog({ children }: AddSupplierDialogProps) {
+export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
   const params = useParams();

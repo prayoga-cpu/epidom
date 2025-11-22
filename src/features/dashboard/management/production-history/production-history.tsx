@@ -69,10 +69,20 @@ export function ProductionHistoryCard() {
   // Fetch production batches from API
   const { data: batchesData, isLoading: batchesLoading } = useProductionBatches(storeId, {
     search: searchQuery || undefined,
+    /**
+     * Type assertion needed because statusFilter is string but filter expects ProductionStatus[]
+     * Actual type: ProductionStatus[]
+     * TODO: Use proper type guard or update filter type
+     */
     status: statusFilter !== "ALL" ? [statusFilter as any] : undefined,
     recipeId: recipeFilter !== "ALL" ? recipeFilter : undefined,
     startDate: dateRange?.from,
     endDate: dateRange?.to,
+    /**
+     * Type assertion needed because sortField is string but filter expects specific union type
+     * Actual type: "createdAt" | "scheduledDate" | "completedDate" | "status"
+     * TODO: Use proper type guard or update filter type
+     */
     sortBy: sortField as any,
     sortOrder: sortDirection,
     skip: (currentPage - 1) * pageSize,
@@ -179,6 +189,11 @@ export function ProductionHistoryCard() {
       </div>
 
       {/* Metrics Cards */}
+      {/**
+       * Type assertion needed because ProductionMetricsCards expects specific batch type
+       * Actual type: ProductionBatchWithRelations[]
+       * TODO: Update ProductionMetricsCards to accept proper type or create type adapter
+       */}
       <ProductionMetricsCards batches={allBatches as any} />
 
       {/* Filters */}

@@ -11,7 +11,7 @@ import { Topbar } from "@/features/dashboard/shared/topbar";
  *
  * Note: SessionProvider is now in root layout (app/layout.tsx)
  */
-export default function PageShell({ children }: { children: React.ReactNode }) {
+export function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="page-transition-container flex h-screen w-full flex-col overflow-hidden">
       {/* Topbar - Fixed at top */}

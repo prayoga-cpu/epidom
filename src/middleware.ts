@@ -1,6 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { generateRequestId, setRequestId } from "@/lib/utils/request-id";
 
 /**
  * Authentication & Subscription Middleware
@@ -16,9 +17,19 @@ import type { NextRequest } from "next/server";
 export default async function middleware(req: NextRequest) {
     const path = req.nextUrl.pathname;
 
+    // Generate request ID for tracking
+    const requestId = req.headers.get("x-request-id") || generateRequestId();
+
+    // Set request ID in response headers
+    const response = NextResponse.next();
+    setRequestId(response.headers, requestId);
+
+    // Store request ID in global context for logger
+    (global as any).requestId = requestId;
+
     // Skip middleware for API routes - they handle authentication internally
     if (path.startsWith("/api/")) {
-      return NextResponse.next();
+      return response;
     }
 
   // PUBLIC ROUTES - Always accessible without authentication
@@ -47,7 +58,7 @@ export default async function middleware(req: NextRequest) {
 
   // If it's a public route, allow access without authentication
   if (isPublicRoute) {
-    return NextResponse.next();
+    return response;
   }
 
   // PROTECTED ROUTES - Require authentication
@@ -111,7 +122,7 @@ export default async function middleware(req: NextRequest) {
       }
     }
 
-    return NextResponse.next();
+    return response;
   }
 
 /**

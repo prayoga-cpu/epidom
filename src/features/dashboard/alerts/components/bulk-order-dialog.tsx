@@ -69,7 +69,7 @@ interface BulkOrderDialogProps {
   supplierId: string;
 }
 
-export default function BulkOrderDialog({
+export function BulkOrderDialog({
   open,
   onOpenChange,
   alerts,

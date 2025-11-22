@@ -7,7 +7,7 @@ import { Suspense } from "react";
 import { I18nProvider } from "@/components/lang/i18n-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { SessionProvider } from "@/components/providers/session-provider";
-import LoadingPage from "@/features/loading/loading-page";
+import { LoadingPage } from "@/features/loading/loading-page";
 
 export const metadata: Metadata = {
   title: "Epidom - Login",

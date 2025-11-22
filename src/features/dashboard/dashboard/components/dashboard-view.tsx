@@ -3,17 +3,25 @@ import { useMemo, lazy, Suspense } from "react";
 import { PageHeader } from "./page-header";
 import { ChartSkeleton } from "./chart-skeleton";
 import { CardSkeleton } from "./card-skeleton";
-import AlertsCard from "../alerts/alerts-card";
-import TrackingCard from "../tracking/tracking-card";
+import { AlertsCard } from "../alerts/alerts-card";
+import { TrackingCard } from "../tracking/tracking-card";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 
 // Lazy load heavy chart component to reduce initial bundle size (~200KB savings)
-const ProductionHistoryChart = lazy(() => import("../production-history/production-history-chart"));
+const ProductionHistoryChart = lazy(() =>
+  import("../production-history/production-history-chart").then((mod) => ({
+    default: mod.ProductionHistoryChart,
+  }))
+);
 
 // Lazy load below-the-fold component for progressive loading
-const SupplierCard = lazy(() => import("../supplier/supplier-card"));
+const SupplierCard = lazy(() =>
+  import("../supplier/supplier-card").then((mod) => ({
+    default: mod.SupplierCard,
+  }))
+);
 
 export function DashboardView() {
   const { t } = useI18n();

@@ -75,6 +75,11 @@ export const productionBatchFilterSchema = z.object({
     .union([
       productionStatusSchema,
       z.array(productionStatusSchema),
+      /**
+       * Type assertion needed because Zod transform return type doesn't match union type
+       * Actual type: ProductionStatus[]
+       * TODO: Use proper Zod type inference or create type helper
+       */
       z.string().transform((val) => val.split(",") as any),
     ])
     .optional(),

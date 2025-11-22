@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
-import RecipeDetailsDialog from "./recipe-details-dialog";
-import EditRecipeDialog from "./edit-recipe-dialog";
-import DuplicateRecipeDialog from "./duplicate-recipe-dialog";
+import { RecipeDetailsDialog } from "./recipe-details-dialog";
+import { EditRecipeDialog } from "./edit-recipe-dialog";
+import { DuplicateRecipeDialog } from "./duplicate-recipe-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import AddRecipeDialog from "./add-recipe-dialog";
+import { AddRecipeDialog } from "./add-recipe-dialog";
 import {
   ArrowUpDown,
   Eye,
@@ -46,9 +46,10 @@ import {
   BaseItemCard,
   type FilterField,
 } from "../../components";
-import LoadingPage from "@/features/loading/loading-page";
+import { LoadingPage } from "@/features/loading/loading-page";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
+import { getTranslatedCategory } from "../utils/category-helpers";
 
 type SortField =
   | "name"
@@ -399,7 +400,7 @@ export function RecipesSection() {
                         </h3>
                         {recipe.category && (
                           <Badge variant="secondary" className="mt-1 text-xs">
-                            {recipe.category}
+                            {getTranslatedCategory(recipe.category, t)}
                           </Badge>
                         )}
                       </div>

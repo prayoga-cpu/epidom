@@ -106,6 +106,11 @@ export class BusinessService {
     userId: string,
     input: CreateBusinessInput | UpdateBusinessInput
   ): Promise<Business> {
+    /**
+     * Type assertion needed because upsert method accepts union type but repository expects specific type
+     * Actual type: CreateBusinessInput | UpdateBusinessInput
+     * TODO: Create proper type guard or overload repository method
+     */
     return this.businessRepo.upsert(userId, input as any);
   }
 
@@ -141,7 +146,8 @@ export class BusinessService {
   ): Promise<StoreDto> {
     // Use transaction to ensure atomicity and prevent race condition
     // ReadCommitted isolation level with transaction is sufficient to prevent race conditions
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(
+      async (tx) => {
       // 1. Verify business exists and belongs to user
       // Using Prisma query (no raw SQL needed) - transaction ensures atomicity
       const business = await tx.business.findUnique({
@@ -210,13 +216,14 @@ export class BusinessService {
       });
 
       return store as unknown as StoreDto;
-    }, {
+    },
+    {
       // Use ReadCommitted isolation level (safer than SERIALIZABLE)
       // SERIALIZABLE can cause deadlocks in production environments
       // ReadCommitted with FOR UPDATE lock is sufficient for preventing race conditions
       isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-      maxWait: 10000, // Wait up to 10 seconds for lock
-      timeout: 20000, // Transaction timeout after 20 seconds
+      maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+      timeout: 10000, // Maximum time for transaction to complete (10s)
     });
   }
 

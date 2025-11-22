@@ -192,6 +192,11 @@ export function AlertDetailsDialog({
                     <div>
                       <p className="mb-1 text-sm font-medium">{t("alerts.detailsDialog.phone")}</p>
                       <a
+                        /**
+                         * Type assertion needed because supplier type may not include phone property
+                         * Actual type: string | undefined
+                         * TODO: Update supplier type to include all contact fields
+                         */
                         href={`tel:${(supplier as any)?.phone || ""}`}
                         className="text-primary text-sm hover:underline"
                       >
@@ -205,6 +210,11 @@ export function AlertDetailsDialog({
                     <div>
                       <p className="mb-1 text-sm font-medium">{t("alerts.detailsDialog.email")}</p>
                       <a
+                        /**
+                         * Type assertion needed because supplier type may not include email property
+                         * Actual type: string | undefined
+                         * TODO: Update supplier type to include all contact fields
+                         */
                         href={`mailto:${(supplier as any)?.email || ""}`}
                         className="text-primary text-sm hover:underline"
                       >
@@ -212,6 +222,11 @@ export function AlertDetailsDialog({
                       </a>
                     </div>
                   </div>
+                  {/**
+                   * Type assertion needed because supplier type may not include address properties
+                   * Actual type: string | undefined
+                   * TODO: Update supplier type to include all address fields
+                   */}
                   {(supplier as any)?.address && (
                     <>
                       <Separator />

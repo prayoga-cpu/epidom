@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogTrigger,
@@ -29,19 +30,14 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Plus, Loader2, X, Star } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateMaterial } from "../hooks/use-materials";
-import { useSuppliers } from "../../suppliers/hooks/use-suppliers";
+import { useSuppliers, supplierKeys } from "../../suppliers/hooks/use-suppliers";
 import { useParams } from "next/navigation";
-import {
-  createIngredientFormSchema,
-  type CreateIngredientFormInput,
-} from "@/lib/validation/inventory.schemas";
+import { createIngredientFormSchema } from "@/lib/validation/inventory.schemas";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCurrency } from "@/components/providers/currency-provider";
 import {
-  parseNumberInput,
   formatNumberForInput,
   createNumberInputHandler,
 } from "@/lib/utils/number-input";
@@ -54,23 +50,52 @@ interface AddMaterialDialogProps {
   trigger?: React.ReactNode;
 }
 
+// Supplier filter configuration (extracted for reuse in prefetch)
+const SUPPLIER_FILTERS = {
+  sortBy: "name" as const,
+  sortOrder: "asc" as const,
+  skip: 0,
+  take: 100,
+};
+
 export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
   const { currency, convertToBase } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
+  const queryClient = useQueryClient();
 
   const createMaterial = useCreateMaterial(storeId);
 
-  // Fetch suppliers for dropdown
-  const { data: suppliersData } = useSuppliers(storeId, {
-    sortBy: "name",
-    sortOrder: "asc",
-    skip: 0,
-    take: 100,
-  });
+  // Fetch suppliers for dropdown - only when dialog is open (performance optimization)
+  const { data: suppliersData } = useSuppliers(
+    storeId,
+    SUPPLIER_FILTERS,
+    { enabled: open } // Only fetch when dialog is open
+  );
   const suppliers = suppliersData?.suppliers || [];
+
+  // Prefetch suppliers on hover for perceived performance
+  // This starts loading data before user clicks, so dialog opens faster
+  const handlePrefetchSuppliers = useCallback(() => {
+    if (!storeId) return;
+
+    queryClient.prefetchQuery({
+      queryKey: supplierKeys.list(storeId, SUPPLIER_FILTERS),
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        params.append("sortBy", SUPPLIER_FILTERS.sortBy);
+        params.append("sortOrder", SUPPLIER_FILTERS.sortOrder);
+        params.append("skip", String(SUPPLIER_FILTERS.skip));
+        params.append("take", String(SUPPLIER_FILTERS.take));
+        const response = await fetch(`/api/stores/${storeId}/suppliers?${params.toString()}`);
+        if (!response.ok) throw new Error("Failed to prefetch suppliers");
+        return response.json();
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+  }, [storeId, queryClient]);
 
   // Note: Type assertions (as any) are required due to TypeScript limitations
   // with React Hook Form's useFieldArray when using dynamic field names.
@@ -80,16 +105,36 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
     defaultValues: FORM_DEFAULTS.material,
   });
 
+  /**
+   * Type assertion needed because React Hook Form's useFieldArray has type limitations
+   * with dynamic field arrays
+   * Actual type: Control<CreateIngredientFormInput>
+   * Known issue: https://github.com/react-hook-form/react-hook-form/issues/7764
+   */
   const { fields, append, remove } = useFieldArray({
     control: form.control as any,
-    name: "suppliers" as any, // Type assertion needed for dynamic field arrays
+    /**
+     * Type assertion needed for dynamic field array names
+     * Actual type: "suppliers"
+     * Known issue: TypeScript cannot infer dynamic field paths
+     */
+    name: "suppliers" as any,
   });
 
-  // Note: data type is any due to React Hook Form's useFieldArray type limitations
-  // The actual data structure is validated by Zod schema before reaching this function
+  /**
+   * Type assertion needed because React Hook Form's useFieldArray has type limitations
+   * The actual data structure is validated by Zod schema before reaching this function
+   * Actual type: CreateIngredientFormInput
+   * TODO: Improve type inference when React Hook Form fixes useFieldArray types
+   */
   async function onSubmit(data: any) {
     try {
       // Filter out invalid suppliers (those with "none" or empty supplierId)
+      /**
+       * Type assertion needed because React Hook Form's useFieldArray has type limitations
+       * Actual type: CreateIngredientFormInput["suppliers"][number]
+       * TODO: Improve type inference when React Hook Form fixes useFieldArray types
+       */
       const validSuppliers =
         data.suppliers?.filter((s: any) => s.supplierId && s.supplierId !== "none") || [];
 
@@ -112,6 +157,8 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
             : undefined,
       };
 
+      // Wait for mutation to complete before closing dialog
+      // Material will appear in list immediately via optimistic update
       await createMaterial.mutateAsync(payload);
 
       toast.success(t("data.materials.toasts.added.title"), {
@@ -121,7 +168,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
       form.reset();
       setOpen(false);
     } catch (error) {
+      // Handle validation errors
       toast.error(error instanceof Error ? error.message : t("messages.errorLoadingMaterials"));
+      // Don't close dialog on error - let user see the error and potentially retry
     }
   }
 
@@ -129,7 +178,12 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button size="sm" className="gap-2">
+          <Button
+            size="sm"
+            className="gap-2"
+            onMouseEnter={handlePrefetchSuppliers}
+            onFocus={handlePrefetchSuppliers}
+          >
             <Plus className="h-4 w-4" />
             {t("data.materials.addButton")}
           </Button>
@@ -386,6 +440,12 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   <div className="flex-1 space-y-1">
                     <FormField
                       control={form.control}
+                      /**
+                       * Type assertion needed because TypeScript cannot infer dynamic field paths
+                       * in React Hook Form's useFieldArray
+                       * Actual type: `suppliers.${number}.supplierId`
+                       * Known limitation: Dynamic field paths require type assertion
+                       */
                       name={`suppliers.${index}.supplierId` as any}
                       render={({ field }) => (
                         <FormItem className="space-y-0.5">
@@ -421,7 +481,13 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                     <div className="grid items-start grid-cols-2 gap-1.5">
                       <FormField
                         control={form.control}
-                        name={`suppliers.${index}.price` as any} // Type assertion needed for dynamic field paths
+                        /**
+                         * Type assertion needed because TypeScript cannot infer dynamic field paths
+                         * in React Hook Form's useFieldArray
+                         * Actual type: `suppliers.${number}.price`
+                         * Known limitation: Dynamic field paths require type assertion
+                         */
+                        name={`suppliers.${index}.price` as any}
                         render={({ field }) => (
                           <FormItem className="space-y-0.5">
                             <FormLabel className="text-sm">{t("data.materials.form.supplierPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
@@ -444,7 +510,13 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
                       <FormField
                         control={form.control}
-                        name={`suppliers.${index}.isPreferred` as any} // Type assertion needed for dynamic field paths
+                        /**
+                         * Type assertion needed because TypeScript cannot infer dynamic field paths
+                         * in React Hook Form's useFieldArray
+                         * Actual type: `suppliers.${number}.isPreferred`
+                         * Known limitation: Dynamic field paths require type assertion
+                         */
+                        name={`suppliers.${index}.isPreferred` as any}
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center space-y-0 space-x-2 pt-8">
                             <FormControl>

@@ -16,9 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import ProductDetailsDialog from "./product-details-dialog";
-import EditProductDialog from "./edit-product-dialog";
-import AddProductDialog from "./add-product-dialog";
+import { ProductDetailsDialog } from "./product-details-dialog";
+import { EditProductDialog } from "./edit-product-dialog";
+import { AddProductDialog } from "./add-product-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Search,

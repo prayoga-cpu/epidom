@@ -96,8 +96,23 @@ export async function POST(request: NextRequest) {
       stripePriceId: priceId,
       plan: plan,
       status: SubscriptionStatus.ACTIVE,
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: number (Unix timestamp in seconds)
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       currentPeriodStart: new Date((activeSubscription as any).current_period_start * 1000),
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: number (Unix timestamp in seconds)
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       currentPeriodEnd: new Date((activeSubscription as any).current_period_end * 1000),
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: boolean
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       cancelAtPeriodEnd: (activeSubscription as any).cancel_at_period_end,
     });
     return NextResponse.json({

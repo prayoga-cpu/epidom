@@ -89,7 +89,7 @@ export class SubscriptionService {
             "Payment system not configured. Epidom owner must complete Stripe Connect onboarding first."
           );
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Allow checkout without Connect for development if:
         // 1. EPIDOM_OWNER_EMAIL not set, OR
         // 2. Owner not found, OR

@@ -9,11 +9,7 @@ import {
 } from "@/lib/validation/inventory.schemas";
 import { ApiSuccessResponse } from "@/types/api/responses";
 import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
-import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
-import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
-import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
-import { useErrorHandler } from "@/hooks/use-error-handler";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 
 export interface MaterialsResponse {
@@ -165,13 +161,13 @@ export function useCreateMaterial(storeId: string) {
       return { previousMaterials };
     },
     onSuccess: async (newMaterial) => {
-      // Update with real data from server
+      // Update with real data from server (replace optimistic update)
       const currentData = queryClient.getQueryData<MaterialsResponse>(
         materialKeys.list(storeId)
       );
 
       if (currentData) {
-        // Replace optimistic material with real one
+        // Replace optimistic material with real one immediately
         queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
           ...currentData,
           materials: currentData.materials.map((m) =>
@@ -180,8 +176,15 @@ export function useCreateMaterial(storeId: string) {
         });
       }
 
-      // Batch invalidate all related queries in parallel for better performance
-      await invalidateMaterialRelatedQueries(queryClient, storeId);
+      // Invalidate materials list for immediate UI update
+      // Note: We DON'T invalidate related queries (suppliers, alerts, recipes, stock movements)
+      // on CREATE because adding a new material doesn't affect those existing resources.
+      // This is a performance optimization - related queries only need invalidation
+      // on UPDATE/DELETE operations where relationships might change.
+      await queryClient.invalidateQueries({
+        queryKey: ["materials", storeId],
+        exact: false,
+      });
     },
     onError: (error, newMaterial, context) => {
       // Rollback optimistic update on error
@@ -219,8 +222,15 @@ export function useUpdateMaterial(storeId: string, id: string) {
     onSuccess: async (updatedMaterial) => {
       // Update cache for specific material (optimistic update)
       queryClient.setQueryData(materialKeys.detail(storeId, id), updatedMaterial);
-      // Batch invalidate all related queries in parallel for better performance
-      await invalidateMaterialRelatedQueries(queryClient, storeId);
+
+      // Invalidate materials list first (blocking) for immediate UI update
+      await queryClient.invalidateQueries({
+        queryKey: ["materials", storeId],
+        exact: false,
+      });
+
+      // Invalidate other related queries in background (skip materials)
+      invalidateMaterialRelatedQueries(queryClient, storeId, true).catch(console.warn);
     },
   });
 }
@@ -248,8 +258,15 @@ export function useDeleteMaterial(storeId: string) {
     onSuccess: async (_, deletedId) => {
       // Remove from cache
       queryClient.removeQueries({ queryKey: materialKeys.detail(storeId, deletedId) });
-      // Batch invalidate all related queries in parallel for better performance
-      await invalidateMaterialRelatedQueries(queryClient, storeId);
+
+      // Invalidate materials list first (blocking) for immediate UI update
+      await queryClient.invalidateQueries({
+        queryKey: ["materials", storeId],
+        exact: false,
+      });
+
+      // Invalidate other related queries in background (skip materials)
+      invalidateMaterialRelatedQueries(queryClient, storeId, true).catch(console.warn);
     },
   });
 }
@@ -284,8 +301,15 @@ export function useBulkDeleteMaterials(storeId: string) {
       ids.forEach((id) => {
         queryClient.removeQueries({ queryKey: materialKeys.detail(storeId, id) });
       });
-      // Batch invalidate all related queries in parallel for better performance
-      await invalidateMaterialRelatedQueries(queryClient, storeId);
+
+      // Invalidate materials list first (blocking) for immediate UI update
+      await queryClient.invalidateQueries({
+        queryKey: ["materials", storeId],
+        exact: false,
+      });
+
+      // Invalidate other related queries in background (skip materials)
+      invalidateMaterialRelatedQueries(queryClient, storeId, true).catch(console.warn);
     },
   });
 }

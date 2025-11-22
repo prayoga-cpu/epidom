@@ -75,6 +75,11 @@ export function StockLevelsTab() {
   // Fetch materials
   const { data: materialsData, isLoading: materialsLoading } = useMaterials(storeId, {
     search: searchQuery,
+    /**
+     * Type assertion needed because stockFilter is string but MaterialFilterInput expects specific union type
+     * Actual type: "in_stock" | "low_stock" | "out_of_stock" | "overstocked"
+     * TODO: Use proper type guard or update filter type
+     */
     stockStatus: stockFilter !== "all" ? (stockFilter as any) : undefined,
     skip: 0,
     take: 100,
