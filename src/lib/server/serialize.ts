@@ -5,56 +5,20 @@
  * passed to Client Components as plain objects.
  */
 
-import { Prisma } from "@prisma/client";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
 import type { ProductWithRelations } from "@/lib/repositories/product.repository";
 import type { RecipeWithIngredients as RecipeWithIngredientsRepo } from "@/lib/repositories/recipe.repository";
 import type { RecipeWithIngredients } from "@/features/dashboard/data/recipes/hooks/use-recipes";
-
-/**
- * Convert Prisma Decimal to number
- * Handles Prisma Decimal objects, strings, numbers, and null/undefined
- */
-function decimalToNumber(decimal: Prisma.Decimal | string | number | null | undefined): number {
-  if (decimal === null || decimal === undefined) {
-    return 0;
-  }
-  if (typeof decimal === "number") {
-    return decimal;
-  }
-  if (typeof decimal === "string") {
-    return parseFloat(decimal) || 0;
-  }
-  // Prisma Decimal object - check if it's a Decimal instance
-  // Prisma Decimal has toString() method and is an object
-  if (typeof decimal === "object" && decimal !== null) {
-    // Check if it's a Prisma Decimal by checking for toString method
-    if (typeof (decimal as any).toString === "function") {
-      const str = (decimal as any).toString();
-      const num = parseFloat(str);
-      return isNaN(num) ? 0 : num;
-    }
-    // If it has toNumber method (some Decimal implementations)
-    if (typeof (decimal as any).toNumber === "function") {
-      const num = (decimal as any).toNumber();
-      return isNaN(num) ? 0 : num;
-    }
-  }
-  // Fallback: try to convert to string then parse
-  try {
-    const str = String(decimal);
-    const num = parseFloat(str);
-    return isNaN(num) ? 0 : num;
-  } catch {
-    return 0;
-  }
-}
+import { decimalToNumber, type SerializedDecimal } from "@/types/prisma";
 
 /**
  * Serialize MaterialWithSuppliers: Convert all Decimal fields to numbers
- * Uses type assertion because serialized version has numbers instead of Decimals
+ *
+ * Note: Uses 'as any' type assertion because we're intentionally converting
+ * Prisma Decimal to number for client component serialization.
+ * The return type still shows Decimal for API compatibility, but runtime values are numbers.
  */
 export function serializeMaterial(material: MaterialWithSuppliers): MaterialWithSuppliers {
   return {
@@ -79,7 +43,10 @@ export function serializeMaterials(materials: MaterialWithSuppliers[]): Material
 
 /**
  * Serialize SupplierWithRelations: Convert all Decimal fields to numbers
- * Uses type assertion because serialized version has numbers instead of Decimals
+ *
+ * Note: Uses 'as any' type assertion because we're intentionally converting
+ * Prisma Decimal to number for client component serialization.
+ * The return type still shows Decimal for API compatibility, but runtime values are numbers.
  */
 export function serializeSupplier(supplier: SupplierWithRelations): SupplierWithRelations {
   return {
@@ -115,15 +82,21 @@ export function serializeSuppliers(suppliers: SupplierWithRelations[]): Supplier
 
 /**
  * Serialize ProductionBatchWithRelations: Convert all Decimal fields to numbers
- * Uses type assertion because serialized version has numbers instead of Decimals
+ *
+ * Note: Uses 'as any' type assertion because we're intentionally converting
+ * Prisma Decimal to number for client component serialization.
+ * The return type still shows Decimal for API compatibility, but runtime values are numbers.
  */
-export function serializeProductionBatch(batch: ProductionBatchWithRelations): ProductionBatchWithRelations {
+export function serializeProductionBatch(
+  batch: ProductionBatchWithRelations
+): ProductionBatchWithRelations {
   return {
     ...batch,
     plannedQuantity: decimalToNumber(batch.plannedQuantity) as any,
-    actualQuantity: batch.actualQuantity !== null ? decimalToNumber(batch.actualQuantity) as any : null,
+    actualQuantity:
+      batch.actualQuantity !== null ? (decimalToNumber(batch.actualQuantity) as any) : null,
     recipe: batch.recipe
-      ? {
+      ? ({
           ...batch.recipe,
           yieldQuantity: decimalToNumber(batch.recipe.yieldQuantity) as any,
           ingredients: batch.recipe.ingredients.map((ing) => {
@@ -143,7 +116,7 @@ export function serializeProductionBatch(batch: ProductionBatchWithRelations): P
               },
             } as any;
           }),
-        } as any
+        } as any)
       : null,
     stockMovements: batch.stockMovements?.map((sm) => ({
       ...sm,
@@ -163,7 +136,10 @@ export function serializeProductionBatches(
 
 /**
  * Serialize ProductWithRelations: Convert all Decimal fields to numbers
- * Uses type assertion because serialized version has numbers instead of Decimals
+ *
+ * Note: Uses 'as any' type assertion because we're intentionally converting
+ * Prisma Decimal to number for client component serialization.
+ * The return type still shows Decimal for API compatibility, but runtime values are numbers.
  */
 export function serializeProduct(product: ProductWithRelations): ProductWithRelations {
   return {
@@ -253,4 +229,3 @@ export function serializeRecipe(recipe: RecipeWithIngredientsRepo): RecipeWithIn
 export function serializeRecipes(recipes: RecipeWithIngredientsRepo[]): RecipeWithIngredients[] {
   return recipes.map(serializeRecipe);
 }
-

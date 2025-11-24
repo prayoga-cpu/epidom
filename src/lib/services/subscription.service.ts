@@ -37,20 +37,13 @@ export class SubscriptionService {
     private readonly productRepo: ProductRepository = productRepository
   ) {}
 
-  // In-memory cache for subscription status
-  // Key: userId
-  // Value: { plan, status, timestamp }
-  private cache = new Map<
-    string,
-    { plan: SubscriptionPlan; status: SubscriptionStatus; timestamp: number }
-  >();
-  private readonly CACHE_TTL = 1000 * 60 * 5; // 5 minutes
-
   /**
-   * Call this when subscription changes
+   * Invalidate user cache (placeholder for future caching implementation)
+   * Currently does nothing but kept for API compatibility
    */
   invalidateUserCache(userId: string): void {
-    this.cache.delete(userId);
+    // Placeholder for future caching implementation
+    // This method is called from webhook handlers to maintain API compatibility
   }
 
   /**
@@ -303,7 +296,7 @@ export class SubscriptionService {
    * Check if user has access to supplier management feature
    */
   async hasSupplierManagementAccess(userId: string): Promise<boolean> {
-    const subscription = await this.getCachedSubscriptionStatus(userId);
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
 
     if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
       return false;
@@ -316,7 +309,7 @@ export class SubscriptionService {
    * Check if user has access to advanced reports feature
    */
   async hasAdvancedReportsAccess(userId: string): Promise<boolean> {
-    const subscription = await this.getCachedSubscriptionStatus(userId);
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
 
     if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
       return false;
