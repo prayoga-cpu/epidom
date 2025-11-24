@@ -1,3 +1,10 @@
+/**
+ * Data View Client Component
+ *
+ * Main component for displaying materials, recipes, products, and suppliers in tabs.
+ * Uses lazy loading and code splitting for optimal performance.
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -5,7 +12,9 @@ import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useQueryClient } from "@tanstack/react-query";
+import { ItemCardGrid } from "./base-item-card";
 import {
   prefetchMaterials,
   prefetchProducts,
@@ -17,21 +26,23 @@ import type { RecipeWithIngredients } from "@/features/dashboard/data/recipes/ho
 import type { Product } from "@/features/dashboard/data/products/hooks/use-products";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 
-/**
- * Lazy load components untuk mengurangi initial bundle size dan mencegah mounting semua komponen sekaligus
- *
- * OPTIMASI PERFORMANCE:
- * 1. Lazy loading: Komponen hanya di-load ketika tab pertama kali diaktifkan
- * 2. Conditional rendering: Hanya render TabsContent untuk tab yang aktif
- * 3. Code splitting: Setiap tab menjadi chunk terpisah, mengurangi initial bundle size
- * 4. Data fetching: Hanya terjadi untuk tab yang aktif, tidak semua tab sekaligus
- *
- * Hasil:
- * - Initial load: Hanya 1 komponen di-mount (tab aktif)
- * - Memory usage: ~75% reduction (dari 4 komponen menjadi 1)
- * - Network requests: Hanya 1 API call untuk tab aktif
- * - Tab switching: Instant untuk tab yang sudah pernah dibuka (cached)
- */
+// ========================================
+// Lazy-Loaded Section Components
+// ========================================
+// Components are lazy-loaded to reduce initial bundle size and prevent mounting
+// all components simultaneously.
+//
+// Performance optimizations:
+// - Lazy loading: Components only load when tab is first activated
+// - Conditional rendering: Only render TabsContent for active tab
+// - Code splitting: Each tab becomes a separate chunk, reducing initial bundle size
+// - Data fetching: Only occurs for active tab, not all tabs at once
+//
+// Results:
+// - Initial load: Only 1 component mounted (active tab)
+// - Memory usage: ~75% reduction (from 4 components to 1)
+// - Network requests: Only 1 API call for active tab
+// - Tab switching: Instant for previously opened tabs (cached)
 const MaterialsSection = dynamic(
   () =>
     import("@/features/dashboard/data/materials/components/materials-section").then((mod) => ({
@@ -76,20 +87,96 @@ const SuppliersSection = dynamic(
   }
 );
 
-// Loading skeleton untuk tab content
+/**
+ * Tab Content Skeleton Component
+ *
+ * Pixel-perfect skeleton that mimics the exact structure of section components
+ * to prevent layout shift during lazy loading.
+ *
+ * @returns {JSX.Element} Skeleton UI matching section component structure
+ */
 function TabContentSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-32" />
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-32 w-full" />
-        ))}
-      </div>
-    </div>
+    <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+      <CardHeader className="border-b">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <Skeleton className="h-7 w-32" />
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4 pb-6">
+        {/* Filter Section Skeleton */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-10 w-full sm:w-64" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+
+        {/* Results Count Skeleton */}
+        <div className="flex items-center border-b pb-2">
+          <Skeleton className="h-4 w-48" />
+        </div>
+
+        {/* Card Grid Skeleton - using ItemCardGrid for consistency */}
+        <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card
+              key={i}
+              className="group bg-card relative rounded-lg border px-0 py-4 shadow-sm transition-all hover:shadow-md"
+            >
+              <CardContent className="!px-4">
+                {/* Header */}
+                <div className="mb-2 flex items-start justify-between">
+                  <div className="flex-1">
+                    <Skeleton className="mb-1 h-4 w-[85px]" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+
+                {/* Separator */}
+                <div className="bg-border my-2 h-px" />
+
+                {/* Info */}
+                <div className="my-2 space-y-1">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-2 grid grid-cols-3 gap-1">
+                  <Skeleton className="h-8 w-full rounded" />
+                  <Skeleton className="h-8 w-full rounded" />
+                  <Skeleton className="h-8 w-full rounded" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </ItemCardGrid>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -101,6 +188,20 @@ interface DataViewClientProps {
   storeId: string;
 }
 
+/**
+ * Data View Client Component
+ *
+ * Main component for displaying materials, recipes, products, and suppliers in tabs.
+ * Uses lazy loading, code splitting, and prefetching for optimal performance.
+ *
+ * @param {DataViewClientProps} props - Component props
+ * @param {MaterialWithSuppliers[]} [props.initialMaterials] - Initial materials data
+ * @param {RecipeWithIngredients[]} [props.initialRecipes] - Initial recipes data
+ * @param {Product[]} [props.initialProducts] - Initial products data
+ * @param {SupplierWithRelations[]} [props.initialSuppliers] - Initial suppliers data
+ * @param {string} props.storeId - Store ID for data fetching
+ * @returns {JSX.Element} Data view with tabs component
+ */
 export function DataViewClient({
   initialMaterials,
   initialRecipes,
@@ -112,9 +213,15 @@ export function DataViewClient({
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("materials");
 
-  // Prefetch handlers for tab hover
+  /**
+   * Handle tab hover to prefetch data
+   *
+   * Prefetches data for tabs on hover to improve perceived performance.
+   * Only prefetches if tab is not already active to avoid unnecessary requests.
+   *
+   * @param {string} tabName - Name of the tab being hovered
+   */
   const handleTabHover = async (tabName: string) => {
-    // Only prefetch if tab is not already active (avoid unnecessary prefetch)
     if (tabName === activeTab) return;
 
     try {
@@ -133,7 +240,6 @@ export function DataViewClient({
           break;
       }
     } catch (error) {
-      // Silently handle prefetch errors (non-critical)
       // Prefetch failures are non-critical and don't need logging
     }
   };
@@ -175,13 +281,11 @@ export function DataViewClient({
         </TabsTrigger>
       </TabsList>
 
-      {/*
-        Conditional rendering: Hanya render TabsContent untuk tab yang aktif
-        Ini mencegah semua komponen di-mount sekaligus, yang menyebabkan:
-        - Semua data fetching terjadi bersamaan
-        - Memory usage tinggi
-        - Initial load time yang lama
-      */}
+      {/* Conditional rendering: Only render TabsContent for active tab
+          This prevents all components from mounting simultaneously, which causes:
+          - All data fetching to occur at once
+          - High memory usage
+          - Long initial load time */}
       {activeTab === "materials" && (
         <TabsContent value="materials" className="mt-0">
           <MaterialsSection initialMaterials={initialMaterials} />

@@ -26,6 +26,7 @@ import {
   BaseItemCard,
   EmptyState,
 } from "../../components";
+import { MaterialsCardGridSkeleton } from "./materials-skeleton";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
 import { responsive, responsiveText } from "@/lib/utils/responsive";
@@ -269,16 +270,9 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
 
   const hasActiveFilters = !!(filters.search || filters.category || filters.stockStatus);
 
-  // Loading state
+  // Loading state - use pixel-perfect skeleton to prevent layout shift
   if (isLoading) {
-    return (
-      <SectionLoadingState
-        title={t("data.materials.title")}
-        exportLabel={t("common.actions.export")}
-        addLabel={t("data.materials.addButton")}
-        selectLabel={t("common.actions.select")}
-      />
-    );
+    return <MaterialsCardGridSkeleton cards={6} />;
   }
 
   // Error state

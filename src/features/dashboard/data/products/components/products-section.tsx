@@ -55,6 +55,7 @@ import {
   SectionErrorState,
   SectionLoadingState,
 } from "../../components";
+import { ProductsCardGridSkeleton } from "./products-skeleton";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
 
@@ -239,16 +240,9 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
 
   const hasActiveFilters = filters.search || filters.category;
 
-  // Show loading state
+  // Loading state - use pixel-perfect skeleton to prevent layout shift
   if (isLoading) {
-    return (
-      <SectionLoadingState
-        title={t("data.products.pageTitle")}
-        exportLabel={t("common.actions.export")}
-        addLabel={t("data.products.addButton")}
-        selectLabel={t("common.actions.view")}
-      />
-    );
+    return <ProductsCardGridSkeleton cards={6} />;
   }
 
   // Show error state

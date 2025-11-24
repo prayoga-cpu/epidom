@@ -1,3 +1,10 @@
+/**
+ * Dashboard Page
+ *
+ * Main dashboard page showing overview of materials, suppliers, production batches, and alerts.
+ * Server-side rendered with parallel data fetching for optimal performance.
+ */
+
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -13,6 +20,13 @@ import type { SupplierWithRelations } from "@/lib/repositories/supplier.reposito
 import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
 import type { Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 
+/**
+ * Dashboard Page Component
+ *
+ * @param {Object} props - Component props
+ * @param {Promise<{storeId: string}>} props.params - Route parameters
+ * @returns {Promise<JSX.Element>} Dashboard page component
+ */
 export default async function DashboardPage({
   params,
 }: {
@@ -25,7 +39,7 @@ export default async function DashboardPage({
     redirect("/login");
   }
 
-  // Fetch initial data in parallel for better performance
+  // Fetch all initial data in parallel for optimal performance
   const [materialsResult, suppliersResult, productionBatchesResult, alertsResult] = await Promise.all([
     fetchMaterialsForPage(storeId),
     fetchSuppliersForPage(storeId, { take: 4, sortBy: "name", sortOrder: "asc" }),

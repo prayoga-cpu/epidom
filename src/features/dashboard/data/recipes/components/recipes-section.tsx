@@ -47,6 +47,7 @@ import {
   BaseItemCard,
   type FilterField,
 } from "../../components";
+import { RecipesCardGridSkeleton } from "./recipes-skeleton";
 import { LoadingPage } from "@/features/loading/loading-page";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
@@ -227,16 +228,9 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
 
   const hasActiveFilters = searchQuery || categoryFilter !== undefined;
 
-  // Loading state
+  // Loading state - use pixel-perfect skeleton to prevent layout shift
   if (isLoading) {
-    return (
-      <SectionLoadingState
-        title={t("data.recipes.pageTitle")}
-        exportLabel={t("common.actions.export")}
-        addLabel={t("data.recipes.addButton")}
-        selectLabel={t("common.actions.view")}
-      />
-    );
+    return <RecipesCardGridSkeleton cards={6} />;
   }
 
   if (error) {

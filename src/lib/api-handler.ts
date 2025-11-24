@@ -1,3 +1,13 @@
+/**
+ * API Handler Wrapper
+ *
+ * Provides a higher-order function to wrap API routes with common functionality:
+ * - Rate limiting
+ * - Authentication
+ * - Store ownership verification (optional)
+ * - Centralized error handling
+ */
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -7,18 +17,24 @@ import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { Session } from "next-auth";
 
-// Define a type for the context that will be passed to the handler
+/**
+ * Context passed to API route handlers
+ */
 export type ApiContext = {
-  params: any; // Using any for params as they can vary, but we'll type check storeId specifically
+  params: any; // Route params (can vary, storeId is type-checked separately)
   session: Session;
   userId: string;
   storeId?: string;
 };
 
-// Define the handler type
+/**
+ * API route handler function signature
+ */
 type ApiHandler = (request: Request, context: ApiContext) => Promise<NextResponse>;
 
-// Options for the wrapper
+/**
+ * Options for the API handler wrapper
+ */
 interface HandlerOptions {
   rateLimitEndpoint?: string; // Endpoint identifier for rate limiter
   requireStoreAuth?: boolean; // Whether to verify store ownership
@@ -36,15 +52,13 @@ export const withApiHandler = (
   options: HandlerOptions = {}
 ) => {
   return async (request: Request, { params }: { params: Promise<any> }) => {
-    // Resolve params once
     const resolvedParams = await params;
-
-    // Determine endpoint name for logging/rate limiting
-    // If not provided, try to construct from URL or default to generic
     const endpoint = options.rateLimitEndpoint || new URL(request.url).pathname;
 
     try {
-      // 1. Rate Limiting
+      // ========================================
+      // Rate Limiting
+      // ========================================
       if (options.rateLimitEndpoint) {
         const rateLimitResult = await rateLimitMiddleware(request, options.rateLimitEndpoint);
         if (rateLimitResult) {
@@ -65,7 +79,9 @@ export const withApiHandler = (
         }
       }
 
-      // 2. Authentication
+      // ========================================
+      // Authentication
+      // ========================================
       const session = await getServerSession(authOptions);
       if (!session?.user?.id) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -73,23 +89,24 @@ export const withApiHandler = (
         });
       }
 
-      // 3. Store Verification (Optional)
+      // ========================================
+      // Store Ownership Verification (Optional)
+      // ========================================
       let storeId: string | undefined;
 
       if (options.requireStoreAuth) {
-        // Expect 'id' or 'storeId' in params
         storeId = resolvedParams.id || resolvedParams.storeId;
 
         if (!storeId) {
-           // Fallback: try to get from query params or body if not in route params?
-           // For now, strict requirement: must be in route params if requireStoreAuth is true
-           throw new Error("Store ID not found in route parameters");
+          throw new Error("Store ID not found in route parameters");
         }
 
         await verifyStoreOwnership(storeId, session.user.id);
       }
 
-      // 4. Execute Business Logic
+      // ========================================
+      // Execute Business Logic
+      // ========================================
       return await handler(request, {
         params: resolvedParams,
         session,
@@ -98,12 +115,14 @@ export const withApiHandler = (
       });
 
     } catch (error) {
-      // 5. Centralized Error Handling
+      // ========================================
+      // Error Handling
+      // ========================================
       return handleApiError(error, {
         endpoint: endpoint,
         context: {
           ...resolvedParams,
-          userId: "session_user_id" // Don't log actual user ID if session might be null, or handle safely
+          userId: "session_user_id", // Don't log actual user ID for security
         },
       });
     }

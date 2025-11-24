@@ -74,10 +74,17 @@ export class SubscriptionService {
       throw new Error(`You already have an active ${plan} plan`);
     } */
 
-    // Get Epidom owner's Stripe Connect account (for receiving 80%)
-    // NOTE: For MVP, this should be a configuration.
-    // You'll need to set up the Epidom owner's Connect account first
-    // For development/testing, you can skip this by setting SKIP_STRIPE_CONNECT=true
+    // Get Epidom owner's Stripe Connect account (for receiving 80% revenue split)
+    //
+    // ENVIRONMENT VARIABLE: SKIP_STRIPE_CONNECT
+    // Purpose: Skip Stripe Connect validation during development/testing
+    // Values: "true" | "false" (default)
+    //
+    // When true: Allows checkout without Connect account (development only)
+    // When false: Requires EPIDOM_OWNER_EMAIL and Connect account setup
+    //
+    // ⚠️ PRODUCTION: Must be "false" or unset
+    //
     const skipConnect = process.env.SKIP_STRIPE_CONNECT === "true";
     let epidomOwner = null;
 
