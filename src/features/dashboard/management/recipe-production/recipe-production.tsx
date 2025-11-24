@@ -16,6 +16,7 @@ import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes"
 import { useProductionBatches } from "./hooks/use-production-batches";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { hasMaterialStockChanged } from "./utils/recipe-helpers";
+import { convertStockToIngredientUnit } from "@/lib/utils/unit-conversion";
 
 export function RecipeProductionCard() {
   const { t } = useI18n();
@@ -87,7 +88,12 @@ export function RecipeProductionCard() {
 
     return selectedRecipe.ingredients.map((ingredient: any) => {
       const required = Number(ingredient.quantity);
-      const available = Number(ingredient.material.currentStock);
+      // Convert material stock to ingredient unit for proper comparison
+      const materialStock = Number(ingredient.material.currentStock);
+      const materialUnit = ingredient.material.unit;
+      const ingredientUnit = ingredient.unit;
+      const available = convertStockToIngredientUnit(materialStock, materialUnit, ingredientUnit);
+
       let status: "sufficient" | "low" | "insufficient";
 
       if (available >= required) {

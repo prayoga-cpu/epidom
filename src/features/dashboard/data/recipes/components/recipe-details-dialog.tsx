@@ -193,55 +193,102 @@ export function RecipeDetailsDialog({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {recipe.ingredients.map((ingredient, index) => {
-                    const material = materials.find((m) => m.id === ingredient.materialId);
-                    const ingredientCost = material
-                      ? Number(material.unitCost) * ingredient.quantity
-                      : 0;
+                {recipe.ingredients.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-amber-300 bg-amber-50 p-8 text-center dark:border-amber-700 dark:bg-amber-950/30">
+                    <AlertCircle className="mb-3 h-12 w-12 text-amber-600 dark:text-amber-500" />
+                    <h3 className="mb-2 text-lg font-semibold text-amber-900 dark:text-amber-100">
+                      {t("data.recipes.warnings.noIngredients.title") || "No Ingredients"}
+                    </h3>
+                    <p className="text-muted-foreground mb-4 max-w-md text-sm">
+                      {t("data.recipes.warnings.noIngredients.description") ||
+                        "This recipe doesn't have any ingredients yet. Add ingredients to calculate costs and use this recipe for production."}
+                    </p>
+                    {onEdit && (
+                      <Button variant="outline" size="sm" onClick={() => onEdit(recipe)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        {t("data.recipes.warnings.noIngredients.action") || "Add Ingredients"}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-3">
+                      {recipe.ingredients.map((ingredient, index) => {
+                        const material = materials.find((m) => m.id === ingredient.materialId);
+                        const ingredientCost = material
+                          ? Number(material.unitCost) * ingredient.quantity
+                          : 0;
 
-                    return (
-                      <div key={index}>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium">
-                              {material?.name || t("data.materials.unknownMaterial")}
-                            </p>
-                            <p className="text-muted-foreground text-sm">
-                              {ingredient.quantity} {ingredient.unit}
-                              {ingredient.notes && ` • ${ingredient.notes}`}
-                            </p>
-                            {material && (
-                              <p className="text-muted-foreground text-xs">
-                                {formatPrice(Number(material.unitCost))}/{material.unit} ×{" "}
-                                {ingredient.quantity} {ingredient.unit}
-                              </p>
+                        // Check if material was deleted
+                        const isMaterialDeleted = !material;
+
+                        return (
+                          <div key={index}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p
+                                    className={`font-medium ${isMaterialDeleted ? "text-muted-foreground line-through" : ""}`}
+                                  >
+                                    {material?.name ||
+                                      t("data.materials.deletedMaterial") ||
+                                      "Deleted Material"}
+                                  </p>
+                                  {isMaterialDeleted && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      {t("common.deleted") || "Deleted"}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-muted-foreground text-sm">
+                                  {ingredient.quantity} {ingredient.unit}
+                                  {ingredient.notes && ` • ${ingredient.notes}`}
+                                </p>
+                                {material && (
+                                  <p className="text-muted-foreground text-xs">
+                                    {formatPrice(Number(material.unitCost))}/{material.unit} ×{" "}
+                                    {ingredient.quantity} {ingredient.unit}
+                                  </p>
+                                )}
+                                {isMaterialDeleted && (
+                                  <p className="text-xs text-amber-600 dark:text-amber-500">
+                                    {t("data.recipes.warnings.materialDeleted") ||
+                                      "⚠️ This material has been deleted. Please update the recipe."}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p
+                                  className={`font-semibold ${isMaterialDeleted ? "text-muted-foreground" : ""}`}
+                                >
+                                  {formatPrice(ingredientCost)}
+                                </p>
+                                <p className="text-muted-foreground text-xs">
+                                  {totalCost > 0
+                                    ? ((ingredientCost / totalCost) * 100).toFixed(1)
+                                    : "0"}
+                                  %
+                                </p>
+                              </div>
+                            </div>
+                            {index < recipe.ingredients.length - 1 && (
+                              <Separator className="mt-3" />
                             )}
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold">{formatPrice(ingredientCost)}</p>
-                            <p className="text-muted-foreground text-xs">
-                              {totalCost > 0
-                                ? ((ingredientCost / totalCost) * 100).toFixed(1)
-                                : "0"}
-                              %
-                            </p>
-                          </div>
-                        </div>
-                        {index < recipe.ingredients.length - 1 && <Separator className="mt-3" />}
-                      </div>
-                    );
-                  })}
-                </div>
+                        );
+                      })}
+                    </div>
 
-                <Separator className="my-4" />
+                    <Separator className="my-4" />
 
-                <div className="flex justify-between font-semibold">
-                  <span>
-                    {t("data.recipes.details.totalMaterialsCost") || "Total Materials Cost"}
-                  </span>
-                  <span>{formatPrice(totalCost)}</span>
-                </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>
+                        {t("data.recipes.details.totalMaterialsCost") || "Total Materials Cost"}
+                      </span>
+                      <span>{formatPrice(totalCost)}</span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -274,11 +321,7 @@ export function RecipeDetailsDialog({
                                     {product.category}
                                   </Badge>
                                 )}
-                                {product.sku && (
-                                  <span className="text-xs">
-                                    SKU: {product.sku}
-                                  </span>
-                                )}
+                                {product.sku && <span className="text-xs">SKU: {product.sku}</span>}
                               </p>
                               <div className="mt-1 flex items-center gap-4 text-xs">
                                 <span className="text-muted-foreground">
@@ -340,8 +383,7 @@ export function RecipeDetailsDialog({
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm">
-                      {t("data.recipes.details.suggestedPrice") ||
-                        "Suggested Price (2.5x markup)"}
+                      {t("data.recipes.details.suggestedPrice") || "Suggested Price (2.5x markup)"}
                     </p>
                     <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                       {formatPrice(suggestedPrice)}
@@ -354,8 +396,10 @@ export function RecipeDetailsDialog({
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
-                      {t("data.recipes.details.profitPerUnit")?.replace("{unit}", recipe.yieldUnit) ||
-                        `Profit per ${recipe.yieldUnit}`}
+                      {t("data.recipes.details.profitPerUnit")?.replace(
+                        "{unit}",
+                        recipe.yieldUnit
+                      ) || `Profit per ${recipe.yieldUnit}`}
                     </span>
                     <span className="font-semibold text-green-600 dark:text-green-400">
                       {formatPrice(profit)}
@@ -386,22 +430,25 @@ export function RecipeDetailsDialog({
                   </div>
                   <div className="text-muted-foreground space-y-1 text-sm">
                     <p>
-                      • {t("data.recipes.details.wholesalePricing")?.replace(
-                          "{price}",
-                          formatPrice(costPerUnit * 1.43)
-                        ) || `Wholesale (30% margin): ${formatPrice(costPerUnit * 1.43)}`}
+                      •{" "}
+                      {t("data.recipes.details.wholesalePricing")?.replace(
+                        "{price}",
+                        formatPrice(costPerUnit * 1.43)
+                      ) || `Wholesale (30% margin): ${formatPrice(costPerUnit * 1.43)}`}
                     </p>
                     <p>
-                      • {t("data.recipes.details.retailPricing")?.replace(
-                          "{price}",
-                          formatPrice(costPerUnit * 2.5)
-                        ) || `Retail (60% margin): ${formatPrice(costPerUnit * 2.5)}`}
+                      •{" "}
+                      {t("data.recipes.details.retailPricing")?.replace(
+                        "{price}",
+                        formatPrice(costPerUnit * 2.5)
+                      ) || `Retail (60% margin): ${formatPrice(costPerUnit * 2.5)}`}
                     </p>
                     <p>
-                      • {t("data.recipes.details.premiumPricing")?.replace(
-                          "{price}",
-                          formatPrice(costPerUnit * 3.33)
-                        ) || `Premium (70% margin): ${formatPrice(costPerUnit * 3.33)}`}
+                      •{" "}
+                      {t("data.recipes.details.premiumPricing")?.replace(
+                        "{price}",
+                        formatPrice(costPerUnit * 3.33)
+                      ) || `Premium (70% margin): ${formatPrice(costPerUnit * 3.33)}`}
                     </p>
                   </div>
                 </div>
@@ -470,10 +517,9 @@ export function RecipeDetailsDialog({
                       {t("data.recipes.details.breakEvenUnits") || "Break-even Units/Day"}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {t("data.recipes.details.breakEvenWithOverhead")?.replace(
-                        "{units}",
-                        Math.ceil(200 / profit).toString()
-                      )?.replace("{unit}", recipe.yieldUnit) ||
+                      {t("data.recipes.details.breakEvenWithOverhead")
+                        ?.replace("{units}", Math.ceil(200 / profit).toString())
+                        ?.replace("{unit}", recipe.yieldUnit) ||
                         `With $200 overhead: ${Math.ceil(200 / profit)} ${recipe.yieldUnit}`}
                     </p>
                   </div>
@@ -486,8 +532,7 @@ export function RecipeDetailsDialog({
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {t("data.materials.details.created") || "Created"}:{" "}
-                  {formatDate(recipe.createdAt)}
+                  {t("data.materials.details.created") || "Created"}: {formatDate(recipe.createdAt)}
                 </span>
               </div>
               <div className="flex items-center gap-2">

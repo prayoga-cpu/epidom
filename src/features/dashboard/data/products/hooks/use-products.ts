@@ -156,6 +156,18 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
 
   if (!response.ok) {
     const error = await response.json();
+
+    // Handle 403 Forbidden (subscription feature locked)
+    if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
+      const { createSubscriptionError } = await import("@/types/errors");
+      const customError = createSubscriptionError(
+        error.message || "Export feature is only available in Pro and Enterprise plans",
+        true
+      );
+      (customError as any).status = 403;
+      throw customError;
+    }
+
     throw new Error(error.error || "Failed to export products");
   }
 

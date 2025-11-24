@@ -6,10 +6,7 @@ import {
 } from "@/lib/repositories/subscription.repository";
 import { userRepository, UserRepository } from "@/lib/repositories/user.repository";
 import { storeRepository, StoreRepository } from "@/lib/repositories/store.repository";
-import {
-  productRepository,
-  ProductRepository,
-} from "@/lib/repositories/product.repository";
+import { productRepository, ProductRepository } from "@/lib/repositories/product.repository";
 import {
   STRIPE_CONFIG,
   canCreateStore,
@@ -39,6 +36,22 @@ export class SubscriptionService {
     private readonly storeRepo: StoreRepository = storeRepository,
     private readonly productRepo: ProductRepository = productRepository
   ) {}
+
+  // In-memory cache for subscription status
+  // Key: userId
+  // Value: { plan, status, timestamp }
+  private cache = new Map<
+    string,
+    { plan: SubscriptionPlan; status: SubscriptionStatus; timestamp: number }
+  >();
+  private readonly CACHE_TTL = 1000 * 60 * 5; // 5 minutes
+
+  /**
+   * Call this when subscription changes
+   */
+  invalidateUserCache(userId: string): void {
+    this.cache.delete(userId);
+  }
 
   /**
    * Create Stripe Checkout Session
@@ -290,7 +303,7 @@ export class SubscriptionService {
    * Check if user has access to supplier management feature
    */
   async hasSupplierManagementAccess(userId: string): Promise<boolean> {
-    const subscription = await this.subscriptionRepo.findByUserId(userId);
+    const subscription = await this.getCachedSubscriptionStatus(userId);
 
     if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
       return false;
@@ -303,7 +316,7 @@ export class SubscriptionService {
    * Check if user has access to advanced reports feature
    */
   async hasAdvancedReportsAccess(userId: string): Promise<boolean> {
-    const subscription = await this.subscriptionRepo.findByUserId(userId);
+    const subscription = await this.getCachedSubscriptionStatus(userId);
 
     if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
       return false;
@@ -349,6 +362,9 @@ export class SubscriptionService {
 
     // Update local record
     await this.subscriptionRepo.cancelAtPeriodEnd(userId);
+
+    // Invalidate cache
+    this.invalidateUserCache(userId);
   }
 
   /**
@@ -369,6 +385,9 @@ export class SubscriptionService {
     await this.subscriptionRepo.update(userId, {
       cancelAtPeriodEnd: false,
     });
+
+    // Invalidate cache
+    this.invalidateUserCache(userId);
   }
 
   /**
@@ -418,6 +437,7 @@ export class SubscriptionService {
         await this.subscriptionRepo.update(userId, {
           stripeSubscriptionId: keepSubscription.id,
         });
+        this.invalidateUserCache(userId);
       }
     }
 

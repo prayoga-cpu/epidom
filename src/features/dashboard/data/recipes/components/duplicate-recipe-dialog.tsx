@@ -69,11 +69,7 @@ const RECIPE_CATEGORIES = [
   "Other",
 ];
 
-export function DuplicateRecipeDialog({
-  open,
-  onOpenChange,
-  recipe,
-}: DuplicateRecipeDialogProps) {
+export function DuplicateRecipeDialog({ open, onOpenChange, recipe }: DuplicateRecipeDialogProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const { t } = useI18n();
   const params = useParams();
@@ -116,9 +112,7 @@ export function DuplicateRecipeDialog({
       toast.success(t("data.recipes.toasts.duplicated.title"));
       onOpenChange(false);
     } catch (error) {
-      toast.error(
-        t("messages.errorLoadingRecipes")
-      );
+      toast.error(t("messages.errorLoadingRecipes"));
     }
   };
 
@@ -155,7 +149,7 @@ export function DuplicateRecipeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px] [&>button]:hidden">
         {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+        <DialogHeader className="border-border shrink-0 border-b px-6 py-4">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
             <Copy className="h-5 w-5" />
             {t("data.recipes.duplicateTitle")}
@@ -166,217 +160,216 @@ export function DuplicateRecipeDialog({
 
           {/* Progress Indicator */}
           <div className="mt-4 flex items-center justify-center gap-2">
-          {STEPS.map((step, index) => (
-            <div key={step.id} className="flex items-center gap-2">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                  currentStep === step.id
-                    ? "bg-primary text-primary-foreground"
-                    : currentStep > step.id
-                      ? "bg-primary/20 text-primary"
-                      : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {currentStep > step.id ? <Check className="h-4 w-4" /> : step.id}
+            {STEPS.map((step, index) => (
+              <div key={step.id} className="flex items-center gap-2">
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                    currentStep === step.id
+                      ? "bg-primary text-primary-foreground"
+                      : currentStep > step.id
+                        ? "bg-primary/20 text-primary"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {currentStep > step.id ? <Check className="h-4 w-4" /> : step.id}
+                </div>
+                <span
+                  className={`text-sm ${
+                    currentStep === step.id
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {step.name}
+                </span>
+                {index < STEPS.length - 1 && (
+                  <ChevronRight className="text-muted-foreground mx-2 h-4 w-4" />
+                )}
               </div>
-              <span
-                className={`text-sm ${
-                  currentStep === step.id ? "text-foreground font-medium" : "text-muted-foreground"
-                }`}
-              >
-                {step.name}
-              </span>
-              {index < STEPS.length - 1 && (
-                <ChevronRight className="text-muted-foreground mx-2 h-4 w-4" />
-              )}
-            </div>
-          ))}
+            ))}
           </div>
         </DialogHeader>
 
         {/* Scrollable Form Content */}
         <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4">
           <Form {...form}>
-            <form id="duplicate-recipe-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Step 1: Basic Info */}
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                <div className="bg-muted/50 rounded-lg border p-4">
-                  <p className="text-muted-foreground text-sm">
-                    <strong>
-                      {t("data.recipes.duplicateDialog.originalRecipe")}:
-                    </strong>{" "}
-                    {recipe.name}
-                  </p>
+            <form
+              id="duplicate-recipe-form"
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-6"
+            >
+              {/* Step 1: Basic Info */}
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                  <div className="bg-muted/50 rounded-lg border p-4">
+                    <p className="text-muted-foreground text-sm">
+                      <strong>{t("data.recipes.duplicateDialog.originalRecipe")}:</strong>{" "}
+                      {recipe.name}
+                    </p>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="newName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("data.recipes.duplicateDialog.nameLabel")} *</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t("data.recipes.form.namePlaceholder")} {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          {t("data.recipes.duplicateDialog.nameDescription") ||
+                            "Enter a unique name for the duplicated recipe. All other details will be copied from the original recipe."}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+                    <p className="text-sm text-blue-900 dark:text-blue-100">
+                      {t("data.recipes.duplicateDialog.note") ||
+                        "Note: All ingredients, instructions, yield, and production time will be copied from the original recipe."}
+                    </p>
+                  </div>
                 </div>
+              )}
 
-                <FormField
-                  control={form.control}
-                  name="newName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        {t("data.recipes.duplicateDialog.nameLabel")} *
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("data.recipes.form.namePlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        {t("data.recipes.duplicateDialog.nameDescription") ||
-                          "Enter a unique name for the duplicated recipe. All other details will be copied from the original recipe."}
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
-                  <p className="text-sm text-blue-900 dark:text-blue-100">
-                    {t("data.recipes.duplicateDialog.note") ||
-                      "Note: All ingredients, instructions, yield, and production time will be copied from the original recipe."}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Review & Confirm */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                <Card className="border-primary/50 bg-primary/5">
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      {t("data.recipes.duplicateDialog.comparison")}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid gap-3 sm:grid-cols-2">
+              {/* Step 2: Review & Confirm */}
+              {currentStep === 2 && (
+                <div className="space-y-4">
+                  <Card className="border-primary/50 bg-primary/5">
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        {t("data.recipes.duplicateDialog.comparison")}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <p className="text-muted-foreground text-xs">
+                            {t("data.recipes.duplicateDialog.originalName")}
+                          </p>
+                          <p className="font-medium">{recipe.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">
+                            {t("data.recipes.duplicateDialog.newName")}
+                          </p>
+                          <p className="text-primary font-medium">{form.watch("newName")}</p>
+                        </div>
+                      </div>
+                      <Separator />
                       <div>
                         <p className="text-muted-foreground text-xs">
-                          {t("data.recipes.duplicateDialog.originalName")}
+                          {t("data.recipes.form.category")}
                         </p>
-                        <p className="font-medium">{recipe.name}</p>
+                        <Badge variant="outline" className="mt-1">
+                          {recipe.category}
+                        </Badge>
                       </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Recipe Details */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        {t("data.recipes.duplicateDialog.recipeDetails")}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Quick Stats */}
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="flex items-center gap-2">
+                          <Package className="text-primary h-4 w-4" />
+                          <div>
+                            <p className="text-muted-foreground text-xs">
+                              {t("data.recipes.review.yield")}
+                            </p>
+                            <p className="text-sm font-medium">
+                              {recipe.yieldQuantity} {recipe.yieldUnit}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-amber-600" />
+                          <div>
+                            <p className="text-muted-foreground text-xs">
+                              {t("data.recipes.review.productionTime")}
+                            </p>
+                            <p className="text-sm font-medium">
+                              {formatDuration(recipe.productionTimeMinutes)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-green-600" />
+                          <div>
+                            <p className="text-muted-foreground text-xs">
+                              {t("data.recipes.duplicateDialog.costSummary")}
+                            </p>
+                            <p className="text-sm font-medium">{formatCurrency(totalCost)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Ingredients Summary */}
                       <div>
-                        <p className="text-muted-foreground text-xs">
-                          {t("data.recipes.duplicateDialog.newName")}
+                        <p className="mb-2 text-sm font-medium">
+                          {t("data.recipes.review.ingredientsCount")?.replace(
+                            "{count}",
+                            recipe.ingredients.length.toString()
+                          ) || `Ingredients (${recipe.ingredients.length})`}
                         </p>
-                        <p className="text-primary font-medium">{form.watch("newName")}</p>
-                      </div>
-                    </div>
-                    <Separator />
-                    <div>
-                      <p className="text-muted-foreground text-xs">
-                        {t("data.recipes.form.category")}
-                      </p>
-                      <Badge variant="outline" className="mt-1">
-                        {recipe.category}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Recipe Details */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      {t("data.recipes.duplicateDialog.recipeDetails")}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Quick Stats */}
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="flex items-center gap-2">
-                        <Package className="text-primary h-4 w-4" />
-                        <div>
-                          <p className="text-muted-foreground text-xs">
-                            {t("data.recipes.review.yield")}
-                          </p>
-                          <p className="text-sm font-medium">
-                            {recipe.yieldQuantity} {recipe.yieldUnit}
-                          </p>
+                        <div className="space-y-2">
+                          {recipe.ingredients.slice(0, 5).map((ingredient, index) => {
+                            const material = materials.find((m) => m.id === ingredient.materialId);
+                            return (
+                              <div
+                                key={index}
+                                className="text-muted-foreground flex justify-between text-sm"
+                              >
+                                <span>{material?.name || t("data.materials.unknownMaterial")}</span>
+                                <span>
+                                  {ingredient.quantity} {ingredient.unit}
+                                </span>
+                              </div>
+                            );
+                          })}
+                          {recipe.ingredients.length > 5 && (
+                            <p className="text-muted-foreground text-xs italic">
+                              + {recipe.ingredients.length - 5} more ingredients
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-amber-600" />
-                        <div>
-                          <p className="text-muted-foreground text-xs">
-                            {t("data.recipes.review.productionTime")}
-                          </p>
-                          <p className="text-sm font-medium">
-                            {formatDuration(recipe.productionTimeMinutes)}
-                          </p>
+
+                      <Separator />
+
+                      {/* Cost Summary */}
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <div className="mb-2 flex justify-between text-sm">
+                          <span className="text-muted-foreground">Total Batch Cost</span>
+                          <span className="font-semibold">{formatCurrency(totalCost)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Cost per {recipe.yieldUnit}</span>
+                          <span className="font-semibold">{formatCurrency(costPerUnit)}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        <div>
-                          <p className="text-muted-foreground text-xs">
-                            {t("data.recipes.duplicateDialog.costSummary")}
-                          </p>
-                          <p className="text-sm font-medium">{formatCurrency(totalCost)}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Ingredients Summary */}
-                    <div>
-                      <p className="mb-2 text-sm font-medium">
-                        {t("data.recipes.review.ingredientsCount")?.replace(
-                          "{count}",
-                          recipe.ingredients.length.toString()
-                        ) || `Ingredients (${recipe.ingredients.length})`}
-                      </p>
-                      <div className="space-y-2">
-                        {recipe.ingredients.slice(0, 5).map((ingredient, index) => {
-                          const material = materials.find((m) => m.id === ingredient.materialId);
-                          return (
-                            <div
-                              key={index}
-                              className="text-muted-foreground flex justify-between text-sm"
-                            >
-                              <span>{material?.name || t("data.materials.unknownMaterial")}</span>
-                              <span>
-                                {ingredient.quantity} {ingredient.unit}
-                              </span>
-                            </div>
-                          );
-                        })}
-                        {recipe.ingredients.length > 5 && (
-                          <p className="text-muted-foreground text-xs italic">
-                            + {recipe.ingredients.length - 5} more ingredients
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Cost Summary */}
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <div className="mb-2 flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total Batch Cost</span>
-                        <span className="font-semibold">{formatCurrency(totalCost)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Cost per {recipe.yieldUnit}</span>
-                        <span className="font-semibold">{formatCurrency(costPerUnit)}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </form>
           </Form>
         </div>
 
         {/* Fixed Footer with Navigation Buttons */}
-        <div className="shrink-0 border-t border-border px-6 py-4">
+        <div className="border-border shrink-0 border-t px-6 py-4">
           <div className="flex justify-between gap-2">
             <div>
               {currentStep > 1 && (
@@ -386,7 +379,7 @@ export function DuplicateRecipeDialog({
                   onClick={handleBack}
                   disabled={duplicateRecipe.isPending}
                 >
-                  <ChevronLeft className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <ChevronLeft className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("common.actions.previous")}
                 </Button>
               )}
@@ -403,7 +396,9 @@ export function DuplicateRecipeDialog({
                   form="duplicate-recipe-form"
                   disabled={duplicateRecipe.isPending}
                 >
-                  {duplicateRecipe.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+                  {duplicateRecipe.isPending && (
+                    <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                  )}
                   {t("data.recipes.duplicate")}
                 </Button>
               )}

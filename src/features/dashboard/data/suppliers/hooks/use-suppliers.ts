@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { CreateSupplierInput, UpdateSupplierInput } from "@/lib/validation/inventory.schemas";
 import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { invalidateSupplierRelatedQueries } from "@/lib/utils/cache-helpers";
@@ -21,12 +22,109 @@ export interface SupplierFilterInput {
 // Query keys for cache management (DRY principle)
 export const supplierKeys = {
   all: (storeId: string) => ["suppliers", storeId] as const,
+  // Access check key - shared across all supplier queries to prevent duplicate 403 checks
+  accessCheck: (storeId: string) => [...supplierKeys.all(storeId), "access-check"] as const,
   lists: (storeId: string) => [...supplierKeys.all(storeId), "list"] as const,
   list: (storeId: string, filters?: SupplierFilterInput) =>
     [...supplierKeys.lists(storeId), normalizeFilters(filters)] as const,
   details: (storeId: string) => [...supplierKeys.all(storeId), "detail"] as const,
   detail: (storeId: string, id: string) => [...supplierKeys.details(storeId), id] as const,
 };
+
+/**
+ * Hook to check if user has access to supplier management
+ * This is cached and shared across all supplier queries to prevent duplicate 403 requests
+ *
+ * IMPORTANT: This hook makes a single request that all supplier hooks depend on.
+ * This prevents race conditions where multiple hooks fetch simultaneously and all get 403.
+ */
+
+/**
+ * Hook to check if user has access to supplier management
+ * This is cached and shared across all supplier queries to prevent duplicate 403 requests
+ *
+ * OPTIMIZATION:
+ * - STARTER: Returns false immediately (cached) -> No network request
+ * - PRO: Returns true immediately -> No network request (data fetch will happen next)
+ */
+export function useSupplierAccessCheck(storeId: string) {
+  const { data: subscriptionData, isLoading: isSubscriptionLoading } = useSubscriptionStatus();
+
+  return useQuery<boolean>({
+    queryKey: supplierKeys.accessCheck(storeId),
+    queryFn: async () => {
+      // If we already know the plan from subscription status, use it!
+      if (subscriptionData?.subscription?.plan === "STARTER") {
+        return false;
+      }
+
+      // If PRO/ENTERPRISE, we assume access is allowed (or let the main query handle it)
+      if (
+        subscriptionData?.subscription?.plan === "PRO" ||
+        subscriptionData?.subscription?.plan === "ENTERPRISE"
+      ) {
+        return true;
+      }
+
+      // Fallback: Make a lightweight request to check access
+      // (Only happens if subscription status is unknown/error)
+      const response = await fetch(`/api/stores/${storeId}/suppliers?take=1`);
+
+      if (response.status === 403) {
+        const error = await response.json().catch(() => ({}));
+        if (error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
+          return false;
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to check supplier access");
+      }
+
+      return true;
+    },
+    // Only run this check if subscription status is loaded
+    enabled: !!storeId && !isSubscriptionLoading && !!subscriptionData,
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+    gcTime: 30 * 60 * 1000,
+    retry: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    // Use initial data from subscription status if available
+    initialData: () => {
+      if (subscriptionData?.subscription?.plan === "STARTER") return false;
+      if (
+        subscriptionData?.subscription?.plan === "PRO" ||
+        subscriptionData?.subscription?.plan === "ENTERPRISE"
+      )
+        return true;
+      return undefined;
+    },
+  });
+}
+
+/**
+ * Hook to get access check status
+ * Returns { hasAccess, isLoading } - other hooks should wait for isLoading to be false
+ * Exported so supplier-orders can also use it
+ */
+export function useSupplierAccessStatus(storeId: string) {
+  const { isLoading: isSubscriptionLoading } = useSubscriptionStatus();
+  const {
+    data: hasAccess,
+    isLoading: isAccessCheckLoading,
+    isFetched,
+  } = useSupplierAccessCheck(storeId);
+
+  const isLoading = isSubscriptionLoading || isAccessCheckLoading;
+
+  return {
+    hasAccess: hasAccess ?? true, // Default to true if not yet checked
+    hasNoAccess: hasAccess === false,
+    isCheckingAccess: isLoading || (!isFetched && !hasAccess),
+  };
+}
 
 // API Functions
 async function fetchSupplierById(
@@ -37,6 +135,19 @@ async function fetchSupplierById(
 
   if (!response.ok) {
     const error = await response.json();
+
+    // Handle 403 Forbidden (subscription feature locked)
+    if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
+      const { createSubscriptionError } = await import("@/types/errors");
+      const customError = createSubscriptionError(
+        error.message || "Supplier Management is only available in Pro and Enterprise plans",
+        true
+      );
+      // Add status for caching detection
+      (customError as any).status = 403;
+      throw customError;
+    }
+
     throw new Error(error.error || "Failed to fetch supplier");
   }
 
@@ -120,6 +231,18 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
 
   if (!response.ok) {
     const error = await response.json();
+
+    // Handle 403 Forbidden (subscription feature locked)
+    if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
+      const { createSubscriptionError } = await import("@/types/errors");
+      const customError = createSubscriptionError(
+        error.message || "Export feature is only available in Pro and Enterprise plans",
+        true
+      );
+      (customError as any).status = 403;
+      throw customError;
+    }
+
     throw new Error(error.error || "Failed to export suppliers");
   }
 
@@ -139,14 +262,20 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
 
 /**
  * Fetch all suppliers with filters
+ * Uses shared access check to prevent duplicate 403 requests across different filter combinations
  */
 export function useSuppliers(
   storeId: string,
   filters: SupplierFilterInput,
   initialData?: SuppliersResponse
 ) {
+  const queryClient = useQueryClient();
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
+
+  // Use the access check hook to prevent race conditions
+  // This ensures only ONE request is made to check access, not multiple concurrent requests
+  const { hasNoAccess, isCheckingAccess } = useSupplierAccessStatus(storeId);
 
   return useQuery<SuppliersResponse>({
     queryKey: supplierKeys.list(storeId, normalizedFilters),
@@ -171,25 +300,57 @@ export function useSuppliers(
 
         // Handle 403 Forbidden (subscription feature locked)
         if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
+          // Cache the access check result to prevent other queries from fetching
+          queryClient.setQueryData(supplierKeys.accessCheck(storeId), false);
+
           const { createSubscriptionError } = await import("@/types/errors");
-          throw createSubscriptionError(
+          const customError = createSubscriptionError(
             error.message || "Supplier Management is only available in Pro and Enterprise plans",
             true
           );
+          // Add status for caching detection
+          (customError as any).status = 403;
+          throw customError;
         }
 
         throw new Error(error.error || "Failed to fetch suppliers");
       }
 
+      // Mark access as granted
+      queryClient.setQueryData(supplierKeys.accessCheck(storeId), true);
+
       return response.json();
     },
-    enabled: !!storeId,
+    // Disable query if:
+    // 1. No storeId
+    // 2. Still checking access (wait for access check to complete first)
+    // 3. User has no access (don't fetch if we know it will 403)
+    enabled: !!storeId && !isCheckingAccess && !hasNoAccess,
     initialData, // ✅ Accept initial data from Server Component
-    // Real-time configuration: Static data - no polling, longer stale time
-    staleTime: 5 * 60 * 1000, // 5 minutes (suppliers don't change often)
+    // Cache configuration: Longer staleTime for 403 errors to avoid repeated failed requests
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache 403 errors longer to avoid repeated requests
+    gcTime: 10 * 60 * 1000, // Keep in garbage collection for 10 minutes
+    // Disable refetch if we have a 403 error (subscription locked)
+    refetchOnMount: (query) => {
+      if (query.state.error && (query.state.error as any)?.status === 403) {
+        return false; // Don't refetch 403 errors on mount
+      }
+      return false; // Don't refetch if data is fresh (within staleTime)
+    },
+    refetchOnWindowFocus: (query) => {
+      if (query.state.error && (query.state.error as any)?.status === 403) {
+        return false; // Don't refetch 403 errors on window focus
+      }
+      return false; // Don't refetch on window focus to prevent spam
+    },
+    // Don't retry 403 errors (subscription locked)
+    retry: (failureCount, error) => {
+      if ((error as any)?.status === 403) {
+        return false; // Don't retry 403 errors
+      }
+      return failureCount < 3; // Retry other errors up to 3 times
+    },
     refetchInterval: false, // No polling for static data
-    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
-    refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
       refetchInterval: false, // Store in meta for smart polling
     },
@@ -198,13 +359,40 @@ export function useSuppliers(
 
 /**
  * Fetch single supplier by ID
+ * Uses shared access check to prevent duplicate 403 requests
  */
 export function useSupplier(storeId: string, supplierId: string | null) {
+  // Use the access check hook to prevent race conditions
+  const { hasNoAccess, isCheckingAccess } = useSupplierAccessStatus(storeId);
+
   return useQuery<SupplierWithRelations>({
     queryKey: supplierKeys.detail(storeId, supplierId!),
     queryFn: () => fetchSupplierById(storeId, supplierId!),
-    enabled: !!storeId && !!supplierId,
-    staleTime: 60000, // 1 minute
+    // Disable query if still checking access or no access
+    enabled: !!storeId && !!supplierId && !isCheckingAccess && !hasNoAccess,
+    // Cache configuration: Longer staleTime for 403 errors to avoid repeated failed requests
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache 403 errors longer to avoid repeated requests
+    gcTime: 10 * 60 * 1000, // Keep in garbage collection for 10 minutes
+    // Don't refetch if we have a 403 error (subscription locked)
+    refetchOnMount: (query) => {
+      if (query.state.error && (query.state.error as any)?.status === 403) {
+        return false; // Don't refetch 403 errors on mount
+      }
+      return false; // Don't refetch if data is fresh (within staleTime)
+    },
+    refetchOnWindowFocus: (query) => {
+      if (query.state.error && (query.state.error as any)?.status === 403) {
+        return false; // Don't refetch 403 errors on window focus
+      }
+      return false; // Don't refetch on window focus to prevent spam
+    },
+    // Don't retry 403 errors (subscription locked)
+    retry: (failureCount, error) => {
+      if ((error as any)?.status === 403) {
+        return false; // Don't retry 403 errors
+      }
+      return failureCount < 3; // Retry other errors up to 3 times
+    },
   });
 }
 

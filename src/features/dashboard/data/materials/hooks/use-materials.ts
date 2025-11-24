@@ -171,17 +171,13 @@ export function useCreateMaterial(storeId: string) {
     },
     onSuccess: async (newMaterial) => {
       // Update with real data from server
-      const currentData = queryClient.getQueryData<MaterialsResponse>(
-        materialKeys.list(storeId)
-      );
+      const currentData = queryClient.getQueryData<MaterialsResponse>(materialKeys.list(storeId));
 
       if (currentData) {
         // Replace optimistic material with real one
         queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
           ...currentData,
-          materials: currentData.materials.map((m) =>
-            m.id.startsWith("temp-") ? newMaterial : m
-          ),
+          materials: currentData.materials.map((m) => (m.id.startsWith("temp-") ? newMaterial : m)),
         });
       }
 

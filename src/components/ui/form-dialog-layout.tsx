@@ -19,6 +19,8 @@ interface FormDialogLayoutProps {
   contentClassName?: string;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
   showCloseButton?: boolean;
+  /** If true, dialog height auto-fits content. If false, uses fixed 90vh height for long content. Default: true */
+  autoHeight?: boolean;
 }
 
 const maxWidthClasses = {
@@ -45,11 +47,13 @@ export function FormDialogLayout({
   contentClassName,
   maxWidth = "md",
   showCloseButton = true,
+  autoHeight = true,
 }: FormDialogLayoutProps) {
   return (
     <DialogContent
       className={cn(
-        "flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0",
+        "flex flex-col overflow-hidden p-0",
+        autoHeight ? "max-h-[90vh]" : "h-[90vh] max-h-[90vh]",
         maxWidthClasses[maxWidth],
         className
       )}

@@ -224,17 +224,20 @@ export const updateRecipeSchema = baseRecipeSchema.partial().omit({ storeId: tru
 export type UpdateRecipeInput = z.infer<typeof updateRecipeSchema>;
 
 // Form schema for client-side (without storeId)
+// Note: yieldQuantity and productionTimeMinutes are optional here to allow undefined during editing
+// Actual validation and conversion to required values happens in onSubmit handler
 const baseRecipeFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
-  yieldQuantity: z.number().positive("Yield quantity must be positive"),
+  yieldQuantity: z.number().positive("Yield quantity must be positive").optional(),
   yieldUnit: z.string().min(1, "Yield unit is required").max(20, "Yield unit is too long"),
   productionTimeMinutes: z
     .number()
     .int()
     .min(1, "Production time must be at least 1 minute")
-    .nonnegative("Production time must be non-negative"),
+    .nonnegative("Production time must be non-negative")
+    .optional(),
   instructions: z.string().max(5000, "Instructions are too long").optional(),
   ingredients: z.array(recipeIngredientSchema).min(1, "At least one ingredient is required"),
 });

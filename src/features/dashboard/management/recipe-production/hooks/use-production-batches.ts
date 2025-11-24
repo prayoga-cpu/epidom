@@ -107,7 +107,9 @@ async function fetchProductionBatches(
     throw new Error(error.error || "Failed to fetch production batches");
   }
 
-  return response.json();
+  const result = await response.json();
+  // API returns { success: true, data: {...} }
+  return result.success === true ? result.data : result;
 }
 
 async function fetchProductionBatchById(
@@ -121,7 +123,9 @@ async function fetchProductionBatchById(
     throw new Error(error.error || "Failed to fetch production batch");
   }
 
-  return response.json();
+  const result = await response.json();
+  // API returns { success: true, data: {...} }
+  return result.success === true ? result.data : result;
 }
 
 async function createProductionBatch(
@@ -139,7 +143,9 @@ async function createProductionBatch(
     throw new Error(error.error || "Failed to start production");
   }
 
-  return response.json();
+  const result = await response.json();
+  // API returns { success: true, data: {...} }
+  return result.success === true ? result.data : result;
 }
 
 async function updateProductionBatch(
@@ -158,7 +164,9 @@ async function updateProductionBatch(
     throw new Error(error.error || "Failed to update production batch");
   }
 
-  return response.json();
+  const result = await response.json();
+  // API returns { success: true, data: {...} }
+  return result.success === true ? result.data : result;
 }
 
 async function completeProduction(
@@ -177,7 +185,9 @@ async function completeProduction(
     throw new Error(error.error || "Failed to complete production");
   }
 
-  return response.json();
+  const result = await response.json();
+  // Complete/Cancel API returns batch directly (not wrapped)
+  return result;
 }
 
 async function cancelProduction(
@@ -196,7 +206,9 @@ async function cancelProduction(
     throw new Error(error.error || "Failed to cancel production");
   }
 
-  return response.json();
+  const result = await response.json();
+  // Complete/Cancel API returns batch directly (not wrapped)
+  return result;
 }
 
 async function deleteProductionBatch(storeId: string, batchId: string): Promise<void> {

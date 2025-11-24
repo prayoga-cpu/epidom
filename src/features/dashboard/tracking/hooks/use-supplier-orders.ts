@@ -3,6 +3,10 @@ import { toast } from "sonner";
 import { alertKeys } from "./use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { materialKeys } from "@/features/dashboard/data/materials/hooks/use-materials";
+import {
+  supplierKeys,
+  useSupplierAccessStatus,
+} from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
 
 export interface SupplierOrderItem {
   id: string;
@@ -83,12 +87,16 @@ export const supplierOrderKeys = {
 
 /**
  * Hook to fetch all supplier orders for a store
- * Real-time enabled: Polls every 60 seconds when tab is active
+ * Real-time enabled: Polls every 10 seconds when tab is active
+ * Uses shared access check with suppliers to prevent duplicate 403 requests
  */
-export function useSupplierOrders(
-  storeId: string,
-  initialData?: SupplierOrdersResponse
-) {
+export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersResponse) {
+  const queryClient = useQueryClient();
+
+  // Use the shared access check hook to prevent race conditions
+  // This ensures only ONE request is made to check access
+  const { hasNoAccess, isCheckingAccess } = useSupplierAccessStatus(storeId);
+
   return useQuery<SupplierOrdersResponse>({
     queryKey: supplierOrderKeys.lists(storeId),
     queryFn: async () => {
@@ -98,7 +106,12 @@ export function useSupplierOrders(
 
         // Check if it's a subscription feature locked error
         if (response.status === 403 && errorData.code === "SUBSCRIPTION_FEATURE_LOCKED") {
-          const customError: any = new Error(errorData.message || "Supplier Management is only available in Pro and Enterprise plans");
+          // Cache the access check result to prevent other supplier queries from fetching
+          queryClient.setQueryData(supplierKeys.accessCheck(storeId), false);
+
+          const customError: any = new Error(
+            errorData.message || "Supplier Management is only available in Pro and Enterprise plans"
+          );
           customError.code = "SUBSCRIPTION_FEATURE_LOCKED";
           customError.status = 403;
           customError.upgradeRequired = true;
@@ -107,16 +120,48 @@ export function useSupplierOrders(
 
         throw new Error(errorData.message || "Failed to fetch supplier orders");
       }
+
+      // Mark access as granted
+      queryClient.setQueryData(supplierKeys.accessCheck(storeId), true);
+
       return response.json();
     },
-    enabled: !!storeId,
+    // Disable query if still checking access or no access
+    enabled: !!storeId && !isCheckingAccess && !hasNoAccess,
     initialData, // ✅ Accept initial data from Server Component
-    // Real-time configuration: Moderate polling for supplier management
-    staleTime: 5 * 1000, // 5 seconds
-    refetchInterval: 10 * 1000, // Poll every 10 seconds - moderate priority
+    // Cache configuration: Longer staleTime for 403 errors to avoid repeated failed requests
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache 403 errors longer to avoid repeated requests
+    gcTime: 10 * 60 * 1000, // Keep in garbage collection for 10 minutes
+    // Disable polling - will be conditionally enabled via refetchInterval
+    refetchInterval: (query) => {
+      // Don't poll if we have a 403 error (subscription locked)
+      if (query.state.error && (query.state.error as any)?.status === 403) {
+        return false; // Disable polling for 403 errors
+      }
+      return 10 * 1000; // Poll every 10 seconds for successful responses
+    },
     refetchIntervalInBackground: false, // Only poll when tab is active
-    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
-    refetchOnWindowFocus: true, // Refetch on window focus if stale
+    // Don't refetch on mount if we have a 403 error
+    refetchOnMount: (query) => {
+      if (query.state.error && (query.state.error as any)?.status === 403) {
+        return false; // Don't refetch 403 errors on mount
+      }
+      return false; // Don't refetch if data is fresh (within staleTime)
+    },
+    // Don't refetch on window focus if we have a 403 error
+    refetchOnWindowFocus: (query) => {
+      if (query.state.error && (query.state.error as any)?.status === 403) {
+        return false; // Don't refetch 403 errors on window focus
+      }
+      return false; // Don't refetch on window focus to prevent spam
+    },
+    // Don't retry 403 errors (subscription locked)
+    retry: (failureCount, error) => {
+      if ((error as any)?.status === 403) {
+        return false;
+      }
+      return failureCount < 3;
+    },
     meta: {
       refetchInterval: 10 * 1000, // Store in meta for smart polling
     },
@@ -125,18 +170,56 @@ export function useSupplierOrders(
 
 /**
  * Hook to fetch a specific supplier order
+ * Caching: 403 responses are cached for 5 minutes to avoid repeated failed requests
  */
 export function useSupplierOrder(storeId: string, orderId: string) {
+  const { hasNoAccess, isCheckingAccess } = useSupplierAccessStatus(storeId);
+
   return useQuery<SupplierOrderResponse>({
     queryKey: supplierOrderKeys.detail(storeId, orderId),
     queryFn: async () => {
       const response = await fetch(`/api/stores/${storeId}/supplier-orders/${orderId}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch supplier order");
+        const errorData = await response.json().catch(() => ({}));
+
+        // Check if it's a subscription feature locked error
+        if (response.status === 403 && errorData.code === "SUBSCRIPTION_FEATURE_LOCKED") {
+          const customError: any = new Error(
+            errorData.message || "Supplier Management is only available in Pro and Enterprise plans"
+          );
+          customError.code = "SUBSCRIPTION_FEATURE_LOCKED";
+          customError.status = 403;
+          customError.upgradeRequired = true;
+          throw customError;
+        }
+
+        throw new Error(errorData.message || "Failed to fetch supplier order");
       }
       return response.json();
     },
-    enabled: !!storeId && !!orderId,
+    enabled: !!storeId && !!orderId && !isCheckingAccess && !hasNoAccess,
+    // Cache configuration: Longer staleTime for 403 errors to avoid repeated failed requests
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache 403 errors longer to avoid repeated requests
+    // Don't refetch if we have a 403 error (subscription locked)
+    refetchOnMount: (query) => {
+      if (query.state.error && (query.state.error as any)?.status === 403) {
+        return false; // Don't refetch 403 errors on mount
+      }
+      return false; // Don't refetch if data is fresh (within staleTime)
+    },
+    refetchOnWindowFocus: (query) => {
+      if (query.state.error && (query.state.error as any)?.status === 403) {
+        return false; // Don't refetch 403 errors on window focus
+      }
+      return true; // Refetch on window focus if stale
+    },
+    // Don't retry 403 errors (subscription locked)
+    retry: (failureCount, error) => {
+      if ((error as any)?.status === 403) {
+        return false; // Don't retry 403 errors
+      }
+      return failureCount < 3; // Retry other errors up to 3 times
+    },
   });
 }
 

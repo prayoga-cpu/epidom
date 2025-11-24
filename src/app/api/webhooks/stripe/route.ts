@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { subscriptionRepository } from "@/lib/repositories";
+import { subscriptionService } from "@/lib/services";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
 import { handleApiError } from "@/lib/utils/api-error-handler";
@@ -35,10 +36,9 @@ export async function POST(request: NextRequest) {
   const signature = headersList.get("stripe-signature");
 
   if (!signature) {
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "No signature"),
-      { status: 400 }
-    );
+    return NextResponse.json(createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "No signature"), {
+      status: 400,
+    });
   }
 
   let event: Stripe.Event;
@@ -178,6 +178,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     });
   }
 
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(userId);
+
   // Note: The 80/20 split transfer happens automatically via Stripe
   // - Platform (developer) receives 20% as application fee
   // - Epidom owner receives 80% via transfer_data.destination
@@ -222,8 +225,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
         if (oldStripeSubscription.status === "active") {
           await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
         }
-      } catch (error: any) {
-      }
+      } catch (error: any) {}
     }
 
     // Update existing record
@@ -249,6 +251,9 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       currentPeriodEnd,
     });
   }
+
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(userId);
 }
 
 /**
@@ -301,6 +306,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     currentPeriodEnd,
     cancelAtPeriodEnd,
   });
+
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(existingSubscription.userId);
 }
 
 /**
@@ -319,8 +327,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   // Mark subscription as canceled
   await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
     status: SubscriptionStatus.CANCELED,
+    status: SubscriptionStatus.CANCELED,
     cancelAtPeriodEnd: true,
   });
+
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(existingSubscription.userId);
 }
 
 /**
@@ -351,6 +363,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
       status: SubscriptionStatus.ACTIVE,
     });
+    // Invalidate cache
+    subscriptionService.invalidateUserCache(subscription.userId);
   }
 }
 
@@ -381,6 +395,8 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
     status: SubscriptionStatus.PAST_DUE,
   });
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(subscription.userId);
   // TODO: Send email notification to user
   // TODO: Consider grace period vs. immediate lockout based on business requirements
 }

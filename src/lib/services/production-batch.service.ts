@@ -8,6 +8,7 @@ import { recipeRepository } from "../repositories/recipe.repository";
 import { materialRepository } from "../repositories/material.repository";
 import { productRepository } from "../repositories/product.repository";
 import { prisma } from "../prisma";
+import { convertStockToIngredientUnit } from "../utils/unit-conversion";
 
 /**
  * Production Batch Service
@@ -77,7 +78,12 @@ export class ProductionBatchService {
 
     const ingredients = recipe.ingredients.map((ingredient) => {
       const required = Number(ingredient.quantity) * multiplier;
-      const available = Number(ingredient.material.currentStock);
+      // Convert material stock to ingredient unit for proper comparison
+      const materialStock = Number(ingredient.material.currentStock);
+      const materialUnit = ingredient.material.unit;
+      const ingredientUnit = ingredient.unit;
+      const available = convertStockToIngredientUnit(materialStock, materialUnit, ingredientUnit);
+
       let status: "sufficient" | "low" | "insufficient";
 
       if (available >= required) {
@@ -257,14 +263,25 @@ export class ProductionBatchService {
               );
             }
 
-            const deductionAmount = Number(ingredient.quantity) * batchMultiplier;
+            // Recipe ingredient quantity is in ingredient.unit (e.g., g)
+            // Material stock is in material.unit (e.g., kg)
+            // We need to convert the deduction to material's unit
+            const deductionInIngredientUnit = Number(ingredient.quantity) * batchMultiplier;
+            // Convert deduction from ingredient unit to material unit
+            const deductionAmount = convertStockToIngredientUnit(
+              deductionInIngredientUnit,
+              ingredient.unit,
+              (ingredient.material as any).unit || 'g'
+            );
             const currentStock = Number(material.currentStock);
             const newBalance = currentStock - deductionAmount;
 
             // CRITICAL: Prevent negative stock - validate within transaction
             if (newBalance < 0) {
+              // Show error in material's unit for clarity
+              const materialUnit = (ingredient.material as any).unit || 'g';
               throw new Error(
-                `Insufficient stock for material '${material.name}'. Required: ${deductionAmount.toFixed(2)} ${ingredient.unit}, Available: ${currentStock.toFixed(2)} ${ingredient.unit}.`
+                `Insufficient stock for material '${material.name}'. Required: ${deductionAmount.toFixed(2)} ${materialUnit}, Available: ${currentStock.toFixed(2)} ${materialUnit}.`
               );
             }
 
@@ -273,12 +290,14 @@ export class ProductionBatchService {
               newStock: newBalance,
             });
 
+            // Store movement in material's unit since that's what we're deducting
+            const materialUnit = (ingredient.material as any).unit || 'g';
             stockMovements.push({
               materialId: ingredient.materialId,
               productionBatchId: batch.id,
               type: MovementType.PRODUCTION_OUT,
               quantity: deductionAmount,
-              unit: ingredient.unit,
+              unit: materialUnit,
               balanceAfter: newBalance,
               notes: `Production batch ${batchNumber} - ${recipe.name}`,
             });
@@ -487,7 +506,14 @@ export class ProductionBatchService {
             const material = materialMap.get(ingredient.materialId);
             if (!material) continue; // Skip if material no longer exists
 
-            const restorationAmount = Number(ingredient.quantity) * batchMultiplier;
+            // Convert restoration amount from ingredient unit to material unit
+            const restorationInIngredientUnit = Number(ingredient.quantity) * batchMultiplier;
+            const materialUnit = (ingredient.material as any)?.unit || 'g';
+            const restorationAmount = convertStockToIngredientUnit(
+              restorationInIngredientUnit,
+              ingredient.unit,
+              materialUnit
+            );
             const newBalance = Number(material.currentStock) + restorationAmount;
 
             materialUpdates.push({
@@ -500,7 +526,7 @@ export class ProductionBatchService {
               productionBatchId: batchId,
               type: MovementType.ADJUSTMENT,
               quantity: restorationAmount,
-              unit: ingredient.unit,
+              unit: materialUnit,
               balanceAfter: newBalance,
               notes: `Production batch ${batch.batchNumber} cancelled - materials restored`,
             });
