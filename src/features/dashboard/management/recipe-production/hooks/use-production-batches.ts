@@ -263,6 +263,8 @@ export function useStartProduction(storeId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
       queryClient.invalidateQueries({ queryKey: ["materials", storeId] });
+      // Invalidate recipes (material stock in ingredients may have changed)
+      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
       // Invalidate alerts (material stock may have changed)
       queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
       // Invalidate stock movements (materials were consumed)
@@ -318,6 +320,8 @@ export function useCancelProduction(storeId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["production-batches", storeId] });
       queryClient.invalidateQueries({ queryKey: ["materials", storeId] });
+      // Invalidate recipes (material stock in ingredients may have been restored)
+      queryClient.invalidateQueries({ queryKey: ["recipes", storeId] });
       // Invalidate alerts (material stock may have been refunded)
       queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
       // Invalidate stock movements (materials may have been returned)

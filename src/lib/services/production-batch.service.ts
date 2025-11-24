@@ -17,6 +17,16 @@ import { prisma } from "../prisma";
  */
 export class ProductionBatchService {
   /**
+   * Calculate batch multiplier based on planned quantity and recipe yield
+   * @param plannedQuantity - Total planned quantity (units)
+   * @param yieldQuantity - Recipe yield per batch (units)
+   * @returns Batch multiplier (how many batches)
+   */
+  private calculateBatchMultiplier(plannedQuantity: number, yieldQuantity: number): number {
+    return plannedQuantity / Number(yieldQuantity);
+  }
+
+  /**
    * Get all production batches for a store with filtering
    */
   async getProductionBatches(
@@ -135,7 +145,10 @@ export class ProductionBatchService {
     }
 
     // Calculate batch multiplier
-    const batchMultiplier = data.plannedQuantity / Number(recipe.yieldQuantity);
+    const batchMultiplier = this.calculateBatchMultiplier(
+      Number(data.plannedQuantity),
+      Number(recipe.yieldQuantity)
+    );
 
     // Check material availability
     const { isAvailable, ingredients } = await this.checkMaterialAvailability(
@@ -245,7 +258,15 @@ export class ProductionBatchService {
             }
 
             const deductionAmount = Number(ingredient.quantity) * batchMultiplier;
-            const newBalance = Number(material.currentStock) - deductionAmount;
+            const currentStock = Number(material.currentStock);
+            const newBalance = currentStock - deductionAmount;
+
+            // CRITICAL: Prevent negative stock - validate within transaction
+            if (newBalance < 0) {
+              throw new Error(
+                `Insufficient stock for material '${material.name}'. Required: ${deductionAmount.toFixed(2)} ${ingredient.unit}, Available: ${currentStock.toFixed(2)} ${ingredient.unit}.`
+              );
+            }
 
             materialUpdates.push({
               id: ingredient.materialId,
@@ -435,7 +456,10 @@ export class ProductionBatchService {
       async (tx) => {
         // 1. If restoring materials, add them back to stock (optimized)
         if (restoreMaterials && batch.recipe) {
-          const batchMultiplier = Number(batch.plannedQuantity) / Number(batch.recipe.yieldQuantity);
+          const batchMultiplier = this.calculateBatchMultiplier(
+            Number(batch.plannedQuantity),
+            Number(batch.recipe.yieldQuantity)
+          );
 
           // Prepare batch operations
           const materialUpdates: Array<{ id: string; newStock: number }> = [];

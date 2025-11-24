@@ -20,11 +20,16 @@ export default async function middleware(req: NextRequest) {
     // Generate unique request ID for logging and tracing
     const requestId = crypto.randomUUID();
 
-    // Set request ID in global context (type-safe)
-    setRequestId(requestId);
-
     // Create a response object to modify headers later if needed
     const response = NextResponse.next();
+
+    // Set request ID in response headers (works in Edge Runtime)
+    // This allows request ID to be accessed in API routes and other handlers
+    response.headers.set("x-request-id", requestId);
+
+    // Try to set in global context (only works in Node.js runtime, not Edge Runtime)
+    // This is safe - setRequestId checks if global is available
+    setRequestId(requestId);
 
     // Skip middleware for API routes - they handle authentication internally
     if (path.startsWith("/api/")) {
