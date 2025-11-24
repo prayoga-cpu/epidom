@@ -6,6 +6,7 @@ import {
   MaterialFilters,
 } from "@/lib/repositories/material.repository";
 import { prisma } from "@/lib/prisma";
+import { toDecimal } from "@/lib/utils/types.server";
 
 /**
  * Material (Ingredient) Service
@@ -216,15 +217,11 @@ export class MaterialService {
       });
 
       // Update material stock
-      /**
-       * Type assertion needed because Prisma Decimal type requires conversion from number
-       * Actual type: Prisma.Decimal
-       * TODO: Create type helper for Decimal conversion to avoid `as any`
-       */
+      // Convert number to Prisma Decimal using type helper
       const updatedMaterial = await tx.material.update({
         where: { id: input.materialId },
         data: {
-          currentStock: newStock as any,
+          currentStock: toDecimal(newStock),
         },
       });
 
@@ -331,30 +328,11 @@ export class MaterialService {
         if (input.description !== undefined) updateData.description = input.description;
         if (input.category !== undefined) updateData.category = input.category;
         if (input.unit !== undefined) updateData.unit = input.unit;
-        /**
-         * Type assertion needed because Prisma Decimal type requires conversion from number
-         * Actual type: Prisma.Decimal
-         * TODO: Create type helper for Decimal conversion to avoid `as any`
-         */
-        if (input.unitCost !== undefined) updateData.unitCost = input.unitCost as any;
-        /**
-         * Type assertion needed because Prisma Decimal type requires conversion from number
-         * Actual type: Prisma.Decimal
-         * TODO: Create type helper for Decimal conversion to avoid `as any`
-         */
-        if (input.currentStock !== undefined) updateData.currentStock = input.currentStock as any;
-        /**
-         * Type assertion needed because Prisma Decimal type requires conversion from number
-         * Actual type: Prisma.Decimal
-         * TODO: Create type helper for Decimal conversion to avoid `as any`
-         */
-        if (input.minStock !== undefined) updateData.minStock = input.minStock as any;
-        /**
-         * Type assertion needed because Prisma Decimal type requires conversion from number
-         * Actual type: Prisma.Decimal
-         * TODO: Create type helper for Decimal conversion to avoid `as any`
-         */
-        if (input.maxStock !== undefined) updateData.maxStock = input.maxStock as any;
+        // Convert numbers to Prisma Decimal using type helper
+        if (input.unitCost !== undefined) updateData.unitCost = toDecimal(input.unitCost);
+        if (input.currentStock !== undefined) updateData.currentStock = toDecimal(input.currentStock);
+        if (input.minStock !== undefined) updateData.minStock = toDecimal(input.minStock);
+        if (input.maxStock !== undefined) updateData.maxStock = toDecimal(input.maxStock);
 
         // Update material
         return await tx.material.update({
@@ -377,30 +355,11 @@ export class MaterialService {
     if (input.description !== undefined) updateData.description = input.description;
     if (input.category !== undefined) updateData.category = input.category;
     if (input.unit !== undefined) updateData.unit = input.unit;
-    /**
-     * Type assertion needed because Prisma Decimal type requires conversion from number
-     * Actual type: Prisma.Decimal
-     * TODO: Create type helper for Decimal conversion to avoid `as any`
-     */
-    if (input.unitCost !== undefined) updateData.unitCost = input.unitCost as any;
-    /**
-     * Type assertion needed because Prisma Decimal type requires conversion from number
-     * Actual type: Prisma.Decimal
-     * TODO: Create type helper for Decimal conversion to avoid `as any`
-     */
-    if (input.currentStock !== undefined) updateData.currentStock = input.currentStock as any;
-    /**
-     * Type assertion needed because Prisma Decimal type requires conversion from number
-     * Actual type: Prisma.Decimal
-     * TODO: Create type helper for Decimal conversion to avoid `as any`
-     */
-    if (input.minStock !== undefined) updateData.minStock = input.minStock as any;
-    /**
-     * Type assertion needed because Prisma Decimal type requires conversion from number
-     * Actual type: Prisma.Decimal
-     * TODO: Create type helper for Decimal conversion to avoid `as any`
-     */
-    if (input.maxStock !== undefined) updateData.maxStock = input.maxStock as any;
+    // Convert numbers to Prisma Decimal using type helper
+    if (input.unitCost !== undefined) updateData.unitCost = toDecimal(input.unitCost);
+    if (input.currentStock !== undefined) updateData.currentStock = toDecimal(input.currentStock);
+    if (input.minStock !== undefined) updateData.minStock = toDecimal(input.minStock);
+    if (input.maxStock !== undefined) updateData.maxStock = toDecimal(input.maxStock);
 
     return this.materialRepo.update(materialId, updateData);
   }

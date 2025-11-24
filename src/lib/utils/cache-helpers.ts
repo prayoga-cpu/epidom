@@ -65,10 +65,23 @@ export async function invalidateMaterialRelatedQueries(
 ): Promise<void> {
   if (immediate) {
     // Blocking: Invalidate all queries immediately (for critical operations)
+    // Use refetchType: "all" to ensure all queries refetch, not just active ones
+    // This ensures production tab sees updates even if it's not currently mounted
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: ["materials", storeId],
         exact: false,
+        refetchType: "all", // Refetch all queries (active and inactive)
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["recipes", storeId],
+        exact: false,
+        refetchType: "all", // Recipes contain material stock, need immediate update
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["production-batches", storeId],
+        exact: false,
+        refetchType: "all", // Production batches contain material stock data
       }),
       queryClient.invalidateQueries({
         queryKey: ["suppliers", storeId],
@@ -82,15 +95,19 @@ export async function invalidateMaterialRelatedQueries(
         queryKey: stockMovementKeys.all(storeId),
         exact: false,
       }),
-      queryClient.invalidateQueries({
-        queryKey: ["recipes", storeId],
-        exact: false,
-      }),
     ]);
   } else {
     // Non-blocking: Invalidate critical queries immediately, defer others
     // This allows UI to respond faster while background sync happens
     invalidateMaterialQueriesImmediate(queryClient, storeId);
+
+    // Also invalidate recipes immediately (they contain material stock data)
+    // This ensures production tab sees updated stock when user navigates
+    queryClient.invalidateQueries({
+      queryKey: ["recipes", storeId],
+      exact: false,
+      refetchType: "active", // Refetch active queries (production tab)
+    });
 
     // Defer non-critical invalidations to background (don't await)
     // These will sync eventually via polling or when user navigates to those pages
@@ -111,9 +128,9 @@ export async function invalidateMaterialRelatedQueries(
         refetchType: "none", // Stock movements not critical for immediate update
       }),
       queryClient.invalidateQueries({
-        queryKey: ["recipes", storeId],
+        queryKey: ["production-batches", storeId],
         exact: false,
-        refetchType: "none", // Recipes will update when user navigates to recipes page
+        refetchType: "none", // Production batches will update when user navigates
       }),
     ]).catch((error) => {
       // Silently handle errors in background invalidation
@@ -225,12 +242,12 @@ export function invalidateRecipeQueriesImmediate(
   queryClient: QueryClient,
   storeId: string
 ): void {
-  // Only invalidate recipes immediately (non-blocking)
-  // This allows UI to update fast while other queries sync in background
+  // Invalidate all recipe queries (both active and inactive)
+  // This ensures recipe lists update everywhere (recipes tab, product form, etc.)
   queryClient.invalidateQueries({
     queryKey: ["recipes", storeId],
     exact: false,
-    refetchType: "active", // Only refetch active queries (visible tabs)
+    refetchType: "all", // Refetch all queries (active and inactive) to ensure consistency
   });
 }
 

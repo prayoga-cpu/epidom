@@ -1,11 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { recipeService } from "@/lib/services/recipe.service";
-import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { serializeRecipe, serializeRecipes } from "@/lib/server/serialize";
 import { z } from "zod";
+import { withApiHandler } from "@/lib/api-handler";
 
 // Validation schema for creating recipe
 const createRecipeSchema = z.object({
@@ -44,23 +42,8 @@ const recipeFilterSchema = z.object({
  * GET /api/stores/[id]/recipes
  * Get all recipes for a store with optional filtering
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  let session: Session | null = null;
-  try {
-    // Verify authentication
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
-    const { id: storeId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
+export const GET = withApiHandler(
+  async (request, { storeId }) => {
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
     const filterParams = {
@@ -75,39 +58,29 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const filters = recipeFilterSchema.parse(filterParams);
 
     // Get recipes from service
-    const result = await recipeService.getRecipes(storeId, filters);
+    const result = await recipeService.getRecipes(storeId!, filters);
 
-    return NextResponse.json(createSuccessResponse(result), { status: 200 });
-  } catch (error) {
-    const { id: storeId } = await params;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/recipes",
-      context: { storeId, userId: session?.user?.id },
-    });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(
+      createSuccessResponse({
+        recipes: serializeRecipes(result.recipes),
+        total: result.total,
+      }),
+      { status: 200 }
+    );
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/recipes",
+    requireStoreAuth: true,
   }
-}
+);
 
 /**
  * POST /api/stores/[id]/recipes
  * Create a new recipe
  */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  let session: Session | null = null;
-  try {
-    // Verify authentication
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
-    const { id: storeId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
+export const POST = withApiHandler(
+  async (request, { storeId }) => {
     const body = await request.json();
 
     // Validate request body
@@ -115,16 +88,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Create recipe via service
     const recipe = await recipeService.createRecipe({
-      storeId,
+      storeId: storeId!,
       ...validatedData,
     });
 
-    return NextResponse.json(createSuccessResponse(recipe), { status: 201 });
-  } catch (error) {
-    const { id: storeId } = await params;
-    return handleApiError(error, {
-      endpoint: "POST /api/stores/[id]/recipes",
-      context: { storeId, userId: session?.user?.id },
-    });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeRecipe(recipe)), { status: 201 });
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/recipes",
+    requireStoreAuth: true,
   }
-}
+);
+

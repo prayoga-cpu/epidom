@@ -2124,17 +2124,11 @@ export const fr = {
     clickToSubscribe: "Cliquez pour S'abonner",
     errorLoading: "Échec du chargement des boutiques",
   },
-  tabs: {
-    delivery: "Livraison",
-    supplierDeliveries: "Livraisons Fournisseurs",
-    recipeProduction: "Production de Recettes",
-    productionHistory: "Historique de Production",
-    editStock: "Modifier le Stock",
-    managePermissions: "Gérer les Permissions",
-    stockLevels: "Niveaux de Stock",
-    movementHistory: "Historique des Mouvements",
-  },
   management: {
+    deliveries: "Livraisons",
+    production: "Production",
+    history: "Historique",
+    stock: "Stock",
     // Delivery Tab
     delivery: {
       title: "Livraisons Fournisseurs",

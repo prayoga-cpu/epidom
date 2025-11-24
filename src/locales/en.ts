@@ -2113,6 +2113,10 @@ export const en = {
     movementHistory: "Movement History",
   },
   management: {
+    deliveries: "Deliveries",
+    production: "Production",
+    history: "History",
+    stock: "Stock",
     // Delivery Tab
     delivery: {
       title: "Supplier Deliveries",

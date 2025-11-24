@@ -111,14 +111,14 @@ export function useSupplierOrders(
     },
     enabled: !!storeId,
     initialData, // ✅ Accept initial data from Server Component
-    // Real-time configuration: Normal data polling
-    staleTime: 60 * 1000, // 1 minute
-    refetchInterval: 60 * 1000, // Poll every 60 seconds
+    // Real-time configuration: Moderate polling for supplier management
+    staleTime: 5 * 1000, // 5 seconds
+    refetchInterval: 10 * 1000, // Poll every 10 seconds - moderate priority
     refetchIntervalInBackground: false, // Only poll when tab is active
     refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
-      refetchInterval: 60 * 1000, // Store in meta for smart polling
+      refetchInterval: 10 * 1000, // Store in meta for smart polling
     },
   });
 }

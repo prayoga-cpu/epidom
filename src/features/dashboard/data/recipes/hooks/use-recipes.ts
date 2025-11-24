@@ -72,7 +72,7 @@ export const recipeKeys = {
 };
 
 // API Functions
-async function fetchRecipes(storeId: string, filters: RecipeFilterInput): Promise<RecipesResponse> {
+async function fetchRecipes(storeId: string, filters: Partial<RecipeFilterInput>): Promise<RecipesResponse> {
   const params = new URLSearchParams();
 
   if (filters.search) params.append("search", filters.search);
@@ -86,10 +86,12 @@ async function fetchRecipes(storeId: string, filters: RecipeFilterInput): Promis
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to fetch recipes");
+    throw new Error(error.error?.message || error.error || "Failed to fetch recipes");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function fetchRecipeById(storeId: string, recipeId: string): Promise<RecipeWithIngredients> {
@@ -97,10 +99,12 @@ async function fetchRecipeById(storeId: string, recipeId: string): Promise<Recip
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to fetch recipe");
+    throw new Error(error.error?.message || error.error || "Failed to fetch recipe");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function createRecipe(
@@ -115,10 +119,12 @@ async function createRecipe(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to create recipe");
+    throw new Error(error.error?.message || error.error || "Failed to create recipe");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function updateRecipe(
@@ -134,10 +140,12 @@ async function updateRecipe(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to update recipe");
+    throw new Error(error.error?.message || error.error || "Failed to update recipe");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function deleteRecipe(storeId: string, recipeId: string): Promise<void> {
@@ -179,10 +187,12 @@ async function duplicateRecipe(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to duplicate recipe");
+    throw new Error(error.error?.message || error.error || "Failed to duplicate recipe");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function exportRecipes(storeId: string, filters: RecipeFilterInput): Promise<void> {
@@ -231,15 +241,15 @@ export function useRecipes(
     queryFn: () => fetchRecipes(storeId, normalizedFilters || filters),
     enabled: !!storeId,
     initialData, // ✅ Accept initial data from Server Component
-    // Real-time configuration: Active data polling
-    staleTime: 20 * 1000, // 20 seconds
+    // Real-time configuration: Aggressive polling for instant cross-tab updates
+    staleTime: 3 * 1000, // 3 seconds - consider data stale faster
     gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    refetchInterval: 5 * 1000, // Poll every 5 seconds - 6x faster for real-time sync
     refetchIntervalInBackground: false, // Only poll when tab is active
-    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    refetchOnMount: "always", // Always refetch on mount to ensure fresh data (especially after stock adjustments)
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
-      refetchInterval: 30 * 1000, // Store in meta for smart polling
+      refetchInterval: 5 * 1000, // Store in meta for smart polling
     },
   });
 }
@@ -256,6 +266,29 @@ export function useRecipe(storeId: string, recipeId: string | null) {
 }
 
 /**
+ * Fetch recipes for selectors/dropdowns (optimized, no polling)
+ * Use this in forms and selectors where real-time updates are not critical
+ */
+export function useRecipesForSelector(
+  storeId: string,
+  filters?: RecipeFilterInput
+) {
+  const normalizedFilters = normalizeFilters(filters);
+
+  return useQuery({
+    queryKey: recipeKeys.list(storeId, normalizedFilters),
+    queryFn: () => fetchRecipes(storeId, normalizedFilters || {}),
+    enabled: !!storeId,
+    // Optimized settings for selectors: no polling, longer staleTime
+    staleTime: 5 * 60 * 1000, // 5 minutes (longer than main hook)
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: false, // Disable polling for selectors
+    refetchOnMount: false, // Don't refetch if data is fresh
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+  });
+}
+
+/**
  * Create recipe mutation
  */
 export function useCreateRecipe(storeId: string) {
@@ -263,11 +296,36 @@ export function useCreateRecipe(storeId: string) {
 
   return useMutation({
     mutationFn: (data: CreateRecipeFormInput) => createRecipe(storeId, data),
-    onSuccess: () => {
-      // Non-blocking cache invalidation: Only invalidate recipes immediately
-      // Other queries (products, materials) will sync in background
-      // This allows UI to respond faster without waiting for all invalidations
-      invalidateRecipeRelatedQueries(queryClient, storeId, false);
+    onSuccess: (newRecipe) => {
+      // Optimistic update: Add new recipe to all recipe list caches immediately
+      // This ensures UI updates instantly without waiting for refetch
+      queryClient.setQueriesData<RecipesResponse>(
+        { queryKey: recipeKeys.lists(storeId), exact: false },
+        (oldData) => {
+          // Validate oldData structure before updating
+          // Check if oldData exists and has the correct structure
+          if (
+            oldData &&
+            typeof oldData === "object" &&
+            "recipes" in oldData &&
+            Array.isArray(oldData.recipes) &&
+            typeof oldData.total === "number"
+          ) {
+            // Safe to update: oldData has correct structure
+            return {
+              recipes: [...oldData.recipes, newRecipe],
+              total: oldData.total + 1,
+            };
+          }
+          // If oldData is invalid or missing, return undefined to trigger refetch
+          // This is safer than trying to update invalid data
+          return undefined;
+        }
+      );
+
+      // Invalidate all recipe queries to ensure consistency
+      // Use immediate: true to ensure active queries refetch
+      invalidateRecipeRelatedQueries(queryClient, storeId, true);
     },
   });
 }

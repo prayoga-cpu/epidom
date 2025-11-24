@@ -5,6 +5,7 @@ import { recipeService } from "@/lib/services/recipe.service";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { handleApiError } from "@/lib/utils/api-error-handler";
+import { serializeRecipe } from "@/lib/server/serialize";
 import { z } from "zod";
 import { cuidSchema } from "@/lib/validation/common.schemas";
 
@@ -77,7 +78,8 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(createSuccessResponse(recipe), { status: 200 });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeRecipe(recipe)), { status: 200 });
   } catch (error) {
     const { id: storeId, recipeId } = await params;
     return handleApiError(error, {
@@ -119,7 +121,8 @@ export async function PATCH(
     // Update recipe via service
     const recipe = await recipeService.updateRecipe(recipeId, storeId, validatedData);
 
-    return NextResponse.json(createSuccessResponse(recipe), { status: 200 });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeRecipe(recipe)), { status: 200 });
   } catch (error) {
     const { id: storeId, recipeId } = await params;
     return handleApiError(error, {

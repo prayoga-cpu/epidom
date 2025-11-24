@@ -76,12 +76,51 @@ export async function fetchRecipesForPage(
   storeId: string,
   filters?: RecipeFilters
 ): Promise<RecipesResponse> {
-  const result = await recipeRepository.findAll(storeId, filters || {});
+  // Use default filters matching client-side defaults for query key matching
+  const defaultFilters: RecipeFilters = {
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    skip: 0,
+    take: 20,
+    ...filters,
+  };
+
+  const result = await recipeRepository.findAll(storeId, defaultFilters);
   // Serialize Decimal fields to numbers for Client Components
-  return {
+  const serialized = {
     recipes: serializeRecipes(result.recipes),
     total: result.total,
   };
+
+  // Deep serialize using JSON to ensure all Decimal objects are converted
+  // This is a safety measure to catch any Decimal objects that might have been missed
+  // Note: Date objects will be converted to ISO strings, which is fine for Next.js serialization
+  return JSON.parse(JSON.stringify(serialized, (key, value) => {
+    // Handle Date objects - convert to ISO string (Next.js will handle this correctly)
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    // If value is a Decimal object (has toString method and is object), convert to number
+    if (value !== null && typeof value === "object" && typeof value.toString === "function") {
+      // Check if it looks like a Decimal (has toString that returns a number string)
+      // Exclude Date objects (they have toString but return ISO strings)
+      try {
+        const str = value.toString();
+        // Skip if it's a Date string (contains T or Z)
+        if (str.includes("T") || str.includes("Z")) {
+          return value;
+        }
+        const num = parseFloat(str);
+        // Check if it's a valid number string
+        if (!isNaN(num) && str.match(/^-?\d*\.?\d+$/)) {
+          return num;
+        }
+      } catch {
+        // Not a Decimal, return as is
+      }
+    }
+    return value;
+  }));
 }
 
 /**
@@ -91,12 +130,51 @@ export async function fetchProductsForPage(
   storeId: string,
   filters?: ProductFilters
 ): Promise<ProductsResponse> {
-  const result = await productRepository.findAll(storeId, filters || {});
+  // Use default filters matching client-side defaults for query key matching
+  const defaultFilters: ProductFilters = {
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    skip: 0,
+    take: 20,
+    ...filters,
+  };
+
+  const result = await productRepository.findAll(storeId, defaultFilters);
   // Serialize Decimal fields to numbers for Client Components
-  return {
+  const serialized = {
     products: serializeProducts(result.products),
     total: result.total,
   };
+
+  // Deep serialize using JSON to ensure all Decimal objects are converted
+  // This is a safety measure to catch any Decimal objects that might have been missed
+  // Note: Date objects will be converted to ISO strings, which is fine for Next.js serialization
+  return JSON.parse(JSON.stringify(serialized, (key, value) => {
+    // Handle Date objects - convert to ISO string (Next.js will handle this correctly)
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    // If value is a Decimal object (has toString method and is object), convert to number
+    if (value !== null && typeof value === "object" && typeof value.toString === "function") {
+      // Check if it looks like a Decimal (has toString that returns a number string)
+      // Exclude Date objects (they have toString but return ISO strings)
+      try {
+        const str = value.toString();
+        // Skip if it's a Date string (contains T or Z)
+        if (str.includes("T") || str.includes("Z")) {
+          return value;
+        }
+        const num = parseFloat(str);
+        // Check if it's a valid number string
+        if (!isNaN(num) && str.match(/^-?\d*\.?\d+$/)) {
+          return num;
+        }
+      } catch {
+        // Not a Decimal, return as is
+      }
+    }
+    return value;
+  }));
 }
 
 /**

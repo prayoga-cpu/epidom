@@ -71,9 +71,9 @@ export function useMaterials(
     },
     enabled: !!storeId,
     initialData, // ✅ Accept initial data from Server Component
-    // Real-time configuration: Active data polling
-    staleTime: 20 * 1000, // 20 seconds
-    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    // Real-time configuration: Aggressive polling for instant cross-tab updates
+    staleTime: 3 * 1000, // 3 seconds - consider data stale faster
+    refetchInterval: 5 * 1000, // Poll every 5 seconds - 6x faster for real-time sync
     refetchIntervalInBackground: false, // Only poll when tab is active
     refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
     refetchOnWindowFocus: true, // Refetch on window focus if stale

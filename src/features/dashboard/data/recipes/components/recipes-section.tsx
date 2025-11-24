@@ -427,11 +427,14 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                       </div>
                     </div>
 
-                    {recipe.description && (
-                      <p className="text-muted-foreground mb-2 line-clamp-2 text-xs">
-                        {recipe.description}
-                      </p>
-                    )}
+                    {/* Description - always render to maintain consistent layout */}
+                    <p className="text-muted-foreground mb-2 line-clamp-2 text-xs min-h-[2.5rem]">
+                      {recipe.description || (
+                        <span className="text-muted-foreground/50 italic">
+                          {t("data.recipes.noDescription")}
+                        </span>
+                      )}
+                    </p>
 
                     <Separator className="my-2" />
 

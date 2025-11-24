@@ -1,13 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { productService } from "@/lib/services/product.service";
 import { subscriptionService } from "@/lib/services";
 import { createProductSchema } from "@/lib/validation/inventory.schemas";
-import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { serializeProduct, serializeProducts } from "@/lib/server/serialize";
 import { z } from "zod";
+import { withApiHandler } from "@/lib/api-handler";
 
 // Validation schema for filtering products
 const productFilterSchema = z.object({
@@ -25,22 +23,8 @@ const productFilterSchema = z.object({
  * GET /api/stores/[id]/products
  * Get all products for a store with optional filtering
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  let session: Session | null = null;
-  try {
-    // Verify authentication
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
-    const { id: storeId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
+export const GET = withApiHandler(
+  async (request, { storeId }) => {
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
     const filterParams = {
@@ -55,40 +39,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const filters = productFilterSchema.parse(filterParams);
 
     // Get products from service
-    const result = await productService.getProducts(storeId, filters);
+    const result = await productService.getProducts(storeId!, filters);
 
-    return NextResponse.json(createSuccessResponse(result), { status: 200 });
-  } catch (error) {
-    const { id: storeId } = await params;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/products",
-      context: { storeId, userId: session?.user?.id },
-    });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(
+      createSuccessResponse({
+        products: serializeProducts(result.products),
+        total: result.total,
+      }),
+      { status: 200 }
+    );
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/products",
+    requireStoreAuth: true,
   }
-}
+);
 
 /**
  * POST /api/stores/[id]/products
  * Create a new product
  */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  let session: Session | null = null;
-  try {
-    // Verify authentication
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
-    const { id: storeId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
+export const POST = withApiHandler(
+  async (request, { storeId, userId }) => {
     // Check subscription plan limits (Starter = 500 products per store, Pro/Enterprise = unlimited)
-    const productCheck = await subscriptionService.canCreateProduct(session.user.id, storeId);
+    const productCheck = await subscriptionService.canCreateProduct(userId, storeId!);
 
     if (!productCheck.allowed) {
       return NextResponse.json(
@@ -112,7 +87,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Create product via service
     const product = await productService.createProduct({
-      storeId,
+      storeId: storeId!,
       sku: validatedData.sku,
       name: validatedData.name,
       description: validatedData.description,
@@ -129,12 +104,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       isActive: validatedData.isActive,
     });
 
-    return NextResponse.json(createSuccessResponse(product), { status: 201 });
-  } catch (error) {
-    const { id: storeId } = await params;
-    return handleApiError(error, {
-      endpoint: "POST /api/stores/[id]/products",
-      context: { storeId, userId: session?.user?.id },
-    });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeProduct(product)), { status: 201 });
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/products",
+    requireStoreAuth: true,
   }
-}
+);
+

@@ -1,7 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { generateRequestId, setRequestId } from "@/lib/utils/request-id";
+import { setRequestId } from "./lib/request-context";
 
 /**
  * Authentication & Subscription Middleware
@@ -17,15 +17,14 @@ import { generateRequestId, setRequestId } from "@/lib/utils/request-id";
 export default async function middleware(req: NextRequest) {
     const path = req.nextUrl.pathname;
 
-    // Generate request ID for tracking
-    const requestId = req.headers.get("x-request-id") || generateRequestId();
+    // Generate unique request ID for logging and tracing
+    const requestId = crypto.randomUUID();
 
-    // Set request ID in response headers
+    // Set request ID in global context (type-safe)
+    setRequestId(requestId);
+
+    // Create a response object to modify headers later if needed
     const response = NextResponse.next();
-    setRequestId(response.headers, requestId);
-
-    // Store request ID in global context for logger
-    (global as any).requestId = requestId;
 
     // Skip middleware for API routes - they handle authentication internally
     if (path.startsWith("/api/")) {
@@ -105,11 +104,15 @@ export default async function middleware(req: NextRequest) {
         });
 
         if (response.ok) {
-          const data = await response.json();
+          const responseData = await response.json();
+
+          // API response is wrapped in { success: true, data: {...} }
+          // Extract the actual data from the response
+          const subscriptionData = responseData.success === true ? responseData.data : responseData;
 
           // Check if user has an active subscription
           // Block access to store dashboards if subscription is not active
-          if (!data.hasSubscription || data.subscription?.status !== "ACTIVE") {
+          if (!subscriptionData.hasSubscription || subscriptionData.subscription?.status !== "ACTIVE") {
             // Redirect to pricing page with message
             const url = new URL("/pricing", req.url);
             url.searchParams.set("reason", "subscription_required");

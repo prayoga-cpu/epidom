@@ -1,16 +1,21 @@
 /**
- * Type Helpers
+ * Client-Safe Type Helpers
  *
  * Utility types and functions for type safety improvements.
- * Helps reduce the need for `as any` type assertions.
+ * These helpers are safe to use in both client and server components.
+ *
+ * ⚠️ For server-only helpers (Decimal conversion), use `@/lib/utils/types.server`
  */
 
-import { Decimal } from "@prisma/client/runtime/library";
+import type { AppError, SubscriptionError } from "@/types/errors";
 
 /**
- * Convert Prisma Decimal to number
+ * Convert Prisma Decimal to number (client-safe)
+ * Works with Decimal objects, strings, numbers, or null/undefined
  */
-export function decimalToNumber(decimal: Decimal | string | number | null | undefined): number {
+export function decimalToNumber(
+  decimal: unknown
+): number {
   if (decimal === null || decimal === undefined) {
     return 0;
   }
@@ -20,21 +25,11 @@ export function decimalToNumber(decimal: Decimal | string | number | null | unde
   if (typeof decimal === "string") {
     return parseFloat(decimal) || 0;
   }
-  return decimal.toNumber();
-}
-
-/**
- * Convert number to Prisma Decimal
- */
-export function numberToDecimal(value: number | string | null | undefined): Decimal {
-  const { Decimal } = require("@prisma/client/runtime/library");
-  if (value === null || value === undefined) {
-    return new Decimal(0);
+  // If it's a Decimal object, try to convert it
+  if (typeof decimal === "object" && decimal !== null && "toNumber" in decimal && typeof (decimal as { toNumber: () => number }).toNumber === "function") {
+    return (decimal as { toNumber: () => number }).toNumber();
   }
-  if (typeof value === "string") {
-    return new Decimal(value);
-  }
-  return new Decimal(value);
+  return 0;
 }
 
 /**
@@ -42,6 +37,32 @@ export function numberToDecimal(value: number | string | null | undefined): Deci
  */
 export function isError(error: unknown): error is Error {
   return error instanceof Error;
+}
+
+/**
+ * Type guard for AppError (custom error type)
+ */
+export function isAppError(error: unknown): error is AppError {
+  return error instanceof Error && "code" in error && "statusCode" in error;
+}
+
+/**
+ * Type guard for SubscriptionError
+ */
+export function isSubscriptionError(error: unknown): error is SubscriptionError {
+  return (
+    isAppError(error) &&
+    error.code === "SUBSCRIPTION_FEATURE_LOCKED" &&
+    "upgradeRequired" in error
+  );
+}
+
+/**
+ * Type guard for Date objects
+ * Use this instead of instanceof Date for better type narrowing
+ */
+export function isDate(value: unknown): value is Date {
+  return value instanceof Date || (typeof value === "object" && value !== null && "getTime" in value && typeof (value as Date).getTime === "function");
 }
 
 /**
@@ -79,6 +100,23 @@ export function isApiErrorResponse(obj: unknown): obj is {
 }
 
 /**
+ * Type guard for error objects with a specific code
+ */
+export function isErrorWithCode<T extends string>(
+  error: unknown,
+  code: T
+): error is { code: T; message: string; [key: string]: unknown } {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === code &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string"
+  );
+}
+
+/**
  * Extract error message from unknown error type
  */
 export function getErrorMessage(error: unknown): string {
@@ -87,6 +125,9 @@ export function getErrorMessage(error: unknown): string {
   }
   if (typeof error === "string") {
     return error;
+  }
+  if (isApiErrorResponse(error)) {
+    return error.error.message;
   }
   return "An unknown error occurred";
 }

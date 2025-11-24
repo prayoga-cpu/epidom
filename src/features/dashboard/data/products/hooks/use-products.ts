@@ -56,10 +56,12 @@ async function fetchProducts(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to fetch products");
+    throw new Error(error.error?.message || error.error || "Failed to fetch products");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function fetchProductById(storeId: string, productId: string): Promise<Product> {
@@ -67,10 +69,12 @@ async function fetchProductById(storeId: string, productId: string): Promise<Pro
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to fetch product");
+    throw new Error(error.error?.message || error.error || "Failed to fetch product");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function createProduct(storeId: string, data: CreateProductInput): Promise<Product> {
@@ -82,10 +86,12 @@ async function createProduct(storeId: string, data: CreateProductInput): Promise
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to create product");
+    throw new Error(error.error?.message || error.error || "Failed to create product");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function updateProduct(
@@ -101,10 +107,12 @@ async function updateProduct(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to update product");
+    throw new Error(error.error?.message || error.error || "Failed to update product");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function deleteProduct(storeId: string, productId: string): Promise<void> {
@@ -182,9 +190,9 @@ export function useProducts(
     queryFn: () => fetchProducts(storeId, normalizedFilters || filters),
     enabled: !!storeId,
     initialData, // ✅ Accept initial data from Server Component
-    // Real-time configuration: Active data polling
-    staleTime: 20 * 1000, // 20 seconds
-    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    // Real-time configuration: Aggressive polling for instant cross-tab updates
+    staleTime: 3 * 1000, // 3 seconds - consider data stale faster
+    refetchInterval: 5 * 1000, // Poll every 5 seconds - 6x faster for real-time sync
     refetchIntervalInBackground: false, // Only poll when tab is active
     refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
     refetchOnWindowFocus: true, // Refetch on window focus if stale
@@ -213,11 +221,34 @@ export function useCreateProduct(storeId: string) {
 
   return useMutation({
     mutationFn: (data: CreateProductInput) => createProduct(storeId, data),
-    onSuccess: () => {
-      // Non-blocking cache invalidation: Only invalidate products immediately
-      // Other queries (product-usage, alerts, etc.) will sync in background
-      // This allows UI to respond faster without waiting for all invalidations
-      invalidateProductRelatedQueries(queryClient, storeId, false);
+    onSuccess: (newProduct) => {
+      // Optimistic update: Add new product to all product list caches immediately
+      // This ensures UI updates instantly without waiting for refetch
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: productKeys.lists(storeId), exact: false },
+        (oldData) => {
+          // Validate oldData structure before updating
+          if (
+            oldData &&
+            typeof oldData === "object" &&
+            "products" in oldData &&
+            Array.isArray(oldData.products) &&
+            typeof oldData.total === "number"
+          ) {
+            // Safe to update: oldData has correct structure
+            return {
+              products: [...oldData.products, newProduct],
+              total: oldData.total + 1,
+            };
+          }
+          // If oldData is invalid or missing, return undefined to trigger refetch
+          return undefined;
+        }
+      );
+
+      // Invalidate all product queries to ensure consistency
+      // Use immediate: true to ensure active queries refetch
+      invalidateProductRelatedQueries(queryClient, storeId, true);
     },
   });
 }

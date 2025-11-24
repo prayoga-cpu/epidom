@@ -2,6 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
 import { stockMovementKeys } from "./use-stock-movements";
+import { recipeKeys } from "@/features/dashboard/data/recipes/hooks/use-recipes";
+import type { RecipeWithIngredients } from "@/features/dashboard/data/recipes/hooks/use-recipes";
+import type { Material, Product } from "@prisma/client";
 
 export interface StockAdjustmentInput {
   materialId?: string;
@@ -14,8 +17,8 @@ export interface StockAdjustmentInput {
 }
 
 interface StockAdjustmentResponse {
-  material?: any;
-  product?: any;
+  material?: Material;
+  product?: Product;
   movement: {
     id: string;
     type: string;
@@ -56,9 +59,68 @@ export function useStockAdjustment(storeId: string) {
 
   return useMutation<StockAdjustmentResponse, Error, StockAdjustmentInput>({
     mutationFn: (input) => adjustStock(storeId, input),
-    onSuccess: async () => {
-      // Invalidate all related queries
-      await invalidateMaterialRelatedQueries(queryClient, storeId);
+    onSuccess: async (response, input) => {
+      // Optimistic update: Immediately update material stock in recipes cache
+      // This ensures production tab sees updated stock instantly without waiting for refetch
+      if (input.materialId && response.material) {
+        const newStock = response.movement.balanceAfter;
+
+        // Update all recipe queries that contain this material
+        queryClient.setQueriesData<{ recipes: RecipeWithIngredients[]; total: number }>(
+          { queryKey: recipeKeys.lists(storeId), exact: false },
+          (oldData) => {
+            if (!oldData || !Array.isArray(oldData.recipes)) {
+              return oldData;
+            }
+
+            // Update material stock in all recipes that use this material
+            const updatedRecipes = oldData.recipes.map((recipe) => {
+              const hasMaterial = recipe.ingredients.some(
+                (ing) => ing.materialId === input.materialId
+              );
+
+              if (!hasMaterial) {
+                return recipe;
+              }
+
+              // Update material stock in ingredients
+              const updatedIngredients = recipe.ingredients.map((ing) => {
+                if (ing.materialId === input.materialId) {
+                  return {
+                    ...ing,
+                    material: {
+                      ...ing.material,
+                      currentStock: newStock,
+                    },
+                  };
+                }
+                return ing;
+              });
+
+              return {
+                ...recipe,
+                ingredients: updatedIngredients,
+              };
+            });
+
+            return {
+              ...oldData,
+              recipes: updatedRecipes,
+            };
+          }
+        );
+      }
+
+      // Invalidate all related queries immediately for real-time updates
+      // This ensures production tab sees updated stock immediately
+      await invalidateMaterialRelatedQueries(queryClient, storeId, true);
+
+      // Also invalidate production batches (they contain material stock data)
+      queryClient.invalidateQueries({
+        queryKey: ["production-batches", storeId],
+        exact: false,
+        refetchType: "active", // Refetch active queries immediately
+      });
 
       // Also invalidate stock movements specifically
       queryClient.invalidateQueries({

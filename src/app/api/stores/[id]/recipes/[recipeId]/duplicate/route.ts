@@ -5,6 +5,7 @@ import { recipeService } from "@/lib/services/recipe.service";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { handleApiError } from "@/lib/utils/api-error-handler";
+import { serializeRecipe } from "@/lib/server/serialize";
 import { z } from "zod";
 
 // Validation schema for duplicating recipe
@@ -44,7 +45,8 @@ export async function POST(
     // Duplicate recipe via service
     const recipe = await recipeService.duplicateRecipe(recipeId, newName, storeId);
 
-    return NextResponse.json(createSuccessResponse(recipe), { status: 201 });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeRecipe(recipe)), { status: 201 });
   } catch (error) {
     const { id: storeId, recipeId } = await params;
     return handleApiError(error, {

@@ -48,6 +48,7 @@ import {
 import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { isErrorWithCode, isSubscriptionError } from "@/lib/utils/types";
 import { Lock, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -214,14 +215,9 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
   }
 
   // Show upgrade prompt if no access (from hook or from API error 403)
-  /**
-   * Type assertion needed because error type is unknown and may have code or status properties
-   * Actual type: Error with optional code and status properties
-   * TODO: Use proper error type guard or create error type definitions
-   */
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
-    (error && ((error as any).code === "SUBSCRIPTION_FEATURE_LOCKED" || (error as any).status === 403));
+    (error && (isSubscriptionError(error) || (typeof error === "object" && error !== null && ("code" in error && error.code === "SUBSCRIPTION_FEATURE_LOCKED") || ("status" in error && error.status === 403))));
 
   if (isSubscriptionLocked) {
     return (

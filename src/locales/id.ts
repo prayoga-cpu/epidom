@@ -2109,6 +2109,10 @@ export const id = {
     movementHistory: "Riwayat Pergerakan",
   },
   management: {
+    deliveries: "Pengiriman",
+    production: "Produksi",
+    history: "Riwayat",
+    stock: "Stok",
     // Delivery Tab
     delivery: {
       title: "Pengiriman Supplier",

@@ -6,6 +6,7 @@ import { updateProductSchema } from "@/lib/validation/inventory.schemas";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { handleApiError } from "@/lib/utils/api-error-handler";
+import { serializeProduct } from "@/lib/server/serialize";
 import { z } from "zod";
 
 /**
@@ -49,7 +50,8 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(createSuccessResponse(product), { status: 200 });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeProduct(product)), { status: 200 });
   } catch (error) {
     const { id: storeId, productId } = await params;
     return handleApiError(error, {
@@ -108,7 +110,8 @@ export async function PATCH(
       isActive: validatedData.isActive,
     });
 
-    return NextResponse.json(createSuccessResponse(product), { status: 200 });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeProduct(product)), { status: 200 });
   } catch (error) {
     const { id: storeId, productId } = await params;
     return handleApiError(error, {

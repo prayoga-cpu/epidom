@@ -84,14 +84,14 @@ export function useStockMovements(storeId: string, filters?: StockMovementFilter
       return response.json();
     },
     enabled: !!storeId && !!(filters?.materialId || filters?.productId),
-    // Real-time configuration: Active data polling
-    staleTime: 20 * 1000, // 20 seconds
-    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    // Real-time configuration: Most aggressive polling for critical stock tracking
+    staleTime: 2 * 1000, // 2 seconds - most critical data, must be very fresh
+    refetchInterval: 5 * 1000, // Poll every 5 seconds - instant stock movement visibility
     refetchIntervalInBackground: false, // Only poll when tab is active
     refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
-      refetchInterval: 30 * 1000, // Store in meta for smart polling
+      refetchInterval: 5 * 1000, // Store in meta for smart polling
     },
   });
 }
