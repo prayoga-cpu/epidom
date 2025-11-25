@@ -183,11 +183,7 @@ export function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         }
       >
         <Form {...form}>
-          <form
-            id="add-material-form"
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-1.5"
-          >
+          <form id="add-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
             {/* Basic Information */}
             <div className="space-y-1">
               <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
@@ -280,7 +276,7 @@ export function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                     <FormControl>
                       <Textarea
                         placeholder={t("data.materials.form.descriptionPlaceholder")}
-                        className="min-h-[55px] text-sm"
+                        className="text-sm"
                         {...field}
                       />
                     </FormControl>

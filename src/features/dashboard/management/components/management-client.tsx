@@ -141,6 +141,12 @@ export function ManagementClient({ initialSupplierOrders, storeId }: ManagementC
         </TabsList>
 
         <TabsContent value="deliveries" className="space-y-4">
+          {/* Header */}
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">{t("management.delivery.title")}</h2>
+            <p className="text-muted-foreground text-sm">{t("management.delivery.description")}</p>
+          </div>
+
           <SupplierDeliveriesTable
             deliveries={deliveries}
             selectedDelivery={selectedDelivery}
@@ -211,4 +217,3 @@ export function ManagementClient({ initialSupplierOrders, storeId }: ManagementC
     </div>
   );
 }
-

@@ -62,15 +62,31 @@ type SortField =
 type SortOrder = "asc" | "desc";
 
 // Recipe categories - use translation keys
+// Store English values in DB, but display translated labels
 const getRecipeCategories = (t: (key: string) => string) => [
-  t("data.recipes.categories.breadPastries"),
-  t("data.recipes.categories.cakesDesserts"),
-  t("data.recipes.categories.confectionery"),
-  t("data.recipes.categories.dairyProducts"),
-  t("data.recipes.categories.beverages"),
-  t("data.recipes.categories.saucesCondiments"),
-  t("data.recipes.categories.other"),
+  { value: "Bread & Pastries", label: t("data.recipes.categories.breadPastries") },
+  { value: "Cakes & Desserts", label: t("data.recipes.categories.cakesDesserts") },
+  { value: "Confectionery", label: t("data.recipes.categories.confectionery") },
+  { value: "Dairy Products", label: t("data.recipes.categories.dairyProducts") },
+  { value: "Beverages", label: t("data.recipes.categories.beverages") },
+  { value: "Sauces & Condiments", label: t("data.recipes.categories.saucesCondiments") },
+  { value: "Other", label: t("data.recipes.categories.other") },
 ];
+
+// Helper to translate category from database value to localized string
+const getCategoryTranslation = (category: string, t: (key: string) => string): string => {
+  const categoryMap: Record<string, string> = {
+    "Bread & Pastries": t("data.recipes.categories.breadPastries"),
+    "Cakes & Desserts": t("data.recipes.categories.cakesDesserts"),
+    Confectionery: t("data.recipes.categories.confectionery"),
+    "Dairy Products": t("data.recipes.categories.dairyProducts"),
+    Beverages: t("data.recipes.categories.beverages"),
+    "Sauces & Condiments": t("data.recipes.categories.saucesCondiments"),
+    Other: t("data.recipes.categories.other"),
+  };
+
+  return categoryMap[category] || category;
+};
 
 interface RecipesSectionProps {
   initialRecipes?: RecipeWithIngredients[];
@@ -342,10 +358,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                 onChange: (value) => setCategoryFilter(value === "all" ? undefined : value),
                 options: [
                   { value: "all", label: t("filters.allCategories") },
-                  ...getRecipeCategories(t).map((category) => ({
-                    value: category,
-                    label: category,
-                  })),
+                  ...getRecipeCategories(t),
                 ],
               },
               {
@@ -419,7 +432,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                       </h3>
                       {recipe.category && (
                         <Badge variant="secondary" className="mt-1 text-xs">
-                          {recipe.category}
+                          {getCategoryTranslation(recipe.category, t)}
                         </Badge>
                       )}
                     </div>
@@ -429,7 +442,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                   </div>
 
                   {/* Description - always render to maintain consistent layout */}
-                  <p className="text-muted-foreground mb-2 line-clamp-2 min-h-[2.5rem] text-xs">
+                  <p className="text-muted-foreground mb-2 line-clamp-1 text-xs">
                     {recipe.description || (
                       <span className="text-muted-foreground/50 italic">
                         {t("data.recipes.noDescription")}

@@ -194,7 +194,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
           <form
             id="edit-material-form"
             onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-1.5"
+            className="space-y-1"
           >
             {/* Basic Information */}
             <div className="space-y-1">
@@ -289,7 +289,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                     <FormControl>
                       <Textarea
                         placeholder={t("data.materials.form.descriptionPlaceholder")}
-                        className="min-h-[55px] text-sm"
+                        className="text-sm"
                         {...field}
                       />
                     </FormControl>

@@ -136,13 +136,32 @@ export function RecipeProductionCard() {
     return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100";
   };
 
+  // Helper to translate category from database value to localized string
+  const getCategoryTranslation = (category: string | null | undefined): string => {
+    if (!category) return "";
+    const categoryMap: Record<string, string> = {
+      "Bread & Pastries": t("data.recipes.categories.breadPastries"),
+      "Cakes & Desserts": t("data.recipes.categories.cakesDesserts"),
+      Confectionery: t("data.recipes.categories.confectionery"),
+      "Dairy Products": t("data.recipes.categories.dairyProducts"),
+      Beverages: t("data.recipes.categories.beverages"),
+      "Sauces & Condiments": t("data.recipes.categories.saucesCondiments"),
+      Other: t("data.recipes.categories.other"),
+    };
+    return categoryMap[category] || category;
+  };
+
   // Loading state
   if (recipesLoading) {
     return (
       <div className="space-y-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">{t("tabs.recipeProduction")}</h2>
-          <p className="text-muted-foreground">{t("management.recipeProduction.description")}</p>
+          <h2 className="text-2xl font-bold tracking-tight">
+            {t("management.recipeProduction.title")}
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            {t("management.recipeProduction.description")}
+          </p>
         </div>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -155,8 +174,12 @@ export function RecipeProductionCard() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">{t("tabs.recipeProduction")}</h2>
-        <p className="text-muted-foreground">{t("management.recipeProduction.description")}</p>
+        <h2 className="text-2xl font-bold tracking-tight">
+          {t("management.recipeProduction.title")}
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          {t("management.recipeProduction.description")}
+        </p>
       </div>
 
       {/* Two-Column Layout */}
@@ -220,7 +243,7 @@ export function RecipeProductionCard() {
                           </span>
                         </div>
                         <Badge className={`mt-2 ${getCategoryColor(recipe.category ?? "")}`}>
-                          {recipe.category}
+                          {getCategoryTranslation(recipe.category)}
                         </Badge>
                       </div>
                     </div>
@@ -243,7 +266,7 @@ export function RecipeProductionCard() {
                     <CardDescription>{selectedRecipe.description}</CardDescription>
                   </div>
                   <Badge className={getCategoryColor(selectedRecipe.category)}>
-                    {selectedRecipe.category}
+                    {getCategoryTranslation(selectedRecipe.category)}
                   </Badge>
                 </div>
               </CardHeader>

@@ -2124,6 +2124,7 @@ export const id = {
     // Delivery Tab
     delivery: {
       title: "Pengiriman Supplier",
+      description: "Kelola pengiriman supplier dan lacak pengiriman",
       searchPlaceholder: "Cari berdasarkan referensi, supplier, atau catatan...",
       filters: {
         status: "Status",
@@ -2430,6 +2431,7 @@ export const id = {
     },
     // Recipe Production Tab
     recipeProduction: {
+      title: "Produksi Resep",
       description: "Memulai batch produksi baru dan memantau produksi aktif",
       availableRecipes: "Resep Tersedia",
       selectRecipeToStart: "Pilih resep untuk memulai produksi",
@@ -2522,6 +2524,7 @@ export const id = {
 
     // Production History Tab
     productionHistory: {
+      title: "Riwayat Produksi",
       description: "Lihat dan analisis batch produksi yang telah selesai",
       filters: "Filter",
       filtersDescription: "Filter batch berdasarkan status, resep, atau rentang tanggal",

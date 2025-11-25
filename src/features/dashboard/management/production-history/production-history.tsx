@@ -178,8 +178,10 @@ export function ProductionHistoryCard() {
   return (
     <div className="space-y-3 sm:space-y-6">
       {/* Header */}
-      <div className="text-left">
-        <h2 className="text-2xl font-bold tracking-tight">{t("tabs.productionHistory")}</h2>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          {t("management.productionHistory.title")}
+        </h2>
         <p className="text-muted-foreground text-sm">
           {t("management.productionHistory.description")}
         </p>

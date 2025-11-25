@@ -231,7 +231,9 @@ export function AddEditDeliveryDialog({
     // TODO: Implement add mode API call when needed
     toast({
       title: t("common.validation.error"),
-      description: t("management.delivery.dialogs.addEditDelivery.validation.addModeNotImplemented"),
+      description: t(
+        "management.delivery.dialogs.addEditDelivery.validation.addModeNotImplemented"
+      ),
       variant: "destructive",
     });
   };
@@ -268,7 +270,7 @@ export function AddEditDeliveryDialog({
           />
         }
       >
-        <form id="add-edit-delivery-form" onSubmit={handleSubmit} className="space-y-4">
+        <form id="add-edit-delivery-form" onSubmit={handleSubmit} className="space-y-1">
           {/* Delivery Reference */}
           <div className="space-y-2">
             <Label htmlFor="deliveryReference">
@@ -352,7 +354,7 @@ export function AddEditDeliveryDialog({
                   variant="outline"
                   className="w-full justify-start text-left font-normal"
                 >
-                  <CalendarIcon className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <CalendarIcon className="mr-1 hidden h-4 w-4 sm:inline" />
                   {expectedDate
                     ? formatDate(expectedDate)
                     : t("management.delivery.dialogs.addEditDelivery.selectExpectedDate")}
@@ -375,7 +377,7 @@ export function AddEditDeliveryDialog({
               <Label>{t("management.delivery.dialogs.addEditDelivery.items")} *</Label>
               {mode === "add" && (
                 <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
-                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("management.delivery.dialogs.addEditDelivery.addItem")}
                 </Button>
               )}

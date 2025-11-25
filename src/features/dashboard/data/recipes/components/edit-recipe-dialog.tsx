@@ -46,21 +46,22 @@ interface EditRecipeDialogProps {
   recipe: RecipeWithIngredients;
 }
 
-const RECIPE_CATEGORIES = [
-  "Bread & Pastries",
-  "Cakes & Desserts",
-  "Confectionery",
-  "Dairy Products",
-  "Beverages",
-  "Sauces & Condiments",
-  "Other",
-];
-
 export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialogProps) {
   const { t } = useI18n();
   const params = useParams();
   const storeId = params.storeId as string;
   const { currency, convertPrice, formatPrice } = useCurrency();
+
+  // Recipe categories with translation - store English values, display translated labels
+  const getRecipeCategories = () => [
+    { value: "Bread & Pastries", label: t("data.recipes.categories.breadPastries") },
+    { value: "Cakes & Desserts", label: t("data.recipes.categories.cakesDesserts") },
+    { value: "Confectionery", label: t("data.recipes.categories.confectionery") },
+    { value: "Dairy Products", label: t("data.recipes.categories.dairyProducts") },
+    { value: "Beverages", label: t("data.recipes.categories.beverages") },
+    { value: "Sauces & Condiments", label: t("data.recipes.categories.saucesCondiments") },
+    { value: "Other", label: t("data.recipes.categories.other") },
+  ];
 
   // Fetch real materials for dropdown
   const { data: materialsData } = useMaterials(storeId);
@@ -207,11 +208,7 @@ export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialo
         }
       >
         <Form {...form}>
-          <form
-            id="edit-recipe-form"
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-1.5"
-          >
+          <form id="edit-recipe-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
             {/* Basic Information */}
             <div className="space-y-1">
               <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
@@ -241,7 +238,7 @@ export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialo
                     <FormControl>
                       <Textarea
                         placeholder={t("data.recipes.form.descriptionPlaceholder")}
-                        className="min-h-[55px] text-sm"
+                        className="text-sm"
                         {...field}
                       />
                     </FormControl>
@@ -263,9 +260,9 @@ export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialo
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {RECIPE_CATEGORIES.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                        {getRecipeCategories().map((category) => (
+                          <SelectItem key={category.value} value={category.value}>
+                            {category.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -392,18 +389,21 @@ export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialo
                   const cost = selectedMaterial ? Number(selectedMaterial.unitCost) * quantity : 0;
 
                   return (
-                    <Card key={index}>
-                      <CardContent className="space-y-1 px-2 py-2">
-                        <div className="mb-1 flex items-center justify-between">
-                          <Badge variant="outline" className="text-xs">
-                            #{index + 1}
+                    <Card key={index} className="relative overflow-hidden">
+                      <CardContent className="space-y-3 px-4">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="secondary" className="font-semibold">
+                            {t("data.recipes.ingredients.ingredientNumber")?.replace(
+                              "{number}",
+                              (index + 1).toString()
+                            ) || `Ingredient ${index + 1}`}
                           </Badge>
                           <Button
                             type="button"
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive h-6 w-6"
                             onClick={() => removeIngredient(index)}
-                            className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
                           >
                             <X className="h-3.5 w-3.5" />
                           </Button>
@@ -413,8 +413,8 @@ export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialo
                           control={form.control}
                           name={`ingredients.${index}.materialId`}
                           render={({ field }) => (
-                            <FormItem className="space-y-0.5">
-                              <FormLabel className="text-sm">
+                            <FormItem className="space-y-1.5">
+                              <FormLabel className="text-sm font-medium">
                                 {t("data.recipes.ingredients.material")} *
                               </FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
@@ -444,13 +444,13 @@ export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialo
                           )}
                         />
 
-                        <div className="grid items-start gap-1.5 sm:grid-cols-2">
+                        <div className="grid items-start gap-4 sm:grid-cols-2">
                           <FormField
                             control={form.control}
                             name={`ingredients.${index}.quantity`}
                             render={({ field }) => (
-                              <FormItem className="space-y-0.5">
-                                <FormLabel className="text-sm">
+                              <FormItem className="space-y-1.5">
+                                <FormLabel className="text-sm font-medium">
                                   {t("data.recipes.ingredients.quantity")} *
                                 </FormLabel>
                                 <FormControl>
@@ -476,8 +476,8 @@ export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialo
                             control={form.control}
                             name={`ingredients.${index}.unit`}
                             render={({ field }) => (
-                              <FormItem className="space-y-0.5">
-                                <FormLabel className="text-sm">
+                              <FormItem className="space-y-1.5">
+                                <FormLabel className="text-sm font-medium">
                                   {t("data.recipes.ingredients.unit")} *
                                 </FormLabel>
                                 <FormControl>
@@ -493,33 +493,18 @@ export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialo
                           />
                         </div>
 
-                        {selectedMaterial && quantity && quantity > 0 && (
-                          <div className="bg-muted/50 rounded border px-2 py-1.5 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">
-                                {t("data.recipes.ingredients.costEstimate")}:
-                              </span>
-                              <span className="font-semibold">{formatPrice(cost)}</span>
-                            </div>
-                            <div className="text-muted-foreground mt-0.5">
-                              {formatPrice(Number(selectedMaterial.unitCost))} {t("common.per")}{" "}
-                              {selectedMaterial.unit} × {quantity}
-                            </div>
-                          </div>
-                        )}
-
                         <FormField
                           control={form.control}
                           name={`ingredients.${index}.notes`}
                           render={({ field }) => (
-                            <FormItem className="space-y-0.5">
-                              <FormLabel className="text-sm">
+                            <FormItem className="space-y-1.5">
+                              <FormLabel className="text-sm font-medium">
                                 {t("data.recipes.ingredients.notes")}
                               </FormLabel>
                               <FormControl>
-                                <Input
+                                <Textarea
                                   placeholder={t("data.recipes.ingredients.notesPlaceholder")}
-                                  className="h-9"
+                                  className="min-h-[120px]"
                                   {...field}
                                 />
                               </FormControl>
@@ -527,6 +512,23 @@ export function EditRecipeDialog({ open, onOpenChange, recipe }: EditRecipeDialo
                             </FormItem>
                           )}
                         />
+
+                        {selectedMaterial && quantity && quantity > 0 && (
+                          <div className="bg-muted/50 rounded-md p-3 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground font-medium">
+                                {t("data.recipes.ingredients.costEstimate")}:
+                              </span>
+                              <span className="text-foreground font-semibold">
+                                {formatPrice(cost)}
+                              </span>
+                            </div>
+                            <div className="text-muted-foreground mt-1">
+                              {formatPrice(Number(selectedMaterial.unitCost))} {t("common.per")}{" "}
+                              {selectedMaterial.unit} × {quantity}
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   );

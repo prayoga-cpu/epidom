@@ -2119,6 +2119,7 @@ export const en = {
     // Delivery Tab
     delivery: {
       title: "Supplier Deliveries",
+      description: "Manage supplier deliveries and track shipments",
       searchPlaceholder: "Search by reference, supplier, or notes...",
       filters: {
         status: "Status",
@@ -2430,6 +2431,7 @@ export const en = {
     },
     // Recipe Production Tab
     recipeProduction: {
+      title: "Recipe Production",
       description: "Start new production batches and monitor active production",
       availableRecipes: "Available Recipes",
       selectRecipeToStart: "Select a recipe to start production",
@@ -2523,6 +2525,7 @@ export const en = {
 
     // Production History Tab
     productionHistory: {
+      title: "Production History",
       description: "View and analyze completed production batches",
       filters: "Filters",
       filtersDescription: "Filter batches by status, recipe, or date range",

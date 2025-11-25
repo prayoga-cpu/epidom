@@ -2135,6 +2135,7 @@ export const fr = {
     // Delivery Tab
     delivery: {
       title: "Livraisons Fournisseurs",
+      description: "Gérer les livraisons des fournisseurs et suivre les expéditions",
       searchPlaceholder: "Rechercher par référence, fournisseur ou notes...",
       filters: {
         status: "Statut",
@@ -2443,6 +2444,7 @@ export const fr = {
     },
     // Recipe Production Tab
     recipeProduction: {
+      title: "Production de Recettes",
       description: "Démarrer de nouveaux lots de production et surveiller la production active",
       availableRecipes: "Recettes Disponibles",
       selectRecipeToStart: "Sélectionnez une recette pour commencer la production",
@@ -2508,6 +2510,33 @@ export const fr = {
           title: "Démarrer un Lot de Production",
           description: "Créer un nouveau lot de production pour cette recette",
         },
+        complete: {
+          title: "Terminer la Production",
+          description: "Entrez la quantité réelle produite pour ce lot",
+        },
+        cancel: {
+          title: "Annuler la Production",
+          description: "Êtes-vous sûr de vouloir annuler ce lot de production?",
+        },
+      },
+
+      // Additional fields
+      actualQuantity: "Quantité Réelle",
+      plannedWas: "Prévu était",
+      scheduled: "Programmé",
+      restoreMaterials: "Restaurer les matières premières dans l'inventaire",
+      restoreMaterialsHint:
+        "Les matières utilisées pour ce lot seront rajoutées à votre inventaire",
+
+      // Messages
+      messages: {
+        completeSuccess: "Production Terminée",
+        completeSuccessDescription: "Le lot {batchNumber} a été terminé avec succès",
+        completeError: "Échec de la finalisation de la production",
+        cancelSuccess: "Production Annulée",
+        cancelSuccessDescription: "Le lot {batchNumber} a été annulé{materialsRestored}",
+        cancelError: "Échec de l'annulation de la production",
+        materialsRestored: " et les matières premières ont été restaurées",
       },
 
       recipe: "Recette",
@@ -2541,6 +2570,7 @@ export const fr = {
 
     // Production History Tab
     productionHistory: {
+      title: "Historique de Production",
       description: "Voir et analyser les lots de production terminés",
       filters: "Filtres",
       filtersDescription: "Filtrer les lots par statut, recette ou plage de dates",
