@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { stripeConnectService } from "@/lib/services";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
  * POST /api/connect/dashboard
@@ -16,7 +18,10 @@ export async function POST(request: NextRequest) {
     // Verify session
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const userId = session.user.id;
@@ -25,7 +30,10 @@ export async function POST(request: NextRequest) {
     const isComplete = await stripeConnectService.isOnboardingComplete(userId);
     if (!isComplete) {
       return NextResponse.json(
-        { error: "Stripe Connect onboarding not complete" },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Stripe Connect onboarding not complete"
+        ),
         { status: 400 }
       );
     }
@@ -33,14 +41,16 @@ export async function POST(request: NextRequest) {
     // Generate dashboard login link
     const dashboardUrl = await stripeConnectService.createDashboardLoginLink(userId);
 
-    return NextResponse.json({
-      url: dashboardUrl,
-      message: "Dashboard link created successfully",
-    });
-  } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Failed to create dashboard link" },
-      { status: 500 }
+      createSuccessResponse({
+        url: dashboardUrl,
+        message: "Dashboard link created successfully",
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/connect/dashboard",
+      context: {},
+    });
   }
 }

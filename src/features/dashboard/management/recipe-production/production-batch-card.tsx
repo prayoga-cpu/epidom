@@ -12,14 +12,7 @@ import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast as sonnerToast } from "sonner";
-import {
-  Clock,
-  Package,
-  CheckCircle,
-  Loader2,
-  XCircle,
-  Ban,
-} from "lucide-react";
+import { Clock, Package, CheckCircle, Loader2, XCircle, Ban } from "lucide-react";
 import { format } from "date-fns";
 import {
   useCompleteProduction,
@@ -43,9 +36,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
   // Dialog states
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [actualQuantity, setActualQuantity] = useState(
-    Number(batch.plannedQuantity)
-  );
+  const [actualQuantity, setActualQuantity] = useState(Number(batch.plannedQuantity));
   const [restoreMaterials, setRestoreMaterials] = useState(true);
 
   // Get status badge configuration - neutral colors only
@@ -72,9 +63,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
         icon: XCircle,
       },
     };
-    return (
-      configs[status as keyof typeof configs] || configs.PLANNED
-    );
+    return configs[status as keyof typeof configs] || configs.PLANNED;
   };
 
   const statusConfig = getStatusConfig(batch.status);
@@ -88,15 +77,25 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
         data: { actualQuantity },
       });
 
-      sonnerToast.success("Production Completed", {
-        description: `Batch ${batch.batchNumber} has been completed successfully`,
-      });
+      sonnerToast.success(
+        t("management.recipeProduction.messages.completeSuccess") || "Production Completed",
+        {
+          description:
+            t("management.recipeProduction.messages.completeSuccessDescription")?.replace(
+              "{batchNumber}",
+              batch.batchNumber
+            ) || `Batch ${batch.batchNumber} has been completed successfully`,
+        }
+      );
 
       setCompleteDialogOpen(false);
     } catch (error) {
-      sonnerToast.error("Error", {
+      sonnerToast.error(t("common.error") || "Error", {
         description:
-          error instanceof Error ? error.message : "Failed to complete production",
+          error instanceof Error
+            ? error.message
+            : t("management.recipeProduction.messages.completeError") ||
+              "Failed to complete production",
       });
     }
   };
@@ -109,15 +108,31 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
         data: { restoreMaterials },
       });
 
-      sonnerToast.success("Production Cancelled", {
-        description: `Batch ${batch.batchNumber} has been cancelled${restoreMaterials ? " and materials restored" : ""}`,
-      });
+      sonnerToast.success(
+        t("management.recipeProduction.messages.cancelSuccess") || "Production Cancelled",
+        {
+          description:
+            t("management.recipeProduction.messages.cancelSuccessDescription")
+              ?.replace("{batchNumber}", batch.batchNumber)
+              ?.replace(
+                "{materialsRestored}",
+                restoreMaterials
+                  ? t("management.recipeProduction.messages.materialsRestored") ||
+                      " and materials restored"
+                  : ""
+              ) ||
+            `Batch ${batch.batchNumber} has been cancelled${restoreMaterials ? " and materials restored" : ""}`,
+        }
+      );
 
       setCancelDialogOpen(false);
     } catch (error) {
-      sonnerToast.error("Error", {
+      sonnerToast.error(t("common.error") || "Error", {
         description:
-          error instanceof Error ? error.message : "Failed to cancel production",
+          error instanceof Error
+            ? error.message
+            : t("management.recipeProduction.messages.cancelError") ||
+              "Failed to cancel production",
       });
     }
   };
@@ -131,9 +146,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="font-medium">{batch.batchNumber}</p>
-                <p className="text-muted-foreground text-sm">
-                  {batch.product.name}
-                </p>
+                <p className="text-muted-foreground text-sm">{batch.product.name}</p>
                 <p className="text-muted-foreground text-xs">
                   {t("management.recipeProduction.scheduled") || "Scheduled"}:{" "}
                   {format(new Date(batch.scheduledDate), "MMM d, yyyy")}
@@ -169,10 +182,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
             {/* Notes */}
             {batch.notes && (
               <div className="text-muted-foreground text-sm">
-                <span className="font-medium">
-                  {t("common.notes") || "Notes"}:
-                </span>{" "}
-                {batch.notes}
+                <span className="font-medium">{t("common.notes") || "Notes"}:</span> {batch.notes}
               </div>
             )}
 
@@ -208,10 +218,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
       {/* Complete Production Dialog */}
       <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
         <FormDialogLayout
-          title={
-            t("management.recipeProduction.dialogs.complete.title") ||
-            "Complete Production"
-          }
+          title={t("management.recipeProduction.dialogs.complete.title") || "Complete Production"}
           description={
             t("management.recipeProduction.dialogs.complete.description") ||
             "Enter the actual quantity produced for this batch"
@@ -230,7 +237,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
                 disabled={completeProduction.isPending || actualQuantity <= 0}
               >
                 {completeProduction.isPending && (
-                  <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                  <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
                 )}
                 {t("common.actions.complete") || "Complete"}
               </Button>
@@ -240,9 +247,8 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="actualQuantity">
-                {t("management.recipeProduction.actualQuantity") ||
-                  "Actual Quantity"}{" "}
-                ({batch.unit})
+                {t("management.recipeProduction.actualQuantity") || "Actual Quantity"} ({batch.unit}
+                )
               </Label>
               <Input
                 id="actualQuantity"
@@ -265,10 +271,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
       {/* Cancel Production Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <FormDialogLayout
-          title={
-            t("management.recipeProduction.dialogs.cancel.title") ||
-            "Cancel Production"
-          }
+          title={t("management.recipeProduction.dialogs.cancel.title") || "Cancel Production"}
           description={
             t("management.recipeProduction.dialogs.cancel.description") ||
             "Are you sure you want to cancel this production batch?"
@@ -288,7 +291,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
                 disabled={cancelProduction.isPending}
               >
                 {cancelProduction.isPending && (
-                  <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                  <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
                 )}
                 {t("common.actions.cancelBatch") || "Cancel Batch"}
               </Button>
@@ -300,9 +303,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
               <Checkbox
                 id="restoreMaterials"
                 checked={restoreMaterials}
-                onCheckedChange={(checked) =>
-                  setRestoreMaterials(checked as boolean)
-                }
+                onCheckedChange={(checked) => setRestoreMaterials(checked as boolean)}
               />
               <Label htmlFor="restoreMaterials" className="cursor-pointer">
                 {t("management.recipeProduction.restoreMaterials") ||

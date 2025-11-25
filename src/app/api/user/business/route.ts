@@ -1,3 +1,10 @@
+/**
+ * User Business API Routes
+ *
+ * Handles business CRUD operations for authenticated users.
+ * Each user can have one business which can contain multiple stores.
+ */
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -10,6 +17,10 @@ import { ZodError } from "zod";
  * GET /api/user/business
  *
  * Get current user's business.
+ *
+ * @route GET /api/user/business
+ * @access Private (requires authentication)
+ * @returns {ApiResponse<Business>} User's business data
  */
 export async function GET() {
   try {
@@ -21,7 +32,6 @@ export async function GET() {
       });
     }
 
-    // Get business via service
     const business = await businessService.getBusinessByUserId(session.user.id);
 
     if (!business) {
@@ -44,6 +54,12 @@ export async function GET() {
  * POST /api/user/business
  *
  * Create a new business for the current user.
+ * Returns 409 Conflict if user already has a business.
+ *
+ * @route POST /api/user/business
+ * @access Private (requires authentication)
+ * @body {CreateBusinessInput} Business creation data
+ * @returns {ApiResponse<Business>} Created business data
  */
 export async function POST(request: Request) {
   try {
@@ -55,16 +71,13 @@ export async function POST(request: Request) {
       });
     }
 
-    // Parse and validate request body
     const body = await request.json();
     const input = createBusinessSchema.parse(body);
 
-    // Create business via service
     const business = await businessService.createBusiness(session.user.id, input);
 
     return NextResponse.json(createSuccessResponse(business), { status: 201 });
   } catch (error) {
-    // Handle validation errors
     if (error instanceof ZodError) {
       return NextResponse.json(
         createErrorResponse(
@@ -79,7 +92,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle business logic errors
     if (error instanceof Error) {
       if (error.message === "User already has a business") {
         return NextResponse.json(
@@ -102,6 +114,12 @@ export async function POST(request: Request) {
  * PATCH /api/user/business
  *
  * Update or create (upsert) business for the current user.
+ * Creates business if it doesn't exist, updates if it does.
+ *
+ * @route PATCH /api/user/business
+ * @access Private (requires authentication)
+ * @body {UpdateBusinessInput} Business update data
+ * @returns {ApiResponse<Business>} Updated or created business data
  */
 export async function PATCH(request: Request) {
   try {
@@ -113,16 +131,13 @@ export async function PATCH(request: Request) {
       });
     }
 
-    // Parse and validate request body
     const body = await request.json();
     const input = updateBusinessSchema.parse(body);
 
-    // Upsert business via service
     const business = await businessService.upsertBusiness(session.user.id, input);
 
     return NextResponse.json(createSuccessResponse(business));
   } catch (error) {
-    // Handle validation errors
     if (error instanceof ZodError) {
       return NextResponse.json(
         createErrorResponse(

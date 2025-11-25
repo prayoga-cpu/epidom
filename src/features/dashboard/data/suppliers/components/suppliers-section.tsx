@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ import {
 import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { isErrorWithCode, isSubscriptionError } from "@/lib/utils/types";
 import { Lock, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -59,7 +61,11 @@ import { SubscriptionLockedState } from "@/features/dashboard/shared/components/
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
 
-export function SuppliersSection() {
+interface SuppliersSectionProps {
+  initialSuppliers?: SupplierWithRelations[];
+}
+
+export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {}) {
   const { t } = useI18n();
   const router = useRouter();
   const params = useParams();
@@ -76,8 +82,16 @@ export function SuppliersSection() {
     take: 20,
   });
 
+  // Debounce search input to reduce API calls (300ms delay)
+  const debouncedSearch = useDebounce(filters.search, 300);
+
   // API hooks
-  const { data, isLoading, error, refetch } = useSuppliers(storeId, filters);
+  // Use debouncedSearch instead of filters.search for API calls
+  // Use initial data from Server Component with real-time updates
+  const { data, isLoading, error, refetch } = useSuppliers(storeId, {
+    ...filters,
+    search: debouncedSearch || undefined,
+  });
   const deleteSupplier = useDeleteSupplier(storeId);
   const bulkDeleteSuppliers = useBulkDeleteSuppliers(storeId);
   const exportSuppliers = useExportSuppliers();
@@ -192,14 +206,9 @@ export function SuppliersSection() {
   }
 
   // Show upgrade prompt if no access (from hook or from API error 403)
-  /**
-   * Type assertion needed because error type is unknown and may have code or status properties
-   * Actual type: Error with optional code and status properties
-   * TODO: Use proper error type guard or create error type definitions
-   */
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
-    (error && ((error as any).code === "SUBSCRIPTION_FEATURE_LOCKED" || (error as any).status === 403));
+    (error && (isSubscriptionError(error) || (typeof error === "object" && error !== null && ("code" in error && error.code === "SUBSCRIPTION_FEATURE_LOCKED") || ("status" in error && error.status === 403))));
 
   if (isSubscriptionLocked) {
     return (

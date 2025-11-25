@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { subscriptionService } from "@/lib/services";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
 
 /**
  * POST /api/subscriptions/checkout
@@ -18,11 +21,34 @@ import { subscriptionService } from "@/lib/services";
  * - url: Redirect URL to Stripe Checkout
  */
 export async function POST(request: NextRequest) {
+  let session: Session | null = null;
   try {
+    // Rate limiting check
+    const rateLimitResult = await rateLimitMiddleware(request, "/api/subscriptions/checkout");
+    if (rateLimitResult) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.RATE_LIMIT_EXCEEDED,
+          `Rate limit exceeded. Please try again in ${rateLimitResult.reset} seconds.`
+        ),
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": rateLimitResult.reset.toString(),
+          },
+        }
+      );
+    }
+
     // Verify session
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized. Please log in first." }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized. Please log in first."),
+        { status: 401 }
+      );
     }
 
     const userId = session.user.id;
@@ -33,7 +59,10 @@ export async function POST(request: NextRequest) {
 
     // Validate plan
     if (!plan || (plan !== "STARTER" && plan !== "PRO")) {
-      return NextResponse.json({ error: "Invalid plan. Must be STARTER or PRO" }, { status: 400 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "Invalid plan. Must be STARTER or PRO"),
+        { status: 400 }
+      );
     }
 
     // Get origin for building absolute URLs
@@ -57,30 +86,18 @@ export async function POST(request: NextRequest) {
       finalCancelUrl
     );
 
-    return NextResponse.json({
-      sessionId: checkoutSession.id,
-      url: checkoutSession.url,
-      message: "Checkout session created successfully",
-    });
-  } catch (error: any) {
-    // Handle specific error messages
-    if (error.message.includes("already have the")) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 409 } // Conflict status
-      );
-    }
-
-    if (error.message.includes("Epidom owner")) {
-      return NextResponse.json(
-        { error: "Payment system is not configured yet. Please contact support." },
-        { status: 503 }
-      );
-    }
-
     return NextResponse.json(
-      { error: error.message || "Failed to create checkout session" },
-      { status: 500 }
+      createSuccessResponse({
+        sessionId: checkoutSession.id,
+        url: checkoutSession.url,
+        message: "Checkout session created successfully",
+      }),
+      { status: 201 }
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/subscriptions/checkout",
+      context: { userId: session?.user?.id },
+    });
   }
 }

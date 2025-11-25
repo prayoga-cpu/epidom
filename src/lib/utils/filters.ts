@@ -3,6 +3,7 @@
  */
 
 import { PaginationParams } from "@/types/entities";
+import { isDate } from "@/lib/utils/types";
 
 // ============================================================================
 // FILTER BUILDING
@@ -245,21 +246,6 @@ export function buildSearchFilter(searchTerm: string, fields: string[]): Record<
   };
 }
 
-/**
- * Debounce function for search inputs
- */
-export function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  delay: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout;
-
-  return function debounced(...args: Parameters<T>) {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-}
-
 // ============================================================================
 // SORTING HELPERS
 // ============================================================================
@@ -350,12 +336,8 @@ export function sortByField<T extends Record<string, any>>(
       return order === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     }
 
-    /**
-     * Type assertion needed because TypeScript cannot narrow union types for instanceof check
-     * Actual type: Date | unknown
-     * TODO: Use type guard function instead of instanceof check
-     */
-    if ((aVal as any) instanceof Date && (bVal as any) instanceof Date) {
+    // Use type guard for Date comparison
+    if (isDate(aVal) && isDate(bVal)) {
       return order === "asc" ? aVal.getTime() - bVal.getTime() : bVal.getTime() - aVal.getTime();
     }
 

@@ -1,10 +1,10 @@
 export const id = {
-    common: {
-      brand: "EPIDOM",
-      item: "Item",
-      ingredient: "Bahan",
-      uncategorized: "Tidak Dikategorikan",
-      stockStatus: {
+  common: {
+    brand: "EPIDOM",
+    item: "Item",
+    ingredient: "Bahan",
+    uncategorized: "Tidak Dikategorikan",
+    stockStatus: {
       outOfStock: "Habis",
       lowStock: "Stok Rendah",
       inStock: "Tersedia",
@@ -135,6 +135,7 @@ export const id = {
       retry: "Coba Lagi",
       select: "Pilih",
       apply: "Terapkan",
+      complete: "Selesaikan",
     },
     loading: "Memuat...",
     goHome: "Kembali ke Beranda",
@@ -184,15 +185,13 @@ export const id = {
       data: "Data",
     },
     dashboard: {
-      subtitle:
-        "Ringkasan Dashboard Komprehensif",
+      subtitle: "Ringkasan Dashboard Komprehensif",
       description:
         "Dengan dashboard komprehensifnya, Epidom memberikan gambaran instan dan global tentang status inventori dan aktivitas. Pengguna dapat dengan mudah meninjau pesanan pembelian yang tertunda, bahan kritis, dan indikator kinerja keseluruhan. Pendekatan berbasis data ini mendukung pengambilan keputusan yang lebih cepat, lebih cerdas, dan lebih akurat bagi para manajer.",
     },
     management: {
       title: "Modul Fleksibel dan Manajemen Izin Lanjutan",
-      subtitle:
-        "Dapat Disesuaikan dengan Kebutuhan Organisasi Anda",
+      subtitle: "Dapat Disesuaikan dengan Kebutuhan Organisasi Anda",
       description:
         "Terakhir, Epidom beradaptasi dengan kebutuhan setiap organisasi melalui modul fleksibel dan manajemen izin lanjutan. Platform ini mempromosikan kolaborasi antar tim, memperkuat komunikasi internal, dan terintegrasi dengan mulus ke dalam alur kerja yang ada. Epidom dengan demikian merupakan alat penting bagi setiap perusahaan yang ingin memprofesionalkan dan mengoptimalkan manajemen bahan baku.",
     },
@@ -488,7 +487,8 @@ export const id = {
       termsOfService: "Syarat Layanan",
       and: "dan",
       refundPolicy: "Kebijakan Pengembalian Dana",
-      agreeToTermsError: "Silakan setujui Syarat Layanan dan Kebijakan Pengembalian Dana untuk melanjutkan.",
+      agreeToTermsError:
+        "Silakan setujui Syarat Layanan dan Kebijakan Pengembalian Dana untuk melanjutkan.",
       redirecting: "Mengalihkan ke checkout...",
       signUpLogin: "Daftar / Masuk untuk Melanjutkan",
       proceedToCheckout: "Lanjutkan ke Checkout Aman",
@@ -994,7 +994,8 @@ export const id = {
       pageTitle: "Bahan Mentah",
       addTitle: "Tambah Bahan Mentah Baru",
       addButton: "Tambah Bahan Mentah",
-      addDescription: "Tambahkan bahan mentah baru ke inventaris Anda. Isi semua kolom yang wajib diisi.",
+      addDescription:
+        "Tambahkan bahan mentah baru ke inventaris Anda. Isi semua kolom yang wajib diisi.",
       editTitle: "Edit Bahan Mentah",
       editDescription: "Perbarui informasi bahan mentah",
       detailsTitle: "Detail Bahan Mentah",
@@ -1014,7 +1015,8 @@ export const id = {
         supplier: "Pemasok",
         selectSupplier: "Pilih pemasok",
         addSupplier: "Tambah Pemasok",
-        noSuppliersYet: "Belum ada pemasok yang ditambahkan. Klik \"Tambah Pemasok\" untuk menghubungkan pemasok ke bahan mentah ini.",
+        noSuppliersYet:
+          'Belum ada pemasok yang ditambahkan. Klik "Tambah Pemasok" untuk menghubungkan pemasok ke bahan mentah ini.',
         quantity: "Jumlah",
         unit: "Satuan",
         selectUnit: "Satuan",
@@ -1109,7 +1111,8 @@ export const id = {
       },
       deleteConfirm: {
         title: "Hapus Bahan",
-        description: "Apakah Anda yakin ingin menghapus \"{name}\"? Tindakan ini tidak dapat dibatalkan.",
+        description:
+          'Apakah Anda yakin ingin menghapus "{name}"? Tindakan ini tidak dapat dibatalkan.',
       },
     },
 
@@ -1292,7 +1295,8 @@ export const id = {
       // Delete confirmation
       deleteConfirm: {
         title: "Hapus Resep",
-        description: 'Apakah Anda yakin ingin menghapus "{name}"? Tindakan ini tidak dapat dibatalkan.',
+        description:
+          'Apakah Anda yakin ingin menghapus "{name}"? Tindakan ini tidak dapat dibatalkan.',
       },
 
       // Details section
@@ -1334,6 +1338,9 @@ export const id = {
     // Products section
     products: {
       pageTitle: "Produk",
+      limitBadge: "produk",
+      limitTooltip:
+        "Anda telah mencapai batas produk paket Anda ({current}/{limit}). Upgrade ke Pro untuk produk tak terbatas.",
       addTitle: "Tambah Produk Baru",
       addButton: "Tambah Produk",
       editTitle: "Edit Produk",
@@ -1365,7 +1372,8 @@ export const id = {
         selectRecipes: "Pilih resep...",
         noRecipe: "Tanpa resep",
         recipeHint: "Hubungkan ke resep produksi",
-        recipeHintMultiple: "Produk dapat diproduksi dengan beberapa resep (mis: 10 baguette atau 50 baguette)",
+        recipeHintMultiple:
+          "Produk dapat diproduksi dengan beberapa resep (mis: 10 baguette atau 50 baguette)",
         addNewRecipe: "Tambah Resep Baru",
         selectedRecipes: "Resep Terpilih",
         noRecipesAvailable: "Tidak ada resep tersedia",
@@ -2109,9 +2117,14 @@ export const id = {
     movementHistory: "Riwayat Pergerakan",
   },
   management: {
+    deliveries: "Pengiriman",
+    production: "Produksi",
+    history: "Riwayat",
+    stock: "Stok",
     // Delivery Tab
     delivery: {
       title: "Pengiriman Supplier",
+      description: "Kelola pengiriman supplier dan lacak pengiriman",
       searchPlaceholder: "Cari berdasarkan referensi, supplier, atau catatan...",
       filters: {
         status: "Status",
@@ -2240,7 +2253,8 @@ export const id = {
           selectExpectedDate: "Pilih tanggal yang diharapkan",
           items: "Item",
           addItem: "Tambah Item",
-          noItemsYet: 'Belum ada item ditambahkan. Klik "Tambah Item" untuk menambahkan bahan mentah.',
+          noItemsYet:
+            'Belum ada item ditambahkan. Klik "Tambah Item" untuk menambahkan bahan mentah.',
           material: "Bahan Mentah",
           selectMaterial: "Pilih bahan mentah",
           quantity: "Jumlah",
@@ -2260,8 +2274,10 @@ export const id = {
             supplierRequired: "Harap pilih supplier",
             expectedDateRequired: "Tanggal yang diharapkan wajib diisi",
             atLeastOneItem: "Harap tambahkan setidaknya satu item",
-            itemsMustHaveMaterial: "Semua item harus memiliki bahan mentah dan jumlah lebih besar dari 0",
-            addModeNotImplemented: "Mode tambah belum diimplementasikan. Pesanan harus dibuat dari peringatan.",
+            itemsMustHaveMaterial:
+              "Semua item harus memiliki bahan mentah dan jumlah lebih besar dari 0",
+            addModeNotImplemented:
+              "Mode tambah belum diimplementasikan. Pesanan harus dibuat dari peringatan.",
           },
           toasts: {
             created: {
@@ -2320,9 +2336,11 @@ export const id = {
       importCSVDescription: "Fitur impor CSV akan segera hadir",
       importCSVDialog: {
         title: "Impor Stok dari CSV",
-        description: "Unggah file CSV untuk memperbarui level stok. CSV harus memiliki kolom: SKU, Tipe (material/product), Stok Saat Ini",
+        description:
+          "Unggah file CSV untuk memperbarui level stok. CSV harus memiliki kolom: SKU, Tipe (material/product), Stok Saat Ini",
         formatTitle: "Format CSV",
-        formatDescription: "File CSV Anda harus memiliki kolom berikut: SKU, Tipe (material atau product), Stok Saat Ini",
+        formatDescription:
+          "File CSV Anda harus memiliki kolom berikut: SKU, Tipe (material atau product), Stok Saat Ini",
         selectFile: "Klik untuk memilih file CSV",
         fileHint: "Hanya file CSV",
         invalidFile: "Harap pilih file CSV",
@@ -2413,6 +2431,7 @@ export const id = {
     },
     // Recipe Production Tab
     recipeProduction: {
+      title: "Produksi Resep",
       description: "Memulai batch produksi baru dan memantau produksi aktif",
       availableRecipes: "Resep Tersedia",
       selectRecipeToStart: "Pilih resep untuk memulai produksi",
@@ -2505,6 +2524,7 @@ export const id = {
 
     // Production History Tab
     productionHistory: {
+      title: "Riwayat Produksi",
       description: "Lihat dan analisis batch produksi yang telah selesai",
       filters: "Filter",
       filtersDescription: "Filter batch berdasarkan status, resep, atau rentang tanggal",
@@ -2821,18 +2841,22 @@ export const id = {
     back: "Kembali",
     save: "Simpan Preferensi",
     settingsTitle: "Preferensi Cookie",
-    settingsDescription: "Pilih cookie yang ingin Anda izinkan. Cookie penting selalu diaktifkan karena diperlukan agar situs web berfungsi.",
+    settingsDescription:
+      "Pilih cookie yang ingin Anda izinkan. Cookie penting selalu diaktifkan karena diperlukan agar situs web berfungsi.",
     essential: {
       title: "Cookie Penting",
-      description: "Diperlukan agar situs web berfungsi dengan baik. Cookie ini tidak dapat dinonaktifkan.",
+      description:
+        "Diperlukan agar situs web berfungsi dengan baik. Cookie ini tidak dapat dinonaktifkan.",
     },
     analytics: {
       title: "Cookie Analitik",
-      description: "Jika diterima: Kami melacak page views dan perilaku pengguna untuk meningkatkan website. Jika ditolak: Tidak ada data tracking yang dikumpulkan.",
+      description:
+        "Jika diterima: Kami melacak page views dan perilaku pengguna untuk meningkatkan website. Jika ditolak: Tidak ada data tracking yang dikumpulkan.",
     },
     marketing: {
       title: "Cookie Pemasaran",
-      description: "Jika diterima: Kami melacak conversions dan events untuk keperluan marketing. Jika ditolak: Tidak ada tracking marketing yang dilakukan.",
+      description:
+        "Jika diterima: Kami melacak conversions dan events untuk keperluan marketing. Jika ditolak: Tidak ada tracking marketing yang dilakukan.",
     },
   },
   billing: {
@@ -2854,8 +2878,10 @@ export const id = {
     currentPlanLabel: "Paket Saat Ini",
     availablePlans: "Paket yang Tersedia",
     comparePlans: "Bandingkan fitur dan tingkatkan kapan saja",
-    subscriptionWillCancel: "Langganan Anda akan dibatalkan pada {date}. Anda akan tetap memiliki akses hingga saat itu.",
-    confirmCancel: "Apakah Anda yakin ingin membatalkan langganan Anda? Anda akan tetap memiliki akses hingga akhir periode penagihan Anda.",
+    subscriptionWillCancel:
+      "Langganan Anda akan dibatalkan pada {date}. Anda akan tetap memiliki akses hingga saat itu.",
+    confirmCancel:
+      "Apakah Anda yakin ingin membatalkan langganan Anda? Anda akan tetap memiliki akses hingga akhir periode penagihan Anda.",
     subscriptionActivated: "Langganan berhasil diaktifkan! Selamat datang di paket {plan}.",
     subscriptionRequired: "Langganan aktif diperlukan untuk mengakses dasbor.",
     upgradePro: "Tingkatkan ke Pro untuk menambahkan lebih banyak toko.",
@@ -2873,7 +2899,8 @@ export const id = {
     description: "Terima 80% pendapatan langganan melalui Stripe Connect",
     connected: "Terhubung",
     setupComplete: "Pengaturan pembayaran selesai",
-    setupCompleteDesc: "Anda sudah siap menerima pembayaran. 80% dari semua pendapatan langganan akan secara otomatis ditransfer ke akun Stripe Anda.",
+    setupCompleteDesc:
+      "Anda sudah siap menerima pembayaran. 80% dari semua pendapatan langganan akan secara otomatis ditransfer ke akun Stripe Anda.",
     accountStatus: "Status Akun",
     charges: "Tagihan",
     payouts: "Pembayaran",
@@ -2881,12 +2908,14 @@ export const id = {
     enabled: "Diaktifkan",
     disabled: "Dinonaktifkan",
     viewEarnings: "Lihat Pendapatan di Dasbor Stripe",
-    completeOnboarding: "Selesaikan onboarding Stripe Connect untuk mulai menerima 80% pembayaran langganan. Ini diperlukan agar sistem pembayaran berfungsi.",
+    completeOnboarding:
+      "Selesaikan onboarding Stripe Connect untuk mulai menerima 80% pembayaran langganan. Ini diperlukan agar sistem pembayaran berfungsi.",
     whatYouNeed: "Apa yang Anda perlukan:",
     needBusiness: "Informasi bisnis (nama, alamat, ID pajak)",
     needBank: "Detail rekening bank untuk pembayaran",
     needIdentity: "Verifikasi identitas (mungkin memerlukan dokumen)",
-    processTime: "Proses ini ditangani dengan aman oleh Stripe dan biasanya memakan waktu 5-10 menit.",
+    processTime:
+      "Proses ini ditangani dengan aman oleh Stripe dan biasanya memakan waktu 5-10 menit.",
     completeSetup: "Selesaikan Pengaturan Pembayaran",
     redirectingToStripe: "Mengalihkan ke Stripe...",
     secureOnboarding: "Anda akan dialihkan ke halaman onboarding aman Stripe",
@@ -2922,7 +2951,8 @@ export const id = {
       item1: "Membayar biaya berlangganan seperti yang ditentukan dalam paket yang Anda pilih",
       item2: "Pembaruan otomatis berlangganan Anda kecuali dibatalkan",
       item3: "Pemrosesan pembayaran melalui gateway pembayaran aman kami",
-      item4: "Kepatuhan terhadap kebijakan pengembalian dana kami seperti yang diuraikan secara terpisah",
+      item4:
+        "Kepatuhan terhadap kebijakan pengembalian dana kami seperti yang diuraikan secara terpisah",
     },
     section5: {
       title: "5. Tanggung Jawab Pengguna",
@@ -2970,16 +3000,17 @@ export const id = {
       "Di EPIDOM, kami berusaha memberikan layanan yang sangat baik. Kebijakan Pengembalian Dana ini menguraikan syarat dan ketentuan untuk pengembalian dana dan pembatalan layanan berlangganan kami.",
     section1: {
       title: "1. Kelayakan Pengembalian Dana",
-      content:
-        "Anda mungkin memenuhi syarat untuk pengembalian dana dalam keadaan berikut:",
+      content: "Anda mungkin memenuhi syarat untuk pengembalian dana dalam keadaan berikut:",
       item1: "Anda membatalkan berlangganan dalam 14 hari sejak pembelian awal",
-      item2: "Anda mengalami masalah teknis yang mencegah Anda menggunakan layanan, dan kami tidak dapat menyelesaikannya",
+      item2:
+        "Anda mengalami masalah teknis yang mencegah Anda menggunakan layanan, dan kami tidak dapat menyelesaikannya",
       item3: "Anda ditagih secara tidak benar karena kesalahan penagihan dari pihak kami",
     },
     section2: {
       title: "2. Proses Pengembalian Dana",
       content: "Untuk meminta pengembalian dana, silakan ikuti langkah-langkah berikut:",
-      step1: "Hubungi tim dukungan kami di support@epidom.com dengan permintaan pengembalian dana Anda",
+      step1:
+        "Hubungi tim dukungan kami di support@epidom.com dengan permintaan pengembalian dana Anda",
       step2: "Berikan email akun dan detail berlangganan Anda",
       step3: "Jelaskan alasan permintaan pengembalian dana Anda",
       step4: "Kami akan meninjau permintaan Anda dan merespons dalam 5-7 hari kerja",

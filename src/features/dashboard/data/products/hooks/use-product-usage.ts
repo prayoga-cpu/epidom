@@ -24,7 +24,7 @@ export interface ProductUsageResponse {
  * @param storeId - Store ID to check product usage for
  * @returns Product usage data with loading and error states
  */
-export function useProductUsage(storeId: string) {
+export function useProductUsage(storeId: string, enabled: boolean = true) {
   return useQuery<ProductUsageResponse>({
     queryKey: ["product-usage", storeId],
     queryFn: async () => {
@@ -43,12 +43,14 @@ export function useProductUsage(storeId: string) {
       }
 
       const data = await response.json();
-      return data;
+      // API response is wrapped in { success: true, data: {...} }
+      return data.success === true ? data.data : data;
     },
+    enabled: !!storeId && enabled,
     retry: false,
-    staleTime: 30000, // Cache for 30 seconds
-    refetchOnWindowFocus: false, // Prevent refetch on window focus
-    refetchOnMount: false, // Prevent refetch on mount if data exists
+    staleTime: 0, // Always fetch fresh - critical for accurate limit display
+    refetchOnWindowFocus: true, // Refetch on window focus to get latest count
+    refetchOnMount: "always", // Always fetch fresh data on mount
   });
 }
 

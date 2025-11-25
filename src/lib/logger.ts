@@ -1,3 +1,5 @@
+import { getRequestId } from "./request-context";
+
 /**
  * Logger Utility
  *
@@ -6,8 +8,6 @@
  * - Production: logs in JSON format for log aggregation services
  * - Supports request ID tracking for distributed tracing
  */
-
-import { getRequestId } from "./utils/request-id";
 
 interface LogContext {
   [key: string]: unknown;
@@ -49,15 +49,10 @@ function formatLogEntry(entry: LogEntry): string {
 }
 
 /**
- * Get current request ID from AsyncLocalStorage or generate new one
+ * Get current request ID from global context (type-safe)
  */
 function getCurrentRequestId(): string | undefined {
-  // Try to get from AsyncLocalStorage if available
-  // This would need to be set up in middleware or API routes
-  if (typeof global !== "undefined" && (global as any).requestId) {
-    return (global as any).requestId;
-  }
-  return undefined;
+  return getRequestId();
 }
 
 export const logger = {

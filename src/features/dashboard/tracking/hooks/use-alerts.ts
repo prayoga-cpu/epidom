@@ -22,7 +22,7 @@ export interface Alert {
   createdAt: string;
 }
 
-interface AlertsResponse {
+export interface AlertsResponse {
   alerts: Alert[];
 }
 
@@ -36,7 +36,7 @@ export const alertKeys = {
  * Hook to fetch alerts for a store
  * Real-time enabled: Critical data - polls every 15 seconds when tab is active
  */
-export function useAlerts(storeId: string) {
+export function useAlerts(storeId: string, initialData?: AlertsResponse) {
   return useQuery<AlertsResponse>({
     queryKey: alertKeys.lists(storeId),
     queryFn: async () => {
@@ -47,6 +47,7 @@ export function useAlerts(storeId: string) {
       return response.json();
     },
     enabled: !!storeId,
+    initialData, // ✅ Accept initial data from Server Component
     // Real-time configuration: Critical data - faster polling
     staleTime: 10 * 1000, // 10 seconds - data considered fresh
     refetchInterval: 15 * 1000, // Poll every 15 seconds (critical data)

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { subscriptionService } from "@/lib/services";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 
 /**
  * GET /api/stores/[id]/supplier-orders/[orderId]
@@ -14,10 +16,14 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string; orderId: string }> }
 ) {
+  let session: Session | null = null;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -38,19 +44,8 @@ export async function GET(
 
     const { id: storeId, orderId } = await params;
 
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     const order = await prisma.supplierOrder.findFirst({
       where: {
@@ -68,12 +63,19 @@ export async function GET(
     });
 
     if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"),
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ order });
+    return NextResponse.json(createSuccessResponse({ order }), { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const { id: storeId, orderId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/supplier-orders/[orderId]",
+      context: { storeId, orderId, userId: session?.user?.id },
+    });
   }
 }
 
@@ -85,10 +87,14 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string; orderId: string }> }
 ) {
+  let session: Session | null = null;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -109,19 +115,8 @@ export async function PATCH(
 
     const { id: storeId, orderId } = await params;
 
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Check if order exists
     const existingOrder = await prisma.supplierOrder.findFirst({
@@ -139,7 +134,10 @@ export async function PATCH(
     });
 
     if (!existingOrder) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"),
+        { status: 404 }
+      );
     }
 
     const body = await request.json();
@@ -210,9 +208,13 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ order: updatedOrder });
+    return NextResponse.json(createSuccessResponse({ order: updatedOrder }), { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const { id: storeId, orderId } = await params;
+    return handleApiError(error, {
+      endpoint: "PATCH /api/stores/[id]/supplier-orders/[orderId]",
+      context: { storeId, orderId, userId: session?.user?.id },
+    });
   }
 }
 
@@ -224,10 +226,14 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string; orderId: string }> }
 ) {
+  let session: Session | null = null;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -248,19 +254,8 @@ export async function DELETE(
 
     const { id: storeId, orderId } = await params;
 
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     const order = await prisma.supplierOrder.findFirst({
       where: {
@@ -270,12 +265,18 @@ export async function DELETE(
     });
 
     if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"),
+        { status: 404 }
+      );
     }
 
     // Don't allow deletion of received orders
     if (order.status === "RECEIVED") {
-      return NextResponse.json({ error: "Cannot delete received orders" }, { status: 400 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.BUSINESS_LOGIC_ERROR, "Cannot delete received orders"),
+        { status: 400 }
+      );
     }
 
     // Mark as cancelled instead of deleting
@@ -286,8 +287,12 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(createSuccessResponse({ success: true }), { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const { id: storeId, orderId } = await params;
+    return handleApiError(error, {
+      endpoint: "DELETE /api/stores/[id]/supplier-orders/[orderId]",
+      context: { storeId, orderId, userId: session?.user?.id },
+    });
   }
 }

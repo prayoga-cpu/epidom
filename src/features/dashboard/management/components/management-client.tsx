@@ -72,21 +72,32 @@ function convertOrderToDelivery(order: SupplierOrder): SupplierDelivery {
   };
 }
 
-export function ManagementView() {
+interface ManagementClientProps {
+  initialSupplierOrders?: SupplierOrder[];
+  storeId: string;
+}
+
+export function ManagementClient({ initialSupplierOrders, storeId }: ManagementClientProps) {
   const { t } = useI18n();
   const params = useParams();
-  const storeId = params?.storeId as string;
 
-  // Fetch supplier orders
-  const { data, isLoading } = useSupplierOrders(storeId);
+  // Fetch supplier orders with initial data from Server Component
+  const { data, isLoading } = useSupplierOrders(
+    storeId,
+    initialSupplierOrders
+      ? {
+          orders: initialSupplierOrders,
+        }
+      : undefined
+  );
 
   // Filter for deliveries (PLACED orders waiting to be received) and convert to old format
   const deliveries = useMemo(() => {
-    if (!data?.orders) return [];
-    return data.orders
+    const orders = data?.orders || initialSupplierOrders || [];
+    return orders
       .filter((order) => order.status === "PLACED" || order.status === "RECEIVED")
       .map(convertOrderToDelivery);
-  }, [data]);
+  }, [data, initialSupplierOrders]);
 
   const [selectedDelivery, setSelectedDelivery] = useState<SupplierDelivery | null>(null);
   const [updateStatusDialogOpen, setUpdateStatusDialogOpen] = useState(false);
@@ -103,112 +114,106 @@ export function ManagementView() {
     }
   }, [deliveries, selectedDelivery]);
 
-  // Handler for updating status
+  // Dialog handlers
   const handleUpdateStatus = (delivery: SupplierDelivery) => {
     setDeliveryToUpdate(delivery);
     setUpdateStatusDialogOpen(true);
   };
 
-  // Handler for editing delivery
-  const handleEditDelivery = (delivery: SupplierDelivery) => {
-    setDeliveryToEdit(delivery);
-    setEditDialogOpen(true);
-  };
-
-  // Handler for printing delivery
-  const handlePrintDelivery = (delivery: SupplierDelivery) => {
+  const handlePrint = (delivery: SupplierDelivery) => {
     setDeliveryToPrint(delivery);
     setPrintDialogOpen(true);
   };
 
-  // Handler for deleting delivery (placeholder for now)
-  const handleDeleteDelivery = (deliveryId: string) => {
-    // TODO: Implement delete confirmation
+  const handleEdit = (delivery: SupplierDelivery) => {
+    setDeliveryToEdit(delivery);
+    setEditDialogOpen(true);
   };
 
   return (
-    <section className="min-h-[calc(100vh-150px)]">
-      <Tabs defaultValue="delivery" className="grid w-full gap-6">
-        <TabsList className="bg-muted/50 grid h-auto w-full max-w-full grid-cols-2 gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm md:inline-flex md:h-9 md:max-w-none md:grid-cols-none md:justify-start md:gap-0 md:p-1.5">
-          <TabsTrigger
-            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-            value="delivery"
-          >
-            {t("tabs.supplierDeliveries")}
-          </TabsTrigger>
-          <TabsTrigger
-            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-            value="recipe"
-          >
-            {t("tabs.recipeProduction")}
-          </TabsTrigger>
-          <TabsTrigger
-            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-            value="history"
-          >
-            {t("tabs.productionHistory")}
-          </TabsTrigger>
-          <TabsTrigger
-            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-            value="stock"
-          >
-            {t("tabs.editStock")}
-          </TabsTrigger>
+    <div className="min-h-[calc(100vh-150px)] space-y-4">
+      <Tabs defaultValue="deliveries" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="deliveries">{t("management.deliveries")}</TabsTrigger>
+          <TabsTrigger value="production">{t("management.production")}</TabsTrigger>
+          <TabsTrigger value="history">{t("management.history")}</TabsTrigger>
+          <TabsTrigger value="stock">{t("management.stock")}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="delivery" className="grid w-full gap-4 md:grid-cols-1 lg:grid-cols-3 lg:items-stretch">
-          <div className="flex lg:col-span-2">
+        <TabsContent value="deliveries" className="space-y-4">
+          {/* Header */}
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">{t("management.delivery.title")}</h2>
+            <p className="text-muted-foreground text-sm">{t("management.delivery.description")}</p>
+          </div>
+
           <SupplierDeliveriesTable
             deliveries={deliveries}
             selectedDelivery={selectedDelivery}
             onDeliverySelect={setSelectedDelivery}
-            onEditDelivery={handleEditDelivery}
-            onUpdateStatus={handleUpdateStatus}
-            onPrintDelivery={handlePrintDelivery}
-            onDeleteDelivery={handleDeleteDelivery}
             isLoading={isLoading}
-          />
-          </div>
-          <div className="flex lg:col-span-1">
-          <SupplierDeliveryDetails
-            selectedDelivery={selectedDelivery}
-            onEdit={handleEditDelivery}
             onUpdateStatus={handleUpdateStatus}
-            onPrintDelivery={handlePrintDelivery}
+            onPrintDelivery={handlePrint}
+            onEditDelivery={handleEdit}
           />
-          </div>
+          {selectedDelivery && (
+            <SupplierDeliveryDetails
+              selectedDelivery={selectedDelivery}
+              onUpdateStatus={handleUpdateStatus}
+              onPrintDelivery={handlePrint}
+              onEdit={handleEdit}
+            />
+          )}
         </TabsContent>
 
-        <TabsContent value="recipe">
+        <TabsContent value="production" className="space-y-4">
           <RecipeProductionCard />
         </TabsContent>
 
-        <TabsContent value="history">
+        <TabsContent value="history" className="space-y-4">
           <ProductionHistoryCard />
         </TabsContent>
 
-        <TabsContent value="stock">
+        <TabsContent value="stock" className="space-y-4">
           <EditStockCard />
         </TabsContent>
       </Tabs>
 
       {/* Dialogs */}
-      <UpdateDeliveryStatusDialog
-        open={updateStatusDialogOpen}
-        onOpenChange={setUpdateStatusDialogOpen}
-        delivery={deliveryToUpdate}
-      />
-      <PrintDeliveryDialog
-        open={printDialogOpen}
-        onOpenChange={setPrintDialogOpen}
-        delivery={deliveryToPrint}
-      />
-      <AddEditDeliveryDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        delivery={deliveryToEdit}
-        mode="edit"
-      />
-    </section>
+      {deliveryToUpdate && (
+        <UpdateDeliveryStatusDialog
+          open={updateStatusDialogOpen}
+          onOpenChange={(open) => {
+            setUpdateStatusDialogOpen(open);
+            if (!open) {
+              setDeliveryToUpdate(null);
+            }
+          }}
+          delivery={deliveryToUpdate}
+        />
+      )}
+
+      {deliveryToPrint && (
+        <PrintDeliveryDialog
+          open={printDialogOpen}
+          onOpenChange={setPrintDialogOpen}
+          delivery={deliveryToPrint}
+        />
+      )}
+
+      {deliveryToEdit && (
+        <AddEditDeliveryDialog
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) {
+              setDeliveryToEdit(null);
+            }
+          }}
+          delivery={deliveryToEdit}
+          mode="edit"
+        />
+      )}
+    </div>
   );
 }

@@ -16,8 +16,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getStorageAdapter } from "@/lib/storage";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 
 /**
  * Allowed image MIME types
@@ -34,11 +36,15 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
  * Upload an image file
  */
 export async function POST(request: NextRequest) {
+  let session: Session | null = null;
   try {
     // Validate session
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Parse form data
@@ -46,16 +52,19 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File | null;
 
     if (!file) {
-      return NextResponse.json({ success: false, message: "No file provided" }, { status: 400 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "No file provided"),
+        { status: 400 }
+      );
     }
 
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.",
-        },
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed."
+        ),
         { status: 400 }
       );
     }
@@ -63,10 +72,7 @@ export async function POST(request: NextRequest) {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "File size exceeds 5MB limit.",
-        },
+        createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "File size exceeds 5MB limit."),
         { status: 400 }
       );
     }
@@ -77,10 +83,10 @@ export async function POST(request: NextRequest) {
     // Check if storage is configured
     if (!storage.isConfigured()) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Storage service is not configured. Please contact support.",
-        },
+        createErrorResponse(
+          ApiErrorCode.INTERNAL_ERROR,
+          "Storage service is not configured. Please contact support."
+        ),
         { status: 500 }
       );
     }
@@ -103,24 +109,19 @@ export async function POST(request: NextRequest) {
     });
 
     // Return success response
-    return NextResponse.json({
-      success: true,
-      url: result.url,
-      key: result.key,
-      size: result.size,
-      contentType: result.contentType,
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "An error occurred while uploading the file";
-
     return NextResponse.json(
-      {
-        success: false,
-        message,
-      },
-      { status: 500 }
+      createSuccessResponse({
+        url: result.url,
+        key: result.key,
+        size: result.size,
+        contentType: result.contentType,
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/upload",
+      context: { userId: session?.user?.id },
+    });
   }
 }
 
@@ -129,11 +130,15 @@ export async function POST(request: NextRequest) {
  * Delete an uploaded image
  */
 export async function DELETE(request: NextRequest) {
+  let session: Session | null = null;
   try {
     // Validate session
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Parse request body
@@ -141,7 +146,10 @@ export async function DELETE(request: NextRequest) {
     const { url } = body;
 
     if (!url || typeof url !== "string") {
-      return NextResponse.json({ success: false, message: "Invalid URL" }, { status: 400 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "Invalid URL"),
+        { status: 400 }
+      );
     }
 
     // Get storage adapter
@@ -151,21 +159,16 @@ export async function DELETE(request: NextRequest) {
     await storage.delete(url);
 
     // Return success response
-    return NextResponse.json({
-      success: true,
-      message: "File deleted successfully",
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "An error occurred while deleting the file";
-
     return NextResponse.json(
-      {
-        success: false,
-        message,
-      },
-      { status: 500 }
+      createSuccessResponse({
+        message: "File deleted successfully",
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "DELETE /api/upload",
+      context: { userId: session?.user?.id },
+    });
   }
 }
 

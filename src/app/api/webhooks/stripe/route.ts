@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { subscriptionRepository } from "@/lib/repositories";
+import { subscriptionService } from "@/lib/services";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import {
+  extractSubscriptionPeriod,
+  isSubscriptionCanceling,
+  isInvoiceWithSubscription,
+} from "@/types/stripe";
 
 /**
  * POST /api/webhooks/stripe
@@ -33,7 +41,9 @@ export async function POST(request: NextRequest) {
   const signature = headersList.get("stripe-signature");
 
   if (!signature) {
-    return NextResponse.json({ error: "No signature" }, { status: 400 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "No signature"), {
+      status: 400,
+    });
   }
 
   let event: Stripe.Event;
@@ -41,16 +51,11 @@ export async function POST(request: NextRequest) {
   try {
     // Verify webhook signature
     event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET!);
-  /**
-   * Type assertion needed because error type is unknown
-   * Actual type: Error
-   * TODO: Use proper error type guard
-   */
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: `Webhook signature verification failed: ${error.message}` },
-      { status: 400 }
-    );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/webhooks/stripe",
+      context: { step: "signature_verification" },
+    });
   }
   try {
     switch (event.type) {
@@ -81,17 +86,12 @@ export async function POST(request: NextRequest) {
       default:
     }
 
-    return NextResponse.json({ received: true });
-  /**
-   * Type assertion needed because error type is unknown
-   * Actual type: Error
-   * TODO: Use proper error type guard
-   */
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: `Webhook handler failed: ${error.message}` },
-      { status: 500 }
-    );
+    return NextResponse.json(createSuccessResponse({ received: true }));
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/webhooks/stripe",
+      context: { step: "event_handling", eventType: event.type },
+    });
   }
 }
 
@@ -118,20 +118,13 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     expand: ["latest_invoice", "customer"],
   });
 
-  /**
-   * Type assertion needed because Stripe API types don't expose all properties
-   * Actual type: Stripe.Subscription with current_period_start and current_period_end
-   * TODO: Use proper Stripe type definitions or create extended type
-   */
-  const subscriptionData = stripeSubscription as any;
-  // Convert Unix timestamps (seconds) to JavaScript Date (milliseconds)
-  const currentPeriodStart = new Date(subscriptionData.current_period_start * 1000);
-  const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000);
-
-  // Validate dates
-  if (isNaN(currentPeriodStart.getTime()) || isNaN(currentPeriodEnd.getTime())) {
-    return; // Don't fail, let subscription.created handle it
+  // Extract period dates using type-safe helper
+  const period = extractSubscriptionPeriod(stripeSubscription);
+  if (!period) {
+    return; // Invalid period data, let subscription.created handle it
   }
+
+  const { currentPeriodStart, currentPeriodEnd } = period;
 
   // Check if user already has a subscription (upgrade/downgrade scenario)
   const existingSubscription = await subscriptionRepository.findByUserId(userId);
@@ -183,6 +176,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     });
   }
 
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(userId);
+
   // Note: The 80/20 split transfer happens automatically via Stripe
   // - Platform (developer) receives 20% as application fee
   // - Epidom owner receives 80% via transfer_data.destination
@@ -199,16 +195,14 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   if (!userId || !plan) {
     return;
   }
-  /**
-   * Type assertion needed because Stripe API types don't expose all properties
-   * Actual type: Stripe.Subscription with current_period_start and current_period_end
-   * TODO: Use proper Stripe type definitions or create extended type
-   */
-  const subscriptionData = subscription as any;
 
-  // Convert Unix timestamps
-  const currentPeriodStart = new Date(subscriptionData.current_period_start * 1000);
-  const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000);
+  // Extract period dates using type-safe helper
+  const period = extractSubscriptionPeriod(subscription);
+  if (!period) {
+    return; // Invalid period data
+  }
+
+  const { currentPeriodStart, currentPeriodEnd } = period;
 
   // Check if already exists
   const existingSubscription = await subscriptionRepository.findByUserId(userId);
@@ -227,8 +221,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
         if (oldStripeSubscription.status === "active") {
           await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
         }
-      } catch (error: any) {
-      }
+      } catch (error: any) {}
     }
 
     // Update existing record
@@ -254,6 +247,9 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       currentPeriodEnd,
     });
   }
+
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(userId);
 }
 
 /**
@@ -261,19 +257,13 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
  * Update subscription details (plan changes, cancellations, etc.)
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  // Convert Unix timestamps to Date
-  /**
-   * Type assertion needed because Stripe API types don't expose all properties
-   * Actual type: number (Unix timestamp in seconds)
-   * TODO: Use proper Stripe type definitions or create extended type
-   */
-  const currentPeriodStart = new Date((subscription as any).current_period_start * 1000);
-  const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
-
-  // Validate dates
-  if (isNaN(currentPeriodStart.getTime()) || isNaN(currentPeriodEnd.getTime())) {
-    return;
+  // Extract period dates using type-safe helper
+  const period = extractSubscriptionPeriod(subscription);
+  if (!period) {
+    return; // Invalid period data
   }
+
+  const { currentPeriodStart, currentPeriodEnd } = period;
 
   // Find subscription by Stripe subscription ID
   const existingSubscription = await subscriptionRepository.findByStripeSubscriptionId(
@@ -286,19 +276,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   // Map Stripe status to our status
   const status = mapStripeStatus(subscription.status);
-  /**
-   * Type assertion needed because Stripe API types don't expose all properties
-   * Actual type: Stripe.Subscription with cancel_at_period_end property
-   * TODO: Use proper Stripe type definitions or create extended type
-   */
-  const subscriptionData = subscription as any;
 
-  // Log the raw Stripe subscription data for debugging
-  // Check if subscription is scheduled for cancellation
-  // Either cancel_at_period_end is true OR cancel_at is set (future timestamp)
-  const cancelAtPeriodEnd = Boolean(
-    subscriptionData.cancel_at_period_end || subscriptionData.cancel_at
-  );
+  // Check if subscription is scheduled for cancellation using type-safe helper
+  const cancelAtPeriodEnd = isSubscriptionCanceling(subscription);
   // Update subscription
   await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
     status,
@@ -306,6 +286,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     currentPeriodEnd,
     cancelAtPeriodEnd,
   });
+
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(existingSubscription.userId);
 }
 
 /**
@@ -326,6 +309,9 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     status: SubscriptionStatus.CANCELED,
     cancelAtPeriodEnd: true,
   });
+
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(existingSubscription.userId);
 }
 
 /**
@@ -333,17 +319,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
  * Confirm payment received (for recurring payments)
  */
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  /**
-   * Type assertion needed because Stripe Invoice type has subscription as string | Stripe.Subscription | null
-   * but we need to access it as string
-   * Actual type: string | null
-   * TODO: Use proper type guard or Stripe type definitions
-   */
-  const subscriptionId = (invoice as any).subscription as string;
-
-  if (!subscriptionId) {
+  // Use type guard to safely extract subscription ID
+  if (!isInvoiceWithSubscription(invoice) || !invoice.subscription) {
     return; // Not a subscription invoice
   }
+
+  const subscriptionId = invoice.subscription;
 
   const subscription = await subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
 
@@ -356,6 +337,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
       status: SubscriptionStatus.ACTIVE,
     });
+    // Invalidate cache
+    subscriptionService.invalidateUserCache(subscription.userId);
   }
 }
 
@@ -364,17 +347,12 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  * Lock user out of dashboard (per requirements: immediate lockout)
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  /**
-   * Type assertion needed because Stripe Invoice type has subscription as string | Stripe.Subscription | null
-   * but we need to access it as string
-   * Actual type: string | null
-   * TODO: Use proper type guard or Stripe type definitions
-   */
-  const subscriptionId = (invoice as any).subscription as string;
-
-  if (!subscriptionId) {
+  // Use type guard to safely extract subscription ID
+  if (!isInvoiceWithSubscription(invoice) || !invoice.subscription) {
     return; // Not a subscription invoice
   }
+
+  const subscriptionId = invoice.subscription;
 
   const subscription = await subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
 
@@ -386,6 +364,8 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
     status: SubscriptionStatus.PAST_DUE,
   });
+  // Invalidate cache
+  subscriptionService.invalidateUserCache(subscription.userId);
   // TODO: Send email notification to user
   // TODO: Consider grace period vs. immediate lockout based on business requirements
 }

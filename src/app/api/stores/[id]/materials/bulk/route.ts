@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { materialService } from "@/lib/services/material.service";
-import { businessService } from "@/lib/services";
 import { bulkDeleteSchema } from "@/lib/validation/inventory.schemas";
 import {
   createSuccessResponse,
   createErrorResponse,
   ApiErrorCode,
 } from "@/types/api/responses";
-import { ZodError } from "zod";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 
 /**
  * DELETE /api/stores/[id]/materials/bulk
@@ -33,29 +33,8 @@ export async function DELETE(
 
     const { id: storeId } = await params;
 
-    // Verify user owns the business that owns this store
-    const business = await businessService.getBusinessByUserId(session.user.id);
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.BUSINESS_NOT_FOUND,
-          "Business not found"
-        ),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to business
-    const store = await businessService.getStoreById(storeId);
-    if (!store || store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Store not found or does not belong to your business"
-        ),
-        { status: 404 }
-      );
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate request body
     const body = await request.json();
@@ -71,47 +50,10 @@ export async function DELETE(
       })
     );
   } catch (error) {
-    // Handle validation errors
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.VALIDATION_ERROR,
-          "Invalid input data",
-          error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          }))
-        ),
-        { status: 400 }
-      );
-    }
-
-    // Handle business logic errors
-    if (error instanceof Error) {
-      if (error.message.includes("do not belong")) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
-          { status: 403 }
-        );
-      }
-
-      if (error.message.includes("used in recipes")) {
-        return NextResponse.json(
-          createErrorResponse(
-            ApiErrorCode.VALIDATION_ERROR,
-            error.message
-          ),
-          { status: 409 }
-        );
-      }
-    }
-
-    return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "DELETE /api/stores/[id]/materials/bulk",
+      context: { storeId },
+    });
   }
 }

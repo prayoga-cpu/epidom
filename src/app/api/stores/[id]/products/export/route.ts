@@ -5,6 +5,8 @@ import { productService } from "@/lib/services/product.service";
 import { subscriptionService } from "@/lib/services";
 import { createCSVResponse } from "@/lib/utils/csv-export";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 import { z } from "zod";
 
 // Validation schema for filtering products (same as main route)
@@ -26,7 +28,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
@@ -47,6 +52,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const { id: storeId } = await params;
 
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
     const filterParams = {
@@ -64,17 +72,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Return CSV file using utility
     return createCSVResponse(csv, "products-export");
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to export products" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/products/export",
+      context: { storeId },
+    });
   }
 }

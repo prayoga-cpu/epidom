@@ -13,9 +13,9 @@ import { generateMetadata } from "@/lib/seo";
 import { ProductStructuredData } from "@/components/seo/structured-data";
 
 export const metadata = generateMetadata({
-  title: "EPIDOM - Food Inventory Management Solution | Coming Soon",
+  title: "EPIDOM - Food Inventory Management Solution",
   description:
-    "Revolutionary food inventory management system launching November 20, 2025. Join our waitlist to be the first to experience the future of restaurant inventory management.",
+    "Revolutionary food inventory management system. Experience the future of restaurant inventory management with EPIDOM.",
   keywords: [
     "food inventory management",
     "restaurant management",
@@ -26,28 +26,26 @@ export const metadata = generateMetadata({
     "restaurant software",
     "food service management",
     "EPIDOM",
-    "coming soon",
-    "waitlist",
   ],
   openGraph: {
-    title: "EPIDOM - Food Inventory Management Solution | Coming Soon",
+    title: "EPIDOM - Food Inventory Management Solution",
     description:
-      "Revolutionary food inventory management system launching November 20, 2025. Join our waitlist now!",
+      "Revolutionary food inventory management system. Experience the future of restaurant inventory management with EPIDOM.",
     url: "https://epidom.com",
     images: [
       {
-        url: "https://epidom.com/images/og-countdown.jpg",
+        url: "https://epidom.com/images/og-main.jpg",
         width: 1200,
         height: 630,
-        alt: "EPIDOM Coming Soon - Food Inventory Management",
+        alt: "EPIDOM - Food Inventory Management",
       },
     ],
   },
   twitter: {
-    title: "EPIDOM - Food Inventory Management Solution | Coming Soon",
+    title: "EPIDOM - Food Inventory Management Solution",
     description:
-      "Revolutionary food inventory management system launching November 20, 2025. Join our waitlist now!",
-    images: ["https://epidom.com/images/twitter-countdown.jpg"],
+      "Revolutionary food inventory management system. Experience the future of restaurant inventory management with EPIDOM.",
+    images: ["https://epidom.com/images/twitter-main.jpg"],
   },
 });
 
@@ -61,32 +59,25 @@ export default function HomePage() {
         DISPLAY MODE TOGGLE INSTRUCTIONS
         ========================================
 
-        CURRENT STATE: Countdown is ACTIVE, Hero section is HIDDEN
+        CURRENT STATE: Hero section is ACTIVE, Countdown is HIDDEN
 
-        TO SHOW COUNTDOWN AND HIDE HERO (current state):
-          - Countdown is active and visible
-          - Hero section is commented out
+        TO SHOW COUNTDOWN AND HIDE HERO:
+          - Uncomment LazyCountdownComponent
+          - Comment out Hero section
 
-        TO SHOW HERO AND HIDE COUNTDOWN:
-          1. Comment out the LazyCountdownComponent line below
-          2. Uncomment the Hero section div block below
-
-        AI/ROBOT INSTRUCTIONS:
-          - Prompt: "show countdown, hide hero" -> uncomment countdown, comment hero
-          - Prompt: "show hero, hide countdown" -> comment countdown, uncomment hero
-          - Prompt: "activate countdown mode" -> uncomment countdown, comment hero
-          - Prompt: "activate hero mode" -> comment countdown, uncomment hero
+        TO SHOW HERO AND HIDE COUNTDOWN (current state):
+          - LazyCountdownComponent is commented out
+          - Hero section is active
         ========================================
       */}
 
-      {/* COUNTDOWN SECTION - Currently ACTIVE (visible) */}
-      <LazyCountdownComponent />
+      {/* COUNTDOWN SECTION - Currently HIDDEN (commented out) */}
+      {/* <LazyCountdownComponent /> */}
 
-      {/* HERO SECTION - Currently HIDDEN (commented out) */}
-      {/* To show: Remove the comment markers around the div block below */}
-      {/* <div className="animate-slide-up">
+      {/* HERO SECTION - Currently ACTIVE (visible) */}
+      <div className="animate-slide-up">
         <LazyHero />
-      </div> */}
+      </div>
     </main>
   );
 }

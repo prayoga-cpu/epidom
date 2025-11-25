@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   interface Session {
@@ -11,8 +11,14 @@ declare module "next-auth" {
       locale?: string;
       timezone?: string;
       phone?: string | null;
-    };
+      subscriptionStatus?: string | null;
+    } & DefaultSession["user"];
     currency?: string; // For session updates
+    locale?: string;
+    timezone?: string;
+    phone?: string | null;
+    image?: string | null;
+    name?: string | null;
   }
   interface User {
     id: string;
@@ -23,6 +29,7 @@ declare module "next-auth" {
     locale?: string;
     timezone?: string;
     phone?: string | null;
+    subscriptionStatus?: string | null;
   }
 }
 
@@ -36,5 +43,6 @@ declare module "next-auth/jwt" {
     locale?: string;
     timezone?: string;
     phone?: string | null;
+    subscriptionStatus?: string | null;
   }
 }

@@ -28,6 +28,16 @@ export interface ProductFilterInput {
   take?: number;
 }
 
+// Query keys for cache management (DRY principle)
+export const productKeys = {
+  all: (storeId: string) => ["products", storeId] as const,
+  lists: (storeId: string) => [...productKeys.all(storeId), "list"] as const,
+  list: (storeId: string, filters?: ProductFilterInput) =>
+    [...productKeys.lists(storeId), normalizeFilters(filters)] as const,
+  details: (storeId: string) => [...productKeys.all(storeId), "detail"] as const,
+  detail: (storeId: string, id: string) => [...productKeys.details(storeId), id] as const,
+};
+
 // API Functions
 async function fetchProducts(
   storeId: string,
@@ -46,10 +56,12 @@ async function fetchProducts(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to fetch products");
+    throw new Error(error.error?.message || error.error || "Failed to fetch products");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function fetchProductById(storeId: string, productId: string): Promise<Product> {
@@ -57,10 +69,12 @@ async function fetchProductById(storeId: string, productId: string): Promise<Pro
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to fetch product");
+    throw new Error(error.error?.message || error.error || "Failed to fetch product");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function createProduct(storeId: string, data: CreateProductInput): Promise<Product> {
@@ -72,10 +86,12 @@ async function createProduct(storeId: string, data: CreateProductInput): Promise
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to create product");
+    throw new Error(error.error?.message || error.error || "Failed to create product");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function updateProduct(
@@ -91,10 +107,12 @@ async function updateProduct(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to update product");
+    throw new Error(error.error?.message || error.error || "Failed to update product");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function deleteProduct(storeId: string, productId: string): Promise<void> {
@@ -138,6 +156,18 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
 
   if (!response.ok) {
     const error = await response.json();
+
+    // Handle 403 Forbidden (subscription feature locked)
+    if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
+      const { createSubscriptionError } = await import("@/types/errors");
+      const customError = createSubscriptionError(
+        error.message || "Export feature is only available in Pro and Enterprise plans",
+        true
+      );
+      (customError as any).status = 403;
+      throw customError;
+    }
+
     throw new Error(error.error || "Failed to export products");
   }
 
@@ -159,17 +189,22 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
  * Fetch all products with filters
  * Real-time enabled: Polls every 30 seconds when tab is active
  */
-export function useProducts(storeId: string, filters: ProductFilterInput) {
+export function useProducts(
+  storeId: string,
+  filters: ProductFilterInput,
+  initialData?: ProductsResponse
+) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
 
   return useQuery({
-    queryKey: ["products", storeId, normalizedFilters],
+    queryKey: productKeys.list(storeId, normalizedFilters),
     queryFn: () => fetchProducts(storeId, normalizedFilters || filters),
     enabled: !!storeId,
-    // Real-time configuration: Active data polling
-    staleTime: 20 * 1000, // 20 seconds
-    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    initialData, // ✅ Accept initial data from Server Component
+    // Real-time configuration: Aggressive polling for instant cross-tab updates
+    staleTime: 3 * 1000, // 3 seconds - consider data stale faster
+    refetchInterval: 5 * 1000, // Poll every 5 seconds - 6x faster for real-time sync
     refetchIntervalInBackground: false, // Only poll when tab is active
     refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
     refetchOnWindowFocus: true, // Refetch on window focus if stale
@@ -184,7 +219,7 @@ export function useProducts(storeId: string, filters: ProductFilterInput) {
  */
 export function useProduct(storeId: string, productId: string | null) {
   return useQuery({
-    queryKey: ["products", storeId, productId],
+    queryKey: productKeys.detail(storeId, productId!),
     queryFn: () => fetchProductById(storeId, productId!),
     enabled: !!storeId && !!productId,
   });
@@ -198,46 +233,183 @@ export function useCreateProduct(storeId: string) {
 
   return useMutation({
     mutationFn: (data: CreateProductInput) => createProduct(storeId, data),
-    onSuccess: () => {
-      // Non-blocking cache invalidation: Only invalidate products immediately
-      // Other queries (product-usage, alerts, etc.) will sync in background
-      // This allows UI to respond faster without waiting for all invalidations
-      invalidateProductRelatedQueries(queryClient, storeId, false);
+    onSuccess: (newProduct) => {
+      // Optimistic update: Add new product to all product list caches immediately
+      // This ensures UI updates instantly without waiting for refetch
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: productKeys.lists(storeId), exact: false },
+        (oldData) => {
+          // Validate oldData structure before updating
+          if (
+            oldData &&
+            typeof oldData === "object" &&
+            "products" in oldData &&
+            Array.isArray(oldData.products) &&
+            typeof oldData.total === "number"
+          ) {
+            // Safe to update: oldData has correct structure
+            return {
+              products: [...oldData.products, newProduct],
+              total: oldData.total + 1,
+            };
+          }
+          // If oldData is invalid or missing, return undefined to trigger refetch
+          return undefined;
+        }
+      );
+
+      // Invalidate all product queries to ensure consistency
+      // Use immediate: true to ensure active queries refetch
+      invalidateProductRelatedQueries(queryClient, storeId, true);
     },
   });
 }
 
 /**
- * Update product mutation
+ * Update product mutation with optimistic updates
+ * Real-time: Updates UI immediately, syncs with server in background
  */
 export function useUpdateProduct(storeId: string, productId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (data: UpdateProductInput) => updateProduct(storeId, productId, data),
-    onSuccess: () => {
-      // Update cache for specific product (optimistic update)
-      queryClient.invalidateQueries({ queryKey: ["products", storeId, productId] });
-      // Non-blocking cache invalidation: Only invalidate products immediately
-      // Other queries (alerts, stock movements) will sync in background
+  return useMutation<
+    Product,
+    Error,
+    UpdateProductInput,
+    {
+      previousProduct: Product | undefined;
+      previousQueries: Array<[readonly unknown[], ProductsResponse | undefined]>;
+    }
+  >({
+    mutationFn: (data) => updateProduct(storeId, productId, data),
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: productKeys.lists(storeId) });
+      await queryClient.cancelQueries({ queryKey: productKeys.detail(storeId, productId) });
+
+      // Snapshot previous values for rollback
+      const previousProduct = queryClient.getQueryData<Product>(
+        productKeys.detail(storeId, productId)
+      );
+      const previousQueries = queryClient.getQueriesData<ProductsResponse>({
+        queryKey: productKeys.lists(storeId),
+      });
+
+      // Optimistically update detail cache
+      if (previousProduct) {
+        queryClient.setQueryData<Product>(productKeys.detail(storeId, productId), {
+          ...previousProduct,
+          ...newData,
+          updatedAt: new Date(),
+        } as Product);
+      }
+
+      // Optimistically update all list caches
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: productKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.products) return oldData;
+          return {
+            ...oldData,
+            products: oldData.products.map((p) =>
+              p.id === productId
+                ? ({
+                    ...p,
+                    ...newData,
+                    updatedAt: new Date(),
+                  } as Product)
+                : p
+            ),
+          };
+        }
+      );
+
+      return { previousProduct, previousQueries };
+    },
+    onError: (error, newData, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousProduct) {
+        queryClient.setQueryData(productKeys.detail(storeId, productId), context.previousProduct);
+      }
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSuccess: (updatedProduct) => {
+      // Replace optimistic data with real server data
+      queryClient.setQueryData(productKeys.detail(storeId, productId), updatedProduct);
+
+      // Update in all list caches with real data
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: productKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.products) return oldData;
+          return {
+            ...oldData,
+            products: oldData.products.map((p) => (p.id === productId ? updatedProduct : p)),
+          };
+        }
+      );
+
+      // Non-blocking cache invalidation for related queries
       invalidateProductRelatedQueries(queryClient, storeId, false);
     },
   });
 }
 
 /**
- * Delete product mutation
+ * Delete product mutation with optimistic updates
+ * Real-time: Removes from UI immediately, syncs with server in background
  */
 export function useDeleteProduct(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (productId: string) => deleteProduct(storeId, productId),
-    onSuccess: (_, productId) => {
-      // Remove from cache
-      queryClient.removeQueries({ queryKey: ["products", storeId, productId] });
-      // Non-blocking cache invalidation: Only invalidate products immediately
-      // Other queries (alerts) will sync in background
+  return useMutation<
+    void,
+    Error,
+    string,
+    { previousQueries: Array<[readonly unknown[], ProductsResponse | undefined]> }
+  >({
+    mutationFn: (productId) => deleteProduct(storeId, productId),
+    onMutate: async (deletedId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: productKeys.lists(storeId) });
+
+      // Snapshot previous queries
+      const previousQueries = queryClient.getQueriesData<ProductsResponse>({
+        queryKey: productKeys.lists(storeId),
+      });
+
+      // Optimistically remove from all matching caches
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: productKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.products) return oldData;
+          return {
+            ...oldData,
+            products: oldData.products.filter((p) => p.id !== deletedId),
+            total: Math.max(0, oldData.total - 1),
+          };
+        }
+      );
+
+      return { previousQueries };
+    },
+    onError: (error, deletedId, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSuccess: (_, deletedId) => {
+      // Remove from detail cache
+      queryClient.removeQueries({ queryKey: productKeys.detail(storeId, deletedId) });
+
+      // Non-blocking cache invalidation for related queries
       invalidateProductRelatedQueries(queryClient, storeId, false);
     },
   });
@@ -254,7 +426,7 @@ export function useBulkDeleteProducts(storeId: string) {
     onSuccess: (_, productIds) => {
       // Remove all deleted items from cache
       productIds.forEach((id) => {
-        queryClient.removeQueries({ queryKey: ["products", storeId, id] });
+        queryClient.removeQueries({ queryKey: productKeys.detail(storeId, id) });
       });
       // Non-blocking cache invalidation: Only invalidate products immediately
       // Other queries (alerts) will sync in background

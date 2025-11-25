@@ -44,7 +44,10 @@ import { BatchDetailsDialog } from "./batch-details-dialog";
 import { ProductionMetricsCards } from "./production-metrics-cards";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
-import { useProductionBatches } from "../recipe-production/hooks/use-production-batches";
+import {
+  ProductionBatchWithRelations,
+  useProductionBatches,
+} from "../recipe-production/hooks/use-production-batches";
 import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 
 export function ProductionHistoryCard() {
@@ -54,7 +57,9 @@ export function ProductionHistoryCard() {
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<
+    "ALL" | "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+  >("ALL");
   const [recipeFilter, setRecipeFilter] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [sortField, setSortField] = useState<"batchNumber" | "scheduledDate" | "status">(
@@ -63,27 +68,17 @@ export function ProductionHistoryCard() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
+  const [selectedBatch, setSelectedBatch] = useState<ProductionBatchWithRelations | null>(null);
   const [isBatchDetailsOpen, setIsBatchDetailsOpen] = useState(false);
 
   // Fetch production batches from API
   const { data: batchesData, isLoading: batchesLoading } = useProductionBatches(storeId, {
     search: searchQuery || undefined,
-    /**
-     * Type assertion needed because statusFilter is string but filter expects ProductionStatus[]
-     * Actual type: ProductionStatus[]
-     * TODO: Use proper type guard or update filter type
-     */
-    status: statusFilter !== "ALL" ? [statusFilter as any] : undefined,
+    status: statusFilter !== "ALL" ? [statusFilter] : undefined,
     recipeId: recipeFilter !== "ALL" ? recipeFilter : undefined,
     startDate: dateRange?.from,
     endDate: dateRange?.to,
-    /**
-     * Type assertion needed because sortField is string but filter expects specific union type
-     * Actual type: "createdAt" | "scheduledDate" | "completedDate" | "status"
-     * TODO: Use proper type guard or update filter type
-     */
-    sortBy: sortField as any,
+    sortBy: sortField,
     sortOrder: sortDirection,
     skip: (currentPage - 1) * pageSize,
     take: pageSize,
@@ -158,7 +153,7 @@ export function ProductionHistoryCard() {
   };
 
   // Handle view batch details
-  const handleViewBatch = (batch: any) => {
+  const handleViewBatch = (batch: ProductionBatchWithRelations) => {
     setSelectedBatch(batch);
     setIsBatchDetailsOpen(true);
   };
@@ -183,9 +178,13 @@ export function ProductionHistoryCard() {
   return (
     <div className="space-y-3 sm:space-y-6">
       {/* Header */}
-      <div className="text-left">
-        <h2 className="text-2xl font-bold tracking-tight">{t("tabs.productionHistory")}</h2>
-        <p className="text-muted-foreground text-sm">{t("management.productionHistory.description")}</p>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          {t("management.productionHistory.title")}
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          {t("management.productionHistory.description")}
+        </p>
       </div>
 
       {/* Metrics Cards */}
@@ -194,7 +193,7 @@ export function ProductionHistoryCard() {
        * Actual type: ProductionBatchWithRelations[]
        * TODO: Update ProductionMetricsCards to accept proper type or create type adapter
        */}
-      <ProductionMetricsCards batches={allBatches as any} />
+      <ProductionMetricsCards batches={allBatches} />
 
       {/* Filters */}
       <Card>
@@ -207,7 +206,12 @@ export function ProductionHistoryCard() {
               </CardDescription>
             </div>
             <div className="flex w-full justify-start md:w-auto md:justify-end">
-              <ExportButton data={exportData} filename="production-history" size="sm" className="w-full md:w-auto" />
+              <ExportButton
+                data={exportData}
+                filename="production-history"
+                size="sm"
+                className="w-full md:w-auto"
+              />
             </div>
           </div>
         </CardHeader>
@@ -225,7 +229,10 @@ export function ProductionHistoryCard() {
             </div>
             <div className="flex w-full flex-wrap gap-2">
               {/* Status Filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}
+              >
                 <SelectTrigger className="w-full md:w-[160px]">
                   <SelectValue placeholder={t("management.productionHistory.selectStatus")} />
                 </SelectTrigger>
@@ -267,7 +274,7 @@ export function ProductionHistoryCard() {
 
               {/* Date Range */}
               <div className="w-full md:w-auto">
-              <DateRangePicker value={dateRange} onChange={setDateRange} />
+                <DateRangePicker value={dateRange} onChange={setDateRange} />
               </div>
             </div>
           </div>
@@ -294,7 +301,9 @@ export function ProductionHistoryCard() {
                 </Badge>
               )}
               {dateRange?.from && (
-                <Badge variant="secondary" className="text-xs">{t("management.productionHistory.dateRange")}</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {t("management.productionHistory.dateRange")}
+                </Badge>
               )}
               <Button
                 variant="ghost"
@@ -359,87 +368,90 @@ export function ProductionHistoryCard() {
             <>
               <div className="overflow-x-auto">
                 <div className="min-w-[640px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort("batchNumber")}>
-                      <div className="flex items-center">
-                        {t("management.productionHistory.batchNumber")}
-                        {renderSortIcon("batchNumber")}
-                      </div>
-                    </TableHead>
-                    <TableHead>{t("management.productionHistory.recipe")}</TableHead>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
-                      <div className="flex items-center">
-                        {t("management.productionHistory.status")}
-                        {renderSortIcon("status")}
-                      </div>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {t("management.productionHistory.quantity")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => handleSort("scheduledDate")}
-                    >
-                      <div className="flex items-center">
-                        {t("management.productionHistory.scheduledDate") || "Scheduled"}
-                        {renderSortIcon("scheduledDate")}
-                      </div>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {t("management.productionHistory.actions")}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allBatches.map((batch) => {
-                    const statusConfig = getStatusConfig(batch.status);
-                    const StatusIcon = statusConfig.icon;
-
-                    return (
-                      <TableRow
-                        key={batch.id}
-                        className="hover:bg-muted/50 cursor-pointer"
-                        onClick={() => handleViewBatch(batch)}
-                      >
-                        <TableCell className="font-medium">{batch.batchNumber}</TableCell>
-                        <TableCell>
-                          {batch.product?.name || getRecipeName(batch.recipeId)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={statusConfig.color}>
-                            <StatusIcon
-                              className={`mr-1 h-3 w-3 ${batch.status === "IN_PROGRESS" ? "animate-spin" : ""}`}
-                            />
-                            {statusConfig.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {batch.actualQuantity || 0} / {batch.plannedQuantity} {batch.unit}
-                        </TableCell>
-                        <TableCell>
-                          {batch.scheduledDate
-                            ? format(new Date(batch.scheduledDate), "MMM d, yyyy HH:mm")
-                            : t("common.notAvailable")}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewBatch(batch);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead
+                          className="cursor-pointer"
+                          onClick={() => handleSort("batchNumber")}
+                        >
+                          <div className="flex items-center">
+                            {t("management.productionHistory.batchNumber")}
+                            {renderSortIcon("batchNumber")}
+                          </div>
+                        </TableHead>
+                        <TableHead>{t("management.productionHistory.recipe")}</TableHead>
+                        <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
+                          <div className="flex items-center">
+                            {t("management.productionHistory.status")}
+                            {renderSortIcon("status")}
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          {t("management.productionHistory.quantity")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer"
+                          onClick={() => handleSort("scheduledDate")}
+                        >
+                          <div className="flex items-center">
+                            {t("management.productionHistory.scheduledDate") || "Scheduled"}
+                            {renderSortIcon("scheduledDate")}
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          {t("management.productionHistory.actions")}
+                        </TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {allBatches.map((batch) => {
+                        const statusConfig = getStatusConfig(batch.status);
+                        const StatusIcon = statusConfig.icon;
+
+                        return (
+                          <TableRow
+                            key={batch.id}
+                            className="hover:bg-muted/50 cursor-pointer"
+                            onClick={() => handleViewBatch(batch)}
+                          >
+                            <TableCell className="font-medium">{batch.batchNumber}</TableCell>
+                            <TableCell>
+                              {batch.product?.name || getRecipeName(batch.recipeId)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={statusConfig.color}>
+                                <StatusIcon
+                                  className={`mr-1 h-3 w-3 ${batch.status === "IN_PROGRESS" ? "animate-spin" : ""}`}
+                                />
+                                {statusConfig.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {batch.actualQuantity || 0} / {batch.plannedQuantity} {batch.unit}
+                            </TableCell>
+                            <TableCell>
+                              {batch.scheduledDate
+                                ? format(new Date(batch.scheduledDate), "MMM d, yyyy HH:mm")
+                                : t("common.notAvailable")}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewBatch(batch);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
 
