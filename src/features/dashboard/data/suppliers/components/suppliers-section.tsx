@@ -88,19 +88,10 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
   // API hooks
   // Use debouncedSearch instead of filters.search for API calls
   // Use initial data from Server Component with real-time updates
-  const { data, isLoading, error, refetch } = useSuppliers(
-    storeId,
-    {
-      ...filters,
-      search: debouncedSearch || undefined,
-    },
-    initialSuppliers
-      ? {
-          suppliers: initialSuppliers,
-          total: initialSuppliers.length,
-        }
-      : undefined
-  );
+  const { data, isLoading, error, refetch } = useSuppliers(storeId, {
+    ...filters,
+    search: debouncedSearch || undefined,
+  });
   const deleteSupplier = useDeleteSupplier(storeId);
   const bulkDeleteSuppliers = useBulkDeleteSuppliers(storeId);
   const exportSuppliers = useExportSuppliers();
