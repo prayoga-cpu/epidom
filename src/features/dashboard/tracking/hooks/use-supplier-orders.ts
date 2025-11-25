@@ -259,13 +259,22 @@ export function useCreateSupplierOrder(storeId: string) {
 }
 
 /**
- * Hook to update a supplier order
+ * Hook to update a supplier order with optimistic updates
+ * Real-time: Updates UI immediately, syncs with server in background
  */
 export function useUpdateSupplierOrder(storeId: string, orderId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (input: UpdateSupplierOrderInput) => {
+  return useMutation<
+    SupplierOrderResponse,
+    Error,
+    UpdateSupplierOrderInput,
+    {
+      previousOrder: SupplierOrderResponse | undefined;
+      previousList: SupplierOrdersResponse | undefined;
+    }
+  >({
+    mutationFn: async (input) => {
       const response = await fetch(`/api/stores/${storeId}/supplier-orders/${orderId}`, {
         method: "PATCH",
         headers: {
@@ -281,29 +290,72 @@ export function useUpdateSupplierOrder(storeId: string, orderId: string) {
 
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: supplierOrderKeys.lists(storeId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: supplierOrderKeys.detail(storeId, orderId),
-      });
-      // Invalidate alerts since stock might have changed
-      queryClient.invalidateQueries({
-        queryKey: alertKeys.lists(storeId),
-      });
-      // Invalidate materials (stock may have increased on delivery)
-      queryClient.invalidateQueries({
-        queryKey: materialKeys.lists(storeId),
-      });
-      // Invalidate stock movements (new stock movements created on delivery)
-      queryClient.invalidateQueries({
-        queryKey: stockMovementKeys.all(storeId),
-      });
-      toast.success("Supplier order updated successfully");
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries({ queryKey: supplierOrderKeys.lists(storeId) });
+      await queryClient.cancelQueries({ queryKey: supplierOrderKeys.detail(storeId, orderId) });
+
+      const previousOrder = queryClient.getQueryData<SupplierOrderResponse>(
+        supplierOrderKeys.detail(storeId, orderId)
+      );
+      const previousList = queryClient.getQueryData<SupplierOrdersResponse>(
+        supplierOrderKeys.lists(storeId)
+      );
+
+      if (previousOrder) {
+        queryClient.setQueryData<SupplierOrderResponse>(
+          supplierOrderKeys.detail(storeId, orderId),
+          {
+            order: {
+              ...previousOrder.order,
+              ...newData,
+              updatedAt: new Date().toISOString(),
+            },
+          }
+        );
+      }
+
+      if (previousList) {
+        queryClient.setQueryData<SupplierOrdersResponse>(supplierOrderKeys.lists(storeId), {
+          orders: previousList.orders.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  ...newData,
+                  updatedAt: new Date().toISOString(),
+                }
+              : o
+          ),
+        });
+      }
+
+      return { previousOrder, previousList };
     },
-    onError: (error: Error) => {
+    onError: (error, newData, context) => {
+      if (context?.previousOrder) {
+        queryClient.setQueryData(supplierOrderKeys.detail(storeId, orderId), context.previousOrder);
+      }
+      if (context?.previousList) {
+        queryClient.setQueryData(supplierOrderKeys.lists(storeId), context.previousList);
+      }
       toast.error(error.message || "Failed to update supplier order");
+    },
+    onSuccess: (updatedOrder) => {
+      queryClient.setQueryData(supplierOrderKeys.detail(storeId, orderId), updatedOrder);
+
+      const currentList = queryClient.getQueryData<SupplierOrdersResponse>(
+        supplierOrderKeys.lists(storeId)
+      );
+      if (currentList) {
+        queryClient.setQueryData<SupplierOrdersResponse>(supplierOrderKeys.lists(storeId), {
+          orders: currentList.orders.map((o) => (o.id === orderId ? updatedOrder.order : o)),
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+
+      toast.success("Supplier order updated successfully");
     },
   });
 }

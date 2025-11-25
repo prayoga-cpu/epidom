@@ -33,7 +33,10 @@ interface StockAdjustmentResponse {
 /**
  * Hook for adjusting stock
  */
-async function adjustStock(storeId: string, input: StockAdjustmentInput): Promise<StockAdjustmentResponse> {
+async function adjustStock(
+  storeId: string,
+  input: StockAdjustmentInput
+): Promise<StockAdjustmentResponse> {
   const response = await fetch(`/api/stores/${storeId}/stock/adjust`, {
     method: "POST",
     headers: {
@@ -52,77 +55,172 @@ async function adjustStock(storeId: string, input: StockAdjustmentInput): Promis
 }
 
 /**
- * Hook for adjusting stock with cache invalidation
+ * Hook for adjusting stock with optimistic updates
+ * Real-time: Updates stock instantly in all caches, syncs with server in background
  */
 export function useStockAdjustment(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<StockAdjustmentResponse, Error, StockAdjustmentInput>({
+  return useMutation<
+    StockAdjustmentResponse,
+    Error,
+    StockAdjustmentInput,
+    {
+      previousMaterials?: any;
+      previousProducts?: any;
+      previousRecipes?: any;
+    }
+  >({
     mutationFn: (input) => adjustStock(storeId, input),
-    onSuccess: async (response, input) => {
-      // Optimistic update: Immediately update material stock in recipes cache
-      // This ensures production tab sees updated stock instantly without waiting for refetch
-      if (input.materialId && response.material) {
-        const newStock = response.movement.balanceAfter;
+    onMutate: async (input) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["materials", storeId] });
+      await queryClient.cancelQueries({ queryKey: ["products", storeId] });
+      await queryClient.cancelQueries({ queryKey: recipeKeys.lists(storeId) });
 
-        // Update all recipe queries that contain this material
-        queryClient.setQueriesData<{ recipes: RecipeWithIngredients[]; total: number }>(
-          { queryKey: recipeKeys.lists(storeId), exact: false },
-          (oldData) => {
-            if (!oldData || !Array.isArray(oldData.recipes)) {
-              return oldData;
-            }
+      // Snapshot previous values for rollback
+      const previousMaterials = queryClient.getQueryData(["materials", storeId, "list"]);
+      const previousProducts = queryClient.getQueryData(["products", storeId, "list"]);
+      const previousRecipes = queryClient.getQueryData(recipeKeys.list(storeId));
 
-            // Update material stock in all recipes that use this material
-            const updatedRecipes = oldData.recipes.map((recipe) => {
-              const hasMaterial = recipe.ingredients.some(
-                (ing) => ing.materialId === input.materialId
-              );
+      // Calculate new stock optimistically
+      if (input.materialId && previousMaterials) {
+        const materialsData = previousMaterials as any;
+        const material = materialsData.materials?.find((m: any) => m.id === input.materialId);
 
-              if (!hasMaterial) {
-                return recipe;
-              }
+        if (material) {
+          const currentStock = Number(material.currentStock) || 0;
+          const adjustment = input.adjustmentType === "IN" ? input.quantity : -input.quantity;
+          const newStock = currentStock + adjustment;
 
-              // Update material stock in ingredients
-              const updatedIngredients = recipe.ingredients.map((ing) => {
-                if (ing.materialId === input.materialId) {
-                  return {
-                    ...ing,
-                    material: {
-                      ...ing.material,
-                      currentStock: newStock,
-                    },
-                  };
-                }
-                return ing;
-              });
+          // Optimistically update materials cache
+          queryClient.setQueryData(["materials", storeId, "list"], {
+            ...materialsData,
+            materials: materialsData.materials.map((m: any) =>
+              m.id === input.materialId ? { ...m, currentStock: newStock } : m
+            ),
+          });
 
-              return {
-                ...recipe,
-                ingredients: updatedIngredients,
-              };
-            });
-
-            return {
-              ...oldData,
-              recipes: updatedRecipes,
+          // Optimistically update recipes cache (material stock in ingredients)
+          if (previousRecipes) {
+            const recipesData = previousRecipes as {
+              recipes: RecipeWithIngredients[];
+              total: number;
             };
+            queryClient.setQueryData(recipeKeys.list(storeId), {
+              ...recipesData,
+              recipes: recipesData.recipes.map((recipe) => ({
+                ...recipe,
+                ingredients: recipe.ingredients.map((ing) =>
+                  ing.materialId === input.materialId
+                    ? {
+                        ...ing,
+                        material: {
+                          ...ing.material,
+                          currentStock: newStock,
+                        },
+                      }
+                    : ing
+                ),
+              })),
+            });
           }
-        );
+        }
       }
 
-      // Invalidate all related queries immediately for real-time updates
-      // This ensures production tab sees updated stock immediately
+      // Similar for products
+      if (input.productId && previousProducts) {
+        const productsData = previousProducts as any;
+        const product = productsData.products?.find((p: any) => p.id === input.productId);
+
+        if (product) {
+          const currentStock = Number(product.currentStock) || 0;
+          const adjustment = input.adjustmentType === "IN" ? input.quantity : -input.quantity;
+          const newStock = currentStock + adjustment;
+
+          queryClient.setQueryData(["products", storeId, "list"], {
+            ...productsData,
+            products: productsData.products.map((p: any) =>
+              p.id === input.productId ? { ...p, currentStock: newStock } : p
+            ),
+          });
+        }
+      }
+
+      return { previousMaterials, previousProducts, previousRecipes };
+    },
+    onError: (error, input, context) => {
+      // Rollback optimistic updates on error
+      if (context?.previousMaterials) {
+        queryClient.setQueryData(["materials", storeId, "list"], context.previousMaterials);
+      }
+      if (context?.previousProducts) {
+        queryClient.setQueryData(["products", storeId, "list"], context.previousProducts);
+      }
+      if (context?.previousRecipes) {
+        queryClient.setQueryData(recipeKeys.list(storeId), context.previousRecipes);
+      }
+    },
+    onSuccess: async (response, input) => {
+      // Replace optimistic data with real server data
+      const realStock = response.movement.balanceAfter;
+
+      if (input.materialId && response.material) {
+        // Update materials cache with real data
+        const materialsData = queryClient.getQueryData(["materials", storeId, "list"]) as any;
+        if (materialsData) {
+          queryClient.setQueryData(["materials", storeId, "list"], {
+            ...materialsData,
+            materials: materialsData.materials.map((m: any) =>
+              m.id === input.materialId ? { ...m, currentStock: realStock } : m
+            ),
+          });
+        }
+
+        // Update recipes cache with real data
+        const recipesData = queryClient.getQueryData(recipeKeys.list(storeId)) as any;
+        if (recipesData) {
+          queryClient.setQueryData(recipeKeys.list(storeId), {
+            ...recipesData,
+            recipes: recipesData.recipes.map((recipe: any) => ({
+              ...recipe,
+              ingredients: recipe.ingredients.map((ing: any) =>
+                ing.materialId === input.materialId
+                  ? {
+                      ...ing,
+                      material: {
+                        ...ing.material,
+                        currentStock: realStock,
+                      },
+                    }
+                  : ing
+              ),
+            })),
+          });
+        }
+      }
+
+      if (input.productId && response.product) {
+        const productsData = queryClient.getQueryData(["products", storeId, "list"]) as any;
+        if (productsData) {
+          queryClient.setQueryData(["products", storeId, "list"], {
+            ...productsData,
+            products: productsData.products.map((p: any) =>
+              p.id === input.productId ? { ...p, currentStock: realStock } : p
+            ),
+          });
+        }
+      }
+
+      // Invalidate related queries (non-blocking)
       await invalidateMaterialRelatedQueries(queryClient, storeId, true);
 
-      // Also invalidate production batches (they contain material stock data)
       queryClient.invalidateQueries({
         queryKey: ["production-batches", storeId],
         exact: false,
-        refetchType: "active", // Refetch active queries immediately
+        refetchType: "active",
       });
 
-      // Also invalidate stock movements specifically
       queryClient.invalidateQueries({
         queryKey: stockMovementKeys.all(storeId),
         exact: false,
@@ -130,4 +228,3 @@ export function useStockAdjustment(storeId: string) {
     },
   });
 }
-
