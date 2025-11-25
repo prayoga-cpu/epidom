@@ -162,29 +162,47 @@ export function useCreateMaterial(storeId: string) {
     },
     onSuccess: async (newMaterial) => {
       // Update with real data from server (replace optimistic update)
-      const currentData = queryClient.getQueryData<MaterialsResponse>(
-        materialKeys.list(storeId)
-      );
+      // Performance optimization: Update all cached material lists directly instead of invalidating
+      // This avoids blocking refetch operations that slow down the UI
+      const allMaterialQueries = queryClient.getQueriesData<MaterialsResponse>({
+        queryKey: materialKeys.lists(storeId),
+      });
 
-      if (currentData) {
-        // Replace optimistic material with real one immediately
-        queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
-          ...currentData,
-          materials: currentData.materials.map((m) =>
-            m.id.startsWith("temp-") ? newMaterial : m
-          ),
-        });
-      }
+      // Update all cached material lists with the new material
+      allMaterialQueries.forEach(([queryKey, cachedData]) => {
+        if (cachedData) {
+          // Check if the new material matches the current filter (if any)
+          // For now, we'll add it to all lists - filtering will happen on next refetch if needed
+          const hasOptimisticMaterial = cachedData.materials.some((m) =>
+            m.id.startsWith("temp-")
+          );
 
-      // Invalidate materials list for immediate UI update
-      // Note: We DON'T invalidate related queries (suppliers, alerts, recipes, stock movements)
-      // on CREATE because adding a new material doesn't affect those existing resources.
-      // This is a performance optimization - related queries only need invalidation
-      // on UPDATE/DELETE operations where relationships might change.
-      await queryClient.invalidateQueries({
+          if (hasOptimisticMaterial) {
+            // Replace optimistic material with real one
+            queryClient.setQueryData<MaterialsResponse>(queryKey, {
+              ...cachedData,
+              materials: cachedData.materials.map((m) =>
+                m.id.startsWith("temp-") ? newMaterial : m
+              ),
+            });
+          } else {
+            // Add new material to the list (if it matches filters, it will be included)
+            // This is a best-effort update - exact filtering happens on server
+            queryClient.setQueryData<MaterialsResponse>(queryKey, {
+              ...cachedData,
+              materials: [...cachedData.materials, newMaterial],
+              total: cachedData.total + 1,
+            });
+          }
+        }
+      });
+
+      // Invalidate in background (non-blocking) to ensure data consistency
+      // This allows UI to update immediately while background sync happens
+      queryClient.invalidateQueries({
         queryKey: ["materials", storeId],
         exact: false,
-      });
+      }).catch(console.warn); // Non-blocking - errors won't affect UI
     },
     onError: (error, newMaterial, context) => {
       // Rollback optimistic update on error

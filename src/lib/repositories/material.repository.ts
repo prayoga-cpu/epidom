@@ -188,6 +188,7 @@ export class MaterialRepository extends BaseRepository {
 
   /**
    * Check if SKU already exists for a store
+   * Optimized: Only select id field for faster query
    */
   async existsBySku(storeId: string, sku: string, excludeId?: string): Promise<boolean> {
     const material = await this.db.material.findFirst({
@@ -198,6 +199,9 @@ export class MaterialRepository extends BaseRepository {
           mode: "insensitive",
         },
         ...(excludeId && { id: { not: excludeId } }),
+      },
+      select: {
+        id: true, // Only select id for faster query
       },
     });
     return material !== null;
