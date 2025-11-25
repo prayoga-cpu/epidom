@@ -414,36 +414,129 @@ export function useCreateSupplier(storeId: string) {
 }
 
 /**
- * Update supplier mutation
+ * Update supplier mutation with optimistic updates
+ * Real-time: Updates UI immediately, syncs with server in background
  */
 export function useUpdateSupplier(storeId: string, supplierId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (data: UpdateSupplierInput) => updateSupplier(storeId, supplierId, data),
-    onSuccess: () => {
-      // Update cache for specific supplier (optimistic update)
-      queryClient.invalidateQueries({ queryKey: supplierKeys.detail(storeId, supplierId) });
-      // Non-blocking cache invalidation: Only invalidate suppliers immediately
-      // Other queries (materials) will sync in background
+  return useMutation<
+    SupplierWithRelations,
+    Error,
+    UpdateSupplierInput,
+    {
+      previousSupplier: SupplierWithRelations | undefined;
+      previousList: SuppliersResponse | undefined;
+    }
+  >({
+    mutationFn: (data) => updateSupplier(storeId, supplierId, data),
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: supplierKeys.lists(storeId) });
+      await queryClient.cancelQueries({ queryKey: supplierKeys.detail(storeId, supplierId) });
+
+      // Snapshot previous values for rollback
+      const previousSupplier = queryClient.getQueryData<SupplierWithRelations>(
+        supplierKeys.detail(storeId, supplierId)
+      );
+      const previousList = queryClient.getQueryData<SuppliersResponse>(supplierKeys.list(storeId));
+
+      // Optimistically update detail cache
+      if (previousSupplier) {
+        queryClient.setQueryData<SupplierWithRelations>(supplierKeys.detail(storeId, supplierId), {
+          ...previousSupplier,
+          ...newData,
+          updatedAt: new Date(),
+        } as SupplierWithRelations);
+      }
+
+      // Optimistically update list cache
+      if (previousList) {
+        queryClient.setQueryData<SuppliersResponse>(supplierKeys.list(storeId), {
+          ...previousList,
+          suppliers: previousList.suppliers.map((s) =>
+            s.id === supplierId
+              ? ({
+                  ...s,
+                  ...newData,
+                  updatedAt: new Date(),
+                } as SupplierWithRelations)
+              : s
+          ),
+        });
+      }
+
+      return { previousSupplier, previousList };
+    },
+    onError: (error, newData, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousSupplier) {
+        queryClient.setQueryData(
+          supplierKeys.detail(storeId, supplierId),
+          context.previousSupplier
+        );
+      }
+      if (context?.previousList) {
+        queryClient.setQueryData(supplierKeys.list(storeId), context.previousList);
+      }
+    },
+    onSuccess: (updatedSupplier) => {
+      // Replace optimistic data with real server data
+      queryClient.setQueryData(supplierKeys.detail(storeId, supplierId), updatedSupplier);
+
+      // Update in list cache with real data
+      const currentList = queryClient.getQueryData<SuppliersResponse>(supplierKeys.list(storeId));
+      if (currentList) {
+        queryClient.setQueryData<SuppliersResponse>(supplierKeys.list(storeId), {
+          ...currentList,
+          suppliers: currentList.suppliers.map((s) => (s.id === supplierId ? updatedSupplier : s)),
+        });
+      }
+
+      // Non-blocking cache invalidation for related queries
       invalidateSupplierRelatedQueries(queryClient, storeId, false);
     },
   });
 }
 
 /**
- * Delete supplier mutation
+ * Delete supplier mutation with optimistic updates
+ * Real-time: Removes from UI immediately, syncs with server in background
  */
 export function useDeleteSupplier(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (supplierId: string) => deleteSupplier(storeId, supplierId),
-    onSuccess: (_, supplierId) => {
-      // Remove from cache
-      queryClient.removeQueries({ queryKey: supplierKeys.detail(storeId, supplierId) });
-      // Non-blocking cache invalidation: Only invalidate suppliers immediately
-      // Other queries (materials) will sync in background
+  return useMutation<void, Error, string, { previousList: SuppliersResponse | undefined }>({
+    mutationFn: (supplierId) => deleteSupplier(storeId, supplierId),
+    onMutate: async (deletedId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: supplierKeys.lists(storeId) });
+
+      // Snapshot previous value
+      const previousList = queryClient.getQueryData<SuppliersResponse>(supplierKeys.list(storeId));
+
+      // Optimistically remove from cache
+      if (previousList) {
+        queryClient.setQueryData<SuppliersResponse>(supplierKeys.list(storeId), {
+          ...previousList,
+          suppliers: previousList.suppliers.filter((s) => s.id !== deletedId),
+          total: previousList.total - 1,
+        });
+      }
+
+      return { previousList };
+    },
+    onError: (error, deletedId, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousList) {
+        queryClient.setQueryData(supplierKeys.list(storeId), context.previousList);
+      }
+    },
+    onSuccess: (_, deletedId) => {
+      // Remove from detail cache
+      queryClient.removeQueries({ queryKey: supplierKeys.detail(storeId, deletedId) });
+
+      // Non-blocking cache invalidation for related queries
       invalidateSupplierRelatedQueries(queryClient, storeId, false);
     },
   });

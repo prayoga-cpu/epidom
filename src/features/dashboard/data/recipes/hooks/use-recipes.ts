@@ -72,7 +72,10 @@ export const recipeKeys = {
 };
 
 // API Functions
-async function fetchRecipes(storeId: string, filters: Partial<RecipeFilterInput>): Promise<RecipesResponse> {
+async function fetchRecipes(
+  storeId: string,
+  filters: Partial<RecipeFilterInput>
+): Promise<RecipesResponse> {
   const params = new URLSearchParams();
 
   if (filters.search) params.append("search", filters.search);
@@ -281,10 +284,7 @@ export function useRecipe(storeId: string, recipeId: string | null) {
  * Fetch recipes for selectors/dropdowns (optimized, no polling)
  * Use this in forms and selectors where real-time updates are not critical
  */
-export function useRecipesForSelector(
-  storeId: string,
-  filters?: RecipeFilterInput
-) {
+export function useRecipesForSelector(storeId: string, filters?: RecipeFilterInput) {
   const normalizedFilters = normalizeFilters(filters);
 
   return useQuery({
@@ -343,36 +343,126 @@ export function useCreateRecipe(storeId: string) {
 }
 
 /**
- * Update recipe mutation
+ * Update recipe mutation with optimistic updates
+ * Real-time: Updates UI immediately, syncs with server in background
  */
 export function useUpdateRecipe(storeId: string, recipeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (data: UpdateRecipeFormInput) => updateRecipe(storeId, recipeId, data),
-    onSuccess: () => {
-      // Update cache for specific recipe (optimistic update)
-      queryClient.invalidateQueries({ queryKey: recipeKeys.detail(storeId, recipeId) });
-      // Non-blocking cache invalidation: Only invalidate recipes immediately
-      // Other queries (products, materials) will sync in background
+  return useMutation<
+    RecipeWithIngredients,
+    Error,
+    UpdateRecipeFormInput,
+    {
+      previousRecipe: RecipeWithIngredients | undefined;
+      previousList: RecipesResponse | undefined;
+    }
+  >({
+    mutationFn: (data) => updateRecipe(storeId, recipeId, data),
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: recipeKeys.lists(storeId) });
+      await queryClient.cancelQueries({ queryKey: recipeKeys.detail(storeId, recipeId) });
+
+      // Snapshot previous values for rollback
+      const previousRecipe = queryClient.getQueryData<RecipeWithIngredients>(
+        recipeKeys.detail(storeId, recipeId)
+      );
+      const previousList = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
+
+      // Optimistically update detail cache
+      if (previousRecipe) {
+        queryClient.setQueryData<RecipeWithIngredients>(recipeKeys.detail(storeId, recipeId), {
+          ...previousRecipe,
+          ...newData,
+          updatedAt: new Date(),
+        } as RecipeWithIngredients);
+      }
+
+      // Optimistically update list cache
+      if (previousList) {
+        queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
+          ...previousList,
+          recipes: previousList.recipes.map((r) =>
+            r.id === recipeId
+              ? ({
+                  ...r,
+                  ...newData,
+                  updatedAt: new Date(),
+                } as RecipeWithIngredients)
+              : r
+          ),
+        });
+      }
+
+      return { previousRecipe, previousList };
+    },
+    onError: (error, newData, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousRecipe) {
+        queryClient.setQueryData(recipeKeys.detail(storeId, recipeId), context.previousRecipe);
+      }
+      if (context?.previousList) {
+        queryClient.setQueryData(recipeKeys.list(storeId), context.previousList);
+      }
+    },
+    onSuccess: (updatedRecipe) => {
+      // Replace optimistic data with real server data
+      queryClient.setQueryData(recipeKeys.detail(storeId, recipeId), updatedRecipe);
+
+      // Update in list cache with real data
+      const currentList = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
+      if (currentList) {
+        queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
+          ...currentList,
+          recipes: currentList.recipes.map((r) => (r.id === recipeId ? updatedRecipe : r)),
+        });
+      }
+
+      // Non-blocking cache invalidation for related queries
       invalidateRecipeRelatedQueries(queryClient, storeId, false);
     },
   });
 }
 
 /**
- * Delete recipe mutation
+ * Delete recipe mutation with optimistic updates
+ * Real-time: Removes from UI immediately, syncs with server in background
  */
 export function useDeleteRecipe(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (recipeId: string) => deleteRecipe(storeId, recipeId),
-    onSuccess: (_, recipeId) => {
-      // Remove from cache
-      queryClient.removeQueries({ queryKey: recipeKeys.detail(storeId, recipeId) });
-      // Non-blocking cache invalidation: Only invalidate recipes immediately
-      // Other queries (products, materials) will sync in background
+  return useMutation<void, Error, string, { previousList: RecipesResponse | undefined }>({
+    mutationFn: (recipeId) => deleteRecipe(storeId, recipeId),
+    onMutate: async (deletedId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: recipeKeys.lists(storeId) });
+
+      // Snapshot previous value
+      const previousList = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
+
+      // Optimistically remove from cache
+      if (previousList) {
+        queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
+          ...previousList,
+          recipes: previousList.recipes.filter((r) => r.id !== deletedId),
+          total: previousList.total - 1,
+        });
+      }
+
+      return { previousList };
+    },
+    onError: (error, deletedId, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousList) {
+        queryClient.setQueryData(recipeKeys.list(storeId), context.previousList);
+      }
+    },
+    onSuccess: (_, deletedId) => {
+      // Remove from detail cache
+      queryClient.removeQueries({ queryKey: recipeKeys.detail(storeId, deletedId) });
+
+      // Non-blocking cache invalidation for related queries
       invalidateRecipeRelatedQueries(queryClient, storeId, false);
     },
   });

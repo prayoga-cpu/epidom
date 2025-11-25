@@ -198,10 +198,22 @@ export function useCreateMaterial(storeId: string) {
 /**
  * Update an existing material with cache invalidation
  */
+/**
+ * Update an existing material with optimistic updates
+ * Real-time: Updates UI immediately, syncs with server in background
+ */
 export function useUpdateMaterial(storeId: string, id: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<MaterialWithSuppliers, Error, UpdateIngredientInput>({
+  return useMutation<
+    MaterialWithSuppliers,
+    Error,
+    UpdateIngredientInput,
+    {
+      previousMaterial: MaterialWithSuppliers | undefined;
+      previousList: MaterialsResponse | undefined;
+    }
+  >({
     mutationFn: async (input) => {
       const response = await fetch(`/api/stores/${storeId}/materials/${id}`, {
         method: "PATCH",
@@ -219,11 +231,68 @@ export function useUpdateMaterial(storeId: string, id: string) {
       const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
       return data.data;
     },
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: materialKeys.lists(storeId) });
+      await queryClient.cancelQueries({ queryKey: materialKeys.detail(storeId, id) });
+
+      // Snapshot previous values for rollback
+      const previousMaterial = queryClient.getQueryData<MaterialWithSuppliers>(
+        materialKeys.detail(storeId, id)
+      );
+      const previousList = queryClient.getQueryData<MaterialsResponse>(materialKeys.list(storeId));
+
+      // Optimistically update detail cache
+      if (previousMaterial) {
+        queryClient.setQueryData<MaterialWithSuppliers>(materialKeys.detail(storeId, id), {
+          ...previousMaterial,
+          ...newData,
+          updatedAt: new Date(), // Update timestamp
+        } as MaterialWithSuppliers);
+      }
+
+      // Optimistically update list cache
+      if (previousList) {
+        queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
+          ...previousList,
+          materials: previousList.materials.map((m) =>
+            m.id === id
+              ? ({
+                  ...m,
+                  ...newData,
+                  updatedAt: new Date(),
+                } as MaterialWithSuppliers)
+              : m
+          ),
+        });
+      }
+
+      return { previousMaterial, previousList };
+    },
+    onError: (error, newData, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousMaterial) {
+        queryClient.setQueryData(materialKeys.detail(storeId, id), context.previousMaterial);
+      }
+      if (context?.previousList) {
+        queryClient.setQueryData(materialKeys.list(storeId), context.previousList);
+      }
+    },
     onSuccess: async (updatedMaterial) => {
-      // Update cache for specific material (optimistic update)
+      // Replace optimistic data with real server data
       queryClient.setQueryData(materialKeys.detail(storeId, id), updatedMaterial);
-      // Batch invalidate all related queries in parallel for better performance
-      await invalidateMaterialRelatedQueries(queryClient, storeId);
+
+      // Update in list cache with real data
+      const currentList = queryClient.getQueryData<MaterialsResponse>(materialKeys.list(storeId));
+      if (currentList) {
+        queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
+          ...currentList,
+          materials: currentList.materials.map((m) => (m.id === id ? updatedMaterial : m)),
+        });
+      }
+
+      // Non-blocking cache invalidation for related queries
+      invalidateMaterialRelatedQueries(queryClient, storeId, false);
     },
   });
 }
@@ -231,10 +300,19 @@ export function useUpdateMaterial(storeId: string, id: string) {
 /**
  * Delete a material with cache invalidation
  */
+/**
+ * Delete a material with optimistic updates
+ * Real-time: Removes from UI immediately, syncs with server in background
+ */
 export function useDeleteMaterial(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<{ message: string }, Error, string>({
+  return useMutation<
+    { message: string },
+    Error,
+    string,
+    { previousList: MaterialsResponse | undefined }
+  >({
     mutationFn: async (id) => {
       const response = await fetch(`/api/stores/${storeId}/materials/${id}`, {
         method: "DELETE",
@@ -248,11 +326,36 @@ export function useDeleteMaterial(storeId: string) {
       const data: ApiSuccessResponse<{ message: string }> = await response.json();
       return data.data;
     },
+    onMutate: async (deletedId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: materialKeys.lists(storeId) });
+
+      // Snapshot previous value
+      const previousList = queryClient.getQueryData<MaterialsResponse>(materialKeys.list(storeId));
+
+      // Optimistically remove from cache
+      if (previousList) {
+        queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
+          ...previousList,
+          materials: previousList.materials.filter((m) => m.id !== deletedId),
+          total: previousList.total - 1,
+        });
+      }
+
+      return { previousList };
+    },
+    onError: (error, deletedId, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousList) {
+        queryClient.setQueryData(materialKeys.list(storeId), context.previousList);
+      }
+    },
     onSuccess: async (_, deletedId) => {
-      // Remove from cache
+      // Remove from detail cache
       queryClient.removeQueries({ queryKey: materialKeys.detail(storeId, deletedId) });
-      // Batch invalidate all related queries in parallel for better performance
-      await invalidateMaterialRelatedQueries(queryClient, storeId);
+
+      // Non-blocking cache invalidation for related queries
+      invalidateMaterialRelatedQueries(queryClient, storeId, false);
     },
   });
 }

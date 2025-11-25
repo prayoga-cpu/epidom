@@ -266,36 +266,126 @@ export function useCreateProduct(storeId: string) {
 }
 
 /**
- * Update product mutation
+ * Update product mutation with optimistic updates
+ * Real-time: Updates UI immediately, syncs with server in background
  */
 export function useUpdateProduct(storeId: string, productId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (data: UpdateProductInput) => updateProduct(storeId, productId, data),
-    onSuccess: () => {
-      // Update cache for specific product (optimistic update)
-      queryClient.invalidateQueries({ queryKey: productKeys.detail(storeId, productId) });
-      // Non-blocking cache invalidation: Only invalidate products immediately
-      // Other queries (alerts, stock movements) will sync in background
+  return useMutation<
+    Product,
+    Error,
+    UpdateProductInput,
+    {
+      previousProduct: Product | undefined;
+      previousList: ProductsResponse | undefined;
+    }
+  >({
+    mutationFn: (data) => updateProduct(storeId, productId, data),
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: productKeys.lists(storeId) });
+      await queryClient.cancelQueries({ queryKey: productKeys.detail(storeId, productId) });
+
+      // Snapshot previous values for rollback
+      const previousProduct = queryClient.getQueryData<Product>(
+        productKeys.detail(storeId, productId)
+      );
+      const previousList = queryClient.getQueryData<ProductsResponse>(productKeys.list(storeId));
+
+      // Optimistically update detail cache
+      if (previousProduct) {
+        queryClient.setQueryData<Product>(productKeys.detail(storeId, productId), {
+          ...previousProduct,
+          ...newData,
+          updatedAt: new Date(),
+        } as Product);
+      }
+
+      // Optimistically update list cache
+      if (previousList) {
+        queryClient.setQueryData<ProductsResponse>(productKeys.list(storeId), {
+          ...previousList,
+          products: previousList.products.map((p) =>
+            p.id === productId
+              ? ({
+                  ...p,
+                  ...newData,
+                  updatedAt: new Date(),
+                } as Product)
+              : p
+          ),
+        });
+      }
+
+      return { previousProduct, previousList };
+    },
+    onError: (error, newData, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousProduct) {
+        queryClient.setQueryData(productKeys.detail(storeId, productId), context.previousProduct);
+      }
+      if (context?.previousList) {
+        queryClient.setQueryData(productKeys.list(storeId), context.previousList);
+      }
+    },
+    onSuccess: (updatedProduct) => {
+      // Replace optimistic data with real server data
+      queryClient.setQueryData(productKeys.detail(storeId, productId), updatedProduct);
+
+      // Update in list cache with real data
+      const currentList = queryClient.getQueryData<ProductsResponse>(productKeys.list(storeId));
+      if (currentList) {
+        queryClient.setQueryData<ProductsResponse>(productKeys.list(storeId), {
+          ...currentList,
+          products: currentList.products.map((p) => (p.id === productId ? updatedProduct : p)),
+        });
+      }
+
+      // Non-blocking cache invalidation for related queries
       invalidateProductRelatedQueries(queryClient, storeId, false);
     },
   });
 }
 
 /**
- * Delete product mutation
+ * Delete product mutation with optimistic updates
+ * Real-time: Removes from UI immediately, syncs with server in background
  */
 export function useDeleteProduct(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (productId: string) => deleteProduct(storeId, productId),
-    onSuccess: (_, productId) => {
-      // Remove from cache
-      queryClient.removeQueries({ queryKey: productKeys.detail(storeId, productId) });
-      // Non-blocking cache invalidation: Only invalidate products immediately
-      // Other queries (alerts) will sync in background
+  return useMutation<void, Error, string, { previousList: ProductsResponse | undefined }>({
+    mutationFn: (productId) => deleteProduct(storeId, productId),
+    onMutate: async (deletedId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: productKeys.lists(storeId) });
+
+      // Snapshot previous value
+      const previousList = queryClient.getQueryData<ProductsResponse>(productKeys.list(storeId));
+
+      // Optimistically remove from cache
+      if (previousList) {
+        queryClient.setQueryData<ProductsResponse>(productKeys.list(storeId), {
+          ...previousList,
+          products: previousList.products.filter((p) => p.id !== deletedId),
+          total: previousList.total - 1,
+        });
+      }
+
+      return { previousList };
+    },
+    onError: (error, deletedId, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousList) {
+        queryClient.setQueryData(productKeys.list(storeId), context.previousList);
+      }
+    },
+    onSuccess: (_, deletedId) => {
+      // Remove from detail cache
+      queryClient.removeQueries({ queryKey: productKeys.detail(storeId, deletedId) });
+
+      // Non-blocking cache invalidation for related queries
       invalidateProductRelatedQueries(queryClient, storeId, false);
     },
   });
