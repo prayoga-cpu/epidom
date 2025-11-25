@@ -12,7 +12,10 @@ import { StartProductionDialog } from "./start-production-dialog";
 import { ProductionBatchCard } from "./production-batch-card";
 import { MaterialAvailabilityCheck } from "./material-availability-check";
 import { formatCurrency } from "@/lib/utils/formatting";
-import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes";
+import {
+  useRecipes,
+  RecipeWithIngredients,
+} from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import { useProductionBatches } from "./hooks/use-production-batches";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { hasMaterialStockChanged } from "./utils/recipe-helpers";
@@ -26,7 +29,7 @@ export function RecipeProductionCard() {
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRecipe, setSelectedRecipe] = useState<any | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeWithIngredients | null>(null);
   const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
 
   // Fetch recipes from API
@@ -86,7 +89,7 @@ export function RecipeProductionCard() {
   const recipeIngredients = useMemo(() => {
     if (!selectedRecipe?.ingredients) return [];
 
-    return selectedRecipe.ingredients.map((ingredient: any) => {
+    return selectedRecipe.ingredients.map((ingredient) => {
       const required = Number(ingredient.quantity);
       // Convert material stock to ingredient unit for proper comparison
       const materialStock = Number(ingredient.material.currentStock);
@@ -119,7 +122,8 @@ export function RecipeProductionCard() {
   const canStartProduction = useMemo(() => {
     if (!selectedRecipe || recipeIngredients.length === 0) return false;
     // Check if recipe has linked products
-    const hasLinkedProducts = selectedRecipe.recipeProducts && selectedRecipe.recipeProducts.length > 0;
+    const hasLinkedProducts =
+      selectedRecipe.recipeProducts && selectedRecipe.recipeProducts.length > 0;
     if (!hasLinkedProducts) return false;
     // Only allow production if all materials have available >= required
     return recipeIngredients.every(
@@ -128,7 +132,7 @@ export function RecipeProductionCard() {
   }, [selectedRecipe, recipeIngredients]);
 
   // Get category color - neutral gray
-  const getCategoryColor = (category: string) => {
+  const getCategoryColor = (category: string | null | undefined) => {
     return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100";
   };
 
@@ -287,7 +291,7 @@ export function RecipeProductionCard() {
                     className="w-full"
                     size="lg"
                   >
-                    <PlayCircle className="mr-1 h-5 w-5 hidden sm:inline" />
+                    <PlayCircle className="mr-1 hidden h-5 w-5 sm:inline" />
                     {t("management.recipeProduction.startProduction")}
                   </Button>
                   {!canStartProduction && (

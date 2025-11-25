@@ -77,6 +77,12 @@ interface UpdateSupplierOrderInput {
   notes?: string;
 }
 
+interface SubscriptionError extends Error {
+  code?: string;
+  status?: number;
+  upgradeRequired?: boolean;
+}
+
 // Query keys
 export const supplierOrderKeys = {
   all: ["supplier-orders"] as const,
@@ -109,9 +115,9 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
           // Cache the access check result to prevent other supplier queries from fetching
           queryClient.setQueryData(supplierKeys.accessCheck(storeId), false);
 
-          const customError: any = new Error(
+          const customError = new Error(
             errorData.message || "Supplier Management is only available in Pro and Enterprise plans"
-          );
+          ) as SubscriptionError;
           customError.code = "SUBSCRIPTION_FEATURE_LOCKED";
           customError.status = 403;
           customError.upgradeRequired = true;
@@ -135,7 +141,7 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
     // Disable polling - will be conditionally enabled via refetchInterval
     refetchInterval: (query) => {
       // Don't poll if we have a 403 error (subscription locked)
-      if (query.state.error && (query.state.error as any)?.status === 403) {
+      if (query.state.error && (query.state.error as SubscriptionError)?.status === 403) {
         return false; // Disable polling for 403 errors
       }
       return 10 * 1000; // Poll every 10 seconds for successful responses
@@ -143,21 +149,21 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
     refetchIntervalInBackground: false, // Only poll when tab is active
     // Don't refetch on mount if we have a 403 error
     refetchOnMount: (query) => {
-      if (query.state.error && (query.state.error as any)?.status === 403) {
+      if (query.state.error && (query.state.error as SubscriptionError)?.status === 403) {
         return false; // Don't refetch 403 errors on mount
       }
       return false; // Don't refetch if data is fresh (within staleTime)
     },
     // Don't refetch on window focus if we have a 403 error
     refetchOnWindowFocus: (query) => {
-      if (query.state.error && (query.state.error as any)?.status === 403) {
+      if (query.state.error && (query.state.error as SubscriptionError)?.status === 403) {
         return false; // Don't refetch 403 errors on window focus
       }
       return false; // Don't refetch on window focus to prevent spam
     },
     // Don't retry 403 errors (subscription locked)
     retry: (failureCount, error) => {
-      if ((error as any)?.status === 403) {
+      if ((error as SubscriptionError)?.status === 403) {
         return false;
       }
       return failureCount < 3;

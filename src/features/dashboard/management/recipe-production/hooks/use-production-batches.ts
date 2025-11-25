@@ -37,6 +37,8 @@ export interface ProductionBatchWithRelations {
     name: string;
     yieldQuantity: number;
     yieldUnit: string;
+    productionTimeMinutes?: number;
+    costPerBatch?: number;
     ingredients: Array<{
       id: string;
       materialId: string;

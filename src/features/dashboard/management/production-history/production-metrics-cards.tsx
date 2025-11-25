@@ -3,11 +3,11 @@
 import { useMemo } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent } from "@/components/ui/card";
-import { ProductionBatch } from "@/types/entities";
+import { ProductionBatchWithRelations } from "../recipe-production/hooks/use-production-batches";
 import { Package, Star, TrendingUp, AlertCircle } from "lucide-react";
 
 interface ProductionMetricsCardsProps {
-  batches: any[];
+  batches: ProductionBatchWithRelations[];
 }
 
 export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps) {
@@ -81,21 +81,27 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-4">
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (
           <Card key={index} className="shadow-sm">
             <CardContent className="p-4 md:p-6">
               {/* Mobile: Center-aligned with icon below */}
-              <div className="flex flex-col items-center text-center space-y-3 md:hidden">
+              <div className="flex flex-col items-center space-y-3 text-center md:hidden">
                 <div className="w-full space-y-2">
                   <p className="text-muted-foreground text-xs font-medium">{card.title}</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <p className="text-2xl font-bold leading-none">{card.value}</p>
-                    {card.suffix && <p className="text-muted-foreground text-sm font-semibold leading-none">{card.suffix}</p>}
+                    <p className="text-2xl leading-none font-bold">{card.value}</p>
+                    {card.suffix && (
+                      <p className="text-muted-foreground text-sm leading-none font-semibold">
+                        {card.suffix}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-muted-foreground text-xs leading-relaxed">{card.description}</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    {card.description}
+                  </p>
                 </div>
                 <div className={`rounded-lg p-3 ${card.bgColor}`}>
                   <Icon className={`h-6 w-6 ${card.iconColor}`} />
@@ -104,15 +110,19 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
 
               {/* Tablet/Desktop: Left-aligned with icon on the right */}
               <div className="hidden md:flex md:items-start md:justify-between md:gap-3">
-                <div className="flex-1 space-y-1.5 min-w-0">
+                <div className="min-w-0 flex-1 space-y-1.5">
                   <p className="text-muted-foreground text-sm font-medium">{card.title}</p>
                   <div className="flex items-baseline gap-1">
-                    <p className="text-3xl font-bold leading-none">{card.value}</p>
-                    {card.suffix && <p className="text-muted-foreground text-base font-semibold leading-none">{card.suffix}</p>}
+                    <p className="text-3xl leading-none font-bold">{card.value}</p>
+                    {card.suffix && (
+                      <p className="text-muted-foreground text-base leading-none font-semibold">
+                        {card.suffix}
+                      </p>
+                    )}
                   </div>
                   <p className="text-muted-foreground text-xs leading-tight">{card.description}</p>
                 </div>
-                <div className={`rounded-lg p-2.5 shrink-0 ${card.bgColor}`}>
+                <div className={`shrink-0 rounded-lg p-2.5 ${card.bgColor}`}>
                   <Icon className={`h-5 w-5 ${card.iconColor}`} />
                 </div>
               </div>

@@ -237,7 +237,7 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     // Use ref to get current step to avoid stale closure
     const step = currentStepRef.current;
 
-    let fieldsToValidate: any[] = [];
+    let fieldsToValidate: Array<keyof RecipeFormValues> = [];
 
     // Validate current step fields
     // Note: We only validate non-number fields in steps, number fields are validated in onSubmit
@@ -281,13 +281,7 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     }
 
     // Validate only text fields (skip number fields)
-    /**
-     * Type assertion needed because React Hook Form's trigger method has type limitations
-     * with dynamic field arrays
-     * Actual type: FieldPath<RecipeFormValues>[]
-     * Known issue: TypeScript cannot infer dynamic field paths
-     */
-    const isValid = await form.trigger(fieldsToValidate as any);
+    const isValid = await form.trigger(fieldsToValidate);
     if (isValid && step < 4) {
       // Update both state and ref
       const newStep = step + 1;

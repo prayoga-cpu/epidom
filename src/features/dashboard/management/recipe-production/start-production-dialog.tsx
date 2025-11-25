@@ -43,6 +43,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useStartProduction } from "./hooks/use-production-batches";
+import { RecipeWithIngredients } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 
 interface IngredientAvailability {
   materialId: string;
@@ -56,7 +57,7 @@ interface IngredientAvailability {
 interface StartProductionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  recipe: any;
+  recipe: RecipeWithIngredients;
   availableIngredients: (IngredientAvailability | null)[];
 }
 
@@ -89,7 +90,9 @@ export function StartProductionDialog({
 
   // Get products linked to this recipe (from Many-to-Many relationship)
   const linkedProducts =
-    recipe?.recipeProducts?.map((rp: { product: { id: string; name: string; sku: string } }) => rp.product) || [];
+    recipe?.recipeProducts?.map(
+      (rp: { product: { id: string; name: string; sku: string } }) => rp.product
+    ) || [];
   const defaultProductId = linkedProducts[0]?.id || "";
 
   // Initialize form
@@ -106,7 +109,8 @@ export function StartProductionDialog({
 
   // Watch number of batches for real-time calculations
   const numberOfBatches = form.watch("numberOfBatches") || 1;
-  const safeNumberOfBatches = Number.isFinite(numberOfBatches) && numberOfBatches > 0 ? numberOfBatches : 1;
+  const safeNumberOfBatches =
+    Number.isFinite(numberOfBatches) && numberOfBatches > 0 ? numberOfBatches : 1;
 
   // Calculate material availability based on number of batches
   const validIngredients = useMemo(() => {
@@ -164,7 +168,9 @@ export function StartProductionDialog({
 
       // Validate planned quantity is positive
       if (plannedQuantity <= 0) {
-        throw new Error("Calculated production quantity is invalid. Please check the recipe configuration.");
+        throw new Error(
+          "Calculated production quantity is invalid. Please check the recipe configuration."
+        );
       }
 
       const result = await startProduction.mutateAsync({
@@ -215,12 +221,12 @@ export function StartProductionDialog({
               type="submit"
               form="start-production-form"
               disabled={
-                startProduction.isPending ||
-                hasInsufficientMaterials ||
-                linkedProducts.length === 0
+                startProduction.isPending || hasInsufficientMaterials || linkedProducts.length === 0
               }
             >
-              {startProduction.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+              {startProduction.isPending && (
+                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+              )}
               {t("management.recipeProduction.startProduction") || "Start Production"}
             </Button>
           </>
@@ -306,7 +312,7 @@ export function StartProductionDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {linkedProducts.map((product: any) => (
+                        {linkedProducts.map((product) => (
                           <SelectItem key={product.id} value={product.id}>
                             {product.name}
                           </SelectItem>
@@ -507,7 +513,6 @@ export function StartProductionDialog({
                 </FormItem>
               )}
             />
-
           </form>
         </Form>
       </FormDialogLayout>

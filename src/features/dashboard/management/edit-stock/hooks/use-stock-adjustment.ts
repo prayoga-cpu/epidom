@@ -3,8 +3,14 @@ import { toast } from "sonner";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
 import { stockMovementKeys } from "./use-stock-movements";
 import { recipeKeys } from "@/features/dashboard/data/recipes/hooks/use-recipes";
-import type { RecipeWithIngredients } from "@/features/dashboard/data/recipes/hooks/use-recipes";
+import type {
+  RecipeWithIngredients,
+  RecipesResponse,
+} from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import type { Material, Product } from "@prisma/client";
+import type { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
+import type { ProductsResponse } from "@/features/dashboard/data/products/hooks/use-products";
+import { Decimal } from "@prisma/client/runtime/library";
 
 export interface StockAdjustmentInput {
   materialId?: string;
@@ -66,9 +72,9 @@ export function useStockAdjustment(storeId: string) {
     Error,
     StockAdjustmentInput,
     {
-      previousMaterials?: any;
-      previousProducts?: any;
-      previousRecipes?: any;
+      previousMaterials?: MaterialsResponse;
+      previousProducts?: ProductsResponse;
+      previousRecipes?: RecipesResponse;
     }
   >({
     mutationFn: (input) => adjustStock(storeId, input),
@@ -79,14 +85,22 @@ export function useStockAdjustment(storeId: string) {
       await queryClient.cancelQueries({ queryKey: recipeKeys.lists(storeId) });
 
       // Snapshot previous values for rollback
-      const previousMaterials = queryClient.getQueryData(["materials", storeId, "list"]);
-      const previousProducts = queryClient.getQueryData(["products", storeId, "list"]);
-      const previousRecipes = queryClient.getQueryData(recipeKeys.list(storeId));
+      const previousMaterials = queryClient.getQueryData<MaterialsResponse>([
+        "materials",
+        storeId,
+        "list",
+      ]);
+      const previousProducts = queryClient.getQueryData<ProductsResponse>([
+        "products",
+        storeId,
+        "list",
+      ]);
+      const previousRecipes = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
 
       // Calculate new stock optimistically
       if (input.materialId && previousMaterials) {
-        const materialsData = previousMaterials as any;
-        const material = materialsData.materials?.find((m: any) => m.id === input.materialId);
+        const materialsData = previousMaterials;
+        const material = materialsData.materials?.find((m) => m.id === input.materialId);
 
         if (material) {
           const currentStock = Number(material.currentStock) || 0;
@@ -94,20 +108,17 @@ export function useStockAdjustment(storeId: string) {
           const newStock = currentStock + adjustment;
 
           // Optimistically update materials cache
-          queryClient.setQueryData(["materials", storeId, "list"], {
+          queryClient.setQueryData<MaterialsResponse>(["materials", storeId, "list"], {
             ...materialsData,
-            materials: materialsData.materials.map((m: any) =>
-              m.id === input.materialId ? { ...m, currentStock: newStock } : m
+            materials: materialsData.materials.map((m) =>
+              m.id === input.materialId ? { ...m, currentStock: newStock as unknown as Decimal } : m
             ),
           });
 
           // Optimistically update recipes cache (material stock in ingredients)
           if (previousRecipes) {
-            const recipesData = previousRecipes as {
-              recipes: RecipeWithIngredients[];
-              total: number;
-            };
-            queryClient.setQueryData(recipeKeys.list(storeId), {
+            const recipesData = previousRecipes;
+            queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
               ...recipesData,
               recipes: recipesData.recipes.map((recipe) => ({
                 ...recipe,
@@ -130,18 +141,18 @@ export function useStockAdjustment(storeId: string) {
 
       // Similar for products
       if (input.productId && previousProducts) {
-        const productsData = previousProducts as any;
-        const product = productsData.products?.find((p: any) => p.id === input.productId);
+        const productsData = previousProducts;
+        const product = productsData.products?.find((p) => p.id === input.productId);
 
         if (product) {
           const currentStock = Number(product.currentStock) || 0;
           const adjustment = input.adjustmentType === "IN" ? input.quantity : -input.quantity;
           const newStock = currentStock + adjustment;
 
-          queryClient.setQueryData(["products", storeId, "list"], {
+          queryClient.setQueryData<ProductsResponse>(["products", storeId, "list"], {
             ...productsData,
-            products: productsData.products.map((p: any) =>
-              p.id === input.productId ? { ...p, currentStock: newStock } : p
+            products: productsData.products.map((p) =>
+              p.id === input.productId ? { ...p, currentStock: newStock as unknown as Decimal } : p
             ),
           });
         }
@@ -167,24 +178,30 @@ export function useStockAdjustment(storeId: string) {
 
       if (input.materialId && response.material) {
         // Update materials cache with real data
-        const materialsData = queryClient.getQueryData(["materials", storeId, "list"]) as any;
+        const materialsData = queryClient.getQueryData<MaterialsResponse>([
+          "materials",
+          storeId,
+          "list",
+        ]);
         if (materialsData) {
-          queryClient.setQueryData(["materials", storeId, "list"], {
+          queryClient.setQueryData<MaterialsResponse>(["materials", storeId, "list"], {
             ...materialsData,
-            materials: materialsData.materials.map((m: any) =>
-              m.id === input.materialId ? { ...m, currentStock: realStock } : m
+            materials: materialsData.materials.map((m) =>
+              m.id === input.materialId
+                ? { ...m, currentStock: realStock as unknown as Decimal }
+                : m
             ),
           });
         }
 
         // Update recipes cache with real data
-        const recipesData = queryClient.getQueryData(recipeKeys.list(storeId)) as any;
+        const recipesData = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
         if (recipesData) {
-          queryClient.setQueryData(recipeKeys.list(storeId), {
+          queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
             ...recipesData,
-            recipes: recipesData.recipes.map((recipe: any) => ({
+            recipes: recipesData.recipes.map((recipe) => ({
               ...recipe,
-              ingredients: recipe.ingredients.map((ing: any) =>
+              ingredients: recipe.ingredients.map((ing) =>
                 ing.materialId === input.materialId
                   ? {
                       ...ing,
@@ -201,12 +218,16 @@ export function useStockAdjustment(storeId: string) {
       }
 
       if (input.productId && response.product) {
-        const productsData = queryClient.getQueryData(["products", storeId, "list"]) as any;
+        const productsData = queryClient.getQueryData<ProductsResponse>([
+          "products",
+          storeId,
+          "list",
+        ]);
         if (productsData) {
-          queryClient.setQueryData(["products", storeId, "list"], {
+          queryClient.setQueryData<ProductsResponse>(["products", storeId, "list"], {
             ...productsData,
-            products: productsData.products.map((p: any) =>
-              p.id === input.productId ? { ...p, currentStock: realStock } : p
+            products: productsData.products.map((p) =>
+              p.id === input.productId ? { ...p, currentStock: realStock as unknown as Decimal } : p
             ),
           });
         }

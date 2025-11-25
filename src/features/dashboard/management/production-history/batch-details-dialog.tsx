@@ -15,11 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Package,
   Clock,
@@ -70,8 +66,8 @@ interface Recipe {
   category?: string;
   yieldQuantity: number;
   yieldUnit: string;
-  productionTimeMinutes: number;
-  costPerBatch: number;
+  productionTimeMinutes?: number;
+  costPerBatch?: number;
   ingredients: RecipeIngredient[];
 }
 
