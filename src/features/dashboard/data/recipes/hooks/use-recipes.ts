@@ -355,7 +355,7 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
     UpdateRecipeFormInput,
     {
       previousRecipe: RecipeWithIngredients | undefined;
-      previousList: RecipesResponse | undefined;
+      previousQueries: Array<[readonly unknown[], RecipesResponse | undefined]>;
     }
   >({
     mutationFn: (data) => updateRecipe(storeId, recipeId, data),
@@ -368,7 +368,9 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
       const previousRecipe = queryClient.getQueryData<RecipeWithIngredients>(
         recipeKeys.detail(storeId, recipeId)
       );
-      const previousList = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
+      const previousQueries = queryClient.getQueriesData<RecipesResponse>({
+        queryKey: recipeKeys.lists(storeId),
+      });
 
       // Optimistically update detail cache
       if (previousRecipe) {
@@ -379,45 +381,54 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
         } as RecipeWithIngredients);
       }
 
-      // Optimistically update list cache
-      if (previousList) {
-        queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
-          ...previousList,
-          recipes: previousList.recipes.map((r) =>
-            r.id === recipeId
-              ? ({
-                  ...r,
-                  ...newData,
-                  updatedAt: new Date(),
-                } as RecipeWithIngredients)
-              : r
-          ),
-        });
-      }
+      // Optimistically update all list caches
+      queryClient.setQueriesData<RecipesResponse>(
+        { queryKey: recipeKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.recipes) return oldData;
+          return {
+            ...oldData,
+            recipes: oldData.recipes.map((r) =>
+              r.id === recipeId
+                ? ({
+                    ...r,
+                    ...newData,
+                    updatedAt: new Date(),
+                  } as RecipeWithIngredients)
+                : r
+            ),
+          };
+        }
+      );
 
-      return { previousRecipe, previousList };
+      return { previousRecipe, previousQueries };
     },
     onError: (error, newData, context) => {
       // Rollback optimistic update on error
       if (context?.previousRecipe) {
         queryClient.setQueryData(recipeKeys.detail(storeId, recipeId), context.previousRecipe);
       }
-      if (context?.previousList) {
-        queryClient.setQueryData(recipeKeys.list(storeId), context.previousList);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: (updatedRecipe) => {
       // Replace optimistic data with real server data
       queryClient.setQueryData(recipeKeys.detail(storeId, recipeId), updatedRecipe);
 
-      // Update in list cache with real data
-      const currentList = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
-      if (currentList) {
-        queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
-          ...currentList,
-          recipes: currentList.recipes.map((r) => (r.id === recipeId ? updatedRecipe : r)),
-        });
-      }
+      // Update in all list caches with real data
+      queryClient.setQueriesData<RecipesResponse>(
+        { queryKey: recipeKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.recipes) return oldData;
+          return {
+            ...oldData,
+            recipes: oldData.recipes.map((r) => (r.id === recipeId ? updatedRecipe : r)),
+          };
+        }
+      );
 
       // Non-blocking cache invalidation for related queries
       invalidateRecipeRelatedQueries(queryClient, storeId, false);
@@ -432,30 +443,43 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
 export function useDeleteRecipe(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, string, { previousList: RecipesResponse | undefined }>({
+  return useMutation<
+    void,
+    Error,
+    string,
+    { previousQueries: Array<[readonly unknown[], RecipesResponse | undefined]> }
+  >({
     mutationFn: (recipeId) => deleteRecipe(storeId, recipeId),
     onMutate: async (deletedId) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: recipeKeys.lists(storeId) });
 
-      // Snapshot previous value
-      const previousList = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
+      // Snapshot previous queries
+      const previousQueries = queryClient.getQueriesData<RecipesResponse>({
+        queryKey: recipeKeys.lists(storeId),
+      });
 
-      // Optimistically remove from cache
-      if (previousList) {
-        queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
-          ...previousList,
-          recipes: previousList.recipes.filter((r) => r.id !== deletedId),
-          total: previousList.total - 1,
-        });
-      }
+      // Optimistically remove from all matching caches
+      queryClient.setQueriesData<RecipesResponse>(
+        { queryKey: recipeKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.recipes) return oldData;
+          return {
+            ...oldData,
+            recipes: oldData.recipes.filter((r) => r.id !== deletedId),
+            total: Math.max(0, oldData.total - 1),
+          };
+        }
+      );
 
-      return { previousList };
+      return { previousQueries };
     },
     onError: (error, deletedId, context) => {
       // Rollback optimistic update on error
-      if (context?.previousList) {
-        queryClient.setQueryData(recipeKeys.list(storeId), context.previousList);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: (_, deletedId) => {

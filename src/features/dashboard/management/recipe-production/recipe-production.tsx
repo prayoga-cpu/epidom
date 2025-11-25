@@ -347,6 +347,7 @@ export function RecipeProductionCard() {
       {/* Start Production Dialog */}
       {selectedRecipe && (
         <StartProductionDialog
+          key={selectedRecipe.id}
           open={isStartDialogOpen}
           onOpenChange={setIsStartDialogOpen}
           recipe={selectedRecipe}

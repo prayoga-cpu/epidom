@@ -278,7 +278,7 @@ export function useUpdateProduct(storeId: string, productId: string) {
     UpdateProductInput,
     {
       previousProduct: Product | undefined;
-      previousList: ProductsResponse | undefined;
+      previousQueries: Array<[readonly unknown[], ProductsResponse | undefined]>;
     }
   >({
     mutationFn: (data) => updateProduct(storeId, productId, data),
@@ -291,7 +291,9 @@ export function useUpdateProduct(storeId: string, productId: string) {
       const previousProduct = queryClient.getQueryData<Product>(
         productKeys.detail(storeId, productId)
       );
-      const previousList = queryClient.getQueryData<ProductsResponse>(productKeys.list(storeId));
+      const previousQueries = queryClient.getQueriesData<ProductsResponse>({
+        queryKey: productKeys.lists(storeId),
+      });
 
       // Optimistically update detail cache
       if (previousProduct) {
@@ -302,45 +304,54 @@ export function useUpdateProduct(storeId: string, productId: string) {
         } as Product);
       }
 
-      // Optimistically update list cache
-      if (previousList) {
-        queryClient.setQueryData<ProductsResponse>(productKeys.list(storeId), {
-          ...previousList,
-          products: previousList.products.map((p) =>
-            p.id === productId
-              ? ({
-                  ...p,
-                  ...newData,
-                  updatedAt: new Date(),
-                } as Product)
-              : p
-          ),
-        });
-      }
+      // Optimistically update all list caches
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: productKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.products) return oldData;
+          return {
+            ...oldData,
+            products: oldData.products.map((p) =>
+              p.id === productId
+                ? ({
+                    ...p,
+                    ...newData,
+                    updatedAt: new Date(),
+                  } as Product)
+                : p
+            ),
+          };
+        }
+      );
 
-      return { previousProduct, previousList };
+      return { previousProduct, previousQueries };
     },
     onError: (error, newData, context) => {
       // Rollback optimistic update on error
       if (context?.previousProduct) {
         queryClient.setQueryData(productKeys.detail(storeId, productId), context.previousProduct);
       }
-      if (context?.previousList) {
-        queryClient.setQueryData(productKeys.list(storeId), context.previousList);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: (updatedProduct) => {
       // Replace optimistic data with real server data
       queryClient.setQueryData(productKeys.detail(storeId, productId), updatedProduct);
 
-      // Update in list cache with real data
-      const currentList = queryClient.getQueryData<ProductsResponse>(productKeys.list(storeId));
-      if (currentList) {
-        queryClient.setQueryData<ProductsResponse>(productKeys.list(storeId), {
-          ...currentList,
-          products: currentList.products.map((p) => (p.id === productId ? updatedProduct : p)),
-        });
-      }
+      // Update in all list caches with real data
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: productKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.products) return oldData;
+          return {
+            ...oldData,
+            products: oldData.products.map((p) => (p.id === productId ? updatedProduct : p)),
+          };
+        }
+      );
 
       // Non-blocking cache invalidation for related queries
       invalidateProductRelatedQueries(queryClient, storeId, false);
@@ -355,30 +366,43 @@ export function useUpdateProduct(storeId: string, productId: string) {
 export function useDeleteProduct(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, string, { previousList: ProductsResponse | undefined }>({
+  return useMutation<
+    void,
+    Error,
+    string,
+    { previousQueries: Array<[readonly unknown[], ProductsResponse | undefined]> }
+  >({
     mutationFn: (productId) => deleteProduct(storeId, productId),
     onMutate: async (deletedId) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: productKeys.lists(storeId) });
 
-      // Snapshot previous value
-      const previousList = queryClient.getQueryData<ProductsResponse>(productKeys.list(storeId));
+      // Snapshot previous queries
+      const previousQueries = queryClient.getQueriesData<ProductsResponse>({
+        queryKey: productKeys.lists(storeId),
+      });
 
-      // Optimistically remove from cache
-      if (previousList) {
-        queryClient.setQueryData<ProductsResponse>(productKeys.list(storeId), {
-          ...previousList,
-          products: previousList.products.filter((p) => p.id !== deletedId),
-          total: previousList.total - 1,
-        });
-      }
+      // Optimistically remove from all matching caches
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: productKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.products) return oldData;
+          return {
+            ...oldData,
+            products: oldData.products.filter((p) => p.id !== deletedId),
+            total: Math.max(0, oldData.total - 1),
+          };
+        }
+      );
 
-      return { previousList };
+      return { previousQueries };
     },
     onError: (error, deletedId, context) => {
       // Rollback optimistic update on error
-      if (context?.previousList) {
-        queryClient.setQueryData(productKeys.list(storeId), context.previousList);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: (_, deletedId) => {

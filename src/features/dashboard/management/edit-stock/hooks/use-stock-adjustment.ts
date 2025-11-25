@@ -72,9 +72,9 @@ export function useStockAdjustment(storeId: string) {
     Error,
     StockAdjustmentInput,
     {
-      previousMaterials?: MaterialsResponse;
-      previousProducts?: ProductsResponse;
-      previousRecipes?: RecipesResponse;
+      previousMaterialQueries: Array<[readonly unknown[], MaterialsResponse | undefined]>;
+      previousProductQueries: Array<[readonly unknown[], ProductsResponse | undefined]>;
+      previousRecipeQueries: Array<[readonly unknown[], RecipesResponse | undefined]>;
     }
   >({
     mutationFn: (input) => adjustStock(storeId, input),
@@ -84,92 +84,107 @@ export function useStockAdjustment(storeId: string) {
       await queryClient.cancelQueries({ queryKey: ["products", storeId] });
       await queryClient.cancelQueries({ queryKey: recipeKeys.lists(storeId) });
 
-      // Snapshot previous values for rollback
-      const previousMaterials = queryClient.getQueryData<MaterialsResponse>([
-        "materials",
-        storeId,
-        "list",
-      ]);
-      const previousProducts = queryClient.getQueryData<ProductsResponse>([
-        "products",
-        storeId,
-        "list",
-      ]);
-      const previousRecipes = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
+      // Snapshot previous queries
+      const previousMaterialQueries = queryClient.getQueriesData<MaterialsResponse>({
+        queryKey: ["materials", storeId, "list"],
+      });
+      const previousProductQueries = queryClient.getQueriesData<ProductsResponse>({
+        queryKey: ["products", storeId, "list"],
+      });
+      const previousRecipeQueries = queryClient.getQueriesData<RecipesResponse>({
+        queryKey: recipeKeys.lists(storeId),
+      });
 
       // Calculate new stock optimistically
-      if (input.materialId && previousMaterials) {
-        const materialsData = previousMaterials;
-        const material = materialsData.materials?.find((m) => m.id === input.materialId);
+      if (input.materialId) {
+        const adjustment = input.adjustmentType === "IN" ? input.quantity : -input.quantity;
 
-        if (material) {
-          const currentStock = Number(material.currentStock) || 0;
-          const adjustment = input.adjustmentType === "IN" ? input.quantity : -input.quantity;
-          const newStock = currentStock + adjustment;
-
-          // Optimistically update materials cache
-          queryClient.setQueryData<MaterialsResponse>(["materials", storeId, "list"], {
-            ...materialsData,
-            materials: materialsData.materials.map((m) =>
-              m.id === input.materialId ? { ...m, currentStock: newStock as unknown as Decimal } : m
-            ),
-          });
-
-          // Optimistically update recipes cache (material stock in ingredients)
-          if (previousRecipes) {
-            const recipesData = previousRecipes;
-            queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
-              ...recipesData,
-              recipes: recipesData.recipes.map((recipe) => ({
-                ...recipe,
-                ingredients: recipe.ingredients.map((ing) =>
-                  ing.materialId === input.materialId
-                    ? {
-                        ...ing,
-                        material: {
-                          ...ing.material,
-                          currentStock: newStock,
-                        },
-                      }
-                    : ing
-                ),
-              })),
-            });
+        // Optimistically update all materials caches
+        queryClient.setQueriesData<MaterialsResponse>(
+          { queryKey: ["materials", storeId, "list"] },
+          (oldData) => {
+            if (!oldData || !oldData.materials) return oldData;
+            return {
+              ...oldData,
+              materials: oldData.materials.map((m) => {
+                if (m.id === input.materialId) {
+                  const currentStock = Number(m.currentStock) || 0;
+                  return { ...m, currentStock: (currentStock + adjustment) as unknown as Decimal };
+                }
+                return m;
+              }),
+            };
           }
-        }
+        );
+
+        // Optimistically update all recipes caches (material stock in ingredients)
+        queryClient.setQueriesData<RecipesResponse>(
+          { queryKey: recipeKeys.lists(storeId) },
+          (oldData) => {
+            if (!oldData || !oldData.recipes) return oldData;
+            return {
+              ...oldData,
+              recipes: oldData.recipes.map((recipe) => ({
+                ...recipe,
+                ingredients: recipe.ingredients.map((ing) => {
+                  if (ing.materialId === input.materialId) {
+                    const currentStock = Number(ing.material.currentStock) || 0;
+                    return {
+                      ...ing,
+                      material: {
+                        ...ing.material,
+                        currentStock: currentStock + adjustment,
+                      },
+                    };
+                  }
+                  return ing;
+                }),
+              })),
+            };
+          }
+        );
       }
 
       // Similar for products
-      if (input.productId && previousProducts) {
-        const productsData = previousProducts;
-        const product = productsData.products?.find((p) => p.id === input.productId);
+      if (input.productId) {
+        const adjustment = input.adjustmentType === "IN" ? input.quantity : -input.quantity;
 
-        if (product) {
-          const currentStock = Number(product.currentStock) || 0;
-          const adjustment = input.adjustmentType === "IN" ? input.quantity : -input.quantity;
-          const newStock = currentStock + adjustment;
-
-          queryClient.setQueryData<ProductsResponse>(["products", storeId, "list"], {
-            ...productsData,
-            products: productsData.products.map((p) =>
-              p.id === input.productId ? { ...p, currentStock: newStock as unknown as Decimal } : p
-            ),
-          });
-        }
+        queryClient.setQueriesData<ProductsResponse>(
+          { queryKey: ["products", storeId, "list"] },
+          (oldData) => {
+            if (!oldData || !oldData.products) return oldData;
+            return {
+              ...oldData,
+              products: oldData.products.map((p) => {
+                if (p.id === input.productId) {
+                  const currentStock = Number(p.currentStock) || 0;
+                  return { ...p, currentStock: (currentStock + adjustment) as unknown as Decimal };
+                }
+                return p;
+              }),
+            };
+          }
+        );
       }
 
-      return { previousMaterials, previousProducts, previousRecipes };
+      return { previousMaterialQueries, previousProductQueries, previousRecipeQueries };
     },
     onError: (error, input, context) => {
       // Rollback optimistic updates on error
-      if (context?.previousMaterials) {
-        queryClient.setQueryData(["materials", storeId, "list"], context.previousMaterials);
+      if (context?.previousMaterialQueries) {
+        context.previousMaterialQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
-      if (context?.previousProducts) {
-        queryClient.setQueryData(["products", storeId, "list"], context.previousProducts);
+      if (context?.previousProductQueries) {
+        context.previousProductQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
-      if (context?.previousRecipes) {
-        queryClient.setQueryData(recipeKeys.list(storeId), context.previousRecipes);
+      if (context?.previousRecipeQueries) {
+        context.previousRecipeQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: async (response, input) => {
@@ -177,75 +192,69 @@ export function useStockAdjustment(storeId: string) {
       const realStock = response.movement.balanceAfter;
 
       if (input.materialId && response.material) {
-        // Update materials cache with real data
-        const materialsData = queryClient.getQueryData<MaterialsResponse>([
-          "materials",
-          storeId,
-          "list",
-        ]);
-        if (materialsData) {
-          queryClient.setQueryData<MaterialsResponse>(["materials", storeId, "list"], {
-            ...materialsData,
-            materials: materialsData.materials.map((m) =>
-              m.id === input.materialId
-                ? { ...m, currentStock: realStock as unknown as Decimal }
-                : m
-            ),
-          });
-        }
-
-        // Update recipes cache with real data
-        const recipesData = queryClient.getQueryData<RecipesResponse>(recipeKeys.list(storeId));
-        if (recipesData) {
-          queryClient.setQueryData<RecipesResponse>(recipeKeys.list(storeId), {
-            ...recipesData,
-            recipes: recipesData.recipes.map((recipe) => ({
-              ...recipe,
-              ingredients: recipe.ingredients.map((ing) =>
-                ing.materialId === input.materialId
-                  ? {
-                      ...ing,
-                      material: {
-                        ...ing.material,
-                        currentStock: realStock,
-                      },
-                    }
-                  : ing
+        // Update all materials caches with real data
+        queryClient.setQueriesData<MaterialsResponse>(
+          { queryKey: ["materials", storeId, "list"] },
+          (oldData) => {
+            if (!oldData || !oldData.materials) return oldData;
+            return {
+              ...oldData,
+              materials: oldData.materials.map((m) =>
+                m.id === input.materialId
+                  ? { ...m, currentStock: realStock as unknown as Decimal }
+                  : m
               ),
-            })),
-          });
-        }
+            };
+          }
+        );
+
+        // Update all recipes caches with real data
+        queryClient.setQueriesData<RecipesResponse>(
+          { queryKey: recipeKeys.lists(storeId) },
+          (oldData) => {
+            if (!oldData || !oldData.recipes) return oldData;
+            return {
+              ...oldData,
+              recipes: oldData.recipes.map((recipe) => ({
+                ...recipe,
+                ingredients: recipe.ingredients.map((ing) =>
+                  ing.materialId === input.materialId
+                    ? {
+                        ...ing,
+                        material: {
+                          ...ing.material,
+                          currentStock: realStock,
+                        },
+                      }
+                    : ing
+                ),
+              })),
+            };
+          }
+        );
       }
 
       if (input.productId && response.product) {
-        const productsData = queryClient.getQueryData<ProductsResponse>([
-          "products",
-          storeId,
-          "list",
-        ]);
-        if (productsData) {
-          queryClient.setQueryData<ProductsResponse>(["products", storeId, "list"], {
-            ...productsData,
-            products: productsData.products.map((p) =>
-              p.id === input.productId ? { ...p, currentStock: realStock as unknown as Decimal } : p
-            ),
-          });
-        }
+        // Update all products caches with real data
+        queryClient.setQueriesData<ProductsResponse>(
+          { queryKey: ["products", storeId, "list"] },
+          (oldData) => {
+            if (!oldData || !oldData.products) return oldData;
+            return {
+              ...oldData,
+              products: oldData.products.map((p) =>
+                p.id === input.productId
+                  ? { ...p, currentStock: realStock as unknown as Decimal }
+                  : p
+              ),
+            };
+          }
+        );
       }
 
       // Invalidate related queries (non-blocking)
-      await invalidateMaterialRelatedQueries(queryClient, storeId, true);
-
-      queryClient.invalidateQueries({
-        queryKey: ["production-batches", storeId],
-        exact: false,
-        refetchType: "active",
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: stockMovementKeys.all(storeId),
-        exact: false,
-      });
+      // Use false to trigger "smart" invalidation: immediate for active queries, background for others
+      invalidateMaterialRelatedQueries(queryClient, storeId, false);
     },
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useForm } from "react-hook-form";
@@ -107,6 +107,14 @@ export function StartProductionDialog({
     },
   });
 
+  // Auto-select default product when available
+  useEffect(() => {
+    const currentProductId = form.getValues("productId");
+    if (!currentProductId && defaultProductId) {
+      form.setValue("productId", defaultProductId);
+    }
+  }, [defaultProductId, form]);
+
   // Watch number of batches for real-time calculations
   const numberOfBatches = form.watch("numberOfBatches") || 1;
   const safeNumberOfBatches =
@@ -188,7 +196,13 @@ export function StartProductionDialog({
         }
       );
 
-      form.reset();
+      form.reset({
+        productId: defaultProductId,
+        recipeId: recipe.id,
+        numberOfBatches: 1,
+        scheduledDate: "",
+        notes: "",
+      });
       onOpenChange(false);
     } catch (error) {
       sonnerToast.error(t("management.recipeProduction.toasts.productionFailed.title") || "Error", {

@@ -211,7 +211,7 @@ export function useUpdateMaterial(storeId: string, id: string) {
     UpdateIngredientInput,
     {
       previousMaterial: MaterialWithSuppliers | undefined;
-      previousList: MaterialsResponse | undefined;
+      previousQueries: Array<[readonly unknown[], MaterialsResponse | undefined]>;
     }
   >({
     mutationFn: async (input) => {
@@ -240,7 +240,9 @@ export function useUpdateMaterial(storeId: string, id: string) {
       const previousMaterial = queryClient.getQueryData<MaterialWithSuppliers>(
         materialKeys.detail(storeId, id)
       );
-      const previousList = queryClient.getQueryData<MaterialsResponse>(materialKeys.list(storeId));
+      const previousQueries = queryClient.getQueriesData<MaterialsResponse>({
+        queryKey: materialKeys.lists(storeId),
+      });
 
       // Optimistically update detail cache
       if (previousMaterial) {
@@ -251,45 +253,54 @@ export function useUpdateMaterial(storeId: string, id: string) {
         } as MaterialWithSuppliers);
       }
 
-      // Optimistically update list cache
-      if (previousList) {
-        queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
-          ...previousList,
-          materials: previousList.materials.map((m) =>
-            m.id === id
-              ? ({
-                  ...m,
-                  ...newData,
-                  updatedAt: new Date(),
-                } as MaterialWithSuppliers)
-              : m
-          ),
-        });
-      }
+      // Optimistically update all list caches
+      queryClient.setQueriesData<MaterialsResponse>(
+        { queryKey: materialKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.materials) return oldData;
+          return {
+            ...oldData,
+            materials: oldData.materials.map((m) =>
+              m.id === id
+                ? ({
+                    ...m,
+                    ...newData,
+                    updatedAt: new Date(),
+                  } as MaterialWithSuppliers)
+                : m
+            ),
+          };
+        }
+      );
 
-      return { previousMaterial, previousList };
+      return { previousMaterial, previousQueries };
     },
     onError: (error, newData, context) => {
       // Rollback optimistic update on error
       if (context?.previousMaterial) {
         queryClient.setQueryData(materialKeys.detail(storeId, id), context.previousMaterial);
       }
-      if (context?.previousList) {
-        queryClient.setQueryData(materialKeys.list(storeId), context.previousList);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: async (updatedMaterial) => {
       // Replace optimistic data with real server data
       queryClient.setQueryData(materialKeys.detail(storeId, id), updatedMaterial);
 
-      // Update in list cache with real data
-      const currentList = queryClient.getQueryData<MaterialsResponse>(materialKeys.list(storeId));
-      if (currentList) {
-        queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
-          ...currentList,
-          materials: currentList.materials.map((m) => (m.id === id ? updatedMaterial : m)),
-        });
-      }
+      // Update in all list caches with real data
+      queryClient.setQueriesData<MaterialsResponse>(
+        { queryKey: materialKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.materials) return oldData;
+          return {
+            ...oldData,
+            materials: oldData.materials.map((m) => (m.id === id ? updatedMaterial : m)),
+          };
+        }
+      );
 
       // Non-blocking cache invalidation for related queries
       invalidateMaterialRelatedQueries(queryClient, storeId, false);
@@ -311,7 +322,7 @@ export function useDeleteMaterial(storeId: string) {
     { message: string },
     Error,
     string,
-    { previousList: MaterialsResponse | undefined }
+    { previousQueries: Array<[readonly unknown[], MaterialsResponse | undefined]> }
   >({
     mutationFn: async (id) => {
       const response = await fetch(`/api/stores/${storeId}/materials/${id}`, {
@@ -330,24 +341,32 @@ export function useDeleteMaterial(storeId: string) {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: materialKeys.lists(storeId) });
 
-      // Snapshot previous value
-      const previousList = queryClient.getQueryData<MaterialsResponse>(materialKeys.list(storeId));
+      // Snapshot previous queries
+      const previousQueries = queryClient.getQueriesData<MaterialsResponse>({
+        queryKey: materialKeys.lists(storeId),
+      });
 
-      // Optimistically remove from cache
-      if (previousList) {
-        queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
-          ...previousList,
-          materials: previousList.materials.filter((m) => m.id !== deletedId),
-          total: previousList.total - 1,
-        });
-      }
+      // Optimistically remove from all matching caches
+      queryClient.setQueriesData<MaterialsResponse>(
+        { queryKey: materialKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.materials) return oldData;
+          return {
+            ...oldData,
+            materials: oldData.materials.filter((m) => m.id !== deletedId),
+            total: Math.max(0, oldData.total - 1),
+          };
+        }
+      );
 
-      return { previousList };
+      return { previousQueries };
     },
     onError: (error, deletedId, context) => {
       // Rollback optimistic update on error
-      if (context?.previousList) {
-        queryClient.setQueryData(materialKeys.list(storeId), context.previousList);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: async (_, deletedId) => {
