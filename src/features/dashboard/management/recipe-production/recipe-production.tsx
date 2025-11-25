@@ -12,11 +12,15 @@ import { StartProductionDialog } from "./start-production-dialog";
 import { ProductionBatchCard } from "./production-batch-card";
 import { MaterialAvailabilityCheck } from "./material-availability-check";
 import { formatCurrency } from "@/lib/utils/formatting";
-import { useRecipes } from "@/features/dashboard/data/recipes/hooks/use-recipes";
+import {
+  useRecipes,
+  RecipeWithIngredients,
+} from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import { useProductionBatches } from "./hooks/use-production-batches";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { hasMaterialStockChanged } from "./utils/recipe-helpers";
 import { getTranslatedCategory } from "@/features/dashboard/data/recipes/utils/category-helpers";
+import { convertStockToIngredientUnit } from "@/lib/utils/unit-conversion";
 
 export function RecipeProductionCard() {
   const { t } = useI18n();
@@ -26,7 +30,7 @@ export function RecipeProductionCard() {
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRecipe, setSelectedRecipe] = useState<any | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeWithIngredients | null>(null);
   const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
 
   // Fetch recipes from API
@@ -91,9 +95,14 @@ export function RecipeProductionCard() {
   const recipeIngredients = useMemo(() => {
     if (!selectedRecipe?.ingredients) return [];
 
-    return selectedRecipe.ingredients.map((ingredient: any) => {
+    return selectedRecipe.ingredients.map((ingredient) => {
       const required = Number(ingredient.quantity);
-      const available = Number(ingredient.material.currentStock);
+      // Convert material stock to ingredient unit for proper comparison
+      const materialStock = Number(ingredient.material.currentStock);
+      const materialUnit = ingredient.material.unit;
+      const ingredientUnit = ingredient.unit;
+      const available = convertStockToIngredientUnit(materialStock, materialUnit, ingredientUnit);
+
       let status: "sufficient" | "low" | "insufficient";
 
       if (available >= required) {
@@ -123,6 +132,7 @@ export function RecipeProductionCard() {
   // Check if all materials have sufficient quantity
   const hasSufficientMaterials = useMemo(() => {
     if (!selectedRecipe || recipeIngredients.length === 0) return false;
+    // Only allow production if all materials have available >= required
     return recipeIngredients.every(
       (ing: { available: number; required: number }) => ing.available >= ing.required
     );
@@ -135,8 +145,23 @@ export function RecipeProductionCard() {
   }, [selectedRecipe, recipeIngredients, hasLinkedProducts, hasSufficientMaterials]);
 
   // Get category color - neutral gray
-  const getCategoryColor = (category: string) => {
+  const getCategoryColor = (category: string | null | undefined) => {
     return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100";
+  };
+
+  // Helper to translate category from database value to localized string
+  const getCategoryTranslation = (category: string | null | undefined): string => {
+    if (!category) return "";
+    const categoryMap: Record<string, string> = {
+      "Bread & Pastries": t("data.recipes.categories.breadPastries"),
+      "Cakes & Desserts": t("data.recipes.categories.cakesDesserts"),
+      Confectionery: t("data.recipes.categories.confectionery"),
+      "Dairy Products": t("data.recipes.categories.dairyProducts"),
+      Beverages: t("data.recipes.categories.beverages"),
+      "Sauces & Condiments": t("data.recipes.categories.saucesCondiments"),
+      Other: t("data.recipes.categories.other"),
+    };
+    return categoryMap[category] || category;
   };
 
   // Loading state
@@ -144,8 +169,12 @@ export function RecipeProductionCard() {
     return (
       <div className="space-y-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">{t("tabs.recipeProduction")}</h2>
-          <p className="text-muted-foreground">{t("management.recipeProduction.description")}</p>
+          <h2 className="text-2xl font-bold tracking-tight">
+            {t("management.recipeProduction.title")}
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            {t("management.recipeProduction.description")}
+          </p>
         </div>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -158,8 +187,12 @@ export function RecipeProductionCard() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">{t("tabs.recipeProduction")}</h2>
-        <p className="text-muted-foreground">{t("management.recipeProduction.description")}</p>
+        <h2 className="text-2xl font-bold tracking-tight">
+          {t("management.recipeProduction.title")}
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          {t("management.recipeProduction.description")}
+        </p>
       </div>
 
       {/* Two-Column Layout */}
@@ -294,7 +327,7 @@ export function RecipeProductionCard() {
                     className="w-full"
                     size="lg"
                   >
-                    <PlayCircle className="mr-1 h-5 w-5 hidden sm:inline" />
+                    <PlayCircle className="mr-1 hidden h-5 w-5 sm:inline" />
                     {t("management.recipeProduction.startProduction")}
                   </Button>
                   {!canStartProduction && !hasLinkedProducts && (
@@ -356,6 +389,7 @@ export function RecipeProductionCard() {
       {/* Start Production Dialog */}
       {selectedRecipe && (
         <StartProductionDialog
+          key={selectedRecipe.id}
           open={isStartDialogOpen}
           onOpenChange={setIsStartDialogOpen}
           recipe={selectedRecipe}

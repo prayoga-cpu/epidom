@@ -4,9 +4,7 @@ import { useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams } from "next/navigation";
-import {
-  Dialog,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import {
@@ -41,10 +39,7 @@ import {
   type UpdateIngredientFormInput,
 } from "@/lib/validation/inventory.schemas";
 import { useCurrency } from "@/components/providers/currency-provider";
-import {
-  formatNumberForInput,
-  createNumberInputHandler,
-} from "@/lib/utils/number-input";
+import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
 
 interface EditMaterialDialogProps {
   open: boolean;
@@ -52,11 +47,7 @@ interface EditMaterialDialogProps {
   material: MaterialWithSuppliers | null;
 }
 
-export function EditMaterialDialog({
-  open,
-  onOpenChange,
-  material,
-}: EditMaterialDialogProps) {
+export function EditMaterialDialog({ open, onOpenChange, material }: EditMaterialDialogProps) {
   const { t } = useI18n();
   const { currency, convertPrice, convertToBase } = useCurrency();
   const params = useParams();
@@ -147,7 +138,7 @@ export function EditMaterialDialog({
     try {
       // Filter out invalid suppliers (those with "none" or empty supplierId)
       const validSuppliers =
-        data.suppliers?.filter((s: any) => s.supplierId && s.supplierId !== "none") || [];
+        data.suppliers?.filter((s) => s.supplierId && s.supplierId !== "none") || [];
 
       const payload = {
         ...data,
@@ -156,7 +147,7 @@ export function EditMaterialDialog({
         minStock: data.minStock ?? 0, // Default to 0 if undefined
         maxStock: data.maxStock ?? 0, // Default to 0 if undefined
         // Always send suppliers array, even if empty, to allow removing all suppliers
-        suppliers: validSuppliers.map((s: any) => ({
+        suppliers: validSuppliers.map((s) => ({
           ...s,
           price: convertToBase(s.price ?? 0), // Convert supplier prices back to EUR
         })),
@@ -181,7 +172,10 @@ export function EditMaterialDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <FormDialogLayout
         title={t("data.materials.editTitle")}
-        description={t("data.materials.editDescription") || "Update material information. Fields marked with * are required."}
+        description={
+          t("data.materials.editDescription") ||
+          "Update material information. Fields marked with * are required."
+        }
         maxWidth="xl"
         footer={
           <FormDialogFooter
@@ -196,43 +190,49 @@ export function EditMaterialDialog({
           />
         }
       >
-          <Form {...form}>
-            <form id="edit-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
+        <Form {...form}>
+          <form
+            id="edit-material-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-1"
+          >
             {/* Basic Information */}
             <div className="space-y-1">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.materials.sections.basicInfo")}</h3>
-            {/* Material Name & SKU */}
-            <div className="grid items-start gap-1.5 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="space-y-0.5">
-                    <FormLabel className="text-sm">{t("data.materials.form.name")} *</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("data.materials.form.namePlaceholder")} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
+                {t("data.materials.sections.basicInfo")}
+              </h3>
+              {/* Material Name & SKU */}
+              <div className="grid items-start gap-1.5 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.materials.form.name")} *</FormLabel>
+                      <FormControl>
+                        <Input placeholder={t("data.materials.form.namePlaceholder")} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem className="space-y-0.5">
-                    <FormLabel className="text-sm">{t("data.materials.form.sku")} *</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("data.materials.form.skuPlaceholder")} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("data.materials.form.sku")} *</FormLabel>
+                      <FormControl>
+                        <Input placeholder={t("data.materials.form.skuPlaceholder")} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <div className="grid items-start grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 items-start gap-1.5">
                 <FormField
                   control={form.control}
                   name="category"
@@ -240,7 +240,10 @@ export function EditMaterialDialog({
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">{t("data.materials.form.category")}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.materials.form.categoryPlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("data.materials.form.categoryPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -274,37 +277,43 @@ export function EditMaterialDialog({
                 />
               </div>
 
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="space-y-0.5">
-                  <FormLabel className="text-sm">{t("data.materials.form.description")}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder={t("data.materials.form.descriptionPlaceholder")}
-                      className="min-h-[55px] text-sm"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Description */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">
+                      {t("data.materials.form.description")}
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t("data.materials.form.descriptionPlaceholder")}
+                        className="text-sm"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Pricing & Stock */}
             <div className="space-y-1">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.materials.sections.pricingStock")}</h3>
+              <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
+                {t("data.materials.sections.pricingStock")}
+              </h3>
 
-              <div className="grid items-start grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 items-start gap-1.5">
                 <FormField
                   control={form.control}
                   name="unitCost"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">{t("data.materials.form.unitCost")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                      <FormLabel className="text-sm">
+                        {t("data.materials.form.unitCost")} ({currency === "EUR" ? "€" : "$"}) *
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -328,7 +337,9 @@ export function EditMaterialDialog({
                   name="currentStock"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">{t("data.materials.form.currentStock")}</FormLabel>
+                      <FormLabel className="text-sm">
+                        {t("data.materials.form.currentStock")}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -348,13 +359,15 @@ export function EditMaterialDialog({
                 />
               </div>
 
-              <div className="grid items-start grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 items-start gap-1.5">
                 <FormField
                   control={form.control}
                   name="minStock"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">{t("data.materials.form.minStockLevel")}</FormLabel>
+                      <FormLabel className="text-sm">
+                        {t("data.materials.form.minStockLevel")}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -368,7 +381,9 @@ export function EditMaterialDialog({
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription className="text-xs">{t("data.materials.form.alertMinStock")}</FormDescription>
+                      <FormDescription className="text-xs">
+                        {t("data.materials.form.alertMinStock")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -379,7 +394,9 @@ export function EditMaterialDialog({
                   name="maxStock"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">{t("data.materials.form.maxStockLevel")}</FormLabel>
+                      <FormLabel className="text-sm">
+                        {t("data.materials.form.maxStockLevel")}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -393,7 +410,9 @@ export function EditMaterialDialog({
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription className="text-xs">{t("data.materials.form.alertMaxStock")}</FormDescription>
+                      <FormDescription className="text-xs">
+                        {t("data.materials.form.alertMaxStock")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -403,15 +422,23 @@ export function EditMaterialDialog({
 
             {/* Suppliers */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("data.materials.sections.suppliers")}</h3>
+              <div className="mb-1 flex items-center justify-between">
+                <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  {t("data.materials.sections.suppliers")}
+                </h3>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({ supplierId: "", price: undefined as number | undefined, isPreferred: false })}
+                  onClick={() =>
+                    append({
+                      supplierId: "",
+                      price: undefined as number | undefined,
+                      isPreferred: false,
+                    })
+                  }
                 >
-                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("data.materials.form.addSupplier")}
                 </Button>
               </div>
@@ -436,14 +463,18 @@ export function EditMaterialDialog({
                       name={`suppliers.${index}.supplierId` as any}
                       render={({ field }) => (
                         <FormItem className="space-y-0.5">
-                          <FormLabel className="text-sm">{t("data.materials.form.supplier")} *</FormLabel>
+                          <FormLabel className="text-sm">
+                            {t("data.materials.form.supplier")} *
+                          </FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={(field.value as string) || "none"}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder={t("data.materials.form.selectSupplierPlaceholder")} />
+                                <SelectValue
+                                  placeholder={t("data.materials.form.selectSupplierPlaceholder")}
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -465,7 +496,7 @@ export function EditMaterialDialog({
                       )}
                     />
 
-                    <div className="grid items-start grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 items-start gap-1.5">
                       <FormField
                         control={form.control}
                         /**
@@ -477,7 +508,10 @@ export function EditMaterialDialog({
                         name={`suppliers.${index}.price` as any}
                         render={({ field }) => (
                           <FormItem className="space-y-0.5">
-                            <FormLabel className="text-sm">{t("data.materials.form.supplierPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                            <FormLabel className="text-sm">
+                              {t("data.materials.form.supplierPrice")} (
+                              {currency === "EUR" ? "€" : "$"}) *
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -536,8 +570,8 @@ export function EditMaterialDialog({
                 </div>
               ))}
             </div>
-            </form>
-          </Form>
+          </form>
+        </Form>
       </FormDialogLayout>
     </Dialog>
   );

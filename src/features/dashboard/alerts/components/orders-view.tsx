@@ -22,6 +22,7 @@ import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-
 import { useQueryClient } from "@tanstack/react-query";
 import { SubscriptionLockedState } from "@/features/dashboard/shared/components/subscription-locked-state";
 import { SectionErrorState } from "@/features/dashboard/data/components/section-error-state";
+import { isSubscriptionError } from "@/lib/utils/types";
 
 export function OrdersView() {
   const { t } = useI18n();
@@ -107,14 +108,9 @@ export function OrdersView() {
   }, [data]);
 
   // Check if subscription is locked (STARTER plan)
-  /**
-   * Type assertion needed because error type is unknown and may have code or status properties
-   * Actual type: Error with optional code and status properties
-   * TODO: Use proper error type guard or create error type definitions
-   */
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
-    (error && ((error as any).code === "SUBSCRIPTION_FEATURE_LOCKED" || (error as any).status === 403));
+    (error && (isSubscriptionError(error) || (typeof error === "object" && error !== null && ("code" in error && error.code === "SUBSCRIPTION_FEATURE_LOCKED") || ("status" in error && error.status === 403))));
 
   if (isLoading || isLoadingAccess) {
     return (

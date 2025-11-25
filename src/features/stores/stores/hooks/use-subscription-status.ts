@@ -58,8 +58,10 @@ export function useSubscriptionStatus() {
         throw new Error("Failed to fetch subscription status");
       }
 
-      const data = await response.json();
-      return data;
+      const responseData = await response.json();
+      // API response is wrapped in { success: true, data: {...} }
+      // Extract the actual data from the response
+      return responseData.success === true ? responseData.data : responseData;
     },
     retry: false,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes (subscription doesn't change often)

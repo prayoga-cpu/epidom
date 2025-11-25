@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { businessService, subscriptionService } from "@/lib/services";
 import { createStoreSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { ZodError } from "zod";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 
 /**
  * GET /api/stores
@@ -12,8 +12,9 @@ import { ZodError } from "zod";
  * Get all stores for the current user's business.
  */
 export async function GET() {
+  let session: Session | null = null;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -39,10 +40,10 @@ export async function GET() {
 
     return NextResponse.json(createSuccessResponse(stores));
   } catch (error) {
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
-      { status: 500 }
-    );
+    return handleApiError(error, {
+      endpoint: "GET /api/stores",
+      context: { userId: session?.user?.id },
+    });
   }
 }
 
@@ -52,8 +53,9 @@ export async function GET() {
  * Create a new store for the current user's business.
  */
 export async function POST(request: Request) {
+  let session: Session | null = null;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -111,66 +113,9 @@ export async function POST(request: Request) {
       throw storeError;
     }
   } catch (error) {
-    // Handle validation errors
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.VALIDATION_ERROR,
-          "Invalid input data",
-          error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          }))
-        ),
-        { status: 400 }
-      );
-    }
-
-    // Handle business logic errors (subscription, name duplicate, etc.)
-    if (error instanceof Error) {
-      // Check if it's a subscription error
-      if (error.message.includes("subscription") || error.message.includes("No active subscription")) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.UNAUTHORIZED, error.message),
-          { status: 403 }
-        );
-      }
-
-      // Check if it's a duplicate name error
-      if (error.message.includes("already exists")) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
-          { status: 400 }
-        );
-      }
-
-      // Check if it's a business not found or unauthorized error
-      if (error.message.includes("Business not found") || error.message.includes("Unauthorized")) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.UNAUTHORIZED, error.message),
-          { status: 403 }
-        );
-      }
-
-      // Check if it's a transaction timeout or deadlock error
-      if (
-        error.message.includes("timeout") ||
-        error.message.includes("deadlock") ||
-        error.message.includes("lock") ||
-        error.message.includes("P2034") // Prisma transaction timeout error code
-      ) {
-        return NextResponse.json(
-          createErrorResponse(
-            ApiErrorCode.INTERNAL_ERROR,
-            "The request is taking too long. Please try again in a moment."
-          ),
-          { status: 503 } // Service Unavailable
-        );
-      }
-    }
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
-      { status: 500 }
-    );
+    return handleApiError(error, {
+      endpoint: "POST /api/stores",
+      context: { userId: session?.user?.id },
+    });
   }
 }

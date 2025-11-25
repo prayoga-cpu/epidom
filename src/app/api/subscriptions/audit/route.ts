@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { subscriptionService } from "@/lib/services";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
  * POST /api/subscriptions/audit
@@ -23,7 +25,10 @@ export async function POST(request: NextRequest) {
     // Verify session
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized. Please log in first." }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized. Please log in first."),
+        { status: 401 }
+      );
     }
 
     const userId = session.user.id;
@@ -32,22 +37,26 @@ export async function POST(request: NextRequest) {
     const result = await subscriptionService.auditAndFixDuplicateSubscriptions(userId);
 
     if (result.duplicatesFound > 0) {
-      return NextResponse.json({
-        message: `Found and canceled ${result.duplicatesFound} duplicate subscription(s)`,
-        duplicatesFound: result.duplicatesFound,
-        canceledSubscriptionIds: result.canceledSubscriptionIds,
-      });
+      return NextResponse.json(
+        createSuccessResponse({
+          message: `Found and canceled ${result.duplicatesFound} duplicate subscription(s)`,
+          duplicatesFound: result.duplicatesFound,
+          canceledSubscriptionIds: result.canceledSubscriptionIds,
+        })
+      );
     }
 
-    return NextResponse.json({
-      message: "No duplicate subscriptions found",
-      duplicatesFound: 0,
-      canceledSubscriptionIds: [],
-    });
-  } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Failed to audit subscriptions" },
-      { status: 500 }
+      createSuccessResponse({
+        message: "No duplicate subscriptions found",
+        duplicatesFound: 0,
+        canceledSubscriptionIds: [],
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/subscriptions/audit",
+      context: {},
+    });
   }
 }

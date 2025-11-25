@@ -82,6 +82,7 @@ export const en = {
       retry: "Retry",
       select: "Select",
       apply: "Apply",
+      complete: "Complete",
     },
     pagination: {
       rowsPerPage: "Rows per page",
@@ -187,15 +188,13 @@ export const en = {
       data: "Data",
     },
     dashboard: {
-      subtitle:
-        "Comprehensive Dashboard Overview",
+      subtitle: "Comprehensive Dashboard Overview",
       description:
         "With its comprehensive dashboard, Epidom delivers an instant and global overview of inventory status and activity. Users can easily review pending purchase orders, critical materials, and overall performance indicators. This data-driven approach supports faster, smarter, and more accurate decision-making for managers.",
     },
     management: {
       title: "Flexible Modules and Advanced Permissions",
-      subtitle:
-        "Adaptable to Your Organization's Needs",
+      subtitle: "Adaptable to Your Organization's Needs",
       description:
         "Finally, Epidom adapts to the needs of each organization through flexible modules and advanced permission management. The platform promotes collaboration across teams, strengthens internal communication, and integrates seamlessly into existing workflows. Epidom is therefore an essential tool for any company looking to professionalize and optimize raw material management.",
     },
@@ -208,8 +207,7 @@ export const en = {
       title: "Dedicated Production Tools and Traceability",
       description1:
         "Epidom also includes dedicated production tools, allowing users to monitor recipe evolution, waste levels, and quantities used over specific periods. These features enhance traceability and provide a deep understanding of consumption patterns.",
-      description2:
-        "They contribute to cost optimization and help reduce food waste.",
+      description2: "They contribute to cost optimization and help reduce food waste.",
     },
     alerts: {
       title: "Threshold Alerts and Consumption Analytics",
@@ -1355,7 +1353,8 @@ export const en = {
         selectRecipes: "Select recipe...",
         noRecipe: "No recipe",
         recipeHint: "Link to production recipe",
-        recipeHintMultiple: "A product can be produced by multiple recipes (e.g., 10 baguettes or 50 baguettes)",
+        recipeHintMultiple:
+          "A product can be produced by multiple recipes (e.g., 10 baguettes or 50 baguettes)",
         addNewRecipe: "Add New Recipe",
         selectedRecipes: "Selected Recipes",
         noRecipesAvailable: "No recipes available",
@@ -2113,9 +2112,14 @@ export const en = {
     movementHistory: "Movement History",
   },
   management: {
+    deliveries: "Deliveries",
+    production: "Production",
+    history: "History",
+    stock: "Stock",
     // Delivery Tab
     delivery: {
       title: "Supplier Deliveries",
+      description: "Manage supplier deliveries and track shipments",
       searchPlaceholder: "Search by reference, supplier, or notes...",
       filters: {
         status: "Status",
@@ -2331,16 +2335,19 @@ export const en = {
       importCSVDescription: "CSV import functionality coming soon",
       importCSVDialog: {
         title: "Import Stock from CSV",
-        description: "Upload a CSV file to update stock levels. The CSV should have columns: SKU, Type (material/product), Current Stock",
+        description:
+          "Upload a CSV file to update stock levels. The CSV should have columns: SKU, Type (material/product), Current Stock",
         formatTitle: "CSV Format",
-        formatDescription: "Your CSV file should have the following columns: SKU, Type (material or product), Current Stock",
+        formatDescription:
+          "Your CSV file should have the following columns: SKU, Type (material or product), Current Stock",
         selectFile: "Click to select CSV file",
         fileHint: "CSV files only",
         invalidFile: "Please select a CSV file",
         importButton: "Import Stock",
         successTitle: "Import Successful",
         partialSuccessTitle: "Import Completed with Errors",
-        resultsSummary: "Successfully imported {success} items, {failed} failed out of {total} total",
+        resultsSummary:
+          "Successfully imported {success} items, {failed} failed out of {total} total",
         resultsTitle: "Import Results",
       },
 
@@ -2424,6 +2431,7 @@ export const en = {
     },
     // Recipe Production Tab
     recipeProduction: {
+      title: "Recipe Production",
       description: "Start new production batches and monitor active production",
       availableRecipes: "Available Recipes",
       selectRecipeToStart: "Select a recipe to start production",
@@ -2443,7 +2451,8 @@ export const en = {
       noLinkedProducts: "No products linked to this recipe",
       noLinkedProductsHint: "Please link a product to this recipe before starting production.",
       insufficientMaterialsWarning: "Some raw materials are below required levels",
-      insufficientMaterialsHint: "Please restock insufficient raw materials before starting production",
+      insufficientMaterialsHint:
+        "Please restock insufficient raw materials before starting production",
 
       // Material Availability
       materialAvailability: "Raw Material Availability",
@@ -2516,6 +2525,7 @@ export const en = {
 
     // Production History Tab
     productionHistory: {
+      title: "Production History",
       description: "View and analyze completed production batches",
       filters: "Filters",
       filtersDescription: "Filter batches by status, recipe, or date range",
@@ -2833,18 +2843,22 @@ export const en = {
     back: "Back",
     save: "Save Preferences",
     settingsTitle: "Cookie Preferences",
-    settingsDescription: "Choose which cookies you want to allow. Essential cookies are always enabled as they are necessary for the website to function.",
+    settingsDescription:
+      "Choose which cookies you want to allow. Essential cookies are always enabled as they are necessary for the website to function.",
     essential: {
       title: "Essential Cookies",
-      description: "Required for the website to function properly. These cookies cannot be disabled.",
+      description:
+        "Required for the website to function properly. These cookies cannot be disabled.",
     },
     analytics: {
       title: "Analytics Cookies",
-      description: "If accepted: We track page views and user behavior to improve our website. If rejected: No tracking data is collected.",
+      description:
+        "If accepted: We track page views and user behavior to improve our website. If rejected: No tracking data is collected.",
     },
     marketing: {
       title: "Marketing Cookies",
-      description: "If accepted: We track conversions and events for marketing purposes. If rejected: No marketing tracking is performed.",
+      description:
+        "If accepted: We track conversions and events for marketing purposes. If rejected: No marketing tracking is performed.",
     },
   },
   billing: {
@@ -2942,8 +2956,7 @@ export const en = {
     },
     section5: {
       title: "5. User Responsibilities",
-      content:
-        "You agree to use EPIDOM in a lawful manner and are responsible for:",
+      content: "You agree to use EPIDOM in a lawful manner and are responsible for:",
       item1: "Ensuring the accuracy of data entered into the system",
       item2: "Not using the service for any illegal or unauthorized purpose",
       item3: "Not attempting to gain unauthorized access to the system",
@@ -2971,8 +2984,7 @@ export const en = {
     },
     section10: {
       title: "10. Contact Information",
-      content:
-        "If you have any questions about these Terms and Conditions, please contact us:",
+      content: "If you have any questions about these Terms and Conditions, please contact us:",
       email: "Email",
     },
     footer:
@@ -2986,10 +2998,10 @@ export const en = {
       "At EPIDOM, we strive to provide excellent service. This Refund Policy outlines the terms and conditions for refunds and cancellations of our subscription services.",
     section1: {
       title: "1. Refund Eligibility",
-      content:
-        "You may be eligible for a refund under the following circumstances:",
+      content: "You may be eligible for a refund under the following circumstances:",
       item1: "You cancel your subscription within 14 days of the initial purchase",
-      item2: "You experience technical issues that prevent you from using the service, and we are unable to resolve them",
+      item2:
+        "You experience technical issues that prevent you from using the service, and we are unable to resolve them",
       item3: "You were charged incorrectly due to a billing error on our part",
     },
     section2: {
@@ -3024,8 +3036,7 @@ export const en = {
     },
     section7: {
       title: "7. Contact for Refunds",
-      content:
-        "For all refund requests and inquiries, please contact our support team:",
+      content: "For all refund requests and inquiries, please contact our support team:",
       email: "Email",
     },
     footer:

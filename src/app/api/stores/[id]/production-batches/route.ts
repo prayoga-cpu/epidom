@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { productionBatchService } from "@/lib/services/production-batch.service";
-import { z } from "zod";
+import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 import {
   createProductionBatchFormSchema,
   productionBatchFilterSchema,
@@ -17,10 +19,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -42,20 +50,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Get production batches from service
     const result = await productionBatchService.getProductionBatches(storeId, filters);
 
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(createSuccessResponse(result), { status: 200 });
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch production batches" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/production-batches",
+      context: { storeId },
+    });
   }
 }
 
@@ -68,10 +69,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     const body = await request.json();
 
     // Validate request body
@@ -83,29 +91,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ...validatedData,
     });
 
-    return NextResponse.json(batch, { status: 201 });
+    return NextResponse.json(createSuccessResponse(batch), { status: 201 });
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      // Handle specific business logic errors
-      if (error.message.includes("Insufficient materials")) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-      }
-      if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to start production" },
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "POST /api/stores/[id]/production-batches",
+      context: { storeId },
+    });
   }
 }

@@ -6,12 +6,7 @@ import { cuidSchema, decimalSchema } from "./common.schemas";
  */
 
 // Production status enum
-export const productionStatusSchema = z.enum([
-  "PLANNED",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "CANCELLED",
-]);
+export const productionStatusSchema = z.enum(["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]);
 
 // Create production batch schema (start production)
 export const createProductionBatchSchema = z.object({
@@ -48,6 +43,8 @@ export type UpdateProductionBatchInput = z.infer<typeof updateProductionBatchSch
 // Complete production schema
 export const completeProductionSchema = z.object({
   actualQuantity: z.number().positive("Actual quantity must be positive"),
+  completedDate: z.coerce.date().optional(),
+  notes: z.string().max(1000, "Notes are too long").optional(),
 });
 
 export type CompleteProductionInput = z.infer<typeof completeProductionSchema>;
@@ -55,6 +52,7 @@ export type CompleteProductionInput = z.infer<typeof completeProductionSchema>;
 // Cancel production schema
 export const cancelProductionSchema = z.object({
   restoreMaterials: z.boolean().default(false),
+  reason: z.string().max(1000, "Reason is too long").optional(),
 });
 
 export type CancelProductionInput = z.infer<typeof cancelProductionSchema>;

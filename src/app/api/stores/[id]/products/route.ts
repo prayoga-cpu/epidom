@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { productService } from "@/lib/services/product.service";
 import { subscriptionService } from "@/lib/services";
 import { createProductSchema } from "@/lib/validation/inventory.schemas";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { serializeProduct, serializeProducts } from "@/lib/server/serialize";
 import { z } from "zod";
+import { withApiHandler } from "@/lib/api-handler";
 
 // Validation schema for filtering products
 const productFilterSchema = z.object({
@@ -23,16 +23,8 @@ const productFilterSchema = z.object({
  * GET /api/stores/[id]/products
  * Get all products for a store with optional filtering
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id: storeId } = await params;
-
+export const GET = withApiHandler(
+  async (request, { storeId }) => {
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
     const filterParams = {
@@ -47,41 +39,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const filters = productFilterSchema.parse(filterParams);
 
     // Get products from service
-    const result = await productService.getProducts(storeId, filters);
+    const result = await productService.getProducts(storeId!, filters);
 
-    return NextResponse.json(result, { status: 200 });
-  } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
-        { status: 400 }
-      );
-    }
-
+    // Serialize Decimal fields to numbers for Client Components
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch products" },
-      { status: 500 }
+      createSuccessResponse({
+        products: serializeProducts(result.products),
+        total: result.total,
+      }),
+      { status: 200 }
     );
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/products",
+    requireStoreAuth: true,
   }
-}
+);
 
 /**
  * POST /api/stores/[id]/products
  * Create a new product
  */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id: storeId } = await params;
-
+export const POST = withApiHandler(
+  async (request, { storeId, userId }) => {
     // Check subscription plan limits (Starter = 500 products per store, Pro/Enterprise = unlimited)
-    const productCheck = await subscriptionService.canCreateProduct(session.user.id, storeId);
+    const productCheck = await subscriptionService.canCreateProduct(userId, storeId!);
 
     if (!productCheck.allowed) {
       return NextResponse.json(
@@ -105,7 +87,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Create product via service
     const product = await productService.createProduct({
-      storeId,
+      storeId: storeId!,
       sku: validatedData.sku,
       name: validatedData.name,
       description: validatedData.description,
@@ -122,29 +104,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       isActive: validatedData.isActive,
     });
 
-    return NextResponse.json(product, { status: 201 });
-  } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      // Handle specific business logic errors
-      if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
-      }
-      if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create product" },
-      { status: 500 }
-    );
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeProduct(product)), { status: 201 });
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/products",
+    requireStoreAuth: true,
   }
-}
+);
+

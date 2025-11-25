@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { subscriptionRepository, storeRepository, userRepository } from "@/lib/repositories";
 import { getStoreLimit } from "@/config/stripe.config";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
 
 /**
  * GET /api/subscriptions/status
@@ -17,11 +20,34 @@ import { getStoreLimit } from "@/config/stripe.config";
  * - Cancellation status
  */
 export async function GET(request: NextRequest) {
+  let session: Session | null = null;
   try {
+    // Rate limiting check
+    const rateLimitResult = await rateLimitMiddleware(request, "/api/subscriptions/status");
+    if (rateLimitResult) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.RATE_LIMIT_EXCEEDED,
+          `Rate limit exceeded. Please try again in ${rateLimitResult.reset} seconds.`
+        ),
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": rateLimitResult.reset.toString(),
+          },
+        }
+      );
+    }
+
     // Verify session
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const userId = session.user.id;
@@ -30,11 +56,13 @@ export async function GET(request: NextRequest) {
     const subscription = await subscriptionRepository.findByUserId(userId);
 
     if (!subscription) {
-      return NextResponse.json({
-        hasSubscription: false,
-        subscription: null,
-        storeUsage: null,
-      });
+      return NextResponse.json(
+        createSuccessResponse({
+          hasSubscription: false,
+          subscription: null,
+          storeUsage: null,
+        })
+      );
     }
 
     // Get store usage
@@ -56,22 +84,24 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    return NextResponse.json({
-      hasSubscription: true,
-      subscription: {
-        id: subscription.id,
-        plan: subscription.plan,
-        status: subscription.status,
-        currentPeriodStart: subscription.currentPeriodStart,
-        currentPeriodEnd: subscription.currentPeriodEnd,
-        cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-      },
-      storeUsage,
-    });
-  } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Failed to get subscription status" },
-      { status: 500 }
+      createSuccessResponse({
+        hasSubscription: true,
+        subscription: {
+          id: subscription.id,
+          plan: subscription.plan,
+          status: subscription.status,
+          currentPeriodStart: subscription.currentPeriodStart,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+        },
+        storeUsage,
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "GET /api/subscriptions/status",
+      context: { userId: session?.user?.id },
+    });
   }
 }

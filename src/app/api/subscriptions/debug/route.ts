@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { subscriptionRepository } from "@/lib/repositories";
 import { stripe } from "@/lib/stripe";
 import Stripe from "stripe";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 type SubscriptionDetail = {
   id: string;
@@ -30,7 +32,10 @@ export async function GET(request: NextRequest) {
     // Verify session
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const userId = session.user.id;
@@ -39,7 +44,10 @@ export async function GET(request: NextRequest) {
     const dbSubscription = await subscriptionRepository.findByUserId(userId);
 
     if (!dbSubscription) {
-      return NextResponse.json({ error: "No subscription found in database" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "No subscription found in database"),
+        { status: 404 }
+      );
     }
 
     // Get ALL subscriptions from Stripe (active, canceled, all statuses)
@@ -93,37 +101,39 @@ export async function GET(request: NextRequest) {
       ),
     };
 
-    return NextResponse.json({
-      database: {
-        plan: dbSubscription.plan,
-        status: dbSubscription.status,
-        stripeSubscriptionId: dbSubscription.stripeSubscriptionId,
-        stripeCustomerId: dbSubscription.stripeCustomerId,
-      },
-      stripe: {
-        total: allSubscriptions.data.length,
-        active: grouped.active.length,
-        canceled: grouped.canceled.length,
-        other: grouped.other.length,
-      },
-      subscriptions: {
-        active: grouped.active,
-        canceled: grouped.canceled,
-        other: grouped.other,
-      },
-      issues: {
-        hasMultipleActive: grouped.active.length > 1,
-        dbMismatch:
-          grouped.active.length > 0 &&
-          !grouped.active.find(
-            (s: SubscriptionDetail) => s.id === dbSubscription.stripeSubscriptionId
-          ),
-      },
-    });
-  } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Failed to get subscription details" },
-      { status: 500 }
+      createSuccessResponse({
+        database: {
+          plan: dbSubscription.plan,
+          status: dbSubscription.status,
+          stripeSubscriptionId: dbSubscription.stripeSubscriptionId,
+          stripeCustomerId: dbSubscription.stripeCustomerId,
+        },
+        stripe: {
+          total: allSubscriptions.data.length,
+          active: grouped.active.length,
+          canceled: grouped.canceled.length,
+          other: grouped.other.length,
+        },
+        subscriptions: {
+          active: grouped.active,
+          canceled: grouped.canceled,
+          other: grouped.other,
+        },
+        issues: {
+          hasMultipleActive: grouped.active.length > 1,
+          dbMismatch:
+            grouped.active.length > 0 &&
+            !grouped.active.find(
+              (s: SubscriptionDetail) => s.id === dbSubscription.stripeSubscriptionId
+            ),
+        },
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "GET /api/subscriptions/debug",
+      context: {},
+    });
   }
 }

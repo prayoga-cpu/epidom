@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useRecipes } from "../../recipes/hooks/use-recipes";
+import { useRecipesForSelector } from "../../recipes/hooks/use-recipes";
 import { getTranslatedCategory } from "../../recipes/utils/category-helpers";
 
 interface RecipeSelectorProps {
@@ -30,8 +30,8 @@ export function RecipeSelector({
   const { t } = useI18n();
   const [previousRecipeCount, setPreviousRecipeCount] = useState(0);
 
-  // Fetch all recipes
-  const { data: recipesData } = useRecipes(storeId, {
+  // Fetch all recipes with optimized settings for selector (no polling, longer cache)
+  const { data: recipesData, isLoading } = useRecipesForSelector(storeId, {
     sortBy: "name" as const,
     sortOrder: "asc" as const,
     skip: 0,
@@ -93,12 +93,23 @@ export function RecipeSelector({
           <Select
             onValueChange={handleSelectRecipe}
             value=""
+            disabled={isLoading}
           >
             <SelectTrigger>
-              <SelectValue placeholder={t("data.products.form.selectRecipes") || "Select recipe..."} />
+              <SelectValue
+                placeholder={
+                  isLoading
+                    ? (t("common.loading") || "Loading...")
+                    : (t("data.products.form.selectRecipes") || "Select recipe...")
+                }
+              />
             </SelectTrigger>
             <SelectContent>
-              {availableRecipes.length > 0 ? (
+              {isLoading ? (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  {t("common.loading") || "Loading..."}
+                </div>
+              ) : availableRecipes.length > 0 ? (
                 availableRecipes.map((recipe) => (
                   <SelectItem key={recipe.id} value={recipe.id}>
                     {recipe.name} ({recipe.yieldQuantity} {recipe.yieldUnit})

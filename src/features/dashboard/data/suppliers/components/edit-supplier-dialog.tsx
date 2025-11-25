@@ -51,11 +51,7 @@ interface EditSupplierDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditSupplierDialog({
-  supplier,
-  open,
-  onOpenChange,
-}: EditSupplierDialogProps) {
+export function EditSupplierDialog({ supplier, open, onOpenChange }: EditSupplierDialogProps) {
   const { t } = useI18n();
   const params = useParams();
   const storeId = params.storeId as string;
@@ -111,10 +107,14 @@ export function EditSupplierDialog({
           />
         }
       >
-          <Form {...form}>
-            <form id="edit-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Form {...form}>
+          <form
+            id="edit-supplier-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-1"
+          >
             {/* Basic Information */}
-            <div className="space-y-4">
+            <div className="space-y-1">
               <h3 className="text-sm font-semibold">{t("data.suppliers.sections.basicInfo")}</h3>
               <FormField
                 control={form.control}
@@ -143,7 +143,9 @@ export function EditSupplierDialog({
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>{t("data.suppliers.form.contactPersonHint")}</FormDescription>
+                      <FormDescription>
+                        {t("data.suppliers.form.contactPersonHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -243,7 +245,9 @@ export function EditSupplierDialog({
 
             {/* Notes */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.additionalNotes")}</h3>
+              <h3 className="text-sm font-semibold">
+                {t("data.suppliers.sections.additionalNotes")}
+              </h3>
               <FormField
                 control={form.control}
                 name="notes"
@@ -257,16 +261,14 @@ export function EditSupplierDialog({
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      {t("data.suppliers.form.notesHint")}
-                    </FormDescription>
+                    <FormDescription>{t("data.suppliers.form.notesHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            </form>
-          </Form>
+          </form>
+        </Form>
       </FormDialogLayout>
     </Dialog>
   );

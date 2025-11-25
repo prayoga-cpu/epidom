@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { materialService } from "@/lib/services/material.service";
-import { businessService, subscriptionService } from "@/lib/services";
+import { subscriptionService } from "@/lib/services";
 import { materialFilterSchema } from "@/lib/validation/inventory.schemas";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { ZodError } from "zod";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 
 /**
  * GET /api/stores/[id]/materials/export
@@ -45,29 +46,8 @@ export async function GET(
 
     const { id: storeId } = await params;
 
-    // Verify user owns the business that owns this store
-    const business = await businessService.getBusinessByUserId(session.user.id);
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.BUSINESS_NOT_FOUND,
-          "Business not found"
-        ),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to business
-    const store = await businessService.getStoreById(storeId);
-    if (!store || store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Store not found or does not belong to your business"
-        ),
-        { status: 404 }
-      );
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -94,26 +74,10 @@ export async function GET(
       },
     });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.VALIDATION_ERROR,
-          "Invalid query parameters",
-          error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          }))
-        ),
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        "An unexpected error occurred"
-      ),
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/materials/export",
+      context: { storeId },
+    });
   }
 }

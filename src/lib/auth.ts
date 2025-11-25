@@ -81,6 +81,17 @@ export const authOptions: NextAuthOptions = {
         token.locale = user.locale;
         token.timezone = user.timezone;
         token.phone = user.phone;
+
+        // Fetch subscription status on initial sign in
+        try {
+          const subscription = await prisma.subscription.findUnique({
+            where: { userId: user.id },
+            select: { status: true },
+          });
+          token.subscriptionStatus = subscription?.status || null;
+        } catch (error) {
+          token.subscriptionStatus = null;
+        }
       }
 
       // Update token on session update (e.g., when user changes currency in profile)
@@ -104,10 +115,14 @@ export const authOptions: NextAuthOptions = {
           // Allow null to remove image
           token.image = session.image === "" ? null : session.image;
         }
+        // Allow updating subscription status via session update if needed
+        if (session.subscriptionStatus !== undefined) {
+          token.subscriptionStatus = session.subscriptionStatus;
+        }
       }
 
       // Refresh token from database if fields are missing (for existing sessions)
-      if (!token.currency || !token.locale) {
+      if (!token.currency || !token.locale || token.subscriptionStatus === undefined) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
@@ -121,6 +136,12 @@ export const authOptions: NextAuthOptions = {
             },
           });
 
+          // Also fetch subscription status
+          const subscription = await prisma.subscription.findUnique({
+            where: { userId: token.id as string },
+            select: { status: true },
+          });
+
           if (dbUser) {
             token.currency = dbUser.currency;
             token.locale = dbUser.locale;
@@ -128,9 +149,9 @@ export const authOptions: NextAuthOptions = {
             token.phone = dbUser.phone;
             token.name = dbUser.name;
             token.image = dbUser.image;
+            token.subscriptionStatus = subscription?.status || null;
           }
-        } catch (error) {
-        }
+        } catch (error) {}
       }
 
       return token;
@@ -145,6 +166,7 @@ export const authOptions: NextAuthOptions = {
         session.user.locale = token.locale as string;
         session.user.timezone = token.timezone as string;
         session.user.phone = token.phone as string;
+        session.user.subscriptionStatus = token.subscriptionStatus as string | null;
       }
       return session;
     },

@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { productService } from "@/lib/services/product.service";
 import { updateProductSchema } from "@/lib/validation/inventory.schemas";
+import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { serializeProduct } from "@/lib/server/serialize";
 import { z } from "zod";
 
 /**
@@ -17,30 +21,43 @@ export async function GET(
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId, productId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     // Get product from service
     const product = await productService.getProductById(productId);
 
     if (!product) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.PRODUCT_NOT_FOUND, "Product not found"),
+        { status: 404 }
+      );
     }
 
     // Verify product belongs to store
     if (product.storeId !== storeId) {
-      return NextResponse.json({ error: "Product does not belong to this store" }, { status: 403 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.FORBIDDEN, "Product does not belong to this store"),
+        { status: 403 }
+      );
     }
 
-    return NextResponse.json(product, { status: 200 });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeProduct(product)), { status: 200 });
   } catch (error) {
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch product" },
-      { status: 500 }
-    );
+    const { id: storeId, productId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/products/[productId]",
+      context: { storeId, productId },
+    });
   }
 }
 
@@ -56,10 +73,17 @@ export async function PATCH(
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId, productId } = await params;
+
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     const body = await request.json();
 
     // Validate request body
@@ -86,33 +110,14 @@ export async function PATCH(
       isActive: validatedData.isActive,
     });
 
-    return NextResponse.json(product, { status: 200 });
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeProduct(product)), { status: 200 });
   } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      // Handle specific business logic errors
-      if (error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
-      }
-      if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
-      }
-      if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update product" },
-      { status: 500 }
-    );
+    const { id: storeId, productId } = await params;
+    return handleApiError(error, {
+      endpoint: "PATCH /api/stores/[id]/products/[productId]",
+      context: { storeId, productId },
+    });
   }
 }
 
@@ -129,29 +134,29 @@ export async function DELETE(
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const { id: storeId, productId } = await params;
 
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
+
     // Delete product via service
     await productService.deleteProduct(productId, storeId);
 
-    return NextResponse.json({ message: "Product deleted successfully" }, { status: 200 });
-  } catch (error) {
-
-    if (error instanceof Error) {
-      if (error.message.includes("does not belong")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
-      }
-      if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
-      }
-    }
-
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete product" },
-      { status: 500 }
+      createSuccessResponse({ message: "Product deleted successfully" }),
+      { status: 200 }
     );
+  } catch (error) {
+    const { id: storeId, productId } = await params;
+    return handleApiError(error, {
+      endpoint: "DELETE /api/stores/[id]/products/[productId]",
+      context: { storeId, productId },
+    });
   }
 }
