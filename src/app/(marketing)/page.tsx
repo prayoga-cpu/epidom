@@ -15,7 +15,7 @@ import { ProductStructuredData } from "@/components/seo/structured-data";
 export const metadata = generateMetadata({
   title: "EPIDOM - Food Inventory Management Solution",
   description:
-    "Revolutionary food inventory management system. Experience the future of restaurant inventory management with EPIDOM.",
+    "Revolutionary food inventory management system. Request a trial to experience the future of restaurant inventory management.",
   keywords: [
     "food inventory management",
     "restaurant management",
@@ -26,11 +26,13 @@ export const metadata = generateMetadata({
     "restaurant software",
     "food service management",
     "EPIDOM",
+    "coming soon",
+    "trial",
   ],
   openGraph: {
     title: "EPIDOM - Food Inventory Management Solution",
     description:
-      "Revolutionary food inventory management system. Experience the future of restaurant inventory management with EPIDOM.",
+      "Revolutionary food inventory management system. Request a trial now!",
     url: "https://epidom.com",
     images: [
       {
@@ -44,8 +46,8 @@ export const metadata = generateMetadata({
   twitter: {
     title: "EPIDOM - Food Inventory Management Solution",
     description:
-      "Revolutionary food inventory management system. Experience the future of restaurant inventory management with EPIDOM.",
-    images: ["https://epidom.com/images/twitter-main.jpg"],
+      "Revolutionary food inventory management system. Request a trial now!",
+    images: ["https://epidom.com/images/twitter-countdown.jpg"],
   },
 });
 
@@ -71,10 +73,11 @@ export default function HomePage() {
         ========================================
       */}
 
-      {/* COUNTDOWN SECTION - Currently HIDDEN (commented out) */}
+      {/* COUNTDOWN SECTION - Currently ACTIVE (visible) */}
       {/* <LazyCountdownComponent /> */}
 
-      {/* HERO SECTION - Currently ACTIVE (visible) */}
+      {/* HERO SECTION - Currently HIDDEN (commented out) */}
+      {/* To show: Remove the comment markers around the div block below */}
       <div className="animate-slide-up">
         <LazyHero />
       </div>

@@ -66,10 +66,15 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   const createMaterial = useCreateMaterial(storeId);
 
   // Fetch suppliers for dropdown - only when dialog is open (performance optimization)
+  // Increased staleTime to reduce unnecessary refetches
   const { data: suppliersData } = useSuppliers(
     storeId,
     SUPPLIER_FILTERS,
-    { enabled: open } // Only fetch when dialog is open
+    {
+      enabled: open, // Only fetch when dialog is open
+      staleTime: 10 * 60 * 1000, // 10 minutes - suppliers don't change often
+      gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    }
   );
   const suppliers = suppliersData?.suppliers || [];
 
@@ -90,7 +95,8 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         if (!response.ok) throw new Error("Failed to prefetch suppliers");
         return response.json();
       },
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 10 * 60 * 1000, // 10 minutes - suppliers don't change often
+      gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
     });
   }, [storeId, queryClient]);
 
