@@ -31,13 +31,13 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateMaterial } from "../hooks/use-materials";
 import { useSuppliers, supplierKeys } from "../../suppliers/hooks/use-suppliers";
 import { useParams } from "next/navigation";
-import { createIngredientFormSchema, CreateIngredientFormInput } from "@/lib/validation/inventory.schemas";
+import {
+  createIngredientFormSchema,
+  CreateIngredientFormInput,
+} from "@/lib/validation/inventory.schemas";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCurrency } from "@/components/providers/currency-provider";
-import {
-  formatNumberForInput,
-  createNumberInputHandler,
-} from "@/lib/utils/number-input";
+import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 
 // Use the form schema (without storeId)
@@ -67,15 +67,11 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
 
   // Fetch suppliers for dropdown - only when dialog is open (performance optimization)
   // Increased staleTime to reduce unnecessary refetches
-  const { data: suppliersData } = useSuppliers(
-    storeId,
-    SUPPLIER_FILTERS,
-    {
-      enabled: open, // Only fetch when dialog is open
-      staleTime: 10 * 60 * 1000, // 10 minutes - suppliers don't change often
-      gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
-    }
-  );
+  const { data: suppliersData } = useSuppliers(storeId, SUPPLIER_FILTERS, {
+    enabled: open, // Only fetch when dialog is open
+    staleTime: 10 * 60 * 1000, // 10 minutes - suppliers don't change often
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+  });
   const suppliers = suppliersData?.suppliers || [];
 
   // Prefetch suppliers on hover for perceived performance
@@ -162,18 +158,28 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
               }))
             : undefined,
       };
-
-      // Wait for mutation to complete before closing dialog
-      // Material will appear in list immediately via optimistic update
-      await createMaterial.mutateAsync(payload);
-
-      toast.success(t("data.materials.toasts.added.title"), {
-        description:
-          t("data.materials.toasts.added.description")?.replace("{name}", data.name) || "",
-      });
-
       form.reset();
       setOpen(false);
+
+      // Use toast.promise to handle the async operation with immediate feedback
+      // This solves the issue where production build takes ~15s to complete the request
+      const promise = createMaterial.mutateAsync(payload);
+
+      toast.promise(promise, {
+        loading: (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{t("data.materials.toasts.adding") || "Adding material..."}</span>
+          </div>
+        ),
+        success: (data) =>
+          t("data.materials.toasts.added.description")?.replace("{name}", data.name) ||
+          "Material added successfully",
+        error: (err) => (err instanceof Error ? err.message : t("messages.errorLoadingMaterials")),
+      });
+
+      // Dialog is already closed by setOpen(false) above
+      // We don't await here so the UI is completely non-blocking
     } catch (error) {
       // Handle validation errors
       toast.error(error instanceof Error ? error.message : t("messages.errorLoadingMaterials"));

@@ -173,13 +173,23 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
         ingredients: processedIngredients,
       };
 
-      await createRecipe.mutateAsync(payload);
-
-      toast.success(t("data.recipes.toasts.created.title"));
+      setOpen(false);
       form.reset();
       currentStepRef.current = 1;
       setCurrentStep(1);
-      setOpen(false);
+
+      const promise = createRecipe.mutateAsync(payload);
+
+      toast.promise(promise, {
+        loading: (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{t("data.recipes.toasts.creating") || "Creating recipe..."}</span>
+          </div>
+        ),
+        success: t("data.recipes.toasts.created.title"),
+        error: (err) => (err instanceof Error ? err.message : t("common.error")),
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("common.error"));
     }
