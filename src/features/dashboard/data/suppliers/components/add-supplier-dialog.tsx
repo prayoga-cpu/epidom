@@ -5,10 +5,7 @@ import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Form,
@@ -50,7 +47,7 @@ interface AddSupplierDialogProps {
   children?: React.ReactNode;
 }
 
-export default function AddSupplierDialog({ children }: AddSupplierDialogProps) {
+export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
   const params = useParams();
@@ -76,7 +73,8 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
       await createSupplier.mutateAsync(payload);
 
       toast.success(t("data.suppliers.toasts.added.title"), {
-        description: t("data.suppliers.toasts.added.description")?.replace("{name}", data.name) || "",
+        description:
+          t("data.suppliers.toasts.added.description")?.replace("{name}", data.name) || "",
       });
 
       form.reset();
@@ -110,21 +108,19 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
             >
               {t("common.actions.cancel")}
             </Button>
-            <Button
-              type="submit"
-              form="add-supplier-form"
-              disabled={createSupplier.isPending}
-            >
-              {createSupplier.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+            <Button type="submit" form="add-supplier-form" disabled={createSupplier.isPending}>
+              {createSupplier.isPending && (
+                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+              )}
               {t("data.suppliers.addButton")}
             </Button>
           </>
         }
       >
-          <Form {...form}>
-            <form id="add-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Form {...form}>
+          <form id="add-supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
             {/* Basic Information */}
-            <div className="space-y-4">
+            <div className="space-y-1">
               <h3 className="text-sm font-semibold">{t("data.suppliers.sections.basicInfo")}</h3>
               <FormField
                 control={form.control}
@@ -153,7 +149,9 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>{t("data.suppliers.form.contactPersonHint")}</FormDescription>
+                      <FormDescription>
+                        {t("data.suppliers.form.contactPersonHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -201,7 +199,7 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
             </div>
 
             {/* Address Information */}
-            <div className="space-y-4">
+            <div className="space-y-1">
               <h3 className="text-sm font-semibold">{t("data.suppliers.sections.address")}</h3>
               <FormField
                 control={form.control}
@@ -252,8 +250,10 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
             </div>
 
             {/* Notes */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">{t("data.suppliers.sections.additionalNotes")}</h3>
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold">
+                {t("data.suppliers.sections.additionalNotes")}
+              </h3>
               <FormField
                 control={form.control}
                 name="notes"
@@ -267,16 +267,14 @@ export default function AddSupplierDialog({ children }: AddSupplierDialogProps) 
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      {t("data.suppliers.form.notesHint")}
-                    </FormDescription>
+                    <FormDescription>{t("data.suppliers.form.notesHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            </form>
-          </Form>
+          </form>
+        </Form>
       </FormDialogLayout>
     </Dialog>
   );

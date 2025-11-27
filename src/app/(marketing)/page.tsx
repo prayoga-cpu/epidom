@@ -13,7 +13,7 @@ import { generateMetadata } from "@/lib/seo";
 import { ProductStructuredData } from "@/components/seo/structured-data";
 
 export const metadata = generateMetadata({
-  title: "EPIDOM - Food Inventory Management Solution | Coming Soon",
+  title: "EPIDOM - Food Inventory Management Solution",
   description:
     "Revolutionary food inventory management system. Request a trial to experience the future of restaurant inventory management.",
   keywords: [
@@ -30,21 +30,21 @@ export const metadata = generateMetadata({
     "trial",
   ],
   openGraph: {
-    title: "EPIDOM - Food Inventory Management Solution | Coming Soon",
+    title: "EPIDOM - Food Inventory Management Solution",
     description:
       "Revolutionary food inventory management system. Request a trial now!",
     url: "https://epidom.com",
     images: [
       {
-        url: "https://epidom.com/images/og-countdown.jpg",
+        url: "https://epidom.com/images/og-main.jpg",
         width: 1200,
         height: 630,
-        alt: "EPIDOM Coming Soon - Food Inventory Management",
+        alt: "EPIDOM - Food Inventory Management",
       },
     ],
   },
   twitter: {
-    title: "EPIDOM - Food Inventory Management Solution | Coming Soon",
+    title: "EPIDOM - Food Inventory Management Solution",
     description:
       "Revolutionary food inventory management system. Request a trial now!",
     images: ["https://epidom.com/images/twitter-countdown.jpg"],
@@ -61,21 +61,15 @@ export default function HomePage() {
         DISPLAY MODE TOGGLE INSTRUCTIONS
         ========================================
 
-        CURRENT STATE: Countdown is ACTIVE, Hero section is HIDDEN
+        CURRENT STATE: Hero section is ACTIVE, Countdown is HIDDEN
 
-        TO SHOW COUNTDOWN AND HIDE HERO (current state):
-          - Countdown is active and visible
-          - Hero section is commented out
+        TO SHOW COUNTDOWN AND HIDE HERO:
+          - Uncomment LazyCountdownComponent
+          - Comment out Hero section
 
-        TO SHOW HERO AND HIDE COUNTDOWN:
-          1. Comment out the LazyCountdownComponent line below
-          2. Uncomment the Hero section div block below
-
-        AI/ROBOT INSTRUCTIONS:
-          - Prompt: "show countdown, hide hero" -> uncomment countdown, comment hero
-          - Prompt: "show hero, hide countdown" -> comment countdown, uncomment hero
-          - Prompt: "activate countdown mode" -> uncomment countdown, comment hero
-          - Prompt: "activate hero mode" -> comment countdown, uncomment hero
+        TO SHOW HERO AND HIDE COUNTDOWN (current state):
+          - LazyCountdownComponent is commented out
+          - Hero section is active
         ========================================
       */}
 

@@ -1,4 +1,12 @@
+/**
+ * Dashboard Sidebar Component
+ *
+ * Renders navigation sidebar with navigation links, store switcher, and language selector.
+ * Supports both desktop and mobile layouts.
+ */
+
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -13,19 +21,20 @@ import { StoreSwitcher } from "./store-switcher";
 
 /**
  * Get badge count for a navigation item
- * Deferred loading: Alerts count is loaded lazily to avoid blocking initial render
+ *
+ * Uses deferred loading: Alerts count is loaded lazily to avoid blocking initial render.
+ *
+ * @param {string} [badgeKey] - Key identifying which badge count to retrieve
+ * @returns {number | null} Badge count or null if no badge key provided
  */
 function useBadgeCount(badgeKey?: string): number | null {
   // Only load alerts count if badgeKey is "alerts" (lazy loading)
-  // This prevents blocking the sidebar render on initial load
   const alertsCount = badgeKey === "alerts" ? useAlertsCount() : 0;
 
   if (!badgeKey) return null;
 
-  // Map badge keys to their respective counts
   const badgeCounts: Record<string, number> = {
     alerts: alertsCount,
-    // Add more badge keys here as needed
   };
 
   return badgeCounts[badgeKey] ?? null;
@@ -33,7 +42,7 @@ function useBadgeCount(badgeKey?: string): number | null {
 
 interface SidebarProps {
   mode?: "desktop" | "mobile";
-  navigation?: NavSection[]; // Allow custom navigation
+  navigation?: NavSection[];
 }
 
 /**
@@ -41,6 +50,11 @@ interface SidebarProps {
  *
  * Renders navigation links from config following Open/Closed Principle.
  * Navigation items are defined in config/navigation.config.ts
+ *
+ * @param {SidebarProps} props - Component props
+ * @param {"desktop" | "mobile"} [props.mode="desktop"] - Display mode
+ * @param {NavSection[]} [props.navigation] - Custom navigation configuration
+ * @returns {JSX.Element} Sidebar component
  */
 export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: SidebarProps) {
   const pathname = usePathname();
@@ -119,7 +133,6 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
         </nav>
         {mode === "mobile" && (
           <div className="border-t space-y-3 p-3">
-            {/* Store Switcher */}
             <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-xs font-medium">
                 {t("dashboard.storeSelector.label")}
@@ -128,7 +141,6 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                 <StoreSwitcher />
               </div>
             </div>
-            {/* Language Switcher */}
             <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-xs font-medium">
                 {t("language.label")}

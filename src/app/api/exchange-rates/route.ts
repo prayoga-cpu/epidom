@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getExchangeRate, refreshExchangeRate } from "@/lib/services/exchange-rate.service";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
  * GET /api/exchange-rates
@@ -22,24 +24,20 @@ export async function GET() {
 
     const rateData = await getExchangeRate();
 
-    return NextResponse.json({
-      success: true,
-      data: {
+    return NextResponse.json(
+      createSuccessResponse({
         fromCurrency: rateData.fromCurrency,
         toCurrency: rateData.toCurrency,
         rate: rateData.rate,
         fetchedAt: rateData.fetchedAt.toISOString(),
         expiresAt: rateData.expiresAt.toISOString(),
-      },
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch exchange rate",
-      },
-      { status: 500 }
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "GET /api/exchange-rates",
+      context: {},
+    });
   }
 }
 
@@ -56,29 +54,28 @@ export async function POST() {
     // Require authentication for manual refresh
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const rateData = await refreshExchangeRate();
 
-    return NextResponse.json({
-      success: true,
-      message: "Exchange rate refreshed successfully",
-      data: {
+    return NextResponse.json(
+      createSuccessResponse({
+        message: "Exchange rate refreshed successfully",
         fromCurrency: rateData.fromCurrency,
         toCurrency: rateData.toCurrency,
         rate: rateData.rate,
         fetchedAt: rateData.fetchedAt.toISOString(),
         expiresAt: rateData.expiresAt.toISOString(),
-      },
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to refresh exchange rate",
-      },
-      { status: 500 }
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/exchange-rates",
+      context: {},
+    });
   }
 }

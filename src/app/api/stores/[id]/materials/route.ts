@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { materialService } from "@/lib/services/material.service";
-import { businessService } from "@/lib/services";
 import { createIngredientSchema, materialFilterSchema } from "@/lib/validation/inventory.schemas";
-import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { ZodError } from "zod";
-import { logger } from "@/lib/logger";
+import { createSuccessResponse } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * GET /api/stores/[id]/materials
@@ -14,39 +10,8 @@ import { logger } from "@/lib/logger";
  * Get all materials for a store with optional filtering.
  * Query params: search, category, supplierId, stockStatus, sortBy, sortOrder, skip, take
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
-    const { id: storeId } = await params;
-
-    // Verify user owns the business that owns this store
-    const business = await businessService.getBusinessByUserId(session.user.id);
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to business
-    const store = await businessService.getStoreById(storeId);
-    if (!store || store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Store not found or does not belong to your business"
-        ),
-        { status: 404 }
-      );
-    }
-
+export const GET = withApiHandler(
+  async (request, { storeId }) => {
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
     const filters = materialFilterSchema.parse({
@@ -61,70 +26,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     });
 
     // Get materials with filters
-    const result = await materialService.getMaterials(storeId, filters);
+    // storeId is guaranteed to be defined because requireStoreAuth is true
+    const result = await materialService.getMaterials(storeId!, filters);
 
     return NextResponse.json(createSuccessResponse(result));
-  } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.VALIDATION_ERROR,
-          "Invalid query parameters",
-          error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          }))
-        ),
-        { status: 400 }
-      );
-    }
-
-    logger.error("Error fetching materials", error, { endpoint: "GET /api/stores/[id]/materials" });
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
-      { status: 500 }
-    );
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/materials",
+    requireStoreAuth: true,
   }
-}
+);
 
 /**
  * POST /api/stores/[id]/materials
  *
  * Create a new material for a store.
  */
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
-    const { id: storeId } = await params;
-
-    // Verify user owns the business that owns this store
-    const business = await businessService.getBusinessByUserId(session.user.id);
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to business
-    const store = await businessService.getStoreById(storeId);
-    if (!store || store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Store not found or does not belong to your business"
-        ),
-        { status: 404 }
-      );
-    }
-
+export const POST = withApiHandler(
+  async (request, { storeId }) => {
     // Parse and validate request body
     const body = await request.json();
     const input = createIngredientSchema.parse({ ...body, storeId });
@@ -135,37 +54,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json(createSuccessResponse(material), {
       status: 201,
     });
-  } catch (error) {
-    // Handle validation errors
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.VALIDATION_ERROR,
-          "Invalid input data",
-          error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          }))
-        ),
-        { status: 400 }
-      );
-    }
-
-    // Handle business logic errors
-    if (error instanceof Error) {
-      // Check for specific error messages
-      if (error.message.includes("SKU already exists")) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.VALIDATION_ERROR, error.message),
-          { status: 409 }
-        );
-      }
-    }
-
-    logger.error("Error creating material", error, { endpoint: "POST /api/stores/[id]/materials" });
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
-      { status: 500 }
-    );
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/materials",
+    requireStoreAuth: true,
   }
-}
+);
+

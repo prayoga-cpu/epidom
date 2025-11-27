@@ -4,10 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Form,
@@ -41,10 +38,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
-import {
-  formatNumberForInput,
-  createNumberInputHandler,
-} from "@/lib/utils/number-input";
+import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
 
 // Helper function to create product schema with translated messages
 // Note: Number fields allow undefined in form state (for better UX - can clear field),
@@ -55,12 +49,24 @@ function createProductSchema(t: (key: string) => string) {
     sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
-    retailPrice: z.union([z.number().positive(t("common.validation.pricePositive")), z.undefined()]),
+    retailPrice: z.union([
+      z.number().positive(t("common.validation.pricePositive")),
+      z.undefined(),
+    ]),
     costPrice: z.union([z.number().positive(t("common.validation.pricePositive")), z.undefined()]),
     unit: z.string().min(1, t("common.validation.unitRequired")),
-    currentStock: z.union([z.number().min(0, t("common.validation.stockNonNegative")), z.undefined()]),
-    minStock: z.union([z.number().min(0, t("common.validation.minStockNonNegative")), z.undefined()]),
-    maxStock: z.union([z.number().positive(t("common.validation.maxStockPositive")), z.undefined()]),
+    currentStock: z.union([
+      z.number().min(0, t("common.validation.stockNonNegative")),
+      z.undefined(),
+    ]),
+    minStock: z.union([
+      z.number().min(0, t("common.validation.minStockNonNegative")),
+      z.undefined(),
+    ]),
+    maxStock: z.union([
+      z.number().positive(t("common.validation.maxStockPositive")),
+      z.undefined(),
+    ]),
     recipeIds: z.array(z.string()).optional(),
   });
 }
@@ -72,7 +78,7 @@ interface AddProductDialogProps {
   children?: React.ReactNode;
 }
 
-export default function AddProductDialog({ storeId, children }: AddProductDialogProps) {
+export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useI18n();
@@ -157,7 +163,8 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
       await createProduct.mutateAsync(apiData);
 
       sonnerToast.success(t("data.products.toasts.added.title"), {
-        description: t("data.products.toasts.added.description")?.replace("{name}", data.name) || "",
+        description:
+          t("data.products.toasts.added.description")?.replace("{name}", data.name) || "",
       });
 
       form.reset();
@@ -198,21 +205,27 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
               form="add-product-form"
               disabled={createProduct.isPending || productLimitReached}
             >
-              {createProduct.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+              {createProduct.isPending && (
+                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+              )}
               {t("data.products.addButton")}
             </Button>
           </>
         }
       >
-          <Form {...form}>
-            <form id="add-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5">
+        <Form {...form}>
+          <form id="add-product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
             {/* Product Limit Warning */}
             {productLimitReached && productUsage && productUsage.limit !== null && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>{t("data.products.limitReached.title") || "Product Limit Reached"}</AlertTitle>
+                <AlertTitle>
+                  {t("data.products.limitReached.title") || "Product Limit Reached"}
+                </AlertTitle>
                 <AlertDescription>
-                  {t("data.products.limitReached.description")?.replace("{current}", String(productUsage.current)).replace("{limit}", String(productUsage.limit)) ||
+                  {t("data.products.limitReached.description")
+                    ?.replace("{current}", String(productUsage.current))
+                    .replace("{limit}", String(productUsage.limit)) ||
                     `You've reached your plan's product limit (${productUsage.current}/${productUsage.limit}). Upgrade to Pro for unlimited products.`}
                   <Link href="/pricing" className="ml-2 font-medium underline">
                     {t("data.products.limitReached.upgrade") || "Upgrade to Pro"}
@@ -222,7 +235,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
             )}
             {/* Basic Information */}
             <div className="space-y-1">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.products.sections.basicInfo")}</h3>
+              <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
+                {t("data.products.sections.basicInfo")}
+              </h3>
               <div className="grid items-start gap-1.5 sm:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -247,7 +262,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                       <FormControl>
                         <Input placeholder={t("data.products.form.skuPlaceholder")} {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">{t("data.products.form.skuHint")}</FormDescription>
+                      <FormDescription className="text-xs">
+                        {t("data.products.form.skuHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -263,7 +280,7 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                     <FormControl>
                       <Textarea
                         placeholder={t("data.products.form.descriptionPlaceholder")}
-                        className="min-h-[55px] text-sm"
+                        className="text-sm"
                         {...field}
                       />
                     </FormControl>
@@ -306,14 +323,18 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
 
             {/* Pricing */}
             <div className="space-y-1">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.products.sections.pricing")}</h3>
+              <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
+                {t("data.products.sections.pricing")}
+              </h3>
               <div className="grid items-start gap-1.5 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="costPrice"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">{t("data.products.form.costPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                      <FormLabel className="text-sm">
+                        {t("data.products.form.costPrice")} ({currency === "EUR" ? "€" : "$"}) *
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -326,7 +347,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription className="text-xs">{t("data.products.form.costPriceHint")}</FormDescription>
+                      <FormDescription className="text-xs">
+                        {t("data.products.form.costPriceHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -337,7 +360,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="retailPrice"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">{t("data.products.form.retailPrice")} ({currency === "EUR" ? "€" : "$"}) *</FormLabel>
+                      <FormLabel className="text-sm">
+                        {t("data.products.form.retailPrice")} ({currency === "EUR" ? "€" : "$"}) *
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -350,17 +375,20 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription className="text-xs">{t("data.products.form.retailPriceHint")}</FormDescription>
+                      <FormDescription className="text-xs">
+                        {t("data.products.form.retailPriceHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
               {costPrice && costPrice > 0 && (
-                <div className="bg-muted rounded-lg p-1.5 text-xs mt-1">
+                <div className="bg-muted mt-1 rounded-lg p-1.5 text-xs">
                   <p className="font-medium">{t("data.products.pricingSuggestions.title")}</p>
                   <p className="text-muted-foreground mt-0.5">
-                    {currency === "EUR" ? "€" : "$"}{suggestedRetailPrice} (2.5x markup)
+                    {currency === "EUR" ? "€" : "$"}
+                    {suggestedRetailPrice} (2.5x markup)
                   </p>
                 </div>
               )}
@@ -368,7 +396,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
 
             {/* Stock Management */}
             <div className="space-y-1">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("data.products.sections.stockManagement")}</h3>
+              <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
+                {t("data.products.sections.stockManagement")}
+              </h3>
               <div className="grid items-start gap-1.5 sm:grid-cols-4">
                 <FormField
                   control={form.control}
@@ -402,7 +432,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="currentStock"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">{t("data.products.form.currentStock")} *</FormLabel>
+                      <FormLabel className="text-sm">
+                        {t("data.products.form.currentStock")} *
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -424,7 +456,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="minStock"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">{t("data.products.form.minStock")} *</FormLabel>
+                      <FormLabel className="text-sm">
+                        {t("data.products.form.minStock")} *
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -436,7 +470,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription className="text-xs">{t("data.products.form.minStockHint")}</FormDescription>
+                      <FormDescription className="text-xs">
+                        {t("data.products.form.minStockHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -447,7 +483,9 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                   name="maxStock"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">{t("data.products.form.maxStock")} *</FormLabel>
+                      <FormLabel className="text-sm">
+                        {t("data.products.form.maxStock")} *
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -459,15 +497,17 @@ export default function AddProductDialog({ storeId, children }: AddProductDialog
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription className="text-xs">{t("data.products.form.maxStockHint")}</FormDescription>
+                      <FormDescription className="text-xs">
+                        {t("data.products.form.maxStockHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
             </div>
-            </form>
-          </Form>
+          </form>
+        </Form>
       </FormDialogLayout>
     </Dialog>
   );

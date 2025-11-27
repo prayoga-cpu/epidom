@@ -58,7 +58,7 @@ export const FORM_DEFAULTS = {
   recipe: {
     name: "",
     description: "",
-    category: "",
+    category: undefined as string | undefined,
     yieldQuantity: undefined as number | undefined,
     yieldUnit: "",
     productionTimeMinutes: undefined as number | undefined,
@@ -111,7 +111,7 @@ export const FORM_DEFAULTS = {
  */
 export function getFormDefaults<T extends keyof typeof FORM_DEFAULTS>(
   formType: T
-): typeof FORM_DEFAULTS[T] {
+): (typeof FORM_DEFAULTS)[T] {
   return { ...FORM_DEFAULTS[formType] };
 }
 
@@ -124,4 +124,3 @@ export type RecipeFormDefaults = typeof FORM_DEFAULTS.recipe;
 export type SupplierFormDefaults = typeof FORM_DEFAULTS.supplier;
 export type StoreFormDefaults = typeof FORM_DEFAULTS.store;
 export type OrderFormDefaults = typeof FORM_DEFAULTS.order;
-

@@ -55,6 +55,12 @@ export function ContactMap() {
       // Use dynamic import instead of require to avoid extension conflicts
       import("leaflet").then((L) => {
         try {
+          /**
+           * Type assertion needed because Leaflet Icon prototype has private _getIconUrl property
+           * that is not in TypeScript definitions
+           * Actual type: Icon.Default.prototype with _getIconUrl property
+           * TODO: Use proper Leaflet type definitions or create type extension
+           */
           delete (L.default.Icon.Default.prototype as any)._getIconUrl;
           L.default.Icon.Default.mergeOptions({
             iconRetinaUrl:

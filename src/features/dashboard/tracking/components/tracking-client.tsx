@@ -2,8 +2,14 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StockLevelsTab } from "./stock-levels-tab";
+import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 
-export function TrackingView() {
+interface TrackingClientProps {
+  initialMaterials?: MaterialWithSuppliers[];
+  storeId: string;
+}
+
+export function TrackingClient({ initialMaterials, storeId }: TrackingClientProps) {
   const { t } = useI18n();
 
   return (
@@ -16,9 +22,8 @@ export function TrackingView() {
         </div>
       </div>
 
-      <StockLevelsTab />
+      <StockLevelsTab initialMaterials={initialMaterials} />
     </div>
   );
 }
 
-export default TrackingView;

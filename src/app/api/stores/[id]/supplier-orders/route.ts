@@ -1,20 +1,26 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { subscriptionService } from "@/lib/services";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 
 /**
  * GET /api/stores/[id]/supplier-orders
  * Get all supplier orders for a store
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -35,19 +41,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const storeId = (await params).id;
 
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     const orders = await prisma.supplierOrder.findMany({
       where: {
@@ -66,9 +61,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       },
     });
 
-    return NextResponse.json({ orders });
+    return NextResponse.json(createSuccessResponse({ orders }), { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const storeId = (await params).id;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]/supplier-orders",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }
 
@@ -77,10 +76,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  * Create a new supplier order
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -101,19 +104,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const storeId = (await params).id;
 
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(storeId, session.user.id);
 
     const body = await request.json();
     const { supplierId, items, expectedDate, notes, tax, shipping } = body;
@@ -208,8 +200,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
     });
 
-    return NextResponse.json({ order }, { status: 201 });
+    return NextResponse.json(createSuccessResponse({ order }), { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const storeId = (await params).id;
+    return handleApiError(error, {
+      endpoint: "POST /api/stores/[id]/supplier-orders",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }

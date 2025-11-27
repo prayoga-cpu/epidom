@@ -1,19 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supplierOrderKeys } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+import { supplierKeys } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
+
+// Note: We need to clear the access check cache so supplier queries will refetch after upgrade
 
 export default function CheckoutSuccessPage() {
   const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
 
   const planName = searchParams.get("plan");
   const sessionId = searchParams.get("session_id");
+
+  // Invalidate subscription-gated caches when subscription changes (after upgrade)
+  // This ensures that 403 errors are cleared and user can access features after upgrade
+  useEffect(() => {
+    // Invalidate subscription status first (to get new plan info)
+    queryClient.invalidateQueries({
+      queryKey: ["subscription-status"],
+      exact: false,
+    });
+
+    // Invalidate all supplier orders queries to clear 403 cache
+    queryClient.invalidateQueries({
+      queryKey: supplierOrderKeys.all,
+      exact: false,
+    });
+
+    // Invalidate all suppliers queries to clear 403 cache
+    // This includes both list and detail queries
+    queryClient.invalidateQueries({
+      queryKey: ["suppliers"],
+      exact: false,
+    });
+
+    // Invalidate export-related caches (materials, products, recipes exports are subscription-gated)
+    // These are mutations but we clear any potential cached state
+    queryClient.invalidateQueries({
+      queryKey: ["materials"],
+      exact: false,
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["products"],
+      exact: false,
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["recipes"],
+      exact: false,
+    });
+  }, [queryClient]);
 
   const handleContinue = () => {
     setIsLoading(true);

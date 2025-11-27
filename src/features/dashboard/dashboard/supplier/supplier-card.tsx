@@ -10,8 +10,9 @@ import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-s
 import { useSuppliers } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { DashboardCard } from "../components/dashboard-card";
+import { isSubscriptionError } from "@/lib/utils/types";
 
-export default function SupplierCard() {
+export function SupplierCard() {
   const { t } = useI18n();
   const router = useRouter();
   const { storeId } = useCurrentStore();
@@ -32,7 +33,7 @@ export default function SupplierCard() {
   // Check if subscription is locked (STARTER plan)
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
-    (error && ((error as any).code === "SUBSCRIPTION_FEATURE_LOCKED" || (error as any).status === 403));
+    (error && (isSubscriptionError(error) || (typeof error === "object" && error !== null && ("code" in error && error.code === "SUBSCRIPTION_FEATURE_LOCKED") || ("status" in error && error.status === 403))));
 
   const cardContent = (
     <div className="h-full overflow-auto">

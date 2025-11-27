@@ -4,20 +4,31 @@ import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertsTable } from "./alerts-table";
-import PlaceOrderDialog from "./place-order-dialog";
+import { PlaceOrderDialog } from "./place-order-dialog";
 import { OrdersView } from "./orders-view";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useAlertsCount } from "../hooks/use-alerts-count";
-import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { useAlerts, type Alert, type AlertsResponse } from "@/features/dashboard/tracking/hooks/use-alerts";
 
-export function AlertsView() {
+interface AlertsClientProps {
+  initialAlerts: Alert[];
+  storeId: string;
+}
+
+export function AlertsClient({ initialAlerts, storeId }: AlertsClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isOrders = searchParams.get("view") === "orders";
   const { t } = useI18n();
-  const alertsCount = useAlertsCount();
+
+  // Use initial data from Server Component with real-time updates
+  const { data: alertsData } = useAlerts(storeId, {
+    alerts: initialAlerts,
+  });
+
+  // Get alerts count from data (with real-time updates)
+  const alertsCount = alertsData?.alerts?.length || initialAlerts.length;
 
   // Dialog states
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
@@ -74,3 +85,4 @@ export function AlertsView() {
     </>
   );
 }
+

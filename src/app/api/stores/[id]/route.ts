@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { businessService } from "@/lib/services";
 import { createStoreSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { ZodError } from "zod";
+import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 import { Prisma } from "@prisma/client";
 
 /**
@@ -13,9 +14,10 @@ import { Prisma } from "@prisma/client";
  * Get a single store by ID.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -23,15 +25,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       });
     }
 
-    // Get user's business
-    const business = await businessService.getBusinessByUserId(session.user.id);
-
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
+    // Verify store ownership
+    await verifyStoreOwnership(id, session.user.id);
 
     // Get store by ID
     const store = await businessService.getStoreById(id);
@@ -43,23 +38,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       );
     }
 
-    // Verify store belongs to user's business
-    if (store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.FORBIDDEN,
-          "You don't have permission to access this store"
-        ),
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json(createSuccessResponse(store));
   } catch (error) {
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "GET /api/stores/[id]",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }
 
@@ -69,9 +54,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  * Update a store.
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -79,33 +65,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       });
     }
 
-    // Get user's business
-    const business = await businessService.getBusinessByUserId(session.user.id);
+    // Verify store ownership
+    await verifyStoreOwnership(id, session.user.id);
 
+    // Get user's business (needed for updateStore)
+    const business = await businessService.getBusinessByUserId(session.user.id);
     if (!business) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
         { status: 404 }
-      );
-    }
-
-    // Check if store exists and belongs to user's business
-    const existingStore = await businessService.getStoreById(id);
-
-    if (!existingStore) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.STORE_NOT_FOUND, "Store not found"),
-        { status: 404 }
-      );
-    }
-
-    if (existingStore.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.FORBIDDEN,
-          "You don't have permission to update this store"
-        ),
-        { status: 403 }
       );
     }
 
@@ -118,46 +86,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     return NextResponse.json(createSuccessResponse(updatedStore));
   } catch (error) {
-    // Handle validation errors
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.VALIDATION_ERROR,
-          "Invalid input data",
-          error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          }))
-        ),
-        { status: 400 }
-      );
-    }
-
-    // Handle Prisma-specific errors
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // P2024: Connection pool timeout
-      if (error.code === "P2024") {
-        return NextResponse.json(
-          createErrorResponse(
-            ApiErrorCode.INTERNAL_ERROR,
-            "Database connection timeout. Please try again in a moment."
-          ),
-          { status: 503 }
-        );
-      }
-      // P2025: Record not found
-      if (error.code === "P2025") {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.STORE_NOT_FOUND, "Store not found"),
-          { status: 404 }
-        );
-      }
-    }
-
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "PATCH /api/stores/[id]",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }
 
@@ -167,9 +100,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
  * Hard delete a store and its image from Blob storage.
  */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  let session: Session | null = null;
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -177,33 +111,15 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       });
     }
 
-    // Get user's business
-    const business = await businessService.getBusinessByUserId(session.user.id);
+    // Verify store ownership
+    await verifyStoreOwnership(id, session.user.id);
 
+    // Get user's business (needed for deleteStore)
+    const business = await businessService.getBusinessByUserId(session.user.id);
     if (!business) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.BUSINESS_NOT_FOUND, "Business not found"),
         { status: 404 }
-      );
-    }
-
-    // Check if store exists and belongs to user's business
-    const existingStore = await businessService.getStoreById(id);
-
-    if (!existingStore) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.STORE_NOT_FOUND, "Store not found"),
-        { status: 404 }
-      );
-    }
-
-    if (existingStore.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.FORBIDDEN,
-          "You don't have permission to delete this store"
-        ),
-        { status: 403 }
       );
     }
 
@@ -212,42 +128,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     return NextResponse.json(createSuccessResponse({ message: "Store deleted successfully" }));
   } catch (error) {
-
-    // Handle Prisma-specific errors
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // P2024: Connection pool timeout
-      if (error.code === "P2024") {
-        return NextResponse.json(
-          createErrorResponse(
-            ApiErrorCode.INTERNAL_ERROR,
-            "Database connection timeout. Please try again in a moment."
-          ),
-          { status: 503 }
-        );
-      }
-      // P2025: Record not found
-      if (error.code === "P2025") {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.STORE_NOT_FOUND, "Store not found"),
-          { status: 404 }
-        );
-      }
-    }
-
-    // Handle connection errors
-    if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.INTERNAL_ERROR,
-          "Database connection error. Please try again later."
-        ),
-        { status: 503 }
-      );
-    }
-
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "An unexpected error occurred"),
-      { status: 500 }
-    );
+    const { id: storeId } = await params;
+    return handleApiError(error, {
+      endpoint: "DELETE /api/stores/[id]",
+      context: { storeId, userId: session?.user?.id },
+    });
   }
 }

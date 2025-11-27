@@ -135,6 +135,7 @@ export const fr = {
       retry: "Réessayer",
       select: "Sélectionner",
       apply: "Appliquer",
+      complete: "Terminer",
     },
     loading: "Chargement...",
     goHome: "Aller à l'Accueil",
@@ -180,15 +181,13 @@ export const fr = {
       "Epidom est une solution innovante dédiée à la gestion des stocks de matières premières, conçue pour accompagner les professionnels de la restauration, de l'agroalimentaire et de la production. Grâce à une interface intuitive et moderne, le logiciel permet de centraliser toutes les informations essentielles afin de garantir une maîtrise totale des flux d'ingrédients. Epidom facilite ainsi le quotidien des équipes tout en améliorant l'efficacité opérationnelle.",
     featureBlock: { management: "Gestion", tracking: "Suivi", data: "Données" },
     dashboard: {
-      subtitle:
-        "Vue d'ensemble du tableau de bord complet",
+      subtitle: "Vue d'ensemble du tableau de bord complet",
       description:
         "Avec son tableau de bord complet, Epidom fournit une vision globale et instantanée de l'état du stock et de l'activité. Les utilisateurs peuvent consulter facilement les commandes à passer, les matières critiques ou encore les performances globales. Cette approche orientée données aide les responsables à prendre des décisions plus rapides et mieux informées.",
     },
     management: {
       title: "Modules flexibles et gestion avancée des permissions",
-      subtitle:
-        "Adapté aux besoins de chaque structure",
+      subtitle: "Adapté aux besoins de chaque structure",
       description:
         "Enfin, Epidom s'adapte aux besoins de chaque structure grâce à ses modules flexibles et à sa gestion des permissions. La plateforme favorise la collaboration entre les différents services, améliore la communication interne et s'intègre parfaitement dans les processus existants. Epidom est ainsi un allié essentiel pour toute entreprise souhaitant professionnaliser la gestion de ses matières premières.",
     },
@@ -1302,7 +1301,8 @@ export const fr = {
       // Delete confirmation
       deleteConfirm: {
         title: "Supprimer la Recette",
-        description: 'Êtes-vous sûr de vouloir supprimer "{name}"? Cette action ne peut pas être annulée.',
+        description:
+          'Êtes-vous sûr de vouloir supprimer "{name}"? Cette action ne peut pas être annulée.',
       },
 
       // Details section
@@ -1375,7 +1375,8 @@ export const fr = {
         selectRecipes: "Sélectionner une recette...",
         noRecipe: "Aucune recette",
         recipeHint: "Lier à une recette de production",
-        recipeHintMultiple: "Un produit peut être produit par plusieurs recettes (ex: 10 baguettes ou 50 baguettes)",
+        recipeHintMultiple:
+          "Un produit peut être produit par plusieurs recettes (ex: 10 baguettes ou 50 baguettes)",
         addNewRecipe: "Ajouter une Nouvelle Recette",
         selectedRecipes: "Recettes Sélectionnées",
         noRecipesAvailable: "Aucune recette disponible",
@@ -1466,7 +1467,8 @@ export const fr = {
       // Delete confirmation
       deleteConfirm: {
         title: "Supprimer le Produit",
-        description: 'Êtes-vous sûr de vouloir supprimer "{name}"? Cette action ne peut pas être annulée.',
+        description:
+          'Êtes-vous sûr de vouloir supprimer "{name}"? Cette action ne peut pas être annulée.',
       },
     },
 
@@ -1830,7 +1832,8 @@ export const fr = {
       selectItemsToOrder: "Sélectionner les Articles à Commander",
       itemsSelected: "{count} article(s) sélectionné(s)",
       orderNotes: "Notes de Commande",
-      orderNotesPlaceholder: "Ajoutez des instructions spéciales ou des notes pour cette commande...",
+      orderNotesPlaceholder:
+        "Ajoutez des instructions spéciales ou des notes pour cette commande...",
       orderNotesHint: "Notes optionnelles pour cette commande groupée",
     },
   },
@@ -2124,20 +2127,15 @@ export const fr = {
     clickToSubscribe: "Cliquez pour S'abonner",
     errorLoading: "Échec du chargement des boutiques",
   },
-  tabs: {
-    delivery: "Livraison",
-    supplierDeliveries: "Livraisons Fournisseurs",
-    recipeProduction: "Production de Recettes",
-    productionHistory: "Historique de Production",
-    editStock: "Modifier le Stock",
-    managePermissions: "Gérer les Permissions",
-    stockLevels: "Niveaux de Stock",
-    movementHistory: "Historique des Mouvements",
-  },
   management: {
+    deliveries: "Livraisons",
+    production: "Production",
+    history: "Historique",
+    stock: "Stock",
     // Delivery Tab
     delivery: {
       title: "Livraisons Fournisseurs",
+      description: "Gérer les livraisons des fournisseurs et suivre les expéditions",
       searchPlaceholder: "Rechercher par référence, fournisseur ou notes...",
       filters: {
         status: "Statut",
@@ -2446,6 +2444,7 @@ export const fr = {
     },
     // Recipe Production Tab
     recipeProduction: {
+      title: "Production de Recettes",
       description: "Démarrer de nouveaux lots de production et surveiller la production active",
       availableRecipes: "Recettes Disponibles",
       selectRecipeToStart: "Sélectionnez une recette pour commencer la production",
@@ -2464,8 +2463,10 @@ export const fr = {
       startProduction: "Démarrer la Production",
       insufficientMaterials: "Matières premières insuffisantes pour démarrer la production",
       noLinkedProducts: "Aucun produit lié à cette recette",
-      noLinkedProductsHint: "Veuillez lier un produit à cette recette avant de démarrer la production.",
-      insufficientMaterialsWarning: "Certaines matières premières sont en dessous des niveaux requis",
+      noLinkedProductsHint:
+        "Veuillez lier un produit à cette recette avant de démarrer la production.",
+      insufficientMaterialsWarning:
+        "Certaines matières premières sont en dessous des niveaux requis",
       insufficientMaterialsHint:
         "Veuillez réapprovisionner les matières premières insuffisantes avant de commencer la production",
 
@@ -2509,6 +2510,33 @@ export const fr = {
           title: "Démarrer un Lot de Production",
           description: "Créer un nouveau lot de production pour cette recette",
         },
+        complete: {
+          title: "Terminer la Production",
+          description: "Entrez la quantité réelle produite pour ce lot",
+        },
+        cancel: {
+          title: "Annuler la Production",
+          description: "Êtes-vous sûr de vouloir annuler ce lot de production?",
+        },
+      },
+
+      // Additional fields
+      actualQuantity: "Quantité Réelle",
+      plannedWas: "Prévu était",
+      scheduled: "Programmé",
+      restoreMaterials: "Restaurer les matières premières dans l'inventaire",
+      restoreMaterialsHint:
+        "Les matières utilisées pour ce lot seront rajoutées à votre inventaire",
+
+      // Messages
+      messages: {
+        completeSuccess: "Production Terminée",
+        completeSuccessDescription: "Le lot {batchNumber} a été terminé avec succès",
+        completeError: "Échec de la finalisation de la production",
+        cancelSuccess: "Production Annulée",
+        cancelSuccessDescription: "Le lot {batchNumber} a été annulé{materialsRestored}",
+        cancelError: "Échec de l'annulation de la production",
+        materialsRestored: " et les matières premières ont été restaurées",
       },
 
       recipe: "Recette",
@@ -2542,6 +2570,7 @@ export const fr = {
 
     // Production History Tab
     productionHistory: {
+      title: "Historique de Production",
       description: "Voir et analyser les lots de production terminés",
       filters: "Filtres",
       filtersDescription: "Filtrer les lots par statut, recette ou plage de dates",

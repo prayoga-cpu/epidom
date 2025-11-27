@@ -239,15 +239,15 @@ export function SupplierDeliveriesTable({
 
   return (
     <TooltipProvider>
-      <Card className="flex h-full w-full min-h-[450px] flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-md lg:min-h-[472px]">
+      <Card className="flex h-full min-h-[450px] w-full flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-md lg:min-h-[472px]">
         <CardHeader className="shrink-0 border-b pb-4">
           <CardTitle className="text-lg font-bold">
-              {t("pages.supplierDeliveriesSectionTitle") || "Supplier Deliveries"} (
-              {processedDeliveries.length})
-            </CardTitle>
+            {t("pages.supplierDeliveriesSectionTitle") || "Supplier Deliveries"} (
+            {processedDeliveries.length})
+          </CardTitle>
         </CardHeader>
 
-        <CardContent className="flex min-h-0 flex-1 flex-col space-y-4 pb-6 pt-6">
+        <CardContent className="flex min-h-0 flex-1 flex-col space-y-4 pt-6 pb-6">
           {/* Loading State */}
           {isLoading && (
             <div className="flex flex-1 flex-col items-center justify-center py-12">
@@ -295,7 +295,7 @@ export function SupplierDeliveriesTable({
                   {/* Status Filter */}
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full sm:w-[180px]">
-                      <Filter className="mr-1 h-4 w-4 hidden sm:inline" />
+                      <Filter className="mr-1 hidden h-4 w-4 sm:inline" />
                       <SelectValue
                         placeholder={t("management.delivery.filters.status") || "Status"}
                       />
@@ -322,7 +322,7 @@ export function SupplierDeliveriesTable({
                   {/* Type Filter */}
                   <Select value={typeFilter} onValueChange={setTypeFilter}>
                     <SelectTrigger className="w-full sm:w-[180px]">
-                      <Package className="mr-1 h-4 w-4 hidden sm:inline" />
+                      <Package className="mr-1 hidden h-4 w-4 sm:inline" />
                       <SelectValue
                         placeholder={
                           t("management.delivery.filters.deliveryType") || "Delivery Type"
@@ -348,7 +348,7 @@ export function SupplierDeliveriesTable({
                   {/* Clear Filters */}
                   {hasActiveFilters && (
                     <Button variant="ghost" size="sm" onClick={clearFilters}>
-                      <X className="mr-1 h-4 w-4 hidden sm:inline" />
+                      <X className="mr-1 hidden h-4 w-4 sm:inline" />
                       {t("common.actions.clearFilters") || "Clear Filters"}
                     </Button>
                   )}
@@ -356,163 +356,177 @@ export function SupplierDeliveriesTable({
               </div>
 
               {/* Deliveries Table */}
-              <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-hidden -mx-4 rounded-md border sm:mx-0">
+              <div className="scrollbar-thin -mx-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border sm:mx-0">
                 <div className="scrollbar-thin min-h-0 flex-1 overflow-auto">
                   <div className="min-w-[800px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead
-                        className="cursor-pointer"
-                        onClick={() => handleSort("deliveryReference")}
-                      >
-                        <div className="flex items-center">
-                          {t("management.delivery.table.reference") || "Reference"}
-                          <SortIcon field="deliveryReference" />
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer"
-                        onClick={() => handleSort("supplierName")}
-                      >
-                        <div className="flex items-center">
-                          {t("management.delivery.table.supplier") || "Supplier"}
-                          <SortIcon field="supplierName" />
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer"
-                        onClick={() => handleSort("expectedDate")}
-                      >
-                        <div className="flex items-center">
-                          {t("management.delivery.table.expectedDate") || "Expected Date"}
-                          <SortIcon field="expectedDate" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
-                        <div className="flex items-center">
-                          {t("management.delivery.table.status") || "Status"}
-                          <SortIcon field="status" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center">
-                        {t("management.delivery.table.items") || "Items"}
-                      </TableHead>
-                      <TableHead className="text-right">
-                        {t("tables.actions") || "Actions"}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedDeliveries.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
-                          {hasActiveFilters
-                            ? t("management.delivery.noMatches") ||
-                              "No deliveries match your filters"
-                            : t("management.delivery.noDeliveries") || "No deliveries found"}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paginatedDeliveries.map((delivery) => {
-                        const StatusIcon = getStatusIcon(delivery.status);
-
-                        return (
-                          <TableRow
-                            key={delivery.id}
-                            className={`cursor-pointer transition-colors ${
-                              selectedDelivery?.id === delivery.id ? "bg-muted/50" : ""
-                            }`}
-                            onClick={() => onDeliverySelect(delivery)}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead
+                            className="cursor-pointer"
+                            onClick={() => handleSort("deliveryReference")}
                           >
-                            <TableCell className="font-medium">
-                              {delivery.deliveryReference}
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">{delivery.supplier?.name}</div>
-                                <div className="text-muted-foreground text-xs">
-                                  {delivery.supplier?.contactPerson}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="text-muted-foreground h-3 w-3" />
-                                <span className="text-sm">{formatDate(delivery.expectedDate)}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={getStatusVariant(delivery.status)} className="gap-1">
-                                <StatusIcon className="h-3 w-3" />
-                                {getStatusLabel(delivery.status)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {delivery.items.length}{" "}
-                              {delivery.items.length !== 1
-                                ? t("management.delivery.items")
-                                : t("management.delivery.item")}
-                            </TableCell>
-                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-end gap-1">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0"
-                                      onClick={() => onDeliverySelect(delivery)}
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {t("management.delivery.actions.viewDelivery")}
-                                  </TooltipContent>
-                                </Tooltip>
-                                {onEditDelivery && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => onEditDelivery(delivery)}
-                                      >
-                                        <Pencil className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {t("management.delivery.actions.editDelivery")}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {onPrintDelivery && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => onPrintDelivery(delivery)}
-                                      >
-                                        <Printer className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {t("management.delivery.actions.printDelivery")}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </div>
+                            <div className="flex items-center">
+                              {t("management.delivery.table.reference") || "Reference"}
+                              <SortIcon field="deliveryReference" />
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer"
+                            onClick={() => handleSort("supplierName")}
+                          >
+                            <div className="flex items-center">
+                              {t("management.delivery.table.supplier") || "Supplier"}
+                              <SortIcon field="supplierName" />
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer"
+                            onClick={() => handleSort("expectedDate")}
+                          >
+                            <div className="flex items-center">
+                              {t("management.delivery.table.expectedDate") || "Expected Date"}
+                              <SortIcon field="expectedDate" />
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer"
+                            onClick={() => handleSort("status")}
+                          >
+                            <div className="flex items-center">
+                              {t("management.delivery.table.status") || "Status"}
+                              <SortIcon field="status" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="text-center">
+                            {t("management.delivery.table.items") || "Items"}
+                          </TableHead>
+                          <TableHead className="text-right">
+                            {t("tables.actions") || "Actions"}
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedDeliveries.length === 0 ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={7}
+                              className="text-muted-foreground h-24 text-center"
+                            >
+                              {hasActiveFilters
+                                ? t("management.delivery.noMatches") ||
+                                  "No deliveries match your filters"
+                                : t("management.delivery.noDeliveries") || "No deliveries found"}
                             </TableCell>
                           </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
+                        ) : (
+                          paginatedDeliveries.map((delivery) => {
+                            const StatusIcon = getStatusIcon(delivery.status);
+
+                            return (
+                              <TableRow
+                                key={delivery.id}
+                                className={`cursor-pointer transition-colors ${
+                                  selectedDelivery?.id === delivery.id ? "bg-muted/50" : ""
+                                }`}
+                                onClick={() => onDeliverySelect(delivery)}
+                              >
+                                <TableCell className="font-medium">
+                                  {delivery.deliveryReference}
+                                </TableCell>
+                                <TableCell>
+                                  <div>
+                                    <div className="font-medium">{delivery.supplier?.name}</div>
+                                    <div className="text-muted-foreground text-xs">
+                                      {delivery.supplier?.contactPerson}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="text-muted-foreground h-3 w-3" />
+                                    <span className="text-sm">
+                                      {formatDate(delivery.expectedDate)}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={getStatusVariant(delivery.status)}
+                                    className="gap-1"
+                                  >
+                                    <StatusIcon className="h-3 w-3" />
+                                    {getStatusLabel(delivery.status)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {delivery.items.length}{" "}
+                                  {delivery.items.length !== 1
+                                    ? t("management.delivery.items")
+                                    : t("management.delivery.item")}
+                                </TableCell>
+                                <TableCell
+                                  className="text-right"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                          onClick={() => onDeliverySelect(delivery)}
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {t("management.delivery.actions.viewDelivery")}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    {onEditDelivery && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0"
+                                            onClick={() => onEditDelivery(delivery)}
+                                          >
+                                            <Pencil className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {t("management.delivery.actions.editDelivery")}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                    {onPrintDelivery && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0"
+                                            onClick={() => onPrintDelivery(delivery)}
+                                          >
+                                            <Printer className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {t("management.delivery.actions.printDelivery")}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </div>

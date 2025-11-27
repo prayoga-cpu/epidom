@@ -8,7 +8,7 @@ import { useI18n } from "../../../components/lang/i18n-provider";
 import LangSwitcher from "../../../components/lang/lang-switcher";
 import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
-import NavUser from "./nav-user";
+import { NavUser } from "./nav-user";
 import { useState } from "react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";

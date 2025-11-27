@@ -48,7 +48,7 @@ function calculateStockPercentage(current: number, max: number): number {
   return Math.min((current / max) * 100, 100);
 }
 
-export default function MaterialDetailsDialog({
+export function MaterialDetailsDialog({
   open,
   onOpenChange,
   material,

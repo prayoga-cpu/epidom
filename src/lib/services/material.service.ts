@@ -6,6 +6,7 @@ import {
   MaterialFilters,
 } from "@/lib/repositories/material.repository";
 import { prisma } from "@/lib/prisma";
+import { toDecimal } from "@/lib/utils/types.server";
 
 /**
  * Material (Ingredient) Service
@@ -119,32 +120,39 @@ export class MaterialService {
     }
 
     // Use transaction to ensure atomicity
-    return await prisma.$transaction(async (tx) => {
-      // Create material with suppliers
-      const material = await this.materialRepo.create({
-        storeId,
-        sku,
-        currentStock,
-        suppliers,
-        ...rest,
-      });
-
-      // If initial stock > 0, create initial stock movement
-      if (currentStock > 0) {
-        await tx.stockMovement.create({
-          data: {
-            materialId: material.id,
-            type: MovementType.ADJUSTMENT,
-            quantity: currentStock,
-            unit: material.unit,
-            balanceAfter: currentStock,
-            notes: "Initial stock",
-          },
+    // Add timeout to prevent hanging on slow database connections
+    return await prisma.$transaction(
+      async (tx) => {
+        // Create material with suppliers
+        const material = await this.materialRepo.create({
+          storeId,
+          sku,
+          currentStock,
+          suppliers,
+          ...rest,
         });
-      }
 
-      return material;
-    });
+        // If initial stock > 0, create initial stock movement
+        if (currentStock > 0) {
+          await tx.stockMovement.create({
+            data: {
+              materialId: material.id,
+              type: MovementType.ADJUSTMENT,
+              quantity: currentStock,
+              unit: material.unit,
+              balanceAfter: currentStock,
+              notes: "Initial stock",
+            },
+          });
+        }
+
+        return material;
+      },
+      {
+        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+        timeout: 10000, // Maximum time for transaction to complete (10s)
+      }
+    );
   }
 
   /**
@@ -192,34 +200,41 @@ export class MaterialService {
     }
 
     // Use transaction to ensure atomicity
-    return await prisma.$transaction(async (tx) => {
-      // Create stock movement with all adjustment data
-      const movement = await tx.stockMovement.create({
-        data: {
-          materialId: input.materialId,
-          type: MovementType.ADJUSTMENT,
-          quantity: isIncrease ? adjustmentQuantity : -adjustmentQuantity, // Signed quantity
-          unit: material.unit,
-          balanceAfter: newStock,
-          notes: input.notes || undefined,
-          reason: input.reason,
-          referenceId: input.referenceId || undefined,
-        },
-      });
+    return await prisma.$transaction(
+      async (tx) => {
+        // Create stock movement with all adjustment data
+        const movement = await tx.stockMovement.create({
+          data: {
+            materialId: input.materialId,
+            type: MovementType.ADJUSTMENT,
+            quantity: isIncrease ? adjustmentQuantity : -adjustmentQuantity, // Signed quantity
+            unit: material.unit,
+            balanceAfter: newStock,
+            notes: input.notes || undefined,
+            reason: input.reason,
+            referenceId: input.referenceId || undefined,
+          },
+        });
 
-      // Update material stock
-      const updatedMaterial = await tx.material.update({
-        where: { id: input.materialId },
-        data: {
-          currentStock: newStock as any,
-        },
-      });
+        // Update material stock
+        // Convert number to Prisma Decimal using type helper
+        const updatedMaterial = await tx.material.update({
+          where: { id: input.materialId },
+          data: {
+            currentStock: toDecimal(newStock),
+          },
+        });
 
-      return {
-        material: updatedMaterial,
-        movement,
-      };
-    });
+        return {
+          material: updatedMaterial,
+          movement,
+        };
+      },
+      {
+        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+        timeout: 10000, // Maximum time for transaction to complete (10s)
+      }
+    );
   }
 
   /**
@@ -262,67 +277,75 @@ export class MaterialService {
       (input.currentStock !== undefined && input.currentStock !== Number(material.currentStock)) ||
       input.suppliers !== undefined
     ) {
-      return await prisma.$transaction(async (tx) => {
-        // Handle stock changes
-        if (
-          input.currentStock !== undefined &&
-          input.currentStock !== Number(material.currentStock)
-        ) {
-          const oldStock = Number(material.currentStock);
-          const newStock = input.currentStock!;
-          const difference = newStock - oldStock;
+      return await prisma.$transaction(
+        async (tx) => {
+          // Handle stock changes
+          if (
+            input.currentStock !== undefined &&
+            input.currentStock !== Number(material.currentStock)
+          ) {
+            const oldStock = Number(material.currentStock);
+            const newStock = input.currentStock!;
+            const difference = newStock - oldStock;
 
-          // Create stock movement with signed quantity
-          await tx.stockMovement.create({
-            data: {
-              materialId: materialId,
-              type: MovementType.ADJUSTMENT,
-              quantity: difference, // Keep the sign: positive for increase, negative for decrease
-              unit: material.unit,
-              balanceAfter: newStock,
-              notes: `Stock ${difference > 0 ? "increase" : "decrease"} - Manual adjustment`,
-            },
-          });
-        }
-
-        // Handle supplier updates
-        if (input.suppliers !== undefined) {
-          // Delete existing supplier relationships
-          await tx.materialSupplier.deleteMany({
-            where: { materialId },
-          });
-
-          // Create new supplier relationships if any
-          if (input.suppliers.length > 0) {
-            await tx.materialSupplier.createMany({
-              data: input.suppliers.map((s) => ({
-                materialId,
-                supplierId: s.supplierId,
-                price: s.price,
-                isPreferred: s.isPreferred ?? false,
-              })),
+            // Create stock movement with signed quantity
+            await tx.stockMovement.create({
+              data: {
+                materialId: materialId,
+                type: MovementType.ADJUSTMENT,
+                quantity: difference, // Keep the sign: positive for increase, negative for decrease
+                unit: material.unit,
+                balanceAfter: newStock,
+                notes: `Stock ${difference > 0 ? "increase" : "decrease"} - Manual adjustment`,
+              },
             });
           }
+
+          // Handle supplier updates
+          if (input.suppliers !== undefined) {
+            // Delete existing supplier relationships
+            await tx.materialSupplier.deleteMany({
+              where: { materialId },
+            });
+
+            // Create new supplier relationships if any
+            if (input.suppliers.length > 0) {
+              await tx.materialSupplier.createMany({
+                data: input.suppliers.map((s) => ({
+                  materialId,
+                  supplierId: s.supplierId,
+                  price: s.price,
+                  isPreferred: s.isPreferred ?? false,
+                })),
+              });
+            }
+          }
+
+          // Convert numbers to Decimal for Prisma
+          const updateData: Partial<Material> = {};
+          if (input.name !== undefined) updateData.name = input.name;
+          if (input.sku !== undefined) updateData.sku = input.sku;
+          if (input.description !== undefined) updateData.description = input.description;
+          if (input.category !== undefined) updateData.category = input.category;
+          if (input.unit !== undefined) updateData.unit = input.unit;
+          // Convert numbers to Prisma Decimal using type helper
+          if (input.unitCost !== undefined) updateData.unitCost = toDecimal(input.unitCost);
+          if (input.currentStock !== undefined)
+            updateData.currentStock = toDecimal(input.currentStock);
+          if (input.minStock !== undefined) updateData.minStock = toDecimal(input.minStock);
+          if (input.maxStock !== undefined) updateData.maxStock = toDecimal(input.maxStock);
+
+          // Update material
+          return await tx.material.update({
+            where: { id: materialId },
+            data: updateData,
+          });
+        },
+        {
+          maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+          timeout: 10000, // Maximum time for transaction to complete (10s)
         }
-
-        // Convert numbers to Decimal for Prisma
-        const updateData: Partial<Material> = {};
-        if (input.name !== undefined) updateData.name = input.name;
-        if (input.sku !== undefined) updateData.sku = input.sku;
-        if (input.description !== undefined) updateData.description = input.description;
-        if (input.category !== undefined) updateData.category = input.category;
-        if (input.unit !== undefined) updateData.unit = input.unit;
-        if (input.unitCost !== undefined) updateData.unitCost = input.unitCost as any;
-        if (input.currentStock !== undefined) updateData.currentStock = input.currentStock as any;
-        if (input.minStock !== undefined) updateData.minStock = input.minStock as any;
-        if (input.maxStock !== undefined) updateData.maxStock = input.maxStock as any;
-
-        // Update material
-        return await tx.material.update({
-          where: { id: materialId },
-          data: updateData,
-        });
-      });
+      );
     }
 
     // No stock change and no suppliers update, just update basic properties
@@ -333,16 +356,18 @@ export class MaterialService {
     if (input.description !== undefined) updateData.description = input.description;
     if (input.category !== undefined) updateData.category = input.category;
     if (input.unit !== undefined) updateData.unit = input.unit;
-    if (input.unitCost !== undefined) updateData.unitCost = input.unitCost as any;
-    if (input.currentStock !== undefined) updateData.currentStock = input.currentStock as any;
-    if (input.minStock !== undefined) updateData.minStock = input.minStock as any;
-    if (input.maxStock !== undefined) updateData.maxStock = input.maxStock as any;
+    // Convert numbers to Prisma Decimal using type helper
+    if (input.unitCost !== undefined) updateData.unitCost = toDecimal(input.unitCost);
+    if (input.currentStock !== undefined) updateData.currentStock = toDecimal(input.currentStock);
+    if (input.minStock !== undefined) updateData.minStock = toDecimal(input.minStock);
+    if (input.maxStock !== undefined) updateData.maxStock = toDecimal(input.maxStock);
 
     return this.materialRepo.update(materialId, updateData);
   }
 
   /**
    * Delete material
+   * Cascade deletes: Removes material from all recipes that use it
    */
   async deleteMaterial(materialId: string, storeId: string): Promise<void> {
     // Verify ownership
@@ -351,25 +376,30 @@ export class MaterialService {
       throw new Error("Material does not belong to this store");
     }
 
-    // Check if material is used in any recipes
-    const material = await this.materialRepo.findById(materialId);
-    if (material) {
-      const recipeCount = await prisma.recipeIngredient.count({
-        where: { materialId: materialId },
-      });
+    // Use transaction to ensure atomicity
+    await prisma.$transaction(
+      async (tx) => {
+        // First, delete all recipe ingredients that use this material
+        // This is a cascade delete - recipes will remain but ingredients will be removed
+        await tx.recipeIngredient.deleteMany({
+          where: { materialId: materialId },
+        });
 
-      if (recipeCount > 0) {
-        throw new Error(
-          `Cannot delete material because it is used in ${recipeCount} recipe(s). Please remove it from recipes first.`
-        );
+        // Then delete the material itself
+        await tx.material.delete({
+          where: { id: materialId },
+        });
+      },
+      {
+        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+        timeout: 10000, // Maximum time for transaction to complete (10s)
       }
-    }
-
-    await this.materialRepo.delete(materialId);
+    );
   }
 
   /**
    * Bulk delete materials
+   * Cascade deletes: Removes materials from all recipes that use them
    */
   async bulkDeleteMaterials(materialIds: string[], storeId: string): Promise<number> {
     // Verify all materials belong to store
@@ -380,18 +410,26 @@ export class MaterialService {
       throw new Error("Some materials do not belong to this store");
     }
 
-    // Check if any materials are used in recipes
-    const recipeCount = await prisma.recipeIngredient.count({
-      where: { materialId: { in: materialIds } },
-    });
+    // Use transaction to ensure atomicity
+    return await prisma.$transaction(
+      async (tx) => {
+        // First, delete all recipe ingredients that use these materials
+        await tx.recipeIngredient.deleteMany({
+          where: { materialId: { in: materialIds } },
+        });
 
-    if (recipeCount > 0) {
-      throw new Error(
-        "Cannot delete materials because some are used in recipes. Please remove them from recipes first."
-      );
-    }
+        // Then delete the materials
+        const result = await tx.material.deleteMany({
+          where: { id: { in: materialIds } },
+        });
 
-    return this.materialRepo.bulkDelete(materialIds);
+        return result.count;
+      },
+      {
+        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+        timeout: 10000, // Maximum time for transaction to complete (10s)
+      }
+    );
   }
 
   /**
@@ -552,26 +590,32 @@ export class MaterialService {
       throw new Error("Material not found");
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Update stock
-      const newStock = Number(material.currentStock) + quantity;
-      await tx.material.update({
-        where: { id: materialId },
-        data: { currentStock: newStock },
-      });
+    await prisma.$transaction(
+      async (tx) => {
+        // Update stock
+        const newStock = Number(material.currentStock) + quantity;
+        await tx.material.update({
+          where: { id: materialId },
+          data: { currentStock: newStock },
+        });
 
-      // Create stock movement
-      await tx.stockMovement.create({
-        data: {
-          materialId: materialId,
-          type: MovementType.PURCHASE,
-          quantity,
-          unit: material.unit,
-          balanceAfter: newStock,
-          notes: notes || `Purchase${supplierId ? " from supplier" : ""}`,
-        },
-      });
-    });
+        // Create stock movement
+        await tx.stockMovement.create({
+          data: {
+            materialId: materialId,
+            type: MovementType.PURCHASE,
+            quantity,
+            unit: material.unit,
+            balanceAfter: newStock,
+            notes: notes || `Purchase${supplierId ? " from supplier" : ""}`,
+          },
+        });
+      },
+      {
+        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+        timeout: 10000, // Maximum time for transaction to complete (10s)
+      }
+    );
   }
 }
 

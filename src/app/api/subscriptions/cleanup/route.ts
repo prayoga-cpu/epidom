@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { subscriptionRepository } from "@/lib/repositories";
 import { stripe } from "@/lib/stripe";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
  * POST /api/subscriptions/cleanup
@@ -24,7 +26,10 @@ export async function POST(request: NextRequest) {
     // Verify session
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
+        { status: 401 }
+      );
     }
 
     const userId = session.user.id;
@@ -37,7 +42,10 @@ export async function POST(request: NextRequest) {
     const dbSubscription = await subscriptionRepository.findByUserId(userId);
 
     if (!dbSubscription) {
-      return NextResponse.json({ error: "No subscription found in database" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "No subscription found in database"),
+        { status: 404 }
+      );
     }
 
     // Get ALL subscriptions from Stripe (all statuses)
@@ -48,10 +56,12 @@ export async function POST(request: NextRequest) {
     // Filter to only active ones
     const activeSubscriptions = allSubscriptions.data.filter((sub) => sub.status === "active");
     if (activeSubscriptions.length === 0) {
-      return NextResponse.json({
-        message: "No active subscriptions found",
-        action: "none",
-      });
+      return NextResponse.json(
+        createSuccessResponse({
+          message: "No active subscriptions found",
+          action: "none",
+        })
+      );
     }
 
     if (activeSubscriptions.length === 1) {
@@ -61,15 +71,17 @@ export async function POST(request: NextRequest) {
       const plan = determinePlan(sub);
 
       if (dryRun) {
-        return NextResponse.json({
-          message: "[DRY RUN] Would update database to match single subscription",
-          action: "update_db_only",
-          subscription: {
-            id: sub.id,
-            plan: plan,
-            status: sub.status,
-          },
-        });
+        return NextResponse.json(
+          createSuccessResponse({
+            message: "[DRY RUN] Would update database to match single subscription",
+            action: "update_db_only",
+            subscription: {
+              id: sub.id,
+              plan: plan,
+              status: sub.status,
+            },
+          })
+        );
       }
 
       await subscriptionRepository.update(userId, {
@@ -77,19 +89,36 @@ export async function POST(request: NextRequest) {
         stripePriceId: sub.items.data[0].price.id,
         plan: plan,
         status: SubscriptionStatus.ACTIVE,
+        /**
+         * Type assertion needed because Stripe API types don't expose all properties
+         * Actual type: number (Unix timestamp in seconds)
+         * TODO: Use proper Stripe type definitions or create extended type
+         */
         currentPeriodStart: new Date((sub as any).current_period_start * 1000),
+        /**
+         * Type assertion needed because Stripe API types don't expose all properties
+         * Actual type: number (Unix timestamp in seconds)
+         * TODO: Use proper Stripe type definitions or create extended type
+         */
         currentPeriodEnd: new Date((sub as any).current_period_end * 1000),
+        /**
+         * Type assertion needed because Stripe API types don't expose all properties
+         * Actual type: boolean
+         * TODO: Use proper Stripe type definitions or create extended type
+         */
         cancelAtPeriodEnd: (sub as any).cancel_at_period_end || false,
       });
 
-      return NextResponse.json({
-        message: "Database synced with single active subscription",
-        subscription: {
-          id: sub.id,
-          plan: plan,
-          status: "ACTIVE",
-        },
-      });
+      return NextResponse.json(
+        createSuccessResponse({
+          message: "Database synced with single active subscription",
+          subscription: {
+            id: sub.id,
+            plan: plan,
+            status: "ACTIVE",
+          },
+        })
+      );
     }
 
     // Multiple active subscriptions - need to clean up
@@ -112,20 +141,22 @@ export async function POST(request: NextRequest) {
     const keepPlan = determinePlan(keepSubscription);
 
     if (dryRun) {
-      return NextResponse.json({
-        message: "[DRY RUN] Would keep 1 subscription and cancel the rest",
-        action: "cleanup_duplicates",
-        keep: {
-          id: keepSubscription.id,
-          plan: keepPlan,
-          created: new Date(keepSubscription.created * 1000).toISOString(),
-        },
-        cancel: toCancel.map((sub) => ({
-          id: sub.id,
-          plan: determinePlan(sub),
-          created: new Date(sub.created * 1000).toISOString(),
-        })),
-      });
+      return NextResponse.json(
+        createSuccessResponse({
+          message: "[DRY RUN] Would keep 1 subscription and cancel the rest",
+          action: "cleanup_duplicates",
+          keep: {
+            id: keepSubscription.id,
+            plan: keepPlan,
+            created: new Date(keepSubscription.created * 1000).toISOString(),
+          },
+          cancel: toCancel.map((sub) => ({
+            id: sub.id,
+            plan: determinePlan(sub),
+            created: new Date(sub.created * 1000).toISOString(),
+          })),
+        })
+      );
     }
 
     // Cancel all duplicates
@@ -144,24 +175,41 @@ export async function POST(request: NextRequest) {
       stripePriceId: keepSubscription.items.data[0].price.id,
       plan: keepPlan,
       status: SubscriptionStatus.ACTIVE,
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: number (Unix timestamp in seconds)
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       currentPeriodStart: new Date((keepSubscription as any).current_period_start * 1000),
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: number (Unix timestamp in seconds)
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       currentPeriodEnd: new Date((keepSubscription as any).current_period_end * 1000),
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: boolean
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       cancelAtPeriodEnd: (keepSubscription as any).cancel_at_period_end || false,
     });
-    return NextResponse.json({
-      message: `Successfully cleaned up ${canceledIds.length} duplicate subscriptions`,
-      kept: {
-        id: keepSubscription.id,
-        plan: keepPlan,
-        status: "ACTIVE",
-      },
-      canceled: canceledIds,
-    });
-  } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Failed to cleanup subscriptions" },
-      { status: 500 }
+      createSuccessResponse({
+        message: `Successfully cleaned up ${canceledIds.length} duplicate subscriptions`,
+        kept: {
+          id: keepSubscription.id,
+          plan: keepPlan,
+          status: "ACTIVE",
+        },
+        canceled: canceledIds,
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/subscriptions/cleanup",
+      context: {},
+    });
   }
 }
 

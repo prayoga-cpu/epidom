@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,9 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import ProductDetailsDialog from "./product-details-dialog";
-import EditProductDialog from "./edit-product-dialog";
-import AddProductDialog from "./add-product-dialog";
+import { ProductDetailsDialog } from "./product-details-dialog";
+import { EditProductDialog } from "./edit-product-dialog";
+import { AddProductDialog } from "./add-product-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Search,
@@ -54,12 +55,17 @@ import {
   SectionErrorState,
   SectionLoadingState,
 } from "../../components";
+import { ProductsCardGridSkeleton } from "./products-skeleton";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
-export function ProductsSection() {
+interface ProductsSectionProps {
+  initialProducts?: Product[];
+}
+
+export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const params = useParams();
@@ -76,8 +82,25 @@ export function ProductsSection() {
     take: 20,
   });
 
+  // Debounce search input to reduce API calls (300ms delay)
+  const debouncedSearch = useDebounce(filters.search, 300);
+
   // API hooks
-  const { data, isLoading, error, refetch } = useProducts(storeId, filters);
+  // Use debouncedSearch instead of filters.search for API calls
+  // Use initial data from Server Component with real-time updates
+  const { data, isLoading, error, refetch } = useProducts(
+    storeId,
+    {
+      ...filters,
+      search: debouncedSearch || undefined,
+    },
+    initialProducts
+      ? {
+          products: initialProducts,
+          total: initialProducts.length,
+        }
+      : undefined
+  );
   const deleteProduct = useDeleteProduct(storeId);
   const bulkDeleteProducts = useBulkDeleteProducts(storeId);
   const exportProducts = useExportProducts();
@@ -92,7 +115,8 @@ export function ProductsSection() {
   const canCreateMore = productUsage?.canCreateMore ?? true;
   const productLimitReached = !isLoadingUsage && !canCreateMore;
   // Only show badge if limit exists and is not unlimited (null or Infinity means unlimited)
-  const showLimitBadge = productUsage && productUsage.limit !== null && productUsage.limit !== Infinity;
+  const showLimitBadge =
+    productUsage && productUsage.limit !== null && productUsage.limit !== Infinity;
 
   // Use reusable hooks for dialog and bulk selection state
   const {
@@ -170,7 +194,10 @@ export function ProductsSection() {
     try {
       await bulkDeleteProducts.mutateAsync(Array.from(selectedIds));
       toast.success(
-        t("data.products.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
+        t("data.products.toasts.bulkDeleted.description")?.replace(
+          "{count}",
+          selectedIds.size.toString()
+        ) || ""
       );
       clearSelection();
     } catch (error) {
@@ -217,16 +244,9 @@ export function ProductsSection() {
 
   const hasActiveFilters = filters.search || filters.category;
 
-  // Show loading state
-  if (isLoading) {
-    return (
-      <SectionLoadingState
-        title={t("data.products.pageTitle")}
-        exportLabel={t("common.actions.export")}
-        addLabel={t("data.products.addButton")}
-        selectLabel={t("common.actions.view")}
-      />
-    );
+  // Loading state - wait for both products and usage data to sync loading
+  if (isLoading || isLoadingUsage) {
+    return <ProductsCardGridSkeleton cards={6} />;
   }
 
   // Show error state
@@ -250,7 +270,8 @@ export function ProductsSection() {
               <CardTitle className="text-lg font-bold">{t("data.products.pageTitle")}</CardTitle>
               {showLimitBadge && productUsage?.limit !== null && (
                 <Badge variant="outline" className="text-xs">
-                  {productUsage.current} / {productUsage.limit} {t("data.products.limitBadge") || "products"}
+                  {productUsage.current ?? 0} / {productUsage.limit ?? 0}{" "}
+                  {t("data.products.limitBadge") || "products"}
                 </Badge>
               )}
             </div>
@@ -266,9 +287,9 @@ export function ProductsSection() {
                       className="w-full md:w-auto"
                     >
                       {exportProducts.isPending ? (
-                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                        <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
                       ) : (
-                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+                        <Download className="mr-1 hidden h-4 w-4 sm:inline" />
                       )}
                       {t("common.actions.export")}
                     </Button>
@@ -284,12 +305,8 @@ export function ProductsSection() {
                 <TooltipTrigger asChild>
                   <div>
                     <AddProductDialog storeId={storeId}>
-                      <Button
-                        size="sm"
-                        className="w-full sm:w-auto"
-                        disabled={productLimitReached}
-                      >
-                        <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
+                      <Button size="sm" className="w-full sm:w-auto" disabled={productLimitReached}>
+                        <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
                         {t("data.products.addButton")}
                       </Button>
                     </AddProductDialog>
@@ -307,8 +324,13 @@ export function ProductsSection() {
                 )}
               </Tooltip>
               {bulkSelectMode && selectedCount > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
-                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("actions.delete")} ({selectedCount})
                 </Button>
               )}
@@ -320,12 +342,12 @@ export function ProductsSection() {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <X className="mr-1 hidden h-4 w-4 sm:inline" />
                     {t("actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <CheckSquare className="mr-1 hidden h-4 w-4 sm:inline" />
                     {t("common.actions.view")}
                   </>
                 )}
@@ -364,37 +386,30 @@ export function ProductsSection() {
                 }}
               >
                 <SelectTrigger className="w-full md:w-[180px]">
-                  <ArrowUpDown className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <ArrowUpDown className="mr-1 hidden h-4 w-4 sm:inline" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name-asc">{t("sort.nameAZ")}</SelectItem>
                   <SelectItem value="name-desc">{t("sort.nameZA")}</SelectItem>
-                  <SelectItem value="currentStock-asc">
-                    {t("sort.stockLowHigh")}
-                  </SelectItem>
-                  <SelectItem value="currentStock-desc">
-                    {t("sort.stockHighLow")}
-                  </SelectItem>
-                  <SelectItem value="sellingPrice-asc">
-                    {t("sort.priceLowHigh")}
-                  </SelectItem>
-                  <SelectItem value="sellingPrice-desc">
-                    {t("sort.priceHighLow")}
-                  </SelectItem>
-                  <SelectItem value="createdAt-desc">
-                    {t("sort.newest")}
-                  </SelectItem>
-                  <SelectItem value="createdAt-asc">
-                    {t("sort.oldest")}
-                  </SelectItem>
+                  <SelectItem value="currentStock-asc">{t("sort.stockLowHigh")}</SelectItem>
+                  <SelectItem value="currentStock-desc">{t("sort.stockHighLow")}</SelectItem>
+                  <SelectItem value="sellingPrice-asc">{t("sort.priceLowHigh")}</SelectItem>
+                  <SelectItem value="sellingPrice-desc">{t("sort.priceHighLow")}</SelectItem>
+                  <SelectItem value="createdAt-desc">{t("sort.newest")}</SelectItem>
+                  <SelectItem value="createdAt-asc">{t("sort.oldest")}</SelectItem>
                 </SelectContent>
               </Select>
 
               {/* Clear Filters */}
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
-                  <X className="mr-1 h-4 w-4 hidden sm:inline" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="w-full sm:w-auto"
+                >
+                  <X className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("common.actions.clearFilters")}
                 </Button>
               )}
@@ -437,129 +452,125 @@ export function ProductsSection() {
                   onSelect={() => toggleSelectItem(product.id)}
                   contentClassName="!px-4"
                 >
-                    <div className="mb-2 flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-sm leading-tight font-semibold">
-                          {product.name}
-                        </h3>
-                        {product.sku && (
-                          <p className="text-muted-foreground text-xs">
-                            SKU: {product.sku}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Stock Status Badge */}
-                      <Badge
-                        variant={
-                          stockStatus === "critical"
-                            ? "destructive"
-                            : stockStatus === "low_stock"
-                              ? "default"
-                              : stockStatus === "overstocked"
-                                ? "secondary"
-                                : "outline"
-                        }
-                        className="ml-auto text-xs"
-                      >
-                        {getStockStatusLabel(stockStatus)}
-                      </Badge>
-                    </div>
-
-                    <Separator />
-
-                    {/* Product Info */}
-                    <div className="text-muted-foreground my-2 space-y-1 text-xs">
-                      {product.category && (
-                        <div className="flex justify-between">
-                          <span>{t("common.category")}:</span>
-                          <span className="text-foreground font-medium">{product.category}</span>
-                        </div>
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-sm leading-tight font-semibold">{product.name}</h3>
+                      {product.sku && (
+                        <p className="text-muted-foreground text-xs">SKU: {product.sku}</p>
                       )}
-                      <div className="flex justify-between">
-                        <span>{t("common.stock")}:</span>
-                        <span className="text-foreground font-medium">
-                          {formatNumber(Number(product.currentStock) || 0)} {product.unit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t("common.price")}:</span>
-                        <span className="text-foreground font-medium">
-                          {formatPrice(Number(product.sellingPrice) || 0)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t("common.profit")}:</span>
-                        <span
-                          className={`text-foreground font-medium ${
-                            profitMargin >= 50
-                              ? "text-green-600"
-                              : profitMargin >= 30
-                                ? "text-blue-600"
-                                : "text-orange-600"
-                          }`}
-                        >
-                          {profitMargin.toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t("tables.supplier")}:</span>
-                        <span className="text-foreground font-medium">
-                          {t("common.notAvailable")}
-                        </span>
-                      </div>
                     </div>
 
-                    {/* Hover Actions */}
-                    {!bulkSelectMode && (
-                      <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 w-full text-xs"
-                              onClick={() => handleView(product)}
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.products.tooltips.view")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 w-full flex-1 text-xs"
-                              onClick={() => handleEdit(product)}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.products.tooltips.edit")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDeleteClickDialog(product)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.products.tooltips.delete")}</p>
-                          </TooltipContent>
-                        </Tooltip>
+                    {/* Stock Status Badge */}
+                    <Badge
+                      variant={
+                        stockStatus === "critical"
+                          ? "destructive"
+                          : stockStatus === "low_stock"
+                            ? "default"
+                            : stockStatus === "overstocked"
+                              ? "secondary"
+                              : "outline"
+                      }
+                      className="ml-auto text-xs"
+                    >
+                      {getStockStatusLabel(stockStatus)}
+                    </Badge>
+                  </div>
+
+                  <Separator />
+
+                  {/* Product Info */}
+                  <div className="text-muted-foreground my-2 space-y-1 text-xs">
+                    {product.category && (
+                      <div className="flex justify-between">
+                        <span>{t("common.category")}:</span>
+                        <span className="text-foreground font-medium">{product.category}</span>
                       </div>
                     )}
+                    <div className="flex justify-between">
+                      <span>{t("common.stock")}:</span>
+                      <span className="text-foreground font-medium">
+                        {formatNumber(Number(product.currentStock) || 0)} {product.unit}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{t("common.price")}:</span>
+                      <span className="text-foreground font-medium">
+                        {formatPrice(Number(product.sellingPrice) || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{t("common.profit")}:</span>
+                      <span
+                        className={`text-foreground font-medium ${
+                          profitMargin >= 50
+                            ? "text-green-600"
+                            : profitMargin >= 30
+                              ? "text-blue-600"
+                              : "text-orange-600"
+                        }`}
+                      >
+                        {profitMargin.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{t("tables.supplier")}:</span>
+                      <span className="text-foreground font-medium">
+                        {t("common.notAvailable")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Hover Actions */}
+                  {!bulkSelectMode && (
+                    <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 w-full text-xs"
+                            onClick={() => handleView(product)}
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.products.tooltips.view")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 w-full flex-1 text-xs"
+                            onClick={() => handleEdit(product)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.products.tooltips.edit")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
+                            onClick={() => handleDeleteClickDialog(product)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.products.tooltips.delete")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                 </BaseItemCard>
               );
             })}
@@ -568,23 +579,21 @@ export function ProductsSection() {
           {/* Empty State */}
           {products.length === 0 && (
             <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
-                <h3 className="mb-2 text-lg font-semibold">
-                  {t("messages.noProductsFound")}
-                </h3>
-                <p className="text-muted-foreground mb-4 text-sm">
-                  {hasActiveFilters
-                    ? t("messages.noMatchingFilters")
-                    : t("messages.getStartedProduct")}
-                </p>
-                {hasActiveFilters ? (
-                  <Button variant="outline" onClick={clearFilters}>
-                    {t("common.actions.clearFilters")}
-                  </Button>
-                ) : (
-                  <AddProductDialog storeId={storeId} />
-                )}
-              </div>
+              <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
+              <h3 className="mb-2 text-lg font-semibold">{t("messages.noProductsFound")}</h3>
+              <p className="text-muted-foreground mb-4 text-sm">
+                {hasActiveFilters
+                  ? t("messages.noMatchingFilters")
+                  : t("messages.getStartedProduct")}
+              </p>
+              {hasActiveFilters ? (
+                <Button variant="outline" onClick={clearFilters}>
+                  {t("common.actions.clearFilters")}
+                </Button>
+              ) : (
+                <AddProductDialog storeId={storeId} />
+              )}
+            </div>
           )}
 
           {/* Pagination */}
@@ -661,10 +670,12 @@ export function ProductsSection() {
           />
           <ConfirmationDialog
             title={t("data.products.toasts.deleted.title")}
-            description={t("data.products.toasts.deleted.description")?.replace(
-              "{name}",
-              selectedProduct.name
-            ) || ""}
+            description={
+              t("data.products.toasts.deleted.description")?.replace(
+                "{name}",
+                selectedProduct.name
+              ) || ""
+            }
             confirmText={t("common.actions.delete")}
             onConfirm={handleDeleteConfirm}
             variant="destructive"

@@ -53,8 +53,23 @@ export function PhoneInput({ className, value, onChange, defaultCountry = "FR", 
   return (
     <PhoneInputWithCountry
       flags={flags}
+      /**
+       * Type assertion needed because react-phone-number-input types don't match exactly
+       * Actual type: CountryCode
+       * TODO: Update react-phone-number-input types or create type adapter
+       */
       defaultCountry={defaultCountry as any}
+      /**
+       * Type assertion needed because react-phone-number-input types don't match exactly
+       * Actual type: E164Number | undefined
+       * TODO: Update react-phone-number-input types or create type adapter
+       */
       value={value as any}
+      /**
+       * Type assertion needed because react-phone-number-input types don't match exactly
+       * Actual type: (value: E164Number | undefined) => void
+       * TODO: Update react-phone-number-input types or create type adapter
+       */
       onChange={onChange as any}
       international
       countryCallingCodeEditable={false}

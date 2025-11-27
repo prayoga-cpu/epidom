@@ -28,7 +28,7 @@ import {
   Hash,
   Loader2,
 } from "lucide-react";
-import { useStockMovements } from "./hooks/use-stock-movements";
+import { useStockMovements, type StockMovementWithRelations } from "./hooks/use-stock-movements";
 
 interface AdjustmentHistoryDialogProps {
   open: boolean;
@@ -124,12 +124,13 @@ export function AdjustmentHistoryDialog({
     [t("management.editStock.quantity")]: `${adj.isIncrease ? "+" : "-"}${adj.quantity}`,
     [t("management.editStock.unit")]: adj.unit,
     [t("management.editStock.runningBalance")]: adj.runningBalance,
-    [t("management.editStock.reason")]: (adj as any).reason || "-",
+    // reason and referenceId are already in StockMovementWithRelations from Prisma
+    [t("management.editStock.reason")]: adj.reason || "-",
     [t("common.reference")]: adj.productionBatchId
-      ? `Batch: ${(adj as any).productionBatch?.batchNumber || adj.productionBatchId}`
+      ? `Batch: ${adj.productionBatch?.batchNumber || adj.productionBatchId}`
       : adj.orderId
-        ? `Order: ${(adj as any).order?.orderNumber || adj.orderId}`
-        : (adj as any).referenceId || "-",
+        ? `Order: ${adj.order?.orderNumber || adj.orderId}`
+        : adj.referenceId || "-",
     [t("common.notes")]: adj.notes || "-",
   }));
 
@@ -281,9 +282,9 @@ export function AdjustmentHistoryDialog({
                                 {Math.abs(adj.quantity)} {adj.unit}
                               </span>
                             </div>
-                            {(adj as any).reason && (
+                            {adj.reason && (
                               <p className="text-muted-foreground mt-1 text-sm font-medium">
-                                {t("management.editStock.reason")}: {(adj as any).reason}
+                                {t("management.editStock.reason")}: {adj.reason}
                               </p>
                             )}
                             {adj.notes && (
@@ -312,12 +313,12 @@ export function AdjustmentHistoryDialog({
                             <Badge variant="outline">{adj.type}</Badge>
                           </div>
 
-                          {((adj as any).referenceId || adj.productionBatchId || adj.orderId) && (
+                          {(adj.referenceId || adj.productionBatchId || adj.orderId) && (
                             <div className="text-muted-foreground flex items-center gap-2">
                               <Hash className="h-3.5 w-3.5" />
                               <span>
                                 {t("common.reference")}:{" "}
-                                {(adj as any).referenceId ||
+                                {adj.referenceId ||
                                   (adj.productionBatchId
                                     ? `Batch ${adj.productionBatchId}`
                                     : adj.orderId

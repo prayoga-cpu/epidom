@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useForm } from "react-hook-form";
@@ -43,6 +43,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useStartProduction } from "./hooks/use-production-batches";
+import { RecipeWithIngredients } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 
 interface IngredientAvailability {
   materialId: string;
@@ -56,17 +57,19 @@ interface IngredientAvailability {
 interface StartProductionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  recipe: any;
+  recipe: RecipeWithIngredients;
   availableIngredients: (IngredientAvailability | null)[];
 }
 
 const startProductionSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   recipeId: z.string().min(1, "Recipe is required"),
-  plannedQuantity: z.coerce
+  numberOfBatches: z.coerce
     .number()
-    .positive("Quantity must be positive")
-    .min(1, "Quantity must be at least 1"),
+    .int("Number of batches must be a whole number")
+    .positive("Number of batches must be positive")
+    .min(1, "Number of batches must be at least 1")
+    .max(1000, "Number of batches cannot exceed 1000"),
   scheduledDate: z.string().min(1, "Scheduled date is required"),
   notes: z.string().optional(),
 });
@@ -85,17 +88,11 @@ export function StartProductionDialog({
   const storeId = params?.storeId as string;
   const startProduction = useStartProduction(storeId);
 
-  // Filter out null values
-  const validIngredients = availableIngredients.filter(
-    (ing): ing is IngredientAvailability => ing !== null
-  );
-
-  // Check if there are any insufficient materials
-  const hasInsufficientMaterials = validIngredients.some((ing) => ing.status === "insufficient");
-
   // Get products linked to this recipe (from Many-to-Many relationship)
   const linkedProducts =
-    recipe?.recipeProducts?.map((rp: { product: { id: string; name: string; sku: string } }) => rp.product) || [];
+    recipe?.recipeProducts?.map(
+      (rp: { product: { id: string; name: string; sku: string } }) => rp.product
+    ) || [];
   const defaultProductId = linkedProducts[0]?.id || "";
 
   // Initialize form
@@ -104,24 +101,90 @@ export function StartProductionDialog({
     defaultValues: {
       productId: defaultProductId,
       recipeId: recipe.id,
-      plannedQuantity: Number(recipe.yieldQuantity) || 1,
+      numberOfBatches: 1,
       scheduledDate: "",
       notes: "",
     },
   });
 
-  // Watch planned quantity for real-time calculations
-  const plannedQuantity = form.watch("plannedQuantity");
-  const totalCost = (plannedQuantity / Number(recipe.yieldQuantity)) * Number(recipe.costPerBatch);
-  const totalTime = (plannedQuantity / Number(recipe.yieldQuantity)) * recipe.productionTimeMinutes;
+  // Auto-select default product when available
+  useEffect(() => {
+    const currentProductId = form.getValues("productId");
+    if (!currentProductId && defaultProductId) {
+      form.setValue("productId", defaultProductId);
+    }
+  }, [defaultProductId, form]);
+
+  // Watch number of batches for real-time calculations
+  const numberOfBatches = form.watch("numberOfBatches") || 1;
+  const safeNumberOfBatches =
+    Number.isFinite(numberOfBatches) && numberOfBatches > 0 ? numberOfBatches : 1;
+
+  // Calculate material availability based on number of batches
+  const validIngredients = useMemo(() => {
+    if (!Number.isFinite(safeNumberOfBatches) || safeNumberOfBatches <= 0) {
+      return availableIngredients.filter((ing): ing is IngredientAvailability => ing !== null);
+    }
+
+    return availableIngredients
+      .filter((ing): ing is IngredientAvailability => ing !== null)
+      .map((ing) => {
+        // Calculate required quantity based on number of batches
+        const required = ing.required * safeNumberOfBatches;
+        const available = ing.available;
+        let status: "sufficient" | "low" | "insufficient";
+
+        if (available >= required) {
+          status = "sufficient";
+        } else if (available >= required * 0.5) {
+          status = "low";
+        } else {
+          status = "insufficient";
+        }
+
+        return {
+          ...ing,
+          required,
+          status,
+        };
+      });
+  }, [availableIngredients, safeNumberOfBatches]);
+
+  // Check if there are any insufficient materials
+  const hasInsufficientMaterials = validIngredients.some((ing) => ing.status === "insufficient");
+
+  // Calculate totals with safety checks
+  const yieldQuantity = Number(recipe.yieldQuantity) || 1;
+  const costPerBatch = Number(recipe.costPerBatch) || 0;
+  const productionTime = recipe.productionTimeMinutes || 0;
+
+  const totalCost = safeNumberOfBatches * costPerBatch;
+  const totalTime = safeNumberOfBatches * productionTime;
 
   // Handle form submission
   const onSubmit = async (data: StartProductionFormData) => {
     try {
+      // Validate recipe yield quantity
+      const yieldQuantity = Number(recipe.yieldQuantity);
+      if (!yieldQuantity || yieldQuantity <= 0) {
+        throw new Error("Recipe yield quantity is invalid. Please check the recipe configuration.");
+      }
+
+      // Convert number of batches to planned quantity (units)
+      // Use Math.round to ensure integer result and prevent floating point precision issues
+      const plannedQuantity = Math.round(data.numberOfBatches * yieldQuantity);
+
+      // Validate planned quantity is positive
+      if (plannedQuantity <= 0) {
+        throw new Error(
+          "Calculated production quantity is invalid. Please check the recipe configuration."
+        );
+      }
+
       const result = await startProduction.mutateAsync({
         productId: data.productId,
         recipeId: data.recipeId,
-        plannedQuantity: data.plannedQuantity,
+        plannedQuantity: plannedQuantity,
         scheduledDate: new Date(data.scheduledDate),
         notes: data.notes,
       });
@@ -133,7 +196,13 @@ export function StartProductionDialog({
         }
       );
 
-      form.reset();
+      form.reset({
+        productId: defaultProductId,
+        recipeId: recipe.id,
+        numberOfBatches: 1,
+        scheduledDate: "",
+        notes: "",
+      });
       onOpenChange(false);
     } catch (error) {
       sonnerToast.error(t("management.recipeProduction.toasts.productionFailed.title") || "Error", {
@@ -166,12 +235,12 @@ export function StartProductionDialog({
               type="submit"
               form="start-production-form"
               disabled={
-                startProduction.isPending ||
-                hasInsufficientMaterials ||
-                linkedProducts.length === 0
+                startProduction.isPending || hasInsufficientMaterials || linkedProducts.length === 0
               }
             >
-              {startProduction.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+              {startProduction.isPending && (
+                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+              )}
               {t("management.recipeProduction.startProduction") || "Start Production"}
             </Button>
           </>
@@ -257,7 +326,7 @@ export function StartProductionDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {linkedProducts.map((product: any) => (
+                        {linkedProducts.map((product) => (
                           <SelectItem key={product.id} value={product.id}>
                             {product.name}
                           </SelectItem>
@@ -290,10 +359,10 @@ export function StartProductionDialog({
               </div>
             )}
 
-            {/* Planned Quantity */}
+            {/* Number of Batches */}
             <FormField
               control={form.control}
-              name="plannedQuantity"
+              name="numberOfBatches"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("management.recipeProduction.batchQuantity")} *</FormLabel>
@@ -302,17 +371,25 @@ export function StartProductionDialog({
                       <Package className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                       <Input
                         type="number"
-                        step="0.01"
-                        min="0.01"
+                        step="1"
+                        min="1"
+                        max="1000"
                         {...field}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Only allow positive integers
+                          if (value === "" || /^\d+$/.test(value)) {
+                            field.onChange(value === "" ? "" : Number(value));
+                          }
+                        }}
                         className="pl-9"
                         placeholder="1"
                       />
                     </div>
                   </FormControl>
                   <FormDescription>
-                    {t("management.recipeProduction.plannedQuantityHint") ||
-                      "Enter the quantity to produce"}
+                    {t("management.recipeProduction.batchQuantityHint") ||
+                      "How many batches do you want to produce?"}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -450,7 +527,6 @@ export function StartProductionDialog({
                 </FormItem>
               )}
             />
-
           </form>
         </Form>
       </FormDialogLayout>

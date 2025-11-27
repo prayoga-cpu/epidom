@@ -20,6 +20,7 @@ import {
   Tag,
   Calendar,
   ChefHat,
+  AlertCircle,
 } from "lucide-react";
 import type { ProductWithRelations } from "@/lib/repositories/product.repository";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/utils/formatting";
@@ -37,7 +38,7 @@ interface ProductDetailsDialogProps {
   onDelete?: () => void;
 }
 
-export default function ProductDetailsDialog({
+export function ProductDetailsDialog({
   open,
   onOpenChange,
   product,
@@ -84,7 +85,8 @@ export default function ProductDetailsDialog({
 
     if (!currentStock && currentStock !== 0) return t("common.stockStatus.unknown") || "Unknown";
     if (currentStock === 0) return t("common.stockStatus.outOfStock");
-    if (minStock && currentStock < minStock * 0.5) return t("common.stockStatus.critical") || "Critical";
+    if (minStock && currentStock < minStock * 0.5)
+      return t("common.stockStatus.critical") || "Critical";
     if (minStock && currentStock <= minStock) return t("common.stockStatus.lowStock");
     if (maxStock && currentStock >= maxStock) return t("common.stockStatus.overstocked");
     return t("common.stockStatus.inStock");
@@ -133,7 +135,7 @@ export default function ProductDetailsDialog({
             <div className="flex gap-2">
               {onEdit && (
                 <Button variant="outline" size="sm" onClick={onEdit}>
-                  <Edit className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <Edit className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("actions.edit") || "Edit"}
                 </Button>
               )}
@@ -143,10 +145,7 @@ export default function ProductDetailsDialog({
                   onOpenChange={setShowDeleteConfirm}
                   title={t("data.products.deleteConfirm.title") || "Delete Product"}
                   description={
-                    t("data.products.deleteConfirm.description")?.replace(
-                      "{name}",
-                      product.name
-                    ) ||
+                    t("data.products.deleteConfirm.description")?.replace("{name}", product.name) ||
                     `Are you sure you want to delete "${product.name}"? This action cannot be undone.`
                   }
                   confirmText={t("data.products.deleteConfirm.title") || "Delete Product"}
@@ -171,6 +170,11 @@ export default function ProductDetailsDialog({
                   {formatNumber(Number(product.currentStock) || 0)}
                 </div>
                 <p className="text-muted-foreground text-xs">{product.unit}</p>
+                {/**
+                 * Type assertion needed because Badge variant type doesn't include all possible values
+                 * Actual type: "default" | "secondary" | "destructive" | "outline"
+                 * TODO: Update Badge component to accept all variant types or use type guard
+                 */}
                 <Badge variant={getStockStatusColor() as any} className="mt-2 text-xs">
                   {stockStatus}
                 </Badge>
@@ -246,9 +250,7 @@ export default function ProductDetailsDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-3">
                 <div>
-                  <label className="text-muted-foreground text-sm font-medium">
-                    SKU
-                  </label>
+                  <label className="text-muted-foreground text-sm font-medium">SKU</label>
                   <p className="text-sm">{product.sku || t("common.notAvailable")}</p>
                 </div>
                 <div>
@@ -274,7 +276,7 @@ export default function ProductDetailsDialog({
           </div>
 
           {/* Recipe Information */}
-          {product.recipeProducts && product.recipeProducts.length > 0 && (
+          {product.recipeProducts && product.recipeProducts.length > 0 ? (
             <>
               <Separator />
               <div>
@@ -321,8 +323,7 @@ export default function ProductDetailsDialog({
                                   {t("data.recipes.cards.yield")}:{" "}
                                 </span>
                                 <span className="font-medium">
-                                  {formatNumber(Number(recipe.yieldQuantity))}{" "}
-                                  {recipe.yieldUnit}
+                                  {formatNumber(Number(recipe.yieldQuantity))} {recipe.yieldUnit}
                                 </span>
                               </div>
                             </div>
@@ -331,6 +332,32 @@ export default function ProductDetailsDialog({
                       </Card>
                     );
                   })}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <Separator />
+              <div>
+                <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+                  <ChefHat className="h-5 w-5" />
+                  {t("data.products.form.linkedRecipes")}
+                </h3>
+                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 p-8 text-center dark:border-blue-700 dark:bg-blue-950/30">
+                  <AlertCircle className="mb-3 h-12 w-12 text-blue-600 dark:text-blue-500" />
+                  <h3 className="mb-2 text-lg font-semibold text-blue-900 dark:text-blue-100">
+                    {t("data.products.warnings.noRecipes.title") || "No Linked Recipes"}
+                  </h3>
+                  <p className="text-muted-foreground mb-4 max-w-md text-sm">
+                    {t("data.products.warnings.noRecipes.description") ||
+                      "This product doesn't have any linked recipes yet. Link a recipe to enable production planning and cost tracking."}
+                  </p>
+                  {onEdit && (
+                    <Button variant="outline" size="sm" onClick={onEdit}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      {t("data.products.warnings.noRecipes.action") || "Link Recipe"}
+                    </Button>
+                  )}
                 </div>
               </div>
             </>
@@ -490,15 +517,13 @@ export default function ProductDetailsDialog({
                 <CardContent className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">
-                      {t("data.products.details.stockValueAtCost") ||
-                        "Stock Value (at cost):"}
+                      {t("data.products.details.stockValueAtCost") || "Stock Value (at cost):"}
                     </span>
                     <span className="font-semibold">{formatPrice(stockValue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">
-                      {t("data.products.details.potentialRevenue") ||
-                        "Potential Revenue (retail):"}
+                      {t("data.products.details.potentialRevenue") || "Potential Revenue (retail):"}
                     </span>
                     <span className="font-semibold">{formatPrice(potentialRevenue)}</span>
                   </div>
@@ -533,8 +558,7 @@ export default function ProductDetailsDialog({
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               <span>
-                {t("data.materials.details.created") || "Created"}:{" "}
-                {formatDate(product.createdAt)}
+                {t("data.materials.details.created") || "Created"}: {formatDate(product.createdAt)}
               </span>
             </div>
             <div className="flex items-center gap-1">

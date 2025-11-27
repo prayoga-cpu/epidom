@@ -2,6 +2,8 @@
  * Utility functions for exporting data to various formats (CSV, Excel, PDF)
  */
 
+import { isDate } from "@/lib/utils/types";
+
 /**
  * Convert an array of objects to CSV string
  */
@@ -101,8 +103,9 @@ export async function exportToExcel<T extends Record<string, any>>(
       ...data.map((row) =>
         cols.map((col) => {
           const value = row[col.key];
-          if ((value as any) instanceof Date) {
-            return (value as Date).toISOString();
+          // Use type guard for Date conversion
+          if (isDate(value)) {
+            return value.toISOString();
           }
           return value;
         })
@@ -152,8 +155,9 @@ export async function exportToPDF<T extends Record<string, any>>(
     const body = data.map((row) =>
       cols.map((col) => {
         const value = row[col.key];
-        if ((value as any) instanceof Date) {
-          return (value as Date).toLocaleDateString();
+        // Use type guard for Date conversion
+        if (isDate(value)) {
+          return value.toLocaleDateString();
         }
         if (value === null || value === undefined) {
           return "";

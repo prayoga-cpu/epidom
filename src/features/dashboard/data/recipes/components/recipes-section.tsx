@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
-import RecipeDetailsDialog from "./recipe-details-dialog";
+import { RecipeDetailsDialog } from "./recipe-details-dialog";
 import EditRecipeDialog from "./edit-recipe-dialog";
 import DuplicateRecipeDialog from "./duplicate-recipe-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import AddRecipeDialog from "./add-recipe-dialog";
+import { AddRecipeDialog } from "./add-recipe-dialog";
 import {
   ArrowUpDown,
   Eye,
@@ -46,7 +47,8 @@ import {
   BaseItemCard,
   type FilterField,
 } from "../../components";
-import LoadingPage from "@/features/loading/loading-page";
+import { RecipesCardGridSkeleton } from "./recipes-skeleton";
+import { LoadingPage } from "@/features/loading/loading-page";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
 import { getTranslatedCategory } from "../utils/category-helpers";
@@ -61,17 +63,37 @@ type SortField =
 type SortOrder = "asc" | "desc";
 
 // Recipe categories - use translation keys
+// Store English values in DB, but display translated labels
 const getRecipeCategories = (t: (key: string) => string) => [
-  t("data.recipes.categories.breadPastries"),
-  t("data.recipes.categories.cakesDesserts"),
-  t("data.recipes.categories.confectionery"),
-  t("data.recipes.categories.dairyProducts"),
-  t("data.recipes.categories.beverages"),
-  t("data.recipes.categories.saucesCondiments"),
-  t("data.recipes.categories.other"),
+  { value: "Bread & Pastries", label: t("data.recipes.categories.breadPastries") },
+  { value: "Cakes & Desserts", label: t("data.recipes.categories.cakesDesserts") },
+  { value: "Confectionery", label: t("data.recipes.categories.confectionery") },
+  { value: "Dairy Products", label: t("data.recipes.categories.dairyProducts") },
+  { value: "Beverages", label: t("data.recipes.categories.beverages") },
+  { value: "Sauces & Condiments", label: t("data.recipes.categories.saucesCondiments") },
+  { value: "Other", label: t("data.recipes.categories.other") },
 ];
 
-export function RecipesSection() {
+// Helper to translate category from database value to localized string
+const getCategoryTranslation = (category: string, t: (key: string) => string): string => {
+  const categoryMap: Record<string, string> = {
+    "Bread & Pastries": t("data.recipes.categories.breadPastries"),
+    "Cakes & Desserts": t("data.recipes.categories.cakesDesserts"),
+    Confectionery: t("data.recipes.categories.confectionery"),
+    "Dairy Products": t("data.recipes.categories.dairyProducts"),
+    Beverages: t("data.recipes.categories.beverages"),
+    "Sauces & Condiments": t("data.recipes.categories.saucesCondiments"),
+    Other: t("data.recipes.categories.other"),
+  };
+
+  return categoryMap[category] || category;
+};
+
+interface RecipesSectionProps {
+  initialRecipes?: RecipeWithIngredients[];
+}
+
+export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
   const { advancedReportsAccess } = useFeatureAccess();
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
@@ -86,20 +108,34 @@ export function RecipesSection() {
   // Duplicate dialog is not part of useDialogState, handle separately
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
 
+  // Debounce search input to reduce API calls (300ms delay)
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
   // API hooks
+  // Use debouncedSearch instead of searchQuery for API calls
+  // Use initial data from Server Component with real-time updates
   const {
     data: recipesData,
     isLoading,
     error,
     refetch,
-  } = useRecipes(storeId, {
-    search: searchQuery || undefined,
-    category: categoryFilter,
-    sortBy: sortField,
-    sortOrder: sortOrder,
-    skip: 0,
-    take: 100,
-  });
+  } = useRecipes(
+    storeId,
+    {
+      search: debouncedSearch || undefined,
+      category: categoryFilter,
+      sortBy: sortField,
+      sortOrder: sortOrder,
+      skip: 0,
+      take: 100,
+    },
+    initialRecipes
+      ? {
+          recipes: initialRecipes,
+          total: initialRecipes.length,
+        }
+      : undefined
+  );
 
   const deleteRecipe = useDeleteRecipe(storeId);
   const bulkDeleteRecipes = useBulkDeleteRecipes(storeId);
@@ -146,7 +182,9 @@ export function RecipesSection() {
     try {
       await deleteRecipe.mutateAsync(selectedRecipe.id);
       toast.success(t("data.recipes.toasts.deleted.title"), {
-        description: t("data.recipes.toasts.deleted.description")?.replace("{name}", selectedRecipe.name) || "",
+        description:
+          t("data.recipes.toasts.deleted.description")?.replace("{name}", selectedRecipe.name) ||
+          "",
       });
       setDeleteDialogOpen(false);
       setSelectedRecipe(null);
@@ -163,10 +201,11 @@ export function RecipesSection() {
     try {
       await bulkDeleteRecipes.mutateAsync(Array.from(selectedIds));
       toast.success(t("data.recipes.toasts.bulkDeleted.title"), {
-        description: t("data.recipes.toasts.bulkDeleted.description")?.replace(
-          "{count}",
-          selectedIds.size.toString()
-        ) || "",
+        description:
+          t("data.recipes.toasts.bulkDeleted.description")?.replace(
+            "{count}",
+            selectedIds.size.toString()
+          ) || "",
       });
       clearSelection();
     } catch (error) {
@@ -209,16 +248,9 @@ export function RecipesSection() {
 
   const hasActiveFilters = searchQuery || categoryFilter !== undefined;
 
-  // Loading state
+  // Loading state - use pixel-perfect skeleton to prevent layout shift
   if (isLoading) {
-    return (
-      <SectionLoadingState
-        title={t("data.recipes.pageTitle")}
-        exportLabel={t("common.actions.export")}
-        addLabel={t("data.recipes.addButton")}
-        selectLabel={t("common.actions.view")}
-      />
-    );
+    return <RecipesCardGridSkeleton cards={6} />;
   }
 
   if (error) {
@@ -246,13 +278,15 @@ export function RecipesSection() {
                       variant="outline"
                       size="sm"
                       onClick={handleExport}
-                      disabled={exportRecipes.isPending || recipes.length === 0 || !advancedReportsAccess}
+                      disabled={
+                        exportRecipes.isPending || recipes.length === 0 || !advancedReportsAccess
+                      }
                       className="w-full md:w-auto"
                     >
                       {exportRecipes.isPending ? (
-                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                        <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
                       ) : (
-                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+                        <Download className="mr-1 hidden h-4 w-4 sm:inline" />
                       )}
                       {t("common.actions.export")}
                     </Button>
@@ -264,12 +298,14 @@ export function RecipesSection() {
                   </TooltipContent>
                 )}
               </Tooltip>
-              <AddRecipeDialog trigger={
-                <Button size="sm" className="w-full md:w-auto">
-                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
-                  {t("data.recipes.addButton")}
-                </Button>
-              } />
+              <AddRecipeDialog
+                trigger={
+                  <Button size="sm" className="w-full md:w-auto">
+                    <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
+                    {t("data.recipes.addButton")}
+                  </Button>
+                }
+              />
               {bulkSelectMode && selectedCount > 0 && (
                 <Button
                   variant="destructive"
@@ -279,9 +315,9 @@ export function RecipesSection() {
                   className="w-full md:w-auto"
                 >
                   {bulkDeleteRecipes.isPending ? (
-                    <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                    <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
                   ) : (
-                    <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
                   )}
                   {t("actions.delete")} ({selectedCount})
                 </Button>
@@ -294,12 +330,12 @@ export function RecipesSection() {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <X className="mr-1 hidden h-4 w-4 sm:inline" />
                     {t("actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <CheckSquare className="mr-1 hidden h-4 w-4 sm:inline" />
                     {t("common.actions.view")}
                   </>
                 )}
@@ -323,10 +359,7 @@ export function RecipesSection() {
                 onChange: (value) => setCategoryFilter(value === "all" ? undefined : value),
                 options: [
                   { value: "all", label: t("filters.allCategories") },
-                  ...getRecipeCategories(t).map((category) => ({
-                    value: category,
-                    label: category,
-                  })),
+                  ...getRecipeCategories(t),
                 ],
               },
               {
@@ -393,134 +426,137 @@ export function RecipesSection() {
                   onSelect={() => toggleSelectItem(recipe.id)}
                   contentClassName="!px-4"
                 >
-                    <div className="mb-2 flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
-                          {recipe.name}
-                        </h3>
-                        {recipe.category && (
-                          <Badge variant="secondary" className="mt-1 text-xs">
-                            {getTranslatedCategory(recipe.category, t)}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="bg-primary/10 ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-                        <ChefHat className="text-primary h-4 w-4" />
-                      </div>
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
+                        {recipe.name}
+                      </h3>
+                      {recipe.category && (
+                        <Badge variant="secondary" className="mt-1 text-xs">
+                          {getTranslatedCategory(recipe.category, t)}
+                        </Badge>
+                      )}
                     </div>
-
-                    {recipe.description && (
-                      <p className="text-muted-foreground mb-2 line-clamp-2 text-xs">
-                        {recipe.description}
-                      </p>
-                    )}
-
-                    <Separator className="my-2" />
-
-                    {/* Recipe Info */}
-                    <div className="text-muted-foreground my-2 space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span>{t("data.recipes.cards.yield")}:</span>
-                        <span className="text-foreground font-medium">
-                          {recipe.yieldQuantity} {recipe.yieldUnit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t("data.recipes.review.productionTime")}:</span>
-                        <span className="text-foreground font-medium">
-                          {formatDuration(recipe.productionTimeMinutes)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t("data.recipes.cards.perBatch")}:</span>
-                        <span className="text-foreground font-medium">
-                          {formatPrice(recipe.costPerBatch)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t("data.recipes.cards.perUnit")}:</span>
-                        <span className="text-foreground font-medium">
-                          {formatPrice(costPerUnit)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>
-                          {recipe.ingredients.length === 1
-                            ? t("data.recipes.cards.ingredient")
-                            : t("data.recipes.cards.ingredients")}
-                          :
-                        </span>
-                        <span className="text-foreground font-medium">
-                          {recipe.ingredients.length}
-                        </span>
-                      </div>
+                    <div className="bg-primary/10 ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                      <ChefHat className="text-primary h-4 w-4" />
                     </div>
+                  </div>
 
-                    {/* Hover Actions */}
-                    {!bulkSelectMode && (
-                      <div className="mt-2 grid grid-cols-4 gap-1 transition-opacity">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 w-full text-xs"
-                              onClick={() => handleView(recipe)}
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.recipes.tooltips.view")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 w-full flex-1 text-xs"
-                              onClick={() => handleEdit(recipe)}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.recipes.tooltips.edit")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDuplicate(recipe)}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.recipes.tooltips.duplicate")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDeleteClickDialog(recipe)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.recipes.tooltips.delete")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
+                  {/* Description - always render to maintain consistent layout */}
+                  <p className="text-muted-foreground mb-2 line-clamp-1 text-xs">
+                    {recipe.description || (
+                      <span className="text-muted-foreground/50 italic">
+                        {t("data.recipes.noDescription")}
+                      </span>
                     )}
+                  </p>
+
+                  <Separator className="my-2" />
+
+                  {/* Recipe Info */}
+                  <div className="text-muted-foreground my-2 space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span>{t("data.recipes.cards.yield")}:</span>
+                      <span className="text-foreground font-medium">
+                        {recipe.yieldQuantity} {recipe.yieldUnit}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{t("data.recipes.review.productionTime")}:</span>
+                      <span className="text-foreground font-medium">
+                        {formatDuration(recipe.productionTimeMinutes)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{t("data.recipes.cards.perBatch")}:</span>
+                      <span className="text-foreground font-medium">
+                        {formatPrice(recipe.costPerBatch)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{t("data.recipes.cards.perUnit")}:</span>
+                      <span className="text-foreground font-medium">
+                        {formatPrice(costPerUnit)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>
+                        {recipe.ingredients.length === 1
+                          ? t("data.recipes.cards.ingredient")
+                          : t("data.recipes.cards.ingredients")}
+                        :
+                      </span>
+                      <span className="text-foreground font-medium">
+                        {recipe.ingredients.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Hover Actions */}
+                  {!bulkSelectMode && (
+                    <div className="mt-2 grid grid-cols-4 gap-1 transition-opacity">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 w-full text-xs"
+                            onClick={() => handleView(recipe)}
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.recipes.tooltips.view")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 w-full flex-1 text-xs"
+                            onClick={() => handleEdit(recipe)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.recipes.tooltips.edit")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 w-full flex-1 text-xs"
+                            onClick={() => handleDuplicate(recipe)}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.recipes.tooltips.duplicate")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
+                            onClick={() => handleDeleteClickDialog(recipe)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.recipes.tooltips.delete")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                 </BaseItemCard>
               );
             })}
@@ -578,10 +614,12 @@ export function RecipesSection() {
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
         title={t("data.recipes.toasts.deleted.title")}
-        description={t("data.recipes.toasts.deleted.description")?.replace(
-          "{name}",
-          selectedRecipe?.name || ""
-        ) || ""}
+        description={
+          t("data.recipes.toasts.deleted.description")?.replace(
+            "{name}",
+            selectedRecipe?.name || ""
+          ) || ""
+        }
         confirmText={t("common.actions.delete")}
         variant="destructive"
       />

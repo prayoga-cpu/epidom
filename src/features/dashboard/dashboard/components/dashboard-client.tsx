@@ -1,27 +1,65 @@
 "use client";
-import { useMemo, lazy, Suspense } from "react";
+import { useMemo } from "react";
+import dynamic from "next/dynamic";
 import { PageHeader } from "./page-header";
 import { ChartSkeleton } from "./chart-skeleton";
 import { CardSkeleton } from "./card-skeleton";
-import AlertsCard from "../alerts/alerts-card";
-import TrackingCard from "../tracking/tracking-card";
+import { AlertsCard } from "../alerts/alerts-card";
+import { TrackingCard } from "../tracking/tracking-card";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
+import { useMaterials, type MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
+import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
+import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
+import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
+import type { Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 
 // Lazy load heavy chart component to reduce initial bundle size (~200KB savings)
-const ProductionHistoryChart = lazy(() => import("../production-history/production-history-chart"));
+// Use Next.js dynamic with ssr: false to prevent hydration mismatch
+const ProductionHistoryChart = dynamic(
+  () =>
+    import("../production-history/production-history-chart").then((mod) => ({
+      default: mod.ProductionHistoryChart,
+    })),
+  {
+    loading: () => <ChartSkeleton />,
+    ssr: false, // Prevent SSR to avoid hydration mismatch
+  }
+);
 
 // Lazy load below-the-fold component for progressive loading
-const SupplierCard = lazy(() => import("../supplier/supplier-card"));
+const SupplierCard = dynamic(
+  () =>
+    import("../supplier/supplier-card").then((mod) => ({
+      default: mod.SupplierCard,
+    })),
+  {
+    loading: () => <CardSkeleton rows={3} />,
+    ssr: false, // Prevent SSR to avoid hydration mismatch
+  }
+);
 
-export function DashboardView() {
+interface DashboardClientProps {
+  initialMaterials: MaterialWithSuppliers[];
+  initialSuppliers: SupplierWithRelations[];
+  initialProductionBatches: ProductionBatchWithRelations[];
+  initialAlerts: Alert[];
+  storeId: string;
+}
+
+export function DashboardClient({
+  initialMaterials,
+  initialSuppliers,
+  initialProductionBatches,
+  initialAlerts,
+  storeId,
+}: DashboardClientProps) {
   const { t } = useI18n();
-  const { storeId } = useCurrentStore();
 
-  // Lift materials fetching to parent to avoid duplicate API calls
-  // Both AlertsCard and TrackingCard need materials data
-  const materialsQuery = useMaterials(storeId || "");
+  // Use initial data from Server Component with real-time updates
+  const materialsQuery = useMaterials(storeId, undefined, {
+    materials: initialMaterials,
+    total: initialMaterials.length,
+  });
 
   // Process materials data once in parent to avoid duplicate computations
   // This replaces the heavy map/filter/sort operations in each child component
@@ -75,9 +113,7 @@ export function DashboardView() {
       {/* Top Stats */}
       <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7 lg:items-stretch">
         <div className="w-full md:col-span-2 lg:col-span-4">
-          <Suspense fallback={<ChartSkeleton />}>
-            <ProductionHistoryChart />
-          </Suspense>
+          <ProductionHistoryChart />
         </div>
         <div className="w-full md:col-span-2 lg:col-span-3">
           <AlertsCard
@@ -93,10 +129,9 @@ export function DashboardView() {
           materialsQuery={materialsQuery}
           processedData={processedMaterials.stockLevels}
         />
-        <Suspense fallback={<CardSkeleton title={t("dashboard.supplierCard.title")} description={t("dashboard.supplierCard.description")} rows={3} />}>
-          <SupplierCard />
-        </Suspense>
+        <SupplierCard />
       </div>
     </div>
   );
 }
+

@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { recipeService } from "@/lib/services/recipe.service";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { serializeRecipe, serializeRecipes } from "@/lib/server/serialize";
 import { z } from "zod";
+import { withApiHandler } from "@/lib/api-handler";
 
 // Validation schema for creating recipe
 const createRecipeSchema = z.object({
@@ -41,16 +42,8 @@ const recipeFilterSchema = z.object({
  * GET /api/stores/[id]/recipes
  * Get all recipes for a store with optional filtering
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id: storeId } = await params;
-
+export const GET = withApiHandler(
+  async (request, { storeId }) => {
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
     const filterParams = {
@@ -65,38 +58,29 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const filters = recipeFilterSchema.parse(filterParams);
 
     // Get recipes from service
-    const result = await recipeService.getRecipes(storeId, filters);
+    const result = await recipeService.getRecipes(storeId!, filters);
 
-    return NextResponse.json(result, { status: 200 });
-  } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid filter parameters", details: error.errors },
-        { status: 400 }
-      );
-    }
-
+    // Serialize Decimal fields to numbers for Client Components
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch recipes" },
-      { status: 500 }
+      createSuccessResponse({
+        recipes: serializeRecipes(result.recipes),
+        total: result.total,
+      }),
+      { status: 200 }
     );
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/recipes",
+    requireStoreAuth: true,
   }
-}
+);
 
 /**
  * POST /api/stores/[id]/recipes
  * Create a new recipe
  */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id: storeId } = await params;
+export const POST = withApiHandler(
+  async (request, { storeId }) => {
     const body = await request.json();
 
     // Validate request body
@@ -104,33 +88,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Create recipe via service
     const recipe = await recipeService.createRecipe({
-      storeId,
+      storeId: storeId!,
       ...validatedData,
     });
 
-    return NextResponse.json(recipe, { status: 201 });
-  } catch (error) {
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      // Handle specific business logic errors
-      if (error.message.includes("already exists")) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
-      }
-      if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create recipe" },
-      { status: 500 }
-    );
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(createSuccessResponse(serializeRecipe(recipe)), { status: 201 });
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/recipes",
+    requireStoreAuth: true,
   }
-}
+);
+

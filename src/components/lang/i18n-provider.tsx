@@ -87,6 +87,12 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
         return String(value);
       }
       // If value is an object or undefined, return undefined so fallback works
+      /**
+       * Type assertion needed because function must return string | undefined
+       * but TypeScript cannot infer that undefined is valid return type
+       * Actual type: undefined
+       * TODO: Improve type inference or use explicit return type
+       */
       return undefined as any;
     },
     [locale]

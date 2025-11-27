@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { subscriptionRepository } from "@/lib/repositories";
 import { stripe } from "@/lib/stripe";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
+import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
  * POST /api/subscriptions/sync
@@ -22,7 +24,10 @@ export async function POST(request: NextRequest) {
     // Verify session
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized. Please log in first." }, { status: 401 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized. Please log in first."),
+        { status: 401 }
+      );
     }
 
     const userId = session.user.id;
@@ -32,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     if (!dbSubscription) {
       return NextResponse.json(
-        { error: "No subscription found in database" },
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "No subscription found in database"),
         { status: 404 }
       );
     }
@@ -50,11 +55,13 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      return NextResponse.json({
-        message: "No active subscription in Stripe. Database updated to CANCELED.",
-        dbStatus: "CANCELED",
-        stripeStatus: "none",
-      });
+      return NextResponse.json(
+        createSuccessResponse({
+          message: "No active subscription in Stripe. Database updated to CANCELED.",
+          dbStatus: "CANCELED",
+          stripeStatus: "none",
+        })
+      );
     }
 
     // Get the newest active subscription
@@ -96,26 +103,43 @@ export async function POST(request: NextRequest) {
       stripePriceId: priceId,
       plan: plan,
       status: SubscriptionStatus.ACTIVE,
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: number (Unix timestamp in seconds)
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       currentPeriodStart: new Date((activeSubscription as any).current_period_start * 1000),
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: number (Unix timestamp in seconds)
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       currentPeriodEnd: new Date((activeSubscription as any).current_period_end * 1000),
+      /**
+       * Type assertion needed because Stripe API types don't expose all properties
+       * Actual type: boolean
+       * TODO: Use proper Stripe type definitions or create extended type
+       */
       cancelAtPeriodEnd: (activeSubscription as any).cancel_at_period_end,
     });
-    return NextResponse.json({
-      message: "Subscription synced successfully with Stripe",
-      before: {
-        plan: dbSubscription.plan,
-        status: dbSubscription.status,
-      },
-      after: {
-        plan: plan,
-        status: "ACTIVE",
-      },
-      duplicatesCanceled: stripeSubscriptions.data.length - 1,
-    });
-  } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Failed to sync subscription" },
-      { status: 500 }
+      createSuccessResponse({
+        message: "Subscription synced successfully with Stripe",
+        before: {
+          plan: dbSubscription.plan,
+          status: dbSubscription.status,
+        },
+        after: {
+          plan: plan,
+          status: "ACTIVE",
+        },
+        duplicatesCanceled: stripeSubscriptions.data.length - 1,
+      })
     );
+  } catch (error) {
+    return handleApiError(error, {
+      endpoint: "POST /api/subscriptions/sync",
+      context: {},
+    });
   }
 }

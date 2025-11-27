@@ -24,7 +24,7 @@ interface TrackingCardProps {
   processedData: ProcessedMaterial[];
 }
 
-export default function TrackingCard({ materialsQuery, processedData }: TrackingCardProps) {
+export function TrackingCard({ materialsQuery, processedData }: TrackingCardProps) {
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
 

@@ -26,6 +26,8 @@ import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-mate
 import { useProducts } from "@/features/dashboard/data/products/hooks/use-products";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
+import type { ProductWithRelations } from "@/lib/repositories/product.repository";
 
 function getStockStatus(currentStock: number, minStock: number, maxStock: number) {
   if (currentStock === 0) {
@@ -61,7 +63,12 @@ type StockItem = {
   type: "material" | "product";
 };
 
-export function StockLevelsTab() {
+interface StockLevelsTabProps {
+  initialMaterials?: MaterialWithSuppliers[];
+  initialProducts?: ProductWithRelations[];
+}
+
+export function StockLevelsTab({ initialMaterials }: StockLevelsTabProps = {}) {
   const { t } = useI18n();
   const params = useParams();
   const storeId = params.storeId as string;
@@ -72,15 +79,29 @@ export function StockLevelsTab() {
   const [stockFilter, setStockFilter] = useState<string>("all");
   const [itemType, setItemType] = useState<"all" | "material" | "product">("all");
 
-  // Fetch materials
-  const { data: materialsData, isLoading: materialsLoading } = useMaterials(storeId, {
-    search: searchQuery,
-    stockStatus: stockFilter !== "all" ? (stockFilter as any) : undefined,
-    skip: 0,
-    take: 100,
-    sortBy: "currentStock",
-    sortOrder: "asc",
-  });
+  // Fetch materials with initial data from Server Component
+  const { data: materialsData, isLoading: materialsLoading } = useMaterials(
+    storeId,
+    {
+      search: searchQuery,
+      /**
+       * Type assertion needed because stockFilter is string but MaterialFilterInput expects specific union type
+       * Actual type: "in_stock" | "low_stock" | "out_of_stock" | "overstocked"
+       * TODO: Use proper type guard or update filter type
+       */
+      stockStatus: stockFilter !== "all" ? (stockFilter as any) : undefined,
+      skip: 0,
+      take: 100,
+      sortBy: "currentStock",
+      sortOrder: "asc",
+    },
+    initialMaterials
+      ? {
+          materials: initialMaterials,
+          total: initialMaterials.length,
+        }
+      : undefined
+  );
 
   // Fetch products
   const { data: productsData, isLoading: productsLoading } = useProducts(storeId, {

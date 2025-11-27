@@ -39,6 +39,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       errorInfo,
     });
 
+    // Error logged via logger (no external service integration)
+
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
   }
@@ -100,27 +102,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 }
 
-// Hook for functional components to trigger error boundary
-export function useErrorHandler() {
-  return (error: Error, errorInfo?: React.ErrorInfo) => {
-    logger.error("Error caught by useErrorHandler:", error);
-    // This will be caught by the nearest ErrorBoundary
-    throw error;
-  };
-}
-
-// Higher-order component for easier usage
-export function withErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
-  errorBoundaryProps?: Omit<ErrorBoundaryProps, "children">
-) {
-  const WrappedComponent = (props: P) => (
-    <ErrorBoundary {...errorBoundaryProps}>
-      <Component {...props} />
-    </ErrorBoundary>
-  );
-
-  WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
-
-  return WrappedComponent;
-}
+// Note: useErrorHandler hook is now in src/hooks/use-error-handler.ts
+// That version is designed for TanStack Query error handling
+//
+// REMOVED: withErrorBoundary HOC (YAGNI - not used anywhere in the codebase)
+// If you need to wrap a component with ErrorBoundary, use <ErrorBoundary> directly:
+//
+// Example:
+// <ErrorBoundary>
+//   <YourComponent />
+// </ErrorBoundary>
