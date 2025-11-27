@@ -262,6 +262,8 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
 
 export interface UseSuppliersOptions {
   enabled?: boolean;
+  staleTime?: number;
+  gcTime?: number;
 }
 
 /**
