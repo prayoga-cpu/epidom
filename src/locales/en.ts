@@ -164,7 +164,7 @@ export const en = {
     p1: "Food inventory management is the process of tracking purchased ingredients that have not yet been consumed. This practice is essential to prevent waste and keep your operation running efficiently.",
     p2: "By monitoring what comes in and what is used, you can plan purchases better, maintain freshness, and make data‑driven decisions that protect margins.",
     p3: "The right workflow helps you avoid shortages, reduce overstock, and optimize your kitchen or food service activity day after day.",
-    cta: "Join the waitlist",
+    cta: "Ask for trial",
   },
   countdown: {
     title: "Coming Soon",
@@ -176,7 +176,7 @@ export const en = {
     targetDate: "Launch Date: November 20th, 2025",
     email: "mrcaoevan@gmail.com",
     whatsapp: "WhatsApp",
-    waitlistText: "Be the first to know when we launch!",
+    waitlistText: "Request a trial to experience our solution",
   },
   services: {
     heroTitle: "Innovative Raw Material Inventory Management",
@@ -827,10 +827,10 @@ export const en = {
       submitErrorTitle: "Error",
       submitErrorDesc: "Failed to submit. Please try again.",
     },
-    openButtonAria: "Join the EPIDOM waitlist",
-    openButton: "Join the waitlist",
-    title: "Join the EPIDOM waitlist",
-    description: "Be first to try our food inventory management solution.",
+    openButtonAria: "Request EPIDOM trial",
+    openButton: "Ask for trial",
+    title: "Request EPIDOM Trial",
+    description: "Request a trial to experience our food inventory management solution.",
     fields: {
       name: "Full name",
       email: "Email",
@@ -843,8 +843,8 @@ export const en = {
     },
     submit: "Request access",
     submitting: "Submitting...",
-    successTitle: "You're on the list!",
-    successDesc: "We'll reach out with early access details soon.",
+    successTitle: "Trial Request Received!",
+    successDesc: "We'll reach out with trial access details soon.",
   },
   nav: {
     profile: "Profile",
