@@ -160,15 +160,23 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
         isActive: true,
       };
 
-      await createProduct.mutateAsync(apiData);
-
-      sonnerToast.success(t("data.products.toasts.added.title"), {
-        description:
-          t("data.products.toasts.added.description")?.replace("{name}", data.name) || "",
-      });
-
-      form.reset();
       setOpen(false);
+      form.reset();
+
+      const promise = createProduct.mutateAsync(apiData);
+
+      sonnerToast.promise(promise, {
+        loading: (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{t("data.products.toasts.adding") || "Adding product..."}</span>
+          </div>
+        ),
+        success: (data) =>
+          t("data.products.toasts.added.description")?.replace("{name}", data.name) ||
+          "Product added successfully",
+        error: (err) => (err instanceof Error ? err.message : t("messages.registrationFailed")),
+      });
     } catch (error) {
       sonnerToast.error(t("common.error"), {
         description: error instanceof Error ? error.message : t("messages.registrationFailed"),

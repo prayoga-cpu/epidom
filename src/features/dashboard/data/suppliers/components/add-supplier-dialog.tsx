@@ -70,15 +70,23 @@ export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
         isActive: true,
       };
 
-      await createSupplier.mutateAsync(payload);
-
-      toast.success(t("data.suppliers.toasts.added.title"), {
-        description:
-          t("data.suppliers.toasts.added.description")?.replace("{name}", data.name) || "",
-      });
-
-      form.reset();
       setOpen(false);
+      form.reset();
+
+      const promise = createSupplier.mutateAsync(payload);
+
+      toast.promise(promise, {
+        loading: (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{t("data.suppliers.toasts.adding") || "Adding supplier..."}</span>
+          </div>
+        ),
+        success: (data) =>
+          t("data.suppliers.toasts.added.description")?.replace("{name}", data.name) ||
+          "Supplier added successfully",
+        error: (err) => (err instanceof Error ? err.message : t("common.error")),
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("common.error"));
     }
