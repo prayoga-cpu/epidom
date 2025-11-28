@@ -165,7 +165,7 @@ export async function deleteBlobImage(url: string): Promise<void> {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || "Failed to delete image");
+      throw new Error(error.error?.message || error.message || "Failed to delete image");
     }
   } catch (error) {
     // Re-throw to allow caller to handle the error
