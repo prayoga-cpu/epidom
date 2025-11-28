@@ -53,13 +53,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       sortOrder: searchParams.get("sortOrder") || "desc",
     };
 
-    const filters = supplierFilterSchema.parse(filterParams);
+    const filters = supplierFilterSchema.omit({ skip: true, take: true }).parse(filterParams);
 
     // Get CSV data from service
-    const csv = await supplierService.exportSuppliers(storeId, filters);
+    const csv = await supplierService.exportSuppliers(storeId, {
+      ...filters,
+      skip: 0,
+      take: 10000, // Export all matching records
+    });
 
     // Return CSV file using utility
-    return createCSVResponse(csv, "suppliers-export");
+    return createCSVResponse(csv, `suppliers-export-${new Date().toISOString().split("T")[0]}`);
   } catch (error) {
     const { id: storeId } = await params;
     return handleApiError(error, {

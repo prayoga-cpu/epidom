@@ -28,10 +28,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
@@ -70,7 +69,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const csv = await productService.exportProducts(storeId, filters);
 
     // Return CSV file using utility
-    return createCSVResponse(csv, "products-export");
+    return createCSVResponse(csv, `products-export-${new Date().toISOString().split("T")[0]}`);
   } catch (error) {
     const { id: storeId } = await params;
     return handleApiError(error, {

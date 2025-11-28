@@ -259,7 +259,11 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                       variant="outline"
                       size="sm"
                       onClick={handleExport}
-                      disabled={exportSuppliers.isPending || !advancedReportsAccess}
+                      disabled={
+                        exportSuppliers.isPending ||
+                        !advancedReportsAccess ||
+                        suppliers.length === 0
+                      }
                       className="w-full md:w-auto"
                     >
                       {exportSuppliers.isPending ? (

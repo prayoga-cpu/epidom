@@ -335,7 +335,11 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                       variant="outline"
                       size="sm"
                       onClick={handleExport}
-                      disabled={exportMaterials.isPending || !advancedReportsAccess}
+                      disabled={
+                        exportMaterials.isPending ||
+                        !advancedReportsAccess ||
+                        materials.length === 0
+                      }
                       className="w-full md:w-auto"
                     >
                       {exportMaterials.isPending ? (

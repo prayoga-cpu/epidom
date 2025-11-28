@@ -279,7 +279,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                       size="sm"
                       onClick={handleExport}
                       disabled={
-                        exportRecipes.isPending || recipes.length === 0 || !advancedReportsAccess
+                        exportRecipes.isPending || !advancedReportsAccess || recipes.length === 0
                       }
                       className="w-full md:w-auto"
                     >

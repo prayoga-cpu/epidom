@@ -284,7 +284,9 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                       variant="outline"
                       size="sm"
                       onClick={handleExport}
-                      disabled={exportProducts.isPending || !advancedReportsAccess}
+                      disabled={
+                        exportProducts.isPending || !advancedReportsAccess || products.length === 0
+                      }
                       className="w-full md:w-auto"
                     >
                       {exportProducts.isPending ? (

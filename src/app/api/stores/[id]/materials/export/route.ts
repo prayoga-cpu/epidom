@@ -14,18 +14,14 @@ import { handleApiError } from "@/lib/utils/api-error-handler";
  * Export materials to CSV.
  * Query params: search, category, supplierId, stockStatus (same as list filters)
  */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
@@ -51,26 +47,28 @@ export async function GET(
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
-    const filters = materialFilterSchema.parse({
+    const filters = materialFilterSchema.omit({ skip: true, take: true }).parse({
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
       supplierId: searchParams.get("supplierId") || undefined,
       stockStatus: searchParams.get("stockStatus") || undefined,
       sortBy: searchParams.get("sortBy") || "name",
       sortOrder: searchParams.get("sortOrder") || "asc",
-      skip: 0,
-      take: 10000, // Export all matching records (up to 10k)
     });
 
     // Generate CSV
-    const csvContent = await materialService.exportMaterialsToCSV(storeId, filters);
+    const csvContent = await materialService.exportMaterialsToCSV(storeId, {
+      ...filters,
+      skip: 0,
+      take: 10000, // Export all matching records (up to 10k)
+    });
 
     // Return CSV file
     return new NextResponse(csvContent, {
       status: 200,
       headers: {
         "Content-Type": "text/csv",
-        "Content-Disposition": `attachment; filename="materials-${storeId}-${new Date().toISOString().split("T")[0]}.csv"`,
+        "Content-Disposition": `attachment; filename="materials-export-${new Date().toISOString().split("T")[0]}.csv"`,
       },
     });
   } catch (error) {
