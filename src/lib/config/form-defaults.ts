@@ -30,7 +30,6 @@ export const FORM_DEFAULTS = {
     minStock: undefined as number | undefined,
     maxStock: undefined as number | undefined,
     suppliers: [],
-    isActive: true,
   },
 
   /**
@@ -78,7 +77,6 @@ export const FORM_DEFAULTS = {
     city: "",
     country: "",
     notes: "",
-    isActive: true,
   },
 
   /**

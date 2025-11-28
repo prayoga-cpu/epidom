@@ -44,10 +44,9 @@ export async function GET(request: NextRequest) {
     // Verify session
     session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     const userId = session.user.id;
@@ -72,7 +71,6 @@ export async function GET(request: NextRequest) {
     if (userProfile?.business) {
       const currentStoreCount = await storeRepository.count({
         businessId: userProfile.business.id,
-        isActive: true,
       });
 
       const limit = getStoreLimit(subscription.plan);

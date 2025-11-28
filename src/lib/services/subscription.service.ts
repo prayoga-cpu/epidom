@@ -249,7 +249,6 @@ export class SubscriptionService {
 
     const currentStoreCount = await this.storeRepo.count({
       businessId: userProfile.business.id,
-      isActive: true,
     });
 
     const limit = getStoreLimit(subscription.plan);
@@ -279,7 +278,6 @@ export class SubscriptionService {
     // Count products in the store
     const currentProductCount = await this.productRepo.count({
       storeId,
-      isActive: true,
     });
 
     const limit = getProductLimit(subscription.plan);
@@ -331,7 +329,6 @@ export class SubscriptionService {
 
     const currentStoreCount = await this.storeRepo.count({
       businessId: userProfile.business.id,
-      isActive: true,
     });
 
     const targetPlanLimit = getStoreLimit(targetPlan);

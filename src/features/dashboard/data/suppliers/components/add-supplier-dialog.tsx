@@ -67,7 +67,6 @@ export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
       const payload = {
         ...data,
         storeId,
-        isActive: true,
       };
 
       setOpen(false);
@@ -259,9 +258,6 @@ export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
 
             {/* Notes */}
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold">
-                {t("data.suppliers.sections.additionalNotes")}
-              </h3>
               <FormField
                 control={form.control}
                 name="notes"

@@ -184,7 +184,7 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
         loading: (
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span>{t("data.recipes.toasts.creating") || "Creating recipe..."}</span>
+            <span>{t("data.recipes.toasts.adding") || "Creating recipe..."}</span>
           </div>
         ),
         success: t("data.recipes.toasts.created.title"),

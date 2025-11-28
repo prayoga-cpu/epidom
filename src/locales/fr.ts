@@ -843,7 +843,8 @@ export const fr = {
     openButtonAria: "Demander un essai EPIDOM",
     openButton: "Demander un essai",
     title: "Demander un essai EPIDOM",
-    description: "Demandez un essai pour découvrir notre solution de gestion des stocks alimentaires.",
+    description:
+      "Demandez un essai pour découvrir notre solution de gestion des stocks alimentaires.",
     fields: {
       name: "Nom complet",
       email: "Email",
@@ -1079,6 +1080,7 @@ export const fr = {
 
       // Toasts
       toasts: {
+        adding: "Ajout de la matière première...",
         added: {
           title: "Matière Première Ajoutée avec Succès",
           description: "{name} a été ajoutée à votre inventaire.",
@@ -1271,6 +1273,7 @@ export const fr = {
 
       // Toasts
       toasts: {
+        adding: "Ajout de la recette...",
         created: {
           title: "Recette Créée avec Succès",
           description: "{name} a été ajouté à vos recettes.",
@@ -1427,6 +1430,7 @@ export const fr = {
 
       // Toasts
       toasts: {
+        adding: "Ajout du produit...",
         added: {
           title: "Produit Ajouté avec Succès",
           description: "{name} a été ajouté à vos produits.",
@@ -1507,7 +1511,7 @@ export const fr = {
         phone: "Téléphone",
         phonePlaceholder: "+33 1 23 45 67 89",
         phoneHint: "Numéro de téléphone professionnel",
-        address: "Adresse",
+        address: "Rue",
         addressPlaceholder: "15 Rue de la Boulangerie",
         city: "Ville",
         cityPlaceholder: "Paris",
@@ -1548,6 +1552,7 @@ export const fr = {
 
       // Toasts
       toasts: {
+        adding: "Ajout du fournisseur...",
         added: {
           title: "Fournisseur Ajouté avec Succès",
           description: "{name} a été ajouté à vos fournisseurs.",

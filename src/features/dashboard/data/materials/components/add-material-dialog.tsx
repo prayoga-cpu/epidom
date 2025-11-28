@@ -149,7 +149,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         currentStock: data.currentStock ?? 0,
         minStock: data.minStock ?? 0,
         maxStock: data.maxStock ?? 1000,
-        isActive: data.isActive ?? true,
+
         suppliers:
           validSuppliers.length > 0
             ? validSuppliers.map((s) => ({

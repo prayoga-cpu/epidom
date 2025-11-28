@@ -354,7 +354,7 @@ export function useUpdateProduct(storeId: string, productId: string) {
       );
 
       // Non-blocking cache invalidation for related queries
-      invalidateProductRelatedQueries(queryClient, storeId, false);
+      invalidateProductRelatedQueries(queryClient, storeId, false, true);
     },
   });
 }
@@ -410,7 +410,7 @@ export function useDeleteProduct(storeId: string) {
       queryClient.removeQueries({ queryKey: productKeys.detail(storeId, deletedId) });
 
       // Non-blocking cache invalidation for related queries
-      invalidateProductRelatedQueries(queryClient, storeId, false);
+      invalidateProductRelatedQueries(queryClient, storeId, false, true);
     },
   });
 }

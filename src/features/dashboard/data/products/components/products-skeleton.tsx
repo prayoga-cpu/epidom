@@ -43,14 +43,14 @@ export function ProductsCardGridSkeleton({ cards = 6 }: { cards?: number }) {
                 {/* Header - matches product card header structure */}
                 <div className="mb-2 flex items-start justify-between">
                   <div className="flex-1">
-                    <Skeleton className="h-4 w-32 mb-1" /> {/* Name */}
+                    <Skeleton className="mb-1 h-4 w-32" /> {/* Name */}
                     <Skeleton className="h-3 w-20" /> {/* SKU */}
                   </div>
                   <Skeleton className="h-5 w-16 rounded-full" /> {/* Status Badge */}
                 </div>
 
                 {/* Separator */}
-                <div className="h-px bg-border my-2" />
+                <div className="bg-border my-2 h-px" />
 
                 {/* Product Info - matches exact structure (category, stock, price, profit, supplier) */}
                 <div className="my-2 space-y-1">
@@ -96,11 +96,15 @@ export function ProductsCardGridSkeleton({ cards = 6 }: { cards?: number }) {
  */
 function FilterSectionSkeleton() {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <Skeleton className="h-10 w-full sm:w-64" />
-      <div className="flex gap-2">
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-10 w-32" />
+    <div className="flex flex-col gap-3">
+      {/* Search */}
+      <div className="relative w-full">
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      {/* Filters Row */}
+      <div className="flex w-full flex-wrap items-center gap-2">
+        <Skeleton className="h-10 w-full md:w-[180px]" />
       </div>
     </div>
   );

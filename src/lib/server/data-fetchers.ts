@@ -6,17 +6,32 @@
  * TanStack Query initialData.
  */
 
-import { materialRepository, type MaterialWithSuppliers, type MaterialFilters } from "@/lib/repositories/material.repository";
+import {
+  materialRepository,
+  type MaterialWithSuppliers,
+  type MaterialFilters,
+} from "@/lib/repositories/material.repository";
 import { recipeRepository, type RecipeFilters } from "@/lib/repositories/recipe.repository";
 import { productRepository, type ProductFilters } from "@/lib/repositories/product.repository";
-import { supplierRepository, type SupplierWithRelations, type SupplierFilters } from "@/lib/repositories/supplier.repository";
+import {
+  supplierRepository,
+  type SupplierWithRelations,
+  type SupplierFilters,
+} from "@/lib/repositories/supplier.repository";
 import type { RecipeWithIngredients } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import type { Product } from "@/features/dashboard/data/products/hooks/use-products";
-import { productionBatchRepository, type ProductionBatchWithRelations, type ProductionBatchFilters } from "@/lib/repositories/production-batch.repository";
+import {
+  productionBatchRepository,
+  type ProductionBatchWithRelations,
+  type ProductionBatchFilters,
+} from "@/lib/repositories/production-batch.repository";
 import { userRepository } from "@/lib/repositories/user.repository";
 import type { UserProfileDto } from "@/types/dto";
 import { prisma } from "@/lib/prisma";
-import type { SupplierOrder, SupplierOrdersResponse } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+import type {
+  SupplierOrder,
+  SupplierOrdersResponse,
+} from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 import type { Alert, AlertsResponse } from "@/features/dashboard/tracking/hooks/use-alerts";
 import {
   serializeMaterials,
@@ -95,32 +110,34 @@ export async function fetchRecipesForPage(
   // Deep serialize using JSON to ensure all Decimal objects are converted
   // This is a safety measure to catch any Decimal objects that might have been missed
   // Note: Date objects will be converted to ISO strings, which is fine for Next.js serialization
-  return JSON.parse(JSON.stringify(serialized, (key, value) => {
-    // Handle Date objects - convert to ISO string (Next.js will handle this correctly)
-    if (value instanceof Date) {
-      return value.toISOString();
-    }
-    // If value is a Decimal object (has toString method and is object), convert to number
-    if (value !== null && typeof value === "object" && typeof value.toString === "function") {
-      // Check if it looks like a Decimal (has toString that returns a number string)
-      // Exclude Date objects (they have toString but return ISO strings)
-      try {
-        const str = value.toString();
-        // Skip if it's a Date string (contains T or Z)
-        if (str.includes("T") || str.includes("Z")) {
-          return value;
-        }
-        const num = parseFloat(str);
-        // Check if it's a valid number string
-        if (!isNaN(num) && str.match(/^-?\d*\.?\d+$/)) {
-          return num;
-        }
-      } catch {
-        // Not a Decimal, return as is
+  return JSON.parse(
+    JSON.stringify(serialized, (key, value) => {
+      // Handle Date objects - convert to ISO string (Next.js will handle this correctly)
+      if (value instanceof Date) {
+        return value.toISOString();
       }
-    }
-    return value;
-  }));
+      // If value is a Decimal object (has toString method and is object), convert to number
+      if (value !== null && typeof value === "object" && typeof value.toString === "function") {
+        // Check if it looks like a Decimal (has toString that returns a number string)
+        // Exclude Date objects (they have toString but return ISO strings)
+        try {
+          const str = value.toString();
+          // Skip if it's a Date string (contains T or Z)
+          if (str.includes("T") || str.includes("Z")) {
+            return value;
+          }
+          const num = parseFloat(str);
+          // Check if it's a valid number string
+          if (!isNaN(num) && str.match(/^-?\d*\.?\d+$/)) {
+            return num;
+          }
+        } catch {
+          // Not a Decimal, return as is
+        }
+      }
+      return value;
+    })
+  );
 }
 
 /**
@@ -149,32 +166,34 @@ export async function fetchProductsForPage(
   // Deep serialize using JSON to ensure all Decimal objects are converted
   // This is a safety measure to catch any Decimal objects that might have been missed
   // Note: Date objects will be converted to ISO strings, which is fine for Next.js serialization
-  return JSON.parse(JSON.stringify(serialized, (key, value) => {
-    // Handle Date objects - convert to ISO string (Next.js will handle this correctly)
-    if (value instanceof Date) {
-      return value.toISOString();
-    }
-    // If value is a Decimal object (has toString method and is object), convert to number
-    if (value !== null && typeof value === "object" && typeof value.toString === "function") {
-      // Check if it looks like a Decimal (has toString that returns a number string)
-      // Exclude Date objects (they have toString but return ISO strings)
-      try {
-        const str = value.toString();
-        // Skip if it's a Date string (contains T or Z)
-        if (str.includes("T") || str.includes("Z")) {
-          return value;
-        }
-        const num = parseFloat(str);
-        // Check if it's a valid number string
-        if (!isNaN(num) && str.match(/^-?\d*\.?\d+$/)) {
-          return num;
-        }
-      } catch {
-        // Not a Decimal, return as is
+  return JSON.parse(
+    JSON.stringify(serialized, (key, value) => {
+      // Handle Date objects - convert to ISO string (Next.js will handle this correctly)
+      if (value instanceof Date) {
+        return value.toISOString();
       }
-    }
-    return value;
-  }));
+      // If value is a Decimal object (has toString method and is object), convert to number
+      if (value !== null && typeof value === "object" && typeof value.toString === "function") {
+        // Check if it looks like a Decimal (has toString that returns a number string)
+        // Exclude Date objects (they have toString but return ISO strings)
+        try {
+          const str = value.toString();
+          // Skip if it's a Date string (contains T or Z)
+          if (str.includes("T") || str.includes("Z")) {
+            return value;
+          }
+          const num = parseFloat(str);
+          // Check if it's a valid number string
+          if (!isNaN(num) && str.match(/^-?\d*\.?\d+$/)) {
+            return num;
+          }
+        } catch {
+          // Not a Decimal, return as is
+        }
+      }
+      return value;
+    })
+  );
 }
 
 /**
@@ -211,9 +230,7 @@ export async function fetchProductionBatchesForPage(
  * Fetch supplier orders for a store
  * Note: No repository exists, so we fetch directly via Prisma
  */
-export async function fetchSupplierOrdersForPage(
-  storeId: string
-): Promise<SupplierOrdersResponse> {
+export async function fetchSupplierOrdersForPage(storeId: string): Promise<SupplierOrdersResponse> {
   const orders = await prisma.supplierOrder.findMany({
     where: { storeId },
     include: {
@@ -294,15 +311,9 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
   const allMaterials = await prisma.material.findMany({
     where: {
       storeId,
-      isActive: true,
     },
     include: {
       materialSuppliers: {
-        where: {
-          supplier: {
-            isActive: true,
-          },
-        },
         include: {
           supplier: {
             select: {
@@ -376,4 +387,3 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
 export async function fetchUserProfile(userId: string): Promise<UserProfileDto | null> {
   return userRepository.getProfile(userId);
 }
-

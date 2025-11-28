@@ -1069,6 +1069,7 @@ export const en = {
 
       // Toasts
       toasts: {
+        adding: "Adding raw material...",
         added: {
           title: "Raw Material Added Successfully",
           description: "{name} has been added to your inventory.",
@@ -1259,6 +1260,7 @@ export const en = {
 
       // Toasts
       toasts: {
+        adding: "Adding recipe...",
         created: {
           title: "Recipe Created Successfully",
           description: "{name} has been added to your recipes.",
@@ -1405,6 +1407,7 @@ export const en = {
 
       // Toasts
       toasts: {
+        adding: "Adding product...",
         added: {
           title: "Product Added Successfully",
           description: "{name} has been added to your products.",
@@ -1525,6 +1528,7 @@ export const en = {
 
       // Toasts
       toasts: {
+        adding: "Adding supplier...",
         added: {
           title: "Supplier Added Successfully",
           description: "{name} has been added to your suppliers.",

@@ -245,9 +245,6 @@ export function EditSupplierDialog({ supplier, open, onOpenChange }: EditSupplie
 
             {/* Notes */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">
-                {t("data.suppliers.sections.additionalNotes")}
-              </h3>
               <FormField
                 control={form.control}
                 name="notes"

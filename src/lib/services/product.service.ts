@@ -55,7 +55,6 @@ export class ProductService {
     recipeIds?: string[]; // Changed from recipeId to recipeIds (array)
     productionTime?: number;
     shelfLife?: number;
-    isActive?: boolean;
   }): Promise<ProductWithRelations> {
     // Validate SKU uniqueness within store
     const skuExists = await productRepository.existsBySku(data.storeId, data.sku);
@@ -88,7 +87,7 @@ export class ProductService {
       maxStock: data.maxStock ?? 1000,
       productionTime: data.productionTime,
       shelfLife: data.shelfLife,
-      isActive: data.isActive ?? true,
+
       store: {
         connect: { id: data.storeId },
       },
@@ -124,7 +123,6 @@ export class ProductService {
       recipeIds?: string[]; // Changed from recipeId to recipeIds (array)
       productionTime?: number;
       shelfLife?: number;
-      isActive?: boolean;
     }
   ): Promise<ProductWithRelations> {
     // Get current product to check if values are actually changing
@@ -175,7 +173,6 @@ export class ProductService {
       ...(data.maxStock !== undefined && { maxStock: data.maxStock }),
       ...(data.productionTime !== undefined && { productionTime: data.productionTime }),
       ...(data.shelfLife !== undefined && { shelfLife: data.shelfLife }),
-      ...(data.isActive !== undefined && { isActive: data.isActive }),
     });
 
     // Update recipes if provided

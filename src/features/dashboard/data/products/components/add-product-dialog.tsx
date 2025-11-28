@@ -157,7 +157,6 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
         maxStock: maxStock,
         recipeIds: data.recipeIds && data.recipeIds.length > 0 ? data.recipeIds : undefined,
         storeId,
-        isActive: true,
       };
 
       setOpen(false);

@@ -23,10 +23,10 @@ model User {
   locale                 String        @default("en")
   timezone               String        @default("UTC")
   currency               String        @default("EUR")
-  stripeConnectAccountId String?       @unique // Stripe Connect account for receiving 80% of subscription revenue
-  stripeConnectOnboarded Boolean       @default(false) // Track if Connect onboarding is complete
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
+  stripeConnectAccountId String?
+  stripeConnectOnboarded Boolean       @default(false)
   accounts               Account[]
   alerts                 Alert[]
   business               Business?
@@ -86,7 +86,6 @@ model Store {
   phone             String?
   email             String?
   image             String?
-  isActive          Boolean           @default(true)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   ingredients       Material[]
@@ -99,7 +98,6 @@ model Store {
   suppliers         Supplier[]
 
   @@index([businessId])
-  @@index([isActive])
   @@map("stores")
 }
 
@@ -133,7 +131,6 @@ model Product {
   unit              String            @default("piece")
   productionTime    Int?
   shelfLife         Int?
-  isActive          Boolean           @default(true)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   storeId           String
@@ -142,13 +139,12 @@ model Product {
   orderItems        OrderItem[]
   productionBatches ProductionBatch[]
   store             Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  stockMovements    StockMovement[]
   recipeProducts    RecipeProduct[]
+  stockMovements    StockMovement[]
 
   @@unique([storeId, sku])
   @@index([storeId])
   @@index([category])
-  @@index([isActive])
   @@map("products")
 }
 
@@ -161,7 +157,6 @@ model Material {
   unit               String              @default("kg")
   unitCost           Decimal             @db.Decimal(10, 2)
   currentStock       Decimal             @default(0) @db.Decimal(10, 2)
-  isActive           Boolean             @default(true)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   maxStock           Decimal             @default(1000) @db.Decimal(10, 2)
@@ -176,7 +171,6 @@ model Material {
   @@unique([storeId, sku])
   @@index([storeId])
   @@index([category])
-  @@index([isActive])
   @@map("ingredients")
 }
 
@@ -240,11 +234,11 @@ model RecipeProduct {
   id        String   @id @default(cuid())
   recipeId  String
   productId String
-  isDefault Boolean  @default(false) // Indicates if this is the default recipe for this product
+  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@unique([recipeId, productId])
   @@index([recipeId])
@@ -289,10 +283,10 @@ model StockMovement {
   orderId           String?
   productionBatchId String?
   notes             String?
-  reason            String?          // Reason for adjustment (e.g., "Count Correction", "Found Items")
-  referenceId       String?          // External reference ID (e.g., invoice number, inventory check ID)
   createdAt         DateTime         @default(now())
   materialId        String?
+  reason            String?
+  referenceId       String?
   material          Material?        @relation(fields: [materialId], references: [id], onDelete: Cascade)
   order             Order?           @relation(fields: [orderId], references: [id])
   product           Product?         @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -315,7 +309,6 @@ model Supplier {
   city              String?
   country           String?
   notes             String?
-  isActive          Boolean            @default(true)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   storeId           String
@@ -324,7 +317,6 @@ model Supplier {
   store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([storeId])
-  @@index([isActive])
   @@map("suppliers")
 }
 
@@ -442,11 +434,11 @@ model Alert {
 
 model ExchangeRate {
   id           String   @id @default(cuid())
-  fromCurrency String // Base currency (EUR)
-  toCurrency   String // Target currency (USD)
-  rate         Decimal  @db.Decimal(10, 6) // Exchange rate with 6 decimal precision
-  fetchedAt    DateTime @default(now()) // When the rate was fetched
-  expiresAt    DateTime // When the cached rate expires
+  fromCurrency String
+  toCurrency   String
+  rate         Decimal  @db.Decimal(10, 6)
+  fetchedAt    DateTime @default(now())
+  expiresAt    DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

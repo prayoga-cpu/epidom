@@ -6,6 +6,8 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { z } from "zod";
 import { withApiHandler } from "@/lib/api-handler";
 
+export const dynamic = "force-dynamic";
+
 // Validation schema for filtering suppliers
 const supplierFilterSchema = z.object({
   search: z.string().optional(),
@@ -98,7 +100,6 @@ export const POST = withApiHandler(
       city: validatedData.city,
       country: validatedData.country,
       notes: validatedData.notes,
-      isActive: validatedData.isActive,
     });
 
     return NextResponse.json(createSuccessResponse(supplier), { status: 201 });
@@ -108,4 +109,3 @@ export const POST = withApiHandler(
     requireStoreAuth: true,
   }
 );
-

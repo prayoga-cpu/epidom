@@ -102,7 +102,7 @@ export class StoreRepository extends BaseRepository {
    */
   async countActiveStores(businessId: string): Promise<number> {
     return this.db.store.count({
-      where: { businessId, isActive: true },
+      where: { businessId },
     });
   }
 

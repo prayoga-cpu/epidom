@@ -15,7 +15,7 @@ export interface Store {
   phone: string | null;
   email: string | null;
   image: string | null;
-  isActive: boolean;
+
   createdAt: Date | string;
   updatedAt: Date | string;
 }

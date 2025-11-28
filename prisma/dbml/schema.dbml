@@ -13,10 +13,10 @@ Table users {
   locale String [not null, default: 'en']
   timezone String [not null, default: 'UTC']
   currency String [not null, default: 'EUR']
-  stripeConnectAccountId String [unique]
-  stripeConnectOnboarded Boolean [not null, default: false]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  stripeConnectAccountId String
+  stripeConnectOnboarded Boolean [not null, default: false]
   accounts accounts [not null]
   alerts alerts [not null]
   business businesses
@@ -73,7 +73,6 @@ Table stores {
   phone String
   email String
   image String
-  isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   ingredients ingredients [not null]
@@ -114,7 +113,6 @@ Table products {
   unit String [not null, default: 'piece']
   productionTime Int
   shelfLife Int
-  isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   storeId String [not null]
@@ -123,8 +121,8 @@ Table products {
   orderItems order_items [not null]
   productionBatches production_batches [not null]
   store stores [not null]
-  stockMovements stock_movements [not null]
   recipeProducts recipe_products [not null]
+  stockMovements stock_movements [not null]
 
   indexes {
     (storeId, sku) [unique]
@@ -140,7 +138,6 @@ Table ingredients {
   unit String [not null, default: 'kg']
   unitCost Decimal [not null]
   currentStock Decimal [not null, default: 0]
-  isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   maxStock Decimal [not null, default: 1000]
@@ -216,8 +213,8 @@ Table recipe_products {
   isDefault Boolean [not null, default: false]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  recipe recipes [not null]
   product products [not null]
+  recipe recipes [not null]
 
   indexes {
     (recipeId, productId) [unique]
@@ -255,10 +252,10 @@ Table stock_movements {
   orderId String
   productionBatchId String
   notes String
-  reason String
-  referenceId String
   createdAt DateTime [default: `now()`, not null]
   materialId String
+  reason String
+  referenceId String
   material ingredients
   order orders
   product products
@@ -275,7 +272,6 @@ Table suppliers {
   city String
   country String
   notes String
-  isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   storeId String [not null]
@@ -467,9 +463,9 @@ Ref: recipe_ingredients.materialId > ingredients.id [delete: Cascade]
 
 Ref: recipe_ingredients.recipeId > recipes.id [delete: Cascade]
 
-Ref: recipe_products.recipeId > recipes.id [delete: Cascade]
-
 Ref: recipe_products.productId > products.id [delete: Cascade]
+
+Ref: recipe_products.recipeId > recipes.id [delete: Cascade]
 
 Ref: production_batches.productId > products.id [delete: Cascade]
 

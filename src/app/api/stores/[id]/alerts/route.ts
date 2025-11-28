@@ -36,17 +36,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const allMaterials = await prisma.material.findMany({
       where: {
         storeId,
-        isActive: true,
       },
       include: {
         materialSuppliers: {
           include: {
             supplier: true,
-          },
-          where: {
-            supplier: {
-              isActive: true,
-            },
           },
         },
       },
@@ -102,7 +96,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ alerts });
   } catch (error) {
-    logger.error("Error fetching alerts", error, { endpoint: "GET /api/stores/[id]/alerts", storeId });
+    logger.error("Error fetching alerts", error, {
+      endpoint: "GET /api/stores/[id]/alerts",
+      storeId,
+    });
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Failed to fetch alerts. Please try again."),
       { status: 500 }

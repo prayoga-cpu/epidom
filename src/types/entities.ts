@@ -128,7 +128,7 @@ export interface Material {
   currentStock: number;
   minStock: number;
   maxStock: number;
-  isActive: boolean;
+
   storeId: string;
   materialSuppliers?: MaterialSupplier[];
   createdAt: Date | string;
@@ -178,7 +178,7 @@ export interface Product {
   recipeId?: string | null;
   productionTime?: number | null;
   shelfLife?: number | null;
-  isActive: boolean;
+
   createdAt: Date | string;
   updatedAt: Date | string;
 }

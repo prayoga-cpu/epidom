@@ -34,7 +34,6 @@ export class BusinessRepository extends BaseRepository {
       where: { id: businessId },
       include: {
         stores: {
-          where: { isActive: true },
           orderBy: { createdAt: "desc" },
         },
       },
@@ -117,7 +116,7 @@ export class BusinessRepository extends BaseRepository {
    */
   async countStores(businessId: string): Promise<number> {
     return this.db.store.count({
-      where: { businessId, isActive: true },
+      where: { businessId },
     });
   }
 

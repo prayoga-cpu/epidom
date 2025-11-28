@@ -148,83 +148,83 @@ export class BusinessService {
     // ReadCommitted isolation level with transaction is sufficient to prevent race conditions
     return prisma.$transaction(
       async (tx) => {
-      // 1. Verify business exists and belongs to user
-      // Using Prisma query (no raw SQL needed) - transaction ensures atomicity
-      const business = await tx.business.findUnique({
-        where: { id: businessId },
-        select: { id: true, userId: true },
-      });
+        // 1. Verify business exists and belongs to user
+        // Using Prisma query (no raw SQL needed) - transaction ensures atomicity
+        const business = await tx.business.findUnique({
+          where: { id: businessId },
+          select: { id: true, userId: true },
+        });
 
-      if (!business) {
-        throw new Error("Business not found");
-      }
+        if (!business) {
+          throw new Error("Business not found");
+        }
 
-      if (business.userId !== userId) {
-        throw new Error("Unauthorized to create store for this business");
-      }
+        if (business.userId !== userId) {
+          throw new Error("Unauthorized to create store for this business");
+        }
 
-      // 2. Check subscription and store limit WITHIN transaction (prevents race condition)
-      // This is critical: we check the limit inside the transaction with lock
-      // so concurrent requests will wait for the lock and see the updated count
-      const subscription = await tx.subscription.findUnique({
-        where: { userId },
-      });
+        // 2. Check subscription and store limit WITHIN transaction (prevents race condition)
+        // This is critical: we check the limit inside the transaction with lock
+        // so concurrent requests will wait for the lock and see the updated count
+        const subscription = await tx.subscription.findUnique({
+          where: { userId },
+        });
 
-      if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
-        throw new Error("No active subscription found. Please subscribe to create stores.");
-      }
+        if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+          throw new Error("No active subscription found. Please subscribe to create stores.");
+        }
 
-      // Count current stores WITHIN transaction (with lock, this is accurate)
-      const currentStoreCount = await tx.store.count({
-        where: {
-          businessId,
-          isActive: true,
-        },
-      });
-
-      // Check if user can create more stores
-      const limit = getStoreLimit(subscription.plan);
-      const allowed = canCreateStore(subscription.plan, currentStoreCount);
-
-      if (!allowed) {
-        throw new Error(
-          `You have reached your plan's store limit (${currentStoreCount}/${limit}). Upgrade to Pro to add more stores.`
-        );
-      }
-
-      // 3. Check if store name already exists for this business (within transaction)
-      const nameExists = await tx.store.findFirst({
-        where: {
-          businessId,
-          name: {
-            equals: input.name,
-            mode: "insensitive",
+        // Count current stores WITHIN transaction (with lock, this is accurate)
+        const currentStoreCount = await tx.store.count({
+          where: {
+            businessId,
           },
-        },
-      });
+        });
 
-      if (nameExists) {
-        throw new Error("A store with this name already exists in your business");
+        // Check if user can create more stores
+        const limit = getStoreLimit(subscription.plan);
+        const allowed = canCreateStore(subscription.plan, currentStoreCount);
+
+        if (!allowed) {
+          throw new Error(
+            `You have reached your plan's store limit (${currentStoreCount}/${limit}). Upgrade to Pro to add more stores.`
+          );
+        }
+
+        // 3. Check if store name already exists for this business (within transaction)
+        const nameExists = await tx.store.findFirst({
+          where: {
+            businessId,
+            name: {
+              equals: input.name,
+              mode: "insensitive",
+            },
+          },
+        });
+
+        if (nameExists) {
+          throw new Error("A store with this name already exists in your business");
+        }
+
+        // 4. Create store (within transaction)
+        const store = await tx.store.create({
+          data: {
+            businessId,
+            ...input,
+          },
+        });
+
+        return store as unknown as StoreDto;
+      },
+      {
+        // Use ReadCommitted isolation level (safer than SERIALIZABLE)
+        // SERIALIZABLE can cause deadlocks in production environments
+        // ReadCommitted with FOR UPDATE lock is sufficient for preventing race conditions
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+        timeout: 10000, // Maximum time for transaction to complete (10s)
       }
-
-      // 4. Create store (within transaction)
-      const store = await tx.store.create({
-        data: {
-          businessId,
-          ...input,
-        },
-      });
-
-      return store as unknown as StoreDto;
-    },
-    {
-      // Use ReadCommitted isolation level (safer than SERIALIZABLE)
-      // SERIALIZABLE can cause deadlocks in production environments
-      // ReadCommitted with FOR UPDATE lock is sufficient for preventing race conditions
-      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-      maxWait: 5000, // Maximum time to wait for transaction to start (5s)
-      timeout: 10000, // Maximum time for transaction to complete (10s)
-    });
+    );
   }
 
   /**
@@ -366,7 +366,6 @@ export class BusinessService {
     }
   }
 
-
   /**
    * Get business statistics
    */
@@ -377,7 +376,7 @@ export class BusinessService {
     const stores = await this.storeRepo.findByBusinessId(businessId);
     return {
       totalStores: stores.length,
-      activeStores: stores.filter((s) => s.isActive).length,
+      activeStores: stores.length,
     };
   }
 }

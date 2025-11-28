@@ -178,9 +178,7 @@ export function useCreateMaterial(storeId: string) {
         if (cachedData) {
           // Check if the new material matches the current filter (if any)
           // For now, we'll add it to all lists - filtering will happen on next refetch if needed
-          const hasOptimisticMaterial = cachedData.materials.some((m) =>
-            m.id.startsWith("temp-")
-          );
+          const hasOptimisticMaterial = cachedData.materials.some((m) => m.id.startsWith("temp-"));
 
           if (hasOptimisticMaterial) {
             // Replace optimistic material with real one
@@ -204,10 +202,12 @@ export function useCreateMaterial(storeId: string) {
 
       // Invalidate in background (non-blocking) to ensure data consistency
       // This allows UI to update immediately while background sync happens
-      queryClient.invalidateQueries({
-        queryKey: ["materials", storeId],
-        exact: false,
-      }).catch(console.warn); // Non-blocking - errors won't affect UI
+      queryClient
+        .invalidateQueries({
+          queryKey: ["materials", storeId],
+          exact: false,
+        })
+        .catch(console.warn); // Non-blocking - errors won't affect UI
     },
     onError: (error, newMaterial, context) => {
       // Rollback optimistic update on error
@@ -397,7 +397,7 @@ export function useDeleteMaterial(storeId: string) {
       queryClient.removeQueries({ queryKey: materialKeys.detail(storeId, deletedId) });
 
       // Non-blocking cache invalidation for related queries
-      invalidateMaterialRelatedQueries(queryClient, storeId, false);
+      invalidateMaterialRelatedQueries(queryClient, storeId, false, true);
     },
   });
 }

@@ -88,22 +88,29 @@ export async function invalidateMaterialQueriesImmediate(
  * @param queryClient - TanStack Query client
  * @param storeId - Store ID
  * @param immediate - If true, invalidate immediately (blocking). If false, defer to background (non-blocking)
+ * @param skipMaterials - If true, skip materials list invalidation
  */
 export async function invalidateMaterialRelatedQueries(
   queryClient: QueryClient,
   storeId: string,
-  immediate: boolean = false
+  immediate: boolean = false,
+  skipMaterials: boolean = false
 ): Promise<void> {
   if (immediate) {
     // Blocking: Invalidate all queries immediately (for critical operations)
-    // Use refetchType: "all" to ensure all queries refetch, not just active ones
-    // This ensures production tab sees updates even if it's not currently mounted
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["materials", storeId],
-        exact: false,
-        refetchType: "all", // Refetch all queries (active and inactive)
-      }),
+    const invalidations = [];
+
+    if (!skipMaterials) {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          queryKey: ["materials", storeId],
+          exact: false,
+          refetchType: "all", // Refetch all queries (active and inactive)
+        })
+      );
+    }
+
+    invalidations.push(
       queryClient.invalidateQueries({
         queryKey: ["recipes", storeId],
         exact: false,
@@ -125,12 +132,14 @@ export async function invalidateMaterialRelatedQueries(
       queryClient.invalidateQueries({
         queryKey: stockMovementKeys.all(storeId),
         exact: false,
-      }),
-    ]);
+      })
+    );
+
+    await Promise.all(invalidations);
   } else {
     // Non-blocking: Invalidate critical queries immediately, defer others
     // This allows UI to respond faster while background sync happens
-    invalidateMaterialQueriesImmediate(queryClient, storeId);
+    invalidateMaterialQueriesImmediate(queryClient, storeId, skipMaterials);
 
     // Also invalidate recipes immediately (they contain material stock data)
     // This ensures production tab sees updated stock when user navigates
@@ -177,19 +186,28 @@ export async function invalidateMaterialRelatedQueries(
  * @param queryClient - TanStack Query client
  * @param storeId - Store ID
  * @param immediate - If true, invalidate immediately (blocking). If false, defer to background (non-blocking)
+ * @param skipProducts - If true, skip products list invalidation
  */
 export async function invalidateProductRelatedQueries(
   queryClient: QueryClient,
   storeId: string,
-  immediate: boolean = false
+  immediate: boolean = false,
+  skipProducts: boolean = false
 ): Promise<void> {
   if (immediate) {
     // Blocking: Invalidate all queries immediately (for critical operations)
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["products", storeId],
-        exact: false,
-      }),
+    const invalidations = [];
+
+    if (!skipProducts) {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          queryKey: ["products", storeId],
+          exact: false,
+        })
+      );
+    }
+
+    invalidations.push(
       queryClient.invalidateQueries({
         queryKey: ["product-usage", storeId],
         exact: false,
@@ -205,8 +223,10 @@ export async function invalidateProductRelatedQueries(
       queryClient.invalidateQueries({
         queryKey: ["recipes", storeId],
         exact: false,
-      }),
-    ]);
+      })
+    );
+
+    await Promise.all(invalidations);
   }
 }
 
@@ -216,18 +236,22 @@ export async function invalidateProductRelatedQueries(
  *
  * @param queryClient - TanStack Query client
  * @param storeId - Store ID
+ * @param skipRecipes - If true, skip recipes list invalidation
  */
 export function invalidateRecipeQueriesImmediate(
   queryClient: QueryClient,
-  storeId: string
+  storeId: string,
+  skipRecipes: boolean = false
 ): void {
   // Invalidate all recipe queries (both active and inactive)
   // This ensures recipe lists update everywhere (recipes tab, product form, etc.)
-  queryClient.invalidateQueries({
-    queryKey: ["recipes", storeId],
-    exact: false,
-    refetchType: "all", // Refetch all queries (active and inactive) to ensure consistency
-  });
+  if (!skipRecipes) {
+    queryClient.invalidateQueries({
+      queryKey: ["recipes", storeId],
+      exact: false,
+      refetchType: "all", // Refetch all queries (active and inactive) to ensure consistency
+    });
+  }
 }
 
 /**
@@ -237,19 +261,28 @@ export function invalidateRecipeQueriesImmediate(
  * @param queryClient - TanStack Query client
  * @param storeId - Store ID
  * @param immediate - If true, invalidate immediately (blocking). If false, defer to background (non-blocking)
+ * @param skipRecipes - If true, skip recipes list invalidation
  */
 export async function invalidateRecipeRelatedQueries(
   queryClient: QueryClient,
   storeId: string,
-  immediate: boolean = false
+  immediate: boolean = false,
+  skipRecipes: boolean = false
 ): Promise<void> {
   if (immediate) {
     // Blocking: Invalidate all queries immediately (for critical operations)
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["recipes", storeId],
-        exact: false,
-      }),
+    const invalidations = [];
+
+    if (!skipRecipes) {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          queryKey: ["recipes", storeId],
+          exact: false,
+        })
+      );
+    }
+
+    invalidations.push(
       queryClient.invalidateQueries({
         queryKey: ["products", storeId],
         exact: false,
@@ -257,12 +290,14 @@ export async function invalidateRecipeRelatedQueries(
       queryClient.invalidateQueries({
         queryKey: ["materials", storeId],
         exact: false,
-      }),
-    ]);
+      })
+    );
+
+    await Promise.all(invalidations);
   } else {
     // Non-blocking: Invalidate critical queries immediately, defer others
     // This allows UI to respond faster while background sync happens
-    invalidateRecipeQueriesImmediate(queryClient, storeId);
+    invalidateRecipeQueriesImmediate(queryClient, storeId, skipRecipes);
 
     // Defer non-critical invalidations to background (don't await)
     // These will sync eventually via polling or when user navigates to those pages
@@ -290,18 +325,22 @@ export async function invalidateRecipeRelatedQueries(
  *
  * @param queryClient - TanStack Query client
  * @param storeId - Store ID
+ * @param skipSuppliers - If true, skip suppliers list invalidation
  */
 export function invalidateSupplierQueriesImmediate(
   queryClient: QueryClient,
-  storeId: string
+  storeId: string,
+  skipSuppliers: boolean = false
 ): void {
   // Only invalidate suppliers immediately (non-blocking)
   // This allows UI to update fast while other queries sync in background
-  queryClient.invalidateQueries({
-    queryKey: ["suppliers", storeId],
-    exact: false,
-    refetchType: "active", // Only refetch active queries (visible tabs)
-  });
+  if (!skipSuppliers) {
+    queryClient.invalidateQueries({
+      queryKey: ["suppliers", storeId],
+      exact: false,
+      refetchType: "active", // Only refetch active queries (visible tabs)
+    });
+  }
 }
 
 /**
@@ -311,24 +350,38 @@ export function invalidateSupplierQueriesImmediate(
  * @param queryClient - TanStack Query client
  * @param storeId - Store ID
  * @param immediate - If true, invalidate immediately (blocking). If false, defer to background (non-blocking)
+ * @param skipSuppliers - If true, skip suppliers list invalidation
  */
 export async function invalidateSupplierRelatedQueries(
   queryClient: QueryClient,
   storeId: string,
-  immediate: boolean = false
+  immediate: boolean = false,
+  skipSuppliers: boolean = false
 ): Promise<void> {
   if (immediate) {
     // Blocking: Invalidate all queries immediately (for critical operations)
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["suppliers", storeId],
-        exact: false,
-      }),
+    const invalidations = [];
+
+    if (!skipSuppliers) {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          queryKey: ["suppliers", storeId],
+          exact: false,
+        })
+      );
+    }
+
+    invalidations.push(
       queryClient.invalidateQueries({
         queryKey: ["materials", storeId],
         exact: false,
-      }),
-    ]);
+      })
+    );
+
+    await Promise.all(invalidations);
+  } else {
+    // Non-blocking: Invalidate critical queries immediately, defer others
+    // This allows UI to respond faster while background sync happens
+    invalidateSupplierQueriesImmediate(queryClient, storeId, skipSuppliers);
   }
 }
-
