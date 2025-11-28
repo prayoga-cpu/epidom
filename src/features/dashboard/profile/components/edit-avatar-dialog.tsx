@@ -67,18 +67,21 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
   };
 
   // Handle file selection
-  const handleFileSelect = useCallback(async (file: File) => {
-    try {
-      // Create preview URL
-      const preview = createImagePreview(file);
-      setTempImageUrl(preview);
-      setMode("crop");
-    } catch (error) {
-      toast.error(t("common.error"), {
-        description: t("profile.errors.loadImageFailed") || t("profile.forms.loadImageFailed"),
-      });
-    }
-  }, [t]);
+  const handleFileSelect = useCallback(
+    async (file: File) => {
+      try {
+        // Create preview URL
+        const preview = createImagePreview(file);
+        setTempImageUrl(preview);
+        setMode("crop");
+      } catch (error) {
+        toast.error(t("common.error"), {
+          description: t("profile.errors.loadImageFailed") || t("profile.forms.loadImageFailed"),
+        });
+      }
+    },
+    [t]
+  );
 
   // Handle file input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,7 +150,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
 
         // Update profile with new URL
         await updateProfile.mutateAsync({
-          image: data.url,
+          image: data.data.url,
         });
       } else {
         // Already a server URL, just update profile
@@ -211,21 +214,15 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
             {t("common.actions.cancel")}
           </Button>
           {originalImageUrl && (
-            <Button
-              variant="destructive"
-              onClick={handleRemove}
-              disabled={updateProfile.isPending}
-            >
-              {updateProfile.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+            <Button variant="destructive" onClick={handleRemove} disabled={updateProfile.isPending}>
+              {updateProfile.isPending && (
+                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+              )}
               {t("profile.actions.removeAvatar")}
             </Button>
           )}
-          <Button
-            onClick={openFilePicker}
-            disabled={updateProfile.isPending}
-            className="flex-1"
-          >
-            <Upload className="mr-1 h-4 w-4 hidden sm:inline" />
+          <Button onClick={openFilePicker} disabled={updateProfile.isPending} className="flex-1">
+            <Upload className="mr-1 hidden h-4 w-4 sm:inline" />
             {t("profile.actions.uploadAvatar")}
           </Button>
         </>
@@ -242,12 +239,10 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
           >
             {t("common.actions.back")}
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={updateProfile.isPending}
-            className="flex-1"
-          >
-            {updateProfile.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+          <Button onClick={handleSave} disabled={updateProfile.isPending} className="flex-1">
+            {updateProfile.isPending && (
+              <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+            )}
             {t("common.actions.save")}
           </Button>
         </>
@@ -285,7 +280,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
                 </div>
               ) : (
                 <div
-                  className="border-border bg-muted/50 relative mx-auto aspect-square w-full max-w-xs cursor-pointer rounded-lg border-2 border-dashed p-8 transition-colors hover:border-primary hover:bg-muted"
+                  className="border-border bg-muted/50 hover:border-primary hover:bg-muted relative mx-auto aspect-square w-full max-w-xs cursor-pointer rounded-lg border-2 border-dashed p-8 transition-colors"
                   onClick={openFilePicker}
                 >
                   <div className="flex h-full flex-col items-center justify-center text-center">

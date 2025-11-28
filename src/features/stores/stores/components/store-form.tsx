@@ -124,7 +124,7 @@ export function StoreForm({
         const uploadData = await response.json();
 
         // Update form data with uploaded URL
-        data.image = uploadData.url;
+        data.image = uploadData.data.url;
         setIsImageUploading(false);
       }
 
@@ -306,10 +306,10 @@ export function StoreForm({
                     </div>
                   ) : (
                     <div
-                      className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors sm:p-6 md:p-8"
+                      className="hover:border-primary cursor-pointer rounded-lg border-2 border-dashed p-4 text-center transition-colors sm:p-6 md:p-8"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      <p className="text-xs text-muted-foreground sm:text-sm">
+                      <p className="text-muted-foreground text-xs sm:text-sm">
                         Click to upload store image (max 5MB)
                       </p>
                     </div>

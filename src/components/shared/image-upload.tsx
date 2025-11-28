@@ -152,9 +152,9 @@ export function ImageUpload({
         revokeImagePreview(preview);
 
         // Update with final URL
-        setPreviewUrl(data.url);
-        previousValueRef.current = data.url;
-        onChange(data.url);
+        setPreviewUrl(data.data.url);
+        previousValueRef.current = data.data.url;
+        onChange(data.data.url);
 
         toast({
           title: "Success!",
