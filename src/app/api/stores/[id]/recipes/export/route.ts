@@ -8,23 +8,18 @@ import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { handleApiError } from "@/lib/utils/api-error-handler";
 import { recipeFilterSchema } from "@/lib/validation/inventory.schemas";
 
-
 /**
  * GET /api/stores/[id]/recipes/export
  * Export recipes to CSV format
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
@@ -57,10 +52,14 @@ export async function GET(
       sortOrder: searchParams.get("sortOrder") || "desc",
     };
 
-    const filters = recipeFilterSchema.parse(filterParams);
+    const filters = recipeFilterSchema.omit({ skip: true, take: true }).parse(filterParams);
 
     // Get CSV data from service
-    const csv = await recipeService.exportRecipes(storeId, filters);
+    const csv = await recipeService.exportRecipes(storeId, {
+      ...filters,
+      skip: 0,
+      take: 10000, // Export all matching records
+    });
 
     // Return CSV file
     return new NextResponse(csv, {
