@@ -52,7 +52,7 @@ export class SupplierRepository extends BaseRepository {
     // Build where clause
     const where: Prisma.SupplierWhereInput = {
       storeId,
-      isActive: true,
+
       ...(search && {
         OR: [
           { name: { contains: search, mode: "insensitive" } },

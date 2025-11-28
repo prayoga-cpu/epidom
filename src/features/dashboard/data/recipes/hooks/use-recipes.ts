@@ -431,7 +431,7 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
       );
 
       // Non-blocking cache invalidation for related queries
-      invalidateRecipeRelatedQueries(queryClient, storeId, false);
+      invalidateRecipeRelatedQueries(queryClient, storeId, false, true);
     },
   });
 }
@@ -487,7 +487,7 @@ export function useDeleteRecipe(storeId: string) {
       queryClient.removeQueries({ queryKey: recipeKeys.detail(storeId, deletedId) });
 
       // Non-blocking cache invalidation for related queries
-      invalidateRecipeRelatedQueries(queryClient, storeId, false);
+      invalidateRecipeRelatedQueries(queryClient, storeId, false, true);
     },
   });
 }

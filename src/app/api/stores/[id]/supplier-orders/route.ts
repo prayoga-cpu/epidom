@@ -17,10 +17,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -80,10 +79,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -115,7 +113,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       where: {
         id: supplierId,
         storeId,
-        isActive: true,
       },
     });
 

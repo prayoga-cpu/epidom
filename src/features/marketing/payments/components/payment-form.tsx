@@ -93,16 +93,21 @@ export function PaymentForm({ plan }: PaymentFormProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || t("payments.form.checkoutSessionError"));
+        const errorMessage =
+          data.error?.message ||
+          data.message ||
+          data.error ||
+          t("payments.form.checkoutSessionError");
+        throw new Error(errorMessage);
       }
 
       // Redirect to Stripe Checkout
       // Security: Validate URL is from Stripe (server-side validated, but double-check client-side)
-      if (data.url && typeof data.url === "string") {
+      if (data.data && data.data.url && typeof data.data.url === "string") {
         // Stripe checkout URLs should start with https://checkout.stripe.com or https://checkout.stripe.com/c/pay/
-        const isValidStripeUrl = data.url.startsWith("https://checkout.stripe.com/");
+        const isValidStripeUrl = data.data.url.startsWith("https://checkout.stripe.com/");
         if (isValidStripeUrl) {
-          window.location.href = data.url;
+          window.location.href = data.data.url;
         } else {
           throw new Error(t("payments.form.checkoutUrlError"));
         }
@@ -153,7 +158,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
         {/* Secure Payment Info */}
         <Card className="flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold text-brand-primary">
+            <CardTitle className="text-brand-primary text-lg font-semibold">
               {t("payments.security.title")}
             </CardTitle>
           </CardHeader>
@@ -163,9 +168,9 @@ export function PaymentForm({ plan }: PaymentFormProps) {
                 const Icon = feature.icon;
                 return (
                   <div key={index} className="flex items-start gap-2.5">
-                    <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-primary" />
+                    <Icon className="text-brand-primary mt-0.5 h-4 w-4 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-brand-primary">
+                      <p className="text-brand-primary text-sm font-medium">
                         {t(`${feature.translationKey}.title`)}
                       </p>
                       <p className="mt-0.5 text-xs text-gray-600">
@@ -182,21 +187,18 @@ export function PaymentForm({ plan }: PaymentFormProps) {
         {/* Terms and Conditions */}
         <Card className="flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold text-brand-primary">
+            <CardTitle className="text-brand-primary text-lg font-semibold">
               {t("payments.terms.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
             {/* Checkbox and Agreement Text */}
-            <label
-              htmlFor="terms-agreement"
-              className="flex items-start gap-2.5 cursor-pointer"
-            >
+            <label htmlFor="terms-agreement" className="flex cursor-pointer items-start gap-2.5">
               <Checkbox
                 id="terms-agreement"
                 checked={agreedToTerms}
                 onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
-                className="mt-0.5 shrink-0 data-[state=checked]:bg-[var(--color-brand-primary)] data-[state=checked]:border-[var(--color-brand-primary)]"
+                className="mt-0.5 shrink-0 data-[state=checked]:border-[var(--color-brand-primary)] data-[state=checked]:bg-[var(--color-brand-primary)]"
               />
               <span className="min-w-0 flex-1 text-sm leading-relaxed text-gray-600">
                 {t("payments.form.termsAgreement")}{" "}
@@ -204,7 +206,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
                   href="/terms"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-brand-primary underline decoration-1 hover:decoration-2 transition-colors"
+                  className="text-brand-primary underline decoration-1 transition-colors hover:decoration-2"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {t("payments.form.termsOfService")}
@@ -214,7 +216,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
                   href="/refund-policy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-brand-primary underline decoration-1 hover:decoration-2 transition-colors"
+                  className="text-brand-primary underline decoration-1 transition-colors hover:decoration-2"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {t("payments.form.refundPolicy")}
@@ -235,7 +237,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
       <Button
         onClick={handleCheckout}
         disabled={isLoading || !agreedToTerms}
-        className="mt-5 flex-shrink-0 h-12 w-full rounded-lg text-base font-semibold text-white bg-brand-primary hover:bg-gray-700 transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-brand-primary mt-5 h-12 w-full flex-shrink-0 rounded-lg text-base font-semibold text-white transition-all duration-200 hover:bg-gray-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isLoading ? (
           <span className="flex items-center gap-2">

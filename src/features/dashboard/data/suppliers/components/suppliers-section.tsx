@@ -70,8 +70,11 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
   const router = useRouter();
   const params = useParams();
   const storeId = params.storeId as string;
-  const { supplierManagementAccess, advancedReportsAccess, isLoading: isLoadingAccess } =
-    useFeatureAccess();
+  const {
+    supplierManagementAccess,
+    advancedReportsAccess,
+    isLoading: isLoadingAccess,
+  } = useFeatureAccess();
 
   // Filters and pagination state
   const [filters, setFilters] = useState({
@@ -96,8 +99,8 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
   const bulkDeleteSuppliers = useBulkDeleteSuppliers(storeId);
   const exportSuppliers = useExportSuppliers();
 
-  const suppliers = data?.suppliers || [];
-  const totalSuppliers = data?.total || 0;
+  const suppliers = data?.suppliers || initialSuppliers || [];
+  const totalSuppliers = data?.total || (initialSuppliers?.length ?? 0);
   const currentPage = Math.floor(filters.skip / filters.take) + 1;
   const totalPages = Math.ceil(totalSuppliers / filters.take);
 
@@ -147,7 +150,10 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
     try {
       await bulkDeleteSuppliers.mutateAsync(Array.from(selectedIds));
       toast.success(
-        t("data.suppliers.toasts.bulkDeleted.description")?.replace("{count}", selectedIds.size.toString()) || ""
+        t("data.suppliers.toasts.bulkDeleted.description")?.replace(
+          "{count}",
+          selectedIds.size.toString()
+        ) || ""
       );
       clearSelection();
     } catch (error) {
@@ -193,8 +199,8 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
 
   const hasActiveFilters = filters.search;
 
-  // Show loading state
-  if (isLoading || isLoadingAccess) {
+  // Show loading state only if we have no data to show
+  if ((isLoading || isLoadingAccess) && !suppliers.length) {
     return (
       <SectionLoadingState
         title={t("data.suppliers.pageTitle")}
@@ -208,15 +214,19 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
   // Show upgrade prompt if no access (from hook or from API error 403)
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
-    (error && (isSubscriptionError(error) || (typeof error === "object" && error !== null && ("code" in error && error.code === "SUBSCRIPTION_FEATURE_LOCKED") || ("status" in error && error.status === 403))));
+    (error &&
+      (isSubscriptionError(error) ||
+        (typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "SUBSCRIPTION_FEATURE_LOCKED") ||
+        ("status" in error && error.status === 403)));
 
   if (isSubscriptionLocked) {
     return (
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
-          <CardTitle className="text-lg font-bold">
-            {t("data.suppliers.pageTitle")}
-          </CardTitle>
+          <CardTitle className="text-lg font-bold">{t("data.suppliers.pageTitle")}</CardTitle>
         </CardHeader>
         <SubscriptionLockedState />
       </Card>
@@ -240,27 +250,25 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
       <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
         <CardHeader className="border-b">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-lg font-bold">
-              {t("data.suppliers.pageTitle")}
-            </CardTitle>
+            <CardTitle className="text-lg font-bold">{t("data.suppliers.pageTitle")}</CardTitle>
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={exportSuppliers.isPending || !advancedReportsAccess}
-                    className="w-full md:w-auto"
-                  >
-                    {exportSuppliers.isPending ? (
-                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
-                    ) : (
-                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
-                    )}
-                    {t("common.actions.export")}
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      disabled={exportSuppliers.isPending || !advancedReportsAccess}
+                      className="w-full md:w-auto"
+                    >
+                      {exportSuppliers.isPending ? (
+                        <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                      ) : (
+                        <Download className="mr-1 hidden h-4 w-4 sm:inline" />
+                      )}
+                      {t("common.actions.export")}
+                    </Button>
                   </div>
                 </TooltipTrigger>
                 {!advancedReportsAccess && (
@@ -271,13 +279,18 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
               </Tooltip>
               <AddSupplierDialog>
                 <Button size="sm" className="w-full sm:w-auto">
-                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("data.suppliers.addButton")}
                 </Button>
               </AddSupplierDialog>
               {bulkSelectMode && selectedCount > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full sm:w-auto">
-                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("common.actions.delete")} ({selectedCount})
                 </Button>
               )}
@@ -289,12 +302,12 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <X className="mr-1 hidden h-4 w-4 sm:inline" />
                     {t("common.actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <CheckSquare className="mr-1 hidden h-4 w-4 sm:inline" />
                     {t("common.actions.select")}
                   </>
                 )}
@@ -333,31 +346,28 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                 }}
               >
                 <SelectTrigger className="w-full md:w-[180px]">
-                  <ArrowUpDown className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <ArrowUpDown className="mr-1 hidden h-4 w-4 sm:inline" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name-asc">{t("sort.nameAZ")}</SelectItem>
                   <SelectItem value="name-desc">{t("sort.nameZA")}</SelectItem>
-                  <SelectItem value="contactPerson-asc">
-                    {t("sort.contactAZ")}
-                  </SelectItem>
-                  <SelectItem value="contactPerson-desc">
-                    {t("sort.contactZA")}
-                  </SelectItem>
-                  <SelectItem value="createdAt-desc">
-                    {t("sort.newest")}
-                  </SelectItem>
-                  <SelectItem value="createdAt-asc">
-                    {t("sort.oldest")}
-                  </SelectItem>
+                  <SelectItem value="contactPerson-asc">{t("sort.contactAZ")}</SelectItem>
+                  <SelectItem value="contactPerson-desc">{t("sort.contactZA")}</SelectItem>
+                  <SelectItem value="createdAt-desc">{t("sort.newest")}</SelectItem>
+                  <SelectItem value="createdAt-asc">{t("sort.oldest")}</SelectItem>
                 </SelectContent>
               </Select>
 
               {/* Clear Filters */}
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
-                  <X className="mr-1 h-4 w-4 hidden sm:inline" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="w-full sm:w-auto"
+                >
+                  <X className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("common.actions.clearFilters")}
                 </Button>
               )}
@@ -371,8 +381,8 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll")} ({selectedCount}{" "}
-                  {t("common.of")} {suppliers.length} {t("common.selected")})
+                  {t("common.selectAll")} ({selectedCount} {t("common.of")} {suppliers.length}{" "}
+                  {t("common.selected")})
                 </span>
               </div>
             )}
@@ -389,130 +399,128 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           {/* Suppliers Grid */}
           <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
             {suppliers.map((supplier) => (
-                <BaseItemCard
-                  key={supplier.id}
-                  isSelected={isSelected(supplier.id)}
-                  bulkSelectMode={bulkSelectMode}
-                  onSelect={() => toggleSelectItem(supplier.id)}
-                  contentClassName="!px-4"
-                >
-                    <div className="mb-2 flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-sm leading-tight font-semibold">{supplier.name}</h3>
-                        {supplier.contactPerson && (
-                          <p className="text-muted-foreground text-xs">{supplier.contactPerson}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Supplier Info */}
-                    <div className="text-muted-foreground my-2 space-y-1 text-xs">
-                      {supplier.email && (
-                        <div className="flex justify-between">
-                          <span>{t("common.email")}:</span>
-                          <span className="text-foreground truncate font-medium">
-                            {supplier.email.split("@")[0]}...
-                          </span>
-                        </div>
-                      )}
-                      {supplier.phone && (
-                        <div className="flex justify-between">
-                          <span>{t("common.phone")}:</span>
-                          <span className="text-foreground font-medium">{supplier.phone}</span>
-                        </div>
-                      )}
-                      {(supplier.city || supplier.country) && (
-                        <div className="flex justify-between">
-                          <span>{t("common.location")}:</span>
-                          <span className="text-foreground font-medium">
-                            {[supplier.city, supplier.country].filter(Boolean).join(", ")}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span>{t("data.materials.pageTitle")}:</span>
-                        <span className="text-foreground font-medium">
-                          {supplier.materialSuppliers?.length ?? 0}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Hover Actions */}
-                    {!bulkSelectMode && (
-                      <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 w-full text-xs"
-                              onClick={() => handleView(supplier)}
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.suppliers.tooltips.view")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 w-full flex-1 text-xs"
-                              onClick={() => handleEdit(supplier)}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.suppliers.tooltips.edit")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDeleteClickDialog(supplier)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.suppliers.tooltips.delete")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
+              <BaseItemCard
+                key={supplier.id}
+                isSelected={isSelected(supplier.id)}
+                bulkSelectMode={bulkSelectMode}
+                onSelect={() => toggleSelectItem(supplier.id)}
+                contentClassName="!px-4"
+              >
+                <div className="mb-2 flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-sm leading-tight font-semibold">{supplier.name}</h3>
+                    {supplier.contactPerson && (
+                      <p className="text-muted-foreground text-xs">{supplier.contactPerson}</p>
                     )}
-                </BaseItemCard>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Supplier Info */}
+                <div className="text-muted-foreground my-2 space-y-1 text-xs">
+                  {supplier.email && (
+                    <div className="flex justify-between">
+                      <span>{t("common.email")}:</span>
+                      <span className="text-foreground truncate font-medium">
+                        {supplier.email.split("@")[0]}...
+                      </span>
+                    </div>
+                  )}
+                  {supplier.phone && (
+                    <div className="flex justify-between">
+                      <span>{t("common.phone")}:</span>
+                      <span className="text-foreground font-medium">{supplier.phone}</span>
+                    </div>
+                  )}
+                  {(supplier.city || supplier.country) && (
+                    <div className="flex justify-between">
+                      <span>{t("common.location")}:</span>
+                      <span className="text-foreground font-medium">
+                        {[supplier.city, supplier.country].filter(Boolean).join(", ")}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>{t("data.materials.pageTitle")}:</span>
+                    <span className="text-foreground font-medium">
+                      {supplier.materialSuppliers?.length ?? 0}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hover Actions */}
+                {!bulkSelectMode && (
+                  <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 w-full text-xs"
+                          onClick={() => handleView(supplier)}
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("data.suppliers.tooltips.view")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 w-full flex-1 text-xs"
+                          onClick={() => handleEdit(supplier)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("data.suppliers.tooltips.edit")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
+                          onClick={() => handleDeleteClickDialog(supplier)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("data.suppliers.tooltips.delete")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                )}
+              </BaseItemCard>
             ))}
           </ItemCardGrid>
 
           {/* Empty State */}
           {suppliers.length === 0 && (
             <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                <Store className="text-muted-foreground/50 mb-4 h-12 w-12" />
-                <h3 className="mb-2 text-lg font-semibold">
-                  {t("messages.noSuppliersFound")}
-                </h3>
-                <p className="text-muted-foreground mb-4 text-sm">
-                  {hasActiveFilters
-                    ? t("messages.noMatchingFilters")
-                    : t("messages.getStartedSupplier")}
-                </p>
-                {hasActiveFilters ? (
-                  <Button variant="outline" onClick={clearFilters}>
-                    {t("common.actions.clearFilters")}
-                  </Button>
-                ) : (
-                  <AddSupplierDialog />
-                )}
-              </div>
+              <Store className="text-muted-foreground/50 mb-4 h-12 w-12" />
+              <h3 className="mb-2 text-lg font-semibold">{t("messages.noSuppliersFound")}</h3>
+              <p className="text-muted-foreground mb-4 text-sm">
+                {hasActiveFilters
+                  ? t("messages.noMatchingFilters")
+                  : t("messages.getStartedSupplier")}
+              </p>
+              {hasActiveFilters ? (
+                <Button variant="outline" onClick={clearFilters}>
+                  {t("common.actions.clearFilters")}
+                </Button>
+              ) : (
+                <AddSupplierDialog />
+              )}
+            </div>
           )}
 
           {/* Pagination */}
@@ -590,15 +598,18 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           />
           <ConfirmationDialog
             title={t("data.suppliers.toasts.deleted.title")}
-            description={t("data.suppliers.toasts.deleted.description")?.replace(
-              "{name}",
-              selectedSupplier.name
-            ) || ""}
+            description={
+              t("data.suppliers.toasts.deleted.description")?.replace(
+                "{name}",
+                selectedSupplier.name
+              ) || ""
+            }
             confirmText={t("common.actions.delete")}
             onConfirm={handleDeleteConfirm}
             variant="destructive"
             open={deleteDialogOpen}
             onOpenChange={setDeleteDialogOpen}
+            loading={deleteSupplier.isPending}
           />
         </>
       )}

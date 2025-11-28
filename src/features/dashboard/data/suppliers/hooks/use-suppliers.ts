@@ -148,7 +148,7 @@ async function fetchSupplierById(
       throw customError;
     }
 
-    throw new Error(error.error || "Failed to fetch supplier");
+    throw new Error(error.error?.message || error.message || "Failed to fetch supplier");
   }
 
   return response.json();
@@ -166,7 +166,7 @@ async function createSupplier(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to create supplier");
+    throw new Error(error.error?.message || error.message || "Failed to create supplier");
   }
 
   return response.json();
@@ -185,7 +185,7 @@ async function updateSupplier(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to update supplier");
+    throw new Error(error.error?.message || error.message || "Failed to update supplier");
   }
 
   return response.json();
@@ -198,7 +198,7 @@ async function deleteSupplier(storeId: string, supplierId: string): Promise<void
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to delete supplier");
+    throw new Error(error.error?.message || error.message || "Failed to delete supplier");
   }
 }
 
@@ -214,7 +214,7 @@ async function bulkDeleteSuppliers(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to delete suppliers");
+    throw new Error(error.error?.message || error.message || "Failed to delete suppliers");
   }
 
   return response.json();
@@ -243,7 +243,7 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
       throw customError;
     }
 
-    throw new Error(error.error || "Failed to export suppliers");
+    throw new Error(error.error?.message || error.message || "Failed to export suppliers");
   }
 
   // Download CSV file
@@ -500,7 +500,7 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
       }
 
       // Non-blocking cache invalidation for related queries
-      invalidateSupplierRelatedQueries(queryClient, storeId, false);
+      invalidateSupplierRelatedQueries(queryClient, storeId, false, true);
     },
   });
 }
@@ -543,7 +543,7 @@ export function useDeleteSupplier(storeId: string) {
       queryClient.removeQueries({ queryKey: supplierKeys.detail(storeId, deletedId) });
 
       // Non-blocking cache invalidation for related queries
-      invalidateSupplierRelatedQueries(queryClient, storeId, false);
+      invalidateSupplierRelatedQueries(queryClient, storeId, false, true);
     },
   });
 }

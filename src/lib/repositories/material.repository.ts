@@ -57,7 +57,7 @@ export class MaterialRepository extends BaseRepository {
     // Build where clause
     const where: Prisma.MaterialWhereInput = {
       storeId,
-      isActive: true,
+
       ...(search && {
         OR: [
           { name: { contains: search, mode: "insensitive" } },
@@ -141,7 +141,6 @@ export class MaterialRepository extends BaseRepository {
       where: {
         storeId,
         sku,
-        isActive: true,
       },
       include: {
         materialSuppliers: {
@@ -401,7 +400,6 @@ export class MaterialRepository extends BaseRepository {
     const materials = await this.db.material.findMany({
       where: {
         storeId,
-        isActive: true,
       },
       include: {
         materialSuppliers: {

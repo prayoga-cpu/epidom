@@ -245,7 +245,8 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const hasActiveFilters = filters.search || filters.category;
 
   // Loading state - wait for both products and usage data to sync loading
-  if (isLoading || isLoadingUsage) {
+  // But if we have products (e.g. from initialData), show them immediately
+  if ((isLoading || isLoadingUsage) && !products.length) {
     return <ProductsCardGridSkeleton cards={6} />;
   }
 
@@ -681,6 +682,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
             variant="destructive"
             open={deleteDialogOpen}
             onOpenChange={setDeleteDialogOpen}
+            loading={deleteProduct.isPending}
           />
         </>
       )}

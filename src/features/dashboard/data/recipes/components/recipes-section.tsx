@@ -622,6 +622,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
         }
         confirmText={t("common.actions.delete")}
         variant="destructive"
+        loading={deleteRecipe.isPending}
       />
     </>
   );

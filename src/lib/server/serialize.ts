@@ -212,7 +212,7 @@ export function serializeRecipe(recipe: RecipeWithIngredientsRepo): RecipeWithIn
         unit: rp.product.unit,
         productionTime: rp.product.productionTime,
         shelfLife: rp.product.shelfLife,
-        isActive: rp.product.isActive,
+
         createdAt: rp.product.createdAt,
         updatedAt: rp.product.updatedAt,
         storeId: rp.product.storeId,

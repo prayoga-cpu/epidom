@@ -268,7 +268,10 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
     try {
       await bulkDelete.mutateAsync({ ids: Array.from(selectedIds) });
       toast.success(
-        t("data.materials.toasts.bulkDeleted.description")?.replace("{count}", selectedCount.toString()) || ""
+        t("data.materials.toasts.bulkDeleted.description")?.replace(
+          "{count}",
+          selectedCount.toString()
+        ) || ""
       );
       clearSelection();
     } catch (error) {
@@ -336,9 +339,9 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                       className="w-full md:w-auto"
                     >
                       {exportMaterials.isPending ? (
-                        <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                        <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
                       ) : (
-                        <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+                        <Download className="mr-1 hidden h-4 w-4 sm:inline" />
                       )}
                       {t("common.actions.export")}
                     </Button>
@@ -350,15 +353,22 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                   </TooltipContent>
                 )}
               </Tooltip>
-              <AddMaterialDialog trigger={
-                <Button size="sm" className="w-full md:w-auto">
-                  <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
-                  {t("data.materials.addButton")}
-                </Button>
-              } />
+              <AddMaterialDialog
+                trigger={
+                  <Button size="sm" className="w-full md:w-auto">
+                    <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
+                    {t("data.materials.addButton")}
+                  </Button>
+                }
+              />
               {bulkSelectMode && selectedCount > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="w-full md:w-auto">
-                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  className="w-full md:w-auto"
+                >
+                  <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("actions.delete")} ({selectedCount})
                 </Button>
               )}
@@ -370,12 +380,12 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
               >
                 {bulkSelectMode ? (
                   <>
-                    <X className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <X className="mr-1 hidden h-4 w-4 sm:inline" />
                     {t("actions.cancel")}
                   </>
                 ) : (
                   <>
-                    <CheckSquare className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <CheckSquare className="mr-1 hidden h-4 w-4 sm:inline" />
                     {t("common.actions.select")}
                   </>
                 )}
@@ -435,8 +445,8 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                 onCheckedChange={toggleSelectAll}
               />
               <span className="text-sm font-medium">
-                {t("common.selectAll")} ({selectedCount} {t("common.of")} {processedMaterials.length}{" "}
-                {t("common.selected")})
+                {t("common.selectAll")} ({selectedCount} {t("common.of")}{" "}
+                {processedMaterials.length} {t("common.selected")})
               </span>
             </div>
           )}
@@ -469,108 +479,106 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                   onSelect={() => toggleSelectItem(material.id)}
                   contentClassName="!px-4"
                 >
-                    <div className="mb-2 flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="w-[85px] truncate text-sm leading-tight font-semibold">
-                          {material.name}
-                        </h3>
-                        {material.sku && (
-                          <p className="text-muted-foreground text-xs">
-                            SKU: {material.sku}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Stock Status Badge */}
-                      <Badge
-                        variant={getStockStatusVariant(stockStatusKey)}
-                        className="ml-auto text-xs"
-                      >
-                        {t(`common.stockStatus.${stockStatusKey}`)}
-                      </Badge>
-                    </div>
-
-                    <Separator />
-
-                    {/* Material Info */}
-                    <div className="text-muted-foreground my-2 space-y-1 text-xs">
-                      {material.category && (
-                        <div className="flex justify-between">
-                          <span>{t("common.category")}:</span>
-                          <span className="text-foreground font-medium">{material.category}</span>
-                        </div>
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="w-[85px] truncate text-sm leading-tight font-semibold">
+                        {material.name}
+                      </h3>
+                      {material.sku && (
+                        <p className="text-muted-foreground text-xs">SKU: {material.sku}</p>
                       )}
-                      <div className="flex justify-between">
-                        <span>{t("common.stock")}:</span>
-                        <span className="text-foreground font-medium">
-                          {currentStock} {material.unit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t("common.cost")}:</span>
-                        <span className="text-foreground font-medium">
-                          {formatPrice(Number(material.unitCost))}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between">
-                        <span>{t("tables.supplier")}:</span>
-                        <span className="text-foreground font-medium">
-                          {primarySupplier ? primarySupplier.supplier.name : t("common.notAvailable")}
-                        </span>
-                      </div>
                     </div>
 
-                    {/* Hover Actions */}
-                    {!bulkSelectMode && (
-                      <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 w-full text-xs"
-                              onClick={() => handleView(material)}
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.materials.tooltips.view")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 w-full flex-1 text-xs"
-                              onClick={() => handleEdit(material)}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.materials.tooltips.edit")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
-                              onClick={() => handleDeleteClick(material)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("data.materials.tooltips.delete")}</p>
-                          </TooltipContent>
-                        </Tooltip>
+                    {/* Stock Status Badge */}
+                    <Badge
+                      variant={getStockStatusVariant(stockStatusKey)}
+                      className="ml-auto text-xs"
+                    >
+                      {t(`common.stockStatus.${stockStatusKey}`)}
+                    </Badge>
+                  </div>
+
+                  <Separator />
+
+                  {/* Material Info */}
+                  <div className="text-muted-foreground my-2 space-y-1 text-xs">
+                    {material.category && (
+                      <div className="flex justify-between">
+                        <span>{t("common.category")}:</span>
+                        <span className="text-foreground font-medium">{material.category}</span>
                       </div>
                     )}
+                    <div className="flex justify-between">
+                      <span>{t("common.stock")}:</span>
+                      <span className="text-foreground font-medium">
+                        {currentStock} {material.unit}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{t("common.cost")}:</span>
+                      <span className="text-foreground font-medium">
+                        {formatPrice(Number(material.unitCost))}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span>{t("tables.supplier")}:</span>
+                      <span className="text-foreground font-medium">
+                        {primarySupplier ? primarySupplier.supplier.name : t("common.notAvailable")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Hover Actions */}
+                  {!bulkSelectMode && (
+                    <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 w-full text-xs"
+                            onClick={() => handleView(material)}
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.materials.tooltips.view")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 w-full flex-1 text-xs"
+                            onClick={() => handleEdit(material)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.materials.tooltips.edit")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive bg-destructive/10 hover:bg-destructive/30 h-8 w-full flex-1 text-xs"
+                            onClick={() => handleDeleteClick(material)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.materials.tooltips.delete")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                 </BaseItemCard>
               );
             })}
@@ -622,15 +630,17 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
         title={t("data.materials.deleteConfirm.title")}
-        description={t("data.materials.deleteConfirm.description")?.replace(
-          "{name}",
-          selectedMaterial?.name || ""
-        ) || ""}
+        description={
+          t("data.materials.deleteConfirm.description")?.replace(
+            "{name}",
+            selectedMaterial?.name || ""
+          ) || ""
+        }
         confirmText={t("common.actions.delete")}
         cancelText={t("common.actions.cancel")}
         variant="destructive"
+        loading={deleteMaterial.isPending}
       />
-
     </>
   );
 }

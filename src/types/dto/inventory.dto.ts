@@ -24,7 +24,7 @@ export interface ProductDto {
   criticalLevel: Decimal | null;
   productionTime: number | null;
   shelfLife: number | null;
-  isActive: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,7 +49,7 @@ export interface IngredientDto {
   minStockLevel: Decimal;
   criticalLevel: Decimal | null;
   supplierId: string | null;
-  isActive: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -100,7 +100,7 @@ export interface SupplierDto {
   city: string | null;
   country: string | null;
   notes: string | null;
-  isActive: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }

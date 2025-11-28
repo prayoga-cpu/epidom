@@ -21,7 +21,6 @@ const baseProductSchema = z.object({
   recipeIds: z.array(cuidSchema).optional(), // Changed from recipeId to recipeIds (array)
   productionTime: z.number().int().nonnegative("Production time must be non-negative").optional(),
   shelfLife: z.number().int().positive("Shelf life must be positive").optional(),
-  isActive: z.boolean().default(true),
 });
 
 export const createProductSchema = baseProductSchema.refine(
@@ -57,7 +56,6 @@ const baseIngredientSchema = z.object({
   minStock: decimalSchema.default(0),
   maxStock: decimalSchema.default(1000),
   suppliers: z.array(ingredientSupplierSchema).optional(),
-  isActive: z.boolean().default(true),
 });
 
 export const createIngredientSchema = baseIngredientSchema
@@ -94,7 +92,6 @@ const baseIngredientFormSchema = z.object({
   minStock: decimalSchema.optional(),
   maxStock: decimalSchema.optional(),
   suppliers: z.array(ingredientSupplierSchema).optional(),
-  isActive: z.boolean().optional(),
 });
 
 export const createIngredientFormSchema = baseIngredientFormSchema
@@ -334,7 +331,6 @@ export const createSupplierSchema = z.object({
   city: z.string().max(100, "City name is too long").optional().or(z.literal("")),
   country: z.string().max(100, "Country name is too long").optional().or(z.literal("")),
   notes: z.string().max(1000, "Notes are too long").optional().or(z.literal("")),
-  isActive: z.boolean().default(true),
 });
 
 export type CreateSupplierInput = z.infer<typeof createSupplierSchema>;

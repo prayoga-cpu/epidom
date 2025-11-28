@@ -1075,6 +1075,7 @@ export const id = {
 
       // Toasts
       toasts: {
+        adding: "Menambahkan bahan baku...",
         added: {
           title: "Bahan Mentah Berhasil Ditambahkan",
           description: "{name} telah ditambahkan ke inventaris Anda.",
@@ -1265,6 +1266,7 @@ export const id = {
 
       // Toasts
       toasts: {
+        adding: "Menambahkan resep...",
         created: {
           title: "Resep Berhasil Dibuat",
           description: "{name} telah ditambahkan ke resep Anda.",
@@ -1424,6 +1426,7 @@ export const id = {
 
       // Toasts
       toasts: {
+        adding: "Menambahkan produk...",
         added: {
           title: "Produk Berhasil Ditambahkan",
           description: "{name} telah ditambahkan ke produk Anda.",
@@ -1538,6 +1541,7 @@ export const id = {
 
       // Toasts
       toasts: {
+        adding: "Menambahkan pemasok...",
         added: {
           title: "Pemasok Berhasil Ditambahkan",
           description: "{name} telah ditambahkan ke pemasok Anda.",

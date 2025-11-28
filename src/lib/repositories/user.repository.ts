@@ -199,7 +199,7 @@ export class UserRepository extends BaseRepository {
    * Find user by Stripe Connect account ID
    */
   async findByStripeConnectAccountId(accountId: string): Promise<User | null> {
-    return this.db.user.findUnique({
+    return this.db.user.findFirst({
       where: { stripeConnectAccountId: accountId },
     });
   }

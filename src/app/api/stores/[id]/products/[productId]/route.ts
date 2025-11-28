@@ -21,10 +21,9 @@ export async function GET(
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     const { id: storeId, productId } = await params;
@@ -73,10 +72,9 @@ export async function PATCH(
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     const { id: storeId, productId } = await params;
@@ -107,7 +105,6 @@ export async function PATCH(
       recipeIds: validatedData.recipeIds,
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
-      isActive: validatedData.isActive,
     });
 
     // Serialize Decimal fields to numbers for Client Components
@@ -134,10 +131,9 @@ export async function DELETE(
     // Verify authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     const { id: storeId, productId } = await params;
@@ -148,10 +144,9 @@ export async function DELETE(
     // Delete product via service
     await productService.deleteProduct(productId, storeId);
 
-    return NextResponse.json(
-      createSuccessResponse({ message: "Product deleted successfully" }),
-      { status: 200 }
-    );
+    return NextResponse.json(createSuccessResponse({ message: "Product deleted successfully" }), {
+      status: 200,
+    });
   } catch (error) {
     const { id: storeId, productId } = await params;
     return handleApiError(error, {

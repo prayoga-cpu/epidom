@@ -48,7 +48,7 @@ export class ProductRepository extends BaseRepository {
     // Build where clause
     const where: Prisma.ProductWhereInput = {
       storeId,
-      isActive: true,
+
       ...(search && {
         OR: [
           { name: { contains: search, mode: "insensitive" } },
@@ -207,10 +207,7 @@ export class ProductRepository extends BaseRepository {
   /**
    * Update product recipes (Many-to-Many relationship)
    */
-  async updateRecipes(
-    productId: string,
-    recipeIds: string[]
-  ): Promise<ProductWithRelations> {
+  async updateRecipes(productId: string, recipeIds: string[]): Promise<ProductWithRelations> {
     // First, delete all existing recipe-product relationships
     await this.db.recipeProduct.deleteMany({
       where: { productId },

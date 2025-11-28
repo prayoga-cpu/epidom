@@ -49,8 +49,6 @@ export const createStoreSchema = z.object({
 export type CreateStoreInput = z.infer<typeof createStoreSchema>;
 
 // Update store schema (all fields optional)
-export const updateStoreSchema = createStoreSchema.partial().extend({
-  isActive: z.boolean().optional(),
-});
+export const updateStoreSchema = createStoreSchema.partial().extend({});
 
 export type UpdateStoreInput = z.infer<typeof updateStoreSchema>;

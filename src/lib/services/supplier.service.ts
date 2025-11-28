@@ -43,7 +43,6 @@ export class SupplierService {
     city?: string;
     country?: string;
     notes?: string;
-    isActive?: boolean;
   }): Promise<SupplierWithRelations> {
     // Validate supplier name uniqueness within store
     const nameExists = await supplierRepository.existsByName(data.storeId, data.name);
@@ -60,7 +59,7 @@ export class SupplierService {
       city: data.city,
       country: data.country,
       notes: data.notes,
-      isActive: data.isActive ?? true,
+
       store: {
         connect: { id: data.storeId },
       },
@@ -82,7 +81,6 @@ export class SupplierService {
       city?: string;
       country?: string;
       notes?: string;
-      isActive?: boolean;
     }
   ): Promise<SupplierWithRelations> {
     // Verify supplier belongs to store
@@ -120,7 +118,10 @@ export class SupplierService {
    * Bulk delete suppliers (hard delete)
    * WARNING: This will permanently delete suppliers and cascade delete related records
    */
-  async bulkDeleteSuppliers(supplierIds: string[], storeId: string): Promise<{ deletedCount: number }> {
+  async bulkDeleteSuppliers(
+    supplierIds: string[],
+    storeId: string
+  ): Promise<{ deletedCount: number }> {
     // Verify all suppliers belong to the store
     const suppliers = await supplierRepository.findByIds(supplierIds);
     const invalidSuppliers = suppliers.filter((s) => s.storeId !== storeId);
@@ -149,7 +150,7 @@ export class SupplierService {
       "City",
       "Country",
       "Notes",
-      "Active",
+
       "Created At",
     ];
 
@@ -163,7 +164,7 @@ export class SupplierService {
       (supplier: Supplier) => supplier.city || "",
       (supplier: Supplier) => supplier.country || "",
       (supplier: Supplier) => supplier.notes || "",
-      (supplier: Supplier) => supplier.isActive ? "Yes" : "No",
+
       (supplier: Supplier) => new Date(supplier.createdAt).toISOString(),
     ];
 

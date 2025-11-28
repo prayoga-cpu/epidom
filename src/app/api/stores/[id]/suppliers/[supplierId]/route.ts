@@ -22,10 +22,9 @@ export async function GET(
     // Verify authentication
     session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -53,10 +52,9 @@ export async function GET(
     const supplier = await supplierService.getSupplierById(supplierId);
 
     if (!supplier) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "Supplier not found"),
-        { status: 404 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Supplier not found"), {
+        status: 404,
+      });
     }
 
     // Verify supplier belongs to store
@@ -90,10 +88,9 @@ export async function PATCH(
     // Verify authentication
     session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -132,7 +129,6 @@ export async function PATCH(
       city: validatedData.city,
       country: validatedData.country,
       notes: validatedData.notes,
-      isActive: validatedData.isActive,
     });
 
     return NextResponse.json(createSuccessResponse(supplier), { status: 200 });
@@ -159,10 +155,9 @@ export async function DELETE(
     // Verify authentication
     session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+        status: 401,
+      });
     }
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
@@ -189,10 +184,9 @@ export async function DELETE(
     // Delete supplier via service
     await supplierService.deleteSupplier(supplierId, storeId);
 
-    return NextResponse.json(
-      createSuccessResponse({ message: "Supplier deleted successfully" }),
-      { status: 200 }
-    );
+    return NextResponse.json(createSuccessResponse({ message: "Supplier deleted successfully" }), {
+      status: 200,
+    });
   } catch (error) {
     const { id: storeId, supplierId } = await params;
     return handleApiError(error, {

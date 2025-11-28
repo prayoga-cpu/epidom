@@ -59,7 +59,7 @@ function convertOrderToDelivery(order: SupplierOrder): SupplierDelivery {
         currentStock: 0, // Not available in SupplierOrderItem, use 0 as default
         minStock: 0, // Not available in SupplierOrderItem, use 0 as default
         maxStock: 0, // Not available in SupplierOrderItem, use 0 as default
-        isActive: true,
+
         storeId: order.storeId,
         createdAt: new Date(),
         updatedAt: new Date(),
