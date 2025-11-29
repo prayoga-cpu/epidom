@@ -61,7 +61,7 @@ export interface StoreDto {
   phone: string | null;
   email: string | null;
   image: string | null;
-  isActive: boolean;
+  // isActive: boolean; // Removed: Not in DB schema
   createdAt: Date;
   updatedAt: Date;
 }
