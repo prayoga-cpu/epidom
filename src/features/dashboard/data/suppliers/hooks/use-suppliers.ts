@@ -151,7 +151,9 @@ async function fetchSupplierById(
     throw new Error(error.error?.message || error.message || "Failed to fetch supplier");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function createSupplier(
@@ -169,7 +171,9 @@ async function createSupplier(
     throw new Error(error.error?.message || error.message || "Failed to create supplier");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function updateSupplier(
@@ -188,7 +192,9 @@ async function updateSupplier(
     throw new Error(error.error?.message || error.message || "Failed to update supplier");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function deleteSupplier(storeId: string, supplierId: string): Promise<void> {
@@ -217,7 +223,8 @@ async function bulkDeleteSuppliers(
     throw new Error(error.error?.message || error.message || "Failed to delete suppliers");
   }
 
-  return response.json();
+  const responseData = await response.json();
+  return responseData.success === true ? responseData.data : responseData;
 }
 
 async function exportSuppliers(storeId: string, filters: SupplierFilterInput): Promise<void> {
@@ -325,7 +332,9 @@ export function useSuppliers(
       // Mark access as granted
       queryClient.setQueryData(supplierKeys.accessCheck(storeId), true);
 
-      return response.json();
+      const responseData = await response.json();
+      // API response is wrapped in { success: true, data: {...} }
+      return responseData.success === true ? responseData.data : responseData;
     },
     // Disable query if:
     // 1. No storeId
@@ -410,7 +419,29 @@ export function useCreateSupplier(storeId: string) {
 
   return useMutation({
     mutationFn: (data: CreateSupplierInput) => createSupplier(storeId, data),
-    onSuccess: () => {
+    onSuccess: (newSupplier) => {
+      // Optimistic update: Add new supplier to all supplier list caches immediately
+      queryClient.setQueriesData<SuppliersResponse>(
+        { queryKey: supplierKeys.lists(storeId), exact: false },
+        (oldData) => {
+          // Validate oldData structure before updating
+          if (
+            oldData &&
+            typeof oldData === "object" &&
+            "suppliers" in oldData &&
+            Array.isArray(oldData.suppliers) &&
+            typeof oldData.total === "number"
+          ) {
+            return {
+              ...oldData,
+              suppliers: [newSupplier, ...oldData.suppliers],
+              total: oldData.total + 1,
+            };
+          }
+          return undefined;
+        }
+      );
+
       // Non-blocking cache invalidation: Only invalidate suppliers immediately
       // Other queries (materials) will sync in background
       // This allows UI to respond faster without waiting for all invalidations
@@ -432,7 +463,7 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
     UpdateSupplierInput,
     {
       previousSupplier: SupplierWithRelations | undefined;
-      previousList: SuppliersResponse | undefined;
+      previousQueries: Array<[readonly unknown[], SuppliersResponse | undefined]>;
     }
   >({
     mutationFn: (data) => updateSupplier(storeId, supplierId, data),
@@ -445,7 +476,9 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
       const previousSupplier = queryClient.getQueryData<SupplierWithRelations>(
         supplierKeys.detail(storeId, supplierId)
       );
-      const previousList = queryClient.getQueryData<SuppliersResponse>(supplierKeys.list(storeId));
+      const previousQueries = queryClient.getQueriesData<SuppliersResponse>({
+        queryKey: supplierKeys.lists(storeId),
+      });
 
       // Optimistically update detail cache
       if (previousSupplier) {
@@ -456,23 +489,27 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
         } as SupplierWithRelations);
       }
 
-      // Optimistically update list cache
-      if (previousList) {
-        queryClient.setQueryData<SuppliersResponse>(supplierKeys.list(storeId), {
-          ...previousList,
-          suppliers: previousList.suppliers.map((s) =>
-            s.id === supplierId
-              ? ({
-                  ...s,
-                  ...newData,
-                  updatedAt: new Date(),
-                } as SupplierWithRelations)
-              : s
-          ),
-        });
-      }
+      // Optimistically update all list caches
+      queryClient.setQueriesData<SuppliersResponse>(
+        { queryKey: supplierKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.suppliers) return oldData;
+          return {
+            ...oldData,
+            suppliers: oldData.suppliers.map((s) =>
+              s.id === supplierId
+                ? ({
+                    ...s,
+                    ...newData,
+                    updatedAt: new Date(),
+                  } as SupplierWithRelations)
+                : s
+            ),
+          };
+        }
+      );
 
-      return { previousSupplier, previousList };
+      return { previousSupplier, previousQueries };
     },
     onError: (error, newData, context) => {
       // Rollback optimistic update on error
@@ -482,22 +519,27 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
           context.previousSupplier
         );
       }
-      if (context?.previousList) {
-        queryClient.setQueryData(supplierKeys.list(storeId), context.previousList);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: (updatedSupplier) => {
       // Replace optimistic data with real server data
       queryClient.setQueryData(supplierKeys.detail(storeId, supplierId), updatedSupplier);
 
-      // Update in list cache with real data
-      const currentList = queryClient.getQueryData<SuppliersResponse>(supplierKeys.list(storeId));
-      if (currentList) {
-        queryClient.setQueryData<SuppliersResponse>(supplierKeys.list(storeId), {
-          ...currentList,
-          suppliers: currentList.suppliers.map((s) => (s.id === supplierId ? updatedSupplier : s)),
-        });
-      }
+      // Update in all list caches with real data
+      queryClient.setQueriesData<SuppliersResponse>(
+        { queryKey: supplierKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.suppliers) return oldData;
+          return {
+            ...oldData,
+            suppliers: oldData.suppliers.map((s) => (s.id === supplierId ? updatedSupplier : s)),
+          };
+        }
+      );
 
       // Non-blocking cache invalidation for related queries
       invalidateSupplierRelatedQueries(queryClient, storeId, false, true);
@@ -512,30 +554,43 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
 export function useDeleteSupplier(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, string, { previousList: SuppliersResponse | undefined }>({
+  return useMutation<
+    void,
+    Error,
+    string,
+    { previousQueries: Array<[readonly unknown[], SuppliersResponse | undefined]> }
+  >({
     mutationFn: (supplierId) => deleteSupplier(storeId, supplierId),
     onMutate: async (deletedId) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: supplierKeys.lists(storeId) });
 
-      // Snapshot previous value
-      const previousList = queryClient.getQueryData<SuppliersResponse>(supplierKeys.list(storeId));
+      // Snapshot previous queries
+      const previousQueries = queryClient.getQueriesData<SuppliersResponse>({
+        queryKey: supplierKeys.lists(storeId),
+      });
 
-      // Optimistically remove from cache
-      if (previousList) {
-        queryClient.setQueryData<SuppliersResponse>(supplierKeys.list(storeId), {
-          ...previousList,
-          suppliers: previousList.suppliers.filter((s) => s.id !== deletedId),
-          total: previousList.total - 1,
-        });
-      }
+      // Optimistically remove from all matching caches
+      queryClient.setQueriesData<SuppliersResponse>(
+        { queryKey: supplierKeys.lists(storeId) },
+        (oldData) => {
+          if (!oldData || !oldData.suppliers) return oldData;
+          return {
+            ...oldData,
+            suppliers: oldData.suppliers.filter((s) => s.id !== deletedId),
+            total: Math.max(0, oldData.total - 1),
+          };
+        }
+      );
 
-      return { previousList };
+      return { previousQueries };
     },
     onError: (error, deletedId, context) => {
       // Rollback optimistic update on error
-      if (context?.previousList) {
-        queryClient.setQueryData(supplierKeys.list(storeId), context.previousList);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: (_, deletedId) => {
