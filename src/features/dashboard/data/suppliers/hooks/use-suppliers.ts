@@ -337,11 +337,11 @@ export function useSuppliers(
       return responseData.success === true ? responseData.data : responseData;
     },
     // Disable query if:
+    // Disable query if:
     // 1. No storeId
-    // 2. Still checking access (wait for access check to complete first)
-    // 3. User has no access (don't fetch if we know it will 403)
-    // 4. Respect external enabled option (e.g., for dialog lazy loading)
-    enabled: !!storeId && !isCheckingAccess && !hasNoAccess && (options?.enabled ?? true),
+    // 2. User has no access (don't fetch if we know it will 403)
+    // 3. Respect external enabled option (e.g., for dialog lazy loading)
+    enabled: !!storeId && !hasNoAccess && (options?.enabled ?? true),
     // Cache configuration: Longer staleTime for 403 errors to avoid repeated failed requests
     staleTime: 5 * 60 * 1000, // 5 minutes - cache 403 errors longer to avoid repeated requests
     gcTime: 10 * 60 * 1000, // Keep in garbage collection for 10 minutes
@@ -350,13 +350,13 @@ export function useSuppliers(
       if (query.state.error && (query.state.error as any)?.status === 403) {
         return false; // Don't refetch 403 errors on mount
       }
-      return false; // Don't refetch if data is fresh (within staleTime)
+      return true; // Check staleTime and refetch if stale (including invalidations)
     },
     refetchOnWindowFocus: (query) => {
       if (query.state.error && (query.state.error as any)?.status === 403) {
         return false; // Don't refetch 403 errors on window focus
       }
-      return false; // Don't refetch on window focus to prevent spam
+      return true; // Refetch on window focus if stale
     },
     // Don't retry 403 errors (subscription locked)
     retry: (failureCount, error) => {
@@ -383,8 +383,8 @@ export function useSupplier(storeId: string, supplierId: string | null) {
   return useQuery<SupplierWithRelations>({
     queryKey: supplierKeys.detail(storeId, supplierId!),
     queryFn: () => fetchSupplierById(storeId, supplierId!),
-    // Disable query if still checking access or no access
-    enabled: !!storeId && !!supplierId && !isCheckingAccess && !hasNoAccess,
+    // Disable query if no access (fail open if checking)
+    enabled: !!storeId && !!supplierId && !hasNoAccess,
     // Cache configuration: Longer staleTime for 403 errors to avoid repeated failed requests
     staleTime: 5 * 60 * 1000, // 5 minutes - cache 403 errors longer to avoid repeated requests
     gcTime: 10 * 60 * 1000, // Keep in garbage collection for 10 minutes
@@ -393,13 +393,13 @@ export function useSupplier(storeId: string, supplierId: string | null) {
       if (query.state.error && (query.state.error as any)?.status === 403) {
         return false; // Don't refetch 403 errors on mount
       }
-      return false; // Don't refetch if data is fresh (within staleTime)
+      return true; // Check staleTime and refetch if stale (including invalidations)
     },
     refetchOnWindowFocus: (query) => {
       if (query.state.error && (query.state.error as any)?.status === 403) {
         return false; // Don't refetch 403 errors on window focus
       }
-      return false; // Don't refetch on window focus to prevent spam
+      return true; // Refetch on window focus if stale
     },
     // Don't retry 403 errors (subscription locked)
     retry: (failureCount, error) => {

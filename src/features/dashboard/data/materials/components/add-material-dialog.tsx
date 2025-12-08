@@ -26,7 +26,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { Plus, Loader2, X, Star } from "lucide-react";
+import { Plus, Loader2, X, Star, Trash2 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateMaterial } from "../hooks/use-materials";
 import { useSuppliers, supplierKeys } from "../../suppliers/hooks/use-suppliers";
@@ -447,9 +447,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
             </div>
 
             {/* Suppliers */}
-            <div className="space-y-1">
-              <div className="mb-1 flex items-center justify-between">
-                <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h3 className="text-sm font-semibold tracking-tight">
                   {t("data.materials.sections.suppliers")}
                 </h3>
                 <Button
@@ -463,138 +463,154 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                       isPreferred: false,
                     })
                   }
+                  className="h-8 gap-1.5"
                 >
-                  <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
-                  {t("data.materials.form.addSupplier")}
+                  <Plus className="h-3.5 w-3.5" />
+                  <span className="text-xs">{t("data.materials.form.addSupplier")}</span>
                 </Button>
               </div>
 
               {fields.length === 0 && (
-                <p className="text-muted-foreground text-sm">
-                  {t("data.materials.form.noSuppliersYet")}
-                </p>
-              )}
-
-              {fields.map((field, index) => (
-                <div key={field.id} className="flex gap-2 rounded-lg border p-2">
-                  <div className="flex-1 space-y-1">
-                    <FormField
-                      control={form.control}
-                      /**
-                       * Type assertion needed because TypeScript cannot infer dynamic field paths
-                       * in React Hook Form's useFieldArray
-                       * Actual type: `suppliers.${number}.supplierId`
-                       * Known limitation: Dynamic field paths require type assertion
-                       */
-                      name={`suppliers.${index}.supplierId` as any}
-                      render={({ field }) => (
-                        <FormItem className="space-y-0.5">
-                          <FormLabel className="text-sm">
-                            {t("data.materials.form.supplier")} *
-                          </FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={(field.value as string) || "none"}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue
-                                  placeholder={t("data.materials.form.selectSupplierPlaceholder")}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none" disabled>
-                                {t("data.materials.form.selectSupplierPlaceholder")}
-                              </SelectItem>
-                              {suppliers.map((supplier) => (
-                                <SelectItem key={supplier.id} value={supplier.id}>
-                                  {supplier.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription className="text-xs">
-                            {t("data.materials.form.chooseSupplier")}
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-2 items-start gap-1.5">
-                      <FormField
-                        control={form.control}
-                        /**
-                         * Type assertion needed because TypeScript cannot infer dynamic field paths
-                         * in React Hook Form's useFieldArray
-                         * Actual type: `suppliers.${number}.price`
-                         * Known limitation: Dynamic field paths require type assertion
-                         */
-                        name={`suppliers.${index}.price` as any}
-                        render={({ field }) => (
-                          <FormItem className="space-y-0.5">
-                            <FormLabel className="text-sm">
-                              {t("data.materials.form.supplierPrice")} (
-                              {currency === "EUR" ? "€" : "$"}) *
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="25.00"
-                                value={formatNumberForInput(field.value as number | undefined)}
-                                onChange={createNumberInputHandler(field.onChange)}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                ref={field.ref}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        /**
-                         * Type assertion needed because TypeScript cannot infer dynamic field paths
-                         * in React Hook Form's useFieldArray
-                         * Actual type: `suppliers.${number}.isPreferred`
-                         * Known limitation: Dynamic field paths require type assertion
-                         */
-                        name={`suppliers.${index}.isPreferred` as any}
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-y-0 space-x-2 pt-8">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value as boolean}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel className="flex items-center gap-1">
-                                <Star className="h-3 w-3" />
-                                {t("data.materials.form.preferred")}
-                              </FormLabel>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-
+                <div className="animate-in fade-in-50 flex flex-col items-center justify-center rounded-lg border border-dashed py-8 text-center text-sm">
+                  <p className="text-muted-foreground">{t("data.materials.form.noSuppliersYet")}</p>
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => remove(index)}
-                    className="h-8 w-8"
+                    variant="link"
+                    size="sm"
+                    className="text-primary h-auto p-0"
+                    onClick={() =>
+                      append({
+                        supplierId: "",
+                        price: undefined as number | undefined,
+                        isPreferred: false,
+                      })
+                    }
                   >
-                    <X className="h-4 w-4" />
+                    {t("data.materials.form.addSupplier")}
                   </Button>
                 </div>
-              ))}
+              )}
+
+              <div className="space-y-3">
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="bg-card hover:border-primary/20 relative rounded-lg border shadow-sm transition-all"
+                  >
+                    <div className="bg-muted/30 flex items-center justify-between border-b px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-primary/10 text-primary flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold">
+                          {index + 1}
+                        </span>
+                        <span className="text-muted-foreground text-xs font-medium">
+                          {t("data.materials.form.supplier")}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => remove(index)}
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mr-1 h-6 w-6"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    <div className="p-3">
+                      <div className="grid gap-3">
+                        <FormField
+                          control={form.control}
+                          name={`suppliers.${index}.supplierId` as any}
+                          render={({ field }) => (
+                            <FormItem className="space-y-1">
+                              <FormLabel className="sr-only">
+                                {t("data.materials.form.supplier")}
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={(field.value as string) || "none"}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue
+                                      placeholder={t(
+                                        "data.materials.form.selectSupplierPlaceholder"
+                                      )}
+                                    />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none" disabled>
+                                    {t("data.materials.form.selectSupplierPlaceholder")}
+                                  </SelectItem>
+                                  {suppliers.map((supplier) => (
+                                    <SelectItem key={supplier.id} value={supplier.id}>
+                                      {supplier.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="flex items-start gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`suppliers.${index}.price` as any}
+                            render={({ field }) => (
+                              <FormItem className="flex-1 space-y-1">
+                                <FormLabel className="text-xs font-medium">
+                                  {t("data.materials.form.supplierPrice")} (
+                                  {currency === "EUR" ? "€" : "$"})
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="25.00"
+                                    className="h-9"
+                                    value={formatNumberForInput(field.value as number | undefined)}
+                                    onChange={createNumberInputHandler(field.onChange)}
+                                    onBlur={field.onBlur}
+                                    name={field.name}
+                                    ref={field.ref}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`suppliers.${index}.isPreferred` as any}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-col items-start gap-1 pt-6">
+                                <div className="flex items-center gap-2">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value as boolean}
+                                      onCheckedChange={field.onChange}
+                                      className="data-[state=checked]:bg-primary"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-muted-foreground cursor-pointer text-xs font-normal">
+                                    {t("data.materials.form.preferred")}
+                                  </FormLabel>
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </form>
         </Form>
