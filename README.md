@@ -1,4 +1,5 @@
-**EPIDOM** - A complete restaurant & food business management platform with Stripe payment integration, multi-language support (EN/FR/ID), and subscription-based pricing.
+# EPIDOM
+A complete restaurant & food business management platform with Stripe payment integration, multi-language support (EN/FR/ID), and subscription-based pricing.
 
 ## Tech Stack
 
