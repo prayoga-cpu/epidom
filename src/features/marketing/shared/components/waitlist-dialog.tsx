@@ -16,10 +16,7 @@
 
 import * as React from "react";
 import { memo } from "react";
-import {
-  Dialog,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -42,9 +39,15 @@ export const WaitlistDialog = memo(function WaitlistDialog({
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errors, setErrors] = React.useState<ValidationError[]>([]);
+  const [mounted, setMounted] = React.useState(false);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
   const { t } = useI18n();
+
+  // Track mounted state for hydration safety
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fix for scrollbar issue - prevent navbar shift when dialog opens
   React.useEffect(() => {
@@ -102,8 +105,10 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       toast({
         title: t("waitlist.errors.tooManyAttemptsTitle") || "Too Many Attempts",
         description:
-          t("waitlist.errors.tooManyAttemptsDesc")?.replace("{minutes}", remainingTime.toString()) ||
-          `Please wait ${remainingTime} minutes before trying again.`,
+          t("waitlist.errors.tooManyAttemptsDesc")?.replace(
+            "{minutes}",
+            remainingTime.toString()
+          ) || `Please wait ${remainingTime} minutes before trying again.`,
         variant: "destructive",
       });
       return;
@@ -176,6 +181,32 @@ export const WaitlistDialog = memo(function WaitlistDialog({
     }
   }
 
+  // Render static placeholder during SSR to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <Button
+        size="lg"
+        className={`h-10 rounded-full px-4 font-semibold transition-colors md:px-5 lg:px-6 ${
+          variant === "home"
+            ? "text-white hover:bg-gray-700"
+            : variant === "sidebar"
+              ? "text-white hover:opacity-80"
+              : "bg-white hover:bg-gray-100"
+        }`}
+        style={
+          variant === "home"
+            ? { backgroundColor: "var(--color-brand-primary)" }
+            : variant === "sidebar"
+              ? { backgroundColor: "var(--color-brand-primary)" }
+              : { color: "var(--color-brand-primary)" }
+        }
+        aria-label={t("waitlist.openButtonAria")}
+      >
+        <span className="text-sm md:text-sm lg:text-base">{t("waitlist.openButton")}</span>
+      </Button>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -208,7 +239,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           <Button
             type="submit"
             form="waitlist-form"
-            className="btn-smooth rounded-full px-6 font-semibold bg-brand-primary text-white"
+            className="btn-smooth bg-brand-primary rounded-full px-6 font-semibold text-white"
             disabled={isSubmitting}
           >
             {isSubmitting ? t("waitlist.submitting") || "Submitting..." : t("waitlist.submit")}
@@ -217,10 +248,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
       >
         <form id="waitlist-form" ref={formRef} onSubmit={handleSubmit} className="grid gap-5">
           <div className="grid gap-2">
-            <Label
-              htmlFor="name"
-              className="font-semibold text-brand-primary"
-            >
+            <Label htmlFor="name" className="text-brand-primary font-semibold">
               {t("waitlist.fields.name")}
             </Label>
             <Input
@@ -242,10 +270,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label
-              htmlFor="email"
-              className="font-semibold text-brand-primary"
-            >
+            <Label htmlFor="email" className="text-brand-primary font-semibold">
               {t("waitlist.fields.email")}
             </Label>
             <Input
@@ -268,10 +293,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label
-              htmlFor="company"
-              className="font-semibold text-brand-primary"
-            >
+            <Label htmlFor="company" className="text-brand-primary font-semibold">
               {t("waitlist.fields.company")}
             </Label>
             <Input
@@ -294,4 +316,3 @@ export const WaitlistDialog = memo(function WaitlistDialog({
     </Dialog>
   );
 });
-

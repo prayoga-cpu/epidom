@@ -3,10 +3,14 @@
 /**
  * Hero Section Component
  *
- * Main hero section for homepage with split layout:
- * - Desktop: 50/50 split with image left, content right
- * - Mobile/Tablet: Full-width image above content
- * Features lazy-loading image with priority on first viewport.
+ * "What tf is this?" Edition
+ * Goal: Instant understanding & Desire.
+ *
+ * Features:
+ * - Massive Typography for instant focus
+ * - "Software" context via abstract UI elements (Overlaying image)
+ * - Clear Value Proposition
+ * - High-contrast "Try Now" CTA
  *
  * @component
  */
@@ -17,83 +21,116 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import React, { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-
-// Helper component for Image with Skeleton loading state
-const HeroImage = ({
-  className,
-  sizes,
-  priority = false,
-}: {
-  className?: string;
-  sizes: string;
-  priority?: boolean;
-}) => {
-  const [isLoading, setIsLoading] = useState(true);
-
-  return (
-    <div className={cn("relative h-full w-full overflow-hidden", className)}>
-      {isLoading && (
-        <Skeleton className="bg-muted/60 absolute inset-0 z-10 h-full w-full animate-pulse" />
-      )}
-      <Image
-        src="/images/pantry-shelf.jpg"
-        alt="Pantry shelves with jars and baskets"
-        fill
-        className={cn(
-          "object-cover transition-opacity duration-700 ease-in-out",
-          isLoading ? "scale-[1.02] opacity-0" : "scale-100 opacity-100"
-        )}
-        sizes={sizes}
-        priority={priority}
-        onLoad={() => setIsLoading(false)}
-      />
-    </div>
-  );
-};
+import { Container } from "./container";
+import { LogoWithSkeleton } from "./logo-with-skeleton";
+import { ChevronDown, BarChart3, PieChart, Layers } from "lucide-react";
 
 export const Hero = React.memo(function Hero() {
   const { t } = useI18n();
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
-    <section className="relative grid min-h-screen overflow-hidden bg-white py-8 md:py-12 lg:h-screen lg:grid-cols-2 lg:pt-16 lg:pb-0">
-      {/* Image Column - 50% Left (Desktop only) - Full width, no padding */}
-      <div className="relative hidden w-full lg:block lg:h-[calc(100vh-4rem)]">
-        <HeroImage sizes="50vw" priority />
-      </div>
+    <section className="relative flex h-full w-full flex-col overflow-hidden bg-white">
+      {/* Background Subtle Grid */}
+      <div className="absolute inset-0 z-0 bg-[url('/grid-pattern.svg')] opacity-[0.03]" />
 
-      {/* Content Column - 50% Right (Desktop) / Full Width (Mobile/Tablet) */}
-      <div className="flex w-full flex-col lg:h-[calc(100vh-4rem)]">
-        <div className="mx-auto w-full max-w-[1400px] px-6 py-8 md:px-8 md:py-12 lg:ml-0 lg:flex lg:h-full lg:flex-col lg:justify-center lg:px-8 lg:py-0">
-          {/* Wrapper untuk semua konten teks - di-center vertikal di desktop */}
-          <div className="w-full space-y-4 md:space-y-5">
-            {/* Mobile/Tablet Image */}
-            <div className="relative mt-[32px] aspect-[4/3] w-full overflow-hidden rounded-xl shadow-md md:mt-0 lg:mt-0 lg:hidden">
-              <HeroImage sizes="100vw" priority />
+      {/* Main Content Wrapper - Centered Vertically */}
+      <div className="flex h-full w-full items-center justify-center px-4 pt-20 pb-8 sm:px-6 lg:px-8 lg:pt-0 lg:pb-0">
+        <Container maxWidth="7xl" className="h-full w-full">
+          <div className="grid h-full w-full grid-cols-1 content-center gap-8 lg:grid-cols-2 lg:gap-16">
+            {/* 1. LEFT COLUMN: POWERFUL TEXT */}
+            <div className="z-10 flex flex-col justify-center text-center lg:text-left">
+              {/* Logo (Mobile Only) */}
+              <div className="mb-6 flex justify-center lg:hidden">
+                <LogoWithSkeleton
+                  src="/images/logo-black.png"
+                  alt="EPIDOM"
+                  filter="invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)"
+                  wrapperClassName="relative h-7 w-[110px]"
+                />
+              </div>
+
+              <div className="space-y-6 lg:space-y-8">
+                <h1 className="text-brand-primary text-5xl leading-[1.1] font-extrabold tracking-tight sm:text-6xl md:text-7xl lg:text-6xl xl:text-7xl">
+                  The <br className="hidden lg:mb-2 lg:block" />
+                  <span className="from-brand-primary bg-gradient-to-r to-gray-500 bg-clip-text pb-2 text-transparent">
+                    Secret Ingredient
+                  </span>{" "}
+                  <br />
+                  for Your Business.
+                </h1>
+
+                <p className="text-brand-primary/80 mx-auto max-w-xl text-lg leading-relaxed sm:text-xl lg:mx-0 lg:text-lg xl:text-xl">
+                  Perfect for <b>cookies bars, bakeries, and cafes</b>. Track every gram of flour,
+                  manage your recipes, and auto-restock your inventory in seconds.
+                </p>
+
+                <div className="flex flex-col items-center gap-4 pt-2 sm:flex-row lg:justify-start">
+                  <div className="scale-100 transform transition-transform duration-300 hover:scale-105">
+                    <WaitlistDialog variant="home" />
+                  </div>
+                  <p className="text-xs font-medium text-gray-400 sm:hidden">
+                    No credit card required
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* Title and Subtitle */}
-            <div className="space-y-2 md:space-y-3">
-              <h1 className="text-brand-primary text-5xl leading-tight font-bold tracking-tight md:text-6xl lg:text-5xl xl:text-6xl">
-                {t("hero.title")}
-              </h1>
-              <p className="text-brand-primary text-2xl leading-relaxed font-medium text-balance md:text-3xl lg:text-2xl">
-                {t("hero.subtitle")}
-              </p>
-            </div>
+            {/* 2. RIGHT COLUMN: DASHBOARD IMAGE */}
+            <div className="relative flex h-full w-full flex-col justify-center">
+              <div className="animate-in fade-in slide-in-from-right-8 relative w-full duration-1000">
+                {/* Browser Window */}
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-gray-200 bg-white/50 shadow-2xl backdrop-blur-sm lg:aspect-[16/10] lg:rounded-2xl">
+                  {/* Browser Header */}
+                  <div className="flex h-8 shrink-0 items-center gap-2 border-b border-gray-200 bg-gray-50/90 px-3 backdrop-blur-md lg:h-10 lg:px-4">
+                    <div className="h-2.5 w-2.5 rounded-full bg-red-400/80 lg:h-3 lg:w-3" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-yellow-400/80 lg:h-3 lg:w-3" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-green-400/80 lg:h-3 lg:w-3" />
+                    <div className="ml-2 h-4 w-full max-w-[200px] rounded bg-gray-200/50 lg:ml-4 lg:h-5 lg:max-w-[300px]" />
+                  </div>
 
-            {/* CTA Button */}
-            <div className="pt-1 md:pt-0 lg:pt-0">
-              <WaitlistDialog variant="home" />
-            </div>
+                  {/* Dashboard Image */}
+                  <div className="relative h-full w-full bg-gray-50">
+                    {!imageLoaded && (
+                      <Skeleton className="absolute inset-0 z-10 h-full w-full bg-gray-100" />
+                    )}
+                    <Image
+                      src="/images/dashboard.png"
+                      alt="Epidom Dashboard"
+                      fill
+                      className={cn(
+                        "object-cover object-left-top transition-opacity duration-700",
+                        imageLoaded ? "opacity-100" : "opacity-0"
+                      )}
+                      onLoad={() => setImageLoaded(true)}
+                      priority
+                      sizes="(max-width: 768px) 100vw, 800px"
+                    />
+                  </div>
+                </div>
 
-            {/* Description */}
-            <div className="space-y-3 text-lg leading-relaxed text-gray-600 md:text-xl lg:text-lg">
-              <p>{t("hero.p1")}</p>
-              <p>{t("hero.p2")}</p>
-              <p>{t("hero.p3")}</p>
+                {/* Decorative Elements */}
+                <div className="bg-brand-primary/5 absolute -top-12 -right-12 -z-10 h-64 w-64 rounded-full opacity-50 blur-3xl" />
+                <div className="absolute -bottom-12 -left-12 -z-10 h-64 w-64 rounded-full bg-blue-500/5 opacity-50 blur-3xl" />
+              </div>
             </div>
           </div>
-        </div>
+        </Container>
+      </div>
+
+      {/* Scroll Indicator */}
+      <div className="absolute right-0 bottom-6 left-0 z-20 flex justify-center">
+        <button
+          onClick={() =>
+            document.getElementById("pain-gain")?.scrollIntoView({ behavior: "smooth" })
+          }
+          className="group text-brand-primary/40 hover:text-brand-primary flex flex-col items-center gap-2 text-sm font-medium transition-colors"
+        >
+          <span className="opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            Explore
+          </span>
+          <ChevronDown className="h-6 w-6 animate-bounce" />
+        </button>
       </div>
     </section>
   );

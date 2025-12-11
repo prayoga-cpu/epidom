@@ -1,4 +1,5 @@
 "use client";
+import * as React from "react";
 import {
   Select,
   SelectContent,
@@ -18,7 +19,28 @@ const opts = [
 
 export default function LangSwitcher({ className = "" }: { className?: string }) {
   const { locale, setLocale } = useI18n();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const currentLang = opts.find((opt) => opt.value === locale);
+
+  // Prevent hydration mismatch by rendering a static placeholder on server
+  if (!mounted) {
+    return (
+      <div
+        className={cn(
+          "bg-background text-foreground flex h-9 items-center gap-2 rounded-full px-3 font-semibold",
+          className
+        )}
+      >
+        <Languages className="h-4 w-4 shrink-0" />
+        {currentLang?.short || "EN"}
+      </div>
+    );
+  }
 
   return (
     <Select value={locale} onValueChange={setLocale}>

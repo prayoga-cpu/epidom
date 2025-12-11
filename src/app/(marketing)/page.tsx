@@ -8,9 +8,12 @@
  * @page
  */
 
-import { LazyCountdownComponent, LazyHero } from "@/lib/dynamic-imports.client";
+import { LazyHero } from "@/lib/dynamic-imports.client";
 import { generateMetadata } from "@/lib/seo";
 import { ProductStructuredData } from "@/components/seo/structured-data";
+import { PainGainSection } from "@/features/marketing/shared/components/pain-gain-section";
+import { CtaSection } from "@/features/marketing/shared/components/cta-section";
+import { SiteFooter } from "@/features/marketing/shared/components/site-footer";
 
 export const metadata = generateMetadata({
   title: "EPIDOM - Food Inventory Management Solution",
@@ -31,8 +34,7 @@ export const metadata = generateMetadata({
   ],
   openGraph: {
     title: "EPIDOM - Food Inventory Management Solution",
-    description:
-      "Revolutionary food inventory management system. Request a trial now!",
+    description: "Revolutionary food inventory management system. Request a trial now!",
     url: "https://epidom.com",
     images: [
       {
@@ -45,42 +47,35 @@ export const metadata = generateMetadata({
   },
   twitter: {
     title: "EPIDOM - Food Inventory Management Solution",
-    description:
-      "Revolutionary food inventory management system. Request a trial now!",
+    description: "Revolutionary food inventory management system. Request a trial now!",
     images: ["https://epidom.com/images/twitter-countdown.jpg"],
   },
 });
 
 export default function HomePage() {
   return (
-    <main className="bg-white pt-12 md:pt-32 lg:pt-0">
+    <div className="h-screen w-full snap-y snap-mandatory overflow-x-hidden overflow-y-auto scroll-smooth bg-white">
       <ProductStructuredData />
 
-      {/*
-        ========================================
-        DISPLAY MODE TOGGLE INSTRUCTIONS
-        ========================================
-
-        CURRENT STATE: Hero section is ACTIVE, Countdown is HIDDEN
-
-        TO SHOW COUNTDOWN AND HIDE HERO:
-          - Uncomment LazyCountdownComponent
-          - Comment out Hero section
-
-        TO SHOW HERO AND HIDE COUNTDOWN (current state):
-          - LazyCountdownComponent is commented out
-          - Hero section is active
-        ========================================
-      */}
-
-      {/* COUNTDOWN SECTION - Currently ACTIVE (visible) */}
-      {/* <LazyCountdownComponent /> */}
-
-      {/* HERO SECTION - Currently HIDDEN (commented out) */}
-      {/* To show: Remove the comment markers around the div block below */}
-      <div className="animate-slide-up">
+      {/* 1. What is this? - Hero Section */}
+      <div className="animate-slide-up h-screen w-full snap-start">
         <LazyHero />
       </div>
-    </main>
+
+      {/* 2. Pain + Gain Section */}
+      <div id="pain-gain" className="h-screen w-full snap-start">
+        <PainGainSection />
+      </div>
+
+      {/* 3. Try now action button - CTA Section */}
+      <div className="h-screen w-full snap-start">
+        <CtaSection />
+      </div>
+
+      {/* 4. Footer - Snap to end */}
+      <div className="w-full snap-start">
+        <SiteFooter />
+      </div>
+    </div>
   );
 }
