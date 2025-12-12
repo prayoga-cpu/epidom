@@ -122,7 +122,15 @@ export const authOptions: NextAuthOptions = {
       }
 
       // Refresh token from database if fields are missing (for existing sessions)
-      if (!token.currency || !token.locale || token.subscriptionStatus === undefined) {
+      // OR if the trigger is explicitly "update" (to ensure we get fresh data from DB, e.g. after subscription upgrade)
+      // OR if subscriptionStatus is null/undefined (to check if it has been updated)
+      if (
+        trigger === "update" ||
+        !token.currency ||
+        !token.locale ||
+        token.subscriptionStatus === undefined ||
+        token.subscriptionStatus === null
+      ) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },

@@ -8,11 +8,13 @@ import { CheckCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supplierOrderKeys } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 import { supplierKeys } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
+import { useSession } from "next-auth/react";
 
 // Note: We need to clear the access check cache so supplier queries will refetch after upgrade
 
 export default function CheckoutSuccessPage() {
   const { t } = useI18n();
+  const { update } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -57,7 +59,10 @@ export default function CheckoutSuccessPage() {
       queryKey: ["recipes"],
       exact: false,
     });
-  }, [queryClient]);
+
+    // Force session update to refresh subscription status in the JWT token
+    update();
+  }, [queryClient, update]);
 
   const handleContinue = () => {
     setIsLoading(true);

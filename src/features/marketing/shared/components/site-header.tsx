@@ -56,7 +56,7 @@
  * @component
  */
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -101,6 +101,12 @@ export const SiteHeader = memo(function SiteHeader({
   const router = useRouter();
   const { t } = useI18n();
   const { data: session, status } = useSession();
+  const [mounted, setMounted] = useState(false);
+
+  // Track mounted state for hydration safety
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   /**
    * BUTTON MODE SELECTION
@@ -271,130 +277,157 @@ export const SiteHeader = memo(function SiteHeader({
             </div>
           </div>
 
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-lg transition-colors hover:bg-white/20 md:hidden"
-                aria-label={t("common.nav.openMenu")}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  focusable="false"
+          {/* Mobile Menu - Only render Sheet after mount to prevent hydration mismatch */}
+          {!mounted ? (
+            // Static placeholder during SSR
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-lg transition-colors hover:bg-white/20 md:hidden"
+              aria-label={t("common.nav.openMenu")}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  d="M4 6h16M4 12h16M4 18h16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </Button>
+          ) : (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-lg transition-colors hover:bg-white/20 md:hidden"
+                  aria-label={t("common.nav.openMenu")}
                 >
-                  <path
-                    d="M4 6h16M4 12h16M4 18h16"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </Button>
-            </SheetTrigger>
-
-            <SheetContent side="right" className="flex w-80 flex-col p-0 sm:w-96 [&>button]:hidden">
-              <SheetTitle className="sr-only">{t("common.nav.navTitle")}</SheetTitle>
-
-              {/* Header Section */}
-              <div className="border-border/20 flex items-center justify-between border-b p-6">
-                <Link href="/" aria-label={t("common.nav.homepage")} className="flex items-center">
-                  <LogoWithSkeleton
-                    src="/images/logo-black.png"
-                    alt="EPIDOM logo"
-                    width={120}
-                    height={32}
-                    className="h-8 w-auto"
-                    filter="invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)"
-                    sizes="(max-width: 768px) 120px, 120px"
-                  />
-                  <span className="sr-only">{t("common.brand")}</span>
-                </Link>
-
-                {/* Close Button */}
-                <SheetClose asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    aria-label={t("common.nav.closeMenu")}
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
                   >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </SheetClose>
-              </div>
+                    <path
+                      d="M4 6h16M4 12h16M4 18h16"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </Button>
+              </SheetTrigger>
 
-              {/* Navigation Section */}
-              <nav aria-label="Mobile" className="flex-1 px-4 py-6">
-                {showNav && (
-                  <div className="space-y-2">
-                    <div className="text-muted-foreground px-3 py-2 text-xs font-semibold tracking-wider uppercase">
-                      {t("common.nav.menu")}
+              <SheetContent
+                side="right"
+                className="flex w-80 flex-col p-0 sm:w-96 [&>button]:hidden"
+              >
+                <SheetTitle className="sr-only">{t("common.nav.navTitle")}</SheetTitle>
+
+                {/* Header Section */}
+                <div className="border-border/20 flex items-center justify-between border-b p-6">
+                  <Link
+                    href="/"
+                    aria-label={t("common.nav.homepage")}
+                    className="flex items-center"
+                  >
+                    <LogoWithSkeleton
+                      src="/images/logo-black.png"
+                      alt="EPIDOM logo"
+                      width={120}
+                      height={32}
+                      className="h-8 w-auto"
+                      filter="invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)"
+                      sizes="(max-width: 768px) 120px, 120px"
+                    />
+                    <span className="sr-only">{t("common.brand")}</span>
+                  </Link>
+
+                  {/* Close Button */}
+                  <SheetClose asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      aria-label={t("common.nav.closeMenu")}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </SheetClose>
+                </div>
+
+                {/* Navigation Section */}
+                <nav aria-label="Mobile" className="flex-1 px-4 py-6">
+                  {showNav && (
+                    <div className="space-y-2">
+                      <div className="text-muted-foreground px-3 py-2 text-xs font-semibold tracking-wider uppercase">
+                        {t("common.nav.menu")}
+                      </div>
+
+                      <ul className="space-y-1">
+                        {/* Mobile navigation - Config-based */}
+                        {navigationItems.map(renderMobileNavLink)}
+                      </ul>
                     </div>
+                  )}
+                </nav>
 
-                    <ul className="space-y-1">
-                      {/* Mobile navigation - Config-based */}
-                      {navigationItems.map(renderMobileNavLink)}
-                    </ul>
-                  </div>
-                )}
-              </nav>
-
-              {/* Footer Section */}
-              <div className="border-border/20 border-t p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    {/* Mobile Button - Mode: Waitlist, Login/My Stores, or Logout */}
-                    {BUTTON_MODE === "waitlist" ? (
-                      // WAITLIST MODE: Always show waitlist button
-                      <SheetClose asChild>
-                        <div>
-                          <WaitlistDialog variant="sidebar" />
-                        </div>
-                      </SheetClose>
-                    ) : showLogout && session?.user ? (
-                      // LOGOUT MODE: Show logout button (for authenticated pages like stores/profile)
-                      <Button
-                        onClick={handleLogout}
-                        variant="outline"
-                        className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
-                      >
-                        {t("common.actions.logout")}
-                      </Button>
-                    ) : session?.user ? (
-                      // MY STORES MODE: Show My Stores button (for marketing pages when logged in)
-                      <SheetClose asChild>
+                {/* Footer Section */}
+                <div className="border-border/20 border-t p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      {/* Mobile Button - Mode: Waitlist, Login/My Stores, or Logout */}
+                      {BUTTON_MODE === "waitlist" ? (
+                        // WAITLIST MODE: Always show waitlist button
+                        <SheetClose asChild>
+                          <div>
+                            <WaitlistDialog variant="sidebar" />
+                          </div>
+                        </SheetClose>
+                      ) : showLogout && session?.user ? (
+                        // LOGOUT MODE: Show logout button (for authenticated pages like stores/profile)
                         <Button
-                          onClick={handleGoToStores}
+                          onClick={handleLogout}
                           variant="outline"
                           className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
                         >
-                          {t("common.nav.stores")}
+                          {t("common.actions.logout")}
                         </Button>
-                      </SheetClose>
-                    ) : (
-                      // LOGIN MODE: Show Login button (for marketing pages when not logged in or loading)
-                      <SheetClose asChild>
-                        <Button
-                          onClick={handleLogin}
-                          variant="outline"
-                          className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
-                        >
-                          {t("common.actions.login")}
-                        </Button>
-                      </SheetClose>
-                    )}
-                  </div>
-                  <div className="flex-shrink-0">
-                    <LangSwitcher />
+                      ) : session?.user ? (
+                        // MY STORES MODE: Show My Stores button (for marketing pages when logged in)
+                        <SheetClose asChild>
+                          <Button
+                            onClick={handleGoToStores}
+                            variant="outline"
+                            className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
+                          >
+                            {t("common.nav.stores")}
+                          </Button>
+                        </SheetClose>
+                      ) : (
+                        // LOGIN MODE: Show Login button (for marketing pages when not logged in or loading)
+                        <SheetClose asChild>
+                          <Button
+                            onClick={handleLogin}
+                            variant="outline"
+                            className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
+                          >
+                            {t("common.actions.login")}
+                          </Button>
+                        </SheetClose>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0">
+                      <LangSwitcher />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
       </nav>
     </header>

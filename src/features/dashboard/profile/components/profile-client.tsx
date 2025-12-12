@@ -9,6 +9,9 @@ import { StripeConnectCard } from "./stripe-connect-card";
 import { useProfile } from "../hooks/use-profile";
 import type { ProfileData } from "../types";
 
+import { useSession } from "next-auth/react";
+import { useEffect } from "react";
+
 interface ProfileClientProps {
   initialProfile: ProfileData;
   isOwner: boolean;
@@ -16,9 +19,27 @@ interface ProfileClientProps {
 
 export function ProfileClient({ initialProfile, isOwner }: ProfileClientProps) {
   const { t } = useI18n();
+  const { data: session, update } = useSession();
 
   // Use initial data from Server Component
   const { data: profileData = initialProfile, isLoading, isError } = useProfile(initialProfile);
+
+  // Sync session with profile data if subscription status mismatches
+  // This ensures that if the user upgraded but session is stale, visiting profile fixes it
+  useEffect(() => {
+    if (!profileData?.subscription || !session) return;
+
+    const profileStatus = profileData.subscription.status;
+    const sessionStatus = session.user.subscriptionStatus;
+
+    // Check if profile has ACTIVE status but session doesn't
+    const isProfileActive = profileStatus === "ACTIVE";
+    const isSessionActive = sessionStatus === "ACTIVE";
+
+    if (isProfileActive && !isSessionActive) {
+      update();
+    }
+  }, [profileData, session, update]);
 
   if (isError || !profileData) {
     return (
@@ -61,4 +82,3 @@ export function ProfileClient({ initialProfile, isOwner }: ProfileClientProps) {
     </div>
   );
 }
-
