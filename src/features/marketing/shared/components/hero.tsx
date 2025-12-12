@@ -35,7 +35,7 @@ export const Hero = React.memo(function Hero() {
       <div className="absolute inset-0 z-0 bg-[url('/grid-pattern.svg')] opacity-[0.03]" />
 
       {/* Main Content Wrapper - Centered Vertically */}
-      <div className="flex h-full w-full items-center justify-center px-4 pt-20 pb-8 sm:px-6 lg:px-8 lg:pt-0 lg:pb-0">
+      <div className="flex h-full w-full items-center justify-center px-4 pt-20 pb-8 sm:px-6 lg:px-8 lg:pt-32 lg:pb-0">
         <Container maxWidth="7xl" className="h-full w-full">
           <div className="grid h-full w-full grid-cols-1 content-center gap-8 lg:grid-cols-2 lg:gap-16">
             {/* 1. LEFT COLUMN: POWERFUL TEXT */}
@@ -51,8 +51,8 @@ export const Hero = React.memo(function Hero() {
               </div>
 
               <div className="space-y-6 lg:space-y-8">
-                <h1 className="text-brand-primary text-5xl leading-[1.1] font-extrabold tracking-tight sm:text-6xl md:text-7xl lg:text-6xl xl:text-7xl">
-                  The <br className="hidden lg:mb-2 lg:block" />
+                <h1 className="text-brand-primary text-5xl leading-[1.1] font-extrabold tracking-tight sm:text-6xl md:text-6xl lg:text-[3.5rem] xl:text-[4.25rem]">
+                  The{" "}
                   <span className="from-brand-primary bg-gradient-to-r to-gray-500 bg-clip-text pb-2 text-transparent">
                     Secret Ingredient
                   </span>{" "}
