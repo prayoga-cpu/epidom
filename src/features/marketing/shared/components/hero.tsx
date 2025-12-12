@@ -86,7 +86,11 @@ export const Hero = React.memo(function Hero() {
                     <div className="h-2.5 w-2.5 rounded-full bg-red-400/80 lg:h-3 lg:w-3" />
                     <div className="h-2.5 w-2.5 rounded-full bg-yellow-400/80 lg:h-3 lg:w-3" />
                     <div className="h-2.5 w-2.5 rounded-full bg-green-400/80 lg:h-3 lg:w-3" />
-                    <div className="ml-2 h-4 w-full max-w-[200px] rounded bg-gray-200/50 lg:ml-4 lg:h-5 lg:max-w-[300px]" />
+                    <div className="ml-2 flex h-4 w-full max-w-[200px] items-center rounded bg-gray-200/50 px-2 lg:ml-4 lg:h-5 lg:max-w-[300px]">
+                      <span className="text-[9px] font-medium text-gray-500 lg:text-[11px]">
+                        epidom.fr
+                      </span>
+                    </div>
                   </div>
 
                   {/* Dashboard Image */}
@@ -98,13 +102,15 @@ export const Hero = React.memo(function Hero() {
                       src="/images/dashboard.png"
                       alt="Epidom Dashboard"
                       fill
-                      className={cn(
-                        "object-cover object-left-top transition-opacity duration-700",
-                        imageLoaded ? "opacity-100" : "opacity-0"
-                      )}
+                      className="object-cover object-left-top"
                       onLoad={() => setImageLoaded(true)}
+                      onError={(e) => {
+                        console.error("Dashboard image failed to load");
+                        setImageLoaded(true); // Hide skeleton even on error
+                      }}
                       priority
                       sizes="(max-width: 768px) 100vw, 800px"
+                      unoptimized
                     />
                   </div>
                 </div>
