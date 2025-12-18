@@ -7,19 +7,16 @@
  * Features:
  * - Prevents hydration mismatch with mounted state
  * - Uses IntersectionObserver for scroll-triggered animations
- * - Includes fallback timer in case observer fails
  *
  * @module
  */
 
 import { useState, useEffect, useRef, RefObject } from "react";
-import { ANIMATION_TIMING, INTERSECTION_OPTIONS } from "@/lib/constants/animations";
+import { INTERSECTION_OPTIONS } from "@/lib/constants/animations";
 
 interface UseSectionVisibilityOptions {
   /** IntersectionObserver threshold (0-1) */
   threshold?: number;
-  /** Fallback delay in ms to ensure visibility */
-  fallbackDelay?: number;
 }
 
 interface UseSectionVisibilityReturn<T extends HTMLElement> {
@@ -52,22 +49,16 @@ interface UseSectionVisibilityReturn<T extends HTMLElement> {
 export function useSectionVisibility<T extends HTMLElement>(
   options: UseSectionVisibilityOptions = {}
 ): UseSectionVisibilityReturn<T> {
-  const {
-    threshold = INTERSECTION_OPTIONS.threshold,
-    fallbackDelay = ANIMATION_TIMING.VISIBILITY_FALLBACK,
-  } = options;
+  const { threshold = INTERSECTION_OPTIONS.threshold } = options;
 
   const ref = useRef<T>(null!);
   const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
-  // Handle mounting with fallback visibility timer
+  // Handle mounting
   useEffect(() => {
     setMounted(true);
-    // Safety fallback: ensure content becomes visible even if observer fails
-    const timer = setTimeout(() => setIsVisible(true), fallbackDelay);
-    return () => clearTimeout(timer);
-  }, [fallbackDelay]);
+  }, []);
 
   // Setup IntersectionObserver after mount
   useEffect(() => {
@@ -94,3 +85,4 @@ export function useSectionVisibility<T extends HTMLElement>(
 
   return { ref, mounted, isVisible };
 }
+

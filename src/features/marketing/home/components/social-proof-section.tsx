@@ -16,6 +16,7 @@ import { Container } from "@/features/marketing/shared/components/container";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
 import { ANIMATION_TIMING } from "@/lib/constants/animations";
+import { SSRPlaceholder } from "@/components/shared";
 
 const TESTIMONIALS = [
   { id: 1, rating: 5 },
@@ -38,20 +39,21 @@ export function SocialProofSection() {
   useEffect(() => {
     if (isHovered) return;
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % 3);
+      setCurrentIndex((prev) => (prev + 1) % TESTIMONIALS.length);
     }, ANIMATION_TIMING.CAROUSEL_INTERVAL);
     return () => clearInterval(timer);
   }, [isHovered]);
 
-  const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + 3) % 3);
-  const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % 3);
+  const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length);
+  const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % TESTIMONIALS.length);
 
   // Return placeholder during SSR
   if (!mounted) {
     return (
-      <section className="relative overflow-hidden bg-gradient-to-b from-white to-gray-50/50 py-20 md:py-28">
-        <div className="h-[500px]" />
-      </section>
+      <SSRPlaceholder
+        height="500px"
+        className="bg-gradient-to-b from-white to-gray-50/50 py-20 md:py-28"
+      />
     );
   }
 
@@ -190,7 +192,7 @@ export function SocialProofSection() {
               role="tablist"
               aria-label="Testimonial navigation"
             >
-              {[0, 1, 2].map((index) => (
+              {TESTIMONIALS.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentIndex(index)}

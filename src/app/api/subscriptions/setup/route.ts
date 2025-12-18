@@ -19,9 +19,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession, Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
-import { createSuccessResponse, createErrorResponse } from "@/lib/api/response";
-import { ApiErrorCode } from "@/lib/api/error-codes";
-import { handleApiError } from "@/lib/api/error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { handleApiError } from "@/lib/utils/api-error-handler";
 import { userRepository } from "@/lib/repositories/user.repository";
 import { subscriptionRepository } from "@/lib/repositories/subscription.repository";
 

@@ -21,6 +21,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { Container } from "@/features/marketing/shared/components/container";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SSRPlaceholder } from "@/components/shared";
 
 export function HeroSection() {
   const router = useRouter();
@@ -37,17 +38,16 @@ export function HeroSection() {
   };
 
   const handleDemo = () => {
-    router.push("/contact");
+    window.open("https://calendly.com/prayogadevelopment/30min", "_blank");
   };
 
   // Return placeholder during SSR to avoid hydration mismatch
   if (!mounted) {
     return (
-      <section className="relative flex min-h-[calc(100vh-4rem)] w-full flex-col overflow-hidden bg-white">
-        <div className="flex flex-1 items-center justify-center">
-          <div className="h-96 w-full max-w-7xl" />
-        </div>
-      </section>
+      <SSRPlaceholder
+        height="calc(100vh - 4rem)"
+        className="bg-white"
+      />
     );
   }
 

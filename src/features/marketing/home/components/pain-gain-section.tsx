@@ -17,6 +17,7 @@ import { X, Check, ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { useSectionVisibility } from "@/hooks/use-section-visibility";
 import { INTERSECTION_OPTIONS, getStaggerDelay } from "@/lib/constants/animations";
+import { SSRPlaceholder } from "@/components/shared";
 
 const OLD_WAY_ITEMS = ["manualSpreadsheets", "foodWaste", "guessingOrders", "unclearCosts"];
 
@@ -32,9 +33,10 @@ export function PainGainSection() {
   // Return placeholder during SSR
   if (!mounted) {
     return (
-      <section className="relative overflow-hidden bg-gray-50 py-20 md:py-28">
-        <div className="h-[500px]" />
-      </section>
+      <SSRPlaceholder
+        height="500px"
+        className="bg-gray-50 py-20 md:py-28"
+      />
     );
   }
 
