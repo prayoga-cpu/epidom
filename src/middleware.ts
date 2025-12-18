@@ -50,6 +50,7 @@ export default async function middleware(req: NextRequest) {
     "/register",
     "/checkout/success",
     "/checkout/failed",
+    "/onboarding", // Card validation step
   ];
 
   // Check if current path is a public route

@@ -49,88 +49,48 @@ export function SocialProofSection() {
   // Return placeholder during SSR
   if (!mounted) {
     return (
-      <section className="relative bg-gradient-to-b from-white to-gray-50/50 py-20 md:py-28 overflow-hidden">
+      <section className="relative overflow-hidden bg-gradient-to-b from-white to-gray-50/50 py-20 md:py-28">
         <div className="h-[500px]" />
       </section>
     );
   }
 
   return (
-    <section className="relative bg-gradient-to-b from-white to-gray-50/50 py-20 md:py-28 overflow-hidden">
+    <section className="relative overflow-hidden bg-gradient-to-b from-white to-gray-50/50 py-20 md:py-28">
       <Container maxWidth="7xl" className="px-4 sm:px-6 lg:px-8">
-
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <p className="text-brand-primary/50 text-sm font-semibold uppercase tracking-widest mb-4">
+        <div className="mb-16 text-center">
+          <p className="text-brand-primary/50 mb-4 text-sm font-semibold tracking-widest uppercase">
             {t("home.socialProof.trustedBy")}
           </p>
         </div>
 
         {/* Infinite Scroll Logo Marquee - using globals.css animation */}
-        <div className="relative mb-20 -mx-4 sm:-mx-6 lg:-mx-8">
-          <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-white to-transparent z-10" aria-hidden="true" />
-          <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white to-transparent z-10" aria-hidden="true" />
-
-          <div className="flex overflow-hidden">
-            <div className="flex animate-marquee gap-12 py-4">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={`logo-1-${i}`}
-                  className="flex-shrink-0 w-40 h-20 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center justify-center hover:shadow-lg hover:scale-105 transition-all duration-300 group"
-                >
-                  {i === 3 || i === 7 ? (
-                    <div className="text-center px-4">
-                      <span className="text-brand-primary/40 font-medium text-xs block">
-                        {t("home.socialProof.yourBrand")}
-                      </span>
-                      <span className="text-[10px] text-brand-primary/30">
-                        +
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                      <span className="text-3xl" aria-hidden="true">🍪</span>
-                      <span className="text-brand-primary/70 font-semibold text-sm">
-                        Cookie Bar {(i % 4) + 1}
-                      </span>
-                    </div>
-                  )}
+        {/* Static Logo Grid - Simplified */}
+        <div className="mb-20">
+          <div className="flex flex-wrap justify-center gap-8 md:gap-12">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={`logo-${i}`}
+                className="group flex h-20 w-40 items-center justify-center rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md"
+              >
+                <div className="flex items-center gap-2 opacity-60 transition-opacity group-hover:opacity-100">
+                  <span className="text-3xl" aria-hidden="true">
+                    🍪
+                  </span>
+                  <span className="text-brand-primary/70 text-sm font-semibold">
+                    Cookie Bar {i + 1}
+                  </span>
                 </div>
-              ))}
-            </div>
-            <div className="flex animate-marquee gap-12 py-4" aria-hidden="true">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={`logo-2-${i}`}
-                  className="flex-shrink-0 w-40 h-20 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center justify-center hover:shadow-lg hover:scale-105 transition-all duration-300 group"
-                >
-                  {i === 3 || i === 7 ? (
-                    <div className="text-center px-4">
-                      <span className="text-brand-primary/40 font-medium text-xs block">
-                        {t("home.socialProof.yourBrand")}
-                      </span>
-                      <span className="text-[10px] text-brand-primary/30">
-                        +
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                      <span className="text-3xl">🍪</span>
-                      <span className="text-brand-primary/70 font-semibold text-sm">
-                        Cookie Bar {(i % 4) + 1}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Instagram/Testimonials Section */}
         <div className="mt-8">
-          <div className="text-center mb-12">
-            <h3 className="text-brand-primary text-3xl md:text-4xl font-bold mb-4">
+          <div className="mb-12 text-center">
+            <h3 className="text-brand-primary mb-4 text-3xl font-bold md:text-4xl">
               {t("home.socialProof.instagramTitle")}
             </h3>
             <p className="text-brand-primary/60 text-lg">
@@ -140,7 +100,7 @@ export function SocialProofSection() {
 
           {/* Premium Testimonial Carousel */}
           <div
-            className="relative max-w-4xl mx-auto"
+            className="relative mx-auto max-w-4xl"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
@@ -150,18 +110,18 @@ export function SocialProofSection() {
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
               >
                 {TESTIMONIALS.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="min-w-full"
-                  >
-                    <div className="relative bg-gradient-to-br from-brand-primary to-gray-700 p-8 md:p-12 lg:p-16 text-white">
+                  <div key={item.id} className="min-w-full">
+                    <div className="from-brand-primary relative bg-gradient-to-br to-gray-700 p-8 text-white md:p-12 lg:p-16">
                       {/* Decorative quote */}
-                      <Quote className="absolute top-6 left-6 md:top-8 md:left-8 w-12 h-12 md:w-16 md:h-16 text-white/10" aria-hidden="true" />
+                      <Quote
+                        className="absolute top-6 left-6 h-12 w-12 text-white/10 md:top-8 md:left-8 md:h-16 md:w-16"
+                        aria-hidden="true"
+                      />
 
-                      <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                      <div className="relative z-10 flex flex-col items-center gap-8 md:flex-row">
                         {/* Avatar */}
                         <div className="flex-shrink-0">
-                          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-white/20 to-white/5 border-2 border-white/30 flex items-center justify-center text-3xl md:text-4xl font-bold shadow-xl">
+                          <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-white/30 bg-gradient-to-br from-white/20 to-white/5 text-3xl font-bold shadow-xl md:h-24 md:w-24 md:text-4xl">
                             {t(`home.socialProof.author${index + 1}`).charAt(0)}
                           </div>
                         </div>
@@ -169,21 +129,28 @@ export function SocialProofSection() {
                         {/* Content */}
                         <div className="flex-1 text-center md:text-left">
                           {/* Stars */}
-                          <div className="flex justify-center md:justify-start gap-1 mb-4" aria-label={`${item.rating} out of 5 stars`}>
+                          <div
+                            className="mb-4 flex justify-center gap-1 md:justify-start"
+                            aria-label={`${item.rating} out of 5 stars`}
+                          >
                             {[...Array(item.rating)].map((_, i) => (
-                              <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" aria-hidden="true" />
+                              <Star
+                                key={i}
+                                className="fill-brand-primary/20 text-brand-primary h-5 w-5"
+                                aria-hidden="true"
+                              />
                             ))}
                           </div>
 
-                          <p className="text-xl md:text-2xl lg:text-3xl font-light leading-relaxed mb-6">
+                          <p className="mb-6 text-xl leading-relaxed font-light md:text-2xl lg:text-3xl">
                             &ldquo;{t(`home.socialProof.testimonial${index + 1}`)}&rdquo;
                           </p>
 
                           <div>
-                            <p className="font-bold text-lg">
+                            <p className="text-lg font-bold">
                               {t(`home.socialProof.author${index + 1}`)}
                             </p>
-                            <p className="text-white/60 text-sm">
+                            <p className="text-sm text-white/60">
                               {t(`home.socialProof.role${index + 1}`)}
                             </p>
                           </div>
@@ -191,7 +158,10 @@ export function SocialProofSection() {
                       </div>
 
                       {/* Decorative elements */}
-                      <div className="absolute bottom-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-3xl" aria-hidden="true" />
+                      <div
+                        className="absolute right-0 bottom-0 h-40 w-40 rounded-full bg-white/5 blur-3xl"
+                        aria-hidden="true"
+                      />
                     </div>
                   </div>
                 ))}
@@ -201,36 +171,40 @@ export function SocialProofSection() {
             {/* Navigation Arrows */}
             <button
               onClick={prevSlide}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 lg:-translate-x-6 w-12 h-12 rounded-full bg-white shadow-xl border border-gray-100 flex items-center justify-center hover:bg-gray-50 hover:scale-110 transition-all duration-300 group"
+              className="group absolute top-1/2 left-0 flex h-12 w-12 -translate-x-4 -translate-y-1/2 items-center justify-center rounded-full border border-gray-100 bg-white shadow-xl transition-all duration-300 hover:scale-110 hover:bg-gray-50 lg:-translate-x-6"
               aria-label="Previous testimonial"
             >
-              <ChevronLeft className="w-6 h-6 text-brand-primary group-hover:-translate-x-0.5 transition-transform" />
+              <ChevronLeft className="text-brand-primary h-6 w-6 transition-transform group-hover:-translate-x-0.5" />
             </button>
             <button
               onClick={nextSlide}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 lg:translate-x-6 w-12 h-12 rounded-full bg-white shadow-xl border border-gray-100 flex items-center justify-center hover:bg-gray-50 hover:scale-110 transition-all duration-300 group"
+              className="group absolute top-1/2 right-0 flex h-12 w-12 translate-x-4 -translate-y-1/2 items-center justify-center rounded-full border border-gray-100 bg-white shadow-xl transition-all duration-300 hover:scale-110 hover:bg-gray-50 lg:translate-x-6"
               aria-label="Next testimonial"
             >
-              <ChevronRight className="w-6 h-6 text-brand-primary group-hover:translate-x-0.5 transition-transform" />
+              <ChevronRight className="text-brand-primary h-6 w-6 transition-transform group-hover:translate-x-0.5" />
             </button>
 
             {/* Progress indicators */}
-            <div className="flex justify-center gap-3 mt-8" role="tablist" aria-label="Testimonial navigation">
+            <div
+              className="mt-8 flex justify-center gap-3"
+              role="tablist"
+              aria-label="Testimonial navigation"
+            >
               {[0, 1, 2].map((index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentIndex(index)}
-                  className={`relative h-2 rounded-full transition-all duration-500 overflow-hidden ${
+                  className={`relative h-2 overflow-hidden rounded-full transition-all duration-500 ${
                     currentIndex === index
                       ? "bg-brand-primary w-12"
-                      : "bg-gray-300 w-2 hover:bg-gray-400"
+                      : "w-2 bg-gray-300 hover:bg-gray-400"
                   }`}
                   role="tab"
                   aria-selected={currentIndex === index}
                   aria-label={`Go to testimonial ${index + 1}`}
                 >
                   {currentIndex === index && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-gray-600 animate-pulse" />
+                    <div className="from-brand-primary absolute inset-0 animate-pulse bg-gradient-to-r to-gray-600" />
                   )}
                 </button>
               ))}

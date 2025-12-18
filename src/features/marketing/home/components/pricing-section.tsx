@@ -1,13 +1,10 @@
 "use client";
 
 /**
- * Pricing Section - PREMIUM Edition
+ * Pricing Section - With Promo Banner
  *
- * Features:
- * - 3D card effects
- * - Animated highlights
- * - Premium hover interactions
- * - Glassmorphism on popular card
+ * Shows all pricing tiers, but ends with a prominent
+ * promotional banner highlighting the FREE offer.
  *
  * @component
  */
@@ -15,7 +12,7 @@
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Container } from "@/features/marketing/shared/components/container";
-import { Check, Sparkles, Star, Crown, ArrowRight, Zap } from "lucide-react";
+import { Check, Sparkles, Crown, ArrowRight, Zap, Gift, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSectionVisibility } from "@/hooks/use-section-visibility";
@@ -23,19 +20,10 @@ import { getFeatureDelay, getStaggerDelay } from "@/lib/constants/animations";
 
 const PRICING_TIERS = [
   {
-    key: "free",
-    icon: Sparkles,
-    price: "€0",
-    period: "",
-    popular: false,
-    features: ["freeTrial", "limitedTime", "creditCard", "fullAccess"],
-  },
-  {
     key: "pro",
     icon: Zap,
     price: "€79",
     period: "/mo",
-    popular: true,
     features: ["multiStore", "unlimited", "advanced", "priority", "whatsapp"],
   },
   {
@@ -43,7 +31,6 @@ const PRICING_TIERS = [
     icon: Crown,
     price: "Custom",
     period: "",
-    popular: false,
     features: ["franchise", "dedicated", "custom", "onboarding"],
   },
 ];
@@ -62,161 +49,153 @@ export function PricingSection() {
     }
   };
 
-  // Return placeholder during SSR to avoid hydration mismatch
+  // Return placeholder during SSR
   if (!mounted) {
     return (
-      <section className="relative bg-white py-20 md:py-28 overflow-hidden">
-        <div className="h-[600px]" />
+      <section className="relative overflow-hidden bg-white py-20 md:py-28">
+        <div className="h-[800px]" />
       </section>
     );
   }
 
   return (
-    <section ref={ref} className="relative bg-white py-20 md:py-28 overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0" aria-hidden="true">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-brand-primary/5 to-transparent rounded-full" />
-      </div>
-
-      <Container maxWidth="7xl" className="px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Header */}
-        <div className={`text-center mb-20 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-          <div className="inline-flex items-center gap-2 bg-brand-primary/5 rounded-full px-4 py-2 mb-6">
-            <Star className="w-4 h-4 text-amber-500" aria-hidden="true" />
-            <span className="text-sm font-medium text-brand-primary">
-              {t("home.pricing.ribbon")}
-            </span>
-          </div>
-
-          <h2 className="text-brand-primary text-4xl sm:text-5xl md:text-6xl font-bold mb-6">
+    <section ref={ref} className="relative overflow-hidden bg-white py-20 md:py-28">
+      <Container maxWidth="6xl" className="relative z-10 px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
+        <div
+          className={`mb-16 text-center transition-all duration-1000 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          }`}
+        >
+          <h2 className="text-brand-primary mb-4 text-3xl font-bold sm:text-4xl md:text-5xl">
             {t("home.pricing.headline")}
           </h2>
-          <p className="text-brand-primary/60 text-lg md:text-xl max-w-2xl mx-auto">
+          <p className="text-brand-primary/60 mx-auto max-w-2xl text-lg">
             {t("home.pricing.subheadline")}
           </p>
         </div>
 
-        {/* Pricing Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">
-          {PRICING_TIERS.map(({ key, icon: Icon, price, period, popular, features }, index) => (
+        {/* Pricing Cards - Pro and Custom only */}
+        <div className="mx-auto mb-16 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
+          {PRICING_TIERS.map(({ key, icon: Icon, price, period, features }, index) => (
             <article
               key={key}
               className={`relative transition-all duration-700 ${
-                isVisible
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-8"
-              } ${popular ? "md:-mt-8 md:mb-8" : ""}`}
+                isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+              }`}
               style={{ transitionDelay: getStaggerDelay(index, 150) }}
               onMouseEnter={() => setHoveredCard(key)}
               onMouseLeave={() => setHoveredCard(null)}
             >
               <div
-                className={`relative rounded-3xl p-8 transition-all duration-500 ${
-                  popular
-                    ? "bg-gradient-to-br from-brand-primary to-gray-800 text-white shadow-2xl"
-                    : "bg-white border-2 border-gray-100 hover:border-gray-200 hover:shadow-xl"
-                } ${hoveredCard === key ? "scale-105" : ""}`}
+                className={`relative h-full rounded-2xl border border-gray-200 bg-white p-6 transition-all duration-300 ${
+                  hoveredCard === key ? "shadow-xl" : "shadow-sm"
+                }`}
               >
-                {/* Popular Badge with animation */}
-                {popular && (
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-amber-400 rounded-full blur-md animate-pulse" aria-hidden="true" />
-                      <div className="relative bg-gradient-to-r from-amber-400 to-orange-500 text-brand-primary px-6 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2">
-                        <Zap className="w-4 h-4" aria-hidden="true" />
-                        {t("home.pricing.mostPopular")}
-                      </div>
+                <div className="flex h-full flex-col">
+                  {/* Icon & Name */}
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="bg-brand-primary/5 flex h-10 w-10 items-center justify-center rounded-xl">
+                      <Icon className="text-brand-primary h-5 w-5" aria-hidden="true" />
                     </div>
+                    <h3 className="text-brand-primary text-lg font-bold">
+                      {t(`home.pricing.${key}.name`)}
+                    </h3>
                   </div>
-                )}
-
-                <div className="flex flex-col h-full">
-                  {/* Icon */}
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${
-                    popular
-                      ? "bg-white/10 backdrop-blur-sm"
-                      : "bg-brand-primary/5"
-                  }`}>
-                    <Icon className={`w-7 h-7 ${popular ? "text-white" : "text-brand-primary"}`} aria-hidden="true" />
-                  </div>
-
-                  {/* Plan Name */}
-                  <h3 className={`text-2xl font-bold mb-4 ${popular ? "text-white" : "text-brand-primary"}`}>
-                    {t(`home.pricing.${key}.name`)}
-                  </h3>
 
                   {/* Price */}
-                  <div className="mb-8">
-                    <div className="flex items-baseline gap-1">
-                      <span className={`text-5xl font-bold ${popular ? "text-white" : "text-brand-primary"}`}>
-                        {price}
-                      </span>
-                      {period && (
-                        <span className={`text-lg ${popular ? "text-white/60" : "text-brand-primary/40"}`}>
-                          {period}
-                        </span>
-                      )}
-                    </div>
+                  <div className="mb-4">
+                    <span className="text-brand-primary text-3xl font-bold">{price}</span>
+                    {period && <span className="text-brand-primary/40 text-sm">{period}</span>}
                   </div>
 
                   {/* Features */}
-                  <ul className="space-y-4 mb-8 flex-1" role="list">
+                  <ul className="mb-6 flex-1 space-y-2" role="list">
                     {features.map((feature, i) => (
                       <li
                         key={feature}
-                        className="flex items-start gap-3"
+                        className="text-brand-primary/70 flex items-start gap-2 text-sm"
                         style={{
                           opacity: isVisible ? 1 : 0,
-                          transform: isVisible ? "translateX(0)" : "translateX(-10px)",
-                          transition: `all 0.5s ease`,
+                          transition: `opacity 0.5s ease`,
                           transitionDelay: getFeatureDelay(index, i),
                         }}
                       >
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          popular ? "bg-white/20" : "bg-brand-primary/10"
-                        }`} aria-hidden="true">
-                          <Check className={`w-3 h-3 ${popular ? "text-white" : "text-brand-primary"}`} />
-                        </div>
-                        <span className={`text-sm ${popular ? "text-white/90" : "text-brand-primary/70"}`}>
-                          {t(`home.pricing.${key}.features.${feature}`)}
-                        </span>
+                        <Check className="text-brand-primary/40 mt-0.5 h-4 w-4 flex-shrink-0" />
+                        {t(`home.pricing.${key}.features.${feature}`)}
                       </li>
                     ))}
                   </ul>
 
-                  {/* CTA Button */}
+                  {/* CTA */}
                   <Button
                     onClick={() => handleSelectPlan(key)}
-                    className={`w-full py-6 rounded-2xl font-semibold transition-all duration-300 group ${
-                      popular
-                        ? "bg-white text-brand-primary hover:bg-gray-100 shadow-lg hover:shadow-xl"
-                        : "bg-brand-primary text-white hover:bg-brand-primary/90"
-                    }`}
+                    variant="outline"
+                    className="border-brand-primary/20 text-brand-primary hover:bg-brand-primary w-full rounded-xl hover:text-white"
                   >
-                    <span className="flex items-center justify-center gap-2">
-                      {key === "custom" ? t("home.pricing.custom.cta") : t("home.pricing.cta")}
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-                    </span>
+                    {key === "custom" ? t("home.pricing.custom.cta") : t("home.pricing.cta")}
                   </Button>
                 </div>
-
-                {/* Shine effect on hover */}
-                {popular && (
-                  <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none" aria-hidden="true">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  </div>
-                )}
               </div>
             </article>
           ))}
         </div>
 
-        {/* Bottom Note */}
-        <div className={`mt-16 text-center transition-all duration-1000 delay-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
-          <p className="text-brand-primary/40 text-sm">
-            {t("home.pricing.note")}
-          </p>
+        {/* ========================================
+            PROMO BANNER - The Main Highlight!
+            ======================================== */}
+        <div
+          className={`from-brand-primary to-brand-primary relative overflow-hidden rounded-3xl bg-gradient-to-r via-gray-800 p-8 shadow-2xl transition-all delay-300 duration-1000 md:p-12 ${
+            isVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-8 scale-95 opacity-0"
+          }`}
+        >
+          {/* Background glow */}
+          <div className="absolute inset-0" aria-hidden="true">
+            <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+            <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+          </div>
+
+          <div className="relative z-10 flex flex-col items-center gap-6 text-center md:flex-row md:justify-between md:text-left">
+            {/* Left: Promo Message */}
+            <div className="flex-1">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+                <Clock className="h-4 w-4 text-white" />
+                <span className="text-xs font-semibold tracking-wider text-white uppercase">
+                  {t("home.pricing.free.features.limitedTime")}
+                </span>
+              </div>
+              <h3 className="mb-2 text-2xl font-bold text-white md:text-3xl lg:text-4xl">
+                🎉 {t("home.pricing.free.name")}
+              </h3>
+              <p className="text-white/70">
+                {t("home.pricing.free.features.fullAccess")} •{" "}
+                {t("home.pricing.free.features.creditCard")}
+              </p>
+            </div>
+
+            {/* Center: Price */}
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-8 w-8 text-white/80" />
+              <span className="text-5xl font-black text-white md:text-6xl lg:text-7xl">€0</span>
+            </div>
+
+            {/* Right: CTA */}
+            <div className="flex-shrink-0">
+              <Button
+                onClick={() => router.push("/register")}
+                size="lg"
+                className="group text-brand-primary cursor-pointer rounded-full bg-white px-8 py-6 text-base font-bold shadow-xl transition-all duration-300 hover:scale-105 hover:bg-gray-100"
+              >
+                <Gift className="mr-2 h-5 w-5" />
+                {t("home.pricing.cta")}
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </div>
+          </div>
         </div>
+
+        {/* Bottom Note */}
+        <p className="text-brand-primary/40 mt-8 text-center text-sm">{t("home.pricing.note")}</p>
       </Container>
     </section>
   );

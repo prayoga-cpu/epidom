@@ -97,13 +97,65 @@ export async function POST(request: NextRequest) {
 
 /**
  * Handle checkout.session.completed
- * Activate subscription after successful payment
+ * Handles both subscription mode AND setup mode (card validation)
  */
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId;
-  const plan = session.metadata?.plan as "STARTER" | "PRO";
+  const plan = session.metadata?.plan as "STARTER" | "PRO" | undefined;
+  const promotion = session.metadata?.promotion;
 
-  if (!userId || !plan) {
+  if (!userId) {
+    return;
+  }
+
+  // ============================================
+  // SETUP MODE: Card validation for free promo
+  // ============================================
+  if (session.mode === "setup" && promotion === "new_year_2025") {
+    // User validated their card for the New Year promotion
+    // Grant them PRO plan until Dec 31, 2025
+
+    const promoEndDate = new Date("2025-12-31T23:59:59Z");
+    const now = new Date();
+
+    // Check if already has subscription
+    const existingSubscription = await subscriptionRepository.findByUserId(userId);
+
+    if (existingSubscription) {
+      // Update existing subscription
+      await subscriptionRepository.update(userId, {
+        plan: SubscriptionPlan.PRO,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodStart: now,
+        currentPeriodEnd: promoEndDate,
+        cancelAtPeriodEnd: false,
+        // No stripeSubscriptionId since this is not a recurring subscription
+        stripeSubscriptionId: null,
+        stripePriceId: null,
+      });
+    } else {
+      // Create new subscription for the promo
+      await subscriptionRepository.create({
+        userId,
+        stripeCustomerId: session.customer as string,
+        stripeSubscriptionId: null, // No recurring subscription
+        stripePriceId: null,
+        plan: SubscriptionPlan.PRO,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodStart: now,
+        currentPeriodEnd: promoEndDate,
+      });
+    }
+
+    // Invalidate cache
+    subscriptionService.invalidateUserCache(userId);
+    return;
+  }
+
+  // ============================================
+  // SUBSCRIPTION MODE: Regular paid subscription
+  // ============================================
+  if (!plan) {
     return;
   }
 

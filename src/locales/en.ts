@@ -165,7 +165,8 @@ export const en = {
       headlineHighlight: "Ingredient",
       headlinePart2: "for Your Cookie Bar",
       headline: "Secret Way of Cookie Bars Inventory Management",
-      description: "Track your cookies stock on mobile, manage it everywhere real-time, & auto-restock in seconds",
+      description:
+        "Track your cookies stock on mobile, manage it everywhere real-time, & auto-restock in seconds",
       ctaStartFree: "Start for free",
       ctaDemo: "1 on 1 Demo",
       mockupTitle: "Cookie Bar Dashboard",
@@ -194,7 +195,8 @@ export const en = {
     },
     howToUse: {
       headline: "Create, Tracking, Alerts",
-      description: "We are popular on solving cookie bar's overwhelmed management to smart expiry alerts, especially in France",
+      description:
+        "We are popular on solving cookie bar's overwhelmed management to smart expiry alerts, especially in France",
       aiGenerated: "AI Generated Contents for better productivity",
       features: {
         profile: {
@@ -262,7 +264,8 @@ export const en = {
     },
     painGain: {
       headline: "Stop Food Waste & Lose Money",
-      description: "Compare how Epidom transforms your traditional operations into efficient modern methods",
+      description:
+        "Compare how Epidom transforms your traditional operations into efficient modern methods",
       oldWay: {
         title: "The Old Way",
         subtitle: "Traditional Method",
@@ -3214,6 +3217,40 @@ export const en = {
         "Your card hasn't been charged. Please review the error above and try again. If you continue to have issues, please contact support.",
       tryAgainButton: "Try Again",
       chargeNotApplied: "No charges have been applied to your account.",
+    },
+  },
+  onboarding: {
+    title: "One Last Step!",
+    subtitle: "Add your card to unlock your free PRO access",
+    canceledTitle: "Card validation canceled",
+    canceledMessage:
+      "You need to validate your card to access the PRO features. No charge will be made.",
+    cardTitle: "New Year's Special",
+    cardDescription: "Get PRO plan free until December 31, 2025",
+    whatYouGet: "What you'll get:",
+    features: {
+      fullAccess: "Full access to all PRO features",
+      unlimited: "Unlimited products and recipes",
+      analytics: "Advanced analytics and reports",
+      emailSupport: "Priority email support",
+      whatsappSupport: "WhatsApp support channel",
+    },
+    whyCard: "Why do we need your card?",
+    whyCardExplanation:
+      "Your card will be validated but not charged. It's saved for when the promotion ends (Jan 1, 2026), so you can seamlessly continue with a paid plan if you choose.",
+    securedBy: "Secured by Stripe • 256-bit SSL encryption",
+    addCardButton: "Add Card & Get PRO Access",
+    skipButton: "Skip for now (limited access)",
+    pleaseWait: "Please wait...",
+    termsNote:
+      "By continuing, you agree to our Terms of Service and Privacy Policy. Your card will not be charged during the promotional period.",
+    success: {
+      title: "Welcome to PRO!",
+      subtitle: "Your card has been validated. Enjoy full PRO access!",
+      planActive: "PRO Plan Active",
+      validUntil: "Valid until December 31, 2025",
+      goToDashboard: "Go to Dashboard",
+      redirecting: "Redirecting to dashboard in {seconds} seconds...",
     },
   },
   notFound: {

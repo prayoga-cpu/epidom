@@ -208,8 +208,13 @@ body.dialog-open {
 
 /* Gradient text animation for hero headlines */
 @keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .animate-gradient-text {
@@ -219,8 +224,13 @@ body.dialog-open {
 
 /* Slow bounce for floating cards */
 @keyframes bounce-slow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .animate-bounce-slow {
@@ -229,7 +239,8 @@ body.dialog-open {
 
 /* Floating particles effect */
 @keyframes float-particle {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) translateX(0);
     opacity: 0.2;
   }
@@ -253,8 +264,12 @@ body.dialog-open {
 
 /* Infinite horizontal marquee scroll */
 @keyframes marquee-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-100%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 .animate-marquee {
@@ -264,6 +279,27 @@ body.dialog-open {
 /* Radial gradient background utility */
 .bg-gradient-radial {
   background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* ========================================
+   PAPER TEXTURE OVERLAY
+   Subtle noise texture for premium feel
+   ======================================== */
+
+/* Paper texture using actual SVG file */
+.paper-texture {
+  position: relative;
+}
+
+.paper-texture::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("/noise-texture.svg");
+  background-repeat: repeat;
+  background-size: 300px 300px;
 }
 
 /* ========================================

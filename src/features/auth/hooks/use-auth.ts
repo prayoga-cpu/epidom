@@ -30,12 +30,17 @@ export function useLogin() {
 
 /**
  * Register mutation hook
+ *
+ * After successful registration:
+ * 1. Auto-login the user
+ * 2. Redirect to onboarding (card validation)
  */
 export function useRegister() {
   const router = useRouter();
 
   return useMutation({
     mutationFn: async (data: RegisterInput) => {
+      // Step 1: Register the user
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
@@ -68,12 +73,24 @@ export function useRegister() {
         throw new Error(result.error?.message || "Registration failed. Please try again.");
       }
 
+      // Step 2: Auto-login the user
+      const loginResult = await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
+
+      if (loginResult?.error) {
+        // Registration succeeded but login failed
+        // Redirect to login page instead
+        throw new Error("Account created! Please log in to continue.");
+      }
+
       return result;
     },
     onSuccess: () => {
-      // After successful registration, redirect to pricing page
-      // The user will need to log in first, then select a plan
-      router.push("/login?registered=true&next=/pricing");
+      // Redirect to onboarding page for card validation
+      router.push("/onboarding");
     },
   });
 }
