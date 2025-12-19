@@ -37,7 +37,7 @@ export function TermsContent() {
 
           {/* Section 1: Acceptance of Terms */}
           <section className="space-y-4">
-            <h2 className="text-2xl font-semibold md:text-3xl text-brand-primary">
+            <h2 className="text-xl font-bold tracking-tight text-brand-primary md:text-2xl lg:text-3xl">
               {t("terms.section1.title")}
             </h2>
             <p className="leading-relaxed text-gray-700 md:text-base">

@@ -1,4 +1,4 @@
-import { getToken } from "next-auth/jwt";
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { setRequestId } from "./lib/request-context";
@@ -51,6 +51,8 @@ export default async function middleware(req: NextRequest) {
     "/checkout/success",
     "/checkout/failed",
     "/onboarding", // Card validation step
+    "/forgot-password",
+    "/reset-password",
   ];
 
   // Check if current path is a public route
@@ -67,50 +69,21 @@ export default async function middleware(req: NextRequest) {
   }
 
   // PROTECTED ROUTES - Require authentication
-  // Get token from session
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  // Check for Better Auth session cookie
+  const sessionCookie = req.cookies.get("better-auth.session_token");
 
   // If no token and trying to access protected route, redirect to login
-  if (!token) {
+  if (!sessionCookie) {
     const loginUrl = new URL("/login", req.url);
     // Preserve the original URL as callbackUrl so user can return after login
     loginUrl.searchParams.set("callbackUrl", path);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Routes that require authentication but NOT active subscription
-  // These routes are accessible to authenticated users regardless of subscription status
-  const authRequiredButNoSubscriptionRoutes = ["/billing", "/profile", "/stores"];
-  const isAuthRequiredButNoSubscription = authRequiredButNoSubscriptionRoutes.some((route) =>
-    path.includes(route)
-  );
-
-  if (isAuthRequiredButNoSubscription) {
-    return NextResponse.next();
-  }
-
-  // Check if accessing store dashboard routes (requires active subscription)
-  // Note: /stores page is accessible without subscription, but creating stores requires subscription
-  // Only dashboard routes for individual stores require subscription
-  // Route pattern: /store/[storeId]/dashboard, /store/[storeId]/tracking, etc.
-  // IMPORTANT: This catches ALL routes starting with /store/ (except /stores which is whitelisted above)
-  // This prevents users from manually typing URLs to access stores without active subscription
-  const isStoreRoute = path.startsWith("/store/") && !path.startsWith("/stores");
-
-  // Check subscription for ALL store routes (dashboard, tracking, data, management, alerts, profile, billing, etc.)
-  // This ensures complete protection - users cannot access any store page without active subscription
-  if (isStoreRoute && token?.sub) {
-    // Check subscription status directly from token (optimized)
-    const subscriptionStatus = token.subscriptionStatus as string | undefined;
-    const hasActiveSubscription = subscriptionStatus === "ACTIVE";
-
-    if (!hasActiveSubscription) {
-      // Redirect to pricing page with message
-      const url = new URL("/pricing", req.url);
-      url.searchParams.set("reason", "subscription_required");
-      return NextResponse.redirect(url);
-    }
-  }
+  // TODO: Re-implement subscription status check using Better Auth session data or DB check
+  // For now, we allow access if authenticated.
+  // To implement this efficiently in middleware without DB calls, we might need to use JWT strategy
+  // or cache the subscription status in the session cookie.
 
   return response;
 }

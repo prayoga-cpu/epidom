@@ -15,10 +15,7 @@ import { PricingCta } from "@/features/marketing/pricing/components/pricing-cta"
 
 export default function PricingPage() {
   return (
-    <main
-      className="min-h-screen bg-white py-24 md:py-32"
-      style={{ color: "var(--color-brand-primary)" }}
-    >
+    <main className="w-full overflow-x-hidden bg-white pt-20 md:pt-24">
       <div className="animate-slide-up">
         <PricingHero />
       </div>

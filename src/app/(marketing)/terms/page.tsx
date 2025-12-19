@@ -30,10 +30,7 @@ export const metadata = genMeta({
 
 export default function TermsPage() {
   return (
-    <main
-      className="min-h-screen bg-white pt-24 md:pt-32"
-      style={{ color: "var(--color-brand-primary)" }}
-    >
+    <main className="w-full overflow-x-hidden bg-white pt-24 md:pt-28">
       <div className="animate-slide-up">
         <TermsContent />
       </div>
