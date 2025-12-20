@@ -248,6 +248,11 @@ export function useCreateProduct(storeId: string) {
             typeof oldData.total === "number"
           ) {
             // Safe to update: oldData has correct structure
+            // Check if product already exists to avoid duplicates (e.g. from background refetch)
+            if (oldData.products.some((p) => p.id === newProduct.id)) {
+              return oldData;
+            }
+
             return {
               products: [...oldData.products, newProduct],
               total: oldData.total + 1,

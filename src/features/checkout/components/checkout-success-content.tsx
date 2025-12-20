@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supplierOrderKeys } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 
 export function CheckoutSuccessContent() {
   const { t } = useI18n();
-  const { update } = useSession();
+  const { refetch } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -54,9 +54,9 @@ export function CheckoutSuccessContent() {
       exact: false,
     });
 
-    // Force session update to refresh subscription status in the JWT token
-    update();
-  }, [queryClient, update]);
+    // Force session refetch to refresh subscription status
+    refetch?.();
+  }, [queryClient, refetch]);
 
   const handleContinue = () => {
     setIsLoading(true);

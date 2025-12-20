@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession, type Session } from "@/lib/auth";
+
 import { subscriptionService } from "@/lib/services";
 import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify session
-    session = await getServerSession(authOptions);
+    session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),

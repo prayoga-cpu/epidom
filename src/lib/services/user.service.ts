@@ -28,25 +28,21 @@ export class UserService {
   }
 
   /**
-   * Get user by ID (without password)
+   * Get user by ID
    */
-  async getUserById(userId: string): Promise<Omit<User, "password">> {
+  async getUserById(userId: string): Promise<User> {
     const user = await this.userRepo.findById(userId);
     if (!user) {
       throw new Error("User not found");
     }
 
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return user;
   }
 
   /**
    * Update user profile
    */
-  async updateProfile(
-    userId: string,
-    input: UpdateProfileInput
-  ): Promise<Omit<User, "password">> {
+  async updateProfile(userId: string, input: UpdateProfileInput): Promise<User> {
     // Validate user exists
     const user = await this.userRepo.findById(userId);
     if (!user) {
@@ -56,9 +52,7 @@ export class UserService {
     // Update user
     const updatedUser = await this.userRepo.update(userId, input);
 
-    // Remove password from response
-    const { password, ...userWithoutPassword } = updatedUser;
-    return userWithoutPassword;
+    return updatedUser;
   }
 
   /**

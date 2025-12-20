@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession, type Session } from "@/lib/auth";
 import { supplierService } from "@/lib/services/supplier.service";
 import { subscriptionService } from "@/lib/services";
 import { bulkDeleteSchema } from "@/lib/validation/inventory.schemas";
@@ -18,7 +17,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   let session: Session | null = null;
   try {
     // Verify authentication
-    session = await getServerSession(authOptions);
+    session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),

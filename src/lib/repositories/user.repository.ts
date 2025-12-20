@@ -45,21 +45,23 @@ export class UserRepository extends BaseRepository {
 
     if (!user) return null;
 
-    // Remove password from response
-    const { password, ...userWithoutPassword } = user;
-
-    return userWithoutPassword as unknown as UserProfileDto;
+    // User data is already safe (no password field in better-auth User model)
+    return user as unknown as UserProfileDto;
   }
 
   /**
    * Create a new user
+   * Note: For better-auth, users are created through the auth flow.
+   * This method is kept for compatibility but password should be handled by better-auth.
    */
-  async create(data: { email: string; password: string; name?: string }): Promise<User> {
+  async create(data: { email: string; name?: string }): Promise<User> {
     return this.db.user.create({
       data: {
         email: data.email.toLowerCase(),
-        password: data.password,
-        name: data.name,
+        name: data.name || "",
+        emailVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     });
   }
@@ -69,7 +71,7 @@ export class UserRepository extends BaseRepository {
    */
   async update(
     userId: string,
-    data: Partial<Omit<User, "id" | "email" | "password" | "createdAt">>
+    data: Partial<Omit<User, "id" | "email" | "createdAt">>
   ): Promise<User> {
     // Process data: convert empty strings to null for nullable fields (like image)
     // and filter out undefined values
@@ -103,10 +105,15 @@ export class UserRepository extends BaseRepository {
 
   /**
    * Update user password
+   * Note: With better-auth, passwords are stored in the Account table.
+   * This method updates the password in the credential account.
    */
-  async updatePassword(userId: string, hashedPassword: string): Promise<User> {
-    return this.db.user.update({
-      where: { id: userId },
+  async updatePassword(userId: string, hashedPassword: string): Promise<void> {
+    await this.db.account.updateMany({
+      where: {
+        userId: userId,
+        providerId: "credential",
+      },
       data: { password: hashedPassword },
     });
   }
@@ -136,7 +143,7 @@ export class UserRepository extends BaseRepository {
   async verifyEmail(userId: string): Promise<User> {
     return this.db.user.update({
       where: { id: userId },
-      data: { emailVerified: new Date() },
+      data: { emailVerified: true },
     });
   }
 

@@ -67,7 +67,7 @@ import LangSwitcher from "@/components/lang/lang-switcher";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ChevronRight } from "lucide-react";
 import { LogoWithSkeleton } from "./logo-with-skeleton";
-import { authClient } from "@/lib/auth-client";
+import { useSession, signOut } from "@/lib/auth-client";
 import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
 /**
  * Props for SiteHeader component
@@ -100,7 +100,7 @@ export const SiteHeader = memo(function SiteHeader({
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useI18n();
-  const { data: session } = authClient.useSession();
+  const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
 
   // Track mounted state for hydration safety
@@ -154,13 +154,8 @@ export const SiteHeader = memo(function SiteHeader({
    * Handle logout action - only used in authenticated pages
    */
   const handleLogout = async () => {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push("/");
-        },
-      },
-    });
+    await signOut();
+    router.push("/");
   };
 
   /**

@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -19,7 +19,8 @@ export function OnboardingContent() {
   const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status } = useSession();
+  const { data: session, isPending } = useSession();
+  const isAuthenticated = !isPending && !!session?.user;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,10 +28,10 @@ export function OnboardingContent() {
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!isPending && !isAuthenticated) {
       router.push("/login?callbackUrl=/onboarding");
     }
-  }, [status, router]);
+  }, [isPending, isAuthenticated, router]);
 
   const handleStartSetup = async () => {
     setIsLoading(true);
@@ -62,7 +63,7 @@ export function OnboardingContent() {
     }
   };
 
-  if (status === "loading") {
+  if (isPending) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <Loader2 className="text-brand-primary h-8 w-8 animate-spin" />
@@ -78,7 +79,9 @@ export function OnboardingContent() {
           <div className="bg-brand-primary/10 mb-4 inline-flex items-center justify-center rounded-full p-3">
             <Gift className="text-brand-primary h-8 w-8" />
           </div>
-          <h1 className="text-brand-primary text-2xl font-bold sm:text-3xl">🎉 {t("onboarding.title")}</h1>
+          <h1 className="text-brand-primary text-2xl font-bold sm:text-3xl">
+            🎉 {t("onboarding.title")}
+          </h1>
           <p className="text-brand-primary/60 mt-2">{t("onboarding.subtitle")}</p>
         </div>
 
@@ -88,9 +91,7 @@ export function OnboardingContent() {
             <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-600" />
             <div>
               <p className="font-medium text-yellow-800">{t("onboarding.canceledTitle")}</p>
-              <p className="text-sm text-yellow-700">
-                {t("onboarding.canceledMessage")}
-              </p>
+              <p className="text-sm text-yellow-700">{t("onboarding.canceledMessage")}</p>
             </div>
           </div>
         )}
@@ -98,7 +99,9 @@ export function OnboardingContent() {
         {/* Main Card */}
         <Card className="border-brand-primary/10 border-2 shadow-xl">
           <CardHeader className="pb-4 text-center">
-            <CardTitle className="text-brand-primary text-xl">{t("onboarding.cardTitle")}</CardTitle>
+            <CardTitle className="text-brand-primary text-xl">
+              {t("onboarding.cardTitle")}
+            </CardTitle>
             <CardDescription>{t("onboarding.cardDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

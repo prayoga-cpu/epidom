@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
   fetchMaterialsForPage,
@@ -13,13 +12,9 @@ import type { RecipeWithIngredients } from "@/features/dashboard/data/recipes/ho
 import type { Product } from "@/features/dashboard/data/products/hooks/use-products";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 
-export default async function DataPage({
-  params,
-}: {
-  params: Promise<{ storeId: string }>;
-}) {
+export default async function DataPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
 
   if (!session?.user?.id) {
     redirect("/login");

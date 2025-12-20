@@ -1,56 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+/**
+ * @file api/subscriptions/status/route.ts
+ * @description Subscription Status API
+ * Returns user's current subscription details and usage limits.
+ */
+
+import { NextResponse } from "next/server";
 import { subscriptionRepository, storeRepository, userRepository } from "@/lib/repositories";
 import { getStoreLimit } from "@/config/stripe.config";
-import { handleApiError } from "@/lib/utils/api-error-handler";
-import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
+import { createSuccessResponse } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * GET /api/subscriptions/status
  *
- * Get current user's subscription status and details
- *
- * Returns subscription information including:
- * - Plan details
- * - Status
- * - Store usage (current/limit)
- * - Billing period
- * - Cancellation status
+ * Retrieves:
+ * - Current subscription details (Plan, Status, etc.)
+ * - Store usage limits (Important for UI logic)
  */
-export async function GET(request: NextRequest) {
-  let session: Session | null = null;
-  try {
-    // Rate limiting check
-    const rateLimitResult = await rateLimitMiddleware(request, "/api/subscriptions/status");
-    if (rateLimitResult) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.RATE_LIMIT_EXCEEDED,
-          `Rate limit exceeded. Please try again in ${rateLimitResult.reset} seconds.`
-        ),
-        {
-          status: 429,
-          headers: {
-            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
-            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
-            "X-RateLimit-Reset": rateLimitResult.reset.toString(),
-          },
-        }
-      );
-    }
-
-    // Verify session
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
-    const userId = session.user.id;
-
+export const GET = withApiHandler(
+  async (request, { userId }) => {
     // Get subscription
     const subscription = await subscriptionRepository.findByUserId(userId);
 
@@ -66,9 +34,10 @@ export async function GET(request: NextRequest) {
 
     // Get store usage
     const userProfile = await userRepository.getProfile(userId);
+    let storeUsage;
 
-    let storeUsage = null;
     if (userProfile?.business) {
+      // If business exists, count actual stores
       const currentStoreCount = await storeRepository.count({
         businessId: userProfile.business.id,
       });
@@ -79,6 +48,16 @@ export async function GET(request: NextRequest) {
         current: currentStoreCount,
         limit,
         canCreateMore: currentStoreCount < limit,
+      };
+    } else {
+      // If no business yet, assume 0 stores usage
+      // This allows the frontend to show "Create Store" button
+      const limit = getStoreLimit(subscription.plan);
+
+      storeUsage = {
+        current: 0,
+        limit,
+        canCreateMore: 0 < limit, // Should be true for all plans (even STARTER limit is 1)
       };
     }
 
@@ -96,10 +75,8 @@ export async function GET(request: NextRequest) {
         storeUsage,
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "GET /api/subscriptions/status",
-      context: { userId: session?.user?.id },
-    });
+  },
+  {
+    rateLimitEndpoint: "/api/subscriptions/status",
   }
-}
+);

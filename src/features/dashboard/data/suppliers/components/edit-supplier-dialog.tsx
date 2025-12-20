@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -58,6 +58,9 @@ export function EditSupplierDialog({ supplier, open, onOpenChange }: EditSupplie
 
   const updateSupplier = useUpdateSupplier(storeId, supplier?.id || "");
 
+  const isSubmittingRef = useRef(false);
+  const savedFormDataRef = useRef<SupplierFormValues | null>(null);
+
   const supplierSchema = createSupplierSchema(t);
 
   const form = useForm<SupplierFormValues>({
@@ -67,7 +70,16 @@ export function EditSupplierDialog({ supplier, open, onOpenChange }: EditSupplie
 
   // Update form when supplier changes
   useEffect(() => {
-    if (supplier && open) {
+    if (!open) return;
+
+    if (savedFormDataRef.current) {
+      requestAnimationFrame(() => {
+        form.reset(savedFormDataRef.current!);
+      });
+      return;
+    }
+
+    if (supplier) {
       form.reset({
         name: supplier.name || "",
         contactPerson: supplier.contactPerson || "",
@@ -81,19 +93,45 @@ export function EditSupplierDialog({ supplier, open, onOpenChange }: EditSupplie
     }
   }, [supplier, open, form]);
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && !isSubmittingRef.current) {
+      savedFormDataRef.current = null;
+    }
+    onOpenChange(newOpen);
+  };
+
   const onSubmit = async (data: SupplierFormValues) => {
     try {
-      await updateSupplier.mutateAsync(data);
-
-      toast.success(`${data.name} has been updated successfully.`);
+      // OPTIMISTIC CLOSING
+      savedFormDataRef.current = data;
+      isSubmittingRef.current = true;
       onOpenChange(false);
+
+      const promise = updateSupplier.mutateAsync(data);
+
+      toast.promise(promise, {
+        loading: t("common.actions.saving"),
+        success: () => {
+          isSubmittingRef.current = false;
+          savedFormDataRef.current = null;
+          return `${data.name} has been updated successfully.`;
+        },
+        error: (err) => {
+          isSubmittingRef.current = false;
+          onOpenChange(true);
+          return err instanceof Error ? err.message : "Failed to update supplier";
+        },
+      });
+
+      await promise;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update supplier");
+      // Handled by toast.promise
+      console.error(error);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <FormDialogLayout
         title={t("data.suppliers.editTitle") || "Edit Supplier"}
         description="Update supplier information. Changes will be saved to your contacts."

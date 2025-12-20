@@ -34,19 +34,36 @@ interface CurrencyProviderProps {
  * Currency Provider
  *
  * Provides currency context throughout the application
- * - Reads user's currency preference from profile
+ * - Reads user's currency preference from profile API
  * - Fetches EUR to USD exchange rate from API
  * - Provides formatPrice() helper for automatic conversion and formatting
  * - Caches exchange rate to minimize API calls
  */
 export function CurrencyProvider({ children }: CurrencyProviderProps) {
   const { user, loading: userLoading } = useUser();
+  const [userCurrency, setUserCurrency] = useState<Currency>("EUR");
   const [exchangeRate, setExchangeRate] = useState<number>(1.1); // Default fallback
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch user's currency preference from profile
+  useEffect(() => {
+    if (!user?.id || userLoading) return;
+
+    fetch("/api/user/profile")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data?.currency) {
+          setUserCurrency(data.data.currency as Currency);
+        }
+      })
+      .catch(() => {
+        // Use default EUR
+      });
+  }, [user?.id, userLoading]);
+
   // Get user's currency preference (default to EUR)
-  const currency: Currency = (user?.currency as Currency) || "EUR";
+  const currency: Currency = userCurrency;
 
   // Fetch exchange rate on mount and when currency changes
   useEffect(() => {

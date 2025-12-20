@@ -1,61 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { businessService } from "@/lib/services";
+/**
+ * @file api/stores/[id]/stock/import/route.ts
+ * @description Stock Import API
+ * Handles bulk import of stock levels via CSV file.
+ */
+
+import { NextResponse } from "next/server";
 import { materialService } from "@/lib/services/material.service";
 import { productService } from "@/lib/services/product.service";
 import { parseCSV } from "@/lib/utils/csv-import";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
 import { z } from "zod";
 
 // Validation schema for stock import row
 const stockImportRowSchema = z.object({
   sku: z.string().min(1, "SKU is required"),
-  type: z.enum(["material", "product", "Material", "Product"]).transform((val) => val.toLowerCase() as "material" | "product"),
+  type: z
+    .enum(["material", "product", "Material", "Product"])
+    .transform((val) => val.toLowerCase() as "material" | "product"),
   currentStock: z.coerce.number().min(0, "Current stock must be non-negative"),
 });
 
 /**
  * POST /api/stores/[id]/stock/import
- * Import stock levels from CSV file
+ * Implements bulk update of stock levels from a CSV file.
+ *
+ * Flow:
+ * 1. Validate Store Auth
+ * 2. Parse CSV
+ * 3. Iterate rows and update stock
+ * 4. Return summary of success/failures
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
-    const { id: storeId } = await params;
-
-    // Verify user owns the business that owns this store
-    const business = await businessService.getBusinessByUserId(session.user.id);
-    if (!business) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "Business not found"),
-        { status: 404 }
-      );
-    }
-
-    // Verify store belongs to business
-    const store = await businessService.getStoreById(storeId);
-    if (!store || store.businessId !== business.id) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Store not found or does not belong to your business"
-        ),
-        { status: 404 }
-      );
-    }
-
+export const POST = withApiHandler(
+  async (request, { storeId }) => {
     // Parse form data
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -75,10 +52,8 @@ export async function POST(
       );
     }
 
-    // Read file content
+    // Read and parse file
     const csvContent = await file.text();
-
-    // Parse CSV
     const rows = parseCSV(csvContent, true);
 
     if (rows.length === 0) {
@@ -88,7 +63,7 @@ export async function POST(
       );
     }
 
-    // Validate and process each row
+    // Process rows
     const results: Array<{
       sku: string;
       type: "material" | "product";
@@ -98,74 +73,40 @@ export async function POST(
 
     for (const row of rows) {
       try {
-        // Validate row schema
         const validatedRow = stockImportRowSchema.parse(row);
 
         if (validatedRow.type === "material") {
-          // Find material by SKU
-          const material = await materialService.getMaterialBySku(storeId, validatedRow.sku);
+          const material = await materialService.getMaterialBySku(storeId!, validatedRow.sku);
+          if (!material) throw new Error("Material not found");
 
-          if (!material) {
-            results.push({
-              sku: validatedRow.sku,
-              type: "material",
-              success: false,
-              message: "Material not found",
-            });
-            continue;
-          }
-
-          // Update material stock
-          await materialService.updateMaterial(material.id, storeId, {
+          await materialService.updateMaterial(material.id, storeId!, {
             currentStock: validatedRow.currentStock,
           });
+          results.push({ sku: validatedRow.sku, type: "material", success: true });
+        } else {
+          const product = await productService.getProductBySku(storeId!, validatedRow.sku);
+          if (!product) throw new Error("Product not found");
 
-          results.push({
-            sku: validatedRow.sku,
-            type: "material",
-            success: true,
-          });
-        } else if (validatedRow.type === "product") {
-          // Find product by SKU
-          const product = await productService.getProductBySku(storeId, validatedRow.sku);
-
-          if (!product) {
-            results.push({
-              sku: validatedRow.sku,
-              type: "product",
-              success: false,
-              message: "Product not found",
-            });
-            continue;
-          }
-
-          // Update product stock
-          await productService.updateProduct(product.id, storeId, {
+          await productService.updateProduct(product.id, storeId!, {
             currentStock: validatedRow.currentStock,
           });
-
-          results.push({
-            sku: validatedRow.sku,
-            type: "product",
-            success: true,
-          });
+          results.push({ sku: validatedRow.sku, type: "product", success: true });
         }
       } catch (error) {
+        // Handle individual row errors gracefully
+        let errorMessage = "Unknown error";
         if (error instanceof z.ZodError) {
-          results.push({
-            sku: row.sku || "unknown",
-            type: (row.type?.toLowerCase() as "material" | "product") || "material",
-            success: false,
-            message: error.errors.map((e) => e.message).join(", "),
-          });
-        } else {
-          results.push({
-            sku: row.sku || "unknown",
-            type: (row.type?.toLowerCase() as "material" | "product") || "material",
-            success: false,
-            message: error instanceof Error ? error.message : "Unknown error",
-          });
+          errorMessage = error.errors.map((e) => e.message).join(", ");
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
         }
+
+        results.push({
+          sku: row.sku || "unknown",
+          type: (row.type?.toLowerCase() as "material" | "product") || "material",
+          success: false,
+          message: errorMessage,
+        });
       }
     }
 
@@ -173,8 +114,7 @@ export async function POST(
     const failureCount = results.length - successCount;
 
     return NextResponse.json(
-      {
-        success: true,
+      createSuccessResponse({
         message: `Imported ${successCount} items successfully${failureCount > 0 ? `, ${failureCount} failed` : ""}`,
         results,
         summary: {
@@ -182,18 +122,11 @@ export async function POST(
           successful: successCount,
           failed: failureCount,
         },
-      },
-      { status: 200 }
+      })
     );
-  } catch (error) {
-
-    return NextResponse.json(
-      createErrorResponse(
-        ApiErrorCode.INTERNAL_ERROR,
-        error instanceof Error ? error.message : "Failed to import stock"
-      ),
-      { status: 500 }
-    );
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/stock/import",
+    requireStoreAuth: true,
   }
-}
-
+);

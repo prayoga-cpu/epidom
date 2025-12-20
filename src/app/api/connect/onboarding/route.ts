@@ -1,36 +1,31 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+/**
+ * @file api/connect/onboarding/route.ts
+ * @description Stripe Connect Onboarding API
+ * Handles the generation of onboarding links for sellers/business owners.
+ */
+
+import { NextResponse } from "next/server";
 import { stripeConnectService } from "@/lib/services";
-import { handleApiError } from "@/lib/utils/api-error-handler";
-import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * POST /api/connect/onboarding
  *
- * Generate Stripe Connect onboarding link for Epidom owner
- * This creates an Express account and returns a Stripe-hosted onboarding URL
+ * Generates a secure, temporary link for the user to onboard with Stripe Connect.
+ * This allows them to receive payouts from the platform.
  *
- * Required: User must be authenticated
+ * Body Params (Optional):
+ * - refreshUrl: Custom URL to redirect if onboarding link expires
+ * - returnUrl: Custom URL to redirect after successful onboarding
  */
-export async function POST(request: NextRequest) {
-  try {
-    // Verify session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-
-    // Get request body for custom URLs (optional)
+export const POST = withApiHandler(
+  async (request, { userId }) => {
+    // Parse request body for optional custom URLs
     const body = await request.json().catch(() => ({}));
     const { refreshUrl, returnUrl } = body;
 
-    // Generate onboarding link
+    // Generate onboarding link via service
     const onboardingUrl = await stripeConnectService.createAccountLink(
       userId,
       refreshUrl,
@@ -43,10 +38,8 @@ export async function POST(request: NextRequest) {
         message: "Onboarding link created successfully",
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "POST /api/connect/onboarding",
-      context: {},
-    });
+  },
+  {
+    rateLimitEndpoint: "/api/connect/onboarding",
   }
-}
+);

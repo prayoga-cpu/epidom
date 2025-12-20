@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { userService } from "@/lib/services";
 import { updateProfileSchema } from "@/lib/validation/auth.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api";
@@ -13,7 +12,7 @@ import { ZodError } from "zod";
  */
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -46,7 +45,7 @@ export async function GET() {
  */
 export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {

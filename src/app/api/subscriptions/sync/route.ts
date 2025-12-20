@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { subscriptionRepository } from "@/lib/repositories";
 import { stripe } from "@/lib/stripe";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
-import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
+import Stripe from "stripe";
+import { extractSubscriptionPeriod, isSubscriptionCanceling } from "@/types/stripe";
 
 /**
  * POST /api/subscriptions/sync
@@ -19,19 +19,8 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
  *
  * It fetches the actual subscription from Stripe and updates the database to match.
  */
-export async function POST(request: NextRequest) {
-  try {
-    // Verify session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized. Please log in first."),
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-
+export const POST = withApiHandler(
+  async (request, { userId }) => {
     // Get current subscription from database
     const dbSubscription = await subscriptionRepository.findByUserId(userId);
 
@@ -41,12 +30,15 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
     // Get all active subscriptions from Stripe for this customer
     const stripeSubscriptions = await stripe.subscriptions.list({
       customer: dbSubscription.stripeCustomerId,
       status: "active",
       limit: 10,
+      expand: ["data.items.data.price"], // Expand price data for plan detection
     });
+
     if (stripeSubscriptions.data.length === 0) {
       // No active subscriptions in Stripe
       if (dbSubscription.status !== SubscriptionStatus.CANCELED) {
@@ -66,62 +58,64 @@ export async function POST(request: NextRequest) {
 
     // Get the newest active subscription
     const activeSubscription = stripeSubscriptions.data.sort((a, b) => b.created - a.created)[0];
+
     // Cancel any duplicate subscriptions
+    // Limit to 5 cancellations per request to prevent timeouts
     if (stripeSubscriptions.data.length > 1) {
-      const duplicates = stripeSubscriptions.data.slice(1);
+      const duplicates = stripeSubscriptions.data.slice(1, 6); // Take max 5 duplicates
 
       for (const dup of duplicates) {
-        await stripe.subscriptions.cancel(dup.id, { prorate: false });
+        try {
+          await stripe.subscriptions.cancel(dup.id, { prorate: false });
+        } catch (e) {
+          console.error(`Failed to cancel duplicate subscription ${dup.id}:`, e);
+          // Continue even if one fails
+        }
       }
     }
 
     // Get the plan from the subscription
+    // Type-safe access to price data
     const priceId = activeSubscription.items.data[0].price.id;
+    const unitAmount = activeSubscription.items.data[0].price.unit_amount;
+
     let plan: SubscriptionPlan;
 
-    // Match price ID to plan (you'll need to import STRIPE_CONFIG or check your config)
-    // For now, we'll try to get it from metadata or deduce it
+    // Determine plan based on metadata or price amount
     if (activeSubscription.metadata?.plan) {
-      plan = activeSubscription.metadata.plan as SubscriptionPlan;
-    } else {
-      // Fallback: check the price amount
-      const price = activeSubscription.items.data[0].price;
-      if (price.unit_amount === 1900) {
-        // $19/month
-        plan = SubscriptionPlan.STARTER;
-      } else if (price.unit_amount === 4900) {
-        // $49/month
-        plan = SubscriptionPlan.PRO;
+      // Validate metadata value against Enum
+      const metaPlan = activeSubscription.metadata.plan as string;
+      if (metaPlan === "STARTER" || metaPlan === "PRO") {
+        plan = metaPlan as SubscriptionPlan;
       } else {
-        plan = dbSubscription.plan; // Keep current plan if can't determine
+        // Metadata invalid, fallback to price check
+        plan = determinePlanByPrice(unitAmount);
       }
+    } else {
+      plan = determinePlanByPrice(unitAmount);
     }
 
+    // Fallback to existing DB plan if we still can't determine
+    if (!plan && dbSubscription.plan) {
+      plan = dbSubscription.plan;
+    }
+
+    // Extract period dates using type-safe helper
+    const period = extractSubscriptionPeriod(activeSubscription);
+    const cancelAtPeriodEnd = isSubscriptionCanceling(activeSubscription);
+
     // Update database to match Stripe
+    // Using proper type access, no 'any' casting needed
     await subscriptionRepository.update(userId, {
       stripeSubscriptionId: activeSubscription.id,
       stripePriceId: priceId,
-      plan: plan,
+      plan: plan || SubscriptionPlan.STARTER, // Default fallback
       status: SubscriptionStatus.ACTIVE,
-      /**
-       * Type assertion needed because Stripe API types don't expose all properties
-       * Actual type: number (Unix timestamp in seconds)
-       * TODO: Use proper Stripe type definitions or create extended type
-       */
-      currentPeriodStart: new Date((activeSubscription as any).current_period_start * 1000),
-      /**
-       * Type assertion needed because Stripe API types don't expose all properties
-       * Actual type: number (Unix timestamp in seconds)
-       * TODO: Use proper Stripe type definitions or create extended type
-       */
-      currentPeriodEnd: new Date((activeSubscription as any).current_period_end * 1000),
-      /**
-       * Type assertion needed because Stripe API types don't expose all properties
-       * Actual type: boolean
-       * TODO: Use proper Stripe type definitions or create extended type
-       */
-      cancelAtPeriodEnd: (activeSubscription as any).cancel_at_period_end,
+      currentPeriodStart: period?.currentPeriodStart ?? new Date(),
+      currentPeriodEnd: period?.currentPeriodEnd ?? new Date(),
+      cancelAtPeriodEnd,
     });
+
     return NextResponse.json(
       createSuccessResponse({
         message: "Subscription synced successfully with Stripe",
@@ -133,13 +127,21 @@ export async function POST(request: NextRequest) {
           plan: plan,
           status: "ACTIVE",
         },
-        duplicatesCanceled: stripeSubscriptions.data.length - 1,
+        duplicatesCanceled: Math.max(0, stripeSubscriptions.data.length - 1),
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "POST /api/subscriptions/sync",
-      context: {},
-    });
+  },
+  {
+    // Strict rate limit for sync operations to protect backend
+    rateLimitEndpoint: "/api/subscriptions/sync",
   }
+);
+
+/**
+ * Helper to determine plan from price amount
+ */
+function determinePlanByPrice(amount: number | null): SubscriptionPlan {
+  if (amount === 1900) return SubscriptionPlan.STARTER; // $19
+  if (amount === 4900) return SubscriptionPlan.PRO; // $49
+  return SubscriptionPlan.STARTER; // Default safest option
 }

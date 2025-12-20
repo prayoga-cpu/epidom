@@ -1,16 +1,11 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { fetchSupplierOrdersForPage } from "@/lib/server/data-fetchers";
 import { ManagementClient } from "@/features/dashboard/management/components/management-client";
 
-export default async function ManagementPage({
-  params,
-}: {
-  params: Promise<{ storeId: string }>;
-}) {
+export default async function ManagementPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
 
   if (!session?.user?.id) {
     redirect("/login");
@@ -19,10 +14,5 @@ export default async function ManagementPage({
   // Fetch initial supplier orders
   const supplierOrdersResult = await fetchSupplierOrdersForPage(storeId);
 
-  return (
-    <ManagementClient
-      initialSupplierOrders={supplierOrdersResult.orders}
-      storeId={storeId}
-    />
-  );
+  return <ManagementClient initialSupplierOrders={supplierOrdersResult.orders} storeId={storeId} />;
 }

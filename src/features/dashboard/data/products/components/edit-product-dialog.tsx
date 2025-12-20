@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -92,6 +92,17 @@ export function EditProductDialog({
   const { currency, convertPrice, convertToBase } = useCurrency();
   const updateProduct = useUpdateProduct(storeId, product.id);
 
+  const isSubmittingRef = useRef(false);
+  const savedFormDataRef = useRef<ProductFormValues | null>(null);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    // If closing manually (not submitting), clear saved data
+    if (!newOpen && !isSubmittingRef.current) {
+      savedFormDataRef.current = null;
+    }
+    onOpenChange(newOpen);
+  };
+
   const productSchema = createProductSchema(t);
 
   const form = useForm<ProductFormValues>({
@@ -114,7 +125,17 @@ export function EditProductDialog({
 
   // Update form when product changes
   useEffect(() => {
-    if (product && open) {
+    if (!open) return;
+
+    // Restore saved data if any
+    if (savedFormDataRef.current) {
+      requestAnimationFrame(() => {
+        form.reset(savedFormDataRef.current!);
+      });
+      return;
+    }
+
+    if (product) {
       const sellingPrice = Number(product.sellingPrice) || 0;
       const costPrice = Number(product.costPrice) || 0;
       const currentStock = Number(product.currentStock) || 0;
@@ -195,28 +216,38 @@ export function EditProductDialog({
         recipeIds: data.recipeIds && data.recipeIds.length > 0 ? data.recipeIds : undefined,
       };
 
-      await updateProduct.mutateAsync(apiData);
-
-      sonnerToast.success(t("data.products.toasts.updated.title") || "Product updated", {
-        description:
-          t("data.products.toasts.updated.description")?.replace("{name}", data.name) ||
-          `${data.name} has been updated successfully.`,
-      });
-
+      // OPTIMISTIC CLOSING
+      savedFormDataRef.current = data;
+      isSubmittingRef.current = true;
       onOpenChange(false);
-    } catch (error) {
-      sonnerToast.error(t("data.products.toasts.updateError.title") || "Failed to update product", {
-        description:
-          error instanceof Error
-            ? error.message
+
+      const promise = updateProduct.mutateAsync(apiData);
+
+      sonnerToast.promise(promise, {
+        loading: t("common.actions.saving"),
+        success: () => {
+          isSubmittingRef.current = false;
+          savedFormDataRef.current = null;
+          return t("data.products.toasts.updated.title") || "Product updated";
+        },
+        error: (err) => {
+          isSubmittingRef.current = false;
+          onOpenChange(true);
+          return err instanceof Error
+            ? err.message
             : t("data.products.toasts.updateError.description") ||
-              "An error occurred while updating the product.",
+                "An error occurred while updating the product.";
+        },
       });
+
+      await promise;
+    } catch (error) {
+      console.error(error);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <FormDialogLayout
         title={t("data.products.editTitle") || "Edit Product"}
         description="Update product information. Changes will be saved to your inventory."

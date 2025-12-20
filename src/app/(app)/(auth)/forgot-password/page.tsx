@@ -18,10 +18,11 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setIsPending(true);
     try {
-      const { error } = await authClient.forgetPassword({
+      const { error } = await authClient.requestPasswordReset({
         email,
         redirectTo: "/reset-password",
       });
+
       if (error) {
         toast.error(error.message);
       } else {
@@ -46,8 +47,8 @@ export default function ForgotPasswordPage() {
         </CardHeader>
         <CardContent>
           {isSent ? (
-            <div className="text-center space-y-4">
-              <div className="bg-green-50 text-green-700 p-4 rounded-lg text-sm">
+            <div className="space-y-4 text-center">
+              <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700">
                 Check your email! We've sent a password reset link to <strong>{email}</strong>.
               </div>
               <Button asChild className="w-full" variant="outline">

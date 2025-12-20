@@ -9,13 +9,11 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession, type Session } from "@/lib/auth";
 import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { Session } from "next-auth";
 
 /**
  * Context passed to API route handlers
@@ -47,10 +45,7 @@ interface HandlerOptions {
  * 3. Store Ownership Verification (optional)
  * 4. Error Handling
  */
-export const withApiHandler = (
-  handler: ApiHandler,
-  options: HandlerOptions = {}
-) => {
+export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}) => {
   return async (request: Request, { params }: { params: Promise<any> }) => {
     const resolvedParams = await params;
     const endpoint = options.rateLimitEndpoint || new URL(request.url).pathname;
@@ -82,7 +77,7 @@ export const withApiHandler = (
       // ========================================
       // Authentication
       // ========================================
-      const session = await getServerSession(authOptions);
+      const session = await getSession();
       if (!session?.user?.id) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
           status: 401,
@@ -113,7 +108,6 @@ export const withApiHandler = (
         userId: session.user.id,
         storeId,
       });
-
     } catch (error) {
       // ========================================
       // Error Handling
