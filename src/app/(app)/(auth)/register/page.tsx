@@ -1,19 +1,34 @@
 import { RegisterForm } from "@/features/auth/register/components/register-form";
 import { AuthVisual } from "@/features/auth/components/auth-visual";
+import Image from "next/image";
 
 export default function RegisterPage() {
   return (
-    <div className="grid h-screen w-full grid-cols-1 md:grid-cols-2 overflow-hidden bg-white">
-       {/* Left: Form Area */}
-       <div className="flex flex-col overflow-y-auto px-6 py-12 sm:px-12 lg:px-24 xl:px-32 scrollbar-hide animate-slide-up">
-        <div className="mb-auto"></div>
+    <div className="grid h-screen w-full grid-cols-1 overflow-hidden bg-white md:grid-cols-2">
+      {/* Left: Form Area */}
+      {/* Removed justify-center to allow scroll on overflow */}
+      <div className="scrollbar-hide animate-in fade-in slide-in-from-left-4 relative flex h-full flex-col items-center overflow-y-auto p-8 duration-700">
+        {/* Main Content - my-auto handles safe centering */}
+        <div className="my-auto w-full max-w-[380px]">
+          {/* Logo */}
+          <div className="mb-8 flex justify-center">
+            <div className="relative h-8 w-32">
+              <Image
+                src="/images/logo-black.png"
+                alt="Epidom"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
 
-        <div className="w-full max-w-sm mx-auto">
           <RegisterForm />
         </div>
 
-        <div className="mt-auto pt-10 text-center md:text-left">
-           <p className="text-xs text-gray-400">© 2025 Epidom. All rights reserved.</p>
+        {/* Footer - In flow */}
+        <div className="mt-8 w-full shrink-0 text-center">
+          <p className="text-xs text-gray-400">© 2025 Epidom. All rights reserved.</p>
         </div>
       </div>
 

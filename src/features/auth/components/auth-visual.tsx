@@ -1,129 +1,241 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Check, TrendingUp, Bell } from "lucide-react";
+import { Check, TrendingUp, Bell, PieChart, Package, Receipt, Truck } from "lucide-react";
 import Image from "next/image";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+
+const SLIDES = [
+  {
+    id: "dashboard",
+    image: "/images/dashboard.png",
+    title: "Manage your bakery\nlike a pro.",
+    description:
+      "Get a bird's eye view of your bakery's performance with our comprehensive dashboard.",
+    icon: PieChart,
+    notification: {
+      title: "Revenue Up 24%",
+      subtitle: "Compared to last month",
+      icon: TrendingUp,
+      color: "green",
+    },
+  },
+  {
+    id: "recipe",
+    image: "/images/data-recipe.png",
+    title: "Precision Recipe\nCosting.",
+    description: "Calculate exact production costs based on real-time material prices and labor.",
+    icon: Receipt,
+    notification: {
+      title: "Recipe Updated",
+      subtitle: "Croissant margins improved by 5%",
+      icon: Check,
+      color: "blue",
+    },
+  },
+  {
+    id: "inventory",
+    image: "/images/data-product.png",
+    title: "Smart Inventory\nManagement.",
+    description: "Track stock levels, set alerts, and never run out of key ingredients again.",
+    icon: Package,
+    notification: {
+      title: "Low Stock Alert",
+      subtitle: "Flour stock below minimum level",
+      icon: Bell,
+      color: "orange",
+    },
+  },
+  {
+    id: "tracking",
+    image: "/images/tracking.png",
+    title: "Real-time Order\nTracking.",
+    description: "Monitor production batches and delivery status in real-time.",
+    icon: Truck,
+    notification: {
+      title: "Batch Completed",
+      subtitle: "Sour Dough Batch #420 is ready",
+      icon: Check,
+      color: "green",
+    },
+  },
+];
 
 export function AuthVisual() {
   const { t } = useI18n();
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
+    }, 5000); // Change slide every 5 seconds
+
+    return () => clearInterval(timer);
+  }, []);
 
   return (
-    <div className="relative hidden h-full w-full flex-col justify-between overflow-hidden bg-zinc-950 p-12 text-white md:flex lg:p-16">
+    <div className="relative hidden h-full w-full overflow-hidden bg-zinc-950 text-white md:flex md:flex-col">
       {/* Background Gradients & Effects */}
-      <div className="absolute inset-0 z-0">
-        {/* Main Gradient */}
+      <div className="pointer-events-none absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-zinc-950 to-zinc-950" />
 
         {/* Animated Blobs */}
-        <div className="absolute top-1/4 right-0 h-[500px] w-[500px] rounded-full bg-orange-500/10 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-0 left-0 h-[500px] w-[500px] rounded-full bg-purple-500/10 blur-[100px] animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-1/4 right-0 h-[500px] w-[500px] animate-pulse rounded-full bg-orange-500/10 blur-[120px]" />
+        <div
+          className="absolute bottom-0 left-0 h-[500px] w-[500px] animate-pulse rounded-full bg-purple-500/10 blur-[100px]"
+          style={{ animationDelay: "2s" }}
+        />
 
         {/* Grid Pattern */}
         <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-            backgroundSize: "40px 40px"
+            backgroundImage:
+              "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
           }}
         />
       </div>
 
-      {/* Top Content */}
-      <div className="relative z-10 animate-in fade-in slide-in-from-top-4 duration-700">
+      {/* Top Status - Absolute Positioned */}
+      <div className="animate-in fade-in slide-in-from-top-4 absolute top-12 left-12 z-20 duration-700">
         <div className="flex items-center gap-2 text-white/90">
           <div className="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
           <span className="text-sm font-medium tracking-wide uppercase">System Operational</span>
         </div>
       </div>
 
-      {/* Center Visual Showcase - Dashboard Mockup */}
-      <div className="relative z-10 flex flex-1 items-center justify-center py-12">
-        <div className="relative w-full max-w-[600px] perspective-[2000px]">
-           {/* Main Dashboard Image */}
-           <div
-             className="relative rounded-xl border border-white/10 bg-zinc-900/50 p-2 shadow-2xl backdrop-blur-xl transition-transform duration-700 hover:scale-[1.02] animate-in fade-in zoom-in-95 duration-1000"
-             style={{
-               transform: "rotateY(-12deg) rotateX(5deg)",
-               transformStyle: "preserve-3d",
-             }}
-           >
-              <div className="relative overflow-hidden rounded-lg bg-zinc-800 aspect-[16/10]">
-                {/* Fallback color/skeleton if image fails, but we assume it loads */}
-                <Image
-                  src="/images/dashboard.png"
-                  alt="Epidom Dashboard"
-                  fill
-                  className="object-cover object-left-top"
-                  sizes="(max-width: 768px) 100vw, 600px"
-                  quality={90}
-                  priority
-                />
+      {/* Main Content Area - Perfectly Centered */}
+      <div className="relative z-10 flex h-full w-full flex-col items-center justify-center p-12">
+        <div className="flex w-full max-w-[550px] flex-col items-center gap-10">
+          {/* 3D Image Carousel */}
+          <div className="relative aspect-[16/10] w-full perspective-[2000px]">
+            {SLIDES.map((slide, index) => (
+              <div
+                key={slide.id}
+                className={cn(
+                  "absolute inset-0 transform transition-all duration-1000 ease-in-out",
+                  index === currentSlide
+                    ? "z-10 translate-x-0 scale-100 rotate-x-[5deg] rotate-y-[-12deg] opacity-100"
+                    : index < currentSlide
+                      ? "z-0 -translate-x-10 scale-95 rotate-x-[5deg] rotate-y-[-12deg] opacity-0"
+                      : "z-0 translate-x-10 scale-95 rotate-x-[5deg] rotate-y-[-12deg] opacity-0"
+                )}
+                style={{
+                  transformStyle: "preserve-3d",
+                }}
+              >
+                {/* Main Image Card */}
+                <div className="relative h-full w-full rounded-xl border border-white/10 bg-zinc-900/50 p-2 shadow-2xl backdrop-blur-xl">
+                  <div className="relative h-full w-full overflow-hidden rounded-lg bg-zinc-800">
+                    <Image
+                      src={slide.image}
+                      alt={slide.title}
+                      fill
+                      className="object-cover object-left-top"
+                      sizes="(max-width: 768px) 100vw, 600px"
+                      quality={90}
+                      priority={index === 0}
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent" />
+                  </div>
+                  {/* Reflection effect */}
+                  <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-tr from-white/5 to-transparent" />
+                </div>
 
-                {/* Overlay Gradient for depth */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent pointer-events-none" />
-              </div>
-
-              {/* Reflection effect */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent rounded-xl pointer-events-none" />
-           </div>
-
-           {/* Floating Notification Card 1 */}
-           <div
-             className="absolute -right-12 top-10 w-64 rounded-xl border border-white/10 bg-zinc-800/90 p-4 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-left-8 duration-1000 delay-300 fill-mode-forwards opacity-0"
-             style={{
-                animationFillMode: 'forwards',
-                transform: "translateZ(40px)"
-             }}
-           >
-              <div className="flex items-start gap-4">
-                 <div className="rounded-full bg-green-500/20 p-2">
-                    <TrendingUp className="h-5 w-5 text-green-400" />
-                 </div>
-                 <div>
-                    <h4 className="font-semibold text-white text-sm">Revenue Up 24%</h4>
-                    <p className="text-xs text-white/50 mt-1">Compared to last month</p>
-                 </div>
-              </div>
-           </div>
-
-           {/* Floating Notification Card 2 */}
-           <div
-             className="absolute -left-12 bottom-20 w-fit rounded-xl border border-white/10 bg-zinc-800/90 p-3 pr-6 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-right-8 duration-1000 delay-500 fill-mode-forwards opacity-0"
-             style={{
-                animationFillMode: 'forwards',
-                transform: "translateZ(60px)"
-             }}
-           >
-              <div className="flex items-center gap-3">
-                 <div className="relative">
-                    <div className="rounded-full bg-orange-500/20 p-2">
-                       <Bell className="h-4 w-4 text-orange-500" />
+                {/* Sliding Notification Card */}
+                <div
+                  className={cn(
+                    "absolute top-8 -right-8 w-64 rounded-xl border border-white/10 bg-zinc-800/90 p-4 shadow-xl backdrop-blur-md transition-all delay-300 duration-700",
+                    index === currentSlide
+                      ? "translate-x-0 translate-z-[40px] opacity-100"
+                      : "translate-x-4 translate-z-[40px] opacity-0"
+                  )}
+                  style={{ transform: "translateZ(40px)" }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={cn(
+                        "rounded-full p-2",
+                        slide.notification.color === "green" && "bg-green-500/20",
+                        slide.notification.color === "blue" && "bg-blue-500/20",
+                        slide.notification.color === "orange" && "bg-orange-500/20"
+                      )}
+                    >
+                      <slide.notification.icon
+                        className={cn(
+                          "h-5 w-5",
+                          slide.notification.color === "green" && "text-green-400",
+                          slide.notification.color === "blue" && "text-blue-400",
+                          slide.notification.color === "orange" && "text-orange-400"
+                        )}
+                      />
                     </div>
-                    <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-400 shadow-sm" />
-                 </div>
-                 <div>
-                    <p className="text-xs font-medium text-white">Low Stock Alert: Flour</p>
-                 </div>
+                    <div>
+                      <h4 className="text-left text-sm font-semibold text-white">
+                        {slide.notification.title}
+                      </h4>
+                      <p className="mt-1 text-left text-xs text-white/50">
+                        {slide.notification.subtitle}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-           </div>
+            ))}
+          </div>
+
+          {/* Text & Controls - Centered */}
+          <div className="w-full text-center">
+            <div className="relative h-[120px] w-full">
+              {SLIDES.map((slide, index) => (
+                <div
+                  key={slide.id}
+                  className={cn(
+                    "absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ease-out",
+                    index === currentSlide ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+                  )}
+                >
+                  <h2 className="mb-3 bg-gradient-to-r from-white to-white/60 bg-clip-text text-3xl leading-tight font-bold whitespace-pre-line text-transparent md:text-3xl lg:text-4xl">
+                    {slide.title}
+                  </h2>
+                  <p className="max-w-md text-lg leading-relaxed text-white/60">
+                    {slide.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Slide Indicators */}
+            <div className="mt-2 flex justify-center gap-2">
+              {SLIDES.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all duration-300",
+                    currentSlide === index ? "w-8 bg-white" : "w-1.5 bg-white/20 hover:bg-white/40"
+                  )}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Content */}
-      <div className="relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500 fill-mode-forwards opacity-0" style={{ animationFillMode: 'forwards' }}>
-        <h2 className="text-3xl font-bold leading-tight md:text-3xl lg:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60 mb-6">
-          Manage your bakery<br />like a pro.
-        </h2>
-
-        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-           <div>
-              <div className="text-2xl font-bold text-white mb-1">2.4k+</div>
-              <div className="text-sm text-white/50">Bakeries Trusted</div>
-           </div>
-           <div>
-              <div className="text-2xl font-bold text-white mb-1">1M+</div>
-              <div className="text-sm text-white/50">Orders Processed</div>
-           </div>
+      {/* Bottom Stats - Absolute Positioned */}
+      <div className="absolute right-12 bottom-12 left-12 z-20 hidden lg:block">
+        <div className="flex items-center justify-between border-t border-white/10 pt-6">
+          <div>
+            <div className="mb-1 text-2xl font-bold text-white">2.4k+</div>
+            <div className="text-sm text-white/50">Bakeries Trusted</div>
+          </div>
+          <div>
+            <div className="mb-1 text-2xl font-bold text-white">1M+</div>
+            <div className="text-sm text-white/50">Orders Processed</div>
+          </div>
         </div>
       </div>
     </div>
