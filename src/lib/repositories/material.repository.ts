@@ -420,11 +420,29 @@ export class MaterialRepository extends BaseRepository {
 
   /**
    * Get materials with low stock
+   * Optimized: Uses raw SQL to filter at database level (currentStock <= minStock)
+   * instead of fetching all materials and filtering in memory
    */
   async findLowStock(storeId: string): Promise<MaterialWithSuppliers[]> {
+    // Use raw SQL for column comparison - Prisma doesn't support comparing two columns
+    const lowStockIds = await this.db.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "ingredients"
+      WHERE "storeId" = ${storeId}
+      AND "currentStock" <= "minStock"
+      AND "currentStock" > 0
+      ORDER BY "currentStock" ASC
+      LIMIT 100
+    `;
+
+    // If no low stock items, return early
+    if (!lowStockIds.length) {
+      return [];
+    }
+
+    // Fetch full details only for filtered items
     const materials = await this.db.material.findMany({
       where: {
-        storeId,
+        id: { in: lowStockIds.map((r) => r.id) },
       },
       include: {
         materialSuppliers: {
@@ -439,17 +457,12 @@ export class MaterialRepository extends BaseRepository {
           orderBy: { isPreferred: "desc" },
         },
       },
-      orderBy: { currentStock: "asc" },
     });
 
-    // Filter for low stock (currentStock <= minStock)
-    const lowStockMaterials = materials.filter(
-      (material) =>
-        Number(material.currentStock) <= Number(material.minStock) &&
-        Number(material.currentStock) > 0
-    );
+    // Sort by stock level (maintain the order from raw query)
+    materials.sort((a, b) => Number(a.currentStock) - Number(b.currentStock));
 
-    return lowStockMaterials as MaterialWithSuppliers[];
+    return materials as MaterialWithSuppliers[];
   }
 
   /**

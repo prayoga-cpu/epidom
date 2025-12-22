@@ -20,7 +20,7 @@ import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
  */
 export type ApiContext = {
   params: any; // Route params (can vary, storeId is type-checked separately)
-  session: Session;
+  session: NonNullable<Session>;
   userId: string;
   storeId?: string;
 };
@@ -28,7 +28,7 @@ export type ApiContext = {
 /**
  * API route handler function signature
  */
-type ApiHandler = (request: Request, context: ApiContext) => Promise<NextResponse>;
+type ApiHandler = (request: Request, context: ApiContext) => Promise<Response>;
 
 /**
  * Options for the API handler wrapper
@@ -104,7 +104,7 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
       // ========================================
       return await handler(request, {
         params: resolvedParams,
-        session,
+        session: session as NonNullable<Session>,
         userId: session.user.id,
         storeId,
       });

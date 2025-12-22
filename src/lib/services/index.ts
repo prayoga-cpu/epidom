@@ -13,8 +13,22 @@
  * API Route → Service → Repository → Database
  */
 
+// Auth & User services
 export * from "./auth.service";
 export * from "./user.service";
+
+// Business & Store services
 export * from "./business.service";
 export * from "./subscription.service";
 export * from "./stripe-connect.service";
+
+// Domain services
+export * from "./material.service";
+export * from "./product.service";
+export * from "./recipe.service";
+export * from "./supplier.service";
+export * from "./production-batch.service";
+
+// Utility services
+export * from "./email.service";
+export * from "./exchange-rate.service";

@@ -1,19 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/prisma";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
  * GET /api/stores/[id]/stock-movements
  * Get stock movements (history) for materials/products in a store
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id: storeId } = await params;
+export const GET = withApiHandler(
+  async (request, { storeId }) => {
     const { searchParams } = new URL(request.url);
 
     // Get query parameters
@@ -24,22 +19,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const dateTo = searchParams.get("dateTo");
     const type = searchParams.get("type"); // movement type filter
 
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
-
     // Build where clause
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     // Filter by item
     if (itemType === "material" && materialId) {
@@ -49,7 +30,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         where: { id: materialId, storeId },
       });
       if (!material) {
-        return NextResponse.json({ error: "Material not found" }, { status: 404 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, "Material not found"),
+          { status: 404 }
+        );
       }
     } else if (itemType === "product" && productId) {
       where.productId = productId;
@@ -58,7 +42,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         where: { id: productId, storeId },
       });
       if (!product) {
-        return NextResponse.json({ error: "Product not found" }, { status: 404 });
+        return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Product not found"), {
+          status: 404,
+        });
       }
     }
 
@@ -69,12 +55,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Filter by date range
     if (dateFrom || dateTo) {
-      where.createdAt = {};
+      where.createdAt = {} as Record<string, Date>;
       if (dateFrom) {
-        where.createdAt.gte = new Date(dateFrom);
+        (where.createdAt as Record<string, Date>).gte = new Date(dateFrom);
       }
       if (dateTo) {
-        where.createdAt.lte = new Date(dateTo);
+        (where.createdAt as Record<string, Date>).lte = new Date(dateTo);
       }
     }
 
@@ -83,45 +69,23 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       where,
       include: {
         material: {
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            unit: true,
-          },
+          select: { id: true, name: true, sku: true, unit: true },
         },
         product: {
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            unit: true,
-          },
+          select: { id: true, name: true, sku: true, unit: true },
         },
         productionBatch: {
-          select: {
-            id: true,
-            batchNumber: true,
-          },
+          select: { id: true, batchNumber: true },
         },
         order: {
-          select: {
-            id: true,
-            orderNumber: true,
-          },
+          select: { id: true, orderNumber: true },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
       take: 100, // Limit to recent 100 movements
     });
 
-    return NextResponse.json({
-      movements,
-      total: movements.length,
-    });
-  } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+    return NextResponse.json(createSuccessResponse({ movements, total: movements.length }));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/stock-movements", requireStoreAuth: true }
+);

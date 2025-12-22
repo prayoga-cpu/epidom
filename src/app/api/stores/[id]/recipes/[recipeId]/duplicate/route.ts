@@ -1,9 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSession, type Session } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api-handler";
 import { recipeService } from "@/lib/services/recipe.service";
-import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse } from "@/types/api/responses";
 import { serializeRecipe } from "@/lib/server/serialize";
 import { z } from "zod";
 
@@ -16,41 +14,17 @@ const duplicateRecipeSchema = z.object({
  * POST /api/stores/[id]/recipes/[recipeId]/duplicate
  * Duplicate a recipe with a new name
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; recipeId: string }> }
-) {
-  let session: Session | null = null;
-  try {
-    // Verify authentication
-    session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
-    const { id: storeId, recipeId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
+export const POST = withApiHandler(
+  async (request, { storeId, params }) => {
+    const { recipeId } = params;
     const body = await request.json();
-
-    // Validate request body
     const { newName } = duplicateRecipeSchema.parse(body);
 
     // Duplicate recipe via service
-    const recipe = await recipeService.duplicateRecipe(recipeId, newName, storeId);
+    const recipe = await recipeService.duplicateRecipe(recipeId, newName, storeId!);
 
     // Serialize Decimal fields to numbers for Client Components
     return NextResponse.json(createSuccessResponse(serializeRecipe(recipe)), { status: 201 });
-  } catch (error) {
-    const { id: storeId, recipeId } = await params;
-    return handleApiError(error, {
-      endpoint: "POST /api/stores/[id]/recipes/[recipeId]/duplicate",
-      context: { storeId, recipeId, userId: session?.user?.id },
-    });
-  }
-}
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/recipes/[recipeId]/duplicate", requireStoreAuth: true }
+);

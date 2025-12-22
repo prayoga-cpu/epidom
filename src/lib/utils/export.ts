@@ -230,7 +230,13 @@ export async function copyToClipboard<T extends Record<string, any>>(
     textArea.select();
     try {
       document.execCommand("copy");
-    } catch (err) {}
+    } catch (execCopyErr) {
+      // execCommand is deprecated but used as last-resort fallback
+      // Log for debugging but don't throw - clipboard failure is non-critical
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Clipboard fallback failed:", execCopyErr);
+      }
+    }
     document.body.removeChild(textArea);
   }
 }

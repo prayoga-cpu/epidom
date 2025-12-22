@@ -1,51 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSession, type Session } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api-handler";
 import { supplierService } from "@/lib/services/supplier.service";
 import { subscriptionService } from "@/lib/services";
 import { updateSupplierSchema } from "@/lib/validation/inventory.schemas";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
-import { z } from "zod";
 
 /**
  * GET /api/stores/[id]/suppliers/[supplierId]
  * Get a single supplier by ID
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; supplierId: string }> }
-) {
-  let session: Session | null = null;
-  try {
-    // Verify authentication
-    session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
+export const GET = withApiHandler(
+  async (request, { storeId, params, userId }) => {
+    const { supplierId } = params;
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
           "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
-          {
-            feature: "supplierManagement",
-            upgradeRequired: true,
-          }
+          { feature: "supplierManagement", upgradeRequired: true }
         ),
         { status: 403 }
       );
     }
-
-    const { id: storeId, supplierId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
 
     // Get supplier from service
     const supplier = await supplierService.getSupplierById(supplierId);
@@ -64,62 +43,37 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(createSuccessResponse(supplier), { status: 200 });
-  } catch (error) {
-    const { id: storeId, supplierId } = await params;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/suppliers/[supplierId]",
-      context: { storeId, supplierId, userId: session?.user?.id },
-    });
-  }
-}
+    return NextResponse.json(createSuccessResponse(supplier));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/suppliers/[supplierId]", requireStoreAuth: true }
+);
 
 /**
  * PATCH /api/stores/[id]/suppliers/[supplierId]
  * Update a supplier
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; supplierId: string }> }
-) {
-  let session: Session | null = null;
-  try {
-    // Verify authentication
-    session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
+export const PATCH = withApiHandler(
+  async (request, { storeId, params, userId }) => {
+    const { supplierId } = params;
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
           "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
-          {
-            feature: "supplierManagement",
-            upgradeRequired: true,
-          }
+          { feature: "supplierManagement", upgradeRequired: true }
         ),
         { status: 403 }
       );
     }
 
-    const { id: storeId, supplierId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
     const body = await request.json();
-
-    // Validate request body
     const validatedData = updateSupplierSchema.parse(body);
 
     // Update supplier via service
-    const supplier = await supplierService.updateSupplier(supplierId, storeId, {
+    const supplier = await supplierService.updateSupplier(supplierId, storeId!, {
       name: validatedData.name,
       contactPerson: validatedData.contactPerson,
       email: validatedData.email,
@@ -130,67 +84,37 @@ export async function PATCH(
       notes: validatedData.notes,
     });
 
-    return NextResponse.json(createSuccessResponse(supplier), { status: 200 });
-  } catch (error) {
-    const { id: storeId, supplierId } = await params;
-    return handleApiError(error, {
-      endpoint: "PATCH /api/stores/[id]/suppliers/[supplierId]",
-      context: { storeId, supplierId, userId: session?.user?.id },
-    });
-  }
-}
+    return NextResponse.json(createSuccessResponse(supplier));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/suppliers/[supplierId]", requireStoreAuth: true }
+);
 
 /**
  * DELETE /api/stores/[id]/suppliers/[supplierId]
  * Delete a supplier (hard delete)
  * WARNING: This will permanently delete the supplier and cascade delete related records
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; supplierId: string }> }
-) {
-  let session: Session | null = null;
-  try {
-    // Verify authentication
-    session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
+export const DELETE = withApiHandler(
+  async (request, { storeId, params, userId }) => {
+    const { supplierId } = params;
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
           "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
-          {
-            feature: "supplierManagement",
-            upgradeRequired: true,
-          }
+          { feature: "supplierManagement", upgradeRequired: true }
         ),
         { status: 403 }
       );
     }
 
-    const { id: storeId, supplierId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
     // Delete supplier via service
-    await supplierService.deleteSupplier(supplierId, storeId);
+    await supplierService.deleteSupplier(supplierId, storeId!);
 
-    return NextResponse.json(createSuccessResponse({ message: "Supplier deleted successfully" }), {
-      status: 200,
-    });
-  } catch (error) {
-    const { id: storeId, supplierId } = await params;
-    return handleApiError(error, {
-      endpoint: "DELETE /api/stores/[id]/suppliers/[supplierId]",
-      context: { storeId, supplierId, userId: session?.user?.id },
-    });
-  }
-}
+    return NextResponse.json(createSuccessResponse({ message: "Supplier deleted successfully" }));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/suppliers/[supplierId]", requireStoreAuth: true }
+);
