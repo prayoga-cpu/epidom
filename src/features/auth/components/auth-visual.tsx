@@ -206,35 +206,6 @@ export function AuthVisual() {
                 </div>
               ))}
             </div>
-
-            {/* Slide Indicators */}
-            <div className="mt-2 flex justify-center gap-2">
-              {SLIDES.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={cn(
-                    "h-1.5 rounded-full transition-all duration-300",
-                    currentSlide === index ? "w-8 bg-white" : "w-1.5 bg-white/20 hover:bg-white/40"
-                  )}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Stats - Absolute Positioned */}
-      <div className="absolute right-12 bottom-12 left-12 z-20 hidden lg:block">
-        <div className="flex items-center justify-between border-t border-white/10 pt-6">
-          <div>
-            <div className="mb-1 text-2xl font-bold text-white">2.4k+</div>
-            <div className="text-sm text-white/50">Bakeries Trusted</div>
-          </div>
-          <div>
-            <div className="mb-1 text-2xl font-bold text-white">1M+</div>
-            <div className="text-sm text-white/50">Orders Processed</div>
           </div>
         </div>
       </div>

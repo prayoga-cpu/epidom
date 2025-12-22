@@ -24,7 +24,7 @@ export function PricingFaq() {
   return (
     <section className="pb-12 md:pb-20 lg:pb-24">
       <Container maxWidth="7xl">
-        <h2 className="mb-6 text-center text-2xl font-bold tracking-tight md:mb-8 md:text-4xl">
+        <h2 className="text-brand-primary mb-6 text-center text-2xl font-bold tracking-tight md:mb-8 md:text-4xl">
           {t("pricing.faq.title")}
         </h2>
         <Accordion type="single" collapsible className="w-full">

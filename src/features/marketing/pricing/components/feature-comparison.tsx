@@ -19,7 +19,7 @@ export function FeatureComparison() {
   return (
     <section className="pb-12 md:pb-20 lg:pb-24">
       <Container maxWidth="7xl">
-        <h2 className="mb-6 text-center text-2xl font-bold tracking-tight md:mb-8 md:text-4xl">
+        <h2 className="text-brand-primary mb-6 text-center text-2xl font-bold tracking-tight md:mb-8 md:text-4xl">
           {t("pricing.compare.title")}
         </h2>
         <div className="overflow-x-auto rounded-lg border">
@@ -30,7 +30,7 @@ export function FeatureComparison() {
                 <th className="p-3 text-center font-semibold md:p-4">
                   {t("pricing.compare.headers.starter")}
                 </th>
-                <th className="border-l-2 border-l-brand-primary p-3 text-center font-semibold md:p-4">
+                <th className="border-l-brand-primary border-l-2 p-3 text-center font-semibold md:p-4">
                   {t("pricing.compare.headers.pro")}
                 </th>
                 <th className="p-3 text-center font-semibold md:p-4">
@@ -44,7 +44,7 @@ export function FeatureComparison() {
                 <td className="p-3 text-center md:p-4">
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
-                <td className="border-l-2 border-l-brand-primary p-3 text-center md:p-4">
+                <td className="border-l-brand-primary border-l-2 p-3 text-center md:p-4">
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
                 <td className="p-3 text-center md:p-4">
@@ -54,7 +54,7 @@ export function FeatureComparison() {
               <tr className="hover:bg-muted/30 border-t">
                 <td className="p-3 md:p-4">{t("pricing.compare.rows.multiSite.name")}</td>
                 <td className="p-3 text-center md:p-4">—</td>
-                <td className="border-l-2 border-l-brand-primary p-3 text-center md:p-4">
+                <td className="border-l-brand-primary border-l-2 p-3 text-center md:p-4">
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
                 <td className="p-3 text-center md:p-4">
@@ -66,7 +66,7 @@ export function FeatureComparison() {
                 <td className="p-3 text-center md:p-4">
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
-                <td className="border-l-2 border-l-brand-primary p-3 text-center md:p-4">
+                <td className="border-l-brand-primary border-l-2 p-3 text-center md:p-4">
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
                 <td className="p-3 text-center md:p-4">
@@ -76,7 +76,7 @@ export function FeatureComparison() {
               <tr className="hover:bg-muted/30 border-t">
                 <td className="p-3 md:p-4">{t("pricing.compare.rows.reports.name")}</td>
                 <td className="p-3 text-center md:p-4">—</td>
-                <td className="border-l-2 border-l-brand-primary p-3 text-center md:p-4">
+                <td className="border-l-brand-primary border-l-2 p-3 text-center md:p-4">
                   <Check className="text-primary mx-auto h-4 w-4 md:h-5 md:w-5" />
                 </td>
                 <td className="p-3 text-center md:p-4">
@@ -88,7 +88,7 @@ export function FeatureComparison() {
                 <td className="p-3 text-center md:p-4">
                   {t("pricing.compare.rows.support.starter")}
                 </td>
-                <td className="border-l-2 border-l-brand-primary p-3 text-center md:p-4">
+                <td className="border-l-brand-primary border-l-2 p-3 text-center md:p-4">
                   {t("pricing.compare.rows.support.pro")}
                 </td>
                 <td className="p-3 text-center md:p-4">

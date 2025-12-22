@@ -43,6 +43,10 @@ export default function LoginPage() {
                 alt="Epidom"
                 fill
                 className="object-contain"
+                style={{
+                  filter:
+                    "invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)",
+                }}
                 priority
               />
             </div>

@@ -16,15 +16,13 @@ export function ContactHeader() {
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl leading-tight font-bold tracking-tight md:mb-8 md:text-5xl lg:mb-4 lg:text-5xl text-brand-primary">
+      <h1 className="text-brand-primary mb-6 text-4xl leading-none font-extrabold tracking-tight md:mb-8 md:text-5xl lg:mb-6 lg:text-6xl">
         {t("contact.title")}
       </h1>
 
-      <p className="mb-6 text-lg leading-relaxed md:mb-8 md:text-2xl lg:mb-6 lg:text-xl text-brand-primary">
+      <p className="text-brand-primary/60 mb-6 text-lg leading-relaxed md:mb-8 md:text-2xl lg:mb-6 lg:text-xl">
         {t("contact.subtitle")}
       </p>
     </div>
   );
 }
-
-
