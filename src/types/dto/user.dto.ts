@@ -15,7 +15,7 @@ export interface UserDto {
   locale: string;
   timezone: string;
   currency: string;
-  emailVerified: Date | null;
+  emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

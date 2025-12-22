@@ -307,10 +307,30 @@ export async function fetchSupplierOrdersForPage(storeId: string): Promise<Suppl
  * Note: Alerts are computed from materials (low stock), so we fetch and process
  */
 export async function fetchAlertsForPage(storeId: string): Promise<AlertsResponse> {
-  // Get all active materials for the store
-  const allMaterials = await prisma.material.findMany({
+  // Optimize: Use raw query to filter at DB level (currentStock <= minStock)
+  // This avoids loading thousands of items into memory just to find a few alerts
+  // Note: We use double quotes for column names to handle case sensitivity in Postgres if needed,
+  // but Prisma usually creates columns matching field names unless mapped.
+  // Table name is "ingredients" based on @@map("ingredients") in schema
+  const lowStockIds = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "ingredients"
+    WHERE "storeId" = ${storeId}
+    AND "currentStock" <= "minStock"
+    ORDER BY "currentStock" ASC
+    LIMIT 100
+  `;
+
+  // If no low stock items, return empty early
+  if (!lowStockIds.length) {
+    return { alerts: [] };
+  }
+
+  // Fetch full details only for the filtered items
+  const lowStockMaterials = await prisma.material.findMany({
     where: {
-      storeId,
+      id: {
+        in: lowStockIds.map((row) => row.id),
+      },
     },
     include: {
       materialSuppliers: {
@@ -326,22 +346,18 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
         },
       },
     },
+    // Maintain the sort order from the raw query effectively by sorting in memory
+    // or we can trust the ID order if we map carefully, but explicit sort is safer here
+    // since we want most critical (lowest stock %) first
   });
 
-  // Filter materials where currentStock <= minStock
-  const lowStockMaterials = allMaterials
-    .filter((material) => {
-      const currentStock = Number(material.currentStock);
-      const minStock = Number(material.minStock);
-      return currentStock <= minStock;
-    })
-    .sort((a, b) => {
-      // Sort by stock percentage (most critical first)
-      const aPercent = Number(a.minStock) > 0 ? Number(a.currentStock) / Number(a.minStock) : 0;
-      const bPercent = Number(b.minStock) > 0 ? Number(b.currentStock) / Number(b.minStock) : 0;
-      if (aPercent !== bPercent) return aPercent - bPercent;
-      return a.name.localeCompare(b.name);
-    });
+  // Sort by severity (stock percentage) logic
+  lowStockMaterials.sort((a, b) => {
+    const aPercent = Number(a.minStock) > 0 ? Number(a.currentStock) / Number(a.minStock) : 0;
+    const bPercent = Number(b.minStock) > 0 ? Number(b.currentStock) / Number(b.minStock) : 0;
+    if (aPercent !== bPercent) return aPercent - bPercent;
+    return a.name.localeCompare(b.name);
+  });
 
   // Format alerts to match Alert type from hook
   const alerts: Alert[] = lowStockMaterials.map((material) => {

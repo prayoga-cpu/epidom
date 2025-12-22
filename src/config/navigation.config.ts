@@ -76,6 +76,12 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: true,
         badgeKey: "alerts",
       },
+      {
+        href: "/billing",
+        labelKey: "billing.title",
+        icon: CreditCard,
+        showBadge: false,
+      },
     ],
   },
 ];

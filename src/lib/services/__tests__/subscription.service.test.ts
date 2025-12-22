@@ -11,6 +11,7 @@ import type { SubscriptionRepository } from "@/lib/repositories/subscription.rep
 import type { UserRepository } from "@/lib/repositories/user.repository";
 import type { StoreRepository } from "@/lib/repositories/store.repository";
 import type { ProductRepository } from "@/lib/repositories/product.repository";
+import type { UserProfileDto } from "@/types/dto";
 
 // Mock Stripe
 vi.mock("@/lib/stripe", () => ({
@@ -81,7 +82,7 @@ const mockUserProfile = {
     name: "Test Business",
   },
   subscription: mockSubscription,
-};
+} as unknown as UserProfileDto;
 
 // Mock repositories
 const createMockRepos = () => ({
@@ -149,6 +150,7 @@ describe("SubscriptionService", () => {
       mocks.userRepo.getProfile.mockResolvedValue({
         ...mockUser,
         business: null,
+        subscription: null,
       });
 
       const result = await service.canCreateStore("user-1");
@@ -299,6 +301,7 @@ describe("SubscriptionService", () => {
       mocks.userRepo.getProfile.mockResolvedValue({
         ...mockUser,
         business: null,
+        subscription: null,
       });
 
       const result = await service.canDowngradeToPlan("user-1", SubscriptionPlan.STARTER);

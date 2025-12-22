@@ -10,7 +10,7 @@ import type {
   MaterialRepository,
   MaterialWithSuppliers,
 } from "@/lib/repositories/material.repository";
-import { MovementType } from "@prisma/client";
+import { MovementType, Prisma } from "@prisma/client";
 
 // Mock material data
 const mockMaterial: MaterialWithSuppliers = {
@@ -20,10 +20,10 @@ const mockMaterial: MaterialWithSuppliers = {
   description: "Test description",
   category: "Test Category",
   unit: "kg",
-  unitCost: 10.0 as unknown as import("@prisma/client/runtime/library").Decimal,
-  currentStock: 100 as unknown as import("@prisma/client/runtime/library").Decimal,
-  minStock: 10 as unknown as import("@prisma/client/runtime/library").Decimal,
-  maxStock: 200 as unknown as import("@prisma/client/runtime/library").Decimal,
+  unitCost: new Prisma.Decimal(10.0),
+  currentStock: new Prisma.Decimal(100),
+  minStock: new Prisma.Decimal(10),
+  maxStock: new Prisma.Decimal(200),
   storeId: "store-1",
   createdAt: new Date(),
   updatedAt: new Date(),

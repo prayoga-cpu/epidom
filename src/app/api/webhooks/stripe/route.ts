@@ -105,7 +105,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     const existingSubscription = await subscriptionRepository.findByUserId(userId);
 
     const subscriptionData = {
-      plan: SubscriptionPlan.PRO,
+      plan: SubscriptionPlan.STARTER,
       status: SubscriptionStatus.ACTIVE,
       currentPeriodStart: now,
       currentPeriodEnd: promoEndDate,
