@@ -43,12 +43,7 @@ export function HeroSection() {
 
   // Return placeholder during SSR to avoid hydration mismatch
   if (!mounted) {
-    return (
-      <SSRPlaceholder
-        height="calc(100vh - 4rem)"
-        className="bg-white"
-      />
-    );
+    return <SSRPlaceholder height="calc(100vh - 4rem)" className="bg-white" />;
   }
 
   return (
@@ -62,7 +57,7 @@ export function HeroSection() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 flex w-full flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
+      <div className="relative z-10 flex w-full flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:px-8 lg:pt-32 lg:pb-20">
         <Container maxWidth="7xl" className="w-full">
           <div className="grid w-full grid-cols-1 content-center gap-12 lg:grid-cols-2 lg:gap-16">
             {/* Left Column: Text Content */}
@@ -75,8 +70,23 @@ export function HeroSection() {
                 {/* Headline with gradient - using globals.css animation */}
                 <h1 className="text-4xl leading-[1.1] font-extrabold tracking-tight sm:text-5xl md:text-5xl lg:text-[3.25rem] xl:text-[4rem]">
                   <span className="text-brand-primary">{t("home.hero.headlinePart1")}</span>{" "}
-                  <span className="animate-gradient-text bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
-                    {t("home.hero.headlineHighlight")}
+                  <span className="relative inline-block px-2">
+                    <span className="text-brand-primary font-serif text-[1.1em] italic">
+                      {t("home.hero.headlineHighlight")}
+                    </span>
+                    {/* Subtle underline SVG for emphasis */}
+                    <svg
+                      className="text-brand-primary/20 absolute -bottom-2 left-0 h-3 w-full"
+                      viewBox="0 0 100 10"
+                      preserveAspectRatio="none"
+                    >
+                      <path
+                        d="M0 5 Q 50 10 100 5"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        fill="none"
+                      />
+                    </svg>
                   </span>{" "}
                   <span className="text-brand-primary">{t("home.hero.headlinePart2")}</span>
                 </h1>
@@ -159,10 +169,10 @@ export function HeroSection() {
 
                 {/* Mobile Phone Mockup - Overlapping */}
                 <div className="absolute -bottom-8 -left-8 hidden w-32 md:block lg:w-40">
-                  <div className="relative aspect-[9/19] w-full overflow-hidden rounded-3xl border-4 border-gray-800 bg-gray-800 shadow-2xl">
+                  <div className="relative aspect-[9/19] w-full overflow-hidden rounded-3xl border-4 border-black bg-black shadow-2xl">
                     {/* Phone notch */}
                     <div
-                      className="absolute top-0 left-1/2 z-20 h-5 w-16 -translate-x-1/2 rounded-b-xl bg-gray-800"
+                      className="absolute top-0 left-1/2 z-20 h-5 w-16 -translate-x-1/2 rounded-b-xl bg-black"
                       aria-hidden="true"
                     />
 

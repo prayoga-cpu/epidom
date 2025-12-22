@@ -52,12 +52,7 @@ export function PricingSection() {
 
   // Return placeholder during SSR
   if (!mounted) {
-    return (
-      <SSRPlaceholder
-        height="800px"
-        className="bg-white py-20 md:py-28"
-      />
-    );
+    return <SSRPlaceholder height="800px" className="bg-white py-20 md:py-28" />;
   }
 
   return (
@@ -132,8 +127,7 @@ export function PricingSection() {
                   {/* CTA */}
                   <Button
                     onClick={() => handleSelectPlan(key)}
-                    variant="outline"
-                    className="border-brand-primary/20 text-brand-primary hover:bg-brand-primary w-full rounded-xl hover:text-white"
+                    className="border-brand-primary text-brand-primary hover:!bg-brand-primary w-full cursor-pointer rounded-xl border-2 bg-transparent font-bold transition-all duration-300 hover:!text-white hover:shadow-lg"
                   >
                     {key === "custom" ? t("home.pricing.custom.cta") : t("home.pricing.cta")}
                   </Button>

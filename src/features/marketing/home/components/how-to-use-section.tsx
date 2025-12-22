@@ -93,12 +93,7 @@ export function HowToUseSection() {
   }, [isPaused, isVisible, goToNext]);
 
   if (!mounted) {
-    return (
-      <SSRPlaceholder
-        height="700px"
-        className="bg-gray-50 py-20 md:py-28"
-      />
-    );
+    return <SSRPlaceholder height="700px" className="bg-gray-50 py-20 md:py-28" />;
   }
 
   const currentFeature = FEATURES[currentIndex];
@@ -202,19 +197,29 @@ export function HowToUseSection() {
 
             {/* Screenshot Container - Maintains aspect ratio */}
             <div className="relative bg-gray-100">
-              <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-                {!loadedImages.has(currentFeature.key) && (
-                  <Skeleton className="absolute inset-0 z-10" />
-                )}
-                <Image
-                  src={currentFeature.image}
-                  alt={t(`home.howToUse.features.${currentFeature.key}.title`)}
-                  fill
-                  className="object-contain object-top transition-opacity duration-500"
-                  onLoad={() => handleImageLoad(currentFeature.key)}
-                  sizes="(max-width: 1200px) 100vw, 1200px"
-                  priority={currentIndex === 0}
-                />
+              <div className="relative w-full overflow-hidden" style={{ paddingBottom: "56.25%" }}>
+                {/* Sliding Track */}
+                <div
+                  className="absolute inset-0 flex transition-transform duration-700 ease-in-out"
+                  style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+                >
+                  {FEATURES.map((feature, index) => (
+                    <div key={feature.key} className="relative h-full w-full flex-shrink-0">
+                      {!loadedImages.has(feature.key) && (
+                        <Skeleton className="absolute inset-0 z-10" />
+                      )}
+                      <Image
+                        src={feature.image}
+                        alt={t(`home.howToUse.features.${feature.key}.title`)}
+                        fill
+                        className="object-contain object-top"
+                        onLoad={() => handleImageLoad(feature.key)}
+                        sizes="(max-width: 1200px) 100vw, 1200px"
+                        priority={index === 0}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
