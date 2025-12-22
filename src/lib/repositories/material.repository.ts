@@ -54,10 +54,58 @@ export class MaterialRepository extends BaseRepository {
       take = 50,
     } = filters;
 
+    // Handle stock status filtering using raw query to get matching IDs
+    // This is necessary because Prisma doesn't support column comparison (current vs min) in where clause
+    let stockStatusIds: string[] | undefined;
+
+    if (stockStatus) {
+      let stockQuery = Prisma.sql``;
+
+      switch (stockStatus) {
+        case "out_of_stock":
+          stockQuery = Prisma.sql`
+            SELECT id FROM "ingredients"
+            WHERE "storeId" = ${storeId}
+            AND "currentStock" <= 0
+          `;
+          break;
+        case "low_stock":
+          stockQuery = Prisma.sql`
+            SELECT id FROM "ingredients"
+            WHERE "storeId" = ${storeId}
+            AND "currentStock" > 0
+            AND "currentStock" <= "minStock"
+          `;
+          break;
+        case "overstocked":
+          stockQuery = Prisma.sql`
+            SELECT id FROM "ingredients"
+            WHERE "storeId" = ${storeId}
+            AND "currentStock" > "maxStock"
+          `;
+          break;
+        case "in_stock":
+          stockQuery = Prisma.sql`
+            SELECT id FROM "ingredients"
+            WHERE "storeId" = ${storeId}
+            AND "currentStock" > "minStock"
+            AND "currentStock" <= "maxStock"
+          `;
+          break;
+      }
+
+      if (stockQuery.values.length > 0 || stockQuery.text.length > 0) {
+        const results = await this.db.$queryRaw<{ id: string }[]>(stockQuery);
+        stockStatusIds = results.map((r) => r.id);
+      }
+    }
+
     // Build where clause
     const where: Prisma.MaterialWhereInput = {
       storeId,
-
+      ...(stockStatusIds && {
+        id: { in: stockStatusIds },
+      }),
       ...(search && {
         OR: [
           { name: { contains: search, mode: "insensitive" } },
@@ -81,54 +129,31 @@ export class MaterialRepository extends BaseRepository {
     };
 
     // Fetch materials with includes
-    let materials = await this.db.material.findMany({
-      where,
-      include: {
-        materialSuppliers: {
-          include: {
-            supplier: {
-              select: {
-                id: true,
-                name: true,
+    const [materials, total] = await Promise.all([
+      this.db.material.findMany({
+        where,
+        include: {
+          materialSuppliers: {
+            include: {
+              supplier: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
+            orderBy: { isPreferred: "desc" },
           },
-          orderBy: { isPreferred: "desc" },
         },
-      },
-      orderBy,
-    });
-
-    // Apply stock status filter in-memory (Prisma doesn't support column comparisons)
-    if (stockStatus) {
-      materials = materials.filter((material) => {
-        const current = Number(material.currentStock);
-        const min = Number(material.minStock);
-        const max = Number(material.maxStock);
-
-        switch (stockStatus) {
-          case "out_of_stock":
-            return current <= 0;
-          case "low_stock":
-            return current > 0 && current <= min;
-          case "overstocked":
-            return current > max;
-          case "in_stock":
-            return current > min && current <= max;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Get total before pagination
-    const total = materials.length;
-
-    // Apply pagination after filtering
-    const paginatedMaterials = materials.slice(skip, skip + take);
+        orderBy,
+        skip,
+        take,
+      }),
+      this.db.material.count({ where }),
+    ]);
 
     return {
-      materials: paginatedMaterials as MaterialWithSuppliers[],
+      materials: materials as MaterialWithSuppliers[],
       total,
     };
   }

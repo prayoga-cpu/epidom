@@ -230,9 +230,30 @@ export async function fetchProductionBatchesForPage(
  * Fetch supplier orders for a store
  * Note: No repository exists, so we fetch directly via Prisma
  */
-export async function fetchSupplierOrdersForPage(storeId: string): Promise<SupplierOrdersResponse> {
+export async function fetchSupplierOrdersForPage(
+  storeId: string,
+  options: {
+    status?:
+      | "PENDING"
+      | "PLACED"
+      | "RECEIVED"
+      | "CANCELLED"
+      | Array<"PENDING" | "PLACED" | "RECEIVED" | "CANCELLED">;
+    skip?: number;
+    take?: number;
+  } = {}
+): Promise<SupplierOrdersResponse> {
+  const { status, skip = 0, take = 50 } = options;
+
+  const where = {
+    storeId,
+    ...(status && {
+      status: Array.isArray(status) ? { in: status } : status,
+    }),
+  };
+
   const orders = await prisma.supplierOrder.findMany({
-    where: { storeId },
+    where,
     include: {
       supplier: {
         select: {
@@ -258,6 +279,8 @@ export async function fetchSupplierOrdersForPage(storeId: string): Promise<Suppl
     orderBy: {
       orderDate: "desc",
     },
+    skip,
+    take,
   });
 
   // Transform to match SupplierOrder type from hook
@@ -395,6 +418,65 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
   });
 
   return { alerts };
+}
+
+/**
+ * Fetch stock levels for dashboard tracking card
+ * Optimize: Fetch only top 5 items with lowest stock percentage directly from DB
+ */
+export async function fetchStockLevelsForPage(storeId: string): Promise<MaterialsResponse> {
+  // Get top 5 items with lowest stock percentage (current / max)
+  const ids = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "ingredients"
+    WHERE "storeId" = ${storeId}
+    ORDER BY
+      CASE
+        WHEN "maxStock" > 0 THEN CAST("currentStock" AS DOUBLE PRECISION) / CAST("maxStock" AS DOUBLE PRECISION)
+        ELSE 0
+      END ASC
+    LIMIT 5
+  `;
+
+  if (!ids.length) {
+    return { materials: [], total: 0 };
+  }
+
+  // Fetch full details for these items
+  const materials = await prisma.material.findMany({
+    where: {
+      id: {
+        in: ids.map((row) => row.id),
+      },
+    },
+    include: {
+      materialSuppliers: {
+        include: {
+          supplier: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { isPreferred: "desc" },
+      },
+    },
+  });
+
+  // Sort again in memory to match the exact percentage order
+  // (Prisma findMany doesn't guarantee order of IN clause match)
+  materials.sort((a, b) => {
+    const aMax = Number(a.maxStock);
+    const bMax = Number(b.maxStock);
+    const aPercent = aMax > 0 ? Number(a.currentStock) / aMax : 0;
+    const bPercent = bMax > 0 ? Number(b.currentStock) / bMax : 0;
+    return aPercent - bPercent;
+  });
+
+  return {
+    materials: serializeMaterials(materials),
+    total: materials.length,
+  };
 }
 
 /**
