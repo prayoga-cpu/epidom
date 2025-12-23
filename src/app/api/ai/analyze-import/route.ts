@@ -12,6 +12,7 @@ import {
   RecipeFields,
   importAnalysisSchema,
 } from "@/lib/ai/import-schema";
+import Papa from "papaparse";
 
 // Use OpenAI (gpt-4o) for high accuracy, fallback to Google Gemini if no OpenAI key
 const model = process.env.OPENAI_API_KEY ? openai("gpt-4o") : google("gemini-1.5-flash");
@@ -36,12 +37,21 @@ export async function POST(req: Request) {
       })
       .parse(body);
 
-    // 3. Select Target Schema based on Type
-    // This reduces "Analysis Space" for AI, increasing accuracy
-    let targetFieldSchema: any = MaterialFields;
-    if (type === "product") targetFieldSchema = ProductFields;
-    if (type === "supplier") targetFieldSchema = SupplierFields;
-    if (type === "recipe") targetFieldSchema = RecipeFields;
+    // 3. Select Target Schema (SMART ALL-IN-ONE MODE)
+    // Instead of restricting schema based on type, we allow ALL fields to be mapped.
+    // This enables the "Smart Wizard" to detect mixed entities in a single CSV.
+
+    // Combine all unique options
+    const allFieldOptions = Array.from(
+      new Set([
+        ...MaterialFields.options,
+        ...ProductFields.options,
+        ...SupplierFields.options,
+        ...RecipeFields.options,
+      ])
+    );
+
+    const targetFieldSchema = z.enum(allFieldOptions as [string, ...string[]]);
 
     const dynamicMappingSchema = z.object({
       targetField: targetFieldSchema, // Restrict to specific fields
@@ -49,16 +59,18 @@ export async function POST(req: Request) {
       csvIndex: z.number(),
       confidence: z.enum(["HIGH", "MEDIUM", "LOW"]),
       reasoning: z.string(),
-      transform: z.enum([
-        "NONE",
-        "EXTRACT_NUMBER",
-        "EXTRACT_INT",
-        "BOOLEAN_Y_N",
-        "DATE_STANDARD",
-        "UPPERCASE",
-        "LOWERCASE",
-        "TITLECASE",
-      ]),
+      transform: z
+        .enum([
+          "NONE",
+          "EXTRACT_NUMBER",
+          "EXTRACT_INT",
+          "BOOLEAN_Y_N",
+          "DATE_STANDARD",
+          "UPPERCASE",
+          "LOWERCASE",
+          "TITLECASE",
+        ])
+        .default("NONE"), // FIX: Default to NONE if AI forgets this field
     });
 
     // We rebuild the full schema with the dynamic target field
@@ -132,6 +144,43 @@ The system is primarily used in **Indonesia**, so CSV data often uses:
 - Indonesian terms: "Produk", "Menu", "Item Jual", "Barang Jadi"
 `;
 
+    // 3. Define Domain Context (Enhanced with Universal/Global Logic)
+    const epidomKnowledgeBase = `
+    ### EPIDOM KNOWLEDGE BASE (GLOBAL F&B MANAGEMENT)
+    You are importing data for a Universal Restaurant Management System.
+    The data can be in ANY language (English, Indonesian, Spanish, French, etc.).
+
+    **1. ENTITIES & RELATIONSHIPS:**
+    - **Material (Ingredients):** Raw items bought from suppliers (e.g., "Flour", "Chicken", "Sugar").
+      - Key Fields: unitCost, currentStock, unit, supplierName.
+    - **Product (Menu Items):** Items sold to customers (e.g., "Fried Rice", "Latte").
+      - Key Fields: sellingPrice, costPrice, category.
+      - **Heuristic:** Columns like "Selling Price" or "Menu Price" strongly indicate a PRODUCT.
+    - **Supplier (Vendors):** Companies/People who sell Materials.
+      - Key Fields: name, contactPerson, phone, email, address.
+    - **Recipe:** The instructional blueprint.
+      - **Context:** Look for "Yield", "Production Time", or "Ingredients List".
+
+    **2. GLOBAL TERMINOLOGY GUIDE (MULTI-LANGUAGE):**
+     - **Money/Cost:** "Price", "Cost", "Harga", "Prix", "Precio", "Amount", "Value", "$", "€", "£", "Rp".
+     - **Quantity/Stock:** "Qty", "Quantity", "Stock", "Count", "Jumlah", "Stok", "Balance", "Cant".
+     - **Units:** "Unit", "UoM", "Satuan", "Measure", "Pack", "Size", "Unidad".
+     - **Names:** "Name", "Item", "Product", "Description", "Nama", "Nombre", "Nom", "Description".
+
+    **3. INTELLIGENT MAPPING RULES:**
+    - **Numeric vs String:** NEVER map a strictly numeric column (e.g., "5000", "10.5") to a NAME field.
+    - **String vs Numeric:** NEVER map a text column (e.g., "Chicken", "Kg") to a PRICE/QUANTITY field.
+    - **Units:** "g", "kg", "pcs", "lb", "oz" are UNITS. Map to 'unit' or 'yieldUnit', NEVER 'qty'.
+    - **Phone Numbers:** High-digit numbers starting with 0, +, or ( ) are Phones. Map to 'phone'.
+    - **Prices:** Contextually large numbers are usually Money.
+
+    **4. SPECIFIC FIELD MAPPING STRATEGY:**
+    - **Material Fields:** [${MaterialFields.options.join(", ")}]
+    - **Product Fields:** [${ProductFields.options.join(", ")}]
+    - **Supplier Fields:** [${SupplierFields.options.join(", ")}]
+    - **Recipe Fields:** [${RecipeFields.options.join(", ")}]
+    `;
+
     // Type-specific instructions
     const typeInstructions: Record<string, string> = {
       material: `
@@ -143,7 +192,8 @@ The system is primarily used in **Indonesia**, so CSV data often uses:
 - "Max Stok", "Maximum Stock" → maxStock
 - "Kategori", "Category", "Jenis" → category
 - "SKU", "Kode", "Code" → sku
-- If you see "Harga Jual" or "Selling Price", this is NOT a material (it's a product). Set confidence LOW.`,
+- "Supplier", "Pemasok" → supplierName
+- If you see "Selling Price", map it to "sellingPrice" (Product Field).`,
 
       product: `
 ### PRODUCT IMPORT SPECIFICS
@@ -151,7 +201,7 @@ The system is primarily used in **Indonesia**, so CSV data often uses:
 - "Harga Pokok", "HPP", "Cost", "COGS" → costPrice
 - "Stok", "Stock" → currentStock
 - "Kategori", "Category" → category (Food, Beverage, Dessert, etc.)
-- If you see "Bahan Baku" or ingredient-related terms, this is NOT a product (it's a material). Set confidence LOW.`,
+- If you see "Bahan Baku" related fields, map them to Material/Recipe fields (e.g. ingredient_name).`,
 
       supplier: `
 ### SUPPLIER IMPORT SPECIFICS
@@ -179,78 +229,156 @@ If CSV contains ingredient lists (e.g., "Ayam 500g, Garam 10g, Bawang 50g"), map
 The system will parse this text later.`,
     };
 
+    // 4. Parse CSV & Create Column Profiles (Robust Transposition)
+    // Instead of sending rows which can be sparse/confusing, we send "Column Profiles"
+    // This isolates each column's data, preventing "shifting" errors.
+    const parsed = Papa.parse(csvPreview, {
+      header: false,
+      skipEmptyLines: true,
+      preview: 20, // Parse first 20 rows to get good samples
+    });
+
+    const rows = parsed.data as string[][];
+    if (rows.length === 0) {
+      return NextResponse.json({ error: "CSV file is empty" }, { status: 400 });
+    }
+
+    // Determine max columns
+    const maxCols = Math.max(...rows.map((r) => r.length));
+    const columnProfiles = [];
+    const autoMatches: string[] = [];
+
+    // Analyze each column individually
+    for (let c = 0; c < maxCols; c++) {
+      const headerVal = rows[0][c] || "";
+      const sampleValues = rows
+        .slice(1)
+        .map((r) => r[c])
+        .filter((val) => val && val.trim() !== "") // Only non-empty
+        .slice(0, 5); // Take top 5 samples
+
+      // Auto-Match Logic (Hybrid)
+      const cleanHeader = headerVal.toLowerCase().replace(/[^a-z0-9]/g, "");
+      let bestMatch = "";
+      if (cleanHeader) {
+        bestMatch =
+          allFieldOptions.find((opt) => {
+            const cleanOpt = opt.toLowerCase().replace(/[^a-z0-9]/g, "");
+            return cleanHeader === cleanOpt || cleanOpt === cleanHeader; // Strict match preferred
+          }) || "";
+
+        if (bestMatch) {
+          autoMatches.push(`- Column ${c} ("${headerVal}") matches field "${bestMatch}"`);
+        }
+      }
+
+      columnProfiles.push(
+        `
+COLUMN INDEX ${c}:
+- Header (Row 0): "${headerVal}"
+- Sample Values: ${JSON.stringify(sampleValues)}
+- Auto-Detected Match: ${bestMatch ? bestMatch : "None"}
+      `.trim()
+      );
+    }
+
+    // 5. Generate AI Analysis
     const result = await generateObject({
       model: model as any,
       schema: analysisSchema,
       prompt: `
-You are an expert Data Analyst for EPIDOM, an Indonesian F&B Inventory Management System.
+      You are a SENIOR DATA ENGINEER for EPIDOM. You are extremely smart, precise, and logical.
+      Your task is to map CSV columns to database fields with 100% accuracy.
 
-${domainContext}
+      **CONTEXT & RULES:**
+      ${epidomKnowledgeBase}
 
----
+      **LAYER 1: AUTOMATED HEADER ANALYSIS (Strong Hints):**
+      The system has pre-analyzed headers and found these potential matches. IGNORE them only if Sample Values prove them wrong.
+      ${autoMatches.join("\n")}
 
-## YOUR TASK
+      **LAYER 2: YOUR JUDGEMENT (SAMPLES & CONTEXT):**
+      **TARGET FIELDS:** ${allFieldOptions.join(", ")}
 
-Analyze the CSV below and map columns to **${type.toUpperCase()}** entity fields.
+      **INPUT DATA (COLUMN PROFILES):**
+      Analyze these columns. LOOK AT THE SAMPLES.
 
-**Available Target Fields:** ${JSON.stringify(
-        type === "material"
-          ? MaterialFields.options
-          : type === "product"
-            ? ProductFields.options
-            : type === "supplier"
-              ? SupplierFields.options
-              : RecipeFields.options
-      )}
+      ${columnProfiles.join("\n\n")}
 
-${typeInstructions[type]}
+      **INSTRUCTIONS:**
+      1. **Check Layer 1:** If a column has an Auto-Match, heavily bias towards it.
+      2. **Verify with Samples:**
+         - If Header says "Price" but samples are "Chicken", trust Samples (map to Name).
+         - If Header says "Name" but samples are "5000", trust Samples (map to Price/Qty).
+      3. **Mixed Entity Mode:** Map everything possible.
+      4. **Logic Check:**
+         - Don't map "500" to "name".
+         - Don't map "Chicken" to "price".
+         - Don't map "kg" to "quantity".
 
----
-
-## INPUT CSV SNIPPET
-
-\`\`\`csv
-${csvPreview}
-\`\`\`
-
----
-
-## INSTRUCTIONS
-
-1. **Structure Discovery**
-   - Skip junk rows (titles, dates, empty rows, totals, "Daftar...", "Laporan...")
-   - Find the HEADER row (contains column names)
-   - Find where DATA actually starts (first row after header)
-
-2. **Column Mapping**
-   - Match CSV columns to target fields based on semantic meaning
-   - Consider Indonesian terminology
-   - Handle number formats: "Rp 50.000" → 50000, "1.234,56" → 1234.56
-
-3. **Confidence Levels**
-   - HIGH: Clear match (e.g., "Nama Bahan" → name for material)
-   - MEDIUM: Likely match but needs verification
-   - LOW: Ambiguous or uncertain match
-
-4. **Transforms**
-   - EXTRACT_NUMBER: For prices/quantities with currency/text mixed
-   - TITLECASE: For names that need capitalization
-   - UPPERCASE/LOWERCASE: For standardization
-
-5. **Edge Cases**
-   - If a column doesn't match any field, you may skip it in mapping
-   - If you suspect the data is for a DIFFERENT entity type, set all confidences to LOW
-
-Output JSON matching the schema exactly.
-`,
+      **OUTPUT:**
+      Return a JSON object with 'mappings' for every useful column.
+    `,
     });
 
-    return NextResponse.json(result.object);
+    const aiResult = result.object;
+
+    // 6. POST-PROCESS: Force-Correct AI Hallucinations using Auto-Matches
+    // Logic: Code > AI. If header says "Phone", it IS "Phone".
+
+    const forcedMatches = new Map<number, string>();
+    const rowsForForce = parsed.data as string[][];
+    // Use the first row as header.
+    const headerRow = rowsForForce[0] || [];
+
+    headerRow.forEach((hVal, c) => {
+      if (!hVal) return;
+      const cleanH = hVal.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (!cleanH) return;
+
+      // Find best matching field
+      const bestMatch = allFieldOptions.find((opt) => {
+        const cleanOpt = opt.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return cleanH === cleanOpt;
+      });
+
+      if (bestMatch) {
+        forcedMatches.set(c, bestMatch);
+      }
+    });
+
+    const finalMappings = aiResult.mappings.map((m) => {
+      // If this column has a Forced Field based on Header
+      if (forcedMatches.has(m.csvIndex)) {
+        const forcedField = forcedMatches.get(m.csvIndex)!;
+
+        // If AI guessed differently, CORRECT IT.
+        // Also, if AI guessed same, we still confirm it.
+        return {
+          ...m,
+          targetField: forcedField,
+          confidence: "HIGH",
+          reasoning: `Verified: Header '${m.csvHeader}' aligns with schema field '${forcedField}'.`,
+        };
+      }
+      return m;
+    });
+
+    // Remove duplicates? Ensure only one column per index?
+    // Actually, one index -> one mapping is standard.
+
+    return NextResponse.json({
+      ...aiResult,
+      mappings: finalMappings,
+    });
   } catch (error) {
-    console.error("AI Analysis Failed:", error);
-    return NextResponse.json(
-      { error: "Failed to analyze CSV. Ensure API Key is set." },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input format", details: error.errors },
+        { status: 400 }
+      );
+    }
+    console.error("AI Analysis Error:", error);
+    return NextResponse.json({ error: "Failed to analyze CSV" }, { status: 500 });
   }
 }

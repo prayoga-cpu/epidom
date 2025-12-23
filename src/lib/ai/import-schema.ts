@@ -32,9 +32,9 @@ export const ProductFields = z.enum([
   "sellingPrice",
   "currentStock",
   "unit",
+  // productionTime removed to match manual form
   "minStock",
   "maxStock",
-  "productionTime", // In minutes
 ]);
 
 export type ProductField = z.infer<typeof ProductFields>;
@@ -76,6 +76,11 @@ export const RecipeFields = z.enum([
   "ingredient_name", // If using multi-row format (1 recipe = multiple rows)
   "ingredient_qty",
   "ingredient_unit",
+  // Extended Fields for Smart Creation (Cascade)
+  "ingredient_sku",
+  "ingredient_supplier",
+  "ingredient_price",
+  "ingredient_stock",
 ]);
 
 export type RecipeField = z.infer<typeof RecipeFields>;
@@ -87,6 +92,81 @@ export const ImportTargetFields = z.union([
   SupplierFields,
   RecipeFields,
 ]);
+
+// ============================================================================
+// FIELD CLASSIFICATION (Single Source of Truth for Entity Detection & Visual Grouping)
+// ============================================================================
+
+/**
+ * Fields that are UNIQUE to each entity type (used for entity detection).
+ * A row is classified as a specific entity if it has any of these fields populated.
+ * Order matters: Recipe > Material > Product > Supplier (most specific first)
+ */
+export const ENTITY_UNIQUE_FIELDS = {
+  // Fields that ONLY appear in Supplier imports
+  supplier: ["contactPerson", "phone", "email", "address", "city", "country"] as const,
+  // Fields that ONLY appear in Material imports (excluding common fields)
+  material: ["unitCost", "supplierName", "supplierPrice"] as const,
+  // Fields that ONLY appear in Recipe imports
+  recipe: [
+    "yieldQuantity",
+    "yieldUnit",
+    "productionTimeMinutes",
+    "costPerBatch",
+    "instructions",
+    "ingredients_text",
+    "ingredient_name",
+    "ingredient_qty",
+    "ingredient_unit",
+    "ingredient_sku",
+    "ingredient_supplier",
+    "ingredient_price",
+    "ingredient_stock",
+  ] as const,
+  // Fields that ONLY appear in Product imports
+  product: ["costPrice", "sellingPrice"] as const,
+} as const;
+
+/**
+ * Fields that appear in MULTIPLE entities (for visual grouping as neutral/common)
+ */
+export const COMMON_FIELDS = ["name", "description", "category", "notes"] as const;
+
+/**
+ * Fields used for visual grouping in the import preview table.
+ * These are broader than unique fields - they define visual zones.
+ */
+export const VISUAL_GROUPING_FIELDS = {
+  supplier: ["contactPerson", "phone", "email", "address", "city", "country"] as const,
+  material: [
+    "sku",
+    "unit",
+    "unitCost",
+    "currentStock",
+    "minStock",
+    "maxStock",
+    "supplierName",
+    "supplierPrice",
+  ] as const,
+  recipe: [
+    "yieldQuantity",
+    "yieldUnit",
+    "productionTimeMinutes",
+    "costPerBatch",
+    "instructions",
+    "ingredients_text",
+  ] as const,
+  ingredient: [
+    "ingredient_name",
+    "ingredient_qty",
+    "ingredient_unit",
+    "ingredient_sku",
+    "ingredient_supplier",
+    "ingredient_price",
+    "ingredient_stock",
+  ] as const,
+  product: ["costPrice", "sellingPrice"] as const,
+} as const;
 
 /**
  * Transformation Types
