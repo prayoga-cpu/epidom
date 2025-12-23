@@ -3133,6 +3133,40 @@ export const fr = {
       chargeNotApplied: "Aucun frais n'a été appliqué à votre compte.",
     },
   },
+  onboarding: {
+    title: "Dernière Étape !",
+    subtitle: "Ajoutez votre carte pour débloquer votre accès PRO gratuit",
+    canceledTitle: "Validation de carte annulée",
+    canceledMessage:
+      "Vous devez valider votre carte pour accéder aux fonctionnalités PRO. Aucun frais ne sera prélevé.",
+    cardTitle: "Offre Nouvel An",
+    cardDescription: "Obtenez le forfait PRO gratuit jusqu'au 31 décembre 2025",
+    whatYouGet: "Ce que vous obtiendrez :",
+    features: {
+      fullAccess: "Accès complet à toutes les fonctionnalités PRO",
+      unlimited: "Produits et recettes illimités",
+      analytics: "Analyses et rapports avancés",
+      emailSupport: "Support email prioritaire",
+      whatsappSupport: "Canal de support WhatsApp",
+    },
+    whyCard: "Pourquoi avons-nous besoin de votre carte ?",
+    whyCardExplanation:
+      "Votre carte sera validée mais pas débitée. Elle est enregistrée pour la fin de la promotion (1er janvier 2026), afin que vous puissiez continuer sans interruption avec un forfait payant si vous le souhaitez.",
+    securedBy: "Sécurisé par Stripe • Chiffrement SSL 256-bit",
+    addCardButton: "Ajouter la Carte & Obtenir l'Accès PRO",
+    skipButton: "Ignorer pour l'instant (accès limité)",
+    pleaseWait: "Veuillez patienter...",
+    termsNote:
+      "En continuant, vous acceptez nos Conditions d'Utilisation et notre Politique de Confidentialité. Votre carte ne sera pas débitée pendant la période promotionnelle.",
+    success: {
+      title: "Bienvenue chez PRO !",
+      subtitle: "Votre carte a été validée. Profitez de votre accès PRO complet !",
+      planActive: "Forfait PRO Actif",
+      validUntil: "Valide jusqu'au 31 décembre 2025",
+      goToDashboard: "Aller au Tableau de Bord",
+      redirecting: "Redirection vers le tableau de bord dans {seconds} secondes...",
+    },
+  },
   notFound: {
     title: "Page Non Trouvée",
     description: "Désolé, nous n'avons pas pu trouver la page que vous recherchez.",

@@ -1,47 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api-handler";
 import { recipeService } from "@/lib/services/recipe.service";
 import { subscriptionService } from "@/lib/services";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
 import { recipeFilterSchema } from "@/lib/validation/inventory.schemas";
 
 /**
  * GET /api/stores/[id]/recipes/export
  * Export recipes to CSV format
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
+export const GET = withApiHandler(
+  async (request, { storeId, userId }) => {
     // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
           "Advanced Reports (Export) is only available in Pro and Enterprise plans. Upgrade to access this feature.",
-          {
-            feature: "advancedReports",
-            upgradeRequired: true,
-          }
+          { feature: "advancedReports", upgradeRequired: true }
         ),
         { status: 403 }
       );
     }
-
-    const { id: storeId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -55,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const filters = recipeFilterSchema.omit({ skip: true, take: true }).parse(filterParams);
 
     // Get CSV data from service
-    const csv = await recipeService.exportRecipes(storeId, {
+    const csv = await recipeService.exportRecipes(storeId!, {
       ...filters,
       skip: 0,
       take: 10000, // Export all matching records
@@ -69,11 +50,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         "Content-Disposition": `attachment; filename="recipes-export-${new Date().toISOString().split("T")[0]}.csv"`,
       },
     });
-  } catch (error) {
-    const { id: storeId } = await params;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/recipes/export",
-      context: { storeId },
-    });
-  }
-}
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/recipes/export", requireStoreAuth: true }
+);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -57,6 +57,7 @@ const SUPPLIER_FILTERS = {
 
 export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   const [open, setOpen] = useState(false);
+  const isSubmittingRef = useRef(false);
   const { t } = useI18n();
   const { currency, convertToBase } = useCurrency();
   const params = useParams();
@@ -123,6 +124,8 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
     name: "suppliers" as any,
   });
 
+  // Track if dialog is closing due to submission to prevent form reset
+
   /**
    * Type assertion needed because React Hook Form's useFieldArray has type limitations
    * The actual data structure is validated by Zod schema before reaching this function
@@ -132,11 +135,6 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   async function onSubmit(data: CreateIngredientFormInput) {
     try {
       // Filter out invalid suppliers (those with "none" or empty supplierId)
-      /**
-       * Type assertion needed because React Hook Form's useFieldArray has type limitations
-       * Actual type: CreateIngredientFormInput["suppliers"][number]
-       * TODO: Improve type inference when React Hook Form fixes useFieldArray types
-       */
       const validSuppliers =
         data.suppliers?.filter((s) => s.supplierId && s.supplierId !== "none") || [];
 
@@ -158,7 +156,9 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
               }))
             : undefined,
       };
-      form.reset();
+
+      // OPTIMISTIC CLOSING
+      isSubmittingRef.current = true;
       setOpen(false);
 
       // Use toast.promise to handle the async operation with immediate feedback
@@ -172,23 +172,45 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
             <span>{t("data.materials.toasts.adding") || "Adding material..."}</span>
           </div>
         ),
-        success: (data) =>
-          t("data.materials.toasts.added.description")?.replace("{name}", data.name) ||
-          "Material added successfully",
-        error: (err) => (err instanceof Error ? err.message : t("messages.errorLoadingMaterials")),
+        success: (data) => {
+          // Success! Reset everything
+          isSubmittingRef.current = false;
+          form.reset();
+          return (
+            t("data.materials.toasts.added.description")?.replace("{name}", data.name) ||
+            "Material added successfully"
+          );
+        },
+        error: (err) => {
+          // Error! Re-open dialog
+          isSubmittingRef.current = false;
+          setOpen(true);
+          return err instanceof Error ? err.message : t("messages.errorLoadingMaterials");
+        },
       });
 
-      // Dialog is already closed by setOpen(false) above
-      // We don't await here so the UI is completely non-blocking
+      // Await to ensure we catch any synchronous errors, though toast handles most
+      await promise;
     } catch (error) {
-      // Handle validation errors
-      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingMaterials"));
-      // Don't close dialog on error - let user see the error and potentially retry
+      // Handled by toast.error / promise error
+      console.error(error);
     }
   }
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    // Only reset form if closing AND NOT submitting (i.e. cancelled by user)
+    // Also reset if opening (fresh start)
+    if (!newOpen && !isSubmittingRef.current) {
+      form.reset();
+    }
+    if (newOpen) {
+      isSubmittingRef.current = false;
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || (
           <Button

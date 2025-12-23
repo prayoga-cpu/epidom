@@ -12,6 +12,7 @@ import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { formatDate } from "@/lib/utils/format-date";
 
 interface MaterialDetailsDialogProps {
   open: boolean;
@@ -109,7 +110,9 @@ export function MaterialDetailsDialog({
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("data.materials.details.currentStock")}</span>
+                    <span className="text-muted-foreground">
+                      {t("data.materials.details.currentStock")}
+                    </span>
                     <span className="font-medium">
                       {currentStock} {material.unit}
                     </span>
@@ -129,11 +132,17 @@ export function MaterialDetailsDialog({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-muted-foreground text-xs">{t("data.materials.details.category")}</p>
-                    <p className="text-sm font-medium">{material.category || t("common.uncategorized")}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("data.materials.details.category")}
+                    </p>
+                    <p className="text-sm font-medium">
+                      {material.category || t("common.uncategorized")}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">{t("data.materials.details.unit")}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("data.materials.details.unit")}
+                    </p>
                     <p className="text-sm font-medium">{material.unit}</p>
                   </div>
                 </div>
@@ -150,7 +159,9 @@ export function MaterialDetailsDialog({
               </CardHeader>
               <CardContent>
                 {!material.materialSuppliers || material.materialSuppliers.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">{t("data.materials.details.noSuppliersLinked")}</p>
+                  <p className="text-muted-foreground text-sm">
+                    {t("data.materials.details.noSuppliersLinked")}
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {material.materialSuppliers.map((supplierLink) => (
@@ -185,11 +196,15 @@ export function MaterialDetailsDialog({
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground text-sm">{t("data.materials.details.unitCost")}</span>
+                    <span className="text-muted-foreground text-sm">
+                      {t("data.materials.details.unitCost")}
+                    </span>
                     <span className="font-medium">{formatPrice(Number(material.unitCost))}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground text-sm">{t("data.materials.details.totalValue")}</span>
+                    <span className="text-muted-foreground text-sm">
+                      {t("data.materials.details.totalValue")}
+                    </span>
                     <span className="font-medium">
                       {formatPrice(Number(material.unitCost) * currentStock)}
                     </span>
@@ -223,12 +238,16 @@ export function MaterialDetailsDialog({
               <CardContent>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("data.materials.details.created")}</span>
-                    <span>{new Date(material.createdAt).toLocaleDateString()}</span>
+                    <span className="text-muted-foreground">
+                      {t("data.materials.details.created")}
+                    </span>
+                    <span>{formatDate(material.createdAt)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("data.materials.details.lastUpdated")}</span>
-                    <span>{new Date(material.updatedAt).toLocaleDateString()}</span>
+                    <span className="text-muted-foreground">
+                      {t("data.materials.details.lastUpdated")}
+                    </span>
+                    <span>{formatDate(material.updatedAt)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -238,11 +257,11 @@ export function MaterialDetailsDialog({
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={handleEdit}>
-              <Edit className="mr-1 h-4 w-4 hidden sm:inline" />
+              <Edit className="mr-1 hidden h-4 w-4 sm:inline" />
               {t("common.actions.edit")}
             </Button>
             <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
-              <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
+              <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
               {t("common.actions.delete")}
             </Button>
           </div>
@@ -254,7 +273,9 @@ export function MaterialDetailsDialog({
         onOpenChange={setShowDeleteConfirm}
         onConfirm={handleDelete}
         title={t("data.materials.deleteConfirm.title")}
-        description={t("data.materials.deleteConfirm.description")?.replace("{name}", material.name) || ""}
+        description={
+          t("data.materials.deleteConfirm.description")?.replace("{name}", material.name) || ""
+        }
         confirmText={t("common.actions.delete")}
         cancelText={t("common.actions.cancel")}
       />

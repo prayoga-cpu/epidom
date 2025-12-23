@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams } from "next/navigation";
@@ -71,6 +71,9 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
 
   const updateRecipe = useUpdateRecipe(storeId, recipe.id);
 
+  const isSubmittingRef = useRef(false);
+  const savedFormDataRef = useRef<RecipeFormValues | null>(null);
+
   const form = useForm<RecipeFormValues>({
     resolver: zodResolver(updateRecipeFormSchema),
     mode: "onSubmit", // Validate only on submit to allow undefined values during editing
@@ -86,9 +89,20 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
     },
   });
 
-  // Populate form when recipe changes
+  // Populate form when recipe changes or dialog opens
   useEffect(() => {
-    if (recipe && open) {
+    if (!open) return;
+
+    // If we have saved data from a failed submission, restore it
+    if (savedFormDataRef.current) {
+      // Delay reset slightly to ensure form is ready
+      requestAnimationFrame(() => {
+        form.reset(savedFormDataRef.current!);
+      });
+      return;
+    }
+
+    if (recipe) {
       const yieldQuantity = Number(recipe.yieldQuantity) || 0;
       const productionTimeMinutes = recipe.productionTimeMinutes || 0;
 
@@ -115,6 +129,14 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
       });
     }
   }, [recipe, open, form]);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    // If closing manually (not submitting), clear saved data
+    if (!newOpen && !isSubmittingRef.current) {
+      savedFormDataRef.current = null;
+    }
+    onOpenChange(newOpen);
+  };
 
   const onSubmit = async (data: RecipeFormValues) => {
     try {
@@ -162,11 +184,33 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
         ingredients: processedIngredients,
       };
 
-      await updateRecipe.mutateAsync(payload);
-      toast.success(t("data.recipes.toasts.updated.title"));
+      // OPTIMISTIC CLOSING
+      // Save form data in case we need to restore it
+      savedFormDataRef.current = data;
+      isSubmittingRef.current = true;
       onOpenChange(false);
+
+      const promise = updateRecipe.mutateAsync(payload);
+
+      toast.promise(promise, {
+        loading: t("data.recipes.toasts.updating") || "Updating recipe...",
+        success: () => {
+          isSubmittingRef.current = false;
+          savedFormDataRef.current = null; // Clear saved data on success
+          return t("data.recipes.toasts.updated.title");
+        },
+        error: (err) => {
+          isSubmittingRef.current = false;
+          // Re-open dialog, useEffect will restore savedFormDataRef
+          onOpenChange(true);
+          return t("messages.errorLoadingRecipes");
+        },
+      });
+
+      await promise;
     } catch (error) {
-      toast.error(t("messages.errorLoadingRecipes"));
+      // Handled by toast promise
+      console.error(error);
     }
   };
 
@@ -195,7 +239,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <FormDialogLayout
         title={t("data.recipes.editTitle")}
         description={t("data.recipes.editDescription")}

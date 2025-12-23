@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/lib/auth-client";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import type { ProfileData } from "../types";
@@ -91,12 +91,12 @@ const updateBusiness = async (payload: UpdateBusinessPayload): Promise<ProfileDa
  * Hook to fetch and cache profile data using TanStack Query
  */
 export const useProfile = (initialData?: ProfileData) => {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
 
   return useQuery<ProfileData>({
     queryKey: ["profile", session?.user?.id],
     queryFn: fetchProfile,
-    enabled: status === "authenticated" && !!session?.user?.id,
+    enabled: !isPending && !!session?.user?.id,
     initialData, // ✅ Accept initial data from Server Component
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
@@ -111,7 +111,7 @@ export const useProfile = (initialData?: ProfileData) => {
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   const { user } = useUser();
-  const { update: updateSession } = useSession();
+  const { refetch: refetchSession } = useSession();
   const { t } = useI18n();
 
   return useMutation({
@@ -125,13 +125,8 @@ export const useUpdateProfile = () => {
         queryKey: ["profile", user?.id],
       });
 
-      // Build session update object (only includes changed fields)
-      const sessionUpdate = buildSessionUpdate(data);
-
-      // Only update session if there are changes
-      if (Object.keys(sessionUpdate).length > 0) {
-        await updateSession(sessionUpdate);
-      }
+      // Refetch session to update with new data
+      refetchSession?.();
 
       // Show toast notification based on update type
       // Only show toast once in the mutation hook to prevent duplicates

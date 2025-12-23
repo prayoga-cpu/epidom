@@ -31,10 +31,13 @@ import { validateWaitlistForm, waitlistRateLimiter, type ValidationError } from 
 interface WaitlistDialogProps {
   /** Button variant: "default", "home" (larger), or "sidebar" (compact) */
   variant?: "default" | "home" | "sidebar";
+  /** Optional class name to override button styles */
+  className?: string;
 }
 
 export const WaitlistDialog = memo(function WaitlistDialog({
   variant = "default",
+  className,
 }: WaitlistDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -192,7 +195,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
             : variant === "sidebar"
               ? "text-white hover:opacity-80"
               : "bg-white hover:bg-gray-100"
-        }`}
+        } ${className || ""}`}
         style={
           variant === "home"
             ? { backgroundColor: "var(--color-brand-primary)" }
@@ -218,7 +221,7 @@ export const WaitlistDialog = memo(function WaitlistDialog({
               : variant === "sidebar"
                 ? "text-white hover:opacity-80"
                 : "bg-white hover:bg-gray-100"
-          }`}
+          } ${className || ""}`}
           style={
             variant === "home"
               ? { backgroundColor: "var(--color-brand-primary)" }

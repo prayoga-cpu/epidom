@@ -13,7 +13,11 @@ import { getRateLimitConfig } from "@/config/rate-limit.config";
 class InMemoryRateLimiter {
   private requests: Map<string, number[]> = new Map();
 
-  async limit(identifier: string, limit: number, window: number): Promise<{
+  async limit(
+    identifier: string,
+    limit: number,
+    window: number
+  ): Promise<{
     success: boolean;
     limit: number;
     remaining: number;
@@ -78,6 +82,32 @@ export async function checkRateLimit(
 }
 
 /**
+ * Check rate limit for a specific user
+ * Returns null if limit is OK, otherwise returns the limit result for error response
+ *
+ * @param userId - User ID from session
+ * @param path - API path to get rate limit configuration
+ * @returns Rate limit result if exceeded, null if OK
+ */
+export async function checkRateLimitByUser(
+  userId: string,
+  path: string
+): Promise<{
+  success: boolean;
+  limit: number;
+  remaining: number;
+  reset: number;
+} | null> {
+  const result = await checkRateLimit(`user:${userId}`, path);
+
+  if (!result.success) {
+    return result;
+  }
+
+  return null;
+}
+
+/**
  * Rate limit middleware for API routes
  *
  * @param request - Next.js request object
@@ -94,9 +124,10 @@ export async function rateLimitMiddleware(
   reset: number;
 } | null> {
   // Get identifier (user ID from session or IP address)
-  const identifier = request.headers.get("x-user-id") ||
-                     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-                     "anonymous";
+  const identifier =
+    request.headers.get("x-user-id") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "anonymous";
 
   const result = await checkRateLimit(identifier, path);
 
@@ -106,4 +137,3 @@ export async function rateLimitMiddleware(
 
   return null;
 }
-

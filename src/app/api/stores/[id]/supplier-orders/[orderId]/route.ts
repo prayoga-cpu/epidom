@@ -1,143 +1,80 @@
 import { NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 import { subscriptionService } from "@/lib/services";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
 
 /**
  * GET /api/stores/[id]/supplier-orders/[orderId]
  * Get a specific supplier order
  */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string; orderId: string }> }
-) {
-  let session: Session | null = null;
-  try {
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
+export const GET = withApiHandler(
+  async (request, { storeId, params, userId }) => {
+    const { orderId } = params;
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
           "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
-          {
-            feature: "supplierManagement",
-            upgradeRequired: true,
-          }
+          { feature: "supplierManagement", upgradeRequired: true }
         ),
         { status: 403 }
       );
     }
 
-    const { id: storeId, orderId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
     const order = await prisma.supplierOrder.findFirst({
-      where: {
-        id: orderId,
-        storeId,
-      },
+      where: { id: orderId, storeId },
       include: {
         supplier: true,
-        items: {
-          include: {
-            material: true,
-          },
-        },
+        items: { include: { material: true } },
       },
     });
 
     if (!order) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"),
-        { status: 404 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"), {
+        status: 404,
+      });
     }
 
-    return NextResponse.json(createSuccessResponse({ order }), { status: 200 });
-  } catch (error) {
-    const { id: storeId, orderId } = await params;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/supplier-orders/[orderId]",
-      context: { storeId, orderId, userId: session?.user?.id },
-    });
-  }
-}
+    return NextResponse.json(createSuccessResponse({ order }));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/supplier-orders/[orderId]", requireStoreAuth: true }
+);
 
 /**
  * PATCH /api/stores/[id]/supplier-orders/[orderId]
  * Update a supplier order (status, dates, etc.)
  */
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string; orderId: string }> }
-) {
-  let session: Session | null = null;
-  try {
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
+export const PATCH = withApiHandler(
+  async (request, { storeId, params, userId }) => {
+    const { orderId } = params;
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
           "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
-          {
-            feature: "supplierManagement",
-            upgradeRequired: true,
-          }
+          { feature: "supplierManagement", upgradeRequired: true }
         ),
         { status: 403 }
       );
     }
 
-    const { id: storeId, orderId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
     // Check if order exists
     const existingOrder = await prisma.supplierOrder.findFirst({
-      where: {
-        id: orderId,
-        storeId,
-      },
-      include: {
-        items: {
-          include: {
-            material: true,
-          },
-        },
-      },
+      where: { id: orderId, storeId },
+      include: { items: { include: { material: true } } },
     });
 
     if (!existingOrder) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"),
-        { status: 404 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"), {
+        status: 404,
+      });
     }
 
     const body = await request.json();
@@ -153,9 +90,7 @@ export async function PATCH(
 
           await tx.material.update({
             where: { id: item.materialId },
-            data: {
-              currentStock: newStock,
-            },
+            data: { currentStock: newStock },
           });
 
           // Create stock movement record
@@ -200,75 +135,44 @@ export async function PATCH(
       where: { id: orderId },
       include: {
         supplier: true,
-        items: {
-          include: {
-            material: true,
-          },
-        },
+        items: { include: { material: true } },
       },
     });
 
-    return NextResponse.json(createSuccessResponse({ order: updatedOrder }), { status: 200 });
-  } catch (error) {
-    const { id: storeId, orderId } = await params;
-    return handleApiError(error, {
-      endpoint: "PATCH /api/stores/[id]/supplier-orders/[orderId]",
-      context: { storeId, orderId, userId: session?.user?.id },
-    });
-  }
-}
+    return NextResponse.json(createSuccessResponse({ order: updatedOrder }));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/supplier-orders/[orderId]", requireStoreAuth: true }
+);
 
 /**
  * DELETE /api/stores/[id]/supplier-orders/[orderId]
  * Delete/cancel a supplier order
  */
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string; orderId: string }> }
-) {
-  let session: Session | null = null;
-  try {
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
+export const DELETE = withApiHandler(
+  async (request, { storeId, params, userId }) => {
+    const { orderId } = params;
 
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
           "Supplier Management is only available in Pro and Enterprise plans. Upgrade to access this feature.",
-          {
-            feature: "supplierManagement",
-            upgradeRequired: true,
-          }
+          { feature: "supplierManagement", upgradeRequired: true }
         ),
         { status: 403 }
       );
     }
 
-    const { id: storeId, orderId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
     const order = await prisma.supplierOrder.findFirst({
-      where: {
-        id: orderId,
-        storeId,
-      },
+      where: { id: orderId, storeId },
     });
 
     if (!order) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"),
-        { status: 404 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"), {
+        status: 404,
+      });
     }
 
     // Don't allow deletion of received orders
@@ -282,17 +186,10 @@ export async function DELETE(
     // Mark as cancelled instead of deleting
     await prisma.supplierOrder.update({
       where: { id: orderId },
-      data: {
-        status: "CANCELLED",
-      },
+      data: { status: "CANCELLED" },
     });
 
-    return NextResponse.json(createSuccessResponse({ success: true }), { status: 200 });
-  } catch (error) {
-    const { id: storeId, orderId } = await params;
-    return handleApiError(error, {
-      endpoint: "DELETE /api/stores/[id]/supplier-orders/[orderId]",
-      context: { storeId, orderId, userId: session?.user?.id },
-    });
-  }
-}
+    return NextResponse.json(createSuccessResponse({ success: true }));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/supplier-orders/[orderId]", requireStoreAuth: true }
+);

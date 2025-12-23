@@ -158,13 +158,156 @@ export const en = {
       tracking: "Tracking",
     },
   },
-  hero: {
-    title: "EPIDOM",
-    subtitle: "A solution for your food inventory management",
-    p1: "Food inventory management is the process of tracking purchased ingredients that have not yet been consumed. This practice is essential to prevent waste and keep your operation running efficiently.",
-    p2: "By monitoring what comes in and what is used, you can plan purchases better, maintain freshness, and make data‑driven decisions that protect margins.",
-    p3: "The right workflow helps you avoid shortages, reduce overstock, and optimize your kitchen or food service activity day after day.",
-    cta: "Ask for trial",
+  home: {
+    hero: {
+      badge: "🚀 Now available for Cookie Bars",
+      headlinePart1: "Secret Way of",
+      headlineHighlight: "Cookie Bars",
+      headlinePart2: "Inventory Management",
+      headline: "Secret Way of Cookie Bars Inventory Management",
+      description:
+        "Track your cookies stock on mobile, manage it everywhere real-time, & auto-restock in seconds",
+      ctaStartFree: "Start for free",
+      ctaDemo: "1 on 1 Demo",
+      mockupTitle: "Cookie Bar Dashboard",
+      mockupSubtitle: "Mobile & Desktop View",
+      mockupUrl: "epidom.fr/dashboard",
+      notificationTitle: "Stock Updated",
+      notificationDetail: "Flour: +50 kg",
+      statsValue: "98%",
+      statsLabel: "Waste Reduced",
+      socialProofMini: "Loved by 500+ cookie bars in France",
+    },
+    socialProof: {
+      trustedBy: "Trusted by Cookie Bars Worldwide",
+      yourBrand: "Your Cookie Bar Here",
+      instagramTitle: "Get us Feedback",
+      instagramSubtitle: "See what our customers say on Instagram",
+      testimonial1: "Epidom transformed how we manage our cookie inventory. No more waste!",
+      author1: "Marie Dubois",
+      role1: "Owner, Sweet Délices Paris",
+      testimonial2: "Real-time tracking means I always know what's in stock. Game changer!",
+      author2: "Jean-Pierre Martin",
+      role2: "Manager, Le Cookie Shop",
+      testimonial3: "The expiry alerts saved us thousands in wasted ingredients.",
+      author3: "Sophie Laurent",
+      role3: "Chef, Pâtisserie Belle",
+    },
+    howToUse: {
+      headline: "Create, Tracking, Alerts",
+      description:
+        "We are popular on solving cookie bar's overwhelmed management to smart expiry alerts, especially in France 🇫🇷.",
+      aiGenerated: "AI Generated Contents: Profile, Dashboard, Management, Tracking, Data, Alerts.",
+      features: {
+        profile: {
+          title: "Profile",
+          description: "Manage your business profile and team members with ease",
+        },
+        dashboard: {
+          title: "Dashboard",
+          description: "Get real-time overview of your inventory and operations",
+        },
+        management: {
+          title: "Management",
+          description: "Organize recipes, products, and suppliers efficiently",
+        },
+        tracking: {
+          title: "Tracking",
+          description: "Monitor stock levels and movements in real-time",
+        },
+        data: {
+          title: "Data",
+          description: "Access detailed reports and analytics for better decisions",
+        },
+        alerts: {
+          title: "Alerts",
+          description: "Never miss critical stock levels or expiry dates",
+        },
+      },
+    },
+    pricing: {
+      headline: "Simple, Transparent Pricing",
+      subheadline: "Choose the plan that fits your cookie bar's needs",
+      ribbon: "Special New Year 2026 Offer",
+      mostPopular: "Most Popular",
+      cta: "Get Started",
+      note: "All plans include 24/7 support and regular updates",
+      free: {
+        name: "2026 New Year's Only",
+        features: {
+          freeTrial: "Before December 31st, it's free",
+          limitedTime: "You just need to Login",
+          creditCard: "Then connect your credit card",
+          fullAccess: "Full access to all features",
+        },
+      },
+      pro: {
+        name: "The Most Popular",
+        features: {
+          multiStore: "You can get more than 1 store",
+          unlimited: "in one dashboard",
+          advanced: "Advanced analytics and reports",
+          priority: "Priority email support",
+          whatsapp: "WhatsApp support channel",
+        },
+      },
+      custom: {
+        name: "Premium Inventory",
+        cta: "Contact Sales",
+        features: {
+          franchise: "For franchise or big demand only",
+          dedicated: "Dedicated account manager",
+          custom: "Custom integrations and features",
+          onboarding: "Personalized onboarding and training",
+        },
+      },
+    },
+    painGain: {
+      headline: "Stop Food Waste & Lose Money",
+      description:
+        "Compare how Epidom transforms your traditional operations become efficient modern methods.",
+      oldWay: {
+        title: "The Old Way",
+        subtitle: "Traditional Method",
+        items: {
+          manualSpreadsheets: "Hours spent on manual spreadsheets",
+          foodWaste: "Constant food waste and spoilage",
+          guessingOrders: "Guessing order quantities",
+          unclearCosts: "Unclear food costs and margins",
+        },
+      },
+      epidomWay: {
+        title: "The Epidom Way",
+        subtitle: "Smart Solution",
+        items: {
+          realtimeTracking: "Real-time inventory tracking",
+          smartAlerts: "Smart expiry alerts & waste reduction",
+          dataDriven: "Data-driven purchasing decisions",
+          preciseCosts: "Precise cost calculation per dish",
+        },
+      },
+    },
+    closingCta: {
+      badge: "Start your journey today",
+      headline: "Ready to Upgrade your Cookie Bar?",
+      description: "Join the International way of stock management with us",
+      ctaStartFree: "Start for free",
+      ctaDemo: "1 on 1 Demo",
+      badges: {
+        secure: {
+          title: "Secure & Private",
+          description: "Your data is encrypted and protected",
+        },
+        cancel: {
+          title: "Cancel Anytime",
+          description: "No long-term commitment required",
+        },
+        quick: {
+          title: "Quick Setup",
+          description: "Get started in under 5 minutes",
+        },
+      },
+    },
   },
   countdown: {
     title: "Coming Soon",
@@ -3074,6 +3217,56 @@ export const en = {
         "Your card hasn't been charged. Please review the error above and try again. If you continue to have issues, please contact support.",
       tryAgainButton: "Try Again",
       chargeNotApplied: "No charges have been applied to your account.",
+    },
+  },
+  onboarding: {
+    title: "One Last Step!",
+    subtitle: "Add your card to unlock your free STARTER access",
+    canceledTitle: "Card validation canceled",
+    canceledMessage:
+      "You need to validate your card to access the STARTER features. No charge will be made.",
+    cardTitle: "New Year's Special",
+    cardDescription: "Get STARTER plan free until December 31, 2025",
+    whatYouGet: "What you'll get:",
+    // Step 1: Business Setup
+    businessSetup: {
+      title: "Setup your Business",
+      subtitle:
+        "Let's start by setting up your business profile. This will be the foundation of your dashboard.",
+      businessName: "Business Name",
+      businessNamePlaceholder: "e.g. Epidom Bakery",
+      businessAddress: "Business Address",
+      businessAddressPlaceholder: "e.g. 123 Baker Street, London",
+      continueButton: "Continue to Next Step",
+      savingProfile: "Saving Profile...",
+      stepIndicator: "Step 1 of 2: Business Information",
+      profileCreated: "Business profile created!",
+    },
+    // Step 2: Payment Setup
+    stepIndicator: "Step 2 of 2: Plan Activation",
+    features: {
+      fullAccess: "Full access to all STARTER features",
+      unlimited: "Up to 500 products and recipes",
+      analytics: "Essential inventory tracking",
+      emailSupport: "Standard email support",
+      whatsappSupport: "Access to community support",
+    },
+    whyCard: "Why do we need your card?",
+    whyCardExplanation:
+      "Your card will be validated but not charged. It's saved for when the promotion ends (Jan 1, 2026), so you can seamlessly continue with a paid plan if you choose.",
+    securedBy: "Secured by Stripe • 256-bit SSL encryption",
+    addCardButton: "Add Card & Get STARTER Access",
+    skipButton: "Skip for now (limited access)",
+    pleaseWait: "Please wait...",
+    termsNote:
+      "By continuing, you agree to our Terms of Service and Privacy Policy. Your card will not be charged during the promotional period.",
+    success: {
+      title: "Welcome to STARTER!",
+      subtitle: "Your card has been validated. Enjoy full STARTER access!",
+      planActive: "STARTER Plan Active",
+      validUntil: "Valid until December 31, 2025",
+      goToDashboard: "Go to Dashboard",
+      redirecting: "Redirecting to dashboard in {seconds} seconds...",
     },
   },
   notFound: {

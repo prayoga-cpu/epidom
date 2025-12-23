@@ -1,9 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
-import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
@@ -14,25 +12,12 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
  *
  * Required: User must be authenticated
  */
-export async function POST(request: NextRequest) {
-  try {
-    // Verify session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-
+export const POST = withApiHandler(
+  async (request, { userId }) => {
     // Get user subscription with Stripe customer ID
     const subscription = await prisma.subscription.findUnique({
       where: { userId },
-      select: {
-        stripeCustomerId: true,
-      },
+      select: { stripeCustomerId: true },
     });
 
     if (!subscription?.stripeCustomerId) {
@@ -43,21 +28,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Stripe Customer Portal session
-    const session_url = await stripe.billingPortal.sessions.create({
+    const portalSession = await stripe.billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,
       return_url: `${process.env.NEXTAUTH_URL || "http://localhost:3001"}/profile`,
     });
 
     return NextResponse.json(
       createSuccessResponse({
-        url: session_url.url,
+        url: portalSession.url,
         message: "Portal link created successfully",
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "POST /api/billing/portal",
-      context: {},
-    });
-  }
-}
+  },
+  { rateLimitEndpoint: "/api/billing/portal", requireStoreAuth: false }
+);

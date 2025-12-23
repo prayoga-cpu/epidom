@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { CsvImportWizard } from "../../components/csv-import-wizard";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,6 +55,8 @@ import {
 } from "../hooks/use-materials";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
+// Import re-exported helpers from consolidated hook (for future use)
+// Full hook migration can be done incrementally
 
 type StockFilter = "in_stock" | "low_stock" | "out_of_stock" | "overstocked" | undefined;
 
@@ -357,6 +360,9 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                   </TooltipContent>
                 )}
               </Tooltip>
+
+              <CsvImportWizard storeId={storeId} type="material" />
+
               <AddMaterialDialog
                 trigger={
                   <Button size="sm" className="w-full md:w-auto">

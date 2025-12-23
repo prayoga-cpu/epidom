@@ -1,10 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api-handler";
 import { subscriptionService } from "@/lib/services";
-import { handleApiError } from "@/lib/utils/api-error-handler";
-import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { createSuccessResponse } from "@/types/api/responses";
 
 /**
  * GET /api/stores/[id]/product-usage
@@ -14,27 +11,10 @@ import { verifyStoreOwnership } from "@/lib/utils/store-verification";
  *
  * Used by UI to check limits before rendering create product button.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    // Verify session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
-    const { id: storeId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
+export const GET = withApiHandler(
+  async (request, { storeId, userId }) => {
     // Get product usage check
-    const productCheck = await subscriptionService.canCreateProduct(session.user.id, storeId);
+    const productCheck = await subscriptionService.canCreateProduct(userId, storeId!);
 
     // Convert Infinity to null for JSON serialization (unlimited plans)
     const limit = productCheck.limit === Infinity ? null : productCheck.limit;
@@ -46,12 +26,6 @@ export async function GET(
         canCreateMore: productCheck.allowed,
       })
     );
-  } catch (error) {
-    const { id: storeId } = await params;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/product-usage",
-      context: { storeId },
-    });
-  }
-}
-
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/product-usage", requireStoreAuth: true }
+);

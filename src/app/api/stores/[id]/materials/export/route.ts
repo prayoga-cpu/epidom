@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { withApiHandler } from "@/lib/api-handler";
 import { materialService } from "@/lib/services/material.service";
 import { subscriptionService } from "@/lib/services";
 import { materialFilterSchema } from "@/lib/validation/inventory.schemas";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
 
 /**
  * GET /api/stores/[id]/materials/export
@@ -14,36 +11,20 @@ import { handleApiError } from "@/lib/utils/api-error-handler";
  * Export materials to CSV.
  * Query params: search, category, supplierId, stockStatus (same as list filters)
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
+export const GET = withApiHandler(
+  async (request, { storeId, userId }) => {
     // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
           "Advanced Reports (Export) is only available in Pro and Enterprise plans. Upgrade to access this feature.",
-          {
-            feature: "advancedReports",
-            upgradeRequired: true,
-          }
+          { feature: "advancedReports", upgradeRequired: true }
         ),
         { status: 403 }
       );
     }
-
-    const { id: storeId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -57,7 +38,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     });
 
     // Generate CSV
-    const csvContent = await materialService.exportMaterialsToCSV(storeId, {
+    const csvContent = await materialService.exportMaterialsToCSV(storeId!, {
       ...filters,
       skip: 0,
       take: 10000, // Export all matching records (up to 10k)
@@ -71,11 +52,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         "Content-Disposition": `attachment; filename="materials-export-${new Date().toISOString().split("T")[0]}.csv"`,
       },
     });
-  } catch (error) {
-    const { id: storeId } = await params;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/materials/export",
-      context: { storeId },
-    });
-  }
-}
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/materials/export", requireStoreAuth: true }
+);

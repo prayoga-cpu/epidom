@@ -1,0 +1,34 @@
+import { z } from "zod";
+
+/**
+ * Subscription Checkout Schema
+ */
+export const checkoutSchema = z.object({
+  plan: z.enum(["STARTER", "PRO"], {
+    required_error: "Plan is required",
+    invalid_type_error: "Plan must be either STARTER or PRO",
+  }),
+  successUrl: z.string().url("Invalid success URL").optional(),
+  cancelUrl: z.string().url("Invalid cancel URL").optional(),
+});
+
+export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+/**
+ * Customer Portal Schema
+ */
+export const portalSchema = z.object({
+  returnUrl: z.string().url("Invalid return URL").optional(),
+});
+
+export type PortalInput = z.infer<typeof portalSchema>;
+
+/**
+ * Setup Intent Schema (Card Validation)
+ */
+export const setupSchema = z.object({
+  successUrl: z.string().url("Invalid success URL").optional(),
+  cancelUrl: z.string().url("Invalid cancel URL").optional(),
+});
+
+export type SetupInput = z.infer<typeof setupSchema>;

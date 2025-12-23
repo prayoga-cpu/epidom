@@ -1,5 +1,7 @@
 "use client";
 
+import { CsvImportWizard } from "../../components/csv-import-wizard";
+
 import { useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
@@ -304,6 +306,17 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                   </TooltipContent>
                 )}
               </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <CsvImportWizard storeId={storeId} type="product" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Import products from CSV via AI</p>
+                </TooltipContent>
+              </Tooltip>
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>

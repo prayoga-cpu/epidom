@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Camera } from "lucide-react";
 import { EditAvatarDialog } from "@/features/dashboard/profile/components/edit-avatar-dialog";
-import { getStatusColor, getStatusLabel, getPlanBadgeColor, getPlanLabel } from "@/lib/utils/subscription-helpers";
+import {
+  getStatusColor,
+  getStatusLabel,
+  getPlanBadgeColor,
+  getPlanLabel,
+} from "@/lib/utils/subscription-helpers";
+import { formatDate } from "@/lib/utils/format-date";
 
 interface ProfileHeaderProps {
   user: {
@@ -41,7 +47,6 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
     return user.email[0].toUpperCase();
   };
 
-
   return (
     <>
       <Card className="border-2">
@@ -64,8 +69,8 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
               </Button>
             </div>
 
-            <div className="flex-1 w-full space-y-2 text-center sm:text-left">
-              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+            <div className="w-full flex-1 space-y-2 text-center sm:text-left">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <h1 className="text-xl font-bold sm:text-2xl">{user.name || t("profile.user")}</h1>
                 {subscription && (
                   <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
@@ -78,9 +83,9 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
                   </div>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground sm:text-base break-words">{user.email}</p>
-              <p className="text-xs text-muted-foreground sm:text-sm">
-                {t("profile.memberSince")} {new Date(user.createdAt).toLocaleDateString()}
+              <p className="text-muted-foreground text-sm break-words sm:text-base">{user.email}</p>
+              <p className="text-muted-foreground text-xs sm:text-sm">
+                {t("profile.memberSince")} {formatDate(user.createdAt)}
               </p>
             </div>
           </div>

@@ -9,20 +9,18 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
+import { getSession, type Session } from "@/lib/auth";
+import { checkRateLimitByUser } from "@/lib/middleware/rate-limit";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { Session } from "next-auth";
 
 /**
  * Context passed to API route handlers
  */
 export type ApiContext = {
   params: any; // Route params (can vary, storeId is type-checked separately)
-  session: Session;
+  session: NonNullable<Session>;
   userId: string;
   storeId?: string;
 };
@@ -30,7 +28,7 @@ export type ApiContext = {
 /**
  * API route handler function signature
  */
-type ApiHandler = (request: Request, context: ApiContext) => Promise<NextResponse>;
+type ApiHandler = (request: Request, context: ApiContext) => Promise<Response>;
 
 /**
  * Options for the API handler wrapper
@@ -47,20 +45,30 @@ interface HandlerOptions {
  * 3. Store Ownership Verification (optional)
  * 4. Error Handling
  */
-export const withApiHandler = (
-  handler: ApiHandler,
-  options: HandlerOptions = {}
-) => {
+export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}) => {
   return async (request: Request, { params }: { params: Promise<any> }) => {
     const resolvedParams = await params;
     const endpoint = options.rateLimitEndpoint || new URL(request.url).pathname;
 
     try {
       // ========================================
-      // Rate Limiting
+      // Authentication (FIRST - we need user ID for rate limiting)
+      // ========================================
+      const session = await getSession();
+      if (!session?.user?.id) {
+        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+          status: 401,
+        });
+      }
+
+      // ========================================
+      // Rate Limiting (uses authenticated user ID)
       // ========================================
       if (options.rateLimitEndpoint) {
-        const rateLimitResult = await rateLimitMiddleware(request, options.rateLimitEndpoint);
+        const rateLimitResult = await checkRateLimitByUser(
+          session.user.id,
+          options.rateLimitEndpoint
+        );
         if (rateLimitResult) {
           return NextResponse.json(
             createErrorResponse(
@@ -77,16 +85,6 @@ export const withApiHandler = (
             }
           );
         }
-      }
-
-      // ========================================
-      // Authentication
-      // ========================================
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.id) {
-        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-          status: 401,
-        });
       }
 
       // ========================================
@@ -109,11 +107,10 @@ export const withApiHandler = (
       // ========================================
       return await handler(request, {
         params: resolvedParams,
-        session,
+        session: session as NonNullable<Session>,
         userId: session.user.id,
         storeId,
       });
-
     } catch (error) {
       // ========================================
       // Error Handling

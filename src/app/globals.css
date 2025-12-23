@@ -202,6 +202,107 @@ body.dialog-open {
 }
 
 /* ========================================
+   LANDING PAGE ANIMATIONS
+   Centralized keyframes for marketing sections
+   ======================================== */
+
+/* Gradient text animation for hero headlines */
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-text {
+  animation: gradient-shift 3s ease infinite;
+  background-size: 200% auto;
+}
+
+/* Slow bounce for floating cards */
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+}
+
+/* Floating particles effect */
+@keyframes float-particle {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.2;
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-40px) translateX(-10px);
+    opacity: 0.2;
+  }
+  75% {
+    transform: translateY(-20px) translateX(5px);
+    opacity: 0.4;
+  }
+}
+
+.animate-float-particle {
+  animation: float-particle 10s ease-in-out infinite;
+}
+
+/* Infinite horizontal marquee scroll */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee-scroll 30s linear infinite;
+}
+
+/* Radial gradient background utility */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* ========================================
+   PAPER TEXTURE OVERLAY
+   Subtle noise texture for premium feel
+   ======================================== */
+
+/* Paper texture using actual SVG file */
+.paper-texture {
+  position: relative;
+}
+
+.paper-texture::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("/noise-texture.svg");
+  background-repeat: repeat;
+  background-size: 300px 300px;
+}
+
+/* ========================================
    TAILWIND CSS THEME CONFIGURATION
    ======================================== */
 
@@ -257,7 +358,7 @@ body.dialog-open {
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.35 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);

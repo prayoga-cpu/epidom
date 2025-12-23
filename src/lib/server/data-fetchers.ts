@@ -230,9 +230,30 @@ export async function fetchProductionBatchesForPage(
  * Fetch supplier orders for a store
  * Note: No repository exists, so we fetch directly via Prisma
  */
-export async function fetchSupplierOrdersForPage(storeId: string): Promise<SupplierOrdersResponse> {
+export async function fetchSupplierOrdersForPage(
+  storeId: string,
+  options: {
+    status?:
+      | "PENDING"
+      | "PLACED"
+      | "RECEIVED"
+      | "CANCELLED"
+      | Array<"PENDING" | "PLACED" | "RECEIVED" | "CANCELLED">;
+    skip?: number;
+    take?: number;
+  } = {}
+): Promise<SupplierOrdersResponse> {
+  const { status, skip = 0, take = 50 } = options;
+
+  const where = {
+    storeId,
+    ...(status && {
+      status: Array.isArray(status) ? { in: status } : status,
+    }),
+  };
+
   const orders = await prisma.supplierOrder.findMany({
-    where: { storeId },
+    where,
     include: {
       supplier: {
         select: {
@@ -258,6 +279,8 @@ export async function fetchSupplierOrdersForPage(storeId: string): Promise<Suppl
     orderBy: {
       orderDate: "desc",
     },
+    skip,
+    take,
   });
 
   // Transform to match SupplierOrder type from hook
@@ -307,10 +330,30 @@ export async function fetchSupplierOrdersForPage(storeId: string): Promise<Suppl
  * Note: Alerts are computed from materials (low stock), so we fetch and process
  */
 export async function fetchAlertsForPage(storeId: string): Promise<AlertsResponse> {
-  // Get all active materials for the store
-  const allMaterials = await prisma.material.findMany({
+  // Optimize: Use raw query to filter at DB level (currentStock <= minStock)
+  // This avoids loading thousands of items into memory just to find a few alerts
+  // Note: We use double quotes for column names to handle case sensitivity in Postgres if needed,
+  // but Prisma usually creates columns matching field names unless mapped.
+  // Table name is "ingredients" based on @@map("ingredients") in schema
+  const lowStockIds = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "ingredients"
+    WHERE "storeId" = ${storeId}
+    AND "currentStock" <= "minStock"
+    ORDER BY "currentStock" ASC
+    LIMIT 100
+  `;
+
+  // If no low stock items, return empty early
+  if (!lowStockIds.length) {
+    return { alerts: [] };
+  }
+
+  // Fetch full details only for the filtered items
+  const lowStockMaterials = await prisma.material.findMany({
     where: {
-      storeId,
+      id: {
+        in: lowStockIds.map((row) => row.id),
+      },
     },
     include: {
       materialSuppliers: {
@@ -326,22 +369,18 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
         },
       },
     },
+    // Maintain the sort order from the raw query effectively by sorting in memory
+    // or we can trust the ID order if we map carefully, but explicit sort is safer here
+    // since we want most critical (lowest stock %) first
   });
 
-  // Filter materials where currentStock <= minStock
-  const lowStockMaterials = allMaterials
-    .filter((material) => {
-      const currentStock = Number(material.currentStock);
-      const minStock = Number(material.minStock);
-      return currentStock <= minStock;
-    })
-    .sort((a, b) => {
-      // Sort by stock percentage (most critical first)
-      const aPercent = Number(a.minStock) > 0 ? Number(a.currentStock) / Number(a.minStock) : 0;
-      const bPercent = Number(b.minStock) > 0 ? Number(b.currentStock) / Number(b.minStock) : 0;
-      if (aPercent !== bPercent) return aPercent - bPercent;
-      return a.name.localeCompare(b.name);
-    });
+  // Sort by severity (stock percentage) logic
+  lowStockMaterials.sort((a, b) => {
+    const aPercent = Number(a.minStock) > 0 ? Number(a.currentStock) / Number(a.minStock) : 0;
+    const bPercent = Number(b.minStock) > 0 ? Number(b.currentStock) / Number(b.minStock) : 0;
+    if (aPercent !== bPercent) return aPercent - bPercent;
+    return a.name.localeCompare(b.name);
+  });
 
   // Format alerts to match Alert type from hook
   const alerts: Alert[] = lowStockMaterials.map((material) => {
@@ -379,6 +418,65 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
   });
 
   return { alerts };
+}
+
+/**
+ * Fetch stock levels for dashboard tracking card
+ * Optimize: Fetch only top 5 items with lowest stock percentage directly from DB
+ */
+export async function fetchStockLevelsForPage(storeId: string): Promise<MaterialsResponse> {
+  // Get top 5 items with lowest stock percentage (current / max)
+  const ids = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "ingredients"
+    WHERE "storeId" = ${storeId}
+    ORDER BY
+      CASE
+        WHEN "maxStock" > 0 THEN CAST("currentStock" AS DOUBLE PRECISION) / CAST("maxStock" AS DOUBLE PRECISION)
+        ELSE 0
+      END ASC
+    LIMIT 5
+  `;
+
+  if (!ids.length) {
+    return { materials: [], total: 0 };
+  }
+
+  // Fetch full details for these items
+  const materials = await prisma.material.findMany({
+    where: {
+      id: {
+        in: ids.map((row) => row.id),
+      },
+    },
+    include: {
+      materialSuppliers: {
+        include: {
+          supplier: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { isPreferred: "desc" },
+      },
+    },
+  });
+
+  // Sort again in memory to match the exact percentage order
+  // (Prisma findMany doesn't guarantee order of IN clause match)
+  materials.sort((a, b) => {
+    const aMax = Number(a.maxStock);
+    const bMax = Number(b.maxStock);
+    const aPercent = aMax > 0 ? Number(a.currentStock) / aMax : 0;
+    const bPercent = bMax > 0 ? Number(b.currentStock) / bMax : 0;
+    return aPercent - bPercent;
+  });
+
+  return {
+    materials: serializeMaterials(materials),
+    total: materials.length,
+  };
 }
 
 /**

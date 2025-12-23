@@ -10,6 +10,7 @@ import { useAlerts, type Alert } from "@/features/dashboard/tracking/hooks/use-a
 import { AlertCircle, Loader2, ShoppingCart, Package2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { BulkOrderDialog } from "./bulk-order-dialog";
+import { formatDate } from "@/lib/utils/format-date";
 
 interface AlertsTableProps {
   onViewDetails?: (alert: Alert) => void;
@@ -31,7 +32,10 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
   } | null>(null);
 
   // Handle bulk order
-  const handleBulkOrder = (supplierGroup: { supplier: { id: string; name: string }; items: Alert[] }) => {
+  const handleBulkOrder = (supplierGroup: {
+    supplier: { id: string; name: string };
+    items: Alert[];
+  }) => {
     setSelectedSupplierGroup(supplierGroup);
     setIsBulkOrderOpen(true);
   };
@@ -109,7 +113,9 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
             <AlertCircle className="text-destructive h-6 w-6" />
           </div>
           <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
-          <p className="text-muted-foreground text-sm">{error.message || t("alerts.errorLoading")}</p>
+          <p className="text-muted-foreground text-sm">
+            {error.message || t("alerts.errorLoading")}
+          </p>
         </CardContent>
       </Card>
     );
@@ -133,98 +139,98 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
     <>
       <section className="space-y-6">
         {alertsBySupplier.map((supplierGroup, idx) => (
-        <div
-          key={idx}
-          className="bg-card relative z-0 rounded-xl border p-4 shadow-md transition-shadow hover:z-10 hover:shadow-lg sm:p-5"
-        >
-          {/* Supplier Header */}
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-              <p className="truncate text-base font-semibold">{supplierGroup.supplier.name}</p>
+          <div
+            key={idx}
+            className="bg-card relative z-0 rounded-xl border p-4 shadow-md transition-shadow hover:z-10 hover:shadow-lg sm:p-5"
+          >
+            {/* Supplier Header */}
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                <p className="truncate text-base font-semibold">{supplierGroup.supplier.name}</p>
+              </div>
+              <Badge variant="destructive">
+                {t("alerts.table.lowStock")} ({supplierGroup.items.length})
+              </Badge>
             </div>
-            <Badge variant="destructive">
-              {t("alerts.table.lowStock")} ({supplierGroup.items.length})
-            </Badge>
-          </div>
 
-          {/* Materials Table with Progress Bars */}
-          <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-[720px] px-4 sm:px-0">
-              <div className="overflow-hidden rounded-lg border shadow-sm">
-                <div className="from-foreground/90 to-foreground/80 text-background flex bg-gradient-to-r px-4 py-3 text-xs font-bold">
-                  <div className="w-2/6">{t("alerts.table.material")}</div>
-                  <div className="w-2/6 text-center">{t("alerts.table.stockLevel")}</div>
-                  <div className="w-1/6 text-center">{t("alerts.table.currentStock")}</div>
-                  <div className="w-1/6 text-center">{t("alerts.table.minStock")}</div>
+            {/* Materials Table with Progress Bars */}
+            <div className="-mx-4 overflow-x-auto sm:mx-0">
+              <div className="min-w-[720px] px-4 sm:px-0">
+                <div className="overflow-hidden rounded-lg border shadow-sm">
+                  <div className="from-foreground/90 to-foreground/80 text-background flex bg-gradient-to-r px-4 py-3 text-xs font-bold">
+                    <div className="w-2/6">{t("alerts.table.material")}</div>
+                    <div className="w-2/6 text-center">{t("alerts.table.stockLevel")}</div>
+                    <div className="w-1/6 text-center">{t("alerts.table.currentStock")}</div>
+                    <div className="w-1/6 text-center">{t("alerts.table.minStock")}</div>
+                  </div>
+                  <ul className="divide-border divide-y">
+                    {supplierGroup.items.map((alert) => (
+                      <li
+                        key={alert.id}
+                        className="hover:bg-muted/30 flex items-center px-4 py-3 text-sm transition-colors"
+                      >
+                        <div className="w-2/6 font-medium">
+                          {alert.materialName}
+                          <span className="text-muted-foreground ml-2 text-xs">
+                            ({alert.materialSku})
+                          </span>
+                        </div>
+                        <div className="w-2/6 px-3">
+                          <Progress
+                            value={Math.min(alert.stockPercentage, 100)}
+                            className="bg-muted h-2 [&>div]:bg-red-600"
+                          />
+                        </div>
+                        <div className="w-1/6 text-center font-semibold text-red-600 dark:text-red-400">
+                          {Number(alert.currentStock)} {alert.unit}
+                        </div>
+                        <div className="w-1/6 text-center font-semibold text-emerald-600 dark:text-emerald-400">
+                          {Number(alert.minStock)} {alert.unit}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="divide-border divide-y">
-                  {supplierGroup.items.map((alert) => (
-                    <li
-                      key={alert.id}
-                      className="hover:bg-muted/30 flex items-center px-4 py-3 text-sm transition-colors"
-                    >
-                      <div className="w-2/6 font-medium">
-                        {alert.materialName}
-                        <span className="text-muted-foreground ml-2 text-xs">
-                          ({alert.materialSku})
-                        </span>
-                      </div>
-                      <div className="w-2/6 px-3">
-                        <Progress
-                          value={Math.min(alert.stockPercentage, 100)}
-                          className="bg-muted h-2 [&>div]:bg-red-600"
-                        />
-                      </div>
-                      <div className="w-1/6 text-center font-semibold text-red-600 dark:text-red-400">
-                        {Number(alert.currentStock)} {alert.unit}
-                      </div>
-                      <div className="w-1/6 text-center font-semibold text-emerald-600 dark:text-emerald-400">
-                        {Number(alert.minStock)} {alert.unit}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
               </div>
             </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="mt-4 flex flex-wrap justify-end gap-2">
-            {supplierGroup.supplier.id === "no-supplier" ? (
-              <Button variant="outline" size="sm" disabled>
-                {t("alerts.actions.noSupplier")}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkOrder(supplierGroup)}
-                  className="gap-2"
-                >
-                  <Package2 className="h-4 w-4" />
-                  Bulk Order
+            {/* Action Buttons */}
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              {supplierGroup.supplier.id === "no-supplier" ? (
+                <Button variant="outline" size="sm" disabled>
+                  {t("alerts.actions.noSupplier")}
                 </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => onCreateOrder(supplierGroup.items[0])}
-                  className="gap-2"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  {t("alerts.actions.createOrder")}
-                </Button>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkOrder(supplierGroup)}
+                    className="gap-2"
+                  >
+                    <Package2 className="h-4 w-4" />
+                    Bulk Order
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onCreateOrder(supplierGroup.items[0])}
+                    className="gap-2"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {t("alerts.actions.createOrder")}
+                  </Button>
+                </>
+              )}
+            </div>
 
-          {/* Date Footer */}
-          <div className="mt-3 text-right">
-            <span className="text-muted-foreground text-xs">
-              {new Date(supplierGroup.items[0].createdAt).toLocaleDateString()}
-            </span>
+            {/* Date Footer */}
+            <div className="mt-3 text-right">
+              <span className="text-muted-foreground text-xs">
+                {formatDate(supplierGroup.items[0].createdAt)}
+              </span>
+            </div>
           </div>
-        </div>
         ))}
       </section>
 

@@ -6,8 +6,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { ArrowRight, Package, Loader2 } from "lucide-react";
 import { DashboardCard } from "../components/dashboard-card";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
-import { UseQueryResult } from "@tanstack/react-query";
+// import { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
+// import { UseQueryResult } from "@tanstack/react-query";
 
 interface ProcessedMaterial {
   id: string;
@@ -20,17 +20,16 @@ interface ProcessedMaterial {
 }
 
 interface TrackingCardProps {
-  materialsQuery: UseQueryResult<MaterialsResponse, Error>;
-  processedData: ProcessedMaterial[];
+  stockLevels: ProcessedMaterial[];
 }
 
-export function TrackingCard({ materialsQuery, processedData }: TrackingCardProps) {
+export function TrackingCard({ stockLevels }: TrackingCardProps) {
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
 
-  // Receive pre-processed data from parent (eliminates heavy computation)
-  const { isLoading, error } = materialsQuery;
-  const stockLevels = processedData;
+  // Data is now passed directly from parent, already processed and sorted
+  const isLoading = false;
+  const error = null;
 
   const cardContent = (
     <div className="h-full overflow-auto">

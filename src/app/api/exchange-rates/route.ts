@@ -1,26 +1,26 @@
+/**
+ * @file api/exchange-rates/route.ts
+ * @description Exchange Rates API Endpoint
+ * Manages currency exchange rates retrieval and refreshing.
+ */
+
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { getExchangeRate, refreshExchangeRate } from "@/lib/services/exchange-rate.service";
-import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * GET /api/exchange-rates
  *
- * Get the current EUR to USD exchange rate
- * Returns cached rate if available and not expired
+ * Retrieves the current cached exchange rate (EUR to USD).
+ * This endpoint is optimized for speed and relies on service-layer caching.
  *
- * @returns {Object} Exchange rate data
+ * @returns {Promise<NextResponse>} Exchange rate data including expiration
  */
 export async function GET() {
   try {
-    // Optional: Require authentication
-    // Uncomment if you want only logged-in users to access rates
-    // const session = await getServerSession(authOptions);
-    // if (!session?.user?.id) {
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // }
+    // Note: Public access allowed for frontend pricing display
+    // If strict auth is needed later, wrap with withApiHandler
 
     const rateData = await getExchangeRate();
 
@@ -34,31 +34,28 @@ export async function GET() {
       })
     );
   } catch (error) {
-    return handleApiError(error, {
-      endpoint: "GET /api/exchange-rates",
-      context: {},
-    });
+    // Fallback error handling since we're not using withApiHandler here (public route)
+    console.error("[Exchange Rates] GET Failed:", error);
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Failed to fetch exchange rates"),
+      { status: 500 }
+    );
   }
 }
 
 /**
  * POST /api/exchange-rates/refresh
  *
- * Manually refresh the exchange rate (admin only)
- * Forces a fresh fetch from the API regardless of cache
+ * Manually forces a refresh of the exchange rate from the external provider.
  *
- * @returns {Object} Fresh exchange rate data
+ * Security: Authenticated Users Only.
+ * Rate Limit: Strict limit to prevent abuse of external API quota.
  */
-export async function POST() {
-  try {
-    // Require authentication for manual refresh
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
+export const POST = withApiHandler(
+  async (request, { userId }) => {
+    // TODO: Add Admin role check here if needed in future
+    // const user = await userService.getUser(userId);
+    // if (user.role !== 'ADMIN') throw new Error('Forbidden');
 
     const rateData = await refreshExchangeRate();
 
@@ -72,10 +69,9 @@ export async function POST() {
         expiresAt: rateData.expiresAt.toISOString(),
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "POST /api/exchange-rates",
-      context: {},
-    });
+  },
+  {
+    // Very strict rate limit for checking/refreshing external API
+    rateLimitEndpoint: "/api/exchange-rates/refresh",
   }
-}
+);

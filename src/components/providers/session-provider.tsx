@@ -1,14 +1,7 @@
 "use client";
 
-import { SessionProvider as NextAuthSessionProvider } from "next-auth/react";
-import type { Session } from "next-auth";
-
-export function SessionProvider({
-  children,
-  session,
-}: {
-  children: React.ReactNode;
-  session?: Session | null;
-}) {
-  return <NextAuthSessionProvider session={session}>{children}</NextAuthSessionProvider>;
+// Better-auth doesn't need a session provider wrapper in client components
+// Session is managed through the authClient hooks
+export function SessionProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }

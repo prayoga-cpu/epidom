@@ -1,0 +1,12 @@
+Laporan Stok Harian Gudang Pusat
+Tanggal Export: 23 Desember 2025
+Dicetak Oleh: Admin Gudang
+
+Kode Item,Nama Bahan,Kategori,Satuan,Hrg Beli (Rp),Sisa Stok,Batas Min.,Masa Aktif,Supplier
+BB-001,Tepung Terigu Segitiga Biru,Dry Good,kg,"12.500",45,10,Active,PT Bogasari
+BB-002,Telur Ayam Negeri (Grade A),Fresh,butir,"Rp 2.800",150,50,Yes,Pak Budi Farm
+BB-003,Gula Pasir Premium,Dry Good,kg,16000,25.5,5,True,Indo Sugar
+BB-004,Susu UHT Full Cream,Dairy,liter,"19.500",12,24,Y,Ultra Jaya
+BB-005,Mentega Blueband 200g,Dairy,pcs,"Rp 15.000",0,10,No,Unilever
+BB-006,Minyak Goreng BIMOLI,Dry Good,liter,"18.000",100,20,Active,Indofood
+BB-007,Bawang Putih Kating,Fresh,kg,"Rp 35.000",5.5,2,Yes,Pasar Induk

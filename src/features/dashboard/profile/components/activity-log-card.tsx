@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Activity, LogIn, LogOut, Edit, Plus, Trash2, Package } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,56 +17,6 @@ interface ActivityEntry {
   timestamp: Date;
   type: "login" | "logout" | "update" | "create" | "delete";
 }
-
-// Mock activity data - TODO: Replace with actual API data
-const MOCK_ACTIVITY: ActivityEntry[] = [
-  {
-    id: "1",
-    action: "login",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 mins ago
-    type: "login",
-  },
-  {
-    id: "2",
-    action: "updateMaterial",
-    entity: "Flour",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    type: "update",
-  },
-  {
-    id: "3",
-    action: "createRecipe",
-    entity: "Croissant",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-    type: "create",
-  },
-  {
-    id: "4",
-    action: "updateProfile",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    type: "update",
-  },
-  {
-    id: "5",
-    action: "createOrder",
-    entity: "ORD-001",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-    type: "create",
-  },
-  {
-    id: "6",
-    action: "createProduction",
-    entity: "Batch #42",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-    type: "create",
-  },
-  {
-    id: "7",
-    action: "updateBusiness",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 1 week ago
-    type: "update",
-  },
-];
 
 function getActionIcon(type: ActivityEntry["type"]) {
   switch (type) {
@@ -102,10 +52,62 @@ function getActionColor(type: ActivityEntry["type"]) {
   }
 }
 
+// Define mock data structure without dates - dates will be computed client-side
+const MOCK_ACTIVITY_CONFIG = [
+  { id: "1", action: "login", type: "login" as const, offsetMs: 1000 * 60 * 30 },
+  { id: "2", action: "updateMaterial", entity: "Flour", type: "update" as const, offsetMs: 1000 * 60 * 60 * 2 },
+  { id: "3", action: "createRecipe", entity: "Croissant", type: "create" as const, offsetMs: 1000 * 60 * 60 * 5 },
+  { id: "4", action: "updateProfile", type: "update" as const, offsetMs: 1000 * 60 * 60 * 24 },
+  { id: "5", action: "createOrder", entity: "ORD-001", type: "create" as const, offsetMs: 1000 * 60 * 60 * 24 * 2 },
+  { id: "6", action: "createProduction", entity: "Batch #42", type: "create" as const, offsetMs: 1000 * 60 * 60 * 24 * 3 },
+  { id: "7", action: "updateBusiness", type: "update" as const, offsetMs: 1000 * 60 * 60 * 24 * 7 },
+];
+
 export function ActivityLogCard() {
   const { t } = useI18n();
   const [showAll, setShowAll] = useState(false);
-  const displayedActivities = showAll ? MOCK_ACTIVITY : MOCK_ACTIVITY.slice(0, 5);
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch - generate dates only on client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Generate mock data with timestamps only after mount
+  const mockActivity: ActivityEntry[] = useMemo(() => {
+    if (!mounted) return [];
+    const now = Date.now();
+    return MOCK_ACTIVITY_CONFIG.map(({ id, action, entity, type, offsetMs }) => ({
+      id,
+      action,
+      entity,
+      type,
+      timestamp: new Date(now - offsetMs),
+    }));
+  }, [mounted]);
+
+  const displayedActivities = showAll ? mockActivity : mockActivity.slice(0, 5);
+
+  // Return loading state during SSR to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              <CardTitle>{t("profile.activity.title")}</CardTitle>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[200px] flex items-center justify-center">
+            <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -115,7 +117,7 @@ export function ActivityLogCard() {
             <Activity className="h-5 w-5 text-primary" />
             <CardTitle>{t("profile.activity.title")}</CardTitle>
           </div>
-          <Badge variant="secondary">{MOCK_ACTIVITY.length} {t("profile.activity.items")}</Badge>
+          <Badge variant="secondary">{mockActivity.length} {t("profile.activity.items")}</Badge>
         </div>
         <CardDescription>
           {t("profile.activity.description")}
@@ -159,7 +161,7 @@ export function ActivityLogCard() {
           </div>
         )}
 
-        {MOCK_ACTIVITY.length > 5 && (
+        {mockActivity.length > 5 && (
           <div className="mt-6 flex justify-center">
             <Button
               variant="outline"
@@ -168,7 +170,7 @@ export function ActivityLogCard() {
             >
               {showAll
                 ? t("profile.activity.showLess")
-                : `${t("profile.activity.viewAll")} (${MOCK_ACTIVITY.length - 5} ${t("profile.activity.more")})`}
+                : `${t("profile.activity.viewAll")} (${mockActivity.length - 5} ${t("profile.activity.more")})`}
             </Button>
           </div>
         )}

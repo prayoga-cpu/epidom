@@ -17,7 +17,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { logger } from "@/lib/logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +40,8 @@ interface PaymentFormProps {
 export function PaymentForm({ plan }: PaymentFormProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
+  const isAuthenticated = !isPending && !!session?.user;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -58,7 +59,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
       }
 
       // Check if user is logged in
-      if (status !== "authenticated" || !session) {
+      if (!isAuthenticated || !session) {
         // Redirect to login with return URL
         router.push(`/login?callbackUrl=${encodeURIComponent(`/payments?plan=${plan}`)}`);
         return;
@@ -142,7 +143,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
       )}
 
       {/* Authentication Status */}
-      {status === "unauthenticated" && (
+      {!isAuthenticated && !isPending && (
         <Alert className="mb-6 rounded-xl border-blue-200 bg-blue-50 text-blue-800">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -244,7 +245,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
             {t("payments.form.redirecting")}
             <ArrowRight className="h-4 w-4" />
           </span>
-        ) : status === "unauthenticated" ? (
+        ) : !isAuthenticated ? (
           t("payments.form.signUpLogin")
         ) : (
           <span className="flex items-center justify-center gap-2">

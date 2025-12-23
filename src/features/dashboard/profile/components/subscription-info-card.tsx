@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useState } from "react";
 import { getStatusColor, getStatusLabel, getPlanDetails } from "@/lib/utils/subscription-helpers";
+import { formatDate } from "@/lib/utils/format-date";
 
 interface SubscriptionInfoCardProps {
   subscription?: {
@@ -82,7 +83,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
   const isPastDue = subscription.status === "PAST_DUE";
 
   return (
-    <Card className="border-2 h-full">
+    <Card className="h-full border-2">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl font-bold">{t("profile.subscription.title")}</CardTitle>
         <div className="flex gap-2">
@@ -99,7 +100,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col flex-1 min-h-0">
+      <CardContent className="flex min-h-0 flex-1 flex-col">
         <div className="space-y-6">
           {/* Plan Details */}
           <div className="space-y-2">
@@ -128,17 +129,13 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
                   <p className="text-muted-foreground text-xs">
                     {t("profile.subscription.periodStart")}
                   </p>
-                  <p className="font-semibold">
-                    {new Date(subscription.currentPeriodStart).toLocaleDateString()}
-                  </p>
+                  <p className="font-semibold">{formatDate(subscription.currentPeriodStart)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">
                     {t("profile.subscription.periodEnd")}
                   </p>
-                  <p className="font-semibold">
-                    {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-                  </p>
+                  <p className="font-semibold">{formatDate(subscription.currentPeriodEnd)}</p>
                 </div>
               </div>
             </div>
@@ -195,7 +192,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
         </div>
 
         {/* Actions - Always at bottom */}
-        <div className="flex flex-col gap-2 pt-4 mt-auto sm:flex-row">
+        <div className="mt-auto flex flex-col gap-2 pt-4 sm:flex-row">
           <Button variant="outline" asChild className="w-full sm:flex-1">
             <Link href="/pricing">{t("profile.subscription.changePlan")}</Link>
           </Button>

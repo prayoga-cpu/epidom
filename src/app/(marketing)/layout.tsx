@@ -38,7 +38,7 @@ export default function LandingLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className={`${lato.variable} font-lato`}>
+    <div className={`${lato.variable} font-lato paper-texture`}>
       <ErrorBoundary>
         <Suspense fallback={<LoadingPage />}>
           <I18nProvider>

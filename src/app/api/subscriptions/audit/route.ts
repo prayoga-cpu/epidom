@@ -1,39 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+/**
+ * @file api/subscriptions/audit/route.ts
+ * @description Subscription Audit API
+ * Diagnostic endpoint to identify and resolve duplicate subscription issues.
+ */
+
+import { NextResponse } from "next/server";
 import { subscriptionService } from "@/lib/services";
-import { handleApiError } from "@/lib/utils/api-error-handler";
-import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * POST /api/subscriptions/audit
  *
- * Audit and fix duplicate active subscriptions for the current user
- *
- * This endpoint:
- * 1. Checks if the user has multiple active Stripe subscriptions
- * 2. Keeps the newest subscription
- * 3. Cancels all older duplicate subscriptions
- * 4. Updates the database to reflect the correct subscription
- *
- * Returns:
- * - duplicatesFound: Number of duplicate subscriptions found
- * - canceledSubscriptionIds: Array of canceled subscription IDs
+ * Audits the current user's subscription state against Stripe.
+ * Automatically attempts to resolve conflicts by:
+ * 1. Identifying multiple active subscriptions in Stripe.
+ * 2. Keeping the most recent valid subscription.
+ * 3. Canceling duplicates.
+ * 4. Syncing local database state.
  */
-export async function POST(request: NextRequest) {
-  try {
-    // Verify session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized. Please log in first."),
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-
-    // Audit and fix duplicate subscriptions
+export const POST = withApiHandler(
+  async (request, { userId }) => {
+    // Audit and fix duplicate subscriptions via service logic
     const result = await subscriptionService.auditAndFixDuplicateSubscriptions(userId);
 
     if (result.duplicatesFound > 0) {
@@ -53,10 +41,9 @@ export async function POST(request: NextRequest) {
         canceledSubscriptionIds: [],
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "POST /api/subscriptions/audit",
-      context: {},
-    });
+  },
+  {
+    // Strict rate limit for admin/diagnostic tools
+    rateLimitEndpoint: "/api/subscriptions/audit",
   }
-}
+);

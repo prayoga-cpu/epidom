@@ -5,14 +5,13 @@
  * Server-side rendered with parallel data fetching for optimal performance.
  */
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
-  fetchMaterialsForPage,
   fetchSuppliersForPage,
   fetchProductionBatchesForPage,
   fetchAlertsForPage,
+  fetchStockLevelsForPage,
 } from "@/lib/server/data-fetchers";
 import { DashboardClient } from "@/features/dashboard/dashboard/components/dashboard-client";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
@@ -27,35 +26,32 @@ import type { Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
  * @param {Promise<{storeId: string}>} props.params - Route parameters
  * @returns {Promise<JSX.Element>} Dashboard page component
  */
-export default async function DashboardPage({
-  params,
-}: {
-  params: Promise<{ storeId: string }>;
-}) {
+export default async function DashboardPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
 
   if (!session?.user?.id) {
     redirect("/login");
   }
 
   // Fetch all initial data in parallel for optimal performance
-  const [materialsResult, suppliersResult, productionBatchesResult, alertsResult] = await Promise.all([
-    fetchMaterialsForPage(storeId),
-    fetchSuppliersForPage(storeId, { take: 4, sortBy: "name", sortOrder: "asc" }),
-    fetchProductionBatchesForPage(storeId, {
-      status: "COMPLETED",
-      sortBy: "scheduledDate",
-      sortOrder: "desc",
-      skip: 0,
-      take: 10,
-    }),
-    fetchAlertsForPage(storeId),
-  ]);
+  const [stockLevelsResult, suppliersResult, productionBatchesResult, alertsResult] =
+    await Promise.all([
+      fetchStockLevelsForPage(storeId),
+      fetchSuppliersForPage(storeId, { take: 4, sortBy: "name", sortOrder: "asc" }),
+      fetchProductionBatchesForPage(storeId, {
+        status: "COMPLETED",
+        sortBy: "scheduledDate",
+        sortOrder: "desc",
+        skip: 0,
+        take: 10,
+      }),
+      fetchAlertsForPage(storeId),
+    ]);
 
   return (
     <DashboardClient
-      initialMaterials={materialsResult.materials}
+      initialStockLevels={stockLevelsResult.materials}
       initialSuppliers={suppliersResult.suppliers}
       initialProductionBatches={productionBatchesResult.batches}
       initialAlerts={alertsResult.alerts}

@@ -3,6 +3,7 @@
  */
 
 import { isDate } from "@/lib/utils/types";
+import { formatDate } from "@/lib/utils/format-date";
 
 /**
  * Convert an array of objects to CSV string
@@ -157,7 +158,7 @@ export async function exportToPDF<T extends Record<string, any>>(
         const value = row[col.key];
         // Use type guard for Date conversion
         if (isDate(value)) {
-          return value.toLocaleDateString();
+          return formatDate(value);
         }
         if (value === null || value === undefined) {
           return "";
@@ -229,7 +230,12 @@ export async function copyToClipboard<T extends Record<string, any>>(
     textArea.select();
     try {
       document.execCommand("copy");
-    } catch (err) {
+    } catch (execCopyErr) {
+      // execCommand is deprecated but used as last-resort fallback
+      // Log for debugging but don't throw - clipboard failure is non-critical
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Clipboard fallback failed:", execCopyErr);
+      }
     }
     document.body.removeChild(textArea);
   }

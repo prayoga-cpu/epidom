@@ -1,38 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+/**
+ * @file api/connect/dashboard/route.ts
+ * @description Stripe Connect Dashboard API
+ * Generates login links for the Stripe Express Dashboard.
+ */
+
+import { NextResponse } from "next/server";
 import { stripeConnectService } from "@/lib/services";
-import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * POST /api/connect/dashboard
  *
- * Generate Stripe Connect dashboard login link
- * Allows Epidom owner to view their earnings, payouts, and account settings
+ * Generates a single-sign-on (SSO) link for the user to access their Stripe Dashboard.
  *
- * Required: User must be authenticated and have completed onboarding
+ * Pre-requisite:
+ * - User must have completed Stripe Connect onboarding.
  */
-export async function POST(request: NextRequest) {
-  try {
-    // Verify session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-
-    // Check if onboarding is complete
+export const POST = withApiHandler(
+  async (request, { userId }) => {
+    // Check if onboarding is complete before generating link
     const isComplete = await stripeConnectService.isOnboardingComplete(userId);
+
     if (!isComplete) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.VALIDATION_ERROR,
-          "Stripe Connect onboarding not complete"
+          "Stripe Connect onboarding not complete. Please complete onboarding first."
         ),
         { status: 400 }
       );
@@ -47,10 +41,8 @@ export async function POST(request: NextRequest) {
         message: "Dashboard link created successfully",
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "POST /api/connect/dashboard",
-      context: {},
-    });
+  },
+  {
+    rateLimitEndpoint: "/api/connect/dashboard",
   }
-}
+);

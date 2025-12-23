@@ -7,7 +7,11 @@ import { CardSkeleton } from "./card-skeleton";
 import { AlertsCard } from "../alerts/alerts-card";
 import { TrackingCard } from "../tracking/tracking-card";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useMaterials, type MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
+// Removed unused useMaterials import since we pass pre-fetched stock levels
+// import {
+//   useMaterials,
+//   type MaterialsResponse,
+// } from "@/features/dashboard/data/materials/hooks/use-materials";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
@@ -39,7 +43,7 @@ const SupplierCard = dynamic(
 );
 
 interface DashboardClientProps {
-  initialMaterials: MaterialWithSuppliers[];
+  initialStockLevels: MaterialWithSuppliers[];
   initialSuppliers: SupplierWithRelations[];
   initialProductionBatches: ProductionBatchWithRelations[];
   initialAlerts: Alert[];
@@ -47,7 +51,7 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({
-  initialMaterials,
+  initialStockLevels,
   initialSuppliers,
   initialProductionBatches,
   initialAlerts,
@@ -55,24 +59,9 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const { t } = useI18n();
 
-  // Use initial data from Server Component with real-time updates
-  const materialsQuery = useMaterials(storeId, undefined, {
-    materials: initialMaterials,
-    total: initialMaterials.length,
-  });
-
-  // Process materials data once in parent to avoid duplicate computations
-  // This replaces the heavy map/filter/sort operations in each child component
-  const processedMaterials = useMemo(() => {
-    if (!materialsQuery.data?.materials) {
-      return {
-        lowStockMaterials: [],
-        stockLevels: [],
-      };
-    }
-
-    // Transform all materials with calculated stock data (do this once, not twice)
-    const transformedMaterials = materialsQuery.data.materials.map((material) => {
+  // Process data for TrackingCard (calculate percentage once)
+  const stockLevels = useMemo(() => {
+    return initialStockLevels.map((material) => {
       const currentStock = Number(material.currentStock);
       const minStock = Number(material.minStock);
       const maxStock = Number(material.maxStock);
@@ -88,23 +77,7 @@ export function DashboardClient({
         stockPercentage,
       };
     });
-
-    // Low stock materials for AlertsCard (currentStock <= minStock)
-    const lowStockMaterials = transformedMaterials
-      .filter((material) => material.currentStock <= material.minStock)
-      .sort((a, b) => a.stockPercentage - b.stockPercentage) // Lowest first
-      .slice(0, 5); // Top 5
-
-    // Stock levels for TrackingCard (all materials sorted by stock percentage)
-    const stockLevels = transformedMaterials
-      .sort((a, b) => a.stockPercentage - b.stockPercentage) // Lowest first
-      .slice(0, 5); // Top 5
-
-    return {
-      lowStockMaterials,
-      stockLevels,
-    };
-  }, [materialsQuery.data]);
+  }, [initialStockLevels]);
 
   return (
     <div className="grid min-h-[calc(100vh-120px)] w-full gap-6">
@@ -116,22 +89,15 @@ export function DashboardClient({
           <ProductionHistoryChart />
         </div>
         <div className="w-full md:col-span-2 lg:col-span-3">
-          <AlertsCard
-            materialsQuery={materialsQuery}
-            processedData={processedMaterials.lowStockMaterials}
-          />
+          <AlertsCard initialAlerts={initialAlerts} storeId={storeId} />
         </div>
       </div>
 
       {/* Bottom Stats */}
       <div className="grid w-full gap-4 md:grid-cols-2">
-        <TrackingCard
-          materialsQuery={materialsQuery}
-          processedData={processedMaterials.stockLevels}
-        />
+        <TrackingCard stockLevels={stockLevels} />
         <SupplierCard />
       </div>
     </div>
   );
 }
-

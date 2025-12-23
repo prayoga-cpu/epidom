@@ -1,5 +1,7 @@
 "use client";
 
+import { CsvImportWizard } from "../../components/csv-import-wizard";
+
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -298,6 +300,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                   </TooltipContent>
                 )}
               </Tooltip>
+              <CsvImportWizard storeId={storeId} type="recipe" />
               <AddRecipeDialog
                 trigger={
                   <Button size="sm" className="w-full md:w-auto">

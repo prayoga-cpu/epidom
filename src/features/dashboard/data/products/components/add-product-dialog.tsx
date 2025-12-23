@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -80,6 +80,7 @@ interface AddProductDialogProps {
 
 export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
+  const isSubmittingRef = useRef(false);
   const { toast } = useToast();
   const { t } = useI18n();
   const { currency, convertToBase } = useCurrency();
@@ -159,8 +160,9 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
         storeId,
       };
 
+      // OPTIMISTIC CLOSING
+      isSubmittingRef.current = true;
       setOpen(false);
-      form.reset();
 
       const promise = createProduct.mutateAsync(apiData);
 
@@ -171,20 +173,41 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
             <span>{t("data.products.toasts.adding") || "Adding product..."}</span>
           </div>
         ),
-        success: (data) =>
-          t("data.products.toasts.added.description")?.replace("{name}", data.name) ||
-          "Product added successfully",
-        error: (err) => (err instanceof Error ? err.message : t("messages.registrationFailed")),
+        success: (data) => {
+          isSubmittingRef.current = false;
+          form.reset();
+          return (
+            t("data.products.toasts.added.description")?.replace("{name}", data.name) ||
+            "Product added successfully"
+          );
+        },
+        error: (err) => {
+          // Re-open on error
+          isSubmittingRef.current = false;
+          setOpen(true);
+          return err instanceof Error ? err.message : t("messages.registrationFailed");
+        },
       });
+      // Await promise to handle errors locally if needed
+      await promise;
     } catch (error) {
-      sonnerToast.error(t("common.error"), {
-        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
-      });
+      // Handled by sonnerToast
+      console.error(error);
+    }
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen && !isSubmittingRef.current) {
+      form.reset();
+    }
+    if (newOpen) {
+      isSubmittingRef.current = false;
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children || (
           <Button size="sm" className="gap-2">
