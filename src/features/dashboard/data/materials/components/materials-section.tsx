@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { CsvImportWizard } from "../../components/csv-import-wizard";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -359,6 +360,9 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                   </TooltipContent>
                 )}
               </Tooltip>
+
+              <CsvImportWizard storeId={storeId} type="material" />
+
               <AddMaterialDialog
                 trigger={
                   <Button size="sm" className="w-full md:w-auto">

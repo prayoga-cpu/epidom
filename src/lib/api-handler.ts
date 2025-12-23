@@ -10,7 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { getSession, type Session } from "@/lib/auth";
-import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
+import { checkRateLimitByUser } from "@/lib/middleware/rate-limit";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
@@ -52,10 +52,23 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
 
     try {
       // ========================================
-      // Rate Limiting
+      // Authentication (FIRST - we need user ID for rate limiting)
+      // ========================================
+      const session = await getSession();
+      if (!session?.user?.id) {
+        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+          status: 401,
+        });
+      }
+
+      // ========================================
+      // Rate Limiting (uses authenticated user ID)
       // ========================================
       if (options.rateLimitEndpoint) {
-        const rateLimitResult = await rateLimitMiddleware(request, options.rateLimitEndpoint);
+        const rateLimitResult = await checkRateLimitByUser(
+          session.user.id,
+          options.rateLimitEndpoint
+        );
         if (rateLimitResult) {
           return NextResponse.json(
             createErrorResponse(
@@ -72,16 +85,6 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
             }
           );
         }
-      }
-
-      // ========================================
-      // Authentication
-      // ========================================
-      const session = await getSession();
-      if (!session?.user?.id) {
-        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-          status: 401,
-        });
       }
 
       // ========================================
