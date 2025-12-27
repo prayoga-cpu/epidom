@@ -10,20 +10,15 @@
  * 5. Pain+Gain - Old way vs Epidom way comparison
  * 6. Closing CTA - Final call-to-action
  *
+ * Each section is wrapped with an error boundary to prevent
+ * one section's failure from crashing the entire page.
+ *
  * @page
  */
 
 import { generateMetadata } from "@/lib/seo";
 import { ProductStructuredData } from "@/components/seo/structured-data";
-import { SiteFooter } from "@/features/marketing/shared/components/site-footer";
-import {
-  HeroSection,
-  SocialProofSection,
-  HowToUseSection,
-  PricingSection,
-  PainGainSection,
-  ClosingCtaSection,
-} from "@/features/marketing/home/components";
+import { LandingPageSections } from "@/features/marketing/home/components/landing-page-sections";
 
 export const metadata = generateMetadata({
   title: "EPIDOM - Secret Way of Cookie Bars Inventory Management",
@@ -67,26 +62,9 @@ export default function HomePage() {
       <ProductStructuredData />
 
       <main className="w-full overflow-x-hidden bg-white">
-        {/* Section 1: Hero */}
-        <HeroSection />
-
-        {/* Section 2: Social Proof (Logo Carousel + Instagram) */}
-        <SocialProofSection />
-
-        {/* Section 3: How to Use */}
-        <HowToUseSection />
-
-        {/* Section 4: Pricing */}
-        <PricingSection />
-
-        {/* Section 5: Pain+Gain Comparison */}
-        <PainGainSection />
-
-        {/* Section 6: Closing CTA */}
-        <ClosingCtaSection />
-
-        {/* Footer */}
+        <LandingPageSections />
       </main>
     </>
   );
 }
+

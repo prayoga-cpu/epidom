@@ -25,6 +25,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useSectionVisibility } from "@/hooks/use-section-visibility";
+import { SSRPlaceholder } from "@/components/shared";
 
 const FEATURES = [
   {
@@ -93,9 +94,10 @@ export function HowToUseSection() {
 
   if (!mounted) {
     return (
-      <section className="relative overflow-hidden bg-gray-50 py-20 md:py-28">
-        <div className="h-[700px]" />
-      </section>
+      <SSRPlaceholder
+        height="700px"
+        className="bg-gray-50 py-20 md:py-28"
+      />
     );
   }
 

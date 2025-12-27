@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSectionVisibility } from "@/hooks/use-section-visibility";
 import { getFeatureDelay, getStaggerDelay } from "@/lib/constants/animations";
+import { SSRPlaceholder } from "@/components/shared";
 
 const PRICING_TIERS = [
   {
@@ -43,7 +44,7 @@ export function PricingSection() {
 
   const handleSelectPlan = (planKey: string) => {
     if (planKey === "custom") {
-      router.push("/contact");
+      window.open("https://calendly.com/prayogadevelopment/30min", "_blank");
     } else {
       router.push("/register");
     }
@@ -52,9 +53,10 @@ export function PricingSection() {
   // Return placeholder during SSR
   if (!mounted) {
     return (
-      <section className="relative overflow-hidden bg-white py-20 md:py-28">
-        <div className="h-[800px]" />
-      </section>
+      <SSRPlaceholder
+        height="800px"
+        className="bg-white py-20 md:py-28"
+      />
     );
   }
 

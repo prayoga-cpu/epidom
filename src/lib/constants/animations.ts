@@ -13,8 +13,6 @@
 export const ANIMATION_TIMING = {
   /** Delay before mounting animations start */
   MOUNT_DELAY: 100,
-  /** Fallback delay to ensure visibility if IntersectionObserver fails */
-  VISIBILITY_FALLBACK: 500,
   /** Interval between staggered animation items */
   STAGGER_INTERVAL: 100,
   /** Standard transition duration */

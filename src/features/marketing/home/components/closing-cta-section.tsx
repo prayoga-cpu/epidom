@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSectionVisibility } from "@/hooks/use-section-visibility";
 import { INTERSECTION_OPTIONS, getStaggerDelay } from "@/lib/constants/animations";
+import { SSRPlaceholder } from "@/components/shared";
 
 const TRUST_BADGES = [
   { key: "secure", icon: Shield },
@@ -50,15 +51,16 @@ export function ClosingCtaSection() {
   };
 
   const handleDemo = () => {
-    router.push("/contact");
+    window.open("https://calendly.com/prayogadevelopment/30min", "_blank");
   };
 
   // Return placeholder during SSR
   if (!mounted) {
     return (
-      <section className="bg-brand-primary relative overflow-hidden py-24 md:py-32">
-        <div className="h-[500px]" />
-      </section>
+      <SSRPlaceholder
+        height="500px"
+        className="bg-brand-primary py-24 md:py-32"
+      />
     );
   }
 
@@ -86,12 +88,15 @@ export function ClosingCtaSection() {
           }}
         />
 
-        {/* Floating particles - using globals.css animation */}
+        {/* Floating particles - reduced on mobile for performance */}
         <div className="absolute inset-0 overflow-hidden">
+          {/* Desktop: 20 particles, Mobile: 8 particles */}
           {[...Array(20)].map((_, i) => (
             <div
               key={i}
-              className="animate-float-particle absolute h-1 w-1 rounded-full bg-white/20"
+              className={`animate-float-particle absolute h-1 w-1 rounded-full bg-white/20 will-change-transform ${
+                i >= 8 ? "hidden md:block" : ""
+              }`}
               style={{
                 left: `${(i * 5) % 100}%`,
                 top: `${(i * 7) % 100}%`,

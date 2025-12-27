@@ -113,9 +113,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   // ============================================
   if (session.mode === "setup" && promotion === "new_year_2025") {
     // User validated their card for the New Year promotion
-    // Grant them PRO plan until Dec 31, 2025
+    // Grant them PRO plan until the configured promo end date
 
-    const promoEndDate = new Date("2025-12-31T23:59:59Z");
+    const promoEndDate = new Date(process.env.PROMO_END_DATE || "2025-12-31T23:59:59Z");
     const now = new Date();
 
     // Check if already has subscription
