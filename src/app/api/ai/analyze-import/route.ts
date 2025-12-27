@@ -2,8 +2,7 @@ import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import {
   MaterialFields,
@@ -20,9 +19,7 @@ const model = process.env.OPENAI_API_KEY ? openai("gpt-4o") : google("gemini-1.5
 export async function POST(req: Request) {
   try {
     // 1. Auth Check
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const session = await getSession();
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
