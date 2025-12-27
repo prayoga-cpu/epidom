@@ -54,7 +54,7 @@ export const metadata = generateMetadata({
 
 export default function HomePage() {
   return (
-    <div className="h-screen w-full snap-y snap-mandatory overflow-x-hidden overflow-y-auto scroll-smooth bg-white">
+    <div className="home-page-snap h-screen w-full snap-y snap-mandatory overflow-x-hidden overflow-y-auto scroll-smooth bg-white">
       <ProductStructuredData />
 
       {/* 1. What is this? - Hero Section */}
