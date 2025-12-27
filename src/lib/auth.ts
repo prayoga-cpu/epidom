@@ -73,8 +73,10 @@ export async function getSession() {
   try {
     const cookieStore = await cookies();
 
-    // Get the session token from cookie
-    const sessionTokenCookie = cookieStore.get("better-auth.session_token")?.value;
+    // Get the session token from cookie (check both standard and secure names)
+    const sessionTokenCookie =
+      cookieStore.get("better-auth.session_token")?.value ||
+      cookieStore.get("__Secure-better-auth.session_token")?.value;
 
     if (!sessionTokenCookie) {
       return null;
