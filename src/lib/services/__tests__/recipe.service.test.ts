@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Prisma } from "@prisma/client";
 
 // Mock modules directly with inline mocks
 vi.mock("@/lib/repositories/recipe.repository", () => ({
@@ -44,12 +45,11 @@ const mockRecipe = {
   name: "Chocolate Cake",
   description: "Delicious chocolate cake",
   category: "Cakes",
-  yieldQuantity: 1,
+  yieldQuantity: new Prisma.Decimal(1),
   yieldUnit: "piece",
   productionTimeMinutes: 60,
   instructions: "Mix and bake",
-  estimatedCost: 15.0,
-  costPerBatch: 15.0,
+  costPerBatch: new Prisma.Decimal(15.0),
   createdAt: new Date(),
   updatedAt: new Date(),
   ingredients: [],
@@ -237,7 +237,7 @@ describe("RecipeService", () => {
         id: "ing-1",
         recipeId: "recipe-1",
         materialId: "mat-1",
-        quantity: 100,
+        quantity: new Prisma.Decimal(100),
         unit: "g",
         notes: null,
       });

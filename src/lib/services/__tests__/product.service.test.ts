@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Prisma } from "@prisma/client";
 
 // Mock modules directly with inline mocks
 vi.mock("@/lib/repositories/product.repository", () => ({
@@ -40,12 +41,12 @@ const mockProduct = {
   name: "Chocolate Cake",
   description: "Delicious chocolate cake",
   category: "Cakes",
-  costPrice: 10.0,
-  sellingPrice: 25.0,
-  currentStock: 50,
+  costPrice: new Prisma.Decimal(10.0),
+  sellingPrice: new Prisma.Decimal(25.0),
+  currentStock: new Prisma.Decimal(50),
   unit: "piece",
-  minStock: 10,
-  maxStock: 100,
+  minStock: new Prisma.Decimal(10),
+  maxStock: new Prisma.Decimal(100),
   productionTime: 60,
   shelfLife: 7,
   createdAt: new Date(),

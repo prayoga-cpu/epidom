@@ -7,7 +7,10 @@ import { CardSkeleton } from "./card-skeleton";
 import { AlertsCard } from "../alerts/alerts-card";
 import { TrackingCard } from "../tracking/tracking-card";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useMaterials, type MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
+import {
+  useMaterials,
+  type MaterialsResponse,
+} from "@/features/dashboard/data/materials/hooks/use-materials";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
@@ -89,19 +92,12 @@ export function DashboardClient({
       };
     });
 
-    // Low stock materials for AlertsCard (currentStock <= minStock)
-    const lowStockMaterials = transformedMaterials
-      .filter((material) => material.currentStock <= material.minStock)
-      .sort((a, b) => a.stockPercentage - b.stockPercentage) // Lowest first
-      .slice(0, 5); // Top 5
-
     // Stock levels for TrackingCard (all materials sorted by stock percentage)
     const stockLevels = transformedMaterials
       .sort((a, b) => a.stockPercentage - b.stockPercentage) // Lowest first
       .slice(0, 5); // Top 5
 
     return {
-      lowStockMaterials,
       stockLevels,
     };
   }, [materialsQuery.data]);
@@ -116,10 +112,7 @@ export function DashboardClient({
           <ProductionHistoryChart />
         </div>
         <div className="w-full md:col-span-2 lg:col-span-3">
-          <AlertsCard
-            materialsQuery={materialsQuery}
-            processedData={processedMaterials.lowStockMaterials}
-          />
+          <AlertsCard initialAlerts={initialAlerts} storeId={storeId} />
         </div>
       </div>
 
@@ -134,4 +127,3 @@ export function DashboardClient({
     </div>
   );
 }
-

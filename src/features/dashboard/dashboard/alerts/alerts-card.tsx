@@ -3,34 +3,23 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
+import { Alert, useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { DashboardCard } from "../components/dashboard-card";
-import { UseQueryResult } from "@tanstack/react-query";
-
-interface ProcessedMaterial {
-  id: string;
-  name: string;
-  currentStock: number;
-  minStock: number;
-  maxStock: number;
-  unit: string;
-  stockPercentage: number;
-}
 
 interface AlertsCardProps {
-  materialsQuery: UseQueryResult<MaterialsResponse, Error>;
-  processedData: ProcessedMaterial[];
+  initialAlerts: Alert[];
+  storeId: string;
 }
 
-export function AlertsCard({ materialsQuery, processedData }: AlertsCardProps) {
+export function AlertsCard({ initialAlerts, storeId }: AlertsCardProps) {
   const { t } = useI18n();
-  const { storeId } = useCurrentStore();
 
-  // Receive pre-processed data from parent (eliminates heavy computation)
-  const { isLoading, error } = materialsQuery;
-  const lowStockMaterials = processedData;
+  // Use the dedicated alerts hook with initial data from server
+  // This uses the optimized DB query (prisma.$queryRaw) instead of client-side filtering
+  const { data, isLoading, error } = useAlerts(storeId, { alerts: initialAlerts });
+
+  const alerts = data?.alerts || [];
 
   const cardContent = (
     <div className="flex min-h-[300px] flex-1 flex-col">
@@ -46,9 +35,11 @@ export function AlertsCard({ materialsQuery, processedData }: AlertsCardProps) {
       ) : error ? (
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <AlertCircle className="text-muted-foreground mb-3 h-8 w-8" />
-          <p className="text-muted-foreground text-sm">{t("messages.errorLoadingMaterials")}</p>
+          <p className="text-muted-foreground text-sm">
+            {t("messages.errorLoadingAlerts") || "Failed to load alerts"}
+          </p>
         </div>
-      ) : lowStockMaterials.length === 0 ? (
+      ) : alerts.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
           <div className="bg-muted mb-3 rounded-full p-3">
             <AlertCircle className="text-muted-foreground h-6 w-6" />
@@ -68,21 +59,21 @@ export function AlertsCard({ materialsQuery, processedData }: AlertsCardProps) {
 
           {/* Table Body */}
           <div className="divide-border flex-1 divide-y overflow-y-auto">
-            {lowStockMaterials.map((material) => {
+            {alerts.slice(0, 5).map((alert) => {
               return (
                 <div
-                  key={material.id}
+                  key={alert.id}
                   className="hover:bg-muted/30 flex items-center px-3 py-2.5 text-sm transition-colors"
                 >
-                  <div className="w-2/5 truncate font-medium">{material.name}</div>
+                  <div className="w-2/5 truncate font-medium">{alert.materialName}</div>
                   <div className="w-2/5 px-2">
                     <Progress
-                      value={Math.min(material.stockPercentage, 100)}
-                      className="bg-muted [&>div]:bg-destructive h-2"
+                      value={Math.min(alert.stockPercentage, 100)}
+                      className={`[&>div]:bg-destructive bg-muted h-2`}
                     />
                   </div>
                   <div className="w-1/5 text-right font-semibold text-red-600 dark:text-red-400">
-                    {material.currentStock} {material.unit}
+                    {alert.currentStock} {alert.unit}
                   </div>
                 </div>
               );
