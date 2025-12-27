@@ -875,6 +875,18 @@ export const en = {
       goTo: "Go to",
       login: "Login",
     },
+    verifyEmail: {
+      title: "Check your email",
+      heading: "Verify your email address",
+      description: "We've sent a verification link to",
+      instructions:
+        "Click the link in the email to verify your account. If you don't see it, check your spam folder.",
+      resendButton: "Resend verification email",
+      resending: "Sending...",
+      resendSuccess: "Verification email sent!",
+      resendError: "Failed to resend. Please try again.",
+      backToLogin: "Back to Login",
+    },
   },
   paymentsComponents: {
     paymentHistory: {

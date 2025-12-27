@@ -738,6 +738,18 @@ export const id = {
       goTo: "Pergi ke",
       login: "Login",
     },
+    verifyEmail: {
+      title: "Periksa email Anda",
+      heading: "Verifikasi alamat email Anda",
+      description: "Kami telah mengirimkan link verifikasi ke",
+      instructions:
+        "Klik link di email untuk memverifikasi akun Anda. Jika tidak melihatnya, periksa folder spam Anda.",
+      resendButton: "Kirim ulang email verifikasi",
+      resending: "Mengirim...",
+      resendSuccess: "Email verifikasi terkirim!",
+      resendError: "Gagal mengirim ulang. Silakan coba lagi.",
+      backToLogin: "Kembali ke Login",
+    },
   },
   paymentsComponents: {
     paymentHistory: {
