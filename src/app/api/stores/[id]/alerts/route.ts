@@ -1,38 +1,33 @@
+/**
+ * @file api/stores/[id]/alerts/route.ts
+ * @description Store Alerts API Endpoint
+ * Handles retrieval of dashboard alerts, primarily low stock warnings.
+ */
+
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { logger } from "@/lib/logger";
-import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * GET /api/stores/[id]/alerts
- * Get low stock materials for a store
+ *
+ * Retrieves active alerts for a specific store.
+ * Currently focuses on Low Stock alerts based on minStock thresholds.
+ *
+ * Logic:
+ * 1. Verifies store ownership (via withApiHandler).
+ * 2. Fetches all active materials.
+ * 3. Filters materials where currentStock <= minStock.
+ * 4. Calculates severity (Critical if <= 25% of minStock).
+ * 5. Returns sorted list (most critical first).
+ *
+ * @param {string} storeId - ID of the store (from route params)
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id: storeId } = await params;
-
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify user has access to this store
-    const store = await prisma.store.findFirst({
-      where: {
-        id: storeId,
-        business: {
-          userId: session.user.id,
-        },
-      },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
-
+export const GET = withApiHandler(
+  async (request, { storeId }) => {
     // Get all active materials for the store
+    // Optimization: Consider adding database-level filtering if dataset grows large
     const allMaterials = await prisma.material.findMany({
       where: {
         storeId,
@@ -51,17 +46,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .filter((material) => {
         const currentStock = Number(material.currentStock);
         const minStock = Number(material.minStock);
-        return currentStock <= minStock;
+        // Only alert if minStock is set (> 0) and threshold is breached
+        return minStock > 0 && currentStock <= minStock;
       })
       .sort((a, b) => {
         // Sort by stock percentage (most critical first)
-        const aPercent = Number(a.minStock) > 0 ? Number(a.currentStock) / Number(a.minStock) : 0;
-        const bPercent = Number(b.minStock) > 0 ? Number(b.currentStock) / Number(b.minStock) : 0;
+        // Avoid division by zero by checking minStock > 0
+        const aPercent = Number(a.minStock) > 0 ? Number(a.currentStock) / Number(a.minStock) : 1;
+        const bPercent = Number(b.minStock) > 0 ? Number(b.currentStock) / Number(b.minStock) : 1;
+
         if (aPercent !== bPercent) return aPercent - bPercent;
         return a.name.localeCompare(b.name);
       });
 
-    // Format alerts
+    // Format alerts for frontend consumption
     const alerts = lowStockMaterials.map((material) => {
       const currentStockNum = Number(material.currentStock);
       const minStockNum = Number(material.minStock);
@@ -90,19 +88,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           isPreferred: ms.isPreferred,
           phone: ms.supplier.phone || null,
         })),
-        createdAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(), // Dynamic timestamp for the alert
       };
     });
 
-    return NextResponse.json({ alerts });
-  } catch (error) {
-    logger.error("Error fetching alerts", error, {
-      endpoint: "GET /api/stores/[id]/alerts",
-      storeId,
-    });
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Failed to fetch alerts. Please try again."),
-      { status: 500 }
-    );
+    return NextResponse.json(createSuccessResponse({ alerts }));
+  },
+  {
+    // Apply standard rate limiting for dashboard widgets
+    rateLimitEndpoint: "/api/stores/[id]/alerts",
+    requireStoreAuth: true, // Auto-verify store ownership
   }
-}
+);

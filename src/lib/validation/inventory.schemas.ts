@@ -349,3 +349,32 @@ export const supplierFilterSchema = z.object({
 });
 
 export type SupplierFilterInput = z.infer<typeof supplierFilterSchema>;
+
+// Supplier Order schemas
+export const supplierOrderItemSchema = z.object({
+  materialId: cuidSchema,
+  quantity: decimalSchema.positive("Quantity must be positive"),
+  unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").optional(),
+  unitPrice: priceSchema,
+});
+
+export const createSupplierOrderSchema = z.object({
+  supplierId: cuidSchema,
+  expectedDate: z.string().datetime({ offset: true }).optional().or(z.date()).optional(),
+  notes: z.string().max(1000, "Notes are too long").optional(),
+  tax: priceSchema.default(0),
+  shipping: priceSchema.default(0),
+  items: z.array(supplierOrderItemSchema).min(1, "Order must have at least one item"),
+});
+
+export type CreateSupplierOrderInput = z.infer<typeof createSupplierOrderSchema>;
+
+export const updateSupplierOrderSchema = z.object({
+  status: z.enum(["PENDING", "ORDERED", "RECEIVED", "CANCELLED"]).optional(),
+  expectedDate: z.string().datetime({ offset: true }).optional().or(z.date()).optional(),
+  notes: z.string().max(1000, "Notes are too long").optional(),
+  tax: priceSchema.default(0),
+  shipping: priceSchema.default(0),
+});
+
+export type UpdateSupplierOrderInput = z.infer<typeof updateSupplierOrderSchema>;

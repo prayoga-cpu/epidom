@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { materialService } from "@/lib/services/material.service";
 import { subscriptionService } from "@/lib/services";
 import { materialFilterSchema } from "@/lib/validation/inventory.schemas";
@@ -16,7 +15,7 @@ import { handleApiError } from "@/lib/utils/api-error-handler";
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {

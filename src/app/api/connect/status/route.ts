@@ -1,35 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+/**
+ * @file api/connect/status/route.ts
+ * @description Stripe Connect Status API
+ * Retrieves the current onboarding and account status of the connected account.
+ */
+
+import { NextResponse } from "next/server";
 import { stripeConnectService } from "@/lib/services";
-import { handleApiError } from "@/lib/utils/api-error-handler";
-import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { createSuccessResponse } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * GET /api/connect/status
  *
- * Check Stripe Connect onboarding status for the current user
- * Returns account details and onboarding completion status
+ * Checks Stripe Connect onboarding status for the current user.
+ * Returns detailed account capabilities (payouts, charges, etc).
  *
- * Required: User must be authenticated
+ * @returns {Promise<NextResponse>} Account status object
  */
-export async function GET(request: NextRequest) {
-  try {
-    // Verify session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-
+export const GET = withApiHandler(
+  async (request, { userId }) => {
     // Check onboarding status
     const isComplete = await stripeConnectService.isOnboardingComplete(userId);
 
-    // Get account details
+    // Get comprehensive account details
     const accountDetails = await stripeConnectService.getAccountDetails(userId);
 
     return NextResponse.json(
@@ -39,12 +32,11 @@ export async function GET(request: NextRequest) {
         chargesEnabled: accountDetails?.charges_enabled || false,
         payoutsEnabled: accountDetails?.payouts_enabled || false,
         detailsSubmitted: accountDetails?.details_submitted || false,
+        // Add more fields here as needed by the frontend
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "GET /api/connect/status",
-      context: {},
-    });
+  },
+  {
+    rateLimitEndpoint: "/api/connect/status",
   }
-}
+);

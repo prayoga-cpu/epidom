@@ -7,7 +7,7 @@ import { StoreSwitcher } from "./store-switcher";
 import { useI18n } from "../../../components/lang/i18n-provider";
 import LangSwitcher from "../../../components/lang/lang-switcher";
 import { LogOut } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/auth-client";
 import { NavUser } from "./nav-user";
 import { useState } from "react";
 import { GlobalSearchDialog } from "./global-search-dialog";
@@ -94,7 +94,7 @@ export function Topbar() {
               variant="ghost"
               className="text-primary-foreground h-9 shrink-0 rounded-xl hover:bg-red-500/20 hover:text-white sm:px-2"
               onClick={() => {
-                signOut({ callbackUrl: "/login" });
+                signOut().then(() => (window.location.href = "/login"));
               }}
             >
               <LogOut className="size-4 sm:mr-1.5" />
@@ -141,7 +141,7 @@ export function Topbar() {
               className="text-muted-foreground relative h-9 w-80 max-w-xl justify-start rounded-full bg-white text-sm font-normal sm:max-w-2xl"
               onClick={() => setSearchOpen(true)}
             >
-              <Search className="mr-1 size-4 shrink-0 hidden sm:inline" />
+              <Search className="mr-1 hidden size-4 shrink-0 sm:inline" />
               <span>{t("actions.searchPlaceholder")}</span>
               <KbdGroup className="absolute right-3 hidden md:flex">
                 <Kbd>⌘</Kbd>
@@ -169,7 +169,7 @@ export function Topbar() {
                 variant="ghost"
                 className="h-9 rounded-xl px-3 hover:bg-red-500"
                 onClick={() => {
-                  signOut({ callbackUrl: "/login" });
+                  signOut().then(() => (window.location.href = "/login"));
                 }}
               >
                 <LogOut className="mr-1.5 size-4" />

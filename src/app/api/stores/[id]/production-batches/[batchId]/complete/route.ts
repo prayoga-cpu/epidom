@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { productionBatchService } from "@/lib/services/production-batch.service";
 import { z } from "zod";
 import { completeProductionSchema } from "@/lib/validation/production.schemas";
@@ -15,7 +14,7 @@ export async function POST(
 ) {
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

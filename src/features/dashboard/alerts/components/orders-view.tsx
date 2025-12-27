@@ -14,7 +14,16 @@ import {
 import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { materialKeys } from "@/features/dashboard/data/materials/hooks/use-materials";
-import { Phone, Mail, MapPin, Package, Loader2, AlertCircle, CheckCircle, ArrowRight } from "lucide-react";
+import {
+  Phone,
+  Mail,
+  MapPin,
+  Package,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  ArrowRight,
+} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -23,6 +32,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SubscriptionLockedState } from "@/features/dashboard/shared/components/subscription-locked-state";
 import { SectionErrorState } from "@/features/dashboard/data/components/section-error-state";
 import { isSubscriptionError } from "@/lib/utils/types";
+import { formatDate } from "@/lib/utils/format-date";
 
 export function OrdersView() {
   const { t } = useI18n();
@@ -110,7 +120,13 @@ export function OrdersView() {
   // Check if subscription is locked (STARTER plan)
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
-    (error && (isSubscriptionError(error) || (typeof error === "object" && error !== null && ("code" in error && error.code === "SUBSCRIPTION_FEATURE_LOCKED") || ("status" in error && error.status === 403))));
+    (error &&
+      (isSubscriptionError(error) ||
+        (typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "SUBSCRIPTION_FEATURE_LOCKED") ||
+        ("status" in error && error.status === 403)));
 
   if (isLoading || isLoadingAccess) {
     return (
@@ -122,12 +138,7 @@ export function OrdersView() {
   }
 
   if (isSubscriptionLocked) {
-    return (
-      <SubscriptionLockedState
-        title={t("data.suppliers.locked")}
-        className="min-h-[400px]"
-      />
-    );
+    return <SubscriptionLockedState title={t("data.suppliers.locked")} className="min-h-[400px]" />;
   }
 
   if (error) {
@@ -248,7 +259,7 @@ export function OrdersView() {
                             </div>
                             {order.expectedDate && (
                               <p className="text-muted-foreground text-xs">
-                                Expected: {new Date(order.expectedDate).toLocaleDateString()}
+                                Expected: {formatDate(order.expectedDate)}
                               </p>
                             )}
                           </div>
@@ -320,12 +331,12 @@ export function OrdersView() {
                         >
                           {placingOrder === order.id ? (
                             <>
-                              <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                              <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
                               {t("alerts.placing")}
                             </>
                           ) : (
                             <>
-                              <CheckCircle className="mr-1 h-4 w-4 hidden sm:inline" />
+                              <CheckCircle className="mr-1 hidden h-4 w-4 sm:inline" />
                               {t("alerts.markAsPlaced")}
                             </>
                           )}

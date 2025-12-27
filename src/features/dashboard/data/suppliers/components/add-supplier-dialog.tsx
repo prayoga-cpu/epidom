@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,6 +49,7 @@ interface AddSupplierDialogProps {
 
 export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
   const [open, setOpen] = useState(false);
+  const isSubmittingRef = useRef(false);
   const { t } = useI18n();
   const params = useParams();
   const storeId = params.storeId as string;
@@ -69,8 +70,9 @@ export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
         storeId,
       };
 
+      // OPTIMISTIC CLOSING
+      isSubmittingRef.current = true;
       setOpen(false);
-      form.reset();
 
       const promise = createSupplier.mutateAsync(payload);
 
@@ -81,18 +83,42 @@ export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
             <span>{t("data.suppliers.toasts.adding") || "Adding supplier..."}</span>
           </div>
         ),
-        success: (data) =>
-          t("data.suppliers.toasts.added.description")?.replace("{name}", data.name) ||
-          "Supplier added successfully",
-        error: (err) => (err instanceof Error ? err.message : t("common.error")),
+        success: (data) => {
+          isSubmittingRef.current = false;
+          form.reset();
+          return (
+            t("data.suppliers.toasts.added.description")?.replace("{name}", data.name) ||
+            "Supplier added successfully"
+          );
+        },
+        error: (err) => {
+          // Re-open on error
+          isSubmittingRef.current = false;
+          setOpen(true);
+          return err instanceof Error ? err.message : t("common.error");
+        },
       });
+
+      // Await promise to handle errors locally if needed
+      await promise;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("common.error"));
+      // Handled by toast.promise
+      console.error(error);
     }
   }
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen && !isSubmittingRef.current) {
+      form.reset();
+    }
+    if (newOpen) {
+      isSubmittingRef.current = false;
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children || (
           <Button size="sm" className="gap-2">

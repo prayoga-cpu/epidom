@@ -3,14 +3,14 @@ import { User } from "@prisma/client";
 import { userRepository, UserRepository } from "@/lib/repositories/user.repository";
 import { businessRepository, BusinessRepository } from "@/lib/repositories/business.repository";
 import { RegisterInput, LoginInput } from "@/lib/validation/auth.schemas";
+import { prisma as db } from "@/lib/prisma";
 
 /**
  * Authentication Service
  *
- * Handles authentication business logic:
- * - User registration with password hashing
- * - Login credential verification
- * - Password management
+ * Handles authentication business logic.
+ * Note: With better-auth, most authentication is handled by the auth library.
+ * This service provides helper functions for business logic that needs auth context.
  *
  * Implements Single Responsibility Principle (only auth logic)
  * and Dependency Inversion (depends on repository abstractions)
@@ -22,74 +22,37 @@ export class AuthService {
   ) {}
 
   /**
-   * Register a new user
-   *
-   * @throws Error if email already exists
+   * Register a new user with business
+   * Note: With better-auth, user creation is handled by the auth flow.
+   * This method is for creating business after user signup.
    */
-  async register(input: RegisterInput): Promise<{
-    user: Omit<User, "password">;
-    business?: { id: string; name: string };
-  }> {
-    // Check if email already exists
-    const existingUser = await this.userRepo.findByEmail(input.email);
-    if (existingUser) {
-      throw new Error("Email already exists");
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(input.password, 12);
-
-    // Use transaction to create user and optional business atomically
-    return this.userRepo.transaction(async (tx) => {
-      // Create user
-      const user = await tx.user.create({
-        data: {
-          email: input.email.toLowerCase(),
-          password: hashedPassword,
-          name: input.name,
-        },
-      });
-
-      // Create business if provided
-      let business;
-      if (input.businessName) {
-        business = await tx.business.create({
-          data: {
-            userId: user.id,
-            name: input.businessName,
-          },
-        });
-      }
-
-      // Remove password from response
-      const { password, ...userWithoutPassword } = user;
-
-      return {
-        user: userWithoutPassword,
-        business: business ? { id: business.id, name: business.name } : undefined,
-      };
+  async createBusinessForUser(
+    userId: string,
+    businessName: string
+  ): Promise<{ id: string; name: string }> {
+    const business = await this.businessRepo.create({
+      userId,
+      name: businessName,
     });
+
+    return { id: business.id, name: business.name };
   }
 
   /**
-   * Verify login credentials
-   *
-   * @throws Error if credentials are invalid
+   * Get user's credential account password hash
+   * Used for password verification
    */
-  async verifyCredentials(input: LoginInput): Promise<User> {
-    // Find user
-    const user = await this.userRepo.findByEmail(input.email);
-    if (!user) {
-      throw new Error("Invalid credentials");
-    }
-
-    // Verify password
-    const isValidPassword = await bcrypt.compare(input.password, user.password);
-    if (!isValidPassword) {
-      throw new Error("Invalid credentials");
-    }
-
-    return user;
+  private async getPasswordHash(userId: string): Promise<string | null> {
+    const account = await db.account.findFirst({
+      where: {
+        userId,
+        providerId: "credential",
+      },
+      select: {
+        password: true,
+      },
+    });
+    return account?.password ?? null;
   }
 
   /**
@@ -102,14 +65,14 @@ export class AuthService {
     currentPassword: string,
     newPassword: string
   ): Promise<void> {
-    // Get user
-    const user = await this.userRepo.findById(userId);
-    if (!user) {
-      throw new Error("User not found");
+    // Get password hash from account
+    const passwordHash = await this.getPasswordHash(userId);
+    if (!passwordHash) {
+      throw new Error("No password set for this account");
     }
 
     // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    const isValidPassword = await bcrypt.compare(currentPassword, passwordHash);
     if (!isValidPassword) {
       throw new Error("Current password is incorrect");
     }
@@ -117,12 +80,13 @@ export class AuthService {
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    // Update password
+    // Update password in account table
     await this.userRepo.updatePassword(userId, hashedPassword);
   }
 
   /**
-   * Request password reset (TODO: implement email sending)
+   * Request password reset
+   * Note: With better-auth, this is handled by authClient.requestPasswordReset
    */
   async requestPasswordReset(email: string): Promise<void> {
     const user = await this.userRepo.findByEmail(email);
@@ -130,26 +94,25 @@ export class AuthService {
       // Don't reveal if email exists (security best practice)
       return;
     }
-
-    // TODO: Generate reset token and send email
-    // For now, just a placeholder
+    // Password reset is handled by better-auth
   }
 
   /**
-   * Reset password with token (TODO: implement token verification)
+   * Reset password with token
+   * Note: With better-auth, this is handled by authClient.resetPassword
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    // TODO: Verify token and get user ID
-    // For now, just a placeholder
-    throw new Error("Password reset not implemented yet");
+    // Password reset is handled by better-auth
+    throw new Error("Use better-auth client for password reset");
   }
 
   /**
-   * Verify email with token (TODO: implement)
+   * Verify email with token
+   * Note: With better-auth, this is handled by the auth flow
    */
   async verifyEmail(token: string): Promise<void> {
-    // TODO: Verify token and mark email as verified
-    throw new Error("Email verification not implemented yet");
+    // Email verification is handled by better-auth
+    throw new Error("Use better-auth for email verification");
   }
 }
 

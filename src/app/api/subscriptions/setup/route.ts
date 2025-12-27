@@ -16,8 +16,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession, type Session } from "@/lib/auth";
+
 import { stripe } from "@/lib/stripe";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { handleApiError } from "@/lib/utils/api-error-handler";
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Verify session
-    session = await getServerSession(authOptions);
+    session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Please log in to continue"),

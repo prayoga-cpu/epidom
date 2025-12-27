@@ -1,29 +1,19 @@
 import { NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { subscriptionService } from "@/lib/services";
-import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
+import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { withApiHandler } from "@/lib/api-handler";
+import { createSupplierOrderSchema } from "@/lib/validation/inventory.schemas";
 
 /**
  * GET /api/stores/[id]/supplier-orders
  * Get all supplier orders for a store
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  let session: Session | null = null;
-  try {
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
+export const GET = withApiHandler(
+  async (request, { storeId, userId }) => {
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
@@ -37,11 +27,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         { status: 403 }
       );
     }
-
-    const storeId = (await params).id;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
 
     const orders = await prisma.supplierOrder.findMany({
       where: {
@@ -60,32 +45,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       },
     });
 
-    return NextResponse.json(createSuccessResponse({ orders }), { status: 200 });
-  } catch (error) {
-    const storeId = (await params).id;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/supplier-orders",
-      context: { storeId, userId: session?.user?.id },
-    });
+    return NextResponse.json(createSuccessResponse({ orders }));
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/supplier-orders",
+    requireStoreAuth: true,
   }
-}
+);
 
 /**
  * POST /api/stores/[id]/supplier-orders
  * Create a new supplier order
  */
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  let session: Session | null = null;
-  try {
-    session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
+export const POST = withApiHandler(
+  async (request, { storeId, userId }) => {
     // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasSupplierManagementAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
@@ -100,15 +75,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
     }
 
-    const storeId = (await params).id;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
     const body = await request.json();
-    const { supplierId, items, expectedDate, notes, tax, shipping } = body;
 
-    // Validate supplier
+    // Validate request body with Zod
+    const { supplierId, items, expectedDate, notes, tax, shipping } =
+      createSupplierOrderSchema.parse(body);
+
+    // Validate supplier existence (Business Logic)
     const supplier = await prisma.supplier.findFirst({
       where: {
         id: supplierId,
@@ -117,15 +90,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
 
     if (!supplier) {
-      return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.NOT_FOUND,
+          "Supplier not found or does not belong to this store"
+        ),
+        { status: 404 }
+      );
     }
 
-    // Validate items
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: "Order must have at least one item" }, { status: 400 });
-    }
-
-    // Calculate totals
+    // Calculate totals and prepare items
     let subtotal = new Prisma.Decimal(0);
     const orderItems = [];
 
@@ -139,7 +113,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
       if (!material) {
         return NextResponse.json(
-          { error: `Material ${item.materialId} not found` },
+          createErrorResponse(ApiErrorCode.NOT_FOUND, `Material ${item.materialId} not found`),
           { status: 404 }
         );
       }
@@ -169,10 +143,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
     const orderNumber = `SO-${Date.now()}-${String(orderCount + 1).padStart(4, "0")}`;
 
-    // Create order
+    // Create order transactionally
     const order = await prisma.supplierOrder.create({
       data: {
-        storeId,
+        storeId: storeId!,
         supplierId,
         orderNumber,
         status: "PENDING",
@@ -198,11 +172,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
 
     return NextResponse.json(createSuccessResponse({ order }), { status: 201 });
-  } catch (error) {
-    const storeId = (await params).id;
-    return handleApiError(error, {
-      endpoint: "POST /api/stores/[id]/supplier-orders",
-      context: { storeId, userId: session?.user?.id },
-    });
+  },
+  {
+    rateLimitEndpoint: "/api/stores/[id]/supplier-orders",
+    requireStoreAuth: true,
   }
-}
+);

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession, type Session } from "@/lib/auth";
 import { businessService } from "@/lib/services";
 import { createStoreSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
@@ -17,7 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   let session: Session | null = null;
   try {
     const { id } = await params;
-    session = await getServerSession(authOptions);
+    session = await getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -57,7 +56,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   let session: Session | null = null;
   try {
     const { id } = await params;
-    session = await getServerSession(authOptions);
+    session = await getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -103,7 +102,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   let session: Session | null = null;
   try {
     const { id } = await params;
-    session = await getServerSession(authOptions);
+    session = await getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {

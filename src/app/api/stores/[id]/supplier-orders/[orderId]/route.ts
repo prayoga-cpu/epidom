@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession, type Session } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { subscriptionService } from "@/lib/services";
@@ -18,7 +17,7 @@ export async function GET(
 ) {
   let session: Session | null = null;
   try {
-    session = await getServerSession(authOptions);
+    session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
@@ -89,7 +88,7 @@ export async function PATCH(
 ) {
   let session: Session | null = null;
   try {
-    session = await getServerSession(authOptions);
+    session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
@@ -228,7 +227,7 @@ export async function DELETE(
 ) {
   let session: Session | null = null;
   try {
-    session = await getServerSession(authOptions);
+    session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),

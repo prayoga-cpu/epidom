@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams } from "next/navigation";
@@ -54,6 +54,17 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
   const storeId = params.storeId as string;
   const materialId = material?.id || "";
 
+  const isSubmittingRef = useRef(false);
+  const savedFormDataRef = useRef<UpdateIngredientFormInput | null>(null);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    // If closing manually (not submitting), clear saved data
+    if (!newOpen && !isSubmittingRef.current) {
+      savedFormDataRef.current = null;
+    }
+    onOpenChange(newOpen);
+  };
+
   const updateMaterial = useUpdateMaterial(storeId, materialId);
 
   // Fetch suppliers for dropdown
@@ -106,7 +117,17 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
 
   // Update form values when material changes
   useEffect(() => {
-    if (material && open) {
+    if (!open) return;
+
+    // Restore saved data if any
+    if (savedFormDataRef.current) {
+      requestAnimationFrame(() => {
+        form.reset(savedFormDataRef.current!);
+      });
+      return;
+    }
+
+    if (material) {
       const unitCost = Number(material.unitCost) || 0;
       const currentStock = Number(material.currentStock) || 0;
       const minStock = Number(material.minStock) || 0;
@@ -153,23 +174,43 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
         })),
       };
 
-      await updateMaterial.mutateAsync(payload);
-      toast.success(
-        t("data.materials.toasts.updated.description")?.replace(
-          "{name}",
-          data.name || material.name
-        ) || ""
-      );
+      // OPTIMISTIC CLOSING
+      savedFormDataRef.current = data;
+      isSubmittingRef.current = true;
       onOpenChange(false);
+
+      const promise = updateMaterial.mutateAsync(payload);
+
+      toast.promise(promise, {
+        loading: t("common.actions.saving"),
+        success: () => {
+          isSubmittingRef.current = false;
+          savedFormDataRef.current = null;
+          return (
+            t("data.materials.toasts.updated.description")?.replace(
+              "{name}",
+              data.name || material.name
+            ) || ""
+          );
+        },
+        error: (err) => {
+          isSubmittingRef.current = false;
+          onOpenChange(true);
+          return err instanceof Error ? err.message : t("messages.failedToUpdateMaterial");
+        },
+      });
+
+      await promise;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("messages.failedToUpdateMaterial"));
+      // Handled by toast.promise
+      console.error(error);
     }
   };
 
   if (!material) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <FormDialogLayout
         title={t("data.materials.editTitle")}
         description={

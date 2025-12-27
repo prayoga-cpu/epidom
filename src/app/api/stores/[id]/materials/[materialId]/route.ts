@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { materialService } from "@/lib/services/material.service";
 import { updateIngredientSchema } from "@/lib/validation/inventory.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
@@ -17,7 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; materialId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -61,7 +60,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; materialId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
@@ -101,7 +100,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; materialId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user?.id) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {

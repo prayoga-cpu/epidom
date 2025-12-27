@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession, type Session } from "@/lib/auth";
 import { recipeService } from "@/lib/services/recipe.service";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
@@ -24,7 +23,7 @@ export async function POST(
   let session: Session | null = null;
   try {
     // Verify authentication
-    session = await getServerSession(authOptions);
+    session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),

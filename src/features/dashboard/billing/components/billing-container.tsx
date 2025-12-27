@@ -21,6 +21,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
+import { formatDate } from "@/lib/utils/format-date";
 
 export function BillingContainer() {
   const { t } = useI18n();
@@ -56,7 +57,12 @@ export function BillingContainer() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!confirm(t("billing.confirmCancel") || "Are you sure you want to cancel your subscription? You'll retain access until the end of your billing period.")) {
+    if (
+      !confirm(
+        t("billing.confirmCancel") ||
+          "Are you sure you want to cancel your subscription? You'll retain access until the end of your billing period."
+      )
+    ) {
       return;
     }
 
@@ -94,7 +100,9 @@ export function BillingContainer() {
       <div className="container mx-auto max-w-4xl py-8">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error || subscriptionError?.message || "Failed to load subscription data"}</AlertDescription>
+          <AlertDescription>
+            {error || subscriptionError?.message || "Failed to load subscription data"}
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -115,8 +123,11 @@ export function BillingContainer() {
           <AlertDescription className="text-green-800">
             {t("billing.subscriptionActivated")?.replace(
               "{plan}",
-              plan === "STARTER" ? t("profile.subscription.plans.starter") : t("profile.subscription.plans.pro")
-            ) || `Subscription activated successfully! Welcome to ${plan === "STARTER" ? "Starter" : "Pro"} plan.`}
+              plan === "STARTER"
+                ? t("profile.subscription.plans.starter")
+                : t("profile.subscription.plans.pro")
+            ) ||
+              `Subscription activated successfully! Welcome to ${plan === "STARTER" ? "Starter" : "Pro"} plan.`}
           </AlertDescription>
         </Alert>
       )}
@@ -129,9 +140,10 @@ export function BillingContainer() {
             {t("billing.subscriptionWillCancel")?.replace(
               "{date}",
               subscription.currentPeriodEnd
-                ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+                ? formatDate(subscription.currentPeriodEnd)
                 : t("billing.nextBilling") || "the end of the billing period"
-            ) || `Your subscription will be canceled on ${subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : "the end of the billing period"}. You'll retain access until then.`}
+            ) ||
+              `Your subscription will be canceled on ${subscription.currentPeriodEnd ? formatDate(subscription.currentPeriodEnd) : "the end of the billing period"}. You'll retain access until then.`}
           </AlertDescription>
         </Alert>
       )}
@@ -161,7 +173,7 @@ export function BillingContainer() {
                   {getStatusLabel(subscription?.status, t)}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {subscription?.plan === "STARTER"
                   ? t("profile.subscription.pricing.starter")
                   : subscription?.plan === "PRO"
@@ -179,10 +191,10 @@ export function BillingContainer() {
           {/* Billing Period */}
           {subscription?.currentPeriodEnd && (
             <div className="flex items-center gap-2 rounded-lg border p-4">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <Calendar className="text-muted-foreground h-5 w-5" />
               <div className="flex-1">
                 <p className="text-sm font-medium">{t("billing.nextBilling")}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
@@ -196,11 +208,12 @@ export function BillingContainer() {
           {/* Store Usage */}
           {storeUsage && (
             <div className="flex items-center gap-2 rounded-lg border p-4">
-              <Store className="h-5 w-5 text-muted-foreground" />
+              <Store className="text-muted-foreground h-5 w-5" />
               <div className="flex-1">
                 <p className="text-sm font-medium">{t("billing.storeUsage")}</p>
-                <p className="text-sm text-muted-foreground">
-                  {storeUsage.current} / {storeUsage.limit === Infinity ? t("billing.unlimited") : storeUsage.limit}{" "}
+                <p className="text-muted-foreground text-sm">
+                  {storeUsage.current} /{" "}
+                  {storeUsage.limit === Infinity ? t("billing.unlimited") : storeUsage.limit}{" "}
                   {t("billing.stores")}
                 </p>
               </div>
@@ -212,7 +225,12 @@ export function BillingContainer() {
 
           {/* Actions */}
           <div className="flex flex-wrap gap-3 border-t pt-6">
-            <Button onClick={handleManagePayment} disabled={actionLoading} variant="outline" className="gap-2">
+            <Button
+              onClick={handleManagePayment}
+              disabled={actionLoading}
+              variant="outline"
+              className="gap-2"
+            >
               {actionLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -228,7 +246,11 @@ export function BillingContainer() {
                 variant="destructive"
                 className="gap-2"
               >
-                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <XCircle className="h-4 w-4" />
+                )}
                 {t("billing.cancelSubscription")}
               </Button>
             )}
@@ -280,9 +302,9 @@ function NoSubscriptionState() {
     <div className="container mx-auto max-w-4xl py-16">
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-          <CreditCard className="mb-4 h-16 w-16 text-muted-foreground" />
+          <CreditCard className="text-muted-foreground mb-4 h-16 w-16" />
           <h2 className="mb-2 text-2xl font-bold">{t("billing.noSubscription")}</h2>
-          <p className="mb-6 text-muted-foreground">{t("billing.noSubscriptionDesc")}</p>
+          <p className="text-muted-foreground mb-6">{t("billing.noSubscriptionDesc")}</p>
           <Button onClick={() => router.push("/pricing")} size="lg" className="gap-2">
             <ArrowUpCircle className="h-5 w-5" />
             {t("billing.viewPlans")}

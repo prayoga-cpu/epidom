@@ -8,18 +8,17 @@
  * - File type and size validation
  * - Upload to configured storage adapter
  * - Error handling
+ * - Rate limiting
  *
  * POST /api/upload
  * - Body: multipart/form-data with 'file' field
  * - Returns: { url: string, key: string, size: number }
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getStorageAdapter } from "@/lib/storage";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { handleApiError } from "@/lib/utils/api-error-handler";
+import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * Allowed image MIME types
@@ -35,18 +34,8 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
  * POST /api/upload
  * Upload an image file
  */
-export async function POST(request: NextRequest) {
-  let session: Session | null = null;
-  try {
-    // Validate session
-    session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
+export const POST = withApiHandler(
+  async (request, { userId }) => {
     // Parse form data
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -93,9 +82,8 @@ export async function POST(request: NextRequest) {
 
     // Upload file
     // Use user ID and timestamp for unique path
-    const userId = session.user.id;
     const timestamp = Date.now();
-    const path = `users/${userId}/images`;
+    const path = `users/${userId}/images/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "")}`;
 
     const result = await storage.upload(file, {
       path,
@@ -117,39 +105,27 @@ export async function POST(request: NextRequest) {
         contentType: result.contentType,
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "POST /api/upload",
-      context: { userId: session?.user?.id },
-    });
+  },
+  {
+    // Apply strict rate limiting for uploads
+    rateLimitEndpoint: "/api/upload",
   }
-}
+);
 
 /**
  * DELETE /api/upload
  * Delete an uploaded image
  */
-export async function DELETE(request: NextRequest) {
-  let session: Session | null = null;
-  try {
-    // Validate session
-    session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"),
-        { status: 401 }
-      );
-    }
-
+export const DELETE = withApiHandler(
+  async (request) => {
     // Parse request body
     const body = await request.json();
     const { url } = body;
 
     if (!url || typeof url !== "string") {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "Invalid URL"),
-        { status: 400 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "Invalid URL"), {
+        status: 400,
+      });
     }
 
     // Get storage adapter
@@ -164,24 +140,8 @@ export async function DELETE(request: NextRequest) {
         message: "File deleted successfully",
       })
     );
-  } catch (error) {
-    return handleApiError(error, {
-      endpoint: "DELETE /api/upload",
-      context: { userId: session?.user?.id },
-    });
+  },
+  {
+    rateLimitEndpoint: "/api/upload",
   }
-}
-
-/**
- * OPTIONS /api/upload
- * Handle preflight requests
- */
-export async function OPTIONS(request: NextRequest) {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
-}
+);

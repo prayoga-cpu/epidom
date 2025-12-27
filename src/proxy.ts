@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { setRequestId } from "./lib/request-context";
@@ -14,7 +13,7 @@ import { setRequestId } from "./lib/request-context";
  *
  * Protected routes are configured below in the matcher array.
  */
-export default async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   // Generate unique request ID for logging and tracing
