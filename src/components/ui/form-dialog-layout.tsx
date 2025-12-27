@@ -17,7 +17,7 @@ interface FormDialogLayoutProps {
   footer?: React.ReactNode;
   className?: string;
   contentClassName?: string;
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
   showCloseButton?: boolean;
   /** If true, dialog height auto-fits content. If false, uses fixed 90vh height for long content. Default: true */
   autoHeight?: boolean;
@@ -29,6 +29,9 @@ const maxWidthClasses = {
   lg: "sm:max-w-[600px]",
   xl: "sm:max-w-[700px]",
   "2xl": "sm:max-w-[900px]",
+  "3xl": "sm:max-w-[1024px]",
+  "4xl": "sm:max-w-[1280px]",
+  "5xl": "sm:max-w-[1536px]",
   full: "sm:max-w-full",
 };
 
@@ -60,7 +63,7 @@ export function FormDialogLayout({
       showCloseButton={showCloseButton}
     >
       {/* Fixed Header - Always visible */}
-      <DialogHeader className="shrink-0 border-b border-border px-4 pr-10 py-3 sm:px-6 sm:pr-6 sm:py-4">
+      <DialogHeader className="border-border shrink-0 border-b px-4 py-3 pr-10 sm:px-6 sm:py-4 sm:pr-6">
         <DialogTitle className="text-lg font-bold sm:text-xl md:text-2xl">{title}</DialogTitle>
         {description && (
           <DialogDescription className="text-xs sm:text-sm md:text-base">
@@ -81,11 +84,10 @@ export function FormDialogLayout({
 
       {/* Fixed Footer with Actions - Always visible */}
       {footer && (
-        <DialogFooter className="shrink-0 border-t border-border px-4 py-3 sm:px-6 sm:py-4">
+        <DialogFooter className="border-border shrink-0 border-t px-4 py-3 sm:px-6 sm:py-4">
           {footer}
         </DialogFooter>
       )}
     </DialogContent>
   );
 }
-

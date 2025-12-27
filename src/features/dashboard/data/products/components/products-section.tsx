@@ -364,7 +364,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                 ) : (
                   <>
                     <CheckSquare className="mr-1 hidden h-4 w-4 sm:inline" />
-                    {t("common.actions.view")}
+                    {t("common.actions.select")}
                   </>
                 )}
               </Button>
