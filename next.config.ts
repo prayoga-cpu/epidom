@@ -39,6 +39,37 @@ const nextConfig: NextConfig = {
   },
   // Enable compression
   compress: true,
+
+  // Security Headers for production
+  headers: async () => [
+    {
+      // Apply to all routes
+      source: "/:path*",
+      headers: [
+        // Prevent clickjacking attacks
+        { key: "X-Frame-Options", value: "DENY" },
+        // Prevent MIME type sniffing
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        // Control referrer information
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        // Restrict browser features
+        {
+          key: "Permissions-Policy",
+          value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+        },
+        // XSS Protection (legacy browsers)
+        { key: "X-XSS-Protection", value: "1; mode=block" },
+      ],
+    },
+    {
+      // Stricter CSP for API routes
+      source: "/api/:path*",
+      headers: [
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "Cache-Control", value: "no-store, max-age=0" },
+      ],
+    },
+  ],
 };
 
 export default nextConfig;

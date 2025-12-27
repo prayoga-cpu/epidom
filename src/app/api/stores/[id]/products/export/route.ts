@@ -1,14 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api-handler";
 import { productService } from "@/lib/services/product.service";
 import { subscriptionService } from "@/lib/services";
 import { createCSVResponse } from "@/lib/utils/csv-export";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
 import { z } from "zod";
 
-// Validation schema for filtering products (same as main route)
+// Validation schema for filtering products
 const productFilterSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
@@ -22,36 +20,20 @@ const productFilterSchema = z.object({
  * GET /api/stores/[id]/products/export
  * Export products to CSV format
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    // Verify authentication
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
+export const GET = withApiHandler(
+  async (request, { storeId, userId }) => {
     // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
-    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(session.user.id);
+    const hasAccess = await subscriptionService.hasAdvancedReportsAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
           "Advanced Reports (Export) is only available in Pro and Enterprise plans. Upgrade to access this feature.",
-          {
-            feature: "advancedReports",
-            upgradeRequired: true,
-          }
+          { feature: "advancedReports", upgradeRequired: true }
         ),
         { status: 403 }
       );
     }
-
-    const { id: storeId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -65,15 +47,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const filters = productFilterSchema.parse(filterParams);
 
     // Get CSV data from service
-    const csv = await productService.exportProducts(storeId, filters);
+    const csv = await productService.exportProducts(storeId!, filters);
 
     // Return CSV file using utility
     return createCSVResponse(csv, `products-export-${new Date().toISOString().split("T")[0]}`);
-  } catch (error) {
-    const { id: storeId } = await params;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/products/export",
-      context: { storeId },
-    });
-  }
-}
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/products/export", requireStoreAuth: true }
+);

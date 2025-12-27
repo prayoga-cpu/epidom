@@ -70,7 +70,6 @@ export interface ApiSuccessResponse<T = unknown> {
   data: T;
   meta?: {
     timestamp: string;
-    requestId?: string;
   };
 }
 
@@ -80,7 +79,6 @@ export interface ApiErrorResponse {
   error: ApiError;
   meta?: {
     timestamp: string;
-    requestId?: string;
   };
 }
 
@@ -107,9 +105,7 @@ export function isApiError(response: ApiResponse): response is ApiErrorResponse 
   return response.success === false;
 }
 
-export function isApiSuccess<T>(
-  response: ApiResponse<T>
-): response is ApiSuccessResponse<T> {
+export function isApiSuccess<T>(response: ApiResponse<T>): response is ApiSuccessResponse<T> {
   return response.success === true;
 }
 

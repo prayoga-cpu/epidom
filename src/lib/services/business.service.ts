@@ -13,6 +13,14 @@ import { prisma } from "@/lib/prisma";
 import { subscriptionRepository } from "@/lib/repositories/subscription.repository";
 import { SubscriptionStatus } from "@prisma/client";
 import { getStoreLimit, canCreateStore } from "@/config/stripe.config";
+import {
+  BusinessNotFoundError,
+  StoreNotFoundError,
+  StoreLimitExceededError,
+  SubscriptionInactiveError,
+  ConflictError,
+  ForbiddenError,
+} from "@/lib/errors";
 
 /**
  * Business Service
@@ -378,6 +386,116 @@ export class BusinessService {
       totalStores: stores.length,
       activeStores: stores.length,
     };
+  }
+
+  // ============================================
+  // NEW SIMPLIFIED METHODS (for cleaner API routes)
+  // ============================================
+
+  /**
+   * Create a store for user, auto-creating business if needed.
+   *
+   * This is the PREFERRED method for creating stores as it:
+   * 1. Auto-creates business if missing (better UX)
+   * 2. Checks store limits internally
+   * 3. Throws typed errors for proper HTTP response mapping
+   *
+   * @throws BusinessNotFoundError - if business lookup fails after creation
+   * @throws StoreLimitExceededError - if store limit is reached
+   * @throws SubscriptionInactiveError - if no active subscription
+   * @throws ConflictError - if store name already exists
+   */
+  async createStoreForUser(userId: string, input: CreateStoreInput): Promise<StoreDto> {
+    // 1. Get or create business
+    let business = await this.businessRepo.findByUserId(userId);
+
+    if (!business) {
+      business = await this.businessRepo.create({
+        userId,
+        name: "My Business",
+        currency: "EUR",
+        timezone: "UTC",
+        locale: "en",
+      });
+    }
+
+    // 2. Check subscription and store limit
+    const subscription = await subscriptionRepository.findByUserId(userId);
+
+    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+      throw new SubscriptionInactiveError();
+    }
+
+    const currentStoreCount = await this.storeRepo.count({ businessId: business.id });
+    const limit = getStoreLimit(subscription.plan);
+    const allowed = canCreateStore(subscription.plan, currentStoreCount);
+
+    if (!allowed) {
+      throw new StoreLimitExceededError(currentStoreCount, limit);
+    }
+
+    // 3. Delegate to existing createStore method (handles transaction + name check)
+    return this.createStore(business.id, userId, input);
+  }
+
+  /**
+   * Update store for user (handles business lookup internally)
+   *
+   * @throws BusinessNotFoundError - if user has no business
+   * @throws StoreNotFoundError - if store doesn't exist
+   * @throws ForbiddenError - if store doesn't belong to user
+   */
+  async updateStoreForUser(
+    storeId: string,
+    userId: string,
+    input: UpdateStoreInput
+  ): Promise<StoreDto> {
+    const business = await this.businessRepo.findByUserId(userId);
+
+    if (!business) {
+      throw new BusinessNotFoundError();
+    }
+
+    return this.updateStore(storeId, business.id, userId, input);
+  }
+
+  /**
+   * Delete store for user (handles business lookup internally)
+   *
+   * @throws BusinessNotFoundError - if user has no business
+   * @throws StoreNotFoundError - if store doesn't exist
+   * @throws ForbiddenError - if store doesn't belong to user
+   */
+  async deleteStoreForUser(storeId: string, userId: string): Promise<void> {
+    const business = await this.businessRepo.findByUserId(userId);
+
+    if (!business) {
+      throw new BusinessNotFoundError();
+    }
+
+    return this.deleteStore(storeId, business.id, userId);
+  }
+
+  /**
+   * Get store by ID for user (handles ownership verification)
+   *
+   * @throws StoreNotFoundError - if store doesn't exist
+   * @throws ForbiddenError - if store doesn't belong to user
+   */
+  async getStoreByIdForUser(storeId: string, userId: string): Promise<StoreDto> {
+    const store = await this.storeRepo.findById(storeId);
+
+    if (!store) {
+      throw new StoreNotFoundError(storeId);
+    }
+
+    // Verify ownership through business
+    const business = await this.businessRepo.findByUserId(userId);
+    if (!business || store.businessId !== business.id) {
+      throw new ForbiddenError("You do not have access to this store");
+    }
+
+    return store as unknown as StoreDto;
   }
 }
 

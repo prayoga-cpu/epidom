@@ -1,34 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api-handler";
 import { productService } from "@/lib/services/product.service";
 import { updateProductSchema } from "@/lib/validation/inventory.schemas";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { handleApiError } from "@/lib/utils/api-error-handler";
 import { serializeProduct } from "@/lib/server/serialize";
-import { z } from "zod";
 
 /**
  * GET /api/stores/[id]/products/[productId]
  * Get a single product by ID
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; productId: string }> }
-) {
-  try {
-    // Verify authentication
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
-    const { id: storeId, productId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
+export const GET = withApiHandler(
+  async (request, { storeId, params }) => {
+    const { productId } = params;
 
     // Get product from service
     const product = await productService.getProductById(productId);
@@ -49,45 +32,23 @@ export async function GET(
     }
 
     // Serialize Decimal fields to numbers for Client Components
-    return NextResponse.json(createSuccessResponse(serializeProduct(product)), { status: 200 });
-  } catch (error) {
-    const { id: storeId, productId } = await params;
-    return handleApiError(error, {
-      endpoint: "GET /api/stores/[id]/products/[productId]",
-      context: { storeId, productId },
-    });
-  }
-}
+    return NextResponse.json(createSuccessResponse(serializeProduct(product)));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/products/[productId]", requireStoreAuth: true }
+);
 
 /**
  * PATCH /api/stores/[id]/products/[productId]
  * Update a product
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; productId: string }> }
-) {
-  try {
-    // Verify authentication
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
-    const { id: storeId, productId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
-
+export const PATCH = withApiHandler(
+  async (request, { storeId, params }) => {
+    const { productId } = params;
     const body = await request.json();
-
-    // Validate request body
     const validatedData = updateProductSchema.parse(body);
 
     // Update product via service
-    const product = await productService.updateProduct(productId, storeId, {
+    const product = await productService.updateProduct(productId, storeId!, {
       sku: validatedData.sku,
       name: validatedData.name,
       description: validatedData.description,
@@ -107,50 +68,24 @@ export async function PATCH(
     });
 
     // Serialize Decimal fields to numbers for Client Components
-    return NextResponse.json(createSuccessResponse(serializeProduct(product)), { status: 200 });
-  } catch (error) {
-    const { id: storeId, productId } = await params;
-    return handleApiError(error, {
-      endpoint: "PATCH /api/stores/[id]/products/[productId]",
-      context: { storeId, productId },
-    });
-  }
-}
+    return NextResponse.json(createSuccessResponse(serializeProduct(product)));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/products/[productId]", requireStoreAuth: true }
+);
 
 /**
  * DELETE /api/stores/[id]/products/[productId]
  * Delete a product (hard delete)
  * Note: Related records (OrderItem, ProductionBatch, StockMovement) will be cascade deleted
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; productId: string }> }
-) {
-  try {
-    // Verify authentication
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-        status: 401,
-      });
-    }
-
-    const { id: storeId, productId } = await params;
-
-    // Verify store ownership
-    await verifyStoreOwnership(storeId, session.user.id);
+export const DELETE = withApiHandler(
+  async (request, { storeId, params }) => {
+    const { productId } = params;
 
     // Delete product via service
-    await productService.deleteProduct(productId, storeId);
+    await productService.deleteProduct(productId, storeId!);
 
-    return NextResponse.json(createSuccessResponse({ message: "Product deleted successfully" }), {
-      status: 200,
-    });
-  } catch (error) {
-    const { id: storeId, productId } = await params;
-    return handleApiError(error, {
-      endpoint: "DELETE /api/stores/[id]/products/[productId]",
-      context: { storeId, productId },
-    });
-  }
-}
+    return NextResponse.json(createSuccessResponse({ message: "Product deleted successfully" }));
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/products/[productId]", requireStoreAuth: true }
+);

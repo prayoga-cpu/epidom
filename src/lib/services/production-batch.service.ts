@@ -268,18 +268,18 @@ export class ProductionBatchService {
             // We need to convert the deduction to material's unit
             const deductionInIngredientUnit = Number(ingredient.quantity) * batchMultiplier;
             // Convert deduction from ingredient unit to material unit
+            // ingredient.material.unit comes from RecipeWithIngredients type
+            const materialUnit = ingredient.material.unit;
             const deductionAmount = convertStockToIngredientUnit(
               deductionInIngredientUnit,
               ingredient.unit,
-              (ingredient.material as any).unit || 'g'
+              materialUnit
             );
             const currentStock = Number(material.currentStock);
             const newBalance = currentStock - deductionAmount;
 
             // CRITICAL: Prevent negative stock - validate within transaction
             if (newBalance < 0) {
-              // Show error in material's unit for clarity
-              const materialUnit = (ingredient.material as any).unit || 'g';
               throw new Error(
                 `Insufficient stock for material '${material.name}'. Required: ${deductionAmount.toFixed(2)} ${materialUnit}, Available: ${currentStock.toFixed(2)} ${materialUnit}.`
               );
@@ -290,8 +290,7 @@ export class ProductionBatchService {
               newStock: newBalance,
             });
 
-            // Store movement in material's unit since that's what we're deducting
-            const materialUnit = (ingredient.material as any).unit || 'g';
+            // Store movement record in material's unit
             stockMovements.push({
               materialId: ingredient.materialId,
               productionBatchId: batch.id,
@@ -350,7 +349,10 @@ export class ProductionBatchService {
         }
 
         // Re-throw with original message if it's already a user-friendly error
-        if (error.message.includes("Cannot start production") || error.message.includes("Insufficient materials")) {
+        if (
+          error.message.includes("Cannot start production") ||
+          error.message.includes("Insufficient materials")
+        ) {
           throw error;
         }
       }
@@ -508,7 +510,8 @@ export class ProductionBatchService {
 
             // Convert restoration amount from ingredient unit to material unit
             const restorationInIngredientUnit = Number(ingredient.quantity) * batchMultiplier;
-            const materialUnit = (ingredient.material as any)?.unit || 'g';
+            // ingredient.material.unit comes from ProductionBatchWithRelations type
+            const materialUnit = ingredient.material.unit;
             const restorationAmount = convertStockToIngredientUnit(
               restorationInIngredientUnit,
               ingredient.unit,

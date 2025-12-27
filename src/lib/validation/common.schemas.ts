@@ -37,11 +37,7 @@ export const phoneSchema = z
   .or(z.literal(""));
 
 // URL validation
-export const urlSchema = z
-  .string()
-  .url("Invalid URL format")
-  .optional()
-  .or(z.literal(""));
+export const urlSchema = z.string().url("Invalid URL format").optional().or(z.literal(""));
 
 // Locale validation
 export const localeSchema = z.enum(["en", "fr", "id"], {
@@ -59,9 +55,7 @@ export const currencySchema = z
 export const timezoneSchema = z.string().default("UTC");
 
 // CUID validation
-export const cuidSchema = z
-  .string()
-  .regex(/^c[a-z0-9]{24}$/, "Invalid ID format");
+export const cuidSchema = z.string().regex(/^c[a-z0-9]{24}$/, "Invalid ID format");
 
 // Decimal/numeric validation
 export const decimalSchema = z
@@ -86,3 +80,46 @@ export const dateRangeSchema = z.object({
   from: z.date().optional(),
   to: z.date().optional(),
 });
+
+// ============================================
+// Base Filter Schema Factory (DRY)
+// ============================================
+
+/**
+ * Base pagination fields for filter schemas
+ * Used by material, product, recipe, supplier filters
+ */
+export const basePaginationFields = {
+  search: z.string().optional(),
+  category: z.string().optional(),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  skip: z.coerce.number().int().nonnegative().default(0),
+  take: z.coerce.number().int().positive().max(100).default(50),
+};
+
+/**
+ * Create a filter schema with custom sortBy options
+ * @param sortByOptions - Array of valid sortBy field names
+ * @param defaultSortBy - Default sortBy field (defaults to "createdAt")
+ * @returns Zod schema for filter
+ *
+ * @example
+ * const productFilterSchema = createBaseFilterSchema(
+ *   ["name", "sku", "currentStock", "costPrice", "sellingPrice", "createdAt", "updatedAt"]
+ * );
+ */
+export function createBaseFilterSchema<T extends readonly [string, ...string[]]>(
+  sortByOptions: T,
+  defaultSortBy: T[number] = "createdAt" as T[number]
+) {
+  return z.object({
+    ...basePaginationFields,
+    sortBy: z.enum(sortByOptions).default(defaultSortBy),
+  });
+}
+
+/**
+ * Base filter schema with common sortBy options
+ * For entities with standard timestamp fields
+ */
+export const baseFilterSchema = createBaseFilterSchema(["name", "createdAt", "updatedAt"] as const);

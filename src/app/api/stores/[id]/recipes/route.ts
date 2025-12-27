@@ -55,25 +55,19 @@ export const GET = withApiHandler(
       take: searchParams.get("take") || "50",
     };
 
-    console.log("[DEBUG] Recipe Filter Params:", JSON.stringify(filterParams, null, 2));
+    const filters = recipeFilterSchema.parse(filterParams);
 
-    try {
-      const filters = recipeFilterSchema.parse(filterParams);
-      // Get recipes from service
-      const result = await recipeService.getRecipes(storeId!, filters);
+    // Get recipes from service
+    const result = await recipeService.getRecipes(storeId!, filters);
 
-      // Serialize Decimal fields to numbers for Client Components
-      return NextResponse.json(
-        createSuccessResponse({
-          recipes: serializeRecipes(result.recipes),
-          total: result.total,
-        }),
-        { status: 200 }
-      );
-    } catch (error) {
-      console.error("[DEBUG] Recipe Filter Validation Error:", error);
-      throw error; // Let withApiHandler handle it
-    }
+    // Serialize Decimal fields to numbers for Client Components
+    return NextResponse.json(
+      createSuccessResponse({
+        recipes: serializeRecipes(result.recipes),
+        total: result.total,
+      }),
+      { status: 200 }
+    );
   },
   {
     rateLimitEndpoint: "/api/stores/[id]/recipes",
