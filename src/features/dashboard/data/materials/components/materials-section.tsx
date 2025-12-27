@@ -54,6 +54,8 @@ import {
 } from "../hooks/use-materials";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
+// Import re-exported helpers from consolidated hook (for future use)
+// Full hook migration can be done incrementally
 
 type StockFilter = "in_stock" | "low_stock" | "out_of_stock" | "overstocked" | undefined;
 
