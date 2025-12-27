@@ -3080,6 +3080,40 @@ export const id = {
       chargeNotApplied: "Tidak ada biaya yang dikenakan pada akun Anda.",
     },
   },
+  onboarding: {
+    title: "Satu Langkah Lagi!",
+    subtitle: "Tambahkan kartu Anda untuk membuka akses PRO gratis",
+    canceledTitle: "Validasi kartu dibatalkan",
+    canceledMessage:
+      "Anda perlu memvalidasi kartu untuk mengakses fitur PRO. Tidak ada biaya yang dikenakan.",
+    cardTitle: "Promo Tahun Baru",
+    cardDescription: "Dapatkan paket PRO gratis hingga 31 Desember 2025",
+    whatYouGet: "Yang akan Anda dapatkan:",
+    features: {
+      fullAccess: "Akses penuh ke semua fitur PRO",
+      unlimited: "Produk dan resep tanpa batas",
+      analytics: "Analitik dan laporan lanjutan",
+      emailSupport: "Dukungan email prioritas",
+      whatsappSupport: "Saluran dukungan WhatsApp",
+    },
+    whyCard: "Mengapa kami membutuhkan kartu Anda?",
+    whyCardExplanation:
+      "Kartu Anda akan divalidasi tapi tidak dikenakan biaya. Kartu disimpan untuk saat promosi berakhir (1 Jan 2026), agar Anda dapat melanjutkan dengan paket berbayar jika menginginkan.",
+    securedBy: "Diamankan oleh Stripe • Enkripsi SSL 256-bit",
+    addCardButton: "Tambah Kartu & Dapatkan Akses PRO",
+    skipButton: "Lewati untuk sekarang (akses terbatas)",
+    pleaseWait: "Mohon tunggu...",
+    termsNote:
+      "Dengan melanjutkan, Anda menyetujui Syarat Layanan dan Kebijakan Privasi kami. Kartu Anda tidak akan dikenakan biaya selama periode promosi.",
+    success: {
+      title: "Selamat Datang di PRO!",
+      subtitle: "Kartu Anda telah divalidasi. Nikmati akses PRO penuh!",
+      planActive: "Paket PRO Aktif",
+      validUntil: "Berlaku hingga 31 Desember 2025",
+      goToDashboard: "Ke Dasbor",
+      redirecting: "Mengalihkan ke dasbor dalam {seconds} detik...",
+    },
+  },
   notFound: {
     title: "Halaman Tidak Ditemukan",
     description: "Maaf, kami tidak dapat menemukan halaman yang Anda cari.",

@@ -42,7 +42,8 @@ export const metadata = generateMetadata({
   ],
   openGraph: {
     title: "EPIDOM - Cookie Bar Inventory Management System",
-    description: "The secret way cookie bars in France manage their inventory. Real-time tracking & smart alerts.",
+    description:
+      "The secret way cookie bars in France manage their inventory. Real-time tracking & smart alerts.",
     url: "https://epidom.com",
     images: [
       {
@@ -85,7 +86,6 @@ export default function HomePage() {
         <ClosingCtaSection />
 
         {/* Footer */}
-        <SiteFooter />
       </main>
     </>
   );

@@ -42,8 +42,8 @@ export class SubscriptionRepository extends BaseRepository {
   async create(data: {
     userId: string;
     stripeCustomerId: string;
-    stripeSubscriptionId?: string;
-    stripePriceId?: string;
+    stripeSubscriptionId?: string | null;
+    stripePriceId?: string | null;
     plan: SubscriptionPlan;
     status: SubscriptionStatus;
     currentPeriodStart?: Date;

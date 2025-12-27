@@ -32,7 +32,6 @@ export const Hero = React.memo(function Hero() {
   return (
     <section className="relative flex h-full w-full flex-col overflow-hidden bg-white">
       {/* Background Subtle Grid */}
-      <div className="absolute inset-0 z-0 bg-[url('/grid-pattern.svg')] opacity-[0.03]" />
 
       {/* Main Content Wrapper - Centered Vertically */}
       <div className="flex h-full w-full items-center justify-center px-4 pt-20 pb-8 sm:px-6 lg:px-8 lg:pt-32 lg:pb-0">
