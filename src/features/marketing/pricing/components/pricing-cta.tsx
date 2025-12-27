@@ -52,7 +52,7 @@ export function PricingCta() {
            {/* Decorative blurred glow backdrop */}
            <div className="absolute -inset-1 bg-gradient-to-r from-brand-primary/20 via-blue-500/20 to-purple-500/20 rounded-3xl blur-xl opacity-75" />
 
-           <div className="relative bg-gray-900 rounded-2xl p-6 md:p-10 shadow-2xl border border-gray-800 flex flex-col md:flex-row items-center justify-between gap-8 text-left">
+           <div className="relative bg-brand-primary rounded-2xl p-6 md:p-10 shadow-2xl border border-white/10 flex flex-col md:flex-row items-center justify-between gap-8 text-left">
               <div className="flex-1 space-y-4">
                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 w-fit">
                     <span className="relative flex h-2 w-2">
