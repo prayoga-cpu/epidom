@@ -742,6 +742,18 @@ export const fr = {
       goTo: "Aller à",
       login: "Connexion",
     },
+    verifyEmail: {
+      title: "Vérifiez votre email",
+      heading: "Vérifiez votre adresse email",
+      description: "Nous avons envoyé un lien de vérification à",
+      instructions:
+        "Cliquez sur le lien dans l'email pour vérifier votre compte. Si vous ne le voyez pas, vérifiez votre dossier spam.",
+      resendButton: "Renvoyer l'email de vérification",
+      resending: "Envoi...",
+      resendSuccess: "Email de vérification envoyé !",
+      resendError: "Échec du renvoi. Veuillez réessayer.",
+      backToLogin: "Retour à la Connexion",
+    },
   },
   paymentsComponents: {
     paymentHistory: {
