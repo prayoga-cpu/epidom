@@ -141,19 +141,19 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60,
   },
   "/api/stores/[id]/materials/bulk": {
-    limit: 10,
-    window: 60, // 10 bulk operations per minute
+    limit: 30,
+    window: 60, // 30 bulk operations per minute
   },
   "/api/stores/[id]/products/bulk": {
-    limit: 10,
+    limit: 30,
     window: 60,
   },
   "/api/stores/[id]/recipes/bulk": {
-    limit: 10,
+    limit: 30,
     window: 60,
   },
   "/api/stores/[id]/suppliers/bulk": {
-    limit: 10,
+    limit: 30,
     window: 60,
   },
 
@@ -198,4 +198,3 @@ export function getRateLimitConfig(path: string): RateLimitConfig {
   // Return default
   return rateLimitConfig.default;
 }
-

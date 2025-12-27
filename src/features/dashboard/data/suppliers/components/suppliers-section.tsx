@@ -1,5 +1,7 @@
 "use client";
 
+import { CsvImportWizard } from "../../components/csv-import-wizard";
+
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -281,6 +283,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                   </TooltipContent>
                 )}
               </Tooltip>
+              <CsvImportWizard storeId={storeId} type="supplier" />
               <AddSupplierDialog>
                 <Button size="sm" className="w-full sm:w-auto">
                   <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
