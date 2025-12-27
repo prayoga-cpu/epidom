@@ -44,8 +44,8 @@ export function RegisterForm() {
 
   return (
     <div className="w-full space-y-8">
-      <div className="space-y-2 text-center md:text-left">
-        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+      <div className="space-y-2 text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
           {t("auth.createAccount")}
         </h1>
         <p className="text-gray-500">{t("auth.manageYourInventory")}</p>
@@ -54,7 +54,7 @@ export function RegisterForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <section className="space-y-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+            <h3 className="text-sm font-semibold tracking-wide text-gray-400 uppercase">
               {t("auth.accountInfo")}
             </h3>
             <div className="space-y-4">
@@ -69,7 +69,7 @@ export function RegisterForm() {
                         placeholder={t("auth.namePlaceholder") || "Jane Baker"}
                         disabled={isPending}
                         autoComplete="name"
-                        className="h-12 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-brand-primary transition-all"
+                        className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
                         {...field}
                       />
                     </FormControl>
@@ -90,7 +90,7 @@ export function RegisterForm() {
                         placeholder={t("auth.emailPlaceholder") || "you@bakery.com"}
                         disabled={isPending}
                         autoComplete="email"
-                        className="h-12 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-brand-primary transition-all"
+                        className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
                         {...field}
                       />
                     </FormControl>
@@ -111,7 +111,7 @@ export function RegisterForm() {
                           type="password"
                           disabled={isPending}
                           autoComplete="new-password"
-                          className="h-12 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-brand-primary transition-all"
+                          className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
                           {...field}
                         />
                       </FormControl>
@@ -131,7 +131,7 @@ export function RegisterForm() {
                           type="password"
                           disabled={isPending}
                           autoComplete="new-password"
-                          className="h-12 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-brand-primary transition-all"
+                          className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
                           {...field}
                         />
                       </FormControl>
@@ -144,7 +144,7 @@ export function RegisterForm() {
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+            <h3 className="text-sm font-semibold tracking-wide text-gray-400 uppercase">
               {t("auth.businessInfo")}
             </h3>
             <div className="grid gap-4">
@@ -159,7 +159,7 @@ export function RegisterForm() {
                         placeholder={t("auth.businessNamePlaceholder") || "Epidom Bakery"}
                         disabled={isPending}
                         autoComplete="organization"
-                        className="h-12 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-brand-primary transition-all"
+                        className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
                         {...field}
                       />
                     </FormControl>
@@ -179,7 +179,7 @@ export function RegisterForm() {
                         placeholder="123 Main St, Paris"
                         disabled={isPending}
                         autoComplete="street-address"
-                        className="h-12 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-brand-primary transition-all"
+                        className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
                         {...field}
                       />
                     </FormControl>
@@ -193,7 +193,7 @@ export function RegisterForm() {
           <Button
             type="submit"
             disabled={isPending}
-            className="h-12 w-full rounded-xl bg-brand-primary text-base font-semibold text-white shadow-lg shadow-brand-primary/25 transition-all hover:bg-brand-primary/90 hover:scale-[1.02] hover:shadow-brand-primary/40"
+            className="bg-brand-primary shadow-brand-primary/25 hover:bg-brand-primary/90 hover:shadow-brand-primary/40 h-12 w-full rounded-xl text-base font-semibold text-white shadow-lg transition-all hover:scale-[1.02]"
           >
             {isPending ? "Creating account..." : t("auth.registerButton")}
           </Button>
@@ -204,7 +204,7 @@ export function RegisterForm() {
         {t("auth.alreadyHaveAccount")}{" "}
         <Link
           href="/login"
-          className="font-semibold text-brand-primary hover:text-brand-primary/80 transition-colors"
+          className="text-brand-primary hover:text-brand-primary/80 font-semibold transition-colors"
         >
           {t("auth.loginButton")}
         </Link>

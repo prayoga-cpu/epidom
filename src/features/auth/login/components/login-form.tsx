@@ -37,15 +37,16 @@ export function LoginForm() {
   useEffect(() => {
     if (registered === "true" && !toastShownRef.current) {
       toastShownRef.current = true;
-      toast.success(t("auth.accountCreatedSuccess") || "Account created successfully! Please log in to continue.");
+      toast.success(
+        t("auth.accountCreatedSuccess") ||
+          "Account created successfully! Please log in to continue."
+      );
 
       // Remove the 'registered' query param to prevent toast from showing again
       // on component re-render or browser back/forward
       const newSearchParams = new URLSearchParams(searchParams.toString());
       newSearchParams.delete("registered");
-      const newUrl = newSearchParams.toString()
-        ? `/login?${newSearchParams.toString()}`
-        : "/login";
+      const newUrl = newSearchParams.toString() ? `/login?${newSearchParams.toString()}` : "/login";
       router.replace(newUrl, { scroll: false });
     }
   }, [registered, searchParams, router]);
@@ -83,10 +84,8 @@ export function LoginForm() {
 
   return (
     <div className="w-full space-y-8">
-      <div className="space-y-2 text-center md:text-left">
-        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-          {t("auth.welcome")}
-        </h1>
+      <div className="space-y-2 text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("auth.welcome")}</h1>
         <p className="text-gray-500">{t("auth.signInToContinue")}</p>
       </div>
 
@@ -105,7 +104,7 @@ export function LoginForm() {
                       placeholder={t("auth.emailPlaceholder") || "name@company.com"}
                       disabled={isPending}
                       autoComplete="email"
-                      className="h-12 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-brand-primary transition-all"
+                      className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
                       {...field}
                     />
                   </FormControl>
@@ -123,7 +122,7 @@ export function LoginForm() {
                     <FormLabel className="text-gray-700">{t("auth.password")}</FormLabel>
                     <Link
                       href="/forgot-password"
-                      className="text-sm font-medium text-brand-primary hover:text-brand-primary/80 transition-colors"
+                      className="text-brand-primary hover:text-brand-primary/80 text-sm font-medium transition-colors"
                     >
                       {t("auth.forgotPassword")}
                     </Link>
@@ -133,7 +132,7 @@ export function LoginForm() {
                       type="password"
                       disabled={isPending}
                       autoComplete="current-password"
-                      className="h-12 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-brand-primary transition-all"
+                      className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
                       {...field}
                     />
                   </FormControl>
@@ -145,7 +144,7 @@ export function LoginForm() {
 
           <Button
             type="submit"
-            className="h-12 w-full rounded-xl bg-brand-primary text-base font-semibold text-white shadow-lg shadow-brand-primary/25 transition-all hover:bg-brand-primary/90 hover:scale-[1.02] hover:shadow-brand-primary/40"
+            className="bg-brand-primary shadow-brand-primary/25 hover:bg-brand-primary/90 hover:shadow-brand-primary/40 h-12 w-full rounded-xl text-base font-semibold text-white shadow-lg transition-all hover:scale-[1.02]"
             disabled={isPending}
           >
             {isPending ? t("messages.loggingIn") || "Logging in..." : t("auth.loginButton")}
@@ -199,7 +198,7 @@ export function LoginForm() {
         {t("auth.dontHaveAccount")}{" "}
         <Link
           href="/register"
-          className="font-semibold text-brand-primary hover:text-brand-primary/80 transition-colors"
+          className="text-brand-primary hover:text-brand-primary/80 font-semibold transition-colors"
         >
           {t("auth.registerButton")}
         </Link>
