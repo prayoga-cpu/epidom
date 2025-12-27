@@ -161,9 +161,9 @@ export const en = {
   home: {
     hero: {
       badge: "🚀 Now available for Cookie Bars",
-      headlinePart1: "The Secret",
-      headlineHighlight: "Ingredient",
-      headlinePart2: "for Your Cookie Bar",
+      headlinePart1: "Secret Way of",
+      headlineHighlight: "Cookie Bars",
+      headlinePart2: "Inventory Management",
       headline: "Secret Way of Cookie Bars Inventory Management",
       description:
         "Track your cookies stock on mobile, manage it everywhere real-time, & auto-restock in seconds",
@@ -196,8 +196,8 @@ export const en = {
     howToUse: {
       headline: "Create, Tracking, Alerts",
       description:
-        "We are popular on solving cookie bar's overwhelmed management to smart expiry alerts, especially in France",
-      aiGenerated: "AI Generated Contents for better productivity",
+        "We are popular on solving cookie bar's overwhelmed management to smart expiry alerts, especially in France 🇫🇷.",
+      aiGenerated: "AI Generated Contents: Profile, Dashboard, Management, Tracking, Data, Alerts.",
       features: {
         profile: {
           title: "Profile",
@@ -233,29 +233,29 @@ export const en = {
       cta: "Get Started",
       note: "All plans include 24/7 support and regular updates",
       free: {
-        name: "New Year's Special",
+        name: "2026 New Year's Only",
         features: {
-          freeTrial: "Free until December 31st, 2026",
-          limitedTime: "Limited time offer for early adopters",
-          creditCard: "Just connect your credit card (no charge)",
+          freeTrial: "Before December 31st, it's free",
+          limitedTime: "You just need to Login",
+          creditCard: "Then connect your credit card",
           fullAccess: "Full access to all features",
         },
       },
       pro: {
-        name: "Professional",
+        name: "The Most Popular",
         features: {
-          multiStore: "Manage multiple stores in one dashboard",
-          unlimited: "Unlimited products and recipes",
+          multiStore: "You can get more than 1 store",
+          unlimited: "in one dashboard",
           advanced: "Advanced analytics and reports",
           priority: "Priority email support",
           whatsapp: "WhatsApp support channel",
         },
       },
       custom: {
-        name: "Enterprise",
+        name: "Premium Inventory",
         cta: "Contact Sales",
         features: {
-          franchise: "Perfect for franchises and big operations",
+          franchise: "For franchise or big demand only",
           dedicated: "Dedicated account manager",
           custom: "Custom integrations and features",
           onboarding: "Personalized onboarding and training",
@@ -265,7 +265,7 @@ export const en = {
     painGain: {
       headline: "Stop Food Waste & Lose Money",
       description:
-        "Compare how Epidom transforms your traditional operations into efficient modern methods",
+        "Compare how Epidom transforms your traditional operations become efficient modern methods.",
       oldWay: {
         title: "The Old Way",
         subtitle: "Traditional Method",
