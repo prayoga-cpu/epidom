@@ -85,7 +85,9 @@ export function LoginForm() {
   return (
     <div className="w-full space-y-8">
       <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("auth.welcome")}</h1>
+        <h1 className="text-brand-primary text-2xl font-bold tracking-tight">
+          {t("auth.welcome")}
+        </h1>
         <p className="text-gray-500">{t("auth.signInToContinue")}</p>
       </div>
 
