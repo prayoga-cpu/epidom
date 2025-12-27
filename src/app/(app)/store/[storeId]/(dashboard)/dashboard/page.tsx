@@ -8,10 +8,10 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
-  fetchMaterialsForPage,
   fetchSuppliersForPage,
   fetchProductionBatchesForPage,
   fetchAlertsForPage,
+  fetchStockLevelsForPage,
 } from "@/lib/server/data-fetchers";
 import { DashboardClient } from "@/features/dashboard/dashboard/components/dashboard-client";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
@@ -35,9 +35,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ stor
   }
 
   // Fetch all initial data in parallel for optimal performance
-  const [materialsResult, suppliersResult, productionBatchesResult, alertsResult] =
+  const [stockLevelsResult, suppliersResult, productionBatchesResult, alertsResult] =
     await Promise.all([
-      fetchMaterialsForPage(storeId),
+      fetchStockLevelsForPage(storeId),
       fetchSuppliersForPage(storeId, { take: 4, sortBy: "name", sortOrder: "asc" }),
       fetchProductionBatchesForPage(storeId, {
         status: "COMPLETED",
@@ -51,7 +51,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ stor
 
   return (
     <DashboardClient
-      initialMaterials={materialsResult.materials}
+      initialStockLevels={stockLevelsResult.materials}
       initialSuppliers={suppliersResult.suppliers}
       initialProductionBatches={productionBatchesResult.batches}
       initialAlerts={alertsResult.alerts}
