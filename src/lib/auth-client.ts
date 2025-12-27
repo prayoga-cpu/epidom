@@ -1,11 +1,5 @@
-"use client";
-import { useSession } from "next-auth/react";
+import { createAuthClient } from "better-auth/react";
 
-export function useUser() {
-  const { data: session, status } = useSession();
-
-  return {
-    user: session?.user,
-    loading: status === "loading",
-  };
-}
+export const authClient = createAuthClient({
+  baseURL: process.env.BETTER_AUTH_URL,
+});

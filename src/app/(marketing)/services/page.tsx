@@ -19,7 +19,7 @@ import { AlertsPreviewSection } from "@/features/marketing/services/components/a
 
 export default function ServicesPage() {
   return (
-    <main className="text-brand-primary min-h-screen bg-white pt-24 md:pt-32">
+    <main className="w-full overflow-x-hidden bg-white pt-20 md:pt-24">
       <div className="animate-slide-up mb-8 md:mb-12">
         <HeroSection />
       </div>

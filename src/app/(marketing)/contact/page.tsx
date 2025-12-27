@@ -32,10 +32,7 @@ export const metadata = genMeta({
 
 export default function ContactPage() {
   return (
-    <main
-      className="bg-white pt-24 md:pt-32 lg:pt-16"
-      style={{ color: "var(--color-brand-primary)" }}
-    >
+    <main className="w-full overflow-x-hidden bg-white pt-20 md:pt-24 lg:pt-20">
       <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
         {/* Tablet Layout: Header Full Width + 2 Columns */}
         <div className="md:block lg:hidden">

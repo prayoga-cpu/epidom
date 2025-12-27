@@ -20,12 +20,12 @@ export function HeroSection() {
       <Container maxWidth="7xl">
         <div className="grid grid-cols-1 items-center gap-6 md:gap-6 lg:grid-cols-12">
           {/* Left Column - Text Content */}
-          <div className="space-y-3 md:space-y-5 lg:col-span-8">
-            <h1 className="text-3xl leading-tight font-bold tracking-tight md:text-5xl lg:text-6xl text-brand-primary">
+          <div className="space-y-4 md:space-y-6 lg:col-span-8">
+            <h1 className="text-3xl leading-[1.1] font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl text-brand-primary">
               {t("services.heroTitle")}
             </h1>
 
-            <p className="max-w-4xl text-lg leading-relaxed md:text-2xl text-brand-primary">
+            <p className="max-w-3xl text-lg leading-relaxed text-brand-primary/80 md:text-xl lg:text-2xl">
               {t("services.heroDesc")}
             </p>
           </div>

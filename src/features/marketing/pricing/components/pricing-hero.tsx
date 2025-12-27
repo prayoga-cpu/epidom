@@ -31,12 +31,12 @@ export function PricingHero() {
           </div>
 
           {/* Title */}
-          <h1 className="mb-4 text-3xl leading-tight font-bold tracking-tight md:mb-6 md:text-5xl lg:text-6xl text-brand-primary">
+          <h1 className="mb-6 text-3xl leading-[1.1] font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl text-brand-primary">
             {t("pricing.heroTitle")}
           </h1>
 
           {/* Description */}
-          <p className="mx-auto max-w-4xl text-lg leading-relaxed md:text-2xl text-brand-primary">
+          <p className="mx-auto max-w-3xl text-lg leading-relaxed text-brand-primary/80 md:text-xl lg:text-2xl">
             {t("pricing.heroDescription")}
           </p>
         </div>
