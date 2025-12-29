@@ -352,7 +352,7 @@ export function CsvImportWizard({ storeId, type }: CsvImportWizardProps) {
       const response = await fetch("/api/ai/analyze-import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csvPreview: csvRaw, type }),
+        body: JSON.stringify({ csvPreview: csvRaw, type, storeId }),
       });
 
       if (!response.ok) throw new Error("Analysis failed");
@@ -979,7 +979,7 @@ export function CsvImportWizard({ storeId, type }: CsvImportWizardProps) {
             </div>
             <h3 className="text-xl font-semibold">AI Analysis in Progress</h3>
             <p className="text-muted-foreground mx-auto mt-2 max-w-xs">
-              Detecting schema, format, and content...
+              Consulting store memory, identifying matches, and analyzing schema...
             </p>
           </div>
         )}
@@ -991,7 +991,7 @@ export function CsvImportWizard({ storeId, type }: CsvImportWizardProps) {
               <div className="flex items-center gap-3">
                 <Wand2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 <span>
-                  AI has analyzed your file and suggested column mappings. Please review them below.
+                  <b>AI Agent</b> has mapped your data using your store's context. Please review the results:
                 </span>
               </div>
             </div>
