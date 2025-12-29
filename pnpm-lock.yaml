@@ -210,8 +210,8 @@ importers:
         specifier: ^1.7.4
         version: 1.7.4(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       stripe:
-        specifier: ^19.3.0
-        version: 19.3.0(@types/node@22.18.10)
+        specifier: ^20.1.0
+        version: 20.1.0(@types/node@22.18.10)
       tailwind-merge:
         specifier: ^3.3.1
         version: 3.3.1
@@ -5647,8 +5647,8 @@ packages:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
 
-  stripe@19.3.0:
-    resolution: {integrity: sha512-3MbqRkw5LXb4LWP1LgIEYxUAYhYDDU5pcHZj4Xha6VWPnN1wrUmQ7Htsgm8wR584s0hn1aQg1lYD0Hi+F37E5g==}
+  stripe@20.1.0:
+    resolution: {integrity: sha512-o1VNRuMkY76ZCq92U3EH3/XHm/WHp7AerpzDs4Zyo8uE5mFL4QUcv/2SudWsSnhBSp4moO2+ZoGCZ7mT8crPmQ==}
     engines: {node: '>=16'}
     peerDependencies:
       '@types/node': '>=16'
@@ -6075,6 +6075,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -11817,7 +11818,7 @@ snapshots:
 
   strip-json-comments@3.1.1: {}
 
-  stripe@19.3.0(@types/node@22.18.10):
+  stripe@20.1.0(@types/node@22.18.10):
     dependencies:
       qs: 6.14.0
     optionalDependencies:
