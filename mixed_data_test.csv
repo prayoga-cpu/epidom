@@ -1,9 +1,9 @@
 name,category,description,sku,unit,unitCost,currentStock,minStock,maxStock,supplierName,supplierPrice,contactPerson,phone,email,address,city,country,notes,yieldQuantity,yieldUnit,productionTimeMinutes,costPerBatch,instructions,ingredient_name,ingredient_qty,ingredient_unit,costPrice,sellingPrice
-"Toko Bahan Kue Abadi",Suppliers,"Main supplier for baking goods",,,,,,"Toko Bahan Kue Abadi",,"Budi Santoso","08123456789","budi@abadi.com","Jl. Merdeka No. 10","Jakarta","Indonesia","Preferred supplier",,,,,,,,,,,
-"Tepung Terigu Segitiga",Materials,"Premium wheat flour","MAT-001","kg",12000,50,10,100,"Toko Bahan Kue Abadi",11500,,,,,,,,"Top quality flour",,,,,,,,,,,
+"Toko Bahan Kue Abadi",Suppliers,"Main supplier for baking goods",,,,,,,"Toko Bahan Kue Abadi",,"Budi Santoso","08123456789","budi@abadi.com","Jl. Merdeka No. 10","Jakarta","Indonesia","Preferred supplier",,,,,,,,,,,
+"Tepung Terigu Segitiga",Materials,"Premium wheat flour","MAT-001","kg",12000,50,10,100,"Toko Bahan Kue Abadi",11500,,,,,,,"Top quality flour",,,,,,,,,,,
 "Gula Pasir",Materials,"White sugar","MAT-002","kg",15000,30,5,50,"Toko Bahan Kue Abadi",14500,,,,,,,,,,,,,,,,,,,
 "Roti Tawar Spesial",Recipes,"Classic white bread recipe",,,,,,,,,,,,,,,10,pcs,60,15000,"1. Mix flour and sugar. 2. Bake at 180C.","Tepung Terigu Segitiga",500,g,,,,
-"Roti Tawar Spesial",Recipes,"Classic white bread recipe",,,,,,,,,,,,,,,,,,,,,"Gula Pasir",100,g,,,,
+"Roti Tawar Spesial",Recipes,"Classic white bread recipe",,,,,,,,,,,,,,,,,,,,,,"Gula Pasir",100,g,,,,
 "Roti Tawar Pack",Products,"Pack of 10 slices","PROD-001","pack",,,10,50,,,,,,,,,,,,,,,,,,,15000,25000
 "Selai Strawberry",Materials,"Fresh strawberry jam","MAT-003","jar",25000,20,2,10,"Supplier Buah Segar",24000,"Siti Aminah","08987654321","siti@freshfruit.com","Jl. Kebun No. 5","Bandung","Indonesia",,,,,,,,,,,
-"Roti Bakar Strawberry",Products,"Toasted bread with strawberry jam (Complete Set)","PROD-002","portion",,,5,50,"Toko Bahan Kue Abadi",,,,,"Jl. Merdeka No. 10","Jakarta","Indonesia",,1,portion,10,5000,"Toast bread, spread jam.","Roti Tawar Spesial",2,slice,3000,12000
+"Roti Bakar Strawberry",Products,"Toasted bread with strawberry jam (Complete Set)","PROD-002","portion",,,5,50,"Toko Bahan Kue Abadi",,,,,,"Jl. Merdeka No. 10","Jakarta","Indonesia",,1,portion,10,5000,"Toast bread, spread jam.","Roti Tawar Spesial",2,slice,3000,12000

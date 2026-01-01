@@ -34,7 +34,7 @@ interface SupplierDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   supplier: SupplierWithRelations;
   onEdit?: () => void;
-  onDelete?: () => void;
+  onDelete?: () => Promise<void> | void;
 }
 
 export function SupplierDetailsDialog({
@@ -262,9 +262,8 @@ export function SupplierDetailsDialog({
           title={t("data.suppliers.toasts.deleted.title")}
           description={t("data.suppliers.toasts.deleted.description")?.replace("{name}", supplier.name) || ""}
           confirmText={t("common.actions.delete")}
-          onConfirm={() => {
-            onDelete();
-            setDeleteDialogOpen(false);
+          onConfirm={async () => {
+            if (onDelete) await onDelete();
           }}
           variant="destructive"
         />

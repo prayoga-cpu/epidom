@@ -19,7 +19,7 @@ export const DELETE = withApiHandler(
     const { ids } = bulkDeleteSchema.parse(body);
 
     // Bulk delete recipes via service
-    const count = await recipeService.bulkDeleteRecipes(ids, storeId!);
+    const { count } = await recipeService.bulkDeleteRecipes(ids, storeId!);
 
     return NextResponse.json(
       createSuccessResponse({ message: `Successfully deleted ${count} recipe(s)`, count })

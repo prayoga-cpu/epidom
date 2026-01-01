@@ -178,8 +178,8 @@ export class SupplierRepository extends BaseRepository {
    * Delete supplier (hard delete)
    * Note: Related records (MaterialSupplier, SupplierOrder) will be cascade deleted
    */
-  async delete(supplierId: string): Promise<void> {
-    await this.db.supplier.delete({
+  async delete(supplierId: string): Promise<Supplier> {
+    return this.db.supplier.delete({
       where: { id: supplierId },
     });
   }

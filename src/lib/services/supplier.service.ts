@@ -104,14 +104,14 @@ export class SupplierService {
    * Delete supplier (hard delete)
    * WARNING: This will permanently delete the supplier and cascade delete related records
    */
-  async deleteSupplier(supplierId: string, storeId: string): Promise<void> {
+  async deleteSupplier(supplierId: string, storeId: string): Promise<Supplier> {
     // Verify supplier belongs to store
     const belongsToStore = await supplierRepository.belongsToStore(supplierId, storeId);
     if (!belongsToStore) {
       throw new Error("Supplier does not belong to this store");
     }
 
-    await supplierRepository.delete(supplierId);
+    return supplierRepository.delete(supplierId);
   }
 
   /**
@@ -121,7 +121,7 @@ export class SupplierService {
   async bulkDeleteSuppliers(
     supplierIds: string[],
     storeId: string
-  ): Promise<{ deletedCount: number }> {
+  ): Promise<{ count: number }> {
     // Verify all suppliers belong to the store
     const suppliers = await supplierRepository.findByIds(supplierIds);
     const invalidSuppliers = suppliers.filter((s) => s.storeId !== storeId);
@@ -130,8 +130,7 @@ export class SupplierService {
       throw new Error("One or more suppliers do not belong to this store");
     }
 
-    const result = await supplierRepository.bulkDelete(supplierIds);
-    return { deletedCount: result.count };
+    return supplierRepository.bulkDelete(supplierIds);
   }
 
   /**

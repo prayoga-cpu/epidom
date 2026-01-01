@@ -101,6 +101,8 @@ Table stores {
   business businesses [not null]
   supplierOrders supplier_orders [not null]
   suppliers suppliers [not null]
+  aiImportMemories ai_import_memories [not null]
+  aiImportSessions ai_import_sessions [not null]
 }
 
 Table subscriptions {
@@ -400,6 +402,47 @@ Table exchange_rates {
   }
 }
 
+Table ai_import_memories {
+  id String [pk]
+  storeId String [not null]
+  store stores [not null]
+  memoryType String [not null]
+  sourcePattern String [not null]
+  targetMapping String [not null]
+  entityType String [not null]
+  confidence Float [not null, default: 0.5]
+  usageCount Int [not null, default: 1]
+  successCount Int [not null, default: 0]
+  lastUsed DateTime [default: `now()`, not null]
+  userConfirmed Boolean [not null, default: false]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+
+  indexes {
+    (storeId, memoryType, sourcePattern, entityType) [unique]
+  }
+}
+
+Table ai_import_sessions {
+  id String [pk]
+  storeId String [not null]
+  store stores [not null]
+  fileName String [not null]
+  fileSize Int [not null, default: 0]
+  rowCount Int [not null, default: 0]
+  entityType String
+  status String [not null, default: 'pending']
+  analysisResult Json
+  importResult Json
+  aiCallCount Int [not null, default: 0]
+  totalTokens Int [not null, default: 0]
+  processingTimeMs Int
+  userCorrections Json
+  errorMessage String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
 Enum SubscriptionPlan {
   STARTER
   PRO
@@ -518,3 +561,7 @@ Ref: order_items.orderId > orders.id [delete: Cascade]
 Ref: order_items.productId > products.id [delete: Cascade]
 
 Ref: alerts.userId > user.id [delete: Cascade]
+
+Ref: ai_import_memories.storeId > stores.id [delete: Cascade]
+
+Ref: ai_import_sessions.storeId > stores.id [delete: Cascade]

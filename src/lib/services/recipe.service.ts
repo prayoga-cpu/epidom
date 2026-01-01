@@ -130,7 +130,7 @@ export class RecipeService {
   /**
    * Bulk delete recipes
    */
-  async bulkDeleteRecipes(recipeIds: string[], storeId: string): Promise<number> {
+  async bulkDeleteRecipes(recipeIds: string[], storeId: string): Promise<{ count: number }> {
     // Verify all recipes belong to store
     const recipes = await recipeRepository.findByIds(recipeIds);
     const invalidRecipes = recipes.filter((r) => r.storeId !== storeId);

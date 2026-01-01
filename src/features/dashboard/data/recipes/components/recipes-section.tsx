@@ -1,7 +1,5 @@
 "use client";
 
-import { CsvImportWizard } from "../../components/csv-import-wizard";
-
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -172,6 +170,8 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
     isSelected,
   } = useBulkSelection(recipes);
 
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+
   // Action handlers
   const handleDuplicate = (recipe: RecipeWithIngredients) => {
     setSelectedRecipe(recipe);
@@ -300,7 +300,6 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                   </TooltipContent>
                 )}
               </Tooltip>
-              <CsvImportWizard storeId={storeId} type="recipe" />
               <AddRecipeDialog
                 trigger={
                   <Button size="sm" className="w-full md:w-auto">
@@ -313,15 +312,10 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleteRecipes.isPending}
+                  onClick={() => setBulkDeleteDialogOpen(true)}
                   className="w-full md:w-auto"
                 >
-                  {bulkDeleteRecipes.isPending ? (
-                    <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
-                  ) : (
-                    <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
-                  )}
+                  <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("actions.delete")} ({selectedCount})
                 </Button>
               )}
@@ -347,7 +341,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pb-6">
           {/* Search and Filters */}
           <FilterSection
             searchValue={searchQuery}
@@ -563,23 +557,34 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                 </BaseItemCard>
               );
             })}
-            {/* Empty State */}
-            {recipes.length === 0 && (
-              <div className="col-span-full py-12 text-center">
-                <ChefHat className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-                <p className="text-muted-foreground">
-                  {hasActiveFilters
-                    ? t("messages.noMatchingFilters")
-                    : t("messages.noRecipesFound")}
-                </p>
-                {hasActiveFilters && (
-                  <Button variant="link" onClick={clearFilters} className="mt-2">
-                    {t("common.actions.clearFilters")}
-                  </Button>
-                )}
-              </div>
-            )}
           </ItemCardGrid>
+
+          {/* Empty State */}
+          {recipes.length === 0 && (
+            <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+              <ChefHat className="text-muted-foreground/50 mb-4 h-12 w-12" />
+              <h3 className="mb-2 text-lg font-semibold">{t("messages.noRecipesFound")}</h3>
+              <p className="text-muted-foreground mb-4 text-sm">
+                {hasActiveFilters
+                  ? t("messages.noMatchingFilters")
+                  : t("messages.getStartedRecipe")}
+              </p>
+              {hasActiveFilters ? (
+                <Button variant="outline" onClick={clearFilters}>
+                  {t("common.actions.clearFilters")}
+                </Button>
+              ) : (
+                <AddRecipeDialog
+                  trigger={
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      {t("data.recipes.addButton")}
+                    </Button>
+                  }
+                />
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -626,6 +631,21 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
         confirmText={t("common.actions.delete")}
         variant="destructive"
         loading={deleteRecipe.isPending}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title={t("data.recipes.bulkDeleteConfirm.title") || "Delete Multiple Recipes"}
+        description={
+          t("data.recipes.bulkDeleteConfirm.description")?.replace("{count}", selectedCount.toString()) ||
+          `Are you sure you want to delete ${selectedCount} recipe(s)? This action cannot be undone.`
+        }
+        confirmText={t("common.actions.delete")}
+        onConfirm={handleBulkDelete}
+        variant="destructive"
+        loading={bulkDeleteRecipes.isPending}
       />
     </>
   );

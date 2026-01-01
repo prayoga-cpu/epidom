@@ -1,7 +1,5 @@
 "use client";
 
-import { CsvImportWizard } from "../../components/csv-import-wizard";
-
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -131,6 +129,8 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
     clearSelection,
     isSelected,
   } = useBulkSelection(suppliers);
+
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   // Action handlers
   const handleDeleteConfirm = async () => {
@@ -283,7 +283,6 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                   </TooltipContent>
                 )}
               </Tooltip>
-              <CsvImportWizard storeId={storeId} type="supplier" />
               <AddSupplierDialog>
                 <Button size="sm" className="w-full sm:w-auto">
                   <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
@@ -294,7 +293,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={handleBulkDelete}
+                  onClick={() => setBulkDeleteDialogOpen(true)}
                   className="w-full sm:w-auto"
                 >
                   <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
@@ -323,7 +322,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pb-6">
           {/* Search and Filters */}
           <div className="flex flex-col gap-3">
             {/* Search */}
@@ -396,7 +395,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center border-b pb-2">
+          <div className="flex items-center border-b pb-2 mt-4">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {suppliers.length} {t("common.of")} {totalSuppliers}{" "}
               {t("data.suppliers.pageTitle")}
@@ -404,7 +403,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           </div>
 
           {/* Suppliers Grid */}
-          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
+          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }} className="mt-4">
             {suppliers.map((supplier) => (
               <BaseItemCard
                 key={supplier.id}
@@ -620,6 +619,21 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           />
         </>
       )}
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title={t("data.suppliers.bulkDeleteConfirm.title") || "Delete Multiple Suppliers"}
+        description={
+          t("data.suppliers.bulkDeleteConfirm.description")?.replace("{count}", selectedCount.toString()) ||
+          `Are you sure you want to delete ${selectedCount} supplier(s)? This action cannot be undone.`
+        }
+        confirmText={t("common.actions.delete")}
+        onConfirm={handleBulkDelete}
+        variant="destructive"
+        loading={bulkDeleteSuppliers.isPending}
+      />
     </>
   );
 }

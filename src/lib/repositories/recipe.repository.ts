@@ -388,7 +388,7 @@ export class RecipeRepository extends BaseRepository {
   /**
    * Bulk hard delete recipes
    */
-  async bulkDelete(recipeIds: string[]): Promise<number> {
+  async bulkDelete(recipeIds: string[]): Promise<{ count: number }> {
     const result = await this.db.recipe.deleteMany({
       where: {
         id: {
@@ -396,7 +396,7 @@ export class RecipeRepository extends BaseRepository {
         },
       },
     });
-    return result.count;
+    return result;
   }
 
   /**

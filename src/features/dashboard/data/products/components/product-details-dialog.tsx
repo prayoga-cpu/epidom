@@ -35,7 +35,7 @@ interface ProductDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   product: ProductWithRelations;
   onEdit?: () => void;
-  onDelete?: () => void;
+  onDelete?: () => Promise<void> | void;
 }
 
 export function ProductDetailsDialog({
@@ -149,7 +149,9 @@ export function ProductDetailsDialog({
                     `Are you sure you want to delete "${product.name}"? This action cannot be undone.`
                   }
                   confirmText={t("data.products.deleteConfirm.title") || "Delete Product"}
-                  onConfirm={onDelete}
+                  onConfirm={async () => {
+                    if (onDelete) await onDelete();
+                  }}
                   variant="destructive"
                 />
               )}

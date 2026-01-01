@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { CsvImportWizard } from "../../components/csv-import-wizard";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,6 +42,7 @@ import {
   CheckSquare,
   Loader2,
   X,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -55,6 +55,7 @@ import {
 } from "../hooks/use-materials";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
+import { SmartImportDialog } from "../../import";
 // Import re-exported helpers from consolidated hook (for future use)
 // Full hook migration can be done incrementally
 
@@ -232,6 +233,11 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
     setBulkSelectMode,
   } = useBulkSelection(processedMaterials);
 
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+
+  // Smart Import dialog state
+  const [smartImportOpen, setSmartImportOpen] = useState(false);
+
   // Filter handlers
   const handleSearch = (value: string) => {
     setFilters((prev) => ({ ...prev, search: value, skip: 0 }));
@@ -361,7 +367,16 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                 )}
               </Tooltip>
 
-              <CsvImportWizard storeId={storeId} type="material" />
+              {/* Smart Import Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSmartImportOpen(true)}
+                className="w-full md:w-auto"
+              >
+                <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
+                Smart Import
+              </Button>
 
               <AddMaterialDialog
                 trigger={
@@ -375,7 +390,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={handleBulkDelete}
+                  onClick={() => setBulkDeleteDialogOpen(true)}
                   className="w-full md:w-auto"
                 >
                   <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
@@ -592,28 +607,27 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                 </BaseItemCard>
               );
             })}
-            {/* Empty State */}
-            {processedMaterials.length === 0 && (
-              <EmptyState
-                icon={PackageOpen}
-                title={t("messages.noMaterialsFound")}
-                description={
-                  hasActiveFilters
-                    ? t("messages.noMatchingFilters")
-                    : t("messages.getStartedMaterial")
-                }
-                action={
-                  hasActiveFilters ? (
-                    <Button variant="outline" onClick={clearFilters}>
-                      {t("common.actions.clearFilters")}
-                    </Button>
-                  ) : (
-                    <AddMaterialDialog />
-                  )
-                }
-              />
-            )}
           </ItemCardGrid>
+
+          {/* Empty State */}
+          {processedMaterials.length === 0 && (
+            <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+              <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
+              <h3 className="mb-2 text-lg font-semibold">{t("messages.noMaterialsFound")}</h3>
+              <p className="text-muted-foreground mb-4 text-sm">
+                {hasActiveFilters
+                  ? t("messages.noMatchingFilters")
+                  : t("messages.getStartedMaterial")}
+              </p>
+              {hasActiveFilters ? (
+                <Button variant="outline" onClick={clearFilters}>
+                  {t("common.actions.clearFilters")}
+                </Button>
+              ) : (
+                <AddMaterialDialog />
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -650,6 +664,29 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
         cancelText={t("common.actions.cancel")}
         variant="destructive"
         loading={deleteMaterial.isPending}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title={t("data.materials.bulkDeleteConfirm.title") || "Delete Multiple Materials"}
+        description={
+          t("data.materials.bulkDeleteConfirm.description")?.replace("{count}", selectedCount.toString()) ||
+          `Are you sure you want to delete ${selectedCount} material(s)? This action cannot be undone.`
+        }
+        confirmText={t("common.actions.delete")}
+        onConfirm={handleBulkDelete}
+        variant="destructive"
+        loading={bulkDelete.isPending}
+      />
+
+      {/* Smart Import Dialog */}
+      <SmartImportDialog
+        open={smartImportOpen}
+        onOpenChange={setSmartImportOpen}
+        storeId={storeId}
+        defaultEntityType="material"
       />
     </>
   );

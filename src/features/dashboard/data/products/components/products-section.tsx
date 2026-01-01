@@ -1,7 +1,5 @@
 "use client";
 
-import { CsvImportWizard } from "../../components/csv-import-wizard";
-
 import { useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
@@ -145,6 +143,8 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     clearSelection,
     isSelected,
   } = useBulkSelection(products);
+
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   // Helper function to determine stock status
   const getStockStatus = (product: Product): StockFilter => {
@@ -306,16 +306,6 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                   </TooltipContent>
                 )}
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <CsvImportWizard storeId={storeId} type="product" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Import products from CSV via AI</p>
-                </TooltipContent>
-              </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -343,7 +333,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={handleBulkDelete}
+                  onClick={() => setBulkDeleteDialogOpen(true)}
                   className="w-full sm:w-auto"
                 >
                   <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
@@ -447,7 +437,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center border-b pb-2">
+          <div className="flex items-center border-b pb-2 mt-4">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {products.length} {t("common.of")} {totalProducts}{" "}
               {t("data.products.pageTitle")}
@@ -455,7 +445,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
           </div>
 
           {/* Products Grid */}
-          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
+          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }} className="mt-4">
             {products.map((product) => {
               const stockStatus = getStockStatus(product);
               const profitMargin = getProfitMargin(product);
@@ -701,6 +691,21 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
           />
         </>
       )}
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title={t("data.products.bulkDeleteConfirm.title") || "Delete Multiple Products"}
+        description={
+          t("data.products.bulkDeleteConfirm.description")?.replace("{count}", selectedCount.toString()) ||
+          `Are you sure you want to delete ${selectedCount} product(s)? This action cannot be undone.`
+        }
+        confirmText={t("common.actions.delete")}
+        onConfirm={handleBulkDelete}
+        variant="destructive"
+        loading={bulkDeleteProducts.isPending}
+      />
     </>
   );
 }

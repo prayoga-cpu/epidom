@@ -27,6 +27,66 @@ interface ImportResult {
   };
 }
 
+// Helper to safely parse numbers from global formats (Rp 10.000, $5,000.00, 1.500,50 etc)
+function parseGlobalNumber(value: any): number {
+  if (value === undefined || value === null || value === "") return 0;
+  if (typeof value === "number") return value;
+
+  let str = String(value).trim();
+  // Remove currency symbols and non-numeric chars except . , -
+  str = str.replace(/[^0-9.,-]/g, "");
+
+  if (!str) return 0;
+
+  // Heuristic to detect format:
+  // If connection contains both . and , -> last one is usually decimal
+  // 10.000,00 -> remove thousand sep (.), replace decimal (,) with .
+  // 10,000.00 -> remove thousand sep (,), keep decimal (.)
+
+  if (str.includes(",") && str.includes(".")) {
+    const lastDot = str.lastIndexOf(".");
+    const lastComma = str.lastIndexOf(",");
+    if (lastComma > lastDot) {
+      // European/Indo format: 1.000,00 -> 1000.00
+      str = str.replace(/\./g, "").replace(",", ".");
+    } else {
+      // US format: 1,000.00 -> 1000.00
+      str = str.replace(/,/g, "");
+    }
+  } else if (str.includes(",")) {
+    // Ambiguous: 10,000 (ten thousand) vs 10,5 (ten point five)
+    // If we have 3 digits after comma, likely thousand separator (10,000)
+    // If 2 digits, likely decimal (10,50) - BUT THIS IS RISKY
+    // Safe bet for commerce: if comma is being used and no dots, treat as thousand separator IF it makes sense?
+    // Actually, widespread convention in data:
+    // If it looks like 10,000 it is 10000.
+    // If it looks like 5,5 it is 5.5.
+
+    // Safer approach: Standardize to US float for storage
+    // If >1 commas, it's definitely update separators (1,000,000) -> remove all
+    if ((str.match(/,/g) || []).length > 1) {
+       str = str.replace(/,/g, "");
+    } else {
+       // Single comma. 10,000 or 0,5?
+       // Check if followed by 3 digits exactly at end -> likely thousand sep
+       if (/,\d{3}$/.test(str)) {
+          str = str.replace(/,/g, "");
+       } else {
+          // Likely decimal
+          str = str.replace(",", ".");
+       }
+    }
+  }
+  // Remove remaining thousand separators (dots if used as such not handled above?)
+  // If we have multiple dots: 1.000.000 -> remove all
+  if ((str.match(/\./g) || []).length > 1) {
+      str = str.replace(/\./g, "");
+  }
+
+  const result = parseFloat(str);
+  return isNaN(result) ? 0 : result;
+}
+
 /**
  * Bulk import data into the database.
  * Handles materials, products, suppliers, and recipes.
@@ -113,6 +173,18 @@ export async function bulkImportData(
   }
 }
 
+// Helper to normalize supplier names for fuzzy matching
+// Removes "PT", "CV", "Inc", "Ltd", punctuation, and extra spaces
+function normalizeSupplierName(name: string): string {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .replace(/[.,\-]/g, " ") // Replace punctuation with space
+    .replace(/\b(pt|cv|inc|ltd|corp|llc|gmbh|tbk|ud)\b/g, "") // Remove entity types
+    .replace(/\s+/g, " ") // Collapse spaces
+    .trim();
+}
+
 /**
  * Import materials with createMany for efficiency
  */
@@ -131,7 +203,8 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
     }
 
     // 1. Process Suppliers (Auto-create if missing)
-    const supplierNames = [
+    // Extract raw names first
+    const rawSupplierNames = [
       ...new Set(
         validData
           .map((d) => d.supplierName)
@@ -139,47 +212,52 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
       ),
     ] as string[];
 
-    const supplierMap = new Map<string, string>(); // Name (lowercase) -> ID
+    const supplierMap = new Map<string, string>(); // Normalized Name -> ID
 
-    if (supplierNames.length > 0) {
-      // Find existing suppliers
+    if (rawSupplierNames.length > 0) {
+      // Fetch ALL existing suppliers to perform in-memory fuzzy check (safer than database strict match)
+      // Note: For <1000 suppliers this is fine. For scale, we'd need a search index.
       const existingSuppliers = await prisma.supplier.findMany({
-        where: {
-          storeId,
-          name: { in: supplierNames, mode: "insensitive" },
-        },
+        where: { storeId },
         select: { id: true, name: true },
       });
 
-      existingSuppliers.forEach((s) => supplierMap.set(s.name.toLowerCase(), s.id));
+      // Build map of Normalized -> ID from DB
+      existingSuppliers.forEach((s) => {
+        supplierMap.set(normalizeSupplierName(s.name), s.id);
+      });
 
-      // Identify missing suppliers
-      const missingSupplierNames = supplierNames.filter(
-        (name) => !supplierMap.has(name.toLowerCase())
-      );
+      // Identify truly missing suppliers
+      const suppliersToCreate = new Set<string>();
+
+      rawSupplierNames.forEach((rawName) => {
+        const normalized = normalizeSupplierName(rawName);
+        if (!supplierMap.has(normalized)) {
+          suppliersToCreate.add(rawName); // Use the raw name for creation (looks better)
+        }
+      });
 
       // Create missing suppliers
-      if (missingSupplierNames.length > 0) {
-        await prisma.supplier.createMany({
-          data: missingSupplierNames.map((name) => ({
-            name,
-            storeId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          })),
-          skipDuplicates: true,
-        });
+      if (suppliersToCreate.size > 0) {
+        // We create them one by one or createMany, but createMany doesn't return IDs easily in all DBs.
+        // Let's use loop for safety to get IDs and map them immediately
+        // (Performance trade-off acceptable for <50 new suppliers)
+        for (const newName of Array.from(suppliersToCreate)) {
+           // Double check to avoid race condition if duplicates in list had diff casing
+           const norm = normalizeSupplierName(newName);
+           if(supplierMap.has(norm)) continue;
 
-        // Fetch newly created suppliers to get their IDs
-        const newSuppliers = await prisma.supplier.findMany({
-          where: {
-            storeId,
-            name: { in: missingSupplierNames, mode: "insensitive" },
-          },
-          select: { id: true, name: true },
-        });
-
-        newSuppliers.forEach((s) => supplierMap.set(s.name.toLowerCase(), s.id));
+           const created = await prisma.supplier.create({
+             data: {
+               name: newName.trim(),
+               storeId,
+               createdAt: new Date(),
+               updatedAt: new Date(),
+             },
+             select: { id: true }
+           });
+           supplierMap.set(norm, created.id);
+        }
       }
     }
 
@@ -192,7 +270,8 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
       try {
         let supplierId = undefined;
         if (item.supplierName && typeof item.supplierName === "string") {
-          supplierId = supplierMap.get(item.supplierName.trim().toLowerCase());
+          // Use normalized lookup
+          supplierId = supplierMap.get(normalizeSupplierName(item.supplierName));
         }
 
         // Prepare supplier relation data if supplier exists
@@ -200,7 +279,7 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
           ? {
               create: {
                 supplierId,
-                price: Number(item.supplierPrice) || Number(item.unitCost) || 0,
+                price: parseGlobalNumber(item.supplierPrice) || parseGlobalNumber(item.unitCost) || 0,
                 isPreferred: true,
               },
             }
@@ -216,10 +295,10 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
             description: item.description || undefined,
             category: item.category || undefined,
             unit: item.unit || "kg",
-            unitCost: Number(item.unitCost) || 0,
-            currentStock: Number(item.currentStock) || 0,
-            minStock: Number(item.minStock) || 0,
-            maxStock: item.maxStock ? Number(item.maxStock) : undefined,
+            unitCost: parseGlobalNumber(item.unitCost) || 0,
+            currentStock: parseGlobalNumber(item.currentStock) || 0,
+            minStock: parseGlobalNumber(item.minStock) || 0,
+            maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             // Create relation to supplier
@@ -272,39 +351,85 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
       };
     }
 
-    const cleanedData = validData.map((item) => ({
-      storeId: item.storeId,
-      sku: item.sku || undefined,
-      name: String(item.name).trim(),
-      description: item.description || undefined,
-      category: item.category || undefined,
-      unit: item.unit || "pcs",
-      costPrice: Number(item.costPrice) || 0,
-      sellingPrice: Number(item.sellingPrice) || 0,
-      currentStock: Number(item.currentStock) || 0,
-      minStock: Number(item.minStock) || 0,
-      maxStock: item.maxStock ? Number(item.maxStock) : undefined,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    }));
+    let successCount = 0;
+    const errors: Array<{ index: number; message: string }> = [];
 
-    const result = await prisma.product.createMany({
-      data: cleanedData,
-      skipDuplicates: true,
-    });
+    // Process one by one to handle Updates (Upsert logic) and precise error reporting
+    for (let i = 0; i < validData.length; i++) {
+        const item = validData[i];
+        try {
+            const name = String(item.name).trim();
+            const sku = item.sku || undefined;
+
+            // Check for existing product by Name (primary match) or SKU (secondary)
+            // We verify storeId and Insensitive Name match
+            let existingProduct = await prisma.product.findFirst({
+                where: {
+                    storeId,
+                    name: { equals: name, mode: "insensitive" }
+                },
+                select: { id: true }
+            });
+
+            // If not found by name, try finding by SKU if provided
+            if (!existingProduct && sku) {
+                existingProduct = await prisma.product.findFirst({
+                    where: { storeId, sku },
+                    select: { id: true }
+                });
+            }
+
+            const productData = {
+                name,
+                sku,
+                description: item.description || undefined,
+                category: item.category || undefined,
+                unit: item.unit || "pcs",
+                costPrice: parseGlobalNumber(item.costPrice) || 0,
+                sellingPrice: parseGlobalNumber(item.sellingPrice) || 0,
+                currentStock: parseGlobalNumber(item.currentStock) || 0,
+                minStock: parseGlobalNumber(item.minStock) || 0,
+                maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
+                updatedAt: new Date(), // Always update timestamp
+            };
+
+            if (existingProduct) {
+                // UPDATE existing product
+                await prisma.product.update({
+                    where: { id: existingProduct.id },
+                    data: productData
+                });
+            } else {
+                // CREATE new product
+                await prisma.product.create({
+                    data: {
+                        ...productData,
+                        storeId,
+                        createdAt: item.createdAt || new Date(),
+                    }
+                });
+            }
+
+            successCount++;
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : "Unknown error";
+            errors.push({ index: i + 1, message: msg.slice(0, 100) });
+            console.error(`Product import error at row ${i+1}:`, error);
+        }
+    }
 
     return {
-      success: true,
-      count: result.count,
+      success: successCount > 0,
+      count: successCount,
       details: {
         attempted: data.length,
-        succeeded: result.count,
-        failed: data.length - result.count,
-        errors: [],
+        succeeded: successCount,
+        failed: data.length - successCount,
+        errors: errors.slice(0, 10),
       },
     };
   } catch (error) {
-    console.error("Product import error:", error);
+    console.error("Product import fatal error:", error);
     return {
       success: false,
       error: `Product import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -369,21 +494,48 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
 /**
  * Import recipes - uses individual creates for better error handling
  * since recipes may have complex validation
+ *
+ * GROUPING LOGIC:
+ * - Same name + same yield = 1 Recipe (merge ingredients)
+ * - Same name + different yield = 2 separate Recipes
+ * - Multi-row format: continuation rows have empty yieldQuantity, inherit from first row
  */
 async function importRecipes(data: any[], storeId: string): Promise<ImportResult> {
   const errors: Array<{ index: number; message: string }> = [];
   let successCount = 0;
 
-  // 1. Group by Recipe Name to handle multi-row ingredients
+  // 1. Group by Recipe Name + YieldQuantity to handle multi-row ingredients
+  // Key format: "RecipeName|YieldQty" (e.g., "Roti Tawar|60" vs "Roti Tawar|30")
   const groups: Record<string, any[]> = {};
+  let lastGroupKey: string | null = null;
+
   data.forEach((item, index) => {
     const name = item.name ? String(item.name).trim() : null;
     if (!name) {
       errors.push({ index: index + 1, message: "Missing recipe name" });
       return;
     }
-    if (!groups[name]) groups[name] = [];
-    groups[name].push({ ...item, originalIndex: index + 1 });
+
+    // Get yield quantity - if empty, this might be a continuation row
+    const yieldQty = parseGlobalNumber(item.yieldQuantity);
+
+    // Build group key: name + yield (or inherit from previous if continuation row)
+    let groupKey: string;
+    if (yieldQty && yieldQty > 0) {
+      // This row has explicit yield - it's either a new recipe or main row
+      groupKey = `${name}|${yieldQty}`;
+      lastGroupKey = groupKey;
+    } else if (lastGroupKey && lastGroupKey.startsWith(`${name}|`)) {
+      // Continuation row (same name, no yield) - use last group
+      groupKey = lastGroupKey;
+    } else {
+      // New recipe without yield specified - use name only
+      groupKey = `${name}|0`;
+      lastGroupKey = groupKey;
+    }
+
+    if (!groups[groupKey]) groups[groupKey] = [];
+    groups[groupKey].push({ ...item, originalIndex: index + 1 });
   });
 
   const recipeNames = Object.keys(groups);
@@ -446,15 +598,15 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
                 sku:
                   row.ingredient_sku ||
                   `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-                unitCost: Number(row.ingredient_price) || 0,
-                currentStock: Number(row.ingredient_stock) || 0,
+                unitCost: parseGlobalNumber(row.ingredient_price) || 0,
+                currentStock: parseGlobalNumber(row.ingredient_stock) || 0,
                 category: "Imported",
                 // Link supplier if found/created
                 materialSuppliers: supplierId
                   ? {
                       create: {
                         supplierId,
-                        price: Number(row.ingredient_price) || 0,
+                        price: parseGlobalNumber(row.ingredient_price) || 0,
                         isPreferred: true,
                       },
                     }
@@ -469,7 +621,7 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
           if (!ingredientsToCreate.some((i) => i.materialId === material!.id)) {
             ingredientsToCreate.push({
               materialId: material.id,
-              quantity: Number(row.ingredient_qty) || Number(row.ingredientQuantity) || 1,
+              quantity: parseGlobalNumber(row.ingredient_qty) || parseGlobalNumber(row.ingredientQuantity) || 1,
               unit: row.ingredient_unit || row.ingredientUnit || "kg",
             });
           }
@@ -492,11 +644,11 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
           name,
           description: mainRow.description || null,
           category: mainRow.category || null,
-          yieldQuantity: Number(mainRow.yieldQuantity) || 1,
+          yieldQuantity: parseGlobalNumber(mainRow.yieldQuantity) || 1,
           yieldUnit: mainRow.yieldUnit || "batch",
-          productionTimeMinutes: Number(mainRow.productionTimeMinutes) || 0,
+          productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
           instructions: instructions || null,
-          costPerBatch: Number(mainRow.costPerBatch) || 0,
+          costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
           createdAt: mainRow.createdAt || new Date(),
           updatedAt: mainRow.updatedAt || new Date(),
           ingredients:
@@ -552,7 +704,9 @@ interface MultiEntityImportResult {
 
 /**
  * Detect which entity type a row best matches based on filled fields.
- * Priority: Recipe > Material > Product > Supplier (most specific first)
+ * Priority:
+ * 1. Check 'category' column for explicit hints (e.g., "Suppliers", "Materials", "Recipes", "Products")
+ * 2. Check unique fields: Recipe > Material > Product > Supplier (most specific first)
  * Uses centralized field definitions from import-schema.ts (DRY principle)
  */
 function detectEntityType(
@@ -561,7 +715,14 @@ function detectEntityType(
   const hasValue = (field: string) =>
     row[field] !== undefined && row[field] !== "" && row[field] !== null;
 
-  // Check in order of specificity (most specific first)
+  // 1. First check 'category' column for explicit entity type hints
+  const category = String(row.category || "").toLowerCase().trim();
+  if (category.includes("supplier") || category === "suppliers") return "supplier";
+  if (category.includes("material") || category === "materials") return "material";
+  if (category.includes("recipe") || category === "recipes") return "recipe";
+  if (category.includes("product") || category === "products") return "product";
+
+  // 2. Fallback: Check in order of specificity (most specific first)
   if (ENTITY_UNIQUE_FIELDS.recipe.some(hasValue)) return "recipe";
   if (ENTITY_UNIQUE_FIELDS.material.some(hasValue)) return "material";
   if (ENTITY_UNIQUE_FIELDS.product.some(hasValue)) return "product";
@@ -660,6 +821,15 @@ export async function bulkImportMultiEntity(
 
     // 5. Import in dependency order
     const summary = { ...defaultSummary };
+
+    // Debug: Log grouped counts
+    console.log("[Smart Import] Entity grouping:", {
+      suppliers: grouped.supplier.length,
+      materials: grouped.material.length,
+      recipes: grouped.recipe.length,
+      products: grouped.product.length,
+      productRows: grouped.product.map((p) => ({ name: p.name, category: p.category })),
+    });
 
     // 5a. Suppliers first (no dependencies)
     if (grouped.supplier.length > 0) {
