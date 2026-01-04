@@ -19,27 +19,6 @@ import { dashboardNavigation, type NavSection } from "@/config/navigation.config
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { StoreSwitcher } from "./store-switcher";
 
-/**
- * Get badge count for a navigation item
- *
- * Uses deferred loading: Alerts count is loaded lazily to avoid blocking initial render.
- *
- * @param {string} [badgeKey] - Key identifying which badge count to retrieve
- * @returns {number | null} Badge count or null if no badge key provided
- */
-function useBadgeCount(badgeKey?: string): number | null {
-  // Only load alerts count if badgeKey is "alerts" (lazy loading)
-  const alertsCount = badgeKey === "alerts" ? useAlertsCount() : 0;
-
-  if (!badgeKey) return null;
-
-  const badgeCounts: Record<string, number> = {
-    alerts: alertsCount,
-  };
-
-  return badgeCounts[badgeKey] ?? null;
-}
-
 interface SidebarProps {
   mode?: "desktop" | "mobile";
   navigation?: NavSection[];
@@ -60,6 +39,20 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
   const pathname = usePathname();
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
+
+  // ✅ Call useAlertsCount unconditionally at the top level (Rules of Hooks)
+  const alertsCount = useAlertsCount();
+
+  // Helper function to get badge count for a navigation item
+  const getBadgeCount = (badgeKey?: string): number | null => {
+    if (!badgeKey) return null;
+
+    const badgeCounts: Record<string, number> = {
+      alerts: alertsCount,
+    };
+
+    return badgeCounts[badgeKey] ?? null;
+  };
 
   return (
     <aside
@@ -96,7 +89,7 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                   const active = pathname === fullHref;
                   const label = t(item.labelKey);
                   const Icon = item.icon;
-                  const badge = useBadgeCount(item.badgeKey);
+                  const badge = getBadgeCount(item.badgeKey);
 
                   return (
                     <li key={item.href}>
@@ -104,25 +97,25 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                         href={fullHref}
                         prefetch={true}
                         className={cn(
-                          "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition",
+                          "group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition",
                           active
                             ? "bg-muted/60 text-foreground shadow-inner"
                             : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                         )}
                         aria-current={active ? "page" : undefined}
                       >
-                        <Icon className="size-4" aria-hidden />
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-3">
+                          <Icon className="size-4" aria-hidden />
                           {label}
-                          {badge !== null && badge > 0 && (
-                            <span
-                              className="text-muted-foreground text-xs font-medium"
-                              aria-label={`${badge} ${item.badgeKey}`}
-                            >
-                              ({badge})
-                            </span>
-                          )}
                         </span>
+                        {badge !== null && badge > 0 && (
+                          <span
+                            className="flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-semibold text-white shadow-sm animate-in fade-in"
+                            aria-label={`${badge} ${item.badgeKey}`}
+                          >
+                            {badge > 99 ? "99+" : badge}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   );
@@ -153,3 +146,4 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
     </aside>
   );
 }
+
