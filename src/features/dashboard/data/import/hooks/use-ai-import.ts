@@ -79,6 +79,7 @@ export const aiImportKeys = {
 
 /**
  * Hook to analyze CSV with AI
+ * Sends actual file as FormData (ChatGPT-style attachment)
  */
 export function useAnalyzeImport() {
   const queryClient = useQueryClient();
@@ -86,14 +87,22 @@ export function useAnalyzeImport() {
   return useMutation({
     mutationFn: async (params: {
       storeId: string;
-      csvContent: string;
+      file: File; // Changed from csvContent: string
       entityType?: "material" | "product" | "supplier" | "recipe";
-      fileName?: string;
     }): Promise<AnalyzeResponse> => {
+      // Create FormData to send file as binary attachment
+      const formData = new FormData();
+      formData.append("file", params.file);
+      formData.append("storeId", params.storeId);
+      formData.append("fileName", params.file.name);
+      if (params.entityType) {
+        formData.append("entityType", params.entityType);
+      }
+
       const response = await fetch("/api/ai/import/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
+        // Note: Do NOT set Content-Type header, browser sets it automatically with boundary
+        body: formData,
       });
 
       if (!response.ok) {
@@ -152,15 +161,15 @@ export function useExecuteImport() {
     onSuccess: async (_, variables) => {
       const { storeId } = variables;
 
-      // Invalidate entity data with specific store keys for reliability
-      // refetchType: "all" forces background refresh even for inactive tabs (like Products)
-      // preventing the "stale data on tab switch" issue caused by refetchOnMount: false
+      // Force immediate refetch of all entity queries after import
+      // Using refetchQueries instead of invalidateQueries to ensure data appears immediately
+      // (invalidateQueries only marks as stale, but may not trigger refetch if refetchOnMount: false)
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["materials", storeId], refetchType: "all" }),
-        queryClient.invalidateQueries({ queryKey: ["products", storeId], refetchType: "all" }),
-        queryClient.invalidateQueries({ queryKey: ["suppliers", storeId], refetchType: "all" }),
-        queryClient.invalidateQueries({ queryKey: ["recipes", storeId], refetchType: "all" }),
-        // Invalidate sessions
+        queryClient.refetchQueries({ queryKey: ["materials", storeId] }),
+        queryClient.refetchQueries({ queryKey: ["products", storeId] }),
+        queryClient.refetchQueries({ queryKey: ["suppliers", storeId] }),
+        queryClient.refetchQueries({ queryKey: ["recipes", storeId] }),
+        // Invalidate sessions (these don't need immediate refetch)
         queryClient.invalidateQueries({ queryKey: aiImportKeys.sessions(storeId) }),
       ]);
     },

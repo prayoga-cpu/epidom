@@ -6,23 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useAlerts, type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
-import { AlertCircle, Loader2, ShoppingCart, Package2 } from "lucide-react";
-import { useParams } from "next/navigation";
+import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { AlertCircle, ShoppingCart, Package2 } from "lucide-react";
 import { BulkOrderDialog } from "./bulk-order-dialog";
 import { formatDate } from "@/lib/utils/format-date";
 
 interface AlertsTableProps {
+  alerts: Alert[];
   onViewDetails?: (alert: Alert) => void;
   onCreateOrder: (alert: Alert) => void;
 }
 
-export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) {
+export function AlertsTable({ alerts, onViewDetails, onCreateOrder }: AlertsTableProps) {
   const { t } = useI18n();
-  const params = useParams();
-  const storeId = params?.storeId as string;
-
-  const { data, isLoading, error } = useAlerts(storeId);
 
   // Bulk order dialog state
   const [isBulkOrderOpen, setIsBulkOrderOpen] = useState(false);
@@ -42,12 +38,12 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
 
   // Group alerts by supplier
   const alertsBySupplier = useMemo(() => {
-    if (!data?.alerts) return [];
+    if (!alerts || alerts.length === 0) return [];
 
     const grouped = new Map<string, Array<Alert>>();
     const noSupplierAlerts: Alert[] = [];
 
-    data.alerts.forEach((alert) => {
+    alerts.forEach((alert) => {
       // Check if alert has suppliers
       if (!alert.suppliers || alert.suppliers.length === 0) {
         noSupplierAlerts.push(alert);
@@ -94,32 +90,9 @@ export function AlertsTable({ onViewDetails, onCreateOrder }: AlertsTableProps) 
     }
 
     return result;
-  }, [data, t]);
+  }, [alerts, t]);
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center">
-        <Loader2 className="text-muted-foreground mb-4 h-8 w-8 animate-spin" />
-        <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
-      </div>
-    );
-  }
 
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-destructive/10 mb-4 rounded-full p-3">
-            <AlertCircle className="text-destructive h-6 w-6" />
-          </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
-          <p className="text-muted-foreground text-sm">
-            {error.message || t("alerts.errorLoading")}
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   if (alertsBySupplier.length === 0) {
     return (

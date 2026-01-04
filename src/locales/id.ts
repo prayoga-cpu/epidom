@@ -154,6 +154,157 @@ export const id = {
       tracking: "Pelacakan",
     },
   },
+  home: {
+    hero: {
+      badge: "🚀 Sekarang tersedia untuk Cookie Bars",
+      headlinePart1: "Rahasia dari",
+      headlineHighlight: "Cookie Bars",
+      headlinePart2: "Manajemen Inventaris",
+      headline: "Rahasia Manajemen Inventaris Cookie Bars",
+      description:
+        "Lacak stok cookie Anda di ponsel, kelola di mana saja secara real-time, & restock otomatis dalam hitungan detik",
+      ctaStartFree: "Mulai gratis",
+      ctaDemo: "Demo 1 on 1",
+      mockupTitle: "Dashboard Cookie Bar",
+      mockupSubtitle: "Tampilan Seluler & Desktop",
+      mockupUrl: "epidom.fr/dashboard",
+      notificationTitle: "Stok Diperbarui",
+      notificationDetail: "Tepung: +50 kg",
+      statsValue: "98%",
+      statsLabel: "Limbah Berkurang",
+      socialProofMini: "Dicintai oleh 500+ cookie bars di Prancis",
+    },
+    socialProof: {
+      trustedBy: "Dipercaya oleh Cookie Bars Seluruh Dunia",
+      yourBrand: "Cookie Bar Anda Di Sini",
+      instagramTitle: "Berikan Kami Masukan",
+      instagramSubtitle: "Lihat apa kata pelanggan kami di Instagram",
+      testimonial1: "Epidom mengubah cara kami mengelola inventaris cookie. Tidak ada lagi limbah!",
+      author1: "Marie Dubois",
+      role1: "Pemilik, Sweet Délices Paris",
+      testimonial2: "Pelacakan real-time berarti saya selalu tahu stok apa yang tersedia. Perubahan besar!",
+      author2: "Jean-Pierre Martin",
+      role2: "Manajer, Le Cookie Shop",
+      testimonial3: "Peringatan kedaluwarsa menyelamatkan kami ribuan dalam bahan baku.",
+      author3: "Sophie Laurent",
+      role3: "Chef, Pâtisserie Belle",
+    },
+    howToUse: {
+      headline: "Buat, Lacak, Peringatan",
+      description:
+        "Kami populer dalam membantu manajemen cookie bar yang kewalahan dengan peringatan kedaluwarsa cerdas, khususnya di Prancis 🇫🇷.",
+      aiGenerated: "Konten Generatif Sistem: Profil, Dasbor, Manajemen, Pelacakan, Data, Peringatan.",
+      features: {
+        profile: {
+          title: "Profil",
+          description: "Kelola profil bisnis dan anggota tim Anda dengan mudah",
+        },
+        dashboard: {
+          title: "Dasbor",
+          description: "Dapatkan tinjauan real-time inventaris dan operasi Anda",
+        },
+        management: {
+          title: "Manajemen",
+          description: "Atur resep, produk, dan pemasok secara efisien",
+        },
+        tracking: {
+          title: "Pelacakan",
+          description: "Pantau tingkat stok dan pergerakan secara real-time",
+        },
+        data: {
+          title: "Data",
+          description: "Akses laporan dan analitik terperinci untuk keputusan yang lebih baik",
+        },
+        alerts: {
+          title: "Peringatan",
+          description: "Jangan pernah melewatkan tingkat stok kritis atau tanggal kedaluwarsa",
+        },
+      },
+    },
+    pricing: {
+      headline: "Harga Sederhana & Transparan",
+      subheadline: "Pilih paket yang sesuai dengan kebutuhan cookie bar Anda",
+      ribbon: "Penawaran Khusus Tahun Baru 2026",
+      mostPopular: "Paling Populer",
+      cta: "Mulai Sekarang",
+      note: "Semua paket termasuk dukungan 24/7 dan pembaruan rutin",
+      free: {
+        name: "Hanya Tahun Baru 2026",
+        features: {
+          freeTrial: "Sebelum 31 Desember, gratis",
+          limitedTime: "Anda hanya perlu Masuk",
+          creditCard: "Lalu hubungkan kartu kredit Anda",
+          fullAccess: "Akses penuh ke semua fitur",
+        },
+      },
+      pro: {
+        name: "Paling Populer",
+        features: {
+          multiStore: "Anda bisa memiliki lebih dari 1 toko",
+          unlimited: "dalam satu dashboard",
+          advanced: "Analitik dan laporan lanjutan",
+          priority: "Dukungan email prioritas",
+          whatsapp: "Saluran dukungan WhatsApp",
+        },
+      },
+      custom: {
+        name: "Inventaris Premium",
+        cta: "Hubungi Penjualan",
+        features: {
+          franchise: "Hanya untuk waralaba atau permintaan besar",
+          dedicated: "Manajer akun dedikasi",
+          custom: "Integrasi dan fitur kustom",
+          onboarding: "Onboarding dan pelatihan personal",
+        },
+      },
+    },
+    painGain: {
+      headline: "Hentikan Pemborosan Makanan & Kerugian Uang",
+      description:
+        "Bandingkan bagaimana Epidom mengubah operasi tradisional Anda menjadi metode modern yang efisien.",
+      oldWay: {
+        title: "Cara Lama",
+        subtitle: "Metode Tradisional",
+        items: {
+          manualSpreadsheets: "Berjam-jam dihabiskan untuk spreadsheet manual",
+          foodWaste: "Pemborosan makanan dan pembusukan konstan",
+          guessingOrders: "Menebak jumlah pesanan",
+          unclearCosts: "Biaya makanan dan margin tidak jelas",
+        },
+      },
+      epidomWay: {
+        title: "Cara Epidom",
+        subtitle: "Solusi Cerdas",
+        items: {
+          realtimeTracking: "Pelacakan inventaris real-time",
+          smartAlerts: "Peringatan kedaluwarsa cerdas & pengurangan limbah",
+          dataDriven: "Keputusan pembelian berbasis data",
+          preciseCosts: "Perhitungan biaya presisi per hidangan",
+        },
+      },
+    },
+    closingCta: {
+      badge: "Mulai perjalanan Anda hari ini",
+      headline: "Siap Meningkatkan Cookie Bar Anda?",
+      description: "Bergabunglah dengan cara internasional manajemen stok bersama kami",
+      ctaStartFree: "Mulai gratis",
+      ctaDemo: "Demo 1 on 1",
+      badges: {
+        secure: {
+          title: "Aman & Pribadi",
+          description: "Data Anda dienkripsi dan dilindungi",
+        },
+        cancel: {
+          title: "Batalkan Kapan Saja",
+          description: "Tidak ada komitmen jangka panjang",
+        },
+        quick: {
+          title: "Pengaturan Cepat",
+          description: "Mulai dalam waktu kurang dari 5 menit",
+        },
+      },
+    },
+  },
   hero: {
     title: "EPIDOM",
     subtitle: "Solusi untuk manajemen persediaan makanan Anda",
@@ -1147,7 +1298,7 @@ export const id = {
       sections: {
         basicInfo: "Informasi Dasar",
         ingredients: "Bahan",
-        instructions: "Instruksi",
+        notifications: "Notifikasi",
       },
 
       // Form fields
@@ -1721,7 +1872,9 @@ export const id = {
   alerts: {
     // Page titles
     title: "Peringatan Stok",
+    description: "Pantau tingkat stok rendah dan ambil tindakan untuk mencegah kehabisan stok",
     ordersToPlace: "Pesanan yang Perlu Dibuat",
+    ordersToPlaceDescription: "Hubungi pemasok untuk mengisi ulang barang dengan stok rendah",
     ordersDescription: "Hubungi pemasok untuk mengisi ulang barang dengan stok rendah",
 
     // Alert states
@@ -3133,5 +3286,76 @@ export const id = {
     backToHome: "Kembali ke Beranda",
     helpText: "Jika Anda yakin ini adalah kesalahan, silakan",
     contactSupport: "hubungi dukungan",
+  },
+  import: {
+    title: "Impor Cerdas",
+    subtitle: "Impor CSV cerdas dengan pemetaan bidang pintar",
+    steps: {
+      upload: "Upload",
+      analysis: "Analisis",
+      preview: "Pratinjau",
+      done: "Selesai",
+    },
+    upload: {
+      label: "Saya mengimpor:",
+      dropZone: "Seret & lepas file CSV Anda di sini",
+      browse: "atau klik untuk menelusuri",
+      supports: "Mendukung file .csv hingga 10MB • Bahasa apa pun • Format apa pun",
+      processing: "Memproses...",
+      analyzing: "Sistem sedang menganalisis file Anda",
+      dropToUpload: "Lepas file di sini",
+      error: "Mohon unggah file CSV",
+      errorSize: "File terlalu besar. Maksimal 10MB",
+      entities: {
+        auto: "Deteksi Otomatis (Disarankan)",
+        material: "Bahan Baku (Materials)",
+        product: "Produk Jual (Products)",
+        supplier: "Pemasok (Suppliers)",
+        recipe: "Resep (Recipes)",
+      },
+    },
+    analysis: {
+      title: "Menganalisis file Anda",
+      description: "Kami sedang memproses data untuk memahami struktur dan formatnya. Ini biasanya memakan waktu 5-15 detik.",
+      stages: {
+        language: "Mendeteksi bahasa & format",
+        structure: "Menganalisis struktur",
+        mapping: "Memetakan kolom ke bidang",
+        healing: "Memperbaiki masalah data",
+        validation: "Memvalidasi data",
+      },
+      analyzing: "Menganalisis struktur file...",
+      identifying: "Mengidentifikasi kolom...",
+      mapping: "Memetakan bidang data...",
+      success: "Analisis selesai!",
+      error: "Analisis gagal. Silakan coba lagi.",
+    },
+    preview: {
+      title: "Tinjau Data",
+      subtitle: "Tinjau dan edit data sebelum mengimpor",
+      importAll: "Impor Semua",
+      cancel: "Batal",
+      itemsReady: "{count} item siap diimpor",
+      startOver: "Mulai Ulang",
+      columns: {
+        status: "Status",
+        original: "Asli",
+        mapped: "Dipetakan",
+      },
+      tabs: {
+        materials: "Bahan Baku",
+        products: "Produk",
+        suppliers: "Pemasok",
+        recipes: "Resep",
+      },
+    },
+    results: {
+      success: "Impor Berhasil",
+      partialSuccess: "Impor Sebagian Berhasil",
+      failure: "Impor Gagal",
+      summary: "Berhasil mengimpor {succeeded} dari {total} item.",
+      close: "Tutup",
+      viewData: "Lihat Data",
+    },
   },
 };

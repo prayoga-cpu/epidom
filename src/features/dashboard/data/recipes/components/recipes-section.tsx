@@ -13,6 +13,7 @@ import EditRecipeDialog from "./edit-recipe-dialog";
 import DuplicateRecipeDialog from "./duplicate-recipe-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AddRecipeDialog } from "./add-recipe-dialog";
+import { SmartImportDialog } from "../../import";
 import {
   ArrowUpDown,
   Eye,
@@ -25,6 +26,7 @@ import {
   Plus,
   Loader2,
   X,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDuration } from "@/lib/utils/formatting";
@@ -107,6 +109,9 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   // Duplicate dialog is not part of useDialogState, handle separately
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+
+  // Smart Import dialog state
+  const [smartImportOpen, setSmartImportOpen] = useState(false);
 
   // Debounce search input to reduce API calls (300ms delay)
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -300,6 +305,17 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                   </TooltipContent>
                 )}
               </Tooltip>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSmartImportOpen(true)}
+                className="w-full md:w-auto"
+              >
+                <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
+                {t("import.title")}
+              </Button>
+
               <AddRecipeDialog
                 trigger={
                   <Button size="sm" className="w-full md:w-auto">
@@ -646,6 +662,13 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
         onConfirm={handleBulkDelete}
         variant="destructive"
         loading={bulkDeleteRecipes.isPending}
+      />
+
+      {/* Smart Import Dialog */}
+      <SmartImportDialog
+        open={smartImportOpen}
+        onOpenChange={setSmartImportOpen}
+        storeId={storeId}
       />
     </>
   );

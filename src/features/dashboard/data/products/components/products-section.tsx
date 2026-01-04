@@ -21,6 +21,7 @@ import { ProductDetailsDialog } from "./product-details-dialog";
 import { EditProductDialog } from "./edit-product-dialog";
 import { AddProductDialog } from "./add-product-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { SmartImportDialog } from "../../import";
 import {
   Search,
   ArrowUpDown,
@@ -35,6 +36,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils/formatting";
@@ -54,6 +56,7 @@ import {
   BaseItemCard,
   SectionErrorState,
   SectionLoadingState,
+  SKUDisplay,
 } from "../../components";
 import { ProductsCardGridSkeleton } from "./products-skeleton";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
@@ -81,6 +84,9 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     skip: 0,
     take: 20,
   });
+
+  // Smart Import dialog state
+  const [smartImportOpen, setSmartImportOpen] = useState(false);
 
   // Debounce search input to reduce API calls (300ms delay)
   const debouncedSearch = useDebounce(filters.search, 300);
@@ -307,6 +313,16 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                 )}
               </Tooltip>
 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSmartImportOpen(true)}
+                className="w-full md:w-auto"
+              >
+                <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
+                {t("import.title")}
+              </Button>
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
@@ -461,9 +477,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                   <div className="mb-2 flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="text-sm leading-tight font-semibold">{product.name}</h3>
-                      {product.sku && (
-                        <p className="text-muted-foreground text-xs">SKU: {product.sku}</p>
-                      )}
+                      {product.sku && <SKUDisplay sku={product.sku} />}
                     </div>
 
                     {/* Stock Status Badge */}
@@ -705,6 +719,12 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
         onConfirm={handleBulkDelete}
         variant="destructive"
         loading={bulkDeleteProducts.isPending}
+      />
+      {/* Smart Import Dialog */}
+      <SmartImportDialog
+        open={smartImportOpen}
+        onOpenChange={setSmartImportOpen}
+        storeId={storeId}
       />
     </>
   );

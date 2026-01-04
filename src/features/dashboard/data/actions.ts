@@ -442,6 +442,9 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
  */
 async function importSuppliers(data: any[], storeId: string): Promise<ImportResult> {
   try {
+    // Debug: Log raw data received
+    console.log("[importSuppliers] Raw data received:", JSON.stringify(data, null, 2));
+
     const validData = data.filter(
       (item) => item.name && typeof item.name === "string" && item.name.trim()
     );
@@ -453,19 +456,24 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
       };
     }
 
-    const cleanedData = validData.map((item) => ({
-      storeId: item.storeId,
-      name: String(item.name).trim(),
-      contactPerson: item.contactPerson || undefined,
-      email: item.email || undefined,
-      phone: item.phone || undefined,
-      address: item.address || undefined,
-      city: item.city || undefined,
-      country: item.country || undefined,
-      notes: item.notes || undefined,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    }));
+    const cleanedData = validData.map((item) => {
+      const cleaned = {
+        storeId: item.storeId,
+        name: String(item.name).trim(),
+        contactPerson: item.contactPerson || undefined,
+        email: item.email || undefined,
+        phone: item.phone || undefined,
+        address: item.address || undefined,
+        city: item.city || undefined,
+        country: item.country || undefined,
+        notes: item.notes || undefined,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      };
+      // Debug: Log cleaned data
+      console.log("[importSuppliers] Cleaned supplier:", cleaned);
+      return cleaned;
+    });
 
     const result = await prisma.supplier.createMany({
       data: cleanedData,
@@ -507,48 +515,76 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
   // 1. Group by Recipe Name + YieldQuantity to handle multi-row ingredients
   // Key format: "RecipeName|YieldQty" (e.g., "Roti Tawar|60" vs "Roti Tawar|30")
   const groups: Record<string, any[]> = {};
+  const nameCounts: Record<string, number> = {}; // Track frequency of each base name
   let lastGroupKey: string | null = null;
 
   data.forEach((item, index) => {
     const name = item.name ? String(item.name).trim() : null;
-    if (!name) {
-      errors.push({ index: index + 1, message: "Missing recipe name" });
-      return;
-    }
+    // Continuation rows might not have name, so we rely on lastGroupKey logic generally,
+    // but for counting we need the base name.
 
     // Get yield quantity - if empty, this might be a continuation row
     const yieldQty = parseGlobalNumber(item.yieldQuantity);
 
     // Build group key: name + yield (or inherit from previous if continuation row)
     let groupKey: string;
-    if (yieldQty && yieldQty > 0) {
-      // This row has explicit yield - it's either a new recipe or main row
+
+    if (name && yieldQty && yieldQty > 0) {
+      // New recipe or main row
       groupKey = `${name}|${yieldQty}`;
       lastGroupKey = groupKey;
-    } else if (lastGroupKey && lastGroupKey.startsWith(`${name}|`)) {
-      // Continuation row (same name, no yield) - use last group
+
+      // Count this unique variant if not already counted
+      if (!groups[groupKey]) {
+         nameCounts[name] = (nameCounts[name] || 0) + 1;
+      }
+    } else if (lastGroupKey) {
+      // Continuation row
       groupKey = lastGroupKey;
-    } else {
-      // New recipe without yield specified - use name only
+    } else if (name) {
+      // New recipe without yield specified (default 0)
       groupKey = `${name}|0`;
       lastGroupKey = groupKey;
+      if (!groups[groupKey]) {
+         nameCounts[name] = (nameCounts[name] || 0) + 1;
+      }
+    } else {
+       errors.push({ index: index + 1, message: "Skipping invalid row (no name/yield)" });
+       return;
     }
 
     if (!groups[groupKey]) groups[groupKey] = [];
     groups[groupKey].push({ ...item, originalIndex: index + 1 });
   });
 
-  const recipeNames = Object.keys(groups);
+  const groupKeys = Object.keys(groups);
 
-  for (const name of recipeNames) {
-    const rows = groups[name];
-    const mainRow = rows[0]; // Use first row for main recipe data
+  for (const key of groupKeys) {
+    const rows = groups[key];
+    const mainRow = rows[0];
+
+    // Recover original name from the key or the row
+    // Key format is "Name|Yield", so split it
+    const lastPipeIndex = key.lastIndexOf("|");
+    const baseName = key.substring(0, lastPipeIndex);
+    const yieldQtyFromKey = key.substring(lastPipeIndex + 1);
 
     try {
+      // SMART SUFFIX LOGIC:
+      // If this name appears in multiple variants (count > 1), we append suffix.
+      // Else we use the clean base name.
+      let finalName = baseName;
+      const yieldQuantity = parseGlobalNumber(mainRow.yieldQuantity) || parseGlobalNumber(yieldQtyFromKey) || 1;
+      const yieldUnit = mainRow.yieldUnit || "unit";
+
+      if (nameCounts[baseName] > 1) {
+         finalName = `${baseName} (${yieldQuantity} ${yieldUnit})`;
+      }
+
       // Prepare Ingredients
       const ingredientsToCreate: any[] = [];
 
-      // Process ingredients from all rows in this group
+      // ... (ingredient processing logic remains same) ...
       for (const row of rows) {
         const ingName = row.ingredient_name || row.ingredientName;
         if (ingName && typeof ingName === "string" && ingName.trim()) {
@@ -594,14 +630,12 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
                 storeId,
                 name: cleanIngName,
                 unit: row.ingredient_unit || row.ingredientUnit || "kg",
-                // Prefer provided SKU, otherwise generate one
                 sku:
                   row.ingredient_sku ||
                   `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
                 unitCost: parseGlobalNumber(row.ingredient_price) || 0,
                 currentStock: parseGlobalNumber(row.ingredient_stock) || 0,
                 category: "Imported",
-                // Link supplier if found/created
                 materialSuppliers: supplierId
                   ? {
                       create: {
@@ -616,8 +650,6 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
             });
           }
 
-          // Add to ingredients list
-          // Check if this material is already added to this recipe to avoid duplicates
           if (!ingredientsToCreate.some((i) => i.materialId === material!.id)) {
             ingredientsToCreate.push({
               materialId: material.id,
@@ -630,35 +662,62 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
 
       // Format instructions
       let instructions = mainRow.instructions || "";
-      // If we have ingredients_text (bulk text) but no structured ingredients, we append it
-      // Or if we just want to preserve it
       if (mainRow.ingredients_text) {
         instructions = instructions
           ? `${instructions}\n\n--- Imported Ingredients ---\n${mainRow.ingredients_text}`
           : `--- Imported Ingredients ---\n${mainRow.ingredients_text}`;
       }
 
-      await prisma.recipe.create({
-        data: {
-          storeId,
-          name,
-          description: mainRow.description || null,
-          category: mainRow.category || null,
-          yieldQuantity: parseGlobalNumber(mainRow.yieldQuantity) || 1,
-          yieldUnit: mainRow.yieldUnit || "batch",
-          productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
-          instructions: instructions || null,
-          costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
-          createdAt: mainRow.createdAt || new Date(),
-          updatedAt: mainRow.updatedAt || new Date(),
-          ingredients:
-            ingredientsToCreate.length > 0
-              ? {
-                  create: ingredientsToCreate,
-                }
-              : undefined,
-        },
+      // UPSERT LOGIC FOR RECIPE
+      // Check if recipe exists by NAME (Final Name)
+      const existingRecipe = await prisma.recipe.findFirst({
+        where: { storeId, name: { equals: finalName, mode: "insensitive" } },
       });
+
+      if (existingRecipe) {
+        // UPDATE existing recipe
+        await prisma.recipe.update({
+            where: { id: existingRecipe.id },
+            data: {
+                description: mainRow.description || undefined,
+                category: mainRow.category || undefined,
+                yieldQuantity,
+                yieldUnit,
+                productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
+                instructions: instructions || undefined,
+                costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+                updatedAt: new Date(),
+                // For ingredients, simpler to delete all and recreate for accuracy in sync
+                ingredients: {
+                    deleteMany: {},
+                    create: ingredientsToCreate
+                }
+            }
+        });
+      } else {
+        // CREATE new recipe
+        await prisma.recipe.create({
+            data: {
+                storeId,
+                name: finalName,
+                description: mainRow.description || null,
+                category: mainRow.category || null,
+                yieldQuantity,
+                yieldUnit,
+                productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
+                instructions: instructions || null,
+                costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+                createdAt: mainRow.createdAt || new Date(),
+                updatedAt: mainRow.updatedAt || new Date(),
+                ingredients: ingredientsToCreate.length > 0
+                ? {
+                    create: ingredientsToCreate,
+                    }
+                : undefined,
+            },
+        });
+      }
+
       successCount += rows.length;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";

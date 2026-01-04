@@ -26,6 +26,7 @@ import {
   ItemCardGrid,
   BaseItemCard,
   EmptyState,
+  SKUDisplay,
 } from "../../components";
 import { MaterialsCardGridSkeleton } from "./materials-skeleton";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
@@ -375,7 +376,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                 className="w-full md:w-auto"
               >
                 <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
-                Smart Import
+                {t("import.title")}
               </Button>
 
               <AddMaterialDialog
@@ -509,9 +510,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                       <h3 className="w-[85px] truncate text-sm leading-tight font-semibold">
                         {material.name}
                       </h3>
-                      {material.sku && (
-                        <p className="text-muted-foreground text-xs">SKU: {material.sku}</p>
-                      )}
+                      {material.sku && <SKUDisplay sku={material.sku} />}
                     </div>
 
                     {/* Stock Status Badge */}
@@ -686,7 +685,6 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
         open={smartImportOpen}
         onOpenChange={setSmartImportOpen}
         storeId={storeId}
-        defaultEntityType="material"
       />
     </>
   );

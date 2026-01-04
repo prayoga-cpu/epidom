@@ -3,6 +3,7 @@
  *
  * POST /api/ai/import/analyze
  *
+ * Receives file as FormData attachment (ChatGPT-style).
  * Runs the full AI analysis pipeline on uploaded CSV data.
  */
 
@@ -11,14 +12,6 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { runImportPipeline } from "@/lib/ai/import/pipeline";
-import { z } from "zod";
-
-const AnalyzeRequestSchema = z.object({
-  storeId: z.string().cuid(),
-  csvContent: z.string().min(1),
-  entityType: z.enum(["material", "product", "supplier", "recipe"]).optional(),
-  fileName: z.string().optional(),
-});
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,18 +24,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Parse and validate request
-    const body = await request.json();
-    const validation = AnalyzeRequestSchema.safeParse(body);
+    // Parse FormData (file attachment style)
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+    const storeId = formData.get("storeId") as string | null;
+    const fileName = formData.get("fileName") as string | null;
+    const entityType = formData.get("entityType") as "material" | "product" | "supplier" | "recipe" | null;
 
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: "Invalid request", details: validation.error.issues },
-        { status: 400 }
-      );
+    // Validate required fields
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+    if (!storeId) {
+      return NextResponse.json({ error: "Store ID is required" }, { status: 400 });
     }
 
-    const { storeId, csvContent, entityType, fileName } = validation.data;
+    // Read file content as text
+    const csvContent = await file.text();
+
+    if (!csvContent || csvContent.trim().length === 0) {
+      return NextResponse.json({ error: "File is empty" }, { status: 400 });
+    }
 
     // Verify store access
     const store = await prisma.store.findFirst({
@@ -77,8 +79,8 @@ export async function POST(request: NextRequest) {
       const result = await runImportPipeline({
         storeId,
         csvContent,
-        entityType,
-        fileName,
+        entityType: entityType ?? undefined, // Convert null to undefined
+        fileName: fileName ?? undefined, // Convert null to undefined
       });
 
       const processingTime = Date.now() - startTime;

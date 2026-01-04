@@ -64,31 +64,44 @@ const ENTITY_COLUMNS: Record<EntityType, { key: string; label: string; width?: s
     { key: "sku", label: "SKU", width: "120px" },
     { key: "category", label: "Category", width: "120px" },
     { key: "unit", label: "Unit", width: "80px" },
-    { key: "unitCost", label: "Cost", width: "100px" },
-    { key: "currentStock", label: "Stock", width: "80px" },
+    { key: "unitCost", label: "Unit Cost", width: "100px" },
+    { key: "currentStock", label: "Current Stock", width: "100px" },
+    { key: "minStock", label: "Min Stock Level", width: "100px" },
+    { key: "maxStock", label: "Max Stock Level", width: "100px" },
+    { key: "description", label: "Description", width: "200px" },
     { key: "supplierName", label: "Supplier", width: "150px" },
   ],
   product: [
     { key: "name", label: "Name", width: "200px" },
     { key: "sku", label: "SKU", width: "120px" },
     { key: "category", label: "Category", width: "120px" },
-    { key: "sellingPrice", label: "Price", width: "100px" },
-    { key: "costPrice", label: "Cost", width: "100px" },
-    { key: "currentStock", label: "Stock", width: "80px" },
+    { key: "unit", label: "Unit", width: "80px" },
+    { key: "sellingPrice", label: "Retail Price", width: "100px" },
+    { key: "costPrice", label: "Cost Price", width: "100px" },
+    { key: "currentStock", label: "Current Stock", width: "100px" },
+    { key: "minStock", label: "Min Stock", width: "100px" },
+    { key: "maxStock", label: "Max Stock", width: "100px" },
+    { key: "description", label: "Description", width: "200px" },
   ],
   recipe: [
     { key: "name", label: "Recipe Name", width: "200px" },
-    { key: "yieldQuantity", label: "Yield", width: "80px" },
-    { key: "yieldUnit", label: "Unit", width: "80px" },
-    { key: "ingredients_summary", label: "Ingredients (Read Only)", width: "300px", readOnly: true },
-    { key: "productionTimeMinutes", label: "Time (m)", width: "80px" },
+    { key: "category", label: "Category", width: "120px" },
+    { key: "yieldQuantity", label: "Yield Quantity", width: "100px" },
+    { key: "yieldUnit", label: "Yield Unit", width: "100px" },
+    { key: "productionTimeMinutes", label: "Production Time", width: "100px" },
+    { key: "ingredients_summary", label: "Ingredients (Summary)", width: "300px", readOnly: true },
+    { key: "description", label: "Description", width: "200px" },
+    { key: "instructions", label: "Instructions", width: "300px" },
   ],
   supplier: [
     { key: "name", label: "Supplier Name", width: "200px" },
-    { key: "contactPerson", label: "Contact", width: "150px" },
+    { key: "contactPerson", label: "Contact Person", width: "150px" },
     { key: "phone", label: "Phone", width: "120px" },
     { key: "email", label: "Email", width: "180px" },
     { key: "address", label: "Address", width: "200px" },
+    { key: "city", label: "City", width: "120px" },
+    { key: "country", label: "Country", width: "120px" },
+    { key: "notes", label: "Notes", width: "200px" },
   ],
 };
 
@@ -141,13 +154,42 @@ function processRawData(rawData: Array<Record<string, string>>): ProcessedEntity
     }
   });
 
-  // 2. Process Recipes (Merge Logic)
+  // 2. Process Recipes (Merge Logic with Continuation Row Support)
+  // Continuation rows: same name OR empty name with empty/missing yieldQuantity → merge into previous group
   const recipeGroups: Record<string, number[]> = {};
+  let lastRecipeKey: string | null = null;
+
   rawData.forEach((row, idx) => {
     if (classifyEntityType(row) === "recipe") {
       const name = (row.name || "").trim();
-      const yieldQty = row.yieldQuantity || "0";
-      const key = `${name}|${yieldQty}`;
+      const yieldQty = (row.yieldQuantity || "").trim();
+
+      let key: string;
+
+      if (name && yieldQty) {
+        // Complete row: new recipe or main row
+        key = `${name}|${yieldQty}`;
+        lastRecipeKey = key;
+      } else if (lastRecipeKey && (!yieldQty || yieldQty === "0" || yieldQty === "")) {
+        // Continuation row: same name (or empty) with no yield → inherit from previous
+        // Check if name matches the base name of last key
+        const lastBaseName = lastRecipeKey.split("|")[0];
+        if (!name || name === lastBaseName) {
+          key = lastRecipeKey;
+        } else {
+          // Different name, treat as new recipe with default yield
+          key = `${name}|1`;
+          lastRecipeKey = key;
+        }
+      } else if (name) {
+        // Has name but no yield, first recipe
+        key = `${name}|1`;
+        lastRecipeKey = key;
+      } else {
+        // Skip invalid rows (no name, no context)
+        return;
+      }
+
       if (!recipeGroups[key]) recipeGroups[key] = [];
       recipeGroups[key].push(idx);
     }
@@ -157,17 +199,23 @@ function processRawData(rawData: Array<Record<string, string>>): ProcessedEntity
     const mainRowIdx = indices[0];
     const mainRow = rawData[mainRowIdx];
 
-    // Aggregate ingredients for summary
+    // Aggregate ingredients for summary from ALL rows in the group
     const ingredients = indices
       .map(i => rawData[i].ingredient_name || rawData[i].ingredientName)
       .filter(Boolean)
       .join(", ");
+
+    // Use the key to determine final display name and yield
+    const [baseName, yieldFromKey] = key.split("|");
+    const displayYield = mainRow.yieldQuantity || yieldFromKey || "1";
 
     processed.push({
       id: `recipe-${mainRowIdx}`,
       entityType: "recipe",
       data: {
         ...mainRow,
+        name: baseName, // Ensure clean base name
+        yieldQuantity: displayYield,
         ingredients_summary: ingredients,
       },
       originalIndices: indices,
@@ -176,20 +224,34 @@ function processRawData(rawData: Array<Record<string, string>>): ProcessedEntity
   });
 
   // 3. Process Auto-Created Suppliers
-  const autoSuppliers = new Set<string>();
+  // Collect supplier info from materials that reference them
+  const autoSupplierData: Map<string, Record<string, string>> = new Map();
+
   materials.forEach(mat => {
     const supName = (mat.data.supplierName || "").trim();
     if (supName && !explicitSuppliers.has(supName.toLowerCase())) {
-      autoSuppliers.add(supName);
+      // Only set if not already captured (first occurrence wins)
+      if (!autoSupplierData.has(supName.toLowerCase())) {
+        autoSupplierData.set(supName.toLowerCase(), {
+          name: supName,
+          contactPerson: mat.data.contactPerson || "",
+          phone: mat.data.phone || "",
+          email: mat.data.email || "",
+          address: mat.data.address || "",
+          city: mat.data.city || "",
+          country: mat.data.country || "",
+          notes: "Auto-created from Material",
+        });
+      }
     }
   });
 
-  Array.from(autoSuppliers).forEach((name, i) => {
+  Array.from(autoSupplierData.entries()).forEach(([key, supplierInfo], i) => {
     processed.push({
       id: `auto-supplier-${i}`,
       entityType: "supplier",
-      data: { name, notes: "Auto-created from Material" },
-      originalIndices: [], // No original row corresponds 1:1, but changes should sync to materials
+      data: supplierInfo,
+      originalIndices: [], // No original row corresponds 1:1
       isAutoGenerated: true,
       selected: true,
     });

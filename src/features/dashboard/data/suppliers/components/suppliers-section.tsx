@@ -19,6 +19,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { SupplierDetailsDialog } from "./supplier-details-dialog";
 import { EditSupplierDialog } from "./edit-supplier-dialog";
 import { AddSupplierDialog } from "./add-supplier-dialog";
+import { SmartImportDialog } from "../../import";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Search,
@@ -35,6 +36,7 @@ import {
   ChevronRight,
   Package,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -84,6 +86,9 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
     skip: 0,
     take: 20,
   });
+
+  // Smart Import dialog state
+  const [smartImportOpen, setSmartImportOpen] = useState(false);
 
   // Debounce search input to reduce API calls (300ms delay)
   const debouncedSearch = useDebounce(filters.search, 300);
@@ -283,6 +288,17 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                   </TooltipContent>
                 )}
               </Tooltip>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSmartImportOpen(true)}
+                className="w-full md:w-auto"
+              >
+                <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
+                {t("import.title")}
+              </Button>
+
               <AddSupplierDialog>
                 <Button size="sm" className="w-full sm:w-auto">
                   <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
@@ -329,7 +345,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
             <div className="relative w-full">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("data.suppliers.searchPlaceholder")}
+                placeholder={t("actions.searchPlaceholder")}
                 value={filters.search}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
@@ -425,28 +441,24 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
 
                 {/* Supplier Info */}
                 <div className="text-muted-foreground my-2 space-y-1 text-xs">
-                  {supplier.email && (
-                    <div className="flex justify-between">
-                      <span>{t("common.email")}:</span>
-                      <span className="text-foreground truncate font-medium">
-                        {supplier.email.split("@")[0]}...
-                      </span>
-                    </div>
-                  )}
-                  {supplier.phone && (
-                    <div className="flex justify-between">
-                      <span>{t("common.phone")}:</span>
-                      <span className="text-foreground font-medium">{supplier.phone}</span>
-                    </div>
-                  )}
-                  {(supplier.city || supplier.country) && (
-                    <div className="flex justify-between">
-                      <span>{t("common.location")}:</span>
-                      <span className="text-foreground font-medium">
-                        {[supplier.city, supplier.country].filter(Boolean).join(", ")}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span>{t("common.email")}:</span>
+                    <span className="text-foreground truncate font-medium max-w-[120px] text-right">
+                      {supplier.email ? `${supplier.email.split("@")[0]}...` : "-"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t("common.phone")}:</span>
+                    <span className="text-foreground font-medium">
+                      {supplier.phone || "-"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t("common.location")}:</span>
+                    <span className="text-foreground font-medium text-right">
+                      {[supplier.city, supplier.country].filter(Boolean).join(", ") || "-"}
+                    </span>
+                  </div>
                   <div className="flex justify-between">
                     <span>{t("data.materials.pageTitle")}:</span>
                     <span className="text-foreground font-medium">
@@ -633,6 +645,12 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
         onConfirm={handleBulkDelete}
         variant="destructive"
         loading={bulkDeleteSuppliers.isPending}
+      />
+      {/* Smart Import Dialog */}
+      <SmartImportDialog
+        open={smartImportOpen}
+        onOpenChange={setSmartImportOpen}
+        storeId={storeId}
       />
     </>
   );

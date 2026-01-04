@@ -19,6 +19,8 @@ import {
 import { Label } from "@/components/ui/label";
 import type { EntityType } from "@/lib/ai/import/types";
 
+import { useI18n } from "@/components/lang/i18n-provider";
+
 interface FileUploadStepProps {
   onFileSelect: (file: File) => void;
   selectedEntityType: EntityType | undefined;
@@ -32,6 +34,7 @@ export function FileUploadStep({
   onEntityTypeChange,
   isLoading,
 }: FileUploadStepProps) {
+  const { t } = useI18n();
   const [isDragActive, setIsDragActive] = useState(false);
   const [dragError, setDragError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,11 +47,11 @@ export function FileUploadStep({
     const extension = "." + file.name.split(".").pop()?.toLowerCase();
 
     if (!validTypes.includes(file.type) && !validExtensions.includes(extension)) {
-      return "Please upload a CSV file";
+      return t("import.upload.error");
     }
 
     if (file.size > maxSize) {
-      return "File too large. Maximum size is 10MB";
+      return t("import.upload.errorSize");
     }
 
     return null;
@@ -117,27 +120,30 @@ export function FileUploadStep({
   return (
     <div className="space-y-6">
       {/* Entity Type Selector */}
-      <div className="space-y-2">
-        <Label>What are you importing? (Optional)</Label>
-        <Select
-          value={selectedEntityType || "auto"}
-          onValueChange={(v) => onEntityTypeChange(v === "auto" ? undefined : (v as EntityType))}
-          disabled={isLoading}
-        >
-          <SelectTrigger className="w-full max-w-xs">
-            <SelectValue placeholder="Auto-detect" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="auto">🤖 Auto-detect (AI will figure it out)</SelectItem>
-            <SelectItem value="material">📦 Materials (Bahan Baku)</SelectItem>
-            <SelectItem value="product">🛒 Products (Produk)</SelectItem>
-            <SelectItem value="supplier">🚚 Suppliers (Pemasok)</SelectItem>
-            <SelectItem value="recipe">👨‍🍳 Recipes (Resep)</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          AI will analyze your file and detect the entity type automatically.
-        </p>
+      <div className="flex flex-col items-center justify-center gap-2">
+        <div className="flex items-center gap-2 bg-muted/40 p-1 pl-3 pr-1 rounded-lg border shadow-sm">
+          <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+            {t("import.upload.label")}
+          </span>
+          <Select
+            value={selectedEntityType || "auto"}
+            onValueChange={(v) =>
+              onEntityTypeChange(v === "auto" ? undefined : (v as EntityType))
+            }
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-[200px] border-none shadow-none bg-transparent hover:bg-muted/50 focus:ring-0 h-8">
+              <SelectValue placeholder="Auto-detect" />
+            </SelectTrigger>
+            <SelectContent align="center">
+              <SelectItem value="auto">{t("import.upload.entities.auto")}</SelectItem>
+              <SelectItem value="material">{t("import.upload.entities.material")}</SelectItem>
+              <SelectItem value="product">{t("import.upload.entities.product")}</SelectItem>
+              <SelectItem value="supplier">{t("import.upload.entities.supplier")}</SelectItem>
+              <SelectItem value="recipe">{t("import.upload.entities.recipe")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Drop Zone */}
@@ -168,24 +174,24 @@ export function FileUploadStep({
             <>
               <Loader2 className="h-12 w-12 text-primary animate-spin" />
               <div>
-                <p className="text-lg font-medium">Processing...</p>
-                <p className="text-sm text-muted-foreground">AI is analyzing your file</p>
+                <p className="text-lg font-medium">{t("import.upload.processing")}</p>
+                <p className="text-sm text-muted-foreground">{t("import.upload.analyzing")}</p>
               </div>
             </>
           ) : isDragActive ? (
             <>
               <Upload className="h-12 w-12 text-primary" />
-              <p className="text-lg font-medium">Drop your file here</p>
+              <p className="text-lg font-medium">{t("import.upload.dropToUpload")}</p>
             </>
           ) : (
             <>
               <FileText className="h-12 w-12 text-muted-foreground" />
               <div>
-                <p className="text-lg font-medium">Drag & drop your CSV file here</p>
-                <p className="text-sm text-muted-foreground">or click to browse</p>
+                <p className="text-lg font-medium">{t("import.upload.dropZone")}</p>
+                <p className="text-sm text-muted-foreground">{t("import.upload.browse")}</p>
               </div>
               <p className="text-xs text-muted-foreground mt-4">
-                Supports .csv files up to 10MB • Any language • Any format
+                {t("import.upload.supports")}
               </p>
             </>
           )}
@@ -194,18 +200,6 @@ export function FileUploadStep({
 
       {/* Error message */}
       {dragError && <p className="text-sm text-destructive text-center">{dragError}</p>}
-
-      {/* AI Features hint */}
-      <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-        <p className="text-sm font-medium">✨ AI-Powered Import Features:</p>
-        <ul className="text-xs text-muted-foreground space-y-1">
-          <li>• Automatic language detection (supports 100+ languages)</li>
-          <li>• Smart column mapping (even with non-standard headers)</li>
-          <li>• Typo correction & data healing</li>
-          <li>• Duplicate detection & conflict resolution</li>
-          <li>• Auto-create missing suppliers & materials</li>
-        </ul>
-      </div>
     </div>
   );
 }

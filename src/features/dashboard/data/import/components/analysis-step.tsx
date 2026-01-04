@@ -6,26 +6,29 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Loader2, Check, Brain, Languages, Table, Database, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface AnalysisStepProps {
   fileName: string;
   isLoading: boolean;
 }
 
-const ANALYSIS_STAGES = [
-  { id: "language", label: "Detecting language & format", icon: Languages, duration: 2000 },
-  { id: "structure", label: "Analyzing structure", icon: Table, duration: 3000 },
-  { id: "mapping", label: "Mapping columns to fields", icon: Database, duration: 4000 },
-  { id: "healing", label: "Healing data issues", icon: Sparkles, duration: 2000 },
-  { id: "validation", label: "Validating data", icon: Check, duration: 1500 },
-];
-
 export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
+  const { t } = useI18n();
   const [currentStage, setCurrentStage] = useState(0);
   const [completedStages, setCompletedStages] = useState<number[]>([]);
+
+  // Stages configuration with i18n
+  const ANALYSIS_STAGES = useMemo(() => [
+    { id: "language", label: t("import.analysis.stages.language"), icon: Languages, duration: 2000 },
+    { id: "structure", label: t("import.analysis.stages.structure"), icon: Table, duration: 3000 },
+    { id: "mapping", label: t("import.analysis.stages.mapping"), icon: Database, duration: 4000 },
+    { id: "healing", label: t("import.analysis.stages.healing"), icon: Sparkles, duration: 2000 },
+    { id: "validation", label: t("import.analysis.stages.validation"), icon: Check, duration: 1500 },
+  ], [t]);
 
   // Simulate stage progression for visual feedback
   useEffect(() => {
@@ -43,7 +46,7 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isLoading]);
+  }, [isLoading, ANALYSIS_STAGES.length]);
 
   // Reset on new analysis
   useEffect(() => {
@@ -63,7 +66,7 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
         </div>
       </div>
 
-      <h3 className="text-xl font-semibold mb-2">AI is analyzing your file</h3>
+      <h3 className="text-xl font-semibold mb-2">{t("import.analysis.title")}</h3>
       <p className="text-muted-foreground mb-8">{fileName}</p>
 
       {/* Stages progress */}
@@ -115,8 +118,7 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
 
       {/* Info text */}
       <p className="text-xs text-muted-foreground mt-8 text-center max-w-md">
-        Our AI is using GPT-4o to understand your data, no matter what language or format.
-        This usually takes 5-15 seconds.
+        {t("import.analysis.description")}
       </p>
     </div>
   );

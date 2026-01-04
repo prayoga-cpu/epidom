@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { useAnalyzeImport, useExecuteImport, type AnalyzeResponse } from "./hooks/use-ai-import";
 import type { EntityType } from "@/lib/ai/import/types";
 
+import { useI18n } from "@/components/lang/i18n-provider";
+
 // Sub-components
 import { FileUploadStep } from "./components/file-upload-step";
 import { AnalysisStep } from "./components/analysis-step";
@@ -39,20 +41,22 @@ interface SmartImportDialogProps {
   defaultEntityType?: EntityType;
 }
 
-// Step configuration
-const STEPS = [
-  { key: "upload", label: "Upload", icon: Upload },
-  { key: "analyzing", label: "Analysis", icon: Sparkles },
-  { key: "preview", label: "Preview", icon: FileSpreadsheet },
-  { key: "results", label: "Done", icon: Check },
-] as const;
-
 export function SmartImportDialog({
   open,
   onOpenChange,
   storeId,
   defaultEntityType,
 }: SmartImportDialogProps) {
+  const { t } = useI18n();
+
+  // Step configuration with i18n
+  const STEPS = [
+    { key: "upload", label: t("import.steps.upload"), icon: Upload },
+    { key: "analyzing", label: t("import.steps.analysis"), icon: Sparkles },
+    { key: "preview", label: t("import.steps.preview"), icon: FileSpreadsheet },
+    { key: "results", label: t("import.steps.done"), icon: Check },
+  ] as const;
+
   // State
   const [step, setStep] = useState<ImportStep>("upload");
   const [file, setFile] = useState<File | null>(null);
@@ -92,20 +96,18 @@ export function SmartImportDialog({
     [onOpenChange]
   );
 
-  // Handle file upload
+  // Handle file upload - send file directly to AI (ChatGPT-style)
   const handleFileSelect = useCallback(
     async (selectedFile: File) => {
       setFile(selectedFile);
       setStep("analyzing");
 
       try {
-        const csvContent = await selectedFile.text();
-
+        // Send file directly to AI - no need to read as text first
         const result = await analyzeMutation.mutateAsync({
           storeId,
-          csvContent,
+          file: selectedFile, // Pass File object directly
           entityType: selectedEntityType,
-          fileName: selectedFile.name,
         });
 
         setAnalysisResult(result);
@@ -132,6 +134,14 @@ export function SmartImportDialog({
     setStep("importing");
 
     try {
+      // Debug: Log data being sent to backend (VISIBLE IN BROWSER CONSOLE)
+      console.log("[SmartImport] Sending data to backend:", {
+        rowCount: editedData.length,
+        sampleRow: editedData[0],
+        entityType: selectedEntityType || "material",
+        firstSupplier: editedData.find(d => d.category === "Suppliers" || d.supplierName || d.contactPerson)
+      });
+
       const result = await executeMutation.mutateAsync({
         sessionId: analysisResult.sessionId,
         storeId,
@@ -167,16 +177,16 @@ export function SmartImportDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-5xl w-full max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden sm:max-w-5xl">
         {/* Header */}
-        <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-primary/5 to-primary/10">
+        <DialogHeader className="px-6 pt-4 pb-10 border-b bg-gradient-to-r from-primary/5 to-primary/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <Sparkles className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-xl">Smart Import</DialogTitle>
+                <DialogTitle className="text-xl">{t("import.title")}</DialogTitle>
                 <p className="text-sm text-muted-foreground">
-                  AI-powered CSV import with intelligent field mapping
+                  {t("import.subtitle")}
                 </p>
               </div>
             </div>
@@ -189,7 +199,7 @@ export function SmartImportDialog({
           </div>
 
           {/* Step indicators */}
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex w-full items-center justify-center py-2 mt-2">
             {STEPS.map((s, idx) => {
               const Icon = s.icon;
               const isCurrent = getCurrentStepIndex() === idx;
@@ -198,31 +208,46 @@ export function SmartImportDialog({
 
               return (
                 <div key={s.key} className="flex items-center">
-                  <div
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                      isCurrent && "bg-primary text-primary-foreground",
-                      isPast && "bg-primary/20 text-primary",
-                      !isCurrent && !isPast && "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isPast ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Icon className="h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">{s.label}</span>
-                  </div>
-                  {idx < STEPS.length - 1 && (
+                  {/* Connector Line */}
+                  {idx > 0 && (
                     <div
                       className={cn(
-                        "w-8 h-0.5 mx-1",
-                        isPast ? "bg-primary" : "bg-muted"
+                        "h-[3px] w-16 sm:w-24 transition-colors duration-300",
+                        isPast || isCurrent ? "bg-primary" : "bg-gray-300 dark:bg-gray-700"
                       )}
                     />
                   )}
+
+                  {/* Step Circle */}
+                  <div className="relative flex flex-col items-center">
+                    <div
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-full border-[3px] transition-all duration-300 z-10 bg-background",
+                        isCurrent && "border-primary bg-primary text-primary-foreground scale-110",
+                        isPast && "border-primary bg-primary text-primary-foreground",
+                        !isCurrent && !isPast && "border-muted text-muted-foreground"
+                      )}
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : isPast ? (
+                        <Check className="h-5 w-5" />
+                      ) : (
+                        <Icon className="h-4 w-4" />
+                      )}
+                    </div>
+
+                    {/* Label */}
+                    <span
+                      className={cn(
+                        "absolute top-11 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors duration-300",
+                        isCurrent ? "text-primary font-semibold" : "text-muted-foreground",
+                        !isCurrent && !isPast && "opacity-70"
+                      )}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -282,14 +307,14 @@ export function SmartImportDialog({
           {step === "preview" && (
             <div className="flex items-center justify-between">
               <Button variant="ghost" onClick={() => setStep("upload")}>
-                ← Start Over
+                ← {t("import.preview.startOver")}
               </Button>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground">
-                  {editedData.length} items ready to import
+                  {t("import.preview.itemsReady")?.replace("{count}", editedData.length.toString())}
                 </span>
                 <Button variant="outline" onClick={() => handleOpenChange(false)}>
-                  Cancel
+                  {t("import.preview.cancel")}
                 </Button>
                 <Button
                   onClick={handleExecuteImport}
@@ -297,7 +322,7 @@ export function SmartImportDialog({
                   className="gap-2"
                 >
                   <Sparkles className="h-4 w-4" />
-                  Import All
+                  {t("import.preview.importAll")}
                 </Button>
               </div>
             </div>
@@ -306,7 +331,7 @@ export function SmartImportDialog({
           {step === "results" && (
             <div className="flex justify-end">
               <Button onClick={() => handleOpenChange(false)}>
-                Close
+                {t("import.results.close")}
               </Button>
             </div>
           )}
@@ -314,7 +339,7 @@ export function SmartImportDialog({
           {(step === "upload" || step === "analyzing") && (
             <div className="flex justify-end">
               <Button variant="outline" onClick={() => handleOpenChange(false)}>
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
             </div>
           )}
