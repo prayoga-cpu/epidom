@@ -18,7 +18,7 @@ export function DataRowTwo() {
       <Container maxWidth="7xl">
         <div className="flex flex-col items-center gap-8 md:flex-row md:gap-12">
           <div className="w-full space-y-4 md:w-1/3">
-            <h2 className="text-brand-primary text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            <h2 className="text-brand-primary text-3xl leading-[1.1] font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
               Supplier Intelligence
             </h2>
             <p className="text-brand-primary/60 text-lg leading-relaxed">

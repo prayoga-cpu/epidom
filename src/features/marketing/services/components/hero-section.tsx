@@ -21,7 +21,7 @@ export function HeroSection() {
         <div className="grid grid-cols-1 items-center gap-6 md:gap-6 lg:grid-cols-12">
           {/* Left Column - Text Content */}
           <div className="space-y-4 md:space-y-6 lg:col-span-8">
-            <h1 className="text-brand-primary text-3xl leading-tight font-bold tracking-tight sm:text-4xl md:text-5xl lg:text-5xl">
+            <h1 className="text-brand-primary text-3xl leading-[1.1] font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
               {t("services.heroTitle")}
             </h1>
 

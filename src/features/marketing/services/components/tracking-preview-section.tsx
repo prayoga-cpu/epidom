@@ -41,7 +41,7 @@ export function TrackingPreviewSection() {
             </span>
           </div>
 
-          <h2 className="mb-6 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
+          <h2 className="mb-6 text-3xl leading-[1.1] font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl">
             {t("services.tracking.title")}
           </h2>
 

@@ -58,7 +58,7 @@ export function DashboardPreviewSection() {
               Full Overview
             </div>
 
-            <h2 className="text-brand-primary text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+            <h2 className="text-brand-primary text-3xl leading-[1.1] font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
               {t("services.dashboard.subtitle")}
             </h2>
 

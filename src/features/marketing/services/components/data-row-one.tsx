@@ -20,7 +20,7 @@ export function DataRowOne() {
     <section className="bg-gray-50 py-16">
       <Container maxWidth="7xl">
         <div className="mx-auto mb-16 max-w-2xl text-center">
-          <h2 className="text-brand-primary mb-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+          <h2 className="text-brand-primary mb-4 text-3xl leading-[1.1] font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
             {t("services.data.title")}
           </h2>
           <p className="text-brand-primary/60 text-lg">{t("services.data.description1")}</p>
