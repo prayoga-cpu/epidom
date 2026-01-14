@@ -182,10 +182,12 @@ export const fr = {
       testimonial1: "Epidom a transformé notre gestion des stocks de cookies. Plus de gaspillage !",
       author1: "Marie Dubois",
       role1: "Propriétaire, Sweet Délices Paris",
-      testimonial2: "Le suivi en temps réel signifie que je sais toujours ce qui est en stock. Révolutionnaire !",
+      testimonial2:
+        "Le suivi en temps réel signifie que je sais toujours ce qui est en stock. Révolutionnaire !",
       author2: "Jean-Pierre Martin",
       role2: "Gérant, Le Cookie Shop",
-      testimonial3: "Les alertes d'expiration nous ont fait économiser des milliers en ingrédients.",
+      testimonial3:
+        "Les alertes d'expiration nous ont fait économiser des milliers en ingrédients.",
       author3: "Sophie Laurent",
       role3: "Chef, Pâtisserie Belle",
     },
@@ -193,7 +195,8 @@ export const fr = {
       headline: "Créer, Suivre, Alertes",
       description:
         "Nous sommes populaires pour résoudre la gestion surchargée des bars à cookies grâce à des alertes d'expiration intelligentes, particulièrement en France 🇫🇷.",
-      aiGenerated: "Contenu généré par Système : Profil, Tableau de bord, Gestion, Suivi, Données, Alertes.",
+      aiGenerated:
+        "Contenu généré par Système : Profil, Tableau de bord, Gestion, Suivi, Données, Alertes.",
       features: {
         profile: {
           title: "Profil",
@@ -213,7 +216,8 @@ export const fr = {
         },
         data: {
           title: "Données",
-          description: "Accédez à des rapports détaillés et des analyses pour de meilleures décisions",
+          description:
+            "Accédez à des rapports détaillés et des analyses pour de meilleures décisions",
         },
         alerts: {
           title: "Alertes",
@@ -1886,7 +1890,8 @@ export const fr = {
     title: "Alertes de Stock",
     description: "Surveillez les niveaux de stock faibles et agissez pour éviter les ruptures",
     ordersToPlace: "Commandes à Passer",
-    ordersToPlaceDescription: "Contacter les fournisseurs pour réapprovisionner les articles en faible stock",
+    ordersToPlaceDescription:
+      "Contacter les fournisseurs pour réapprovisionner les articles en faible stock",
     ordersDescription:
       "Contacter les fournisseurs pour réapprovisionner les articles en faible stock",
 
@@ -3332,8 +3337,7 @@ export const fr = {
       redirecting: "Redirection vers le tableau de bord dans {seconds} secondes...",
     },
   },
-<<<<<<< HEAD
-=======
+
   import: {
     title: "Import Intelligent",
     subtitle: "Import CSV intelligent avec mappage intelligent des champs",
@@ -3363,7 +3367,8 @@ export const fr = {
     },
     analysis: {
       title: "Analyse du fichier en cours",
-      description: "Nous traitons vos données pour comprendre la structure et le format. Cela prend généralement 5 à 15 secondes.",
+      description:
+        "Nous traitons vos données pour comprendre la structure et le format. Cela prend généralement 5 à 15 secondes.",
       stages: {
         language: "Détection de la langue et du format",
         structure: "Analyse de la structure",
@@ -3405,7 +3410,7 @@ export const fr = {
       viewData: "Voir les Données",
     },
   },
->>>>>>> dev
+
   notFound: {
     title: "Page Non Trouvée",
     description: "Désolé, nous n'avons pas pu trouver la page que vous recherchez.",
