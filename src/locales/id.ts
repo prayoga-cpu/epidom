@@ -198,7 +198,8 @@ export const id = {
       testimonial1: "Epidom mengubah cara kami mengelola inventaris cookie. Tidak ada lagi limbah!",
       author1: "Marie Dubois",
       role1: "Pemilik, Sweet Délices Paris",
-      testimonial2: "Pelacakan real-time berarti saya selalu tahu stok apa yang tersedia. Perubahan besar!",
+      testimonial2:
+        "Pelacakan real-time berarti saya selalu tahu stok apa yang tersedia. Perubahan besar!",
       author2: "Jean-Pierre Martin",
       role2: "Manajer, Le Cookie Shop",
       testimonial3: "Peringatan kedaluwarsa menyelamatkan kami ribuan dalam bahan baku.",
@@ -209,7 +210,8 @@ export const id = {
       headline: "Buat, Lacak, Peringatan",
       description:
         "Kami populer dalam membantu manajemen cookie bar yang kewalahan dengan peringatan kedaluwarsa cerdas, khususnya di Prancis 🇫🇷.",
-      aiGenerated: "Konten Generatif Sistem: Profil, Dasbor, Manajemen, Pelacakan, Data, Peringatan.",
+      aiGenerated:
+        "Konten Generatif Sistem: Profil, Dasbor, Manajemen, Pelacakan, Data, Peringatan.",
       features: {
         profile: {
           title: "Profil",
@@ -1041,6 +1043,9 @@ export const id = {
     tracking: "Pelacakan",
     data: "Data",
     alerts: "Peringatan",
+    import: "Impor",
+    pos: "POS",
+    reports: "Laporan",
   },
   sidebar: {
     inventoryProduction: "Inventaris & Produksi",
@@ -3332,7 +3337,8 @@ export const id = {
     },
     analysis: {
       title: "Menganalisis file Anda",
-      description: "Kami sedang memproses data untuk memahami struktur dan formatnya. Ini biasanya memakan waktu 5-15 detik.",
+      description:
+        "Kami sedang memproses data untuk memahami struktur dan formatnya. Ini biasanya memakan waktu 5-15 detik.",
       stages: {
         language: "Mendeteksi bahasa & format",
         structure: "Menganalisis struktur",

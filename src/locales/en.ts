@@ -1008,6 +1008,9 @@ export const en = {
     tracking: "Tracking",
     data: "Data",
     alerts: "Alerts",
+    import: "Import",
+    pos: "POS",
+    reports: "Reports",
   },
   sidebar: {
     inventoryProduction: "Inventory & Production",
@@ -1996,7 +1999,6 @@ export const en = {
       notifications: "Notification Preferences",
       activity: "Activity Log",
     },
-
 
     // Personal info
     personal: {
@@ -3313,7 +3315,8 @@ export const en = {
     },
     analysis: {
       title: "Analyzing your file",
-      description: "We are processing your data to understand the structure and format. This usually takes 5-15 seconds.",
+      description:
+        "We are processing your data to understand the structure and format. This usually takes 5-15 seconds.",
       stages: {
         language: "Detecting language & format",
         structure: "Analyzing structure",

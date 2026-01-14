@@ -47,7 +47,7 @@ export function ExportCard({
 
       const csv = arrayToCSV(
         data,
-        headers as { key: keyof typeof data[0]; label: string }[] | undefined
+        headers as { key: keyof (typeof data)[0]; label: string }[] | undefined
       );
 
       const dateStr = new Date().toISOString().slice(0, 10);
@@ -67,29 +67,19 @@ export function ExportCard({
   };
 
   return (
-    <div className={`group rounded-xl border p-5 transition-all duration-200 hover:shadow-lg hover:border-primary/30 ${
-      exported ? "border-green-500/30 bg-green-500/5" : "bg-card"
-    }`}>
+    <div className="group bg-card hover:bg-accent/5 rounded-lg border p-4 transition-colors">
       <div className="flex items-start gap-4">
-        <div className={`rounded-xl p-3 transition-colors ${
-          exported
-            ? "bg-green-500/10"
-            : "bg-muted group-hover:bg-primary/10"
-        }`}>
-          <Icon className={`h-5 w-5 ${
-            exported
-              ? "text-green-600"
-              : "text-muted-foreground group-hover:text-primary"
-          }`} />
+        <div className="bg-muted rounded-lg p-2.5">
+          <Icon className="text-muted-foreground h-5 w-5" />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold">{title}</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold">{title}</h3>
+          <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>
 
           {exported && rowCount !== null && (
-            <p className="text-sm text-green-600 mt-2 flex items-center gap-1.5">
-              <CheckCircle className="h-4 w-4" />
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-green-600">
+              <CheckCircle className="h-3.5 w-3.5" />
               {rowCount} rows exported
             </p>
           )}
@@ -99,24 +89,26 @@ export function ExportCard({
           onClick={handleExport}
           disabled={isExporting}
           size="sm"
-          variant={exported ? "outline" : "default"}
-          className={`gap-2 min-w-[100px] ${
-            exported ? "border-green-500 text-green-600 hover:bg-green-500/10" : ""
+          variant={exported ? "outline" : "secondary"}
+          className={`h-8 min-w-[90px] gap-2 ${
+            exported
+              ? "border-green-200 bg-green-50 text-green-600 hover:bg-green-100"
+              : "hover:bg-accent"
           }`}
         >
           {isExporting ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Exporting
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Export
             </>
           ) : exported ? (
             <>
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="h-3.5 w-3.5" />
               Done
             </>
           ) : (
             <>
-              <Download className="h-4 w-4" />
+              <Download className="h-3.5 w-3.5" />
               Export
             </>
           )}

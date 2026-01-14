@@ -10,6 +10,10 @@ import {
   CreditCard,
   Mail,
   Store,
+  Upload,
+  ShoppingCart,
+  FileSpreadsheet,
+  Logs,
   type LucideIcon,
 } from "lucide-react";
 
@@ -30,7 +34,10 @@ export interface NavItem {
 
 export interface NavSection {
   title?: string; // Optional section title
+  icon?: LucideIcon;
   items: NavItem[];
+  collapsed?: boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -45,6 +52,14 @@ export const dashboardNavigation: NavSection[] = [
         icon: UserRound,
         showBadge: false,
       },
+    ],
+  },
+  {
+    title: "STOCK",
+    icon: Logs,
+    collapsed: false,
+    disabled: true, // Visual indicator
+    items: [
       {
         href: "/dashboard",
         labelKey: "nav.dashboard",
@@ -75,6 +90,31 @@ export const dashboardNavigation: NavSection[] = [
         icon: Bell,
         showBadge: true,
         badgeKey: "alerts",
+      },
+    ],
+  },
+  {
+    title: "COST",
+    icon: CreditCard,
+    collapsed: false,
+    items: [
+      {
+        href: "/import",
+        labelKey: "nav.import",
+        icon: Upload,
+        showBadge: false,
+      },
+      {
+        href: "/pos",
+        labelKey: "nav.pos",
+        icon: ShoppingCart,
+        showBadge: false,
+      },
+      {
+        href: "/reports",
+        labelKey: "nav.reports",
+        icon: FileSpreadsheet,
+        showBadge: false,
       },
     ],
   },

@@ -17,7 +17,7 @@ import {
   Receipt,
   Calculator,
   ArrowUpRight,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react";
 import { ExportCard } from "./export-card";
 import { getProductsForExport, getTransactionsForExport } from "../actions";
@@ -74,14 +74,14 @@ export function ReportsDashboard({ summary }: ReportsDashboardProps) {
 
       {/* Export Section */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">Export Data</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Download your data as CSV for Google Sheets
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <FileSpreadsheet className="h-4 w-4" />
             <span>Google Sheets Compatible</span>
           </div>
@@ -164,14 +164,14 @@ export function ReportsDashboard({ summary }: ReportsDashboardProps) {
       </div>
 
       {/* Detailed Export */}
-      <div className="rounded-xl border bg-gradient-to-br from-muted/50 to-muted/30 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="rounded-xl bg-primary/10 p-3">
-            <TrendingUp className="h-5 w-5 text-primary" />
+      <div className="bg-card rounded-lg border p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="bg-muted rounded-lg p-2">
+            <TrendingUp className="text-muted-foreground h-5 w-5" />
           </div>
           <div>
             <h3 className="font-bold">Transaction Details</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Detailed line-item export for P&L analysis
             </p>
           </div>
@@ -196,7 +196,7 @@ export function ReportsDashboard({ summary }: ReportsDashboardProps) {
                   "Unit Price": item.unitPrice,
                   Total: item.total,
                   "Cost Price": item.costPrice,
-                  Profit: item.total - (item.costPrice * Number(item.quantity)),
+                  Profit: item.total - item.costPrice * Number(item.quantity),
                 });
               }
             }
@@ -207,20 +207,22 @@ export function ReportsDashboard({ summary }: ReportsDashboardProps) {
       </div>
 
       {/* MVP Validation Checklist */}
-      <div className={`rounded-xl border p-6 ${
-        mvpComplete
-          ? "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/30"
-          : "bg-muted/50"
-      }`}>
-        <div className="flex items-center gap-3 mb-4">
-          <div className={`rounded-full p-2 ${mvpComplete ? "bg-green-500" : "bg-muted"}`}>
-            <CheckCircle className={`h-5 w-5 ${mvpComplete ? "text-white" : "text-muted-foreground"}`} />
+      <div
+        className={`rounded-lg border p-6 ${
+          mvpComplete
+            ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-900/10"
+            : "bg-card"
+        }`}
+      >
+        <div className="mb-4 flex items-center gap-3">
+          <div
+            className={`rounded-full p-1.5 ${mvpComplete ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"}`}
+          >
+            <CheckCircle className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-bold">
-              {mvpComplete ? "🎉 MVP Complete!" : "MVP Checklist"}
-            </h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="font-bold">{mvpComplete ? "MVP Complete!" : "MVP Checklist"}</h3>
+            <p className="text-muted-foreground text-sm">
               {mvpComplete
                 ? "All requirements met. Export your data and you're done!"
                 : "Complete these steps to finish the MVP"}
@@ -229,18 +231,9 @@ export function ReportsDashboard({ summary }: ReportsDashboardProps) {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <ChecklistItem
-            checked={summary.productCount > 0}
-            label="Product Master imported"
-          />
-          <ChecklistItem
-            checked={summary.productCount > 0}
-            label="Stock data populated"
-          />
-          <ChecklistItem
-            checked={summary.productCount > 0}
-            label="COGS data available"
-          />
+          <ChecklistItem checked={summary.productCount > 0} label="Product Master imported" />
+          <ChecklistItem checked={summary.productCount > 0} label="Stock data populated" />
+          <ChecklistItem checked={summary.productCount > 0} label="COGS data available" />
           <ChecklistItem
             checked={summary.transactionCount >= 3}
             label={`3+ transactions (${summary.transactionCount}/3)`}
@@ -248,9 +241,9 @@ export function ReportsDashboard({ summary }: ReportsDashboardProps) {
         </div>
 
         {mvpComplete && (
-          <div className="mt-4 pt-4 border-t border-green-500/20">
+          <div className="mt-4 border-t border-green-200 pt-4 dark:border-green-900">
             <p className="text-sm text-green-700 dark:text-green-400">
-              ✅ All exports are ready. Download your CSV files to use in Google Sheets.
+              All exports are ready. Download your CSV files.
             </p>
           </div>
         )}
@@ -289,35 +282,44 @@ function SummaryCard({
   };
 
   return (
-    <div className={`rounded-xl bg-gradient-to-br border p-5 ${colorClasses[color]}`}>
+    <div className="bg-card rounded-xl border p-6 shadow-sm">
       <div className="flex items-center justify-between">
-        <div className={`rounded-xl p-2.5 ${iconColors[color]}`}>
-          <Icon className="h-5 w-5" />
+        <div className="bg-muted rounded-lg p-2">
+          <Icon className="text-muted-foreground h-5 w-5" />
         </div>
         {trend && (
-          <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
+          <div className="flex items-center gap-1 text-xs font-medium text-green-600">
             <ArrowUpRight className="h-3 w-3" />
             Ready
           </div>
         )}
       </div>
-      <p className="text-2xl font-bold mt-4 tabular-nums">
-        {prefix}{value}
+      <p className="mt-4 text-2xl font-bold tabular-nums">
+        {prefix}
+        {value}
       </p>
-      <p className="text-sm text-muted-foreground mt-1">{label}</p>
+      <p className="text-muted-foreground mt-1 text-sm">{label}</p>
     </div>
   );
 }
 
 function ChecklistItem({ checked, label }: { checked: boolean; label: string }) {
   return (
-    <div className={`flex items-center gap-3 rounded-lg p-3 transition-colors ${
-      checked ? "bg-green-500/10" : "bg-muted/50"
-    }`}>
-      <div className={`rounded-full p-1 ${checked ? "bg-green-500" : "bg-muted"}`}>
-        <CheckCircle className={`h-3.5 w-3.5 ${checked ? "text-white" : "text-muted-foreground"}`} />
+    <div
+      className={`flex items-center gap-3 rounded-md border p-3 ${
+        checked
+          ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-900/10"
+          : "bg-card border-border"
+      }`}
+    >
+      <div
+        className={`rounded-full p-0.5 ${checked ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"}`}
+      >
+        <CheckCircle className="h-4 w-4" />
       </div>
-      <span className={`text-sm font-medium ${checked ? "text-green-700 dark:text-green-400" : "text-muted-foreground"}`}>
+      <span
+        className={`text-sm font-medium ${checked ? "text-green-700 dark:text-green-400" : "text-muted-foreground"}`}
+      >
         {label}
       </span>
     </div>

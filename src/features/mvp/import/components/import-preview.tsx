@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Package,
   Loader2,
-  Upload
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useImportStore } from "../import-store";
@@ -25,13 +25,7 @@ export function ImportPreview() {
   const params = useParams();
   const storeId = params?.storeId as string;
 
-  const {
-    previewProducts,
-    validationErrors,
-    setStep,
-    setImportResult,
-    step,
-  } = useImportStore();
+  const { previewProducts, validationErrors, setStep, setImportResult, step } = useImportStore();
 
   const [isImporting, setIsImporting] = useState(false);
 
@@ -62,60 +56,60 @@ export function ImportPreview() {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 p-5">
+        <div className="bg-card rounded-lg border p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="rounded-full bg-green-500/20 p-2">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            </div>
+            <CheckCircle2 className="h-8 w-8 text-green-600 opacity-80" />
             <div>
-              <p className="text-2xl font-bold text-green-600">{previewProducts.length}</p>
-              <p className="text-sm text-muted-foreground">Ready to import</p>
+              <p className="text-2xl font-bold">{previewProducts.length}</p>
+              <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                Ready to import
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 p-5">
+        <div className="bg-card rounded-lg border p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="rounded-full bg-amber-500/20 p-2">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-            </div>
+            <AlertTriangle className="h-8 w-8 text-amber-500 opacity-80" />
             <div>
-              <p className="text-2xl font-bold text-amber-600">{validationErrors.length}</p>
-              <p className="text-sm text-muted-foreground">Rows skipped</p>
+              <p className="text-2xl font-bold">{validationErrors.length}</p>
+              <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                Rows skipped
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-5">
+        <div className="bg-card rounded-lg border p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="rounded-full bg-primary/20 p-2">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
+            <Package className="text-primary h-8 w-8 opacity-80" />
             <div>
-              <p className="text-2xl font-bold text-primary">
+              <p className="text-2xl font-bold">
                 {previewProducts.length + validationErrors.length}
               </p>
-              <p className="text-sm text-muted-foreground">Total rows</p>
+              <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                Total rows
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Products Preview Table */}
-      <div className="rounded-xl border overflow-hidden">
-        <div className="bg-muted/50 px-4 py-3 border-b">
+      <div className="overflow-hidden rounded-lg border">
+        <div className="bg-muted border-b px-4 py-3">
           <h3 className="font-semibold">Products Preview</h3>
         </div>
         <div className="max-h-[400px] overflow-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/30 sticky top-0">
               <tr>
-                <th className="text-left px-4 py-3 font-medium">SKU</th>
-                <th className="text-left px-4 py-3 font-medium">Name</th>
-                <th className="text-right px-4 py-3 font-medium">Cost</th>
-                <th className="text-right px-4 py-3 font-medium">Price</th>
-                <th className="text-right px-4 py-3 font-medium">Stock</th>
-                <th className="text-left px-4 py-3 font-medium">Category</th>
+                <th className="px-4 py-3 text-left font-medium">SKU</th>
+                <th className="px-4 py-3 text-left font-medium">Name</th>
+                <th className="px-4 py-3 text-right font-medium">Cost</th>
+                <th className="px-4 py-3 text-right font-medium">Price</th>
+                <th className="px-4 py-3 text-right font-medium">Stock</th>
+                <th className="px-4 py-3 text-left font-medium">Category</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -126,15 +120,13 @@ export function ImportPreview() {
                   <td className="px-4 py-3 text-right tabular-nums">
                     {product.costPrice.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-medium">
+                  <td className="px-4 py-3 text-right font-medium tabular-nums">
                     {product.sellingPrice.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {product.currentStock}
-                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">{product.currentStock}</td>
                   <td className="px-4 py-3">
                     {product.category && (
-                      <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs">
+                      <span className="bg-muted inline-flex rounded-full px-2 py-0.5 text-xs">
                         {product.category}
                       </span>
                     )}
@@ -144,7 +136,7 @@ export function ImportPreview() {
             </tbody>
           </table>
           {previewProducts.length > 50 && (
-            <div className="px-4 py-3 text-center text-sm text-muted-foreground bg-muted/30">
+            <div className="text-muted-foreground bg-muted/30 px-4 py-3 text-center text-sm">
               ... and {previewProducts.length - 50} more products
             </div>
           )}
@@ -153,22 +145,22 @@ export function ImportPreview() {
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className="rounded-xl border border-amber-500/30 overflow-hidden">
-          <div className="bg-amber-500/10 px-4 py-3 border-b border-amber-500/30">
-            <h3 className="font-semibold text-amber-700 flex items-center gap-2">
+        <div className="overflow-hidden rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-900/10">
+          <div className="border-b border-amber-200 px-4 py-3 dark:border-amber-900">
+            <h3 className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-400">
               <AlertTriangle className="h-4 w-4" />
               Skipped Rows ({validationErrors.length})
             </h3>
           </div>
-          <div className="max-h-[150px] overflow-auto p-4 space-y-2">
+          <div className="max-h-[150px] space-y-1 overflow-auto p-4">
             {validationErrors.slice(0, 10).map((error, index) => (
-              <p key={index} className="text-sm">
-                <span className="font-mono text-amber-600">Row {error.row}:</span>{" "}
-                <span className="text-muted-foreground">{error.message}</span>
+              <p key={index} className="text-sm text-amber-900 dark:text-amber-200">
+                <span className="font-mono font-semibold">Row {error.row}:</span>{" "}
+                <span className="opacity-90">{error.message}</span>
               </p>
             ))}
             {validationErrors.length > 10 && (
-              <p className="text-sm text-muted-foreground">
+              <p className="pt-2 text-xs text-amber-700 dark:text-amber-400">
                 ... and {validationErrors.length - 10} more errors
               </p>
             )}
@@ -177,7 +169,7 @@ export function ImportPreview() {
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-4 border-t">
+      <div className="flex items-center justify-between border-t pt-4">
         <Button
           variant="ghost"
           onClick={() => setStep("mapping")}
@@ -192,7 +184,7 @@ export function ImportPreview() {
           onClick={handleImport}
           disabled={previewProducts.length === 0 || isImportingStep}
           size="lg"
-          className="gap-2 px-8 min-w-[180px]"
+          className="min-w-[180px] gap-2 px-8"
         >
           {isImportingStep ? (
             <>

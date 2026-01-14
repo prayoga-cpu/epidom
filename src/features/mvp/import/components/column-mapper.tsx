@@ -21,14 +21,7 @@ import { REQUIRED_FIELDS, OPTIONAL_FIELDS, FIELD_LABELS, type ColumnMapping } fr
 import type { ImportPreviewProduct, ImportValidationError } from "../types";
 
 export function ColumnMapper() {
-  const {
-    parsedData,
-    mappings,
-    setMapping,
-    setStep,
-    setPreviewData,
-    fileName,
-  } = useImportStore();
+  const { parsedData, mappings, setMapping, setStep, setPreviewData, fileName } = useImportStore();
 
   const headers = parsedData?.headers || [];
 
@@ -56,11 +49,18 @@ export function ColumnMapper() {
       const sellingPriceRaw = mappings.sellingPrice ? row[mappings.sellingPrice] : 0;
       const stockRaw = mappings.currentStock ? row[mappings.currentStock] : 0;
 
-      const costPrice = typeof costPriceRaw === "number" ? costPriceRaw : parseFloat(String(costPriceRaw)) || 0;
-      const sellingPrice = typeof sellingPriceRaw === "number" ? sellingPriceRaw : parseFloat(String(sellingPriceRaw)) || 0;
-      const currentStock = typeof stockRaw === "number" ? stockRaw : parseInt(String(stockRaw)) || 0;
+      const costPrice =
+        typeof costPriceRaw === "number" ? costPriceRaw : parseFloat(String(costPriceRaw)) || 0;
+      const sellingPrice =
+        typeof sellingPriceRaw === "number"
+          ? sellingPriceRaw
+          : parseFloat(String(sellingPriceRaw)) || 0;
+      const currentStock =
+        typeof stockRaw === "number" ? stockRaw : parseInt(String(stockRaw)) || 0;
 
-      const category = mappings.category ? String(row[mappings.category] || "").trim() || undefined : undefined;
+      const category = mappings.category
+        ? String(row[mappings.category] || "").trim() || undefined
+        : undefined;
       const unit = mappings.unit ? String(row[mappings.unit] || "").trim() || "Pcs" : "Pcs";
 
       // Validate
@@ -92,24 +92,24 @@ export function ColumnMapper() {
   return (
     <div className="space-y-6">
       {/* Header with Progress */}
-      <div className="rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-card rounded-lg border p-6">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">Mapping columns from</p>
-            <p className="font-semibold text-lg">{fileName}</p>
+            <p className="text-muted-foreground text-sm">Mapping columns from</p>
+            <p className="font-semibold">{fileName}</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-primary">
+            <p className="text-xl font-bold">
               {mappedRequiredFields.length}/{REQUIRED_FIELDS.length}
             </p>
-            <p className="text-sm text-muted-foreground">required mapped</p>
+            <p className="text-muted-foreground text-sm">required mapped</p>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div className="bg-muted h-2 overflow-hidden rounded-full">
           <div
-            className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500 ease-out"
+            className="bg-primary h-full transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -119,8 +119,8 @@ export function ColumnMapper() {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Required Fields */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+          <div className="mb-4 flex items-center gap-2">
+            <div className="bg-primary h-2 w-2 rounded-full" />
             <h3 className="font-semibold">Required Fields</h3>
           </div>
           {REQUIRED_FIELDS.map((field) => (
@@ -138,9 +138,9 @@ export function ColumnMapper() {
 
         {/* Optional Fields */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-2 w-2 rounded-full bg-muted-foreground/50" />
-            <h3 className="font-semibold text-muted-foreground">Optional Fields</h3>
+          <div className="mb-4 flex items-center gap-2">
+            <div className="bg-muted-foreground h-2 w-2 rounded-full" />
+            <h3 className="text-muted-foreground font-semibold">Optional Fields</h3>
           </div>
           {OPTIONAL_FIELDS.map((field) => (
             <MappingRow
@@ -157,22 +157,18 @@ export function ColumnMapper() {
 
       {/* Preview Info */}
       {parsedData && (
-        <div className="flex items-center gap-3 rounded-xl bg-muted/50 p-4">
-          <Columns3 className="h-5 w-5 text-muted-foreground" />
+        <div className="bg-muted/50 flex items-center gap-3 rounded-xl p-4">
+          <Columns3 className="text-muted-foreground h-5 w-5" />
           <p className="text-sm">
             <span className="font-semibold">{parsedData.totalRows}</span> rows detected •
-            <span className="font-semibold ml-1">{headers.length}</span> columns available
+            <span className="ml-1 font-semibold">{headers.length}</span> columns available
           </p>
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-4 border-t">
-        <Button
-          variant="ghost"
-          onClick={() => setStep("upload")}
-          className="gap-2"
-        >
+      <div className="flex items-center justify-between border-t pt-4">
+        <Button variant="ghost" onClick={() => setStep("upload")} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
@@ -209,38 +205,33 @@ function MappingRow({
   const isMapped = !!value;
 
   return (
-    <div className={`flex items-center gap-3 rounded-xl border p-3 transition-all duration-200 ${
-      isMapped
-        ? "border-primary/30 bg-primary/5"
-        : required
-          ? "border-amber-500/30 bg-amber-500/5"
-          : "border-muted"
-    }`}>
-      <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+    <div
+      className={`flex items-center gap-3 rounded-md border p-3 ${
         isMapped
-          ? "bg-primary text-primary-foreground"
+          ? "border-primary/50 bg-accent/50"
           : required
-            ? "bg-amber-500/20 text-amber-600"
-            : "bg-muted text-muted-foreground"
-      }`}>
-        {isMapped ? (
-          <Check className="h-4 w-4" />
-        ) : required ? (
-          <AlertCircle className="h-4 w-4" />
-        ) : (
-          <span className="text-xs">?</span>
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{label}</p>
-      </div>
-
-      <Select
-        value={value || ""}
-        onValueChange={(v) => onChange(v || null)}
+            ? "border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-900/10"
+            : "border-border"
+      }`}
+    >
+      <div
+        className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+          isMapped
+            ? "bg-primary text-primary-foreground"
+            : required
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-400"
+              : "bg-muted text-muted-foreground"
+        }`}
       >
-        <SelectTrigger className="w-[180px] bg-background">
+        {isMapped ? <Check className="h-3 w-3" /> : required ? "!" : "?"}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{label}</p>
+      </div>
+
+      <Select value={value || ""} onValueChange={(v) => onChange(v || null)}>
+        <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Select column" />
         </SelectTrigger>
         <SelectContent>
