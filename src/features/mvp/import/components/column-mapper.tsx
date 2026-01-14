@@ -230,12 +230,15 @@ function MappingRow({
         <p className="truncate text-sm font-medium">{label}</p>
       </div>
 
-      <Select value={value || ""} onValueChange={(v) => onChange(v || null)}>
+      <Select
+        value={value || "__none__"}
+        onValueChange={(v) => onChange(v === "__none__" ? null : v)}
+      >
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Select column" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Not mapped</SelectItem>
+          <SelectItem value="__none__">Not mapped</SelectItem>
           {headers.map((header) => (
             <SelectItem key={header} value={header}>
               {header}
