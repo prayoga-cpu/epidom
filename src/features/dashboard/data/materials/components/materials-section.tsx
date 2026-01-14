@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { CsvImportWizard } from "../../components/csv-import-wizard";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -57,10 +56,7 @@ import {
 } from "../hooks/use-materials";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
-<<<<<<< HEAD
-=======
 import { SmartImportDialog } from "../../import";
->>>>>>> dev
 // Import re-exported helpers from consolidated hook (for future use)
 // Full hook migration can be done incrementally
 
@@ -372,9 +368,6 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                 )}
               </Tooltip>
 
-<<<<<<< HEAD
-              <CsvImportWizard storeId={storeId} type="material" />
-=======
               {/* Smart Import Button */}
               <Button
                 variant="outline"
@@ -385,7 +378,6 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                 <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
                 {t("import.title")}
               </Button>
->>>>>>> dev
 
               <AddMaterialDialog
                 trigger={
