@@ -189,14 +189,14 @@ export class ProductService {
    * Delete product (hard delete)
    * Note: Related records (OrderItem, ProductionBatch, StockMovement) will be cascade deleted
    */
-  async deleteProduct(productId: string, storeId: string): Promise<void> {
+  async deleteProduct(productId: string, storeId: string): Promise<Product> {
     // Verify product belongs to store
     const belongsToStore = await productRepository.belongsToStore(productId, storeId);
     if (!belongsToStore) {
       throw new Error("Product does not belong to this store");
     }
 
-    await productRepository.delete(productId);
+    return productRepository.delete(productId);
   }
 
   /**
@@ -206,7 +206,7 @@ export class ProductService {
   async bulkDeleteProducts(
     productIds: string[],
     storeId: string
-  ): Promise<{ deletedCount: number }> {
+  ): Promise<{ count: number }> {
     // Verify all products belong to the store
     const products = await productRepository.findByIds(productIds);
     const invalidProducts = products.filter((p) => p.storeId !== storeId);
@@ -215,8 +215,7 @@ export class ProductService {
       throw new Error("One or more products do not belong to this store");
     }
 
-    const result = await productRepository.bulkDelete(productIds);
-    return { deletedCount: result.count };
+    return productRepository.bulkDelete(productIds);
   }
 
   /**

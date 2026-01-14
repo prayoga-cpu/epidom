@@ -70,9 +70,9 @@ export function CreateStoreDialog() {
           {t("stores.createStore")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[500px] sm:h-[90vh]">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 sm:h-[90vh] sm:max-w-[550px]">
         {/* Fixed Header */}
-        <DialogHeader className="shrink-0 border-b border-border px-4 pr-10 py-3 sm:px-6 sm:pr-6 sm:py-4">
+        <DialogHeader className="border-border shrink-0 border-b px-4 py-3 pr-10 sm:px-6 sm:py-4 sm:pr-6">
           <DialogTitle className="text-lg font-bold sm:text-xl md:text-2xl">
             {t("stores.createStore")}
           </DialogTitle>
@@ -96,7 +96,7 @@ export function CreateStoreDialog() {
         </div>
 
         {/* Fixed Footer with Actions */}
-        <div className="shrink-0 border-t border-border px-4 py-3 sm:px-6 sm:py-4">
+        <div className="border-border shrink-0 border-t px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
             <Button
               type="button"

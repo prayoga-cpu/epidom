@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StoreCard } from "./store-card";
 import { CreateStoreDialog } from "./create-store-dialog";
@@ -16,6 +17,48 @@ export function StoresContainer() {
   const router = useRouter();
   const { data: stores, isLoading, error, refetch } = useStores();
   const { data: subscriptionStatus, isLoading: isLoadingSubscription } = useSubscriptionStatus();
+  /**
+   * GATEKEEPER LOGIC:
+   * Protects the /stores route from incomplete users.
+   * If a user lands here without a complete business profile or active plan,
+   * they correspond to a 'New User' flow and must be sent to onboarding.
+   */
+  useEffect(() => {
+     // Run only when authentication/subscription is adequately loaded
+    if (isLoadingSubscription) return;
+
+    const checkCompliance = async () => {
+      try {
+        const res = await fetch("/api/user/profile");
+        if (res.ok) {
+          const { data: profile } = await res.json();
+          const business = profile.business;
+          const subscription = profile.subscription;
+
+          // Conditions for redirection:
+          // 1. Plan is NOT active (if plan is active, we let them in regardless of business info)
+          const isPlanActive = subscription?.status === "ACTIVE";
+
+          if (!isPlanActive) {
+            // 2. Business Profile is Incomplete
+            const DEFAULT_BUSINESS_NAME = "My Business";
+            const isDefaultName = business?.name === DEFAULT_BUSINESS_NAME;
+            const isAddressMissing = !business?.address || business.address.trim() === "";
+            const isIncomplete = !business || isDefaultName || isAddressMissing;
+
+            if (isIncomplete) {
+               // Redirect to onboarding to fix profile/payment
+               router.replace("/onboarding");
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Gatekeeper compliance check failed", error);
+      }
+    };
+
+    checkCompliance();
+  }, [isLoadingSubscription, router]);
 
   /**
    * Render create store button based on subscription status

@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, PlayCircle, Clock, Package, AlertCircle, Loader2, ChefHat } from "lucide-react";
+import { Search, PlayCircle, Clock, Package, AlertCircle, ChefHat } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { StartProductionDialog } from "./start-production-dialog";
 import { ProductionBatchCard } from "./production-batch-card";
 import { MaterialAvailabilityCheck } from "./material-availability-check";
@@ -183,7 +184,7 @@ export function RecipeProductionCard() {
           </p>
         </div>
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+          <LottieLoader size="md" className="text-gray-500" />
         </div>
       </div>
     );

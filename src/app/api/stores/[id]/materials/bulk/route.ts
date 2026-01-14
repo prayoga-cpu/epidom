@@ -17,7 +17,11 @@ export const DELETE = withApiHandler(
     const { ids } = bulkDeleteSchema.parse(body);
 
     // Bulk delete materials via service
+<<<<<<< HEAD
     const deletedCount = await materialService.bulkDeleteMaterials(ids, storeId!);
+=======
+    const { count: deletedCount } = await materialService.bulkDeleteMaterials(ids, storeId!);
+>>>>>>> dev
 
     return NextResponse.json(
       createSuccessResponse({

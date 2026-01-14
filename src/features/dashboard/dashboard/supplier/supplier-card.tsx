@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Phone, Mail, Star, Loader2, Package, ArrowRight } from "lucide-react";
+import { Phone, Mail, Star, Package, ArrowRight } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { useSuppliers } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
@@ -43,7 +44,7 @@ export function SupplierCard() {
         </div>
       ) : isLoading || isLoadingAccess ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
-          <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
+          <LottieLoader size="md" className="text-muted-foreground mb-3" />
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         </div>
       ) : isSubscriptionLocked ? (

@@ -154,6 +154,157 @@ export const fr = {
       tracking: "Suivi",
     },
   },
+  home: {
+    hero: {
+      badge: "🚀 Maintenant disponible pour les Cookie Bars",
+      headlinePart1: "Le Secret de la",
+      headlineHighlight: "Cookie Bars",
+      headlinePart2: "Gestion des Stocks",
+      headline: "Le Secret de la Gestion des Stocks de Cookie Bars",
+      description:
+        "Suivez votre stock de cookies sur mobile, gérez-le partout en temps réel, et réapprovisionnez-vous en quelques secondes",
+      ctaStartFree: "Commencer gratuitement",
+      ctaDemo: "Démo 1 sur 1",
+      mockupTitle: "Tableau de Bord Cookie Bar",
+      mockupSubtitle: "Vue Mobile & Bureau",
+      mockupUrl: "epidom.fr/dashboard",
+      notificationTitle: "Stock Mis à Jour",
+      notificationDetail: "Farine: +50 kg",
+      statsValue: "98%",
+      statsLabel: "Gaspillage Réduit",
+      socialProofMini: "Adoré par 500+ cookie bars en France",
+    },
+    socialProof: {
+      trustedBy: "Approuvé par des Cookie Bars du monde entier",
+      yourBrand: "Votre Cookie Bar Ici",
+      instagramTitle: "Donnez-nous votre avis",
+      instagramSubtitle: "Voyez ce que nos clients disent sur Instagram",
+      testimonial1: "Epidom a transformé notre gestion des stocks de cookies. Plus de gaspillage !",
+      author1: "Marie Dubois",
+      role1: "Propriétaire, Sweet Délices Paris",
+      testimonial2: "Le suivi en temps réel signifie que je sais toujours ce qui est en stock. Révolutionnaire !",
+      author2: "Jean-Pierre Martin",
+      role2: "Gérant, Le Cookie Shop",
+      testimonial3: "Les alertes d'expiration nous ont fait économiser des milliers en ingrédients.",
+      author3: "Sophie Laurent",
+      role3: "Chef, Pâtisserie Belle",
+    },
+    howToUse: {
+      headline: "Créer, Suivre, Alertes",
+      description:
+        "Nous sommes populaires pour résoudre la gestion surchargée des bars à cookies grâce à des alertes d'expiration intelligentes, particulièrement en France 🇫🇷.",
+      aiGenerated: "Contenu généré par Système : Profil, Tableau de bord, Gestion, Suivi, Données, Alertes.",
+      features: {
+        profile: {
+          title: "Profil",
+          description: "Gérez votre profil d'entreprise et les membres de votre équipe facilement",
+        },
+        dashboard: {
+          title: "Tableau de bord",
+          description: "Obtenez un aperçu en temps réel de votre inventaire et de vos opérations",
+        },
+        management: {
+          title: "Gestion",
+          description: "Organisez efficacement les recettes, les produits et les fournisseurs",
+        },
+        tracking: {
+          title: "Suivi",
+          description: "Surveillez les niveaux de stock et les mouvements en temps réel",
+        },
+        data: {
+          title: "Données",
+          description: "Accédez à des rapports détaillés et des analyses pour de meilleures décisions",
+        },
+        alerts: {
+          title: "Alertes",
+          description: "Ne manquez jamais les niveaux de stock critiques ou les dates d'expiration",
+        },
+      },
+    },
+    pricing: {
+      headline: "Tarification Simple et Transparente",
+      subheadline: "Choisissez le plan qui correspond aux besoins de votre cookie bar",
+      ribbon: "Offre Spéciale Nouvel An 2026",
+      mostPopular: "Le Plus Populaire",
+      cta: "Commencer",
+      note: "Tous les plans incluent un support 24/7 et des mises à jour régulières",
+      free: {
+        name: "Nouvel An 2026 Uniquement",
+        features: {
+          freeTrial: "Avant le 31 décembre, c'est gratuit",
+          limitedTime: "Il suffit de se connecter",
+          creditCard: "Puis connectez votre carte de crédit",
+          fullAccess: "Accès complet à toutes les fonctionnalités",
+        },
+      },
+      pro: {
+        name: "Le Plus Populaire",
+        features: {
+          multiStore: "Vous pouvez avoir plus d'un magasin",
+          unlimited: "dans un seul tableau de bord",
+          advanced: "Analyses et rapports avancés",
+          priority: "Support email prioritaire",
+          whatsapp: "Canal de support WhatsApp",
+        },
+      },
+      custom: {
+        name: "Inventaire Premium",
+        cta: "Contacter les Ventes",
+        features: {
+          franchise: "Pour franchise ou forte demande uniquement",
+          dedicated: "Gestionnaire de compte dédié",
+          custom: "Intégrations et fonctionnalités personnalisées",
+          onboarding: "Intégration et formation personnalisées",
+        },
+      },
+    },
+    painGain: {
+      headline: "Arrêtez le Gaspillage Alimentaire et les Pertes d'Argent",
+      description:
+        "Comparez comment Epidom transforme vos opérations traditionnelles en méthodes modernes efficaces.",
+      oldWay: {
+        title: "L'Ancienne Méthode",
+        subtitle: "Méthode Traditionnelle",
+        items: {
+          manualSpreadsheets: "Heures passées sur des tableurs manuels",
+          foodWaste: "Gaspillage alimentaire constant",
+          guessingOrders: "Devinettes des quantités de commande",
+          unclearCosts: "Coûts alimentaires et marges flous",
+        },
+      },
+      epidomWay: {
+        title: "La Méthode Epidom",
+        subtitle: "Solution Intelligente",
+        items: {
+          realtimeTracking: "Suivi des stocks en temps réel",
+          smartAlerts: "Alertes d'expiration intelligentes & réduction du gaspillage",
+          dataDriven: "Décisions d'achat basées sur les données",
+          preciseCosts: "Calcul précis des coûts par plat",
+        },
+      },
+    },
+    closingCta: {
+      badge: "Commencez votre voyage aujourd'hui",
+      headline: "Prêt à Mettre à Niveau votre Cookie Bar ?",
+      description: "Rejoignez la méthode internationale de gestion des stocks avec nous",
+      ctaStartFree: "Commencer gratuitement",
+      ctaDemo: "Démo 1 sur 1",
+      badges: {
+        secure: {
+          title: "Sécurisé & Privé",
+          description: "Vos données sont cryptées et protégées",
+        },
+        cancel: {
+          title: "Annulez à tout moment",
+          description: "Aucun engagement à long terme requis",
+        },
+        quick: {
+          title: "Installation Rapide",
+          description: "Commencez en moins de 5 minutes",
+        },
+      },
+    },
+  },
   hero: {
     title: "EPIDOM",
     subtitle: "Une solution pour la gestion de votre stock alimentaire",
@@ -741,6 +892,18 @@ export const fr = {
       },
       goTo: "Aller à",
       login: "Connexion",
+    },
+    verifyEmail: {
+      title: "Vérifiez votre email",
+      heading: "Vérifiez votre adresse email",
+      description: "Nous avons envoyé un lien de vérification à",
+      instructions:
+        "Cliquez sur le lien dans l'email pour vérifier votre compte. Si vous ne le voyez pas, vérifiez votre dossier spam.",
+      resendButton: "Renvoyer l'email de vérification",
+      resending: "Envoi...",
+      resendSuccess: "Email de vérification envoyé !",
+      resendError: "Échec du renvoi. Veuillez réessayer.",
+      backToLogin: "Retour à la Connexion",
     },
   },
   paymentsComponents: {
@@ -1721,7 +1884,9 @@ export const fr = {
   alerts: {
     // Page titles
     title: "Alertes de Stock",
+    description: "Surveillez les niveaux de stock faibles et agissez pour éviter les ruptures",
     ordersToPlace: "Commandes à Passer",
+    ordersToPlaceDescription: "Contacter les fournisseurs pour réapprovisionner les articles en faible stock",
     ordersDescription:
       "Contacter les fournisseurs pour réapprovisionner les articles en faible stock",
 
@@ -3167,6 +3332,80 @@ export const fr = {
       redirecting: "Redirection vers le tableau de bord dans {seconds} secondes...",
     },
   },
+<<<<<<< HEAD
+=======
+  import: {
+    title: "Import Intelligent",
+    subtitle: "Import CSV intelligent avec mappage intelligent des champs",
+    steps: {
+      upload: "Télécharger",
+      analysis: "Analyse",
+      preview: "Aperçu",
+      done: "Terminé",
+    },
+    upload: {
+      label: "J'importe :",
+      dropZone: "Glissez & déposez votre fichier CSV ici",
+      browse: "ou cliquez pour parcourir",
+      supports: "Supporte les fichiers .csv jusqu'à 10 Mo • Toutes langues • Tous formats",
+      processing: "Traitement...",
+      analyzing: "Le système analyse votre fichier",
+      dropToUpload: "Déposez votre fichier ici",
+      error: "Veuillez télécharger un fichier CSV",
+      errorSize: "Fichier trop volumineux. Taille maximale 10 Mo",
+      entities: {
+        auto: "Détection automatique (Recommandé)",
+        material: "Matières Premières (Materials)",
+        product: "Produits (Products)",
+        supplier: "Fournisseurs (Suppliers)",
+        recipe: "Recettes (Recipes)",
+      },
+    },
+    analysis: {
+      title: "Analyse du fichier en cours",
+      description: "Nous traitons vos données pour comprendre la structure et le format. Cela prend généralement 5 à 15 secondes.",
+      stages: {
+        language: "Détection de la langue et du format",
+        structure: "Analyse de la structure",
+        mapping: "Mappage des colonnes aux champs",
+        healing: "Correction des problèmes de données",
+        validation: "Validation des données",
+      },
+      analyzing: "Analyse de la structure du fichier...",
+      identifying: "Identification des colonnes...",
+      mapping: "Mappage des champs de données...",
+      success: "Analyse terminée !",
+      error: "L'analyse a échoué. Veuillez réessayer.",
+    },
+    preview: {
+      title: "Vérifier les données",
+      subtitle: "Vérifiez et modifiez les données avant l'importation",
+      importAll: "Tout Importer",
+      cancel: "Annuler",
+      itemsReady: "{count} éléments prêts à importer",
+      startOver: "Recommencer",
+      columns: {
+        status: "Statut",
+        original: "Original",
+        mapped: "Mappé",
+      },
+      tabs: {
+        materials: "Matières Premières",
+        products: "Produits",
+        suppliers: "Fournisseurs",
+        recipes: "Recettes",
+      },
+    },
+    results: {
+      success: "Importation Réussie",
+      partialSuccess: "Importation Partiellement Réussie",
+      failure: "Échec de l'Importation",
+      summary: "Importé {succeeded} sur {total} éléments avec succès.",
+      close: "Fermer",
+      viewData: "Voir les Données",
+    },
+  },
+>>>>>>> dev
   notFound: {
     title: "Page Non Trouvée",
     description: "Désolé, nous n'avons pas pu trouver la page que vous recherchez.",

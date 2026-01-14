@@ -43,7 +43,7 @@ interface RecipeDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   recipe: RecipeWithIngredients;
   onEdit?: (recipe: RecipeWithIngredients) => void;
-  onDelete?: (recipeId: string) => void;
+  onDelete?: (recipeId: string) => Promise<void> | void;
 }
 
 export function RecipeDetailsDialog({
@@ -89,11 +89,11 @@ export function RecipeDetailsDialog({
     return { suggestedPrice, profit, margin };
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (onDelete) {
-      onDelete(recipe.id);
-      setDeleteDialogOpen(false);
-      onOpenChange(false);
+      await onDelete(recipe.id);
+      // setDeleteDialogOpen(false); // Handled by ConfirmationDialog
+      // onOpenChange(false); // Handled by ConfirmationDialog or parent update
     }
   };
 

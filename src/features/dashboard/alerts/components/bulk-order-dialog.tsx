@@ -25,7 +25,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { useCreateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
-import { ShoppingCart, Loader2, Package, AlertCircle } from "lucide-react";
+import { ShoppingCart, Package, AlertCircle } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useParams } from "next/navigation";
 
 // Schema for bulk order items
@@ -207,7 +208,7 @@ export function BulkOrderDialog({
               Cancel
             </Button>
             <Button type="submit" form="bulk-order-form" disabled={createOrder.isPending}>
-              {createOrder.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+              {createOrder.isPending && <LottieLoader size="xs" className="mr-1 hidden sm:inline" />}
               <ShoppingCart className="mr-1 h-4 w-4 hidden sm:inline" />
               Create Bulk Order ({selectedItems.length})
             </Button>

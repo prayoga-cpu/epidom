@@ -33,7 +33,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Loader2,
   ChevronRight,
   ChevronLeft,
   Check,
@@ -42,6 +41,7 @@ import {
   DollarSign,
   Clock,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
@@ -392,7 +392,7 @@ export default function DuplicateRecipeDialog({
                   disabled={duplicateRecipe.isPending}
                 >
                   {duplicateRecipe.isPending && (
-                    <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                    <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
                   )}
                   {t("data.recipes.duplicate")}
                 </Button>

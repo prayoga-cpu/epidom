@@ -19,7 +19,7 @@ import { Store } from "../hooks/use-stores";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { compressImage } from "@/lib/utils/image-compression";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Upload } from "lucide-react";
 
 interface StoreFormProps {
   /**
@@ -145,6 +145,86 @@ export function StoreForm({
         onSubmit={form.handleSubmit(handleFormSubmit)}
         className="space-y-3 sm:space-y-4"
       >
+        {/* Store Image - Optional with Manual Upload (Placed first for visual identity) */}
+        <FormField
+          control={form.control}
+          name="image"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("stores.storeImage") || "Store Image"}</FormLabel>
+              <FormControl>
+                <div className="space-y-2">
+                  {imagePreviewUrl ? (
+                    <div className="relative overflow-hidden rounded-lg border">
+                      <img
+                        src={imagePreviewUrl}
+                        alt="Preview"
+                        className="h-40 w-full object-cover sm:h-48"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1.5 right-1.5 h-7 w-7 sm:top-2 sm:right-2 sm:h-8 sm:w-8"
+                        onClick={() => {
+                          if (imagePreviewUrl.startsWith("blob:")) {
+                            URL.revokeObjectURL(imagePreviewUrl);
+                          }
+                          setImagePreviewUrl(undefined);
+                          setPendingImageFile(null);
+                          field.onChange("");
+                        }}
+                        disabled={isLoading || isImageUploading}
+                      >
+                        <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="hover:border-primary hover:bg-muted/50 bg-muted/30 cursor-pointer rounded-lg border-2 border-dashed p-6 text-center transition-colors sm:p-8"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="bg-primary/10 mb-3 rounded-full p-3">
+                          <Upload className="text-primary h-6 w-6" />
+                        </div>
+                        <p className="text-foreground mb-1 text-sm font-medium">
+                          Click to upload store image
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          JPEG, PNG, WebP, or GIF (max 5MB)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // Create preview
+                        const preview = URL.createObjectURL(file);
+                        setImagePreviewUrl(preview);
+                        // Store file for upload on submit
+                        setPendingImageFile(file);
+                        // Clear the form field value (will be set after upload)
+                        field.onChange("");
+                      }
+                      // Reset input
+                      e.target.value = "";
+                    }}
+                    disabled={isLoading || isImageUploading}
+                    className="hidden"
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Store Name - Required */}
         <FormField
           control={form.control}
@@ -264,78 +344,6 @@ export function StoreForm({
                   placeholder={t("stores.emailPlaceholder") || "e.g., contact@store.com"}
                   disabled={isLoading}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Store Image - Optional with Manual Upload */}
-        <FormField
-          control={form.control}
-          name="image"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("stores.storeImage") || "Store Image"}</FormLabel>
-              <FormControl>
-                <div className="space-y-2">
-                  {imagePreviewUrl ? (
-                    <div className="relative overflow-hidden rounded-lg border">
-                      <img
-                        src={imagePreviewUrl}
-                        alt="Preview"
-                        className="h-40 w-full object-cover sm:h-48"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1.5 right-1.5 h-7 w-7 sm:top-2 sm:right-2 sm:h-8 sm:w-8"
-                        onClick={() => {
-                          if (imagePreviewUrl.startsWith("blob:")) {
-                            URL.revokeObjectURL(imagePreviewUrl);
-                          }
-                          setImagePreviewUrl(undefined);
-                          setPendingImageFile(null);
-                          field.onChange("");
-                        }}
-                        disabled={isLoading || isImageUploading}
-                      >
-                        <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div
-                      className="hover:border-primary cursor-pointer rounded-lg border-2 border-dashed p-4 text-center transition-colors sm:p-6 md:p-8"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <p className="text-muted-foreground text-xs sm:text-sm">
-                        Click to upload store image (max 5MB)
-                      </p>
-                    </div>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        // Create preview
-                        const preview = URL.createObjectURL(file);
-                        setImagePreviewUrl(preview);
-                        // Store file for upload on submit
-                        setPendingImageFile(file);
-                        // Clear the form field value (will be set after upload)
-                        field.onChange("");
-                      }
-                      // Reset input
-                      e.target.value = "";
-                    }}
-                    disabled={isLoading || isImageUploading}
-                    className="hidden"
-                  />
-                </div>
               </FormControl>
               <FormMessage />
             </FormItem>

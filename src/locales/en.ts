@@ -875,6 +875,18 @@ export const en = {
       goTo: "Go to",
       login: "Login",
     },
+    verifyEmail: {
+      title: "Check your email",
+      heading: "Verify your email address",
+      description: "We've sent a verification link to",
+      instructions:
+        "Click the link in the email to verify your account. If you don't see it, check your spam folder.",
+      resendButton: "Resend verification email",
+      resending: "Sending...",
+      resendSuccess: "Verification email sent!",
+      resendError: "Failed to resend. Please try again.",
+      backToLogin: "Back to Login",
+    },
   },
   paymentsComponents: {
     paymentHistory: {
@@ -996,6 +1008,9 @@ export const en = {
     tracking: "Tracking",
     data: "Data",
     alerts: "Alerts",
+    import: "Import",
+    pos: "POS",
+    reports: "Reports",
   },
   sidebar: {
     inventoryProduction: "Inventory & Production",
@@ -1845,7 +1860,9 @@ export const en = {
   alerts: {
     // Page titles
     title: "Stock Alerts",
+    description: "Monitor low stock levels and take action to prevent stockouts",
     ordersToPlace: "Orders to Place",
+    ordersToPlaceDescription: "Contact suppliers to restock low inventory items",
     ordersDescription: "Contact suppliers to restock low inventory items",
 
     // Alert states
@@ -3269,6 +3286,81 @@ export const en = {
       redirecting: "Redirecting to dashboard in {seconds} seconds...",
     },
   },
+<<<<<<< HEAD
+=======
+  import: {
+    title: "Smart Import",
+    subtitle: "Smart CSV import with intelligent field mapping",
+    steps: {
+      upload: "Upload",
+      analysis: "Analysis",
+      preview: "Preview",
+      done: "Done",
+    },
+    upload: {
+      label: "I am importing:",
+      dropZone: "Drag & drop your CSV file here",
+      browse: "or click to browse",
+      supports: "Supports .csv files up to 10MB • Any language • Any format",
+      processing: "Processing...",
+      analyzing: "System is analyzing your file",
+      dropToUpload: "Drop your file here",
+      error: "Please upload a CSV file",
+      errorSize: "File too large. Maximum size is 10MB",
+      entities: {
+        auto: "Auto-detect (Recommended)",
+        material: "Materials (Bahan Baku)",
+        product: "Products (Produk Jual)",
+        supplier: "Suppliers (Pemasok)",
+        recipe: "Recipes (Resep)",
+      },
+    },
+    analysis: {
+      title: "Analyzing your file",
+      description:
+        "We are processing your data to understand the structure and format. This usually takes 5-15 seconds.",
+      stages: {
+        language: "Detecting language & format",
+        structure: "Analyzing structure",
+        mapping: "Mapping columns to fields",
+        healing: "Healing data issues",
+        validation: "Validating data",
+      },
+      analyzing: "Analyzing file structure...",
+      identifying: "Identifying columns...",
+      mapping: "Mapping data fields...",
+      success: "Analysis complete!",
+      error: "Analysis failed. Please try again.",
+    },
+    preview: {
+      title: "Review Data",
+      subtitle: "Review and edit the data before importing",
+      importAll: "Import All",
+      cancel: "Cancel",
+      itemsReady: "{count} items ready to import",
+      startOver: "Start Over",
+      columns: {
+        status: "Status",
+        original: "Original",
+        mapped: "Mapped",
+      },
+      tabs: {
+        materials: "Materials",
+        products: "Products",
+        suppliers: "Suppliers",
+        recipes: "Recipes",
+      },
+    },
+    results: {
+      success: "Import Successful",
+      partialSuccess: "Import Partly Successful",
+      failure: "Import Failed",
+      summary: "Imported {succeeded} of {total} items successfully.",
+      close: "Close",
+      viewData: "View Data",
+    },
+  },
+>>>>>>> dev
   notFound: {
     title: "Page Not Found",
     description: "Sorry, we couldn't find the page you're looking for.",

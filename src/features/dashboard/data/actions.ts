@@ -27,6 +27,69 @@ interface ImportResult {
   };
 }
 
+<<<<<<< HEAD
+=======
+// Helper to safely parse numbers from global formats (Rp 10.000, $5,000.00, 1.500,50 etc)
+function parseGlobalNumber(value: any): number {
+  if (value === undefined || value === null || value === "") return 0;
+  if (typeof value === "number") return value;
+
+  let str = String(value).trim();
+  // Remove currency symbols and non-numeric chars except . , -
+  str = str.replace(/[^0-9.,-]/g, "");
+
+  if (!str) return 0;
+
+  // Heuristic to detect format:
+  // If connection contains both . and , -> last one is usually decimal
+  // 10.000,00 -> remove thousand sep (.), replace decimal (,) with .
+  // 10,000.00 -> remove thousand sep (,), keep decimal (.)
+
+  if (str.includes(",") && str.includes(".")) {
+    const lastDot = str.lastIndexOf(".");
+    const lastComma = str.lastIndexOf(",");
+    if (lastComma > lastDot) {
+      // European/Indo format: 1.000,00 -> 1000.00
+      str = str.replace(/\./g, "").replace(",", ".");
+    } else {
+      // US format: 1,000.00 -> 1000.00
+      str = str.replace(/,/g, "");
+    }
+  } else if (str.includes(",")) {
+    // Ambiguous: 10,000 (ten thousand) vs 10,5 (ten point five)
+    // If we have 3 digits after comma, likely thousand separator (10,000)
+    // If 2 digits, likely decimal (10,50) - BUT THIS IS RISKY
+    // Safe bet for commerce: if comma is being used and no dots, treat as thousand separator IF it makes sense?
+    // Actually, widespread convention in data:
+    // If it looks like 10,000 it is 10000.
+    // If it looks like 5,5 it is 5.5.
+
+    // Safer approach: Standardize to US float for storage
+    // If >1 commas, it's definitely update separators (1,000,000) -> remove all
+    if ((str.match(/,/g) || []).length > 1) {
+       str = str.replace(/,/g, "");
+    } else {
+       // Single comma. 10,000 or 0,5?
+       // Check if followed by 3 digits exactly at end -> likely thousand sep
+       if (/,\d{3}$/.test(str)) {
+          str = str.replace(/,/g, "");
+       } else {
+          // Likely decimal
+          str = str.replace(",", ".");
+       }
+    }
+  }
+  // Remove remaining thousand separators (dots if used as such not handled above?)
+  // If we have multiple dots: 1.000.000 -> remove all
+  if ((str.match(/\./g) || []).length > 1) {
+      str = str.replace(/\./g, "");
+  }
+
+  const result = parseFloat(str);
+  return isNaN(result) ? 0 : result;
+}
+
+>>>>>>> dev
 /**
  * Bulk import data into the database.
  * Handles materials, products, suppliers, and recipes.
@@ -113,6 +176,21 @@ export async function bulkImportData(
   }
 }
 
+<<<<<<< HEAD
+=======
+// Helper to normalize supplier names for fuzzy matching
+// Removes "PT", "CV", "Inc", "Ltd", punctuation, and extra spaces
+function normalizeSupplierName(name: string): string {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .replace(/[.,\-]/g, " ") // Replace punctuation with space
+    .replace(/\b(pt|cv|inc|ltd|corp|llc|gmbh|tbk|ud)\b/g, "") // Remove entity types
+    .replace(/\s+/g, " ") // Collapse spaces
+    .trim();
+}
+
+>>>>>>> dev
 /**
  * Import materials with createMany for efficiency
  */
@@ -131,7 +209,12 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
     }
 
     // 1. Process Suppliers (Auto-create if missing)
+<<<<<<< HEAD
     const supplierNames = [
+=======
+    // Extract raw names first
+    const rawSupplierNames = [
+>>>>>>> dev
       ...new Set(
         validData
           .map((d) => d.supplierName)
@@ -139,6 +222,7 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
       ),
     ] as string[];
 
+<<<<<<< HEAD
     const supplierMap = new Map<string, string>(); // Name (lowercase) -> ID
 
     if (supplierNames.length > 0) {
@@ -180,6 +264,54 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
         });
 
         newSuppliers.forEach((s) => supplierMap.set(s.name.toLowerCase(), s.id));
+=======
+    const supplierMap = new Map<string, string>(); // Normalized Name -> ID
+
+    if (rawSupplierNames.length > 0) {
+      // Fetch ALL existing suppliers to perform in-memory fuzzy check (safer than database strict match)
+      // Note: For <1000 suppliers this is fine. For scale, we'd need a search index.
+      const existingSuppliers = await prisma.supplier.findMany({
+        where: { storeId },
+        select: { id: true, name: true },
+      });
+
+      // Build map of Normalized -> ID from DB
+      existingSuppliers.forEach((s) => {
+        supplierMap.set(normalizeSupplierName(s.name), s.id);
+      });
+
+      // Identify truly missing suppliers
+      const suppliersToCreate = new Set<string>();
+
+      rawSupplierNames.forEach((rawName) => {
+        const normalized = normalizeSupplierName(rawName);
+        if (!supplierMap.has(normalized)) {
+          suppliersToCreate.add(rawName); // Use the raw name for creation (looks better)
+        }
+      });
+
+      // Create missing suppliers
+      if (suppliersToCreate.size > 0) {
+        // We create them one by one or createMany, but createMany doesn't return IDs easily in all DBs.
+        // Let's use loop for safety to get IDs and map them immediately
+        // (Performance trade-off acceptable for <50 new suppliers)
+        for (const newName of Array.from(suppliersToCreate)) {
+           // Double check to avoid race condition if duplicates in list had diff casing
+           const norm = normalizeSupplierName(newName);
+           if(supplierMap.has(norm)) continue;
+
+           const created = await prisma.supplier.create({
+             data: {
+               name: newName.trim(),
+               storeId,
+               createdAt: new Date(),
+               updatedAt: new Date(),
+             },
+             select: { id: true }
+           });
+           supplierMap.set(norm, created.id);
+        }
+>>>>>>> dev
       }
     }
 
@@ -192,7 +324,12 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
       try {
         let supplierId = undefined;
         if (item.supplierName && typeof item.supplierName === "string") {
+<<<<<<< HEAD
           supplierId = supplierMap.get(item.supplierName.trim().toLowerCase());
+=======
+          // Use normalized lookup
+          supplierId = supplierMap.get(normalizeSupplierName(item.supplierName));
+>>>>>>> dev
         }
 
         // Prepare supplier relation data if supplier exists
@@ -200,7 +337,11 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
           ? {
               create: {
                 supplierId,
+<<<<<<< HEAD
                 price: Number(item.supplierPrice) || Number(item.unitCost) || 0,
+=======
+                price: parseGlobalNumber(item.supplierPrice) || parseGlobalNumber(item.unitCost) || 0,
+>>>>>>> dev
                 isPreferred: true,
               },
             }
@@ -216,10 +357,17 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
             description: item.description || undefined,
             category: item.category || undefined,
             unit: item.unit || "kg",
+<<<<<<< HEAD
             unitCost: Number(item.unitCost) || 0,
             currentStock: Number(item.currentStock) || 0,
             minStock: Number(item.minStock) || 0,
             maxStock: item.maxStock ? Number(item.maxStock) : undefined,
+=======
+            unitCost: parseGlobalNumber(item.unitCost) || 0,
+            currentStock: parseGlobalNumber(item.currentStock) || 0,
+            minStock: parseGlobalNumber(item.minStock) || 0,
+            maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
+>>>>>>> dev
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             // Create relation to supplier
@@ -272,6 +420,7 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
       };
     }
 
+<<<<<<< HEAD
     const cleanedData = validData.map((item) => ({
       storeId: item.storeId,
       sku: item.sku || undefined,
@@ -305,6 +454,87 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
     };
   } catch (error) {
     console.error("Product import error:", error);
+=======
+    let successCount = 0;
+    const errors: Array<{ index: number; message: string }> = [];
+
+    // Process one by one to handle Updates (Upsert logic) and precise error reporting
+    for (let i = 0; i < validData.length; i++) {
+        const item = validData[i];
+        try {
+            const name = String(item.name).trim();
+            const sku = item.sku || undefined;
+
+            // Check for existing product by Name (primary match) or SKU (secondary)
+            // We verify storeId and Insensitive Name match
+            let existingProduct = await prisma.product.findFirst({
+                where: {
+                    storeId,
+                    name: { equals: name, mode: "insensitive" }
+                },
+                select: { id: true }
+            });
+
+            // If not found by name, try finding by SKU if provided
+            if (!existingProduct && sku) {
+                existingProduct = await prisma.product.findFirst({
+                    where: { storeId, sku },
+                    select: { id: true }
+                });
+            }
+
+            const productData = {
+                name,
+                sku,
+                description: item.description || undefined,
+                category: item.category || undefined,
+                unit: item.unit || "pcs",
+                costPrice: parseGlobalNumber(item.costPrice) || 0,
+                sellingPrice: parseGlobalNumber(item.sellingPrice) || 0,
+                currentStock: parseGlobalNumber(item.currentStock) || 0,
+                minStock: parseGlobalNumber(item.minStock) || 0,
+                maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
+                updatedAt: new Date(), // Always update timestamp
+            };
+
+            if (existingProduct) {
+                // UPDATE existing product
+                await prisma.product.update({
+                    where: { id: existingProduct.id },
+                    data: productData
+                });
+            } else {
+                // CREATE new product
+                await prisma.product.create({
+                    data: {
+                        ...productData,
+                        storeId,
+                        createdAt: item.createdAt || new Date(),
+                    }
+                });
+            }
+
+            successCount++;
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : "Unknown error";
+            errors.push({ index: i + 1, message: msg.slice(0, 100) });
+            console.error(`Product import error at row ${i+1}:`, error);
+        }
+    }
+
+    return {
+      success: successCount > 0,
+      count: successCount,
+      details: {
+        attempted: data.length,
+        succeeded: successCount,
+        failed: data.length - successCount,
+        errors: errors.slice(0, 10),
+      },
+    };
+  } catch (error) {
+    console.error("Product import fatal error:", error);
+>>>>>>> dev
     return {
       success: false,
       error: `Product import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -317,6 +547,12 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
  */
 async function importSuppliers(data: any[], storeId: string): Promise<ImportResult> {
   try {
+<<<<<<< HEAD
+=======
+    // Debug: Log raw data received
+    console.log("[importSuppliers] Raw data received:", JSON.stringify(data, null, 2));
+
+>>>>>>> dev
     const validData = data.filter(
       (item) => item.name && typeof item.name === "string" && item.name.trim()
     );
@@ -328,6 +564,7 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
       };
     }
 
+<<<<<<< HEAD
     const cleanedData = validData.map((item) => ({
       storeId: item.storeId,
       name: String(item.name).trim(),
@@ -341,6 +578,26 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
     }));
+=======
+    const cleanedData = validData.map((item) => {
+      const cleaned = {
+        storeId: item.storeId,
+        name: String(item.name).trim(),
+        contactPerson: item.contactPerson || undefined,
+        email: item.email || undefined,
+        phone: item.phone || undefined,
+        address: item.address || undefined,
+        city: item.city || undefined,
+        country: item.country || undefined,
+        notes: item.notes || undefined,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      };
+      // Debug: Log cleaned data
+      console.log("[importSuppliers] Cleaned supplier:", cleaned);
+      return cleaned;
+    });
+>>>>>>> dev
 
     const result = await prisma.supplier.createMany({
       data: cleanedData,
@@ -369,11 +626,20 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
 /**
  * Import recipes - uses individual creates for better error handling
  * since recipes may have complex validation
+<<<<<<< HEAD
+=======
+ *
+ * GROUPING LOGIC:
+ * - Same name + same yield = 1 Recipe (merge ingredients)
+ * - Same name + different yield = 2 separate Recipes
+ * - Multi-row format: continuation rows have empty yieldQuantity, inherit from first row
+>>>>>>> dev
  */
 async function importRecipes(data: any[], storeId: string): Promise<ImportResult> {
   const errors: Array<{ index: number; message: string }> = [];
   let successCount = 0;
 
+<<<<<<< HEAD
   // 1. Group by Recipe Name to handle multi-row ingredients
   const groups: Record<string, any[]> = {};
   data.forEach((item, index) => {
@@ -397,6 +663,81 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
       const ingredientsToCreate: any[] = [];
 
       // Process ingredients from all rows in this group
+=======
+  // 1. Group by Recipe Name + YieldQuantity to handle multi-row ingredients
+  // Key format: "RecipeName|YieldQty" (e.g., "Roti Tawar|60" vs "Roti Tawar|30")
+  const groups: Record<string, any[]> = {};
+  const nameCounts: Record<string, number> = {}; // Track frequency of each base name
+  let lastGroupKey: string | null = null;
+
+  data.forEach((item, index) => {
+    const name = item.name ? String(item.name).trim() : null;
+    // Continuation rows might not have name, so we rely on lastGroupKey logic generally,
+    // but for counting we need the base name.
+
+    // Get yield quantity - if empty, this might be a continuation row
+    const yieldQty = parseGlobalNumber(item.yieldQuantity);
+
+    // Build group key: name + yield (or inherit from previous if continuation row)
+    let groupKey: string;
+
+    if (name && yieldQty && yieldQty > 0) {
+      // New recipe or main row
+      groupKey = `${name}|${yieldQty}`;
+      lastGroupKey = groupKey;
+
+      // Count this unique variant if not already counted
+      if (!groups[groupKey]) {
+         nameCounts[name] = (nameCounts[name] || 0) + 1;
+      }
+    } else if (lastGroupKey) {
+      // Continuation row
+      groupKey = lastGroupKey;
+    } else if (name) {
+      // New recipe without yield specified (default 0)
+      groupKey = `${name}|0`;
+      lastGroupKey = groupKey;
+      if (!groups[groupKey]) {
+         nameCounts[name] = (nameCounts[name] || 0) + 1;
+      }
+    } else {
+       errors.push({ index: index + 1, message: "Skipping invalid row (no name/yield)" });
+       return;
+    }
+
+    if (!groups[groupKey]) groups[groupKey] = [];
+    groups[groupKey].push({ ...item, originalIndex: index + 1 });
+  });
+
+  const groupKeys = Object.keys(groups);
+
+  for (const key of groupKeys) {
+    const rows = groups[key];
+    const mainRow = rows[0];
+
+    // Recover original name from the key or the row
+    // Key format is "Name|Yield", so split it
+    const lastPipeIndex = key.lastIndexOf("|");
+    const baseName = key.substring(0, lastPipeIndex);
+    const yieldQtyFromKey = key.substring(lastPipeIndex + 1);
+
+    try {
+      // SMART SUFFIX LOGIC:
+      // If this name appears in multiple variants (count > 1), we append suffix.
+      // Else we use the clean base name.
+      let finalName = baseName;
+      const yieldQuantity = parseGlobalNumber(mainRow.yieldQuantity) || parseGlobalNumber(yieldQtyFromKey) || 1;
+      const yieldUnit = mainRow.yieldUnit || "unit";
+
+      if (nameCounts[baseName] > 1) {
+         finalName = `${baseName} (${yieldQuantity} ${yieldUnit})`;
+      }
+
+      // Prepare Ingredients
+      const ingredientsToCreate: any[] = [];
+
+      // ... (ingredient processing logic remains same) ...
+>>>>>>> dev
       for (const row of rows) {
         const ingName = row.ingredient_name || row.ingredientName;
         if (ingName && typeof ingName === "string" && ingName.trim()) {
@@ -442,6 +783,7 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
                 storeId,
                 name: cleanIngName,
                 unit: row.ingredient_unit || row.ingredientUnit || "kg",
+<<<<<<< HEAD
                 // Prefer provided SKU, otherwise generate one
                 sku:
                   row.ingredient_sku ||
@@ -450,11 +792,23 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
                 currentStock: Number(row.ingredient_stock) || 0,
                 category: "Imported",
                 // Link supplier if found/created
+=======
+                sku:
+                  row.ingredient_sku ||
+                  `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+                unitCost: parseGlobalNumber(row.ingredient_price) || 0,
+                currentStock: parseGlobalNumber(row.ingredient_stock) || 0,
+                category: "Imported",
+>>>>>>> dev
                 materialSuppliers: supplierId
                   ? {
                       create: {
                         supplierId,
+<<<<<<< HEAD
                         price: Number(row.ingredient_price) || 0,
+=======
+                        price: parseGlobalNumber(row.ingredient_price) || 0,
+>>>>>>> dev
                         isPreferred: true,
                       },
                     }
@@ -464,12 +818,19 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
             });
           }
 
+<<<<<<< HEAD
           // Add to ingredients list
           // Check if this material is already added to this recipe to avoid duplicates
           if (!ingredientsToCreate.some((i) => i.materialId === material!.id)) {
             ingredientsToCreate.push({
               materialId: material.id,
               quantity: Number(row.ingredient_qty) || Number(row.ingredientQuantity) || 1,
+=======
+          if (!ingredientsToCreate.some((i) => i.materialId === material!.id)) {
+            ingredientsToCreate.push({
+              materialId: material.id,
+              quantity: parseGlobalNumber(row.ingredient_qty) || parseGlobalNumber(row.ingredientQuantity) || 1,
+>>>>>>> dev
               unit: row.ingredient_unit || row.ingredientUnit || "kg",
             });
           }
@@ -478,14 +839,18 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
 
       // Format instructions
       let instructions = mainRow.instructions || "";
+<<<<<<< HEAD
       // If we have ingredients_text (bulk text) but no structured ingredients, we append it
       // Or if we just want to preserve it
+=======
+>>>>>>> dev
       if (mainRow.ingredients_text) {
         instructions = instructions
           ? `${instructions}\n\n--- Imported Ingredients ---\n${mainRow.ingredients_text}`
           : `--- Imported Ingredients ---\n${mainRow.ingredients_text}`;
       }
 
+<<<<<<< HEAD
       await prisma.recipe.create({
         data: {
           storeId,
@@ -507,6 +872,58 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
               : undefined,
         },
       });
+=======
+      // UPSERT LOGIC FOR RECIPE
+      // Check if recipe exists by NAME (Final Name)
+      const existingRecipe = await prisma.recipe.findFirst({
+        where: { storeId, name: { equals: finalName, mode: "insensitive" } },
+      });
+
+      if (existingRecipe) {
+        // UPDATE existing recipe
+        await prisma.recipe.update({
+            where: { id: existingRecipe.id },
+            data: {
+                description: mainRow.description || undefined,
+                category: mainRow.category || undefined,
+                yieldQuantity,
+                yieldUnit,
+                productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
+                instructions: instructions || undefined,
+                costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+                updatedAt: new Date(),
+                // For ingredients, simpler to delete all and recreate for accuracy in sync
+                ingredients: {
+                    deleteMany: {},
+                    create: ingredientsToCreate
+                }
+            }
+        });
+      } else {
+        // CREATE new recipe
+        await prisma.recipe.create({
+            data: {
+                storeId,
+                name: finalName,
+                description: mainRow.description || null,
+                category: mainRow.category || null,
+                yieldQuantity,
+                yieldUnit,
+                productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
+                instructions: instructions || null,
+                costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+                createdAt: mainRow.createdAt || new Date(),
+                updatedAt: mainRow.updatedAt || new Date(),
+                ingredients: ingredientsToCreate.length > 0
+                ? {
+                    create: ingredientsToCreate,
+                    }
+                : undefined,
+            },
+        });
+      }
+
+>>>>>>> dev
       successCount += rows.length;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -552,7 +969,13 @@ interface MultiEntityImportResult {
 
 /**
  * Detect which entity type a row best matches based on filled fields.
+<<<<<<< HEAD
  * Priority: Recipe > Material > Product > Supplier (most specific first)
+=======
+ * Priority:
+ * 1. Check 'category' column for explicit hints (e.g., "Suppliers", "Materials", "Recipes", "Products")
+ * 2. Check unique fields: Recipe > Material > Product > Supplier (most specific first)
+>>>>>>> dev
  * Uses centralized field definitions from import-schema.ts (DRY principle)
  */
 function detectEntityType(
@@ -561,7 +984,18 @@ function detectEntityType(
   const hasValue = (field: string) =>
     row[field] !== undefined && row[field] !== "" && row[field] !== null;
 
+<<<<<<< HEAD
   // Check in order of specificity (most specific first)
+=======
+  // 1. First check 'category' column for explicit entity type hints
+  const category = String(row.category || "").toLowerCase().trim();
+  if (category.includes("supplier") || category === "suppliers") return "supplier";
+  if (category.includes("material") || category === "materials") return "material";
+  if (category.includes("recipe") || category === "recipes") return "recipe";
+  if (category.includes("product") || category === "products") return "product";
+
+  // 2. Fallback: Check in order of specificity (most specific first)
+>>>>>>> dev
   if (ENTITY_UNIQUE_FIELDS.recipe.some(hasValue)) return "recipe";
   if (ENTITY_UNIQUE_FIELDS.material.some(hasValue)) return "material";
   if (ENTITY_UNIQUE_FIELDS.product.some(hasValue)) return "product";
@@ -661,6 +1095,18 @@ export async function bulkImportMultiEntity(
     // 5. Import in dependency order
     const summary = { ...defaultSummary };
 
+<<<<<<< HEAD
+=======
+    // Debug: Log grouped counts
+    console.log("[Smart Import] Entity grouping:", {
+      suppliers: grouped.supplier.length,
+      materials: grouped.material.length,
+      recipes: grouped.recipe.length,
+      products: grouped.product.length,
+      productRows: grouped.product.map((p) => ({ name: p.name, category: p.category })),
+    });
+
+>>>>>>> dev
     // 5a. Suppliers first (no dependencies)
     if (grouped.supplier.length > 0) {
       summary.suppliers.attempted = grouped.supplier.length;

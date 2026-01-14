@@ -124,6 +124,8 @@ model Store {
   business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
   supplierOrders    SupplierOrder[]
   suppliers         Supplier[]
+  aiImportMemories  AIImportMemory[]
+  aiImportSessions  AIImportSession[]
 
   @@index([businessId])
   @@map("stores")
@@ -532,4 +534,54 @@ enum AlertSeverity {
   INFO
   WARNING
   CRITICAL
+}
+
+// =============================================================================
+// AI IMPORT AGENT MODELS
+// =============================================================================
+
+model AIImportMemory {
+  id            String   @id @default(cuid())
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  memoryType    String   // FIELD_MAPPING, TYPO_CORRECTION, CATEGORY_PATTERN, etc.
+  sourcePattern String   // Original pattern (e.g., "Hrg Beli")
+  targetMapping String   // What it maps to (e.g., "unitCost")
+  entityType    String   // material, product, supplier, recipe
+  confidence    Float    @default(0.5) // 0.0 - 1.0
+  usageCount    Int      @default(1) // How many times used
+  successCount  Int      @default(0) // How many times correct
+  lastUsed      DateTime @default(now())
+  userConfirmed Boolean  @default(false) // Did user explicitly confirm?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([storeId, memoryType, sourcePattern, entityType])
+  @@index([storeId])
+  @@index([memoryType])
+  @@map("ai_import_memories")
+}
+
+model AIImportSession {
+  id              String   @id @default(cuid())
+  storeId         String
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  fileName        String
+  fileSize        Int      @default(0)
+  rowCount        Int      @default(0)
+  entityType      String? // Detected or specified entity type
+  status          String   @default("pending") // pending, analyzing, preview, importing, completed, failed
+  analysisResult  Json? // Full AI analysis result
+  importResult    Json? // Import execution result
+  aiCallCount     Int      @default(0)
+  totalTokens     Int      @default(0)
+  processingTimeMs Int? // Total processing time
+  userCorrections Json? // What user changed from AI suggestions
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([status])
+  @@map("ai_import_sessions")
 }

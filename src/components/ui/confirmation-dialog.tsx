@@ -10,6 +10,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 
 interface ConfirmationDialogProps {
   open: boolean;
@@ -34,10 +37,25 @@ export function ConfirmationDialog({
   variant = "default",
   loading = false,
 }: ConfirmationDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleConfirm = async () => {
-    await onConfirm();
-    onOpenChange(false);
+    try {
+      if (loading) return; // Prevent double clicks if parent controls loading
+
+      setIsLoading(true);
+      await onConfirm();
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      // Optional: keep dialog open on error so user can retry
+      // onOpenChange(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const isBusy = loading || isLoading;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -47,15 +65,23 @@ export function ConfirmationDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>{cancelText}</AlertDialogCancel>
+          <AlertDialogCancel disabled={isBusy}>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleConfirm}
-            disabled={loading}
+            onClick={(e) => {
+              e.preventDefault();
+              handleConfirm();
+            }}
+            disabled={isBusy}
             className={
               variant === "destructive" ? "bg-destructive hover:bg-destructive/90 text-white" : ""
             }
           >
-            {loading ? "Please wait..." : confirmText}
+            {isBusy ? (
+             <>
+               <LottieLoader size="xs" className="mr-2" />
+               Please wait...
+             </>
+            ) : confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

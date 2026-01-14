@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertsTable } from "./alerts-table";
 import { PlaceOrderDialog } from "./place-order-dialog";
 import { OrdersView } from "./orders-view";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useAlerts, type Alert, type AlertsResponse } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { useAlerts, type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 
 interface AlertsClientProps {
   initialAlerts: Alert[];
@@ -50,31 +49,50 @@ export function AlertsClient({ initialAlerts, storeId }: AlertsClientProps) {
     setIsOrderDialogOpen(true);
   };
 
+  // Get title and description based on current view
+  const pageTitle = isOrders ? t("alerts.ordersToPlace") : t("alerts.title");
+  const pageDescription = isOrders
+    ? t("alerts.ordersToPlaceDescription")
+    : t("alerts.description");
+
   return (
     <>
-      <Card className="min-h-[calc(100vh-150px)] border-0 bg-transparent shadow-none">
-        <CardHeader className="flex flex-col justify-between gap-3 px-0 py-4 sm:flex-row sm:items-center sm:px-1">
-          <CardTitle className="flex items-center gap-2 text-xl font-bold md:text-2xl">
-            <span>{isOrders ? t("alerts.ordersToPlace") : t("alerts.title")}</span>
-            {!isOrders && alertsCount > 0 && (
-              <span className="text-muted-foreground text-lg font-bold md:text-xl">
-                ({alertsCount})
-              </span>
-            )}
-          </CardTitle>
-          <Button
-            size="sm"
-            className="self-start rounded-full shadow-md transition-all hover:shadow-lg sm:self-center"
-            aria-pressed={isOrders}
-            onClick={handleToggle}
-          >
-            {isOrders ? t("actions.backToAlerts") : t("actions.ordersToPlace")}
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isOrders ? <OrdersView /> : <AlertsTable onCreateOrder={handleCreateOrder} />}
-        </CardContent>
-      </Card>
+      <div className="min-h-[calc(100vh-150px)] space-y-4">
+        {/* Header - Consistent with Tracking and Dashboard */}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="grid gap-2">
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+                {pageTitle}
+                {!isOrders && alertsCount > 0 && (
+                  <span className="text-muted-foreground ml-2 text-xl font-bold sm:text-2xl md:text-3xl">
+                    ({alertsCount})
+                  </span>
+                )}
+              </h1>
+              <p className="text-muted-foreground text-sm">{pageDescription}</p>
+            </div>
+            <Button
+              size="sm"
+              className="rounded-full shadow-md transition-all hover:shadow-lg"
+              aria-pressed={isOrders}
+              onClick={handleToggle}
+            >
+              {isOrders ? t("actions.backToAlerts") : t("actions.ordersToPlace")}
+            </Button>
+          </div>
+        </div>
+
+        {/* Content */}
+        {isOrders ? (
+          <OrdersView />
+        ) : (
+          <AlertsTable
+            alerts={alertsData?.alerts ?? initialAlerts}
+            onCreateOrder={handleCreateOrder}
+          />
+        )}
+      </div>
 
       {/* Place Order Dialog */}
       <PlaceOrderDialog
@@ -85,4 +103,5 @@ export function AlertsClient({ initialAlerts, storeId }: AlertsClientProps) {
     </>
   );
 }
+
 

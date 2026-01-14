@@ -69,7 +69,10 @@ export default async function proxy(req: NextRequest) {
 
   // PROTECTED ROUTES - Require authentication
   // Check for Better Auth session cookie
-  const sessionCookie = req.cookies.get("better-auth.session_token");
+  // In production, Better Auth uses __Secure- prefix
+  const sessionCookie =
+    req.cookies.get("better-auth.session_token") ||
+    req.cookies.get("__Secure-better-auth.session_token");
 
   // If no token and trying to access protected route, redirect to login
   if (!sessionCookie) {

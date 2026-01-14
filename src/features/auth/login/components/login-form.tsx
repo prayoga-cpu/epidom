@@ -99,7 +99,11 @@ export function LoginForm() {
         onClick={async () => {
           await authClient.signIn.social({
             provider: "google",
+<<<<<<< HEAD
             callbackURL: "/onboarding",
+=======
+            callbackURL: "/stores",
+>>>>>>> dev
           });
         }}
       >

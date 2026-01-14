@@ -22,8 +22,8 @@ import {
   CheckCircle,
   AlertCircle,
   XCircle,
-  Loader2,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
 import { BulkAdjustmentDialog } from "./bulk-adjustment-dialog";
 import { AdjustmentHistoryDialog } from "./adjustment-history-dialog";
@@ -283,7 +283,7 @@ export function EditStockCard() {
               <div className="scrollbar-thin flex-1 space-y-2 overflow-y-auto">
                 {isLoading ? (
                   <div className="flex items-center justify-center p-8">
-                    <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+                    <LottieLoader size="md" className="text-muted-foreground" />
                   </div>
                 ) : filteredItems.length === 0 ? (
                   <div className="rounded-lg border border-dashed p-8 text-center">

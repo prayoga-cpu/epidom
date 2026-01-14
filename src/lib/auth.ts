@@ -12,6 +12,12 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+<<<<<<< HEAD
+=======
+  advanced: {
+    useSecureCookies: process.env.NODE_ENV === "production",
+  },
+>>>>>>> dev
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
@@ -73,8 +79,15 @@ export async function getSession() {
   try {
     const cookieStore = await cookies();
 
+<<<<<<< HEAD
     // Get the session token from cookie
     const sessionTokenCookie = cookieStore.get("better-auth.session_token")?.value;
+=======
+    // Get the session token from cookie (check both standard and secure names)
+    const sessionTokenCookie =
+      cookieStore.get("better-auth.session_token")?.value ||
+      cookieStore.get("__Secure-better-auth.session_token")?.value;
+>>>>>>> dev
 
     if (!sessionTokenCookie) {
       return null;

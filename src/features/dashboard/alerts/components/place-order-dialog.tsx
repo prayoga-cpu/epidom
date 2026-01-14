@@ -35,7 +35,8 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { useCreateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
-import { ShoppingCart, Loader2, Package, Phone } from "lucide-react";
+import { ShoppingCart, Package, Phone } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useParams } from "next/navigation";
 
 // Zod validation schema

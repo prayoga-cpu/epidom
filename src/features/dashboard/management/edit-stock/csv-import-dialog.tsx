@@ -8,7 +8,8 @@ import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useImportStock, type StockImportResult } from "./hooks/use-import-stock";
-import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Upload, FileText, CheckCircle2, XCircle} from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -74,7 +75,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
             onClick={handleImport}
             disabled={!selectedFile || importStock.isPending}
           >
-            {importStock.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+            {importStock.isPending && <LottieLoader size="xs" className="mr-1 hidden sm:inline" />}
             {t("management.editStock.importCSVDialog.importButton") || "Import Stock"}
           </Button>
         </>

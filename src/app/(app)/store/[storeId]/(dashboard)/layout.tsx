@@ -8,6 +8,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { PageShell } from "@/features/dashboard/shared/page-shell";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { RouteLoadingIndicator } from "@/components/navigation/route-loading-indicator";
+import { AlertsPrefetch } from "@/features/dashboard/alerts/components/alerts-prefetch";
 
 export const metadata: Metadata = {
   title: "Epidom - Admin Dashboard",
@@ -41,6 +42,8 @@ export default function Layout({
         {/* Only page content changes, not the entire layout */}
         <CurrencyProvider>
           <I18nProvider>
+            {/* Prefetch alerts data for sidebar badge */}
+            <AlertsPrefetch />
             <PageShell>{children}</PageShell>
           </I18nProvider>
         </CurrencyProvider>
@@ -49,3 +52,4 @@ export default function Layout({
     </div>
   );
 }
+

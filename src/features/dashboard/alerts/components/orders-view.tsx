@@ -19,11 +19,18 @@ import {
   Mail,
   MapPin,
   Package,
+<<<<<<< HEAD
   Loader2,
+=======
+>>>>>>> dev
   AlertCircle,
   CheckCircle,
   ArrowRight,
 } from "lucide-react";
+<<<<<<< HEAD
+=======
+import { LottieLoader } from "@/components/ui/lottie-loader";
+>>>>>>> dev
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -131,7 +138,7 @@ export function OrdersView() {
   if (isLoading || isLoadingAccess) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Loader2 className="text-muted-foreground mb-4 h-8 w-8 animate-spin" />
+        <LottieLoader size="md" className="text-muted-foreground mb-4" />
         <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
       </div>
     );
@@ -331,7 +338,11 @@ export function OrdersView() {
                         >
                           {placingOrder === order.id ? (
                             <>
+<<<<<<< HEAD
                               <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+=======
+                              <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
+>>>>>>> dev
                               {t("alerts.placing")}
                             </>
                           ) : (

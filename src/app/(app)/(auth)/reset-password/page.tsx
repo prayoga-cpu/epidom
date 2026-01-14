@@ -8,6 +8,10 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
+<<<<<<< HEAD
+=======
+import { LottieLoader } from "@/components/ui/lottie-loader";
+>>>>>>> dev
 
 function ResetPasswordForm() {
   const [password, setPassword] = useState("");
@@ -85,7 +89,11 @@ function ResetPasswordForm() {
         />
       </div>
       <Button type="submit" className="w-full" disabled={isPending}>
+<<<<<<< HEAD
         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+=======
+        {isPending && <LottieLoader size="xs" className="mr-2" />}
+>>>>>>> dev
         Reset Password
       </Button>
     </form>

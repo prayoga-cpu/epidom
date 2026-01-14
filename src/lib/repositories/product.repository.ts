@@ -232,8 +232,8 @@ export class ProductRepository extends BaseRepository {
    * Delete product (hard delete)
    * Note: Related records (OrderItem, ProductionBatch, StockMovement) will be cascade deleted
    */
-  async delete(productId: string): Promise<void> {
-    await this.db.product.delete({
+  async delete(productId: string): Promise<Product> {
+    return this.db.product.delete({
       where: { id: productId },
     });
   }

@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
 
@@ -70,7 +71,7 @@ export function FormDialogFooter({
         disabled={isPending || disabled}
         className={cn(variant === "full-width" && "flex-1")}
       >
-        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {isPending && <LottieLoader size="xs" className="mr-2" />}
         {submitText}
       </Button>
     </>

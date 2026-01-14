@@ -12,7 +12,8 @@ import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast as sonnerToast } from "sonner";
-import { Clock, Package, CheckCircle, Loader2, XCircle, Ban } from "lucide-react";
+import { Clock, Package, CheckCircle, XCircle, Ban, Loader2 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { format } from "date-fns";
 import {
   useCompleteProduction,
@@ -237,7 +238,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
                 disabled={completeProduction.isPending || actualQuantity <= 0}
               >
                 {completeProduction.isPending && (
-                  <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                  <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
                 )}
                 {t("common.actions.complete") || "Complete"}
               </Button>
@@ -291,7 +292,7 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
                 disabled={cancelProduction.isPending}
               >
                 {cancelProduction.isPending && (
-                  <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                  <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
                 )}
                 {t("common.actions.cancelBatch") || "Cancel Batch"}
               </Button>

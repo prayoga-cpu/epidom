@@ -369,39 +369,23 @@ export class MaterialService {
    * Delete material
    * Cascade deletes: Removes material from all recipes that use it
    */
-  async deleteMaterial(materialId: string, storeId: string): Promise<void> {
+  async deleteMaterial(materialId: string, storeId: string): Promise<Material> {
     // Verify ownership
     const belongsToStore = await this.materialRepo.belongsToStore(materialId, storeId);
     if (!belongsToStore) {
       throw new Error("Material does not belong to this store");
     }
 
-    // Use transaction to ensure atomicity
-    await prisma.$transaction(
-      async (tx) => {
-        // First, delete all recipe ingredients that use this material
-        // This is a cascade delete - recipes will remain but ingredients will be removed
-        await tx.recipeIngredient.deleteMany({
-          where: { materialId: materialId },
-        });
-
-        // Then delete the material itself
-        await tx.material.delete({
-          where: { id: materialId },
-        });
-      },
-      {
-        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
-        timeout: 10000, // Maximum time for transaction to complete (10s)
-      }
-    );
+    // Use direct repository delete (relies on DB cascade)
+    // This matches the pattern used in Recipe, Product, and Supplier services
+    return this.materialRepo.delete(materialId);
   }
 
   /**
    * Bulk delete materials
    * Cascade deletes: Removes materials from all recipes that use them
    */
-  async bulkDeleteMaterials(materialIds: string[], storeId: string): Promise<number> {
+  async bulkDeleteMaterials(materialIds: string[], storeId: string): Promise<{ count: number }> {
     // Verify all materials belong to store
     const materials = await this.materialRepo.findByIds(materialIds);
 
@@ -410,26 +394,8 @@ export class MaterialService {
       throw new Error("Some materials do not belong to this store");
     }
 
-    // Use transaction to ensure atomicity
-    return await prisma.$transaction(
-      async (tx) => {
-        // First, delete all recipe ingredients that use these materials
-        await tx.recipeIngredient.deleteMany({
-          where: { materialId: { in: materialIds } },
-        });
-
-        // Then delete the materials
-        const result = await tx.material.deleteMany({
-          where: { id: { in: materialIds } },
-        });
-
-        return result.count;
-      },
-      {
-        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
-        timeout: 10000, // Maximum time for transaction to complete (10s)
-      }
-    );
+    // Use direct repository bulk delete (relies on DB cascade)
+    return this.materialRepo.bulkDelete(materialIds);
   }
 
   /**

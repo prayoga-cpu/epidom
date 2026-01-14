@@ -1,9 +1,14 @@
-import { useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { useParams } from "next/navigation";
+import { useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
 
 /**
  * Custom hook to get alerts count
  * Returns the number of active alerts
+ *
+ * This hook:
+ * 1. Uses the shared useAlerts hook to leverage React Query caching
+ * 2. Actively fetches if no data exists in cache
+ * 3. Stays in sync with any cache updates from AlertsClient or AlertsPrefetch
  *
  * @returns {number} Total count of alerts
  *
@@ -15,9 +20,10 @@ export function useAlertsCount(): number {
   const params = useParams();
   const storeId = params?.storeId as string;
 
+  // Use the shared useAlerts hook - this shares cache with AlertsClient
   const { data } = useAlerts(storeId);
 
-  return data?.alerts?.length || 0;
+  return data?.alerts?.length ?? 0;
 }
 
 /**
@@ -31,3 +37,5 @@ export function getAlertsCount(): number {
   // that fetches from the API or database directly
   return 0;
 }
+
+

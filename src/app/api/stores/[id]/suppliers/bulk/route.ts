@@ -34,7 +34,11 @@ export const DELETE = withApiHandler(
     return NextResponse.json(
       createSuccessResponse({
         message: "Suppliers deleted successfully",
+<<<<<<< HEAD
         deletedCount: result.deletedCount,
+=======
+        deletedCount: result.count,
+>>>>>>> dev
       })
     );
   },

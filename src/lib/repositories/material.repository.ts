@@ -309,7 +309,7 @@ export class MaterialRepository extends BaseRepository {
   /**
    * Bulk hard delete materials
    */
-  async bulkDelete(materialIds: string[]): Promise<number> {
+  async bulkDelete(materialIds: string[]): Promise<{ count: number }> {
     const result = await this.db.material.deleteMany({
       where: {
         id: {
@@ -317,7 +317,7 @@ export class MaterialRepository extends BaseRepository {
         },
       },
     });
-    return result.count;
+    return result;
   }
 
   /**

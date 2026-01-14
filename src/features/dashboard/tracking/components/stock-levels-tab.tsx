@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { CheckCircle2, AlertCircle, XCircle, Search, Loader2, Package } from "lucide-react";
+import { CheckCircle2, AlertCircle, XCircle, Search, Package } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { ExportButton } from "@/components/ui/export-button";
@@ -253,7 +254,7 @@ export function StockLevelsTab({ initialMaterials }: StockLevelsTabProps = {}) {
         <div className="p-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+              <LottieLoader size="md" className="text-muted-foreground" />
             </div>
           ) : finalFilteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

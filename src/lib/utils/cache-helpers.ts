@@ -227,6 +227,41 @@ export async function invalidateProductRelatedQueries(
     );
 
     await Promise.all(invalidations);
+  } else {
+    // Non-blocking: Invalidate critical queries immediately, defer others
+    if (!skipProducts) {
+      queryClient.invalidateQueries({
+        queryKey: ["products", storeId],
+        exact: false,
+        refetchType: "active",
+      });
+    }
+
+    // Defer non-critical invalidations to background
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["product-usage", storeId],
+        exact: false,
+        refetchType: "none",
+      }),
+      queryClient.invalidateQueries({
+        queryKey: alertKeys.lists(storeId),
+        exact: false,
+        refetchType: "none",
+      }),
+      queryClient.invalidateQueries({
+        queryKey: stockMovementKeys.all(storeId),
+        exact: false,
+        refetchType: "none",
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["recipes", storeId],
+        exact: false,
+        refetchType: "none",
+      }),
+    ]).catch((error) => {
+      logger.warn("Background cache invalidation failed", { error });
+    });
   }
 }
 

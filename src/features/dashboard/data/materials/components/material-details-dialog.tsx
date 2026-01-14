@@ -19,7 +19,7 @@ interface MaterialDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   material: MaterialWithSuppliers | null;
   onEdit?: (material: MaterialWithSuppliers) => void;
-  onDelete?: (materialId: string) => void;
+  onDelete?: (materialId: string) => Promise<void> | void;
 }
 
 // Helper functions
@@ -68,11 +68,11 @@ export function MaterialDetailsDialog({
   const stockStatus = getStockStatus(currentStock, minStock, maxStock, t);
   const stockPercentage = calculateStockPercentage(currentStock, maxStock);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (onDelete) {
-      onDelete(material.id);
-      setShowDeleteConfirm(false);
-      onOpenChange(false);
+      await onDelete(material.id);
+      // setShowDeleteConfirm(false); // Handled by ConfirmationDialog
+      // onOpenChange(false); // Handled by ConfirmationDialog or parent update
     }
   };
 

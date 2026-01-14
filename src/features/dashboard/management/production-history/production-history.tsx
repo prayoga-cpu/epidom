@@ -32,13 +32,14 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle,
-  Loader2,
   XCircle,
   Clock,
   Eye,
   Ban,
   AlertCircle,
 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { ProductionBatch } from "@/types/entities";
 import { BatchDetailsDialog } from "./batch-details-dialog";
 import { ProductionMetricsCards } from "./production-metrics-cards";
@@ -357,7 +358,7 @@ export function ProductionHistoryCard() {
         <CardContent className="pt-0">
           {batchesLoading ? (
             <div className="py-12 text-center">
-              <Loader2 className="text-muted-foreground mx-auto h-8 w-8 animate-spin" />
+              <LottieLoader size="md" className="text-muted-foreground mx-auto" />
               <p className="text-muted-foreground mt-2 text-sm">{t("common.loading")}</p>
             </div>
           ) : allBatches.length === 0 ? (

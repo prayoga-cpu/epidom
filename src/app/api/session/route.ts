@@ -39,8 +39,13 @@ export async function GET() {
       }),
       {
         headers: {
+<<<<<<< HEAD
           // Private cache (browser only)
           "Cache-Control": `private, max-age=${CACHE_MAX_AGE}, stale-while-revalidate=10`,
+=======
+          // Private cache (browser only) - No store to prevent stale session status on redirect
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+>>>>>>> dev
         },
       }
     );

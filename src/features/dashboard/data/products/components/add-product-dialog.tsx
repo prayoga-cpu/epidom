@@ -27,7 +27,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus} from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateProduct } from "../hooks/use-products";
@@ -169,7 +170,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
       sonnerToast.promise(promise, {
         loading: (
           <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LottieLoader size="xs" />
             <span>{t("data.products.toasts.adding") || "Adding product..."}</span>
           </div>
         ),
@@ -236,7 +237,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
               disabled={createProduct.isPending || productLimitReached}
             >
               {createProduct.isPending && (
-                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
               )}
               {t("data.products.addButton")}
             </Button>

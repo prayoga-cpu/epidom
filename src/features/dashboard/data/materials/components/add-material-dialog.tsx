@@ -26,7 +26,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { Plus, Loader2, X, Star, Trash2 } from "lucide-react";
+import { Plus, X, Star, Trash2 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateMaterial } from "../hooks/use-materials";
 import { useSuppliers, supplierKeys } from "../../suppliers/hooks/use-suppliers";
@@ -168,7 +169,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
       toast.promise(promise, {
         loading: (
           <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LottieLoader size="xs" />
             <span>{t("data.materials.toasts.adding") || "Adding material..."}</span>
           </div>
         ),
@@ -240,7 +241,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
             </Button>
             <Button type="submit" form="add-material-form" disabled={createMaterial.isPending}>
               {createMaterial.isPending && (
-                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
               )}
               {t("data.materials.addButton")}
             </Button>

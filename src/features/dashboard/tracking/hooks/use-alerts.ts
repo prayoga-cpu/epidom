@@ -1,5 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 export interface Alert {
   id: string;
@@ -44,18 +43,22 @@ export function useAlerts(storeId: string, initialData?: AlertsResponse) {
       if (!response.ok) {
         throw new Error("Failed to fetch alerts");
       }
-      return response.json();
+      const json = await response.json();
+      // API returns { success: true, data: { alerts: [...] } }
+      // We need to extract the data property
+      return json.data as AlertsResponse;
     },
     enabled: !!storeId,
-    initialData, // ✅ Accept initial data from Server Component
+    initialData,
+    // ✅ Mark initial data as fresh so React Query won't immediately refetch
+    initialDataUpdatedAt: initialData ? Date.now() : undefined,
     // Real-time configuration: Critical data - faster polling
-    staleTime: 10 * 1000, // 10 seconds - data considered fresh
-    refetchInterval: 15 * 1000, // Poll every 15 seconds (critical data)
-    refetchIntervalInBackground: true, // Poll even when tab is not active (critical)
+    staleTime: 30 * 1000, // 30 seconds - data considered fresh (increased from 10s)
+    refetchInterval: 60 * 1000, // Poll every 60 seconds (reduced from 15s for stability)
+    refetchIntervalInBackground: false, // Don't poll when tab is not active
     refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
-    refetchOnWindowFocus: true, // Always refetch on focus for critical data
-    meta: {
-      refetchInterval: 15 * 1000, // Store in meta for smart polling
-    },
+    refetchOnWindowFocus: false, // Don't refetch on focus to prevent badge flicker
+    gcTime: 5 * 60 * 1000, // Keep data in cache for 5 minutes
   });
 }
+

@@ -21,6 +21,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { SupplierDetailsDialog } from "./supplier-details-dialog";
 import { EditSupplierDialog } from "./edit-supplier-dialog";
 import { AddSupplierDialog } from "./add-supplier-dialog";
+import { SmartImportDialog } from "../../import";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Search,
@@ -31,13 +32,14 @@ import {
   X,
   CheckSquare,
   Store,
-  Loader2,
   Download,
   ChevronLeft,
   ChevronRight,
   Package,
   Plus,
+  Sparkles,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
@@ -87,6 +89,9 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
     take: 20,
   });
 
+  // Smart Import dialog state
+  const [smartImportOpen, setSmartImportOpen] = useState(false);
+
   // Debounce search input to reduce API calls (300ms delay)
   const debouncedSearch = useDebounce(filters.search, 300);
 
@@ -131,6 +136,8 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
     clearSelection,
     isSelected,
   } = useBulkSelection(suppliers);
+
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   // Action handlers
   const handleDeleteConfirm = async () => {
@@ -269,7 +276,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                       className="w-full md:w-auto"
                     >
                       {exportSuppliers.isPending ? (
-                        <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                        <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
                       ) : (
                         <Download className="mr-1 hidden h-4 w-4 sm:inline" />
                       )}
@@ -283,7 +290,21 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                   </TooltipContent>
                 )}
               </Tooltip>
+<<<<<<< HEAD
               <CsvImportWizard storeId={storeId} type="supplier" />
+=======
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSmartImportOpen(true)}
+                className="w-full md:w-auto"
+              >
+                <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
+                {t("import.title")}
+              </Button>
+
+>>>>>>> dev
               <AddSupplierDialog>
                 <Button size="sm" className="w-full sm:w-auto">
                   <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
@@ -294,7 +315,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={handleBulkDelete}
+                  onClick={() => setBulkDeleteDialogOpen(true)}
                   className="w-full sm:w-auto"
                 >
                   <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
@@ -323,14 +344,14 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pb-6">
           {/* Search and Filters */}
           <div className="flex flex-col gap-3">
             {/* Search */}
             <div className="relative w-full">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder={t("data.suppliers.searchPlaceholder")}
+                placeholder={t("actions.searchPlaceholder")}
                 value={filters.search}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value, skip: 0 }))
@@ -396,7 +417,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center border-b pb-2">
+          <div className="flex items-center border-b pb-2 mt-4">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {suppliers.length} {t("common.of")} {totalSuppliers}{" "}
               {t("data.suppliers.pageTitle")}
@@ -404,7 +425,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           </div>
 
           {/* Suppliers Grid */}
-          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }}>
+          <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }} className="mt-4">
             {suppliers.map((supplier) => (
               <BaseItemCard
                 key={supplier.id}
@@ -426,28 +447,24 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
 
                 {/* Supplier Info */}
                 <div className="text-muted-foreground my-2 space-y-1 text-xs">
-                  {supplier.email && (
-                    <div className="flex justify-between">
-                      <span>{t("common.email")}:</span>
-                      <span className="text-foreground truncate font-medium">
-                        {supplier.email.split("@")[0]}...
-                      </span>
-                    </div>
-                  )}
-                  {supplier.phone && (
-                    <div className="flex justify-between">
-                      <span>{t("common.phone")}:</span>
-                      <span className="text-foreground font-medium">{supplier.phone}</span>
-                    </div>
-                  )}
-                  {(supplier.city || supplier.country) && (
-                    <div className="flex justify-between">
-                      <span>{t("common.location")}:</span>
-                      <span className="text-foreground font-medium">
-                        {[supplier.city, supplier.country].filter(Boolean).join(", ")}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span>{t("common.email")}:</span>
+                    <span className="text-foreground truncate font-medium max-w-[120px] text-right">
+                      {supplier.email ? `${supplier.email.split("@")[0]}...` : "-"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t("common.phone")}:</span>
+                    <span className="text-foreground font-medium">
+                      {supplier.phone || "-"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t("common.location")}:</span>
+                    <span className="text-foreground font-medium text-right">
+                      {[supplier.city, supplier.country].filter(Boolean).join(", ") || "-"}
+                    </span>
+                  </div>
                   <div className="flex justify-between">
                     <span>{t("data.materials.pageTitle")}:</span>
                     <span className="text-foreground font-medium">
@@ -620,6 +637,27 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           />
         </>
       )}
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        title={t("data.suppliers.bulkDeleteConfirm.title") || "Delete Multiple Suppliers"}
+        description={
+          t("data.suppliers.bulkDeleteConfirm.description")?.replace("{count}", selectedCount.toString()) ||
+          `Are you sure you want to delete ${selectedCount} supplier(s)? This action cannot be undone.`
+        }
+        confirmText={t("common.actions.delete")}
+        onConfirm={handleBulkDelete}
+        variant="destructive"
+        loading={bulkDeleteSuppliers.isPending}
+      />
+      {/* Smart Import Dialog */}
+      <SmartImportDialog
+        open={smartImportOpen}
+        onOpenChange={setSmartImportOpen}
+        storeId={storeId}
+      />
     </>
   );
 }
