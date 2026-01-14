@@ -7,7 +7,8 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Loader2, Mail, CheckCircle2 } from "lucide-react";
+import { Mail, CheckCircle2 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useI18n } from "@/components/lang/i18n-provider";
 
 function VerifyEmailContent() {
@@ -72,7 +73,7 @@ function VerifyEmailContent() {
               onClick={handleResend}
               disabled={isResending || resendSuccess}
             >
-              {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isResending && <LottieLoader size="xs" className="mr-2" />}
               {resendSuccess
                 ? t("auth.verifyEmail.resendSuccess")
                 : isResending
@@ -100,7 +101,7 @@ export default function VerifyEmailSentPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <LottieLoader size="md" className="text-gray-400" />
         </div>
       }
     >

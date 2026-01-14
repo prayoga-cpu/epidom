@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ExternalLink, CheckCircle2, AlertCircle, Wallet } from "lucide-react";
+import { ExternalLink, CheckCircle2, AlertCircle, Wallet } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 
 interface ConnectStatus {
   onboardingComplete: boolean;
@@ -114,7 +115,7 @@ export function StripeConnectCard() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            <LottieLoader size="md" className="text-muted-foreground" />
           </div>
         </CardContent>
       </Card>
@@ -202,7 +203,7 @@ export function StripeConnectCard() {
               variant="outline"
             >
               {actionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <LottieLoader size="xs" />
               ) : (
                 <ExternalLink className="h-4 w-4" />
               )}
@@ -238,7 +239,7 @@ export function StripeConnectCard() {
             >
               {actionLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <LottieLoader size="xs" />
                   Redirecting to Stripe...
                 </>
               ) : (

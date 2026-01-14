@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { ArrowRight, Package, Loader2 } from "lucide-react";
+import { ArrowRight, Package } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { DashboardCard } from "../components/dashboard-card";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 // import { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
@@ -39,7 +40,7 @@ export function TrackingCard({ stockLevels }: TrackingCardProps) {
         </div>
       ) : isLoading ? (
         <div className="flex h-full flex-col items-center justify-center py-8 text-center">
-          <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
+          <LottieLoader size="md" className="mb-3" />
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         </div>
       ) : error ? (

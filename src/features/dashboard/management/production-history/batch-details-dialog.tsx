@@ -21,7 +21,6 @@ import {
   Clock,
   DollarSign,
   CheckCircle,
-  Loader2,
   Calendar,
   Download,
   Edit,
@@ -29,6 +28,8 @@ import {
   ChefHat,
   TrendingUp,
 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { format } from "date-fns";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { getTranslatedCategory } from "@/features/dashboard/data/recipes/utils/category-helpers";
@@ -788,7 +789,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
               onClick={handleComplete}
               disabled={completeProduction.isPending || actualQuantity <= 0}
             >
-              {completeProduction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {completeProduction.isPending && <LottieLoader size="xs" className="mr-2" />}
               {t("common.actions.complete") || "Complete"}
             </Button>
           </DialogFooter>

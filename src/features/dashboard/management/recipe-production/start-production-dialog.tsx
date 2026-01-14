@@ -31,13 +31,13 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast as sonnerToast } from "sonner";
 import {
-  Loader2,
   Calendar as CalendarIcon,
   Package,
   DollarSign,
   Clock,
   AlertTriangle,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { format } from "date-fns";
@@ -239,7 +239,7 @@ export function StartProductionDialog({
               }
             >
               {startProduction.isPending && (
-                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
               )}
               {t("management.recipeProduction.startProduction") || "Start Production"}
             </Button>

@@ -17,7 +17,8 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -343,7 +344,7 @@ export function ImageUpload({
           <div className="flex flex-col items-center justify-center text-center">
             {isUploading ? (
               <>
-                <Loader2 className="text-muted-foreground mb-4 h-10 w-10 animate-spin" />
+                <LottieLoader size="lg" />
                 <p className="text-muted-foreground text-sm font-medium">Uploading...</p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   Please wait while we process your image

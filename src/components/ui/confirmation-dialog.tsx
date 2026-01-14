@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 
 interface ConfirmationDialogProps {
   open: boolean;
@@ -77,7 +78,7 @@ export function ConfirmationDialog({
           >
             {isBusy ? (
              <>
-               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+               <LottieLoader size="xs" className="mr-2" />
                Please wait...
              </>
             ) : confirmText}

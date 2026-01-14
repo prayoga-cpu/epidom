@@ -30,7 +30,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
   Plus,
-  Loader2,
   ChevronRight,
   ChevronLeft,
   Check,
@@ -40,6 +39,7 @@ import {
   Calculator,
   ClipboardList,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useParams } from "next/navigation";
 import { useCreateRecipe } from "../hooks/use-recipes";
@@ -207,7 +207,7 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
       toast.promise(promise, {
         loading: (
           <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LottieLoader size="xs" />
             <span>{t("data.recipes.toasts.adding") || "Creating recipe..."}</span>
           </div>
         ),
@@ -312,7 +312,7 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
             ) : (
               <Button type="button" onClick={handleCreateRecipe} disabled={createRecipe.isPending}>
                 {createRecipe.isPending && (
-                  <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                  <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
                 )}
                 {t("data.recipes.create")}
               </Button>

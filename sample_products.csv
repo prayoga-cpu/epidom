@@ -1,0 +1,11 @@
+SKU,Name,Category,Cost Price,Selling Price,Stock,Unit
+COF-001,Signature Coffee Blend,Beverage,5000,25000,100,Cup
+COF-002,Vanilla Latte,Beverage,6000,30000,80,Cup
+COF-003,Caramel Macchiato,Beverage,6500,35000,50,Cup
+SNK-001,Chocolate Croissant,Food,8000,22000,30,Pcs
+SNK-002,Cheese Bagel,Food,5000,15000,40,Pcs
+SNK-003,Blueberry Muffin,Food,4500,18000,25,Pcs
+TEA-001,Earl Grey Tea,Beverage,2000,18000,100,Cup
+TEA-002,Green Tea Latte,Beverage,4000,28000,60,Cup
+MSC-001,Reusable Cup,Merchandise,15000,85000,50,Pcs
+MSC-002,Coffee Beans (250g),Merchandise,45000,120000,20,Pack

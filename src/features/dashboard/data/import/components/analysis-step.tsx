@@ -7,9 +7,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Loader2, Check, Brain, Languages, Table, Database, Sparkles } from "lucide-react";
+import { Check, Brain, Languages, Table, Database, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 
 interface AnalysisStepProps {
   fileName: string;
@@ -88,7 +89,7 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
             >
               <div className="relative">
                 {isCurrent ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <LottieLoader size="xs" />
                 ) : isCompleted ? (
                   <Check className="h-5 w-5" />
                 ) : (

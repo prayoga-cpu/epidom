@@ -31,13 +31,13 @@ import {
   X,
   CheckSquare,
   PackageOpen,
-  Loader2,
   Download,
   ChevronLeft,
   ChevronRight,
   Plus,
   Sparkles,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils/formatting";
 import { Separator } from "@/components/ui/separator";
@@ -298,7 +298,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                       className="w-full md:w-auto"
                     >
                       {exportProducts.isPending ? (
-                        <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                        <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
                       ) : (
                         <Download className="mr-1 hidden h-4 w-4 sm:inline" />
                       )}

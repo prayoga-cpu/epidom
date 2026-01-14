@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Alert, useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
-import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowRight, AlertCircle } from "lucide-react";
 import { DashboardCard } from "../components/dashboard-card";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 
 interface AlertsCardProps {
   initialAlerts: Alert[];
@@ -29,7 +30,7 @@ export function AlertsCard({ initialAlerts, storeId }: AlertsCardProps) {
         </div>
       ) : isLoading ? (
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
+          <LottieLoader size="md" className="mb-3" />
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         </div>
       ) : error ? (

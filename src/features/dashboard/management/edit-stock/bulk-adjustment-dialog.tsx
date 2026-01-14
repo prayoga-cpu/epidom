@@ -36,7 +36,8 @@ import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useStockAdjustment } from "./hooks/use-stock-adjustment";
-import { Loader2, Plus, Trash2, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Trash2, TrendingUp, TrendingDown } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Separator } from "@/components/ui/separator";
 
 // Stock item type
@@ -283,7 +284,7 @@ export function BulkAdjustmentDialog({
               disabled={adjustStockMutation.isPending || fields.length === 0}
             >
               {adjustStockMutation.isPending && (
-                <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
               )}
               {t("management.editStock.recordAdjustments")} ({fields.length})
             </Button>
