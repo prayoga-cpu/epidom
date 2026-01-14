@@ -3286,8 +3286,7 @@ export const en = {
       redirecting: "Redirecting to dashboard in {seconds} seconds...",
     },
   },
-<<<<<<< HEAD
-=======
+
   import: {
     title: "Smart Import",
     subtitle: "Smart CSV import with intelligent field mapping",
@@ -3360,7 +3359,7 @@ export const en = {
       viewData: "View Data",
     },
   },
->>>>>>> dev
+
   notFound: {
     title: "Page Not Found",
     description: "Sorry, we couldn't find the page you're looking for.",
