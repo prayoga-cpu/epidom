@@ -27,8 +27,6 @@ interface ImportResult {
   };
 }
 
-<<<<<<< HEAD
-=======
 // Helper to safely parse numbers from global formats (Rp 10.000, $5,000.00, 1.500,50 etc)
 function parseGlobalNumber(value: any): number {
   if (value === undefined || value === null || value === "") return 0;
@@ -89,7 +87,6 @@ function parseGlobalNumber(value: any): number {
   return isNaN(result) ? 0 : result;
 }
 
->>>>>>> dev
 /**
  * Bulk import data into the database.
  * Handles materials, products, suppliers, and recipes.
@@ -176,8 +173,6 @@ export async function bulkImportData(
   }
 }
 
-<<<<<<< HEAD
-=======
 // Helper to normalize supplier names for fuzzy matching
 // Removes "PT", "CV", "Inc", "Ltd", punctuation, and extra spaces
 function normalizeSupplierName(name: string): string {
@@ -190,7 +185,6 @@ function normalizeSupplierName(name: string): string {
     .trim();
 }
 
->>>>>>> dev
 /**
  * Import materials with createMany for efficiency
  */
@@ -209,12 +203,8 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
     }
 
     // 1. Process Suppliers (Auto-create if missing)
-<<<<<<< HEAD
-    const supplierNames = [
-=======
     // Extract raw names first
     const rawSupplierNames = [
->>>>>>> dev
       ...new Set(
         validData
           .map((d) => d.supplierName)
@@ -222,49 +212,6 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
       ),
     ] as string[];
 
-<<<<<<< HEAD
-    const supplierMap = new Map<string, string>(); // Name (lowercase) -> ID
-
-    if (supplierNames.length > 0) {
-      // Find existing suppliers
-      const existingSuppliers = await prisma.supplier.findMany({
-        where: {
-          storeId,
-          name: { in: supplierNames, mode: "insensitive" },
-        },
-        select: { id: true, name: true },
-      });
-
-      existingSuppliers.forEach((s) => supplierMap.set(s.name.toLowerCase(), s.id));
-
-      // Identify missing suppliers
-      const missingSupplierNames = supplierNames.filter(
-        (name) => !supplierMap.has(name.toLowerCase())
-      );
-
-      // Create missing suppliers
-      if (missingSupplierNames.length > 0) {
-        await prisma.supplier.createMany({
-          data: missingSupplierNames.map((name) => ({
-            name,
-            storeId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          })),
-          skipDuplicates: true,
-        });
-
-        // Fetch newly created suppliers to get their IDs
-        const newSuppliers = await prisma.supplier.findMany({
-          where: {
-            storeId,
-            name: { in: missingSupplierNames, mode: "insensitive" },
-          },
-          select: { id: true, name: true },
-        });
-
-        newSuppliers.forEach((s) => supplierMap.set(s.name.toLowerCase(), s.id));
-=======
     const supplierMap = new Map<string, string>(); // Normalized Name -> ID
 
     if (rawSupplierNames.length > 0) {
@@ -311,7 +258,6 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
            });
            supplierMap.set(norm, created.id);
         }
->>>>>>> dev
       }
     }
 
@@ -324,12 +270,8 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
       try {
         let supplierId = undefined;
         if (item.supplierName && typeof item.supplierName === "string") {
-<<<<<<< HEAD
-          supplierId = supplierMap.get(item.supplierName.trim().toLowerCase());
-=======
           // Use normalized lookup
           supplierId = supplierMap.get(normalizeSupplierName(item.supplierName));
->>>>>>> dev
         }
 
         // Prepare supplier relation data if supplier exists
@@ -337,11 +279,7 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
           ? {
               create: {
                 supplierId,
-<<<<<<< HEAD
-                price: Number(item.supplierPrice) || Number(item.unitCost) || 0,
-=======
                 price: parseGlobalNumber(item.supplierPrice) || parseGlobalNumber(item.unitCost) || 0,
->>>>>>> dev
                 isPreferred: true,
               },
             }
@@ -357,17 +295,10 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
             description: item.description || undefined,
             category: item.category || undefined,
             unit: item.unit || "kg",
-<<<<<<< HEAD
-            unitCost: Number(item.unitCost) || 0,
-            currentStock: Number(item.currentStock) || 0,
-            minStock: Number(item.minStock) || 0,
-            maxStock: item.maxStock ? Number(item.maxStock) : undefined,
-=======
             unitCost: parseGlobalNumber(item.unitCost) || 0,
             currentStock: parseGlobalNumber(item.currentStock) || 0,
             minStock: parseGlobalNumber(item.minStock) || 0,
             maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
->>>>>>> dev
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             // Create relation to supplier
@@ -420,41 +351,6 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
       };
     }
 
-<<<<<<< HEAD
-    const cleanedData = validData.map((item) => ({
-      storeId: item.storeId,
-      sku: item.sku || undefined,
-      name: String(item.name).trim(),
-      description: item.description || undefined,
-      category: item.category || undefined,
-      unit: item.unit || "pcs",
-      costPrice: Number(item.costPrice) || 0,
-      sellingPrice: Number(item.sellingPrice) || 0,
-      currentStock: Number(item.currentStock) || 0,
-      minStock: Number(item.minStock) || 0,
-      maxStock: item.maxStock ? Number(item.maxStock) : undefined,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    }));
-
-    const result = await prisma.product.createMany({
-      data: cleanedData,
-      skipDuplicates: true,
-    });
-
-    return {
-      success: true,
-      count: result.count,
-      details: {
-        attempted: data.length,
-        succeeded: result.count,
-        failed: data.length - result.count,
-        errors: [],
-      },
-    };
-  } catch (error) {
-    console.error("Product import error:", error);
-=======
     let successCount = 0;
     const errors: Array<{ index: number; message: string }> = [];
 
@@ -534,7 +430,6 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
     };
   } catch (error) {
     console.error("Product import fatal error:", error);
->>>>>>> dev
     return {
       success: false,
       error: `Product import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -547,12 +442,9 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
  */
 async function importSuppliers(data: any[], storeId: string): Promise<ImportResult> {
   try {
-<<<<<<< HEAD
-=======
     // Debug: Log raw data received
     console.log("[importSuppliers] Raw data received:", JSON.stringify(data, null, 2));
 
->>>>>>> dev
     const validData = data.filter(
       (item) => item.name && typeof item.name === "string" && item.name.trim()
     );
@@ -564,21 +456,6 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
       };
     }
 
-<<<<<<< HEAD
-    const cleanedData = validData.map((item) => ({
-      storeId: item.storeId,
-      name: String(item.name).trim(),
-      contactPerson: item.contactPerson || undefined,
-      email: item.email || undefined,
-      phone: item.phone || undefined,
-      address: item.address || undefined,
-      city: item.city || undefined,
-      country: item.country || undefined,
-      notes: item.notes || undefined,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    }));
-=======
     const cleanedData = validData.map((item) => {
       const cleaned = {
         storeId: item.storeId,
@@ -597,7 +474,6 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
       console.log("[importSuppliers] Cleaned supplier:", cleaned);
       return cleaned;
     });
->>>>>>> dev
 
     const result = await prisma.supplier.createMany({
       data: cleanedData,
@@ -626,44 +502,16 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
 /**
  * Import recipes - uses individual creates for better error handling
  * since recipes may have complex validation
-<<<<<<< HEAD
-=======
  *
  * GROUPING LOGIC:
  * - Same name + same yield = 1 Recipe (merge ingredients)
  * - Same name + different yield = 2 separate Recipes
  * - Multi-row format: continuation rows have empty yieldQuantity, inherit from first row
->>>>>>> dev
  */
 async function importRecipes(data: any[], storeId: string): Promise<ImportResult> {
   const errors: Array<{ index: number; message: string }> = [];
   let successCount = 0;
 
-<<<<<<< HEAD
-  // 1. Group by Recipe Name to handle multi-row ingredients
-  const groups: Record<string, any[]> = {};
-  data.forEach((item, index) => {
-    const name = item.name ? String(item.name).trim() : null;
-    if (!name) {
-      errors.push({ index: index + 1, message: "Missing recipe name" });
-      return;
-    }
-    if (!groups[name]) groups[name] = [];
-    groups[name].push({ ...item, originalIndex: index + 1 });
-  });
-
-  const recipeNames = Object.keys(groups);
-
-  for (const name of recipeNames) {
-    const rows = groups[name];
-    const mainRow = rows[0]; // Use first row for main recipe data
-
-    try {
-      // Prepare Ingredients
-      const ingredientsToCreate: any[] = [];
-
-      // Process ingredients from all rows in this group
-=======
   // 1. Group by Recipe Name + YieldQuantity to handle multi-row ingredients
   // Key format: "RecipeName|YieldQty" (e.g., "Roti Tawar|60" vs "Roti Tawar|30")
   const groups: Record<string, any[]> = {};
@@ -737,7 +585,6 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
       const ingredientsToCreate: any[] = [];
 
       // ... (ingredient processing logic remains same) ...
->>>>>>> dev
       for (const row of rows) {
         const ingName = row.ingredient_name || row.ingredientName;
         if (ingName && typeof ingName === "string" && ingName.trim()) {
@@ -783,32 +630,17 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
                 storeId,
                 name: cleanIngName,
                 unit: row.ingredient_unit || row.ingredientUnit || "kg",
-<<<<<<< HEAD
-                // Prefer provided SKU, otherwise generate one
-                sku:
-                  row.ingredient_sku ||
-                  `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-                unitCost: Number(row.ingredient_price) || 0,
-                currentStock: Number(row.ingredient_stock) || 0,
-                category: "Imported",
-                // Link supplier if found/created
-=======
                 sku:
                   row.ingredient_sku ||
                   `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
                 unitCost: parseGlobalNumber(row.ingredient_price) || 0,
                 currentStock: parseGlobalNumber(row.ingredient_stock) || 0,
                 category: "Imported",
->>>>>>> dev
                 materialSuppliers: supplierId
                   ? {
                       create: {
                         supplierId,
-<<<<<<< HEAD
-                        price: Number(row.ingredient_price) || 0,
-=======
                         price: parseGlobalNumber(row.ingredient_price) || 0,
->>>>>>> dev
                         isPreferred: true,
                       },
                     }
@@ -818,19 +650,10 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
             });
           }
 
-<<<<<<< HEAD
-          // Add to ingredients list
-          // Check if this material is already added to this recipe to avoid duplicates
-          if (!ingredientsToCreate.some((i) => i.materialId === material!.id)) {
-            ingredientsToCreate.push({
-              materialId: material.id,
-              quantity: Number(row.ingredient_qty) || Number(row.ingredientQuantity) || 1,
-=======
           if (!ingredientsToCreate.some((i) => i.materialId === material!.id)) {
             ingredientsToCreate.push({
               materialId: material.id,
               quantity: parseGlobalNumber(row.ingredient_qty) || parseGlobalNumber(row.ingredientQuantity) || 1,
->>>>>>> dev
               unit: row.ingredient_unit || row.ingredientUnit || "kg",
             });
           }
@@ -839,40 +662,12 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
 
       // Format instructions
       let instructions = mainRow.instructions || "";
-<<<<<<< HEAD
-      // If we have ingredients_text (bulk text) but no structured ingredients, we append it
-      // Or if we just want to preserve it
-=======
->>>>>>> dev
       if (mainRow.ingredients_text) {
         instructions = instructions
           ? `${instructions}\n\n--- Imported Ingredients ---\n${mainRow.ingredients_text}`
           : `--- Imported Ingredients ---\n${mainRow.ingredients_text}`;
       }
 
-<<<<<<< HEAD
-      await prisma.recipe.create({
-        data: {
-          storeId,
-          name,
-          description: mainRow.description || null,
-          category: mainRow.category || null,
-          yieldQuantity: Number(mainRow.yieldQuantity) || 1,
-          yieldUnit: mainRow.yieldUnit || "batch",
-          productionTimeMinutes: Number(mainRow.productionTimeMinutes) || 0,
-          instructions: instructions || null,
-          costPerBatch: Number(mainRow.costPerBatch) || 0,
-          createdAt: mainRow.createdAt || new Date(),
-          updatedAt: mainRow.updatedAt || new Date(),
-          ingredients:
-            ingredientsToCreate.length > 0
-              ? {
-                  create: ingredientsToCreate,
-                }
-              : undefined,
-        },
-      });
-=======
       // UPSERT LOGIC FOR RECIPE
       // Check if recipe exists by NAME (Final Name)
       const existingRecipe = await prisma.recipe.findFirst({
@@ -923,7 +718,6 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
         });
       }
 
->>>>>>> dev
       successCount += rows.length;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -969,13 +763,9 @@ interface MultiEntityImportResult {
 
 /**
  * Detect which entity type a row best matches based on filled fields.
-<<<<<<< HEAD
- * Priority: Recipe > Material > Product > Supplier (most specific first)
-=======
  * Priority:
  * 1. Check 'category' column for explicit hints (e.g., "Suppliers", "Materials", "Recipes", "Products")
  * 2. Check unique fields: Recipe > Material > Product > Supplier (most specific first)
->>>>>>> dev
  * Uses centralized field definitions from import-schema.ts (DRY principle)
  */
 function detectEntityType(
@@ -984,9 +774,6 @@ function detectEntityType(
   const hasValue = (field: string) =>
     row[field] !== undefined && row[field] !== "" && row[field] !== null;
 
-<<<<<<< HEAD
-  // Check in order of specificity (most specific first)
-=======
   // 1. First check 'category' column for explicit entity type hints
   const category = String(row.category || "").toLowerCase().trim();
   if (category.includes("supplier") || category === "suppliers") return "supplier";
@@ -995,7 +782,6 @@ function detectEntityType(
   if (category.includes("product") || category === "products") return "product";
 
   // 2. Fallback: Check in order of specificity (most specific first)
->>>>>>> dev
   if (ENTITY_UNIQUE_FIELDS.recipe.some(hasValue)) return "recipe";
   if (ENTITY_UNIQUE_FIELDS.material.some(hasValue)) return "material";
   if (ENTITY_UNIQUE_FIELDS.product.some(hasValue)) return "product";
@@ -1095,8 +881,6 @@ export async function bulkImportMultiEntity(
     // 5. Import in dependency order
     const summary = { ...defaultSummary };
 
-<<<<<<< HEAD
-=======
     // Debug: Log grouped counts
     console.log("[Smart Import] Entity grouping:", {
       suppliers: grouped.supplier.length,
@@ -1106,7 +890,6 @@ export async function bulkImportMultiEntity(
       productRows: grouped.product.map((p) => ({ name: p.name, category: p.category })),
     });
 
->>>>>>> dev
     // 5a. Suppliers first (no dependencies)
     if (grouped.supplier.length > 0) {
       summary.suppliers.attempted = grouped.supplier.length;
