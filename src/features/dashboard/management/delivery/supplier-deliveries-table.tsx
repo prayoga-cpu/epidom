@@ -38,9 +38,9 @@ import {
   CheckCircle2,
   XCircle,
   TruckIcon,
-  Loader2,
   Package,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 interface SupplierDeliveriesTableProps {
@@ -251,7 +251,7 @@ export function SupplierDeliveriesTable({
           {/* Loading State */}
           {isLoading && (
             <div className="flex flex-1 flex-col items-center justify-center py-12">
-              <Loader2 className="text-muted-foreground mb-4 h-8 w-8 animate-spin" />
+              <LottieLoader size="md" className="text-muted-foreground mb-4" />
               <p className="text-muted-foreground text-sm">{t("common.loading") || "Loading..."}</p>
             </div>
           )}

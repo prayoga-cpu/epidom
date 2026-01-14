@@ -2,9 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Plus, CheckSquare } from "lucide-react";
+import { Download, Plus, CheckSquare } from "lucide-react";
 import { SectionHeader, ActionButtons, ActionButton } from "./section-header";
 import { responsive } from "@/lib/utils/responsive";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 
 interface SectionLoadingStateProps {
   title: string;
@@ -54,7 +55,7 @@ export function SectionLoadingState({
         </div>
       </CardHeader>
       <CardContent className="flex items-center justify-center py-12">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        <LottieLoader size="md" />
       </CardContent>
     </Card>
   );

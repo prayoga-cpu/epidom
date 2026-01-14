@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Upload, Loader2, Check, AlertTriangle, X, FileSpreadsheet } from "lucide-react";
+import { Sparkles, Upload, Check, AlertTriangle, X, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useAnalyzeImport, useExecuteImport, type AnalyzeResponse } from "./hooks/use-ai-import";
 import type { EntityType } from "@/lib/ai/import/types";
 
@@ -229,7 +230,7 @@ export function SmartImportDialog({
                       )}
                     >
                       {isProcessing ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <LottieLoader size="sm" />
                       ) : isPast ? (
                         <Check className="h-5 w-5" />
                       ) : (
@@ -287,7 +288,7 @@ export function SmartImportDialog({
               <div className="relative">
                 <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
                 <div className="relative p-6 rounded-full bg-primary/10">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <LottieLoader size="xl" />
                 </div>
               </div>
               <h3 className="mt-6 text-lg font-semibold">Importing Data...</h3>

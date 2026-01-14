@@ -35,7 +35,8 @@ import { toast as sonnerToast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { useStockAdjustment } from "./hooks/use-stock-adjustment";
-import { Loader2, Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 
 // Adjustment types (IN = increase stock, OUT = decrease stock)
 enum AdjustmentType {
@@ -205,7 +206,7 @@ export function StockAdjustmentDialog({
               disabled={isSubmitting || adjustStockMutation.isPending}
             >
               {(isSubmitting || adjustStockMutation.isPending) && (
-                <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
               )}
               {t("management.editStock.recordAdjustment")}
             </Button>

@@ -21,10 +21,10 @@ import {
   Shield,
   ArrowRight,
   CheckCircle2,
-  Loader2,
   XCircle,
   Building2,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -268,7 +268,7 @@ export function OnboardingContent() {
   if (isLoadingGlobal) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50/50">
-        <Loader2 className="text-brand-primary/80 h-10 w-10 animate-spin" />
+        <LottieLoader size="lg" />
         <p className="mt-4 text-sm font-medium text-gray-500">Loading your profile...</p>
       </div>
     );
@@ -338,7 +338,7 @@ export function OnboardingContent() {
                     <Button type="submit" disabled={isCreatingProfile} className={BUTTON_STYLES}>
                       {isCreatingProfile ? (
                         <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          <LottieLoader size="sm" />
                           {t("onboarding.businessSetup.savingProfile")}
                         </>
                       ) : (
@@ -439,7 +439,7 @@ export function OnboardingContent() {
               <div className="relative z-10 flex items-center justify-center gap-2">
                 {isPaymentLoading ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <LottieLoader size="sm" />
                     <span>{t("onboarding.pleaseWait")}</span>
                   </>
                 ) : (

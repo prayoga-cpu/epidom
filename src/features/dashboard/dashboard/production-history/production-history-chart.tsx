@@ -10,6 +10,7 @@ import { useProductionBatches } from "@/features/dashboard/management/recipe-pro
 import { exportData } from "@/features/dashboard/dashboard/production-history/utils/export";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { Loader2 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 
 export function ProductionHistoryChart() {
   const { t, locale } = useI18n();
@@ -107,7 +108,7 @@ export function ProductionHistoryChart() {
           </div>
         ) : isLoading ? (
           <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center">
-            <Loader2 className="text-muted-foreground mb-3 h-8 w-8 animate-spin" />
+            <LottieLoader size="md" className="text-muted-foreground mb-3" />
             <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
           </div>
         ) : error ? (

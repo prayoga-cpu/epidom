@@ -26,8 +26,8 @@ import {
   User,
   FileText,
   Hash,
-  Loader2,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useStockMovements, type StockMovementWithRelations } from "./hooks/use-stock-movements";
 
 interface AdjustmentHistoryDialogProps {
@@ -214,7 +214,7 @@ export function AdjustmentHistoryDialog({
 
             {isLoading ? (
               <div className="flex items-center justify-center p-12">
-                <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+                <LottieLoader size="md" className="text-muted-foreground" />
               </div>
             ) : adjustmentsWithBalance.length === 0 ? (
               <div className="rounded-lg border border-dashed p-12 text-center">

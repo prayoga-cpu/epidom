@@ -9,7 +9,8 @@ import { ImageUpload } from "@/components/shared/image-upload";
 import { AvatarCropper } from "@/components/shared/avatar-cropper";
 import { toast } from "sonner";
 import { useUpdateProfile } from "../hooks/use-profile";
-import { Loader2, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import {
   compressImage,
   createImagePreview,
@@ -216,7 +217,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
           {originalImageUrl && (
             <Button variant="destructive" onClick={handleRemove} disabled={updateProfile.isPending}>
               {updateProfile.isPending && (
-                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
               )}
               {t("profile.actions.removeAvatar")}
             </Button>
@@ -241,7 +242,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
           </Button>
           <Button onClick={handleSave} disabled={updateProfile.isPending} className="flex-1">
             {updateProfile.isPending && (
-              <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+              <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
             )}
             {t("common.actions.save")}
           </Button>

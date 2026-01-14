@@ -7,8 +7,9 @@
 "use client";
 
 import { useCallback, useState, useRef, type DragEvent, type ChangeEvent } from "react";
-import { Upload, FileText, Loader2 } from "lucide-react";
+import { Upload, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import {
   Select,
   SelectContent,
@@ -172,7 +173,7 @@ export function FileUploadStep({
         <div className="flex flex-col items-center gap-4">
           {isLoading ? (
             <>
-              <Loader2 className="h-12 w-12 text-primary animate-spin" />
+              <LottieLoader size="xl" />
               <div>
                 <p className="text-lg font-medium">{t("import.upload.processing")}</p>
                 <p className="text-sm text-muted-foreground">{t("import.upload.analyzing")}</p>

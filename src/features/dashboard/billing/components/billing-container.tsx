@@ -16,8 +16,8 @@ import {
   ExternalLink,
   Calendar,
   Store,
-  Loader2,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
@@ -232,7 +232,7 @@ export function BillingContainer() {
               className="gap-2"
             >
               {actionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <LottieLoader size="xs" />
               ) : (
                 <ExternalLink className="h-4 w-4" />
               )}
@@ -247,7 +247,7 @@ export function BillingContainer() {
                 className="gap-2"
               >
                 {actionLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <LottieLoader size="xs" />
                 ) : (
                   <XCircle className="h-4 w-4" />
                 )}

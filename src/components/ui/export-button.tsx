@@ -8,7 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import { Download, FileSpreadsheet, FileText} from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { exportData } from "@/lib/utils/export";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -72,7 +73,7 @@ export function ExportButton<T extends Record<string, any>>({
         <Button variant={variant} size={size} disabled={disabled || loading} className={className}>
           {loading ? (
             <>
-              <Loader2 className="mr-1 h-4 w-4 hidden animate-spin sm:inline" />
+              <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
               {t("common.actions.exporting") || "Exporting..."}
             </>
           ) : (

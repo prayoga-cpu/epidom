@@ -24,10 +24,10 @@ import {
   Copy,
   Download,
   Plus,
-  Loader2,
   X,
   Sparkles,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { toast } from "sonner";
 import { formatDuration } from "@/lib/utils/formatting";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -291,7 +291,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                       className="w-full md:w-auto"
                     >
                       {exportRecipes.isPending ? (
-                        <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                        <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
                       ) : (
                         <Download className="mr-1 hidden h-4 w-4 sm:inline" />
                       )}

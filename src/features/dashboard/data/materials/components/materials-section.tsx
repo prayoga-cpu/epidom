@@ -41,10 +41,10 @@ import {
   Plus,
   Download,
   CheckSquare,
-  Loader2,
   X,
   Sparkles,
 } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
@@ -353,7 +353,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                       className="w-full md:w-auto"
                     >
                       {exportMaterials.isPending ? (
-                        <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                        <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
                       ) : (
                         <Download className="mr-1 hidden h-4 w-4 sm:inline" />
                       )}

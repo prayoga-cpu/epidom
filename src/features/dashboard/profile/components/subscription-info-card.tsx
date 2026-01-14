@@ -3,7 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, CreditCard, AlertCircle, Loader2, ExternalLink } from "lucide-react";
+import { Calendar, CreditCard, AlertCircle, ExternalLink } from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useState } from "react";
@@ -205,7 +206,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
             >
               {isLoadingPortal ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <LottieLoader size="xs" />
                   <span className="hidden sm:inline">Loading...</span>
                   <span className="sm:hidden">Loading</span>
                 </>

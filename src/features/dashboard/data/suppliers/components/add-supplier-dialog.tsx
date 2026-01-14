@@ -21,7 +21,8 @@ import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus} from "lucide-react";
+import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateSupplier } from "../hooks/use-suppliers";
@@ -79,7 +80,7 @@ export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
       toast.promise(promise, {
         loading: (
           <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LottieLoader size="xs" />
             <span>{t("data.suppliers.toasts.adding") || "Adding supplier..."}</span>
           </div>
         ),
@@ -143,7 +144,7 @@ export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
             </Button>
             <Button type="submit" form="add-supplier-form" disabled={createSupplier.isPending}>
               {createSupplier.isPending && (
-                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
               )}
               {t("data.suppliers.addButton")}
             </Button>
