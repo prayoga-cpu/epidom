@@ -117,13 +117,20 @@ function ProductCard({ product, onAdd }: { product: ProductForPOS; onAdd: () => 
   const lowStock = product.currentStock > 0 && product.currentStock <= 5;
 
   return (
-    <button
-      onClick={onAdd}
-      disabled={outOfStock}
+    <div
+      onClick={outOfStock ? undefined : onAdd}
+      role="button"
+      tabIndex={outOfStock ? -1 : 0}
+      onKeyDown={(e) => {
+        if (!outOfStock && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onAdd();
+        }
+      }}
       className={`group bg-card relative flex flex-col rounded-lg border p-4 text-left transition-colors ${
         outOfStock
           ? "cursor-not-allowed opacity-50"
-          : "hover:bg-accent hover:text-accent-foreground"
+          : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
       }`}
     >
       {/* Stock Badge */}
@@ -153,14 +160,16 @@ function ProductCard({ product, onAdd }: { product: ProductForPOS; onAdd: () => 
       <div className="mt-auto flex items-end justify-between gap-2 pt-4">
         <div>
           <p className="text-muted-foreground text-xs">Price</p>
-          <p className="text-lg font-bold tabular-nums">{product.sellingPrice.toLocaleString()}</p>
+          <p className="text-lg font-bold tabular-nums">
+            {new Intl.NumberFormat("en-US").format(product.sellingPrice)}
+          </p>
         </div>
         {!outOfStock && (
-          <Button variant="secondary" size="icon" className="h-8 w-8 shrink-0">
+          <div className="bg-secondary text-secondary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-md">
             <Plus className="h-4 w-4" />
-          </Button>
+          </div>
         )}
       </div>
-    </button>
+    </div>
   );
 }
