@@ -4,7 +4,7 @@
  * Onboarding Success Content
  *
  * Shown after successful card validation.
- * User now has PRO access until Dec 31, 2025.
+ * User now has OPERATIONS access until Dec 31, 2025.
  */
 
 import { useEffect, useState } from "react";

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 /**
  * Subscription plan type
  */
-export type SubscriptionPlan = "STARTER" | "PRO" | "ENTERPRISE";
+export type SubscriptionPlan = "FREE" | "FREE" | "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE";
 
 /**
  * Subscription status type

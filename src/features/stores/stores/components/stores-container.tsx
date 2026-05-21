@@ -87,9 +87,9 @@ export function StoresContainer() {
 
     // If we have store limit info, calculate directly from current stores
     // This ensures button updates immediately after creating a store
-    // For PRO/ENTERPRISE (limit = Infinity), always allow creating
+    // For OPERATIONS/ENTERPRISE (limit = Infinity), always allow creating
     const canCreateMore = storeLimit === Infinity || storeLimit === null
-      ? true // PRO/ENTERPRISE: unlimited stores
+      ? true // OPERATIONS/ENTERPRISE: unlimited stores
       : storeLimit !== undefined
         ? currentStoreCount < storeLimit // Calculate from current count
         : canCreateMoreFromSubscription; // Fallback to subscription status
