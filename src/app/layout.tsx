@@ -3,6 +3,7 @@ import type React from "react";
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { WebVitalsReporter } from "@/components/analytics/web-vitals-reporter";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { PwaProvider } from "@/components/providers/pwa-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
@@ -14,14 +15,6 @@ export const metadata: Metadata = {
   },
 };
 
-/**
- * Root Layout
- *
- * Wraps the entire application with global providers:
- * - ErrorBoundary: Catches and handles errors gracefully
- * - QueryProvider: TanStack Query for data fetching and caching
- * - WebVitalsReporter: Core Web Vitals performance monitoring
- */
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -32,6 +25,7 @@ export default function RootLayout({
       <body>
         <ErrorBoundary>
           <QueryProvider>
+            <PwaProvider />
             <section>
               {children}
               <ConditionalAnalytics />

@@ -12,7 +12,7 @@ import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/type
  */
 export const DELETE = withApiHandler(
   async (request, { storeId, userId }) => {
-    // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
+    // Check subscription plan - Supplier Management is OPERATIONS/ENTERPRISE only
     const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(

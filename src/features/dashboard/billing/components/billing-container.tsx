@@ -123,11 +123,11 @@ export function BillingContainer() {
           <AlertDescription className="text-green-800">
             {t("billing.subscriptionActivated")?.replace(
               "{plan}",
-              plan === "STARTER"
+              plan === "POS"
                 ? t("profile.subscription.plans.starter")
                 : t("profile.subscription.plans.pro")
             ) ||
-              `Subscription activated successfully! Welcome to ${plan === "STARTER" ? "Starter" : "Pro"} plan.`}
+              `Subscription activated successfully! Welcome to ${plan === "POS" ? "Starter" : "Pro"} plan.`}
           </AlertDescription>
         </Alert>
       )}
@@ -159,13 +159,13 @@ export function BillingContainer() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Plan Info */}
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <h3 className="text-2xl font-bold">
-                  {subscription?.plan === "STARTER"
+                  {subscription?.plan === "POS"
                     ? t("profile.subscription.plans.starter")
-                    : subscription?.plan === "PRO"
+                    : subscription?.plan === "OPERATIONS"
                       ? t("profile.subscription.plans.pro")
                       : t("profile.subscription.plans.enterprise")}
                 </h3>
@@ -174,15 +174,15 @@ export function BillingContainer() {
                 </Badge>
               </div>
               <p className="text-muted-foreground text-sm">
-                {subscription?.plan === "STARTER"
+                {subscription?.plan === "POS"
                   ? t("profile.subscription.pricing.starter")
-                  : subscription?.plan === "PRO"
+                  : subscription?.plan === "OPERATIONS"
                     ? t("profile.subscription.pricing.pro")
                     : t("profile.subscription.pricing.enterprise")}
               </p>
             </div>
-            {subscription?.plan === "STARTER" && (
-              <Button onClick={handleUpgrade} variant="outline">
+            {subscription?.plan === "POS" && (
+              <Button onClick={handleUpgrade} variant="outline" className="w-full shrink-0 sm:w-auto">
                 {t("billing.upgradeToPro")}
               </Button>
             )}
@@ -217,7 +217,7 @@ export function BillingContainer() {
                   {t("billing.stores")}
                 </p>
               </div>
-              {!storeUsage.canCreateMore && subscription?.plan === "STARTER" && (
+              {!storeUsage.canCreateMore && subscription?.plan === "POS" && (
                 <Badge variant="secondary">{t("billing.limitReached")}</Badge>
               )}
             </div>
@@ -259,7 +259,7 @@ export function BillingContainer() {
       </Card>
 
       {/* Upgrade CTA */}
-      {subscription?.plan === "STARTER" && (
+      {subscription?.plan === "POS" && (
         <Card>
           <CardHeader>
             <CardTitle>{t("billing.availablePlans")}</CardTitle>

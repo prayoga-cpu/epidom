@@ -198,11 +198,11 @@ describe("RecipeService", () => {
         { ...mockRecipe, id: "recipe-1", storeId: "store-1" },
         { ...mockRecipe, id: "recipe-2", storeId: "store-1" },
       ]);
-      mockedRecipeRepo.bulkDelete.mockResolvedValue(2);
+      mockedRecipeRepo.bulkDelete.mockResolvedValue({ count: 2 });
 
       const result = await service.bulkDeleteRecipes(["recipe-1", "recipe-2"], "store-1");
 
-      expect(result).toBe(2);
+      expect(result.count).toBe(2);
     });
   });
 

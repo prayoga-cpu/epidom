@@ -58,7 +58,7 @@ describe("Stripe Webhook Handler", () => {
   };
 
   describe("checkout.session.completed", () => {
-    it("should assign STARTER plan for setup mode with new_year_2025 promotion", async () => {
+    it("should assign POS plan for setup mode with new_year_2025 promotion", async () => {
       // Arrange
       const mockEvent = {
         type: "checkout.session.completed",
@@ -88,7 +88,7 @@ describe("Stripe Webhook Handler", () => {
       expect(subscriptionRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: "user-123",
-          plan: SubscriptionPlan.STARTER, // CRITICAL CHECK
+          plan: SubscriptionPlan.POS, // CRITICAL CHECK
           status: SubscriptionStatus.ACTIVE,
           stripeCustomerId: "cus_123",
         })
@@ -102,7 +102,7 @@ describe("Stripe Webhook Handler", () => {
       expect(endDate.getUTCDate()).toBe(31);
     });
 
-    it("should assign PRO plan for regular subscription checkout", async () => {
+    it("should assign OPERATIONS plan for regular subscription checkout", async () => {
       // Arrange
       const mockEvent = {
         type: "checkout.session.completed",
@@ -113,7 +113,7 @@ describe("Stripe Webhook Handler", () => {
             customer: "cus_123",
             metadata: {
               userId: "user-123",
-              plan: "PRO",
+              plan: "OPERATIONS",
             },
           },
         },
@@ -141,7 +141,7 @@ describe("Stripe Webhook Handler", () => {
       expect(subscriptionRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: "user-123",
-          plan: SubscriptionPlan.PRO,
+          plan: SubscriptionPlan.OPERATIONS,
           stripeSubscriptionId: "sub_123",
         })
       );

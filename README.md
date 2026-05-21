@@ -1,16 +1,17 @@
-**EPIDOM** - A complete restaurant & food business management platform with Stripe payment integration, multi-language support (EN/FR/ID), and subscription-based pricing.
+**EPIDOM** - A free, all-in-one operating system for small Indonesian food & beverage businesses (warung, café, restaurant, cookie bar, home kitchen).
+It provides a customizable public storefront page, POS, operations (shift, KDS, inventory), and finance reports.
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 (App Router with Turbopack)
+- **Framework**: Next.js 16 (App Router with Turbopack), React 19
 - **Language**: TypeScript
 - **Database**: PostgreSQL + Prisma ORM
 - **Authentication**: **Better Auth** (Email/Password + Google OAuth)
-- **Payment**: Stripe (Checkout Sessions, Customer Portal, Connect for 80/20 split)
-- **State Management**: TanStack Query (React Query)
+- **Payment**: Stripe (SaaS subscription billing) & Xendit (end-customer QRIS payments)
+- **State Management**: TanStack Query (React Query) v5
 - **UI Components**: shadcn/ui
 - **Styling**: Tailwind CSS 4
-- **Internationalization**: Custom i18n provider (EN/FR/ID)
+- **Internationalization**: Custom i18n provider (ID primarily, EN secondary)
 - **Email**: Resend
 
 ## Developer Setup

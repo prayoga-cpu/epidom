@@ -8,31 +8,30 @@
  */
 
 import { ContactInfo } from "@/features/marketing/contact/components/contact-info";
-import { ContactMap } from "@/features/marketing/contact/components/contact-map";
 import { generateMetadata as genMeta } from "@/lib/seo";
 import { ContactHeader } from "@/features/marketing/contact/components/contact-header";
 
 export const metadata = genMeta({
-  title: "Contact Us - EPIDOM",
+  title: "Kontak - EPIDOM",
   description:
-    "Get in touch with EPIDOM. Whether you're a potential client, interested in our food inventory management services, or have questions, we're here to help.",
+    "Hubungi tim Epidom. Kami siap membantu warung, kafe, dan resto Indonesia berkembang dengan platform digital.",
   keywords: [
-    "contact EPIDOM",
-    "food inventory management support",
-    "restaurant software contact",
-    "customer support",
-    "EPIDOM help",
+    "kontak epidom",
+    "platform F&B Indonesia",
+    "dukungan epidom",
+    "warung digital",
+    "hubungi epidom",
   ],
   openGraph: {
-    title: "Contact Us - EPIDOM",
-    description: "Get in touch with EPIDOM for questions about our food inventory management solution.",
+    title: "Kontak - EPIDOM",
+    description: "Hubungi tim Epidom untuk pertanyaan seputar platform F&B Indonesia.",
     url: "https://epidom.com/contact",
   },
 });
 
 export default function ContactPage() {
   return (
-    <main className="w-full overflow-x-hidden bg-white pt-20 md:pt-24 lg:pt-20">
+    <main className="w-full overflow-x-hidden bg-bg-warm pt-20 md:pt-24 lg:pt-20">
       <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-8">
         {/* Tablet Layout: Header Full Width + 2 Columns */}
         <div className="md:block lg:hidden">
@@ -41,24 +40,18 @@ export default function ContactPage() {
             <ContactHeader />
           </div>
 
-          {/* Content Section - 2 Columns */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-6 pb-8 md:pb-12">
-            <div className="animate-slide-up-delayed">
-            <ContactInfo />
-          </div>
-            <div className="animate-slide-up-delayed">
-              <ContactMap />
+          {/* Content Section - Centered */}
+          <div className="flex justify-center pb-8 md:pb-12">
+            <div className="animate-slide-up-delayed w-full max-w-lg">
+              <ContactInfo />
             </div>
           </div>
         </div>
 
-        {/* Desktop Layout: Original - Grid 2 Columns with ContactInfo containing header */}
-        <div className="hidden lg:grid lg:grid-cols-2 lg:items-start lg:gap-0 lg:min-h-[calc(100vh-4rem)]">
-          <div className="animate-slide-up flex flex-col justify-center h-full lg:pr-8">
+        {/* Desktop Layout: Centered ContactInfo */}
+        <div className="hidden lg:flex lg:justify-center lg:items-start lg:min-h-[calc(100vh-4rem)]">
+          <div className="animate-slide-up flex flex-col justify-center h-full w-full max-w-2xl">
             <ContactInfoWithHeader />
-          </div>
-          <div className="animate-slide-up-delayed flex items-center justify-center h-full w-full lg:ml-0 lg:-mr-[calc((100vw-80rem)/2+2rem)] lg:pr-0">
-            <ContactMap />
           </div>
         </div>
       </div>

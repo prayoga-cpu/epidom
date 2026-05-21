@@ -20,7 +20,7 @@ import { extractSubscriptionPeriod, isSubscriptionCanceling } from "@/types/stri
  *
  * Strategy:
  * 1. Fetch ALL subscriptions for the customer.
- * 2. Identify "Winner" (Newest PRO > Newest STARTER).
+ * 2. Identify "Winner" (Newest OPERATIONS > Newest POS).
  * 3. Cancel all "Losers".
  * 4. Sync Database to "Winner".
  *
@@ -61,13 +61,13 @@ export const POST = withApiHandler(
     }
 
     // Sort to find the "Winner"
-    // Criteria: PRO > STARTER, then Newest > Oldest
+    // Criteria: OPERATIONS > POS, then Newest > Oldest
     const sorted = activeSubscriptions.sort((a, b) => {
       const planA = determinePlan(a);
       const planB = determinePlan(b);
 
-      if (planA === SubscriptionPlan.PRO && planB !== SubscriptionPlan.PRO) return -1;
-      if (planB === SubscriptionPlan.PRO && planA !== SubscriptionPlan.PRO) return 1;
+      if (planA === SubscriptionPlan.OPERATIONS && planB !== SubscriptionPlan.OPERATIONS) return -1;
+      if (planB === SubscriptionPlan.OPERATIONS && planA !== SubscriptionPlan.OPERATIONS) return 1;
 
       return b.created - a.created;
     });
@@ -149,13 +149,13 @@ function determinePlan(subscription: Stripe.Subscription): SubscriptionPlan {
   // Try metadata first
   if (subscription.metadata?.plan) {
     const plan = subscription.metadata.plan as string;
-    if (plan === "STARTER" || plan === "PRO") return plan as SubscriptionPlan;
+    if (plan === "POS" || plan === "OPERATIONS") return plan as SubscriptionPlan;
   }
 
   // Fallback to price amount
   const amount = subscription.items.data[0]?.price.unit_amount;
-  if (amount === 1900) return SubscriptionPlan.STARTER;
-  if (amount === 4900) return SubscriptionPlan.PRO;
+  if (amount === 1900) return SubscriptionPlan.POS;
+  if (amount === 4900) return SubscriptionPlan.OPERATIONS;
 
-  return SubscriptionPlan.STARTER;
+  return SubscriptionPlan.POS;
 }

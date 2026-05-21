@@ -24,7 +24,17 @@ export const STRIPE_CONFIG = {
    * Store limits per plan
    */
   PLAN_LIMITS: {
-    STARTER: {
+    FREE: {
+      maxStores: 1,
+      maxProducts: 50,
+      name: "Free",
+      price: 0,
+      features: {
+        supplierManagement: false,
+        advancedReports: false,
+      },
+    },
+    POS: {
       maxStores: 1,
       maxProducts: 500,
       name: "Starter",
@@ -34,7 +44,7 @@ export const STRIPE_CONFIG = {
         advancedReports: false,
       },
     },
-    PRO: {
+    OPERATIONS: {
       maxStores: Infinity, // Unlimited
       maxProducts: Infinity, // Unlimited
       name: "Pro",
@@ -64,8 +74,9 @@ export const STRIPE_CONFIG = {
    * Production price IDs start with 'price_'
    */
   PRICE_IDS: {
-    STARTER: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || "price_test_starter_placeholder",
-    PRO: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || "price_test_pro_placeholder",
+    FREE: "price_free_placeholder",
+    POS: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS || "price_test_pos_placeholder",
+    OPERATIONS: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || "price_test_operations_placeholder",
     // Enterprise is handled via sales contact, not Stripe Checkout
   },
 
@@ -92,14 +103,14 @@ export const STRIPE_CONFIG = {
 /**
  * Helper to get price ID by plan name
  */
-export function getPriceId(plan: "STARTER" | "PRO"): string {
+export function getPriceId(plan: "FREE" | "FREE" | "POS" | "OPERATIONS"): string {
   return STRIPE_CONFIG.PRICE_IDS[plan];
 }
 
 /**
  * Helper to get store limit by plan name
  */
-export function getStoreLimit(plan: "STARTER" | "PRO" | "ENTERPRISE"): number {
+export function getStoreLimit(plan: "FREE" | "FREE" | "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE"): number {
   return STRIPE_CONFIG.PLAN_LIMITS[plan].maxStores;
 }
 
@@ -107,7 +118,7 @@ export function getStoreLimit(plan: "STARTER" | "PRO" | "ENTERPRISE"): number {
  * Helper to check if a plan allows more stores
  */
 export function canCreateStore(
-  plan: "STARTER" | "PRO" | "ENTERPRISE",
+  plan: "FREE" | "FREE" | "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE",
   currentStoreCount: number
 ): boolean {
   const limit = getStoreLimit(plan);
@@ -117,7 +128,7 @@ export function canCreateStore(
 /**
  * Helper to get product limit by plan name
  */
-export function getProductLimit(plan: "STARTER" | "PRO" | "ENTERPRISE"): number {
+export function getProductLimit(plan: "FREE" | "FREE" | "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE"): number {
   return STRIPE_CONFIG.PLAN_LIMITS[plan].maxProducts;
 }
 
@@ -125,7 +136,7 @@ export function getProductLimit(plan: "STARTER" | "PRO" | "ENTERPRISE"): number 
  * Helper to check if a plan allows more products
  */
 export function canCreateProduct(
-  plan: "STARTER" | "PRO" | "ENTERPRISE",
+  plan: "FREE" | "FREE" | "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE",
   currentProductCount: number
 ): boolean {
   const limit = getProductLimit(plan);
@@ -135,13 +146,13 @@ export function canCreateProduct(
 /**
  * Helper to check if a plan has access to supplier management
  */
-export function hasSupplierManagementAccess(plan: "STARTER" | "PRO" | "ENTERPRISE"): boolean {
+export function hasSupplierManagementAccess(plan: "FREE" | "FREE" | "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE"): boolean {
   return STRIPE_CONFIG.PLAN_LIMITS[plan].features.supplierManagement;
 }
 
 /**
  * Helper to check if a plan has access to advanced reports
  */
-export function hasAdvancedReportsAccess(plan: "STARTER" | "PRO" | "ENTERPRISE"): boolean {
+export function hasAdvancedReportsAccess(plan: "FREE" | "FREE" | "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE"): boolean {
   return STRIPE_CONFIG.PLAN_LIMITS[plan].features.advancedReports;
 }

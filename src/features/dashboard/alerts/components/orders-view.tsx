@@ -117,7 +117,7 @@ export function OrdersView() {
     });
   }, [data]);
 
-  // Check if subscription is locked (STARTER plan)
+  // Check if subscription is locked (POS plan)
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
     (error &&

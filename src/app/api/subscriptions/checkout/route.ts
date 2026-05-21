@@ -10,7 +10,7 @@ import { checkoutSchema } from "@/lib/validation/subscription.schemas";
  * Create Stripe Checkout Session for subscription
  *
  * Body:
- * - plan: "STARTER" | "PRO"
+ * - plan: "FREE" | "FREE" | "POS" | "OPERATIONS"
  * - successUrl?: string (optional, defaults to /checkout/success)
  * - cancelUrl?: string (optional, defaults to /checkout/failed)
  *

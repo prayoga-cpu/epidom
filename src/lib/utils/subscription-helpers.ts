@@ -74,7 +74,7 @@ export function getPlanDetails(
   t: (key: string) => string
 ): PlanDetails {
   switch (plan) {
-    case "PRO":
+    case "OPERATIONS":
       return {
         name: t("profile.subscription.plans.pro") || "Pro",
         price: t("profile.subscription.pricing.pro") || "€79/month",
@@ -103,7 +103,7 @@ export function getPlanDetails(
  */
 export function getPlanBadgeColor(plan?: string): string {
   switch (plan) {
-    case "PRO":
+    case "OPERATIONS":
       return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
     case "ENTERPRISE":
       return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
@@ -117,7 +117,7 @@ export function getPlanBadgeColor(plan?: string): string {
  */
 export function getPlanLabel(plan: string | undefined, t: (key: string) => string): string {
   switch (plan) {
-    case "PRO":
+    case "OPERATIONS":
       return t("profile.subscription.plans.pro") || plan || "";
     case "ENTERPRISE":
       return t("profile.subscription.plans.enterprise") || plan || "";

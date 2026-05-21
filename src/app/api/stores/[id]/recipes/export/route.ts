@@ -11,7 +11,7 @@ import { recipeFilterSchema } from "@/lib/validation/inventory.schemas";
  */
 export const GET = withApiHandler(
   async (request, { storeId, userId }) => {
-    // Check subscription plan - Advanced Reports (Export) is PRO/ENTERPRISE only
+    // Check subscription plan - Advanced Reports (Export) is OPERATIONS/ENTERPRISE only
     const hasAccess = await subscriptionService.hasAdvancedReportsAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(

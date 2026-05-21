@@ -52,7 +52,7 @@ const mockProduct = {
   createdAt: new Date(),
   updatedAt: new Date(),
   recipes: [],
-};
+} as any;
 
 // Get mocked functions
 const mockedProductRepo = vi.mocked(productRepository);
@@ -212,7 +212,7 @@ describe("ProductService", () => {
 
     it("should delete product when valid", async () => {
       mockedProductRepo.belongsToStore.mockResolvedValue(true);
-      mockedProductRepo.delete.mockResolvedValue(undefined);
+      mockedProductRepo.delete.mockResolvedValue(mockProduct);
 
       await service.deleteProduct("prod-1", "store-1");
 
@@ -241,7 +241,7 @@ describe("ProductService", () => {
 
       const result = await service.bulkDeleteProducts(["prod-1", "prod-2"], "store-1");
 
-      expect(result.deletedCount).toBe(2);
+      expect(result.count).toBe(2);
     });
   });
 

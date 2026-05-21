@@ -62,8 +62,11 @@ export default async function proxy(req: NextRequest) {
     return path.startsWith(route);
   });
 
-  // If it's a public route, allow access without authentication
-  if (isPublicRoute) {
+  // Also allow public storefront routes which start with /@
+  const isStorefrontRoute = path.startsWith("/@");
+
+  // If it's a public route or storefront route, allow access without authentication
+  if (isPublicRoute || isStorefrontRoute) {
     return response;
   }
 

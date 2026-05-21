@@ -50,14 +50,14 @@ export class SubscriptionService {
    * Create Stripe Checkout Session
    *
    * @param userId - User ID creating the subscription
-   * @param plan - Subscription plan (STARTER or PRO)
+   * @param plan - Subscription plan (POS or OPERATIONS)
    * @param successUrl - URL to redirect on successful payment
    * @param cancelUrl - URL to redirect if user cancels
    * @returns Stripe Checkout Session
    */
   async createCheckoutSession(
     userId: string,
-    plan: "STARTER" | "PRO",
+    plan: "FREE" | "FREE" | "POS" | "OPERATIONS",
     successUrl: string,
     cancelUrl: string
   ): Promise<Stripe.Checkout.Session> {

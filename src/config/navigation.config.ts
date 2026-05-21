@@ -10,6 +10,14 @@ import {
   CreditCard,
   Mail,
   Store,
+  Monitor,
+  UtensilsCrossed,
+  ChefHat,
+  Grid2X2,
+  Users,
+  Clock,
+  BarChart3,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -33,6 +41,8 @@ export interface NavSection {
   items: NavItem[];
 }
 
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
+
 /**
  * Dashboard navigation items
  */
@@ -52,30 +62,119 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: false,
       },
       {
-        href: "/management",
-        labelKey: "nav.management",
-        icon: Boxes,
+        href: "/storefront",
+        labelKey: "nav.storefront",
+        icon: Store,
         showBadge: false,
       },
-      {
-        href: "/tracking",
-        labelKey: "nav.tracking",
-        icon: PackageSearch,
-        showBadge: false,
-      },
-      {
-        href: "/data",
-        labelKey: "nav.data",
-        icon: Database,
-        showBadge: false,
-      },
-      {
-        href: "/alerts",
-        labelKey: "nav.alerts",
-        icon: Bell,
-        showBadge: true,
-        badgeKey: "alerts",
-      },
+      ...(FEATURE_FLAGS.LEGACY_INVENTORY
+        ? [
+            {
+              href: "/management",
+              labelKey: "nav.management",
+              icon: Boxes,
+              showBadge: false,
+            },
+            {
+              href: "/tracking",
+              labelKey: "nav.tracking",
+              icon: PackageSearch,
+              showBadge: false,
+            },
+            {
+              href: "/data",
+              labelKey: "nav.data",
+              icon: Database,
+              showBadge: false,
+            },
+            {
+              href: "/alerts",
+              labelKey: "nav.alerts",
+              icon: Bell,
+              showBadge: true,
+              badgeKey: "alerts",
+            },
+          ]
+        : []),
+      ...(FEATURE_FLAGS.POS
+        ? [
+            {
+              href: "/pos",
+              labelKey: "nav.pos",
+              icon: Monitor,
+              showBadge: false,
+            },
+            {
+              href: "/pos/orders",
+              labelKey: "nav.posOrders",
+              icon: UtensilsCrossed,
+              showBadge: false,
+            },
+            {
+              href: "/pos/kds",
+              labelKey: "nav.posKds",
+              icon: ChefHat,
+              showBadge: false,
+            },
+            {
+              href: "/tables",
+              labelKey: "nav.posTables",
+              icon: Grid2X2,
+              showBadge: false,
+            },
+          ]
+        : []),
+      ...(FEATURE_FLAGS.OPERATIONS
+        ? [
+            {
+              href: "/management",
+              labelKey: "nav.management",
+              icon: Boxes,
+              showBadge: false,
+            },
+            {
+              href: "/tracking",
+              labelKey: "nav.tracking",
+              icon: PackageSearch,
+              showBadge: false,
+            },
+            {
+              href: "/data",
+              labelKey: "nav.data",
+              icon: Database,
+              showBadge: false,
+            },
+            {
+              href: "/alerts",
+              labelKey: "nav.alerts",
+              icon: Bell,
+              showBadge: true,
+              badgeKey: "alerts",
+            },
+            {
+              href: "/staff",
+              labelKey: "nav.staff",
+              icon: Users,
+              showBadge: false,
+            },
+            {
+              href: "/shifts",
+              labelKey: "nav.shifts",
+              icon: Clock,
+              showBadge: false,
+            },
+          ]
+        : []),
+      ...(FEATURE_FLAGS.ENTERPRISE
+        ? [
+            {
+              href: "/finance",
+              labelKey: "nav.finance",
+              icon: BarChart3,
+              showBadge: false,
+            },
+          ]
+        : []),
     ],
   },
 ];
@@ -91,7 +190,7 @@ export const landingNavigation: NavItem[] = [
   },
   {
     href: "/services",
-    labelKey: "common.nav.services",
+    labelKey: "common.nav.features",
     icon: Briefcase,
   },
   {

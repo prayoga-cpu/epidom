@@ -2,13 +2,13 @@
  * POST /api/subscriptions/setup
  *
  * Create Stripe Checkout Session in SETUP mode
- * This validates the card without charging, then grants STARTER plan
+ * This validates the card without charging, then grants POS plan
  *
  * Flow:
  * 1. User registers
  * 2. User is redirected here to validate their card
  * 3. Card is validated (no charge)
- * 4. User gets STARTER plan until Dec 31, 2025
+ * 4. User gets POS plan until Dec 31, 2025
  *
  * Returns:
  * - sessionId: Stripe Checkout Session ID
@@ -63,7 +63,7 @@ export const POST = withApiHandler(
       metadata: {
         userId: userId,
         promotion: "new_year_2025",
-        plan: "STARTER",
+        plan: "POS",
       },
     });
 

@@ -50,7 +50,7 @@ const mockSubscription = {
   stripeCustomerId: "cus_123",
   stripeSubscriptionId: "sub_stripe_123",
   stripePriceId: "price_123",
-  plan: SubscriptionPlan.STARTER,
+  plan: SubscriptionPlan.POS,
   status: SubscriptionStatus.ACTIVE,
   currentPeriodStart: new Date(),
   currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -158,10 +158,10 @@ describe("SubscriptionService", () => {
       expect(result.allowed).toBe(false);
     });
 
-    it("should enforce STARTER plan limit (1 store)", async () => {
+    it("should enforce POS plan limit (1 store)", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
-        plan: SubscriptionPlan.STARTER,
+        plan: SubscriptionPlan.POS,
       });
       mocks.userRepo.getProfile.mockResolvedValue(mockUserProfile);
       mocks.storeRepo.count.mockResolvedValue(1);
@@ -173,10 +173,10 @@ describe("SubscriptionService", () => {
       expect(result.current).toBe(1);
     });
 
-    it("should allow PRO plan unlimited stores", async () => {
+    it("should allow OPERATIONS plan unlimited stores", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
-        plan: SubscriptionPlan.PRO,
+        plan: SubscriptionPlan.OPERATIONS,
       });
       mocks.userRepo.getProfile.mockResolvedValue(mockUserProfile);
       mocks.storeRepo.count.mockResolvedValue(10);
@@ -196,10 +196,10 @@ describe("SubscriptionService", () => {
       expect(result.allowed).toBe(false);
     });
 
-    it("should enforce STARTER plan limit (500 products)", async () => {
+    it("should enforce POS plan limit (500 products)", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
-        plan: SubscriptionPlan.STARTER,
+        plan: SubscriptionPlan.POS,
       });
       mocks.productRepo.count.mockResolvedValue(500);
 
@@ -212,7 +212,7 @@ describe("SubscriptionService", () => {
     it("should allow under limit", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
-        plan: SubscriptionPlan.STARTER,
+        plan: SubscriptionPlan.POS,
       });
       mocks.productRepo.count.mockResolvedValue(100);
 
@@ -223,10 +223,10 @@ describe("SubscriptionService", () => {
   });
 
   describe("hasSupplierManagementAccess", () => {
-    it("should return false for STARTER plan", async () => {
+    it("should return false for POS plan", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
-        plan: SubscriptionPlan.STARTER,
+        plan: SubscriptionPlan.POS,
       });
 
       const result = await service.hasSupplierManagementAccess("user-1");
@@ -234,10 +234,10 @@ describe("SubscriptionService", () => {
       expect(result).toBe(false);
     });
 
-    it("should return true for PRO plan", async () => {
+    it("should return true for OPERATIONS plan", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
-        plan: SubscriptionPlan.PRO,
+        plan: SubscriptionPlan.OPERATIONS,
       });
 
       const result = await service.hasSupplierManagementAccess("user-1");
@@ -255,10 +255,10 @@ describe("SubscriptionService", () => {
   });
 
   describe("hasAdvancedReportsAccess", () => {
-    it("should return false for STARTER plan", async () => {
+    it("should return false for POS plan", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
-        plan: SubscriptionPlan.STARTER,
+        plan: SubscriptionPlan.POS,
       });
 
       const result = await service.hasAdvancedReportsAccess("user-1");
@@ -266,10 +266,10 @@ describe("SubscriptionService", () => {
       expect(result).toBe(false);
     });
 
-    it("should return true for PRO plan", async () => {
+    it("should return true for OPERATIONS plan", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
-        plan: SubscriptionPlan.PRO,
+        plan: SubscriptionPlan.OPERATIONS,
       });
 
       const result = await service.hasAdvancedReportsAccess("user-1");
@@ -283,7 +283,7 @@ describe("SubscriptionService", () => {
       mocks.userRepo.getProfile.mockResolvedValue(mockUserProfile);
       mocks.storeRepo.count.mockResolvedValue(1);
 
-      const result = await service.canDowngradeToPlan("user-1", SubscriptionPlan.STARTER);
+      const result = await service.canDowngradeToPlan("user-1", SubscriptionPlan.POS);
 
       expect(result).toBe(true);
     });
@@ -292,7 +292,7 @@ describe("SubscriptionService", () => {
       mocks.userRepo.getProfile.mockResolvedValue(mockUserProfile);
       mocks.storeRepo.count.mockResolvedValue(5);
 
-      const result = await service.canDowngradeToPlan("user-1", SubscriptionPlan.STARTER);
+      const result = await service.canDowngradeToPlan("user-1", SubscriptionPlan.POS);
 
       expect(result).toBe(false);
     });
@@ -304,7 +304,7 @@ describe("SubscriptionService", () => {
         subscription: null,
       });
 
-      const result = await service.canDowngradeToPlan("user-1", SubscriptionPlan.STARTER);
+      const result = await service.canDowngradeToPlan("user-1", SubscriptionPlan.POS);
 
       expect(result).toBe(false);
     });

@@ -138,9 +138,11 @@ export const SiteHeader = memo(function SiteHeader({
    * This is the natural entry point for authenticated users
    */
   const handleLogin = () => {
-    // Simply redirect to login page
-    // Login form will redirect to /stores after successful login (if no callbackUrl)
     router.push("/login");
+  };
+
+  const handleStartFree = () => {
+    router.push("/register");
   };
 
   /**
@@ -266,14 +268,22 @@ export const SiteHeader = memo(function SiteHeader({
                   {t("common.nav.stores")}
                 </Button>
               ) : (
-                // LOGIN MODE: Show Login button (for marketing pages when not logged in or loading)
-                <Button
-                  onClick={handleLogin}
-                  variant="outline"
-                  className="cursor-pointer rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
-                >
-                  {t("common.actions.login")}
-                </Button>
+                // LOGIN MODE: Show Login + Start Free when not logged in
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleLogin}
+                    variant="ghost"
+                    className="cursor-pointer rounded-full px-4 text-white hover:bg-white/20 hover:text-white md:px-5"
+                  >
+                    {t("common.actions.login")}
+                  </Button>
+                  <Button
+                    onClick={handleStartFree}
+                    className="cursor-pointer rounded-full border-0 bg-white px-4 text-neutral-900 hover:bg-neutral-100 md:px-5 lg:px-6"
+                  >
+                    {t("common.nav.startFree")}
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -409,14 +419,14 @@ export const SiteHeader = memo(function SiteHeader({
                           </Button>
                         </SheetClose>
                       ) : (
-                        // LOGIN MODE: Show Login button (for marketing pages when not logged in or loading)
+                        // LOGIN MODE: Show Start Free (mobile)
                         <SheetClose asChild>
                           <Button
-                            onClick={handleLogin}
+                            onClick={handleStartFree}
                             variant="outline"
                             className="w-full border-0 bg-neutral-900 text-white hover:bg-neutral-800"
                           >
-                            {t("common.actions.login")}
+                            {t("common.nav.startFree")}
                           </Button>
                         </SheetClose>
                       )}

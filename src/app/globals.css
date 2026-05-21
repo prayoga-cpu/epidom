@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "leaflet/dist/leaflet.css";
+
 
 /* ========================================
    SCROLLBAR STYLES
@@ -311,6 +311,8 @@ body.dialog-open {
 @theme inline {
   --color-brand-primary: #444444;
   --color-brand-white: #ffffff;
+  --color-bg-warm: #FAF9F6;
+  --color-accent-warm: #B45309;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);

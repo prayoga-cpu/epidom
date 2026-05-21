@@ -15,7 +15,7 @@ import { PricingCta } from "@/features/marketing/pricing/components/pricing-cta"
 
 export default function PricingPage() {
   return (
-    <main className="w-full overflow-x-hidden bg-white pt-20 md:pt-24">
+    <main className="w-full overflow-x-hidden bg-bg-warm pt-20 md:pt-24">
       <div className="animate-slide-up">
         <PricingHero />
       </div>

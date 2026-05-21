@@ -44,8 +44,8 @@ export const supplierKeys = {
  * This is cached and shared across all supplier queries to prevent duplicate 403 requests
  *
  * OPTIMIZATION:
- * - STARTER: Returns false immediately (cached) -> No network request
- * - PRO: Returns true immediately -> No network request (data fetch will happen next)
+ * - POS: Returns false immediately (cached) -> No network request
+ * - OPERATIONS: Returns true immediately -> No network request (data fetch will happen next)
  */
 export function useSupplierAccessCheck(storeId: string) {
   const { data: subscriptionData, isLoading: isSubscriptionLoading } = useSubscriptionStatus();
@@ -54,13 +54,13 @@ export function useSupplierAccessCheck(storeId: string) {
     queryKey: supplierKeys.accessCheck(storeId),
     queryFn: async () => {
       // If we already know the plan from subscription status, use it!
-      if (subscriptionData?.subscription?.plan === "STARTER") {
+      if (subscriptionData?.subscription?.plan === "POS") {
         return false;
       }
 
-      // If PRO/ENTERPRISE, we assume access is allowed (or let the main query handle it)
+      // If OPERATIONS/ENTERPRISE, we assume access is allowed (or let the main query handle it)
       if (
-        subscriptionData?.subscription?.plan === "PRO" ||
+        subscriptionData?.subscription?.plan === "OPERATIONS" ||
         subscriptionData?.subscription?.plan === "ENTERPRISE"
       ) {
         return true;
@@ -93,9 +93,9 @@ export function useSupplierAccessCheck(storeId: string) {
     refetchOnReconnect: false,
     // Use initial data from subscription status if available
     initialData: () => {
-      if (subscriptionData?.subscription?.plan === "STARTER") return false;
+      if (subscriptionData?.subscription?.plan === "POS") return false;
       if (
-        subscriptionData?.subscription?.plan === "PRO" ||
+        subscriptionData?.subscription?.plan === "OPERATIONS" ||
         subscriptionData?.subscription?.plan === "ENTERPRISE"
       )
         return true;

@@ -21,38 +21,23 @@ import { ProductStructuredData } from "@/components/seo/structured-data";
 import { LandingPageSections } from "@/features/marketing/home/components/landing-page-sections";
 
 export const metadata = generateMetadata({
-  title: "EPIDOM - Secret Way of Cookie Bars Inventory Management",
+  title: "Epidom — Toko Online, Menu, dan Kasir untuk UMKM F&B Indonesia",
   description:
-    "Track your cookies stock on mobile, manage it everywhere real-time, & auto-restock in seconds. Trusted by cookie bars in France 🇫🇷",
+    "Bikin halaman menu untuk Instagram, terima pesanan QRIS, kelola kasir, semua gratis. Untuk warung, kafe, dan resto Indonesia.",
   keywords: [
-    "cookie bar inventory",
-    "bakery management",
-    "pastry inventory",
-    "food stock management",
-    "real-time tracking",
-    "France inventory system",
-    "cookie inventory software",
-    "bakery software",
-    "EPIDOM",
+    "aplikasi kasir gratis",
+    "menu QR resto",
+    "halaman pesanan instagram",
+    "toko online F&B",
+    "POS UMKM",
+    "QRIS resto",
+    "Epidom",
   ],
   openGraph: {
-    title: "EPIDOM - Cookie Bar Inventory Management System",
-    description:
-      "The secret way cookie bars in France manage their inventory. Real-time tracking & smart alerts.",
-    url: "https://epidom.com",
-    images: [
-      {
-        url: "https://epidom.com/images/og-cookie-bar.jpg",
-        width: 1200,
-        height: 630,
-        alt: "EPIDOM Cookie Bar Management",
-      },
-    ],
-  },
-  twitter: {
-    title: "EPIDOM - Cookie Bar Inventory Management",
-    description: "Track cookies stock in real-time, manage everywhere, auto-restock in seconds.",
-    images: ["https://epidom.com/images/twitter-cookie-bar.jpg"],
+    title: "Epidom — Toko Online dan Kasir untuk F&B",
+    description: "Halaman menu, pesanan online, dan kasir dalam satu link.",
+    url: "https://epidom.id",
+    locale: "id_ID",
   },
 });
 

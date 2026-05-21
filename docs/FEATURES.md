@@ -1,151 +1,303 @@
-# Features Overview
+# Features
 
-## Core Features
+What Epidom offers, organized by subscription tier. Aligned with `/docs/STRATEGY.md` section 6 and `/docs/roadmap.md`.
 
-### Inventory Management
-
-#### Materials (Ingredients)
-
-- Create, update, delete materials
-- Track current stock levels
-- Set minimum/maximum stock thresholds
-- Low stock alerts
-- Multiple suppliers per material
-- Preferred supplier pricing
-- CSV export
-
-#### Products
-
-- Product catalog management
-- Cost and selling price tracking
-- Profit margin calculation
-- Stock tracking
-- Recipe linkage
-- CSV export
-
-#### Recipes
-
-- Recipe creation with ingredients
-- Automatic cost calculation
-- Yield and unit tracking
-- Production time estimates
-- Recipe duplication
-- Ingredient usage tracking
+If you add a feature, update this doc in the same PR. If a feature is in development, mark it with the phase it lands in.
 
 ---
 
-### Supply Chain
+## Tier overview
 
-#### Suppliers
+| Tier | Price (IDR/mo) | Who it's for | Phase delivered |
+|---|---|---|---|
+| **FREE** | Rp 0 | Any merchant who wants a public storefront | Phase 1-2 |
+| **POS** | Rp 99,000 | Merchant with a cashier and >50 orders/day | Phase 3 |
+| **OPERATIONS** | Rp 249,000 | Multi-staff café or restaurant | Phase 4 |
+| **ENTERPRISE** | Rp 499,000+ | Multi-outlet brand, small manufacturer | Phase 5 |
 
-- Supplier directory
-- Contact information management
-- Material-supplier relationships
-- Price tracking per supplier
-
-#### Supplier Orders
-
-- Create purchase orders
-- Track order status (Pending → Placed → Received)
-- Automatic stock updates on receipt
-- Order history
+Each tier includes everything in the tier below. The upgrade always preserves data.
 
 ---
 
-### Production
+## FREE tier
 
-#### Production Batches
+The wedge. Forever free. Replaces Linktree + Google Drive menu + WhatsApp ordering.
 
+### Public storefront *(Phase 1)*
+- Branded landing page at `epidom.id/@your-slug`
+- Logo and theme color customization
+- Hero image
+- Business name, tagline, description
+- Opening hours display
+- Social links: Instagram, TikTok, WhatsApp
+- Outbound links: GoFood, GrabFood, ShopeeFood, Google Maps
+- Custom link buttons (Linktree-style)
+- QR code download for printable assets
+
+### Menu listing *(Phase 1)*
+- Unlimited menu categories
+- Up to 50 menu items on FREE tier
+- Item photos, names, prices, descriptions
+- "Sold out" toggle per item
+- Featured items
+- Modifier options (size, spice level, add-ons)
+
+### Direct ordering *(Phase 2)*
+- Customer cart and checkout
+- Dine-in (with table number), takeaway, or self-delivery
+- Customer phone number capture
+- Order notes
+
+### Indonesian payments *(Phase 2)*
+- QRIS payment integration
+- GoPay, OVO, DANA, ShopeePay
+- Bank transfer
+- Cash (mark as paid manually)
+
+### Notifications *(Phase 2)*
+- WhatsApp notification to merchant on new order
+- Real-time dashboard updates via SSE
+- WhatsApp order confirmation to customer
+
+### Basic analytics *(Phase 2)*
+- Storefront view count
+- Total orders today / this week / this month
+- Top 5 menu items by orders
+
+### Free tier limits
+| Resource | Limit |
+|---|---|
+| Storefronts | 1 |
+| Menu items | 50 |
+| Orders per month | 200 |
+| Storage (images) | 500 MB |
+| WhatsApp notifications | 100/month |
+
+Hitting any of these prompts an upgrade to POS tier.
+
+---
+
+## POS tier (Rp 99,000/mo)
+
+For merchants who run service in-person. Everything in FREE, plus:
+
+### Cashier mode *(Phase 3)*
+- Tablet and phone optimized POS
+- Quick-add items by category or search
+- Apply discounts (percentage or fixed)
+- Service charge and tax presets
+- Multiple payment methods per order (split tender)
+- Order modifications and refunds
+
+### Receipts *(Phase 3)*
+- Bluetooth thermal printer support (58mm, 80mm)
+- ESC/POS commands
+- PDF receipt fallback
+- Email receipt to customer
+- WhatsApp receipt to customer
+
+### Order queue *(Phase 3)*
+- Unified queue: walk-in + online orders
+- Status flow: New → Preparing → Ready → Served
+- Per-order timer
+- Quick mark-ready actions
+
+### Basic Kitchen Display *(Phase 3)*
+- Order tickets in real-time
+- Item-level status (preparing, ready)
+- Audio alert on new order
+- Configurable for one screen
+
+### Table management *(Phase 3)*
+- Define your tables and zones
+- Assign orders to tables
+- Table state: empty, seated, ordered, billed
+- Move and merge tables
+
+### Offline mode *(Phase 3)*
+- POS continues working without internet
+- Orders queue locally and sync on reconnect
+- Conflict resolution on sync
+
+### POS tier limits
+| Resource | Limit |
+|---|---|
+| Storefronts | 1 |
+| Menu items | 500 |
+| Orders per month | Unlimited |
+| Storage | 5 GB |
+| WhatsApp notifications | 1,000/month |
+| POS terminals | 2 |
+
+---
+
+## OPERATIONS tier (Rp 249,000/mo)
+
+For merchants with staff and ingredient cost concerns. Everything in POS, plus:
+
+### Shift management *(Phase 4)*
+- Clock-in / clock-out with PIN
+- Opening and closing cash counts
+- Cash drawer reconciliation
+- Discrepancy alerts
+- Shift handover notes
+
+### Staff and roles *(Phase 4)*
+- Add staff members with roles (Manager, Cashier, Kitchen, Waiter)
+- Per-role permissions
+- Hours tracking per shift
+
+### Full Kitchen Display *(Phase 4)*
+- Multiple KDS screens (prep, line, expo)
+- Item routing by station
+- Course pacing
+- Bump-bar friendly
+
+### Inventory and recipes *(Phase 4)*
+- Ingredient (material) catalog
+- Recipe builder with ingredient quantities
+- Automatic HPP (cost per dish) calculation
+- Auto stock deduction on order completion
+- Low stock alerts via WhatsApp
+- Stock movement audit trail
+
+### Supplier management *(Phase 4)*
+- Supplier directory with contact info
+- Material-supplier price tracking
+- Manual supplier order creation
+- Order receipt updates stock
+
+### Operations tier limits
+| Resource | Limit |
+|---|---|
+| Storefronts | 1 |
+| Menu items | Unlimited |
+| Orders per month | Unlimited |
+| Storage | 25 GB |
+| WhatsApp notifications | 5,000/month |
+| POS terminals | 5 |
+| Staff accounts | 15 |
+
+---
+
+## ENTERPRISE tier (Rp 499,000+/mo)
+
+For multi-outlet brands and small manufacturers. Everything in OPERATIONS, plus:
+
+### Multi-outlet management *(Phase 5)*
+- Multiple stores under one business
+- Centralized menu management with per-outlet overrides
+- Per-outlet permissions for managers
+- Cross-outlet inventory transfers
+
+### Aggregator dashboard *(Phase 5)*
+- Unified order queue across GoFood, GrabFood, ShopeeFood, direct
+- Per-channel revenue tracking
+- Commission and net margin per channel
+- Source-tagged orders for reporting
+- Email parsing ingestion (v1)
+- Direct API integrations (v2, partner-dependent)
+
+### Finance reports *(Phase 5)*
+- Daily, weekly, monthly P&L
+- Revenue, COGS, gross margin
+- Per-channel profitability
+- Per-outlet rollup
+- Per-shift cash reconciliation
+- PDF and Excel export
+- Customizable date ranges
+
+### Production batches *(Phase 5)*
+- Resurrected from the original schema for small manufacturers
 - Plan production runs
-- Link recipes to products
-- Schedule production dates
-- Track batch status:
-  - **Planned** - Created, not started
-  - **In Progress** - Materials consumed
-  - **Completed** - Products added to stock
-  - **Cancelled** - Production cancelled
+- Track planned vs actual yield
+- Cost per batch
 
-#### Stock Movements
+### Stripe Connect 80/20 *(Phase 5+, optional)*
+- Accept payments through Epidom's Stripe Connect account
+- 80% to merchant, 20% to Epidom
+- For merchants who want a single financial relationship
+- Requires legal review for Indonesian payment regulations
 
-- Automatic tracking for:
-  - Purchases
-  - Production (in/out)
-  - Sales
-  - Adjustments
-  - Waste
-- Full audit trail
-- Filter by type, date, item
+### Custom domains *(Phase 5+)*
+- Use your own domain instead of `epidom.id/@slug`
+- TLS certificates auto-provisioned
 
----
+### White-label option *(Phase 5+)*
+- Remove "Powered by Epidom" footer
+- Custom email sender domain
+- Custom WhatsApp business profile
 
-### Dashboard
-
-#### Overview
-
-- Quick stats (products, materials, orders)
-- Low stock alerts
-- Upcoming production
-- Recent activity
-
-#### Alerts
-
-- Low stock warnings
-- Critical stock alerts
-- Production reminders
-- System notifications
+### Enterprise tier limits
+| Resource | Limit |
+|---|---|
+| Storefronts | Unlimited (one per outlet) |
+| Outlets | Unlimited |
+| Menu items | Unlimited |
+| Orders | Unlimited |
+| Storage | 250 GB |
+| WhatsApp notifications | 25,000/month |
+| POS terminals | Unlimited |
+| Staff accounts | Unlimited |
+| Support | Priority WhatsApp, email, scheduled calls |
 
 ---
 
-### User Management
+## Cross-tier features
 
-#### Profile
+These ship across all tiers, from FREE upward.
 
-- User information
-- Locale preference
-- Currency preference
-- Timezone setting
+### Internationalization *(always)*
+- Bahasa Indonesia (`id`), primary
+- English (`en`), secondary
+- French (`fr`), frozen — legacy only
 
-#### Business
+### Mobile-first design *(always)*
+- All surfaces designed for phones first
+- Tablet-optimized POS in Phase 3+
+- No desktop-only flows
 
-- Business profile
-- Multi-store support
-- Store management
+### Security *(always)*
+- Better Auth session management
+- Email/password and Google OAuth
+- HMAC-signed cookies
+- Per-tenant data isolation
+- Audit logs on sensitive operations
 
----
-
-### Billing
-
-#### Subscription Plans
-
-| Feature          | Starter | Pro       |
-| ---------------- | ------- | --------- |
-| Stores           | 1       | Unlimited |
-| Products         | 500     | Unlimited |
-| Export CSV       | ❌      | ✅        |
-| Advanced Reports | ❌      | ✅        |
-| Priority Support | ❌      | ✅        |
-
-#### Stripe Integration
-
-- Secure checkout
-- Customer portal
-- Subscription management
-- Webhook handling
+### Help and onboarding *(always)*
+- In-app guided tour for first session
+- WhatsApp support channel
+- Video tutorials in Bahasa Indonesia
 
 ---
 
-### Multi-language Support
+## Deprecated and archived features
 
-- English
-- French
-- Indonesian
+These existed in the original codebase. They are not deleted — they're paused or archived.
 
-All UI elements, form labels, validation messages, and notifications are fully translated.
+| Feature | Status | Future |
+|---|---|---|
+| Cookie-bar-specific copy | Removed in Phase 0 | Will not return |
+| Stripe Connect 80/20 (original) | Paused | Returns in Phase 5+ ENTERPRISE tier, pending legal |
+| French market positioning | Paused | Re-evaluate after 5,000 paying IDN merchants |
+| Production batch UI | Hidden behind feature flag in Phase 0 | Returns in Phase 5 ENTERPRISE for manufacturers |
+| AI CSV import for inventory | Code retained, UI hidden | Returns in Phase 4 OPERATIONS tier |
+| Maps (Leaflet, MapLibre) | Removed in Phase 0 | Not returning unless a clear use case emerges |
 
 ---
 
-### Responsive Design
+## Feature decision log
 
-- Desktop optimized
-- Tablet support
-- Mobile-friendly navigation
+Decisions about what to ship, when, and why. Append-only.
+
+### 2026-05, Phase 0 cleanup
+- Renamed plans from `STARTER / PRO / ENTERPRISE` to `FREE / POS / OPERATIONS / ENTERPRISE` to reflect tier wedge strategy
+- Paused all French market features
+- Archived cookie-bar copy
+- Hidden production / inventory / alerts behind feature flag, to be re-exposed in Phase 4
+
+### Future decisions to log here
+- When AI menu suggestions launches (target: Phase 1)
+- When inventory returns visibly to merchants (target: Phase 4)
+- When white-label or custom domains ships
+- Any pricing changes

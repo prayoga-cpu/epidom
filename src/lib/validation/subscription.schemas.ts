@@ -4,9 +4,9 @@ import { z } from "zod";
  * Subscription Checkout Schema
  */
 export const checkoutSchema = z.object({
-  plan: z.enum(["STARTER", "PRO"], {
+  plan: z.enum(["POS", "OPERATIONS"], {
     required_error: "Plan is required",
-    invalid_type_error: "Plan must be either STARTER or PRO",
+    invalid_type_error: "Plan must be either POS or OPERATIONS",
   }),
   successUrl: z.string().url("Invalid success URL").optional(),
   cancelUrl: z.string().url("Invalid cancel URL").optional(),

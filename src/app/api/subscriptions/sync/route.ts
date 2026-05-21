@@ -85,7 +85,7 @@ export const POST = withApiHandler(
     if (activeSubscription.metadata?.plan) {
       // Validate metadata value against Enum
       const metaPlan = activeSubscription.metadata.plan as string;
-      if (metaPlan === "STARTER" || metaPlan === "PRO") {
+      if (metaPlan === "POS" || metaPlan === "OPERATIONS") {
         plan = metaPlan as SubscriptionPlan;
       } else {
         // Metadata invalid, fallback to price check
@@ -109,7 +109,7 @@ export const POST = withApiHandler(
     await subscriptionRepository.update(userId, {
       stripeSubscriptionId: activeSubscription.id,
       stripePriceId: priceId,
-      plan: plan || SubscriptionPlan.STARTER, // Default fallback
+      plan: plan || SubscriptionPlan.POS, // Default fallback
       status: SubscriptionStatus.ACTIVE,
       currentPeriodStart: period?.currentPeriodStart ?? new Date(),
       currentPeriodEnd: period?.currentPeriodEnd ?? new Date(),
@@ -141,7 +141,7 @@ export const POST = withApiHandler(
  * Helper to determine plan from price amount
  */
 function determinePlanByPrice(amount: number | null): SubscriptionPlan {
-  if (amount === 1900) return SubscriptionPlan.STARTER; // $19
-  if (amount === 4900) return SubscriptionPlan.PRO; // $49
-  return SubscriptionPlan.STARTER; // Default safest option
+  if (amount === 1900) return SubscriptionPlan.POS; // $19
+  if (amount === 4900) return SubscriptionPlan.OPERATIONS; // $49
+  return SubscriptionPlan.POS; // Default safest option
 }

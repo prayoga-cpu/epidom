@@ -57,7 +57,7 @@ export const GET = withApiHandler(
       storeUsage = {
         current: 0,
         limit,
-        canCreateMore: 0 < limit, // Should be true for all plans (even STARTER limit is 1)
+        canCreateMore: 0 < limit, // Should be true for all plans (even POS limit is 1)
       };
     }
 

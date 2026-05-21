@@ -1,46 +1,37 @@
-/**
- * Services Page
- *
- * Showcases all EPIDOM features and functionality.
- * Displays preview sections with animated mockups and descriptions.
- * Sections: Hero, Dashboard, Management, Tracking, Data, Alerts
- *
- * @page
- */
-
+import type { Metadata } from "next";
 import { HeroSection } from "@/features/marketing/services/components/hero-section";
-import { DashboardPreviewSection } from "@/features/marketing/services/components/dashboard-preview-section";
-import { ManagementRowOne } from "@/features/marketing/services/components/management-row-one";
-import { ManagementRowTwo } from "@/features/marketing/services/components/management-row-two";
-import { TrackingPreviewSection } from "@/features/marketing/services/components/tracking-preview-section";
-import { DataRowOne } from "@/features/marketing/services/components/data-row-one";
-import { DataRowTwo } from "@/features/marketing/services/components/data-row-two";
-import { AlertsPreviewSection } from "@/features/marketing/services/components/alerts-preview-section";
+import { FeaturesShowcaseSection } from "@/features/marketing/services/components/features-showcase-section";
+
+export const metadata: Metadata = {
+  title: "Fitur — EPIDOM",
+  description:
+    "Semua fitur Epidom dalam satu halaman: halaman menu gratis, kasir (POS), dapur (KDS), manajemen stok, laporan operasional, dan multi-outlet untuk bisnis F&B Indonesia.",
+  keywords: [
+    "fitur epidom",
+    "aplikasi kasir warung",
+    "pos restoran indonesia",
+    "manajemen stok kafe",
+    "halaman menu digital",
+    "qris pembayaran",
+    "kitchen display system",
+    "laporan operasional f&b",
+  ],
+  openGraph: {
+    title: "Fitur Lengkap EPIDOM — Platform F&B Indonesia",
+    description:
+      "Dari halaman menu gratis hingga kasir dan laporan operasional. Satu platform untuk warung, kafe, dan restoran Indonesia.",
+    type: "website",
+  },
+};
 
 export default function ServicesPage() {
   return (
-    <main className="w-full overflow-x-hidden bg-white pt-20 md:pt-24">
-      <div className="animate-slide-up mb-8 md:mb-12">
+    <main className="w-full overflow-x-hidden bg-bg-warm pt-20 md:pt-24">
+      <div className="animate-slide-up">
         <HeroSection />
       </div>
-      <div className="animate-slide-up-delayed mb-8 md:mb-12">
-        <DashboardPreviewSection />
-      </div>
-      <div className="animate-slide-up-delayed-2 mb-8 md:mb-12">
-        <ManagementRowOne />
-        <ManagementRowTwo />
-      </div>
-      <div className="animate-slide-up-delayed-3 mb-8 md:mb-12">
-        <TrackingPreviewSection />
-      </div>
-      <div className="mb-8 md:mb-12">
-        <DataRowOne />
-      </div>
-      <div className="mb-8 md:mb-12">
-        <DataRowTwo />
-      </div>
-      <div className="animate-slide-up-delayed-3">
-        <AlertsPreviewSection />
+      <div className="animate-slide-up-delayed">
+        <FeaturesShowcaseSection />
       </div>
     </main>
   );

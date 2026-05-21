@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId;
-  const plan = session.metadata?.plan as "STARTER" | "PRO" | undefined;
+  const plan = session.metadata?.plan as "FREE" | "FREE" | "POS" | "OPERATIONS" | undefined;
   const promotion = session.metadata?.promotion;
 
   if (!userId) return;
@@ -105,7 +105,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     const existingSubscription = await subscriptionRepository.findByUserId(userId);
 
     const subscriptionData = {
-      plan: SubscriptionPlan.STARTER,
+      plan: SubscriptionPlan.POS,
       status: SubscriptionStatus.ACTIVE,
       currentPeriodStart: now,
       currentPeriodEnd: promoEndDate,
@@ -189,7 +189,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.userId;
-  const plan = subscription.metadata?.plan as "STARTER" | "PRO";
+  const plan = subscription.metadata?.plan as "FREE" | "FREE" | "POS" | "OPERATIONS";
 
   if (!userId || !plan) return;
 

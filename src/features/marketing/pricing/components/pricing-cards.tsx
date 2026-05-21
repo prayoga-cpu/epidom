@@ -102,7 +102,7 @@ export const PricingCards = memo(function PricingCards() {
             {/* Center: Price */}
             <div className="flex items-center gap-2">
               <Sparkles className="h-8 w-8 text-white/80" />
-              <span className="text-5xl font-black text-white md:text-6xl lg:text-7xl">€0</span>
+              <span className="text-5xl font-black text-white md:text-6xl lg:text-7xl">{t("pricing.plans.free.price")}</span>
             </div>
 
             {/* Right: CTA */}
@@ -134,7 +134,7 @@ export const PricingCards = memo(function PricingCards() {
             </CardHeader>
             <CardContent className="flex-1 space-y-6">
               <div>
-                <div className="text-4xl font-bold text-brand-primary">€29</div>
+                <div className="text-4xl font-bold text-brand-primary">{t("pricing.plans.starter.price")}</div>
                 <p className="text-sm text-brand-primary">
                   {t("pricing.plans.starter.billing")}
                 </p>
@@ -177,7 +177,7 @@ export const PricingCards = memo(function PricingCards() {
             </CardHeader>
             <CardContent className="flex-1 space-y-6">
               <div>
-                <div className="text-4xl font-bold text-brand-primary">€79</div>
+                <div className="text-4xl font-bold text-brand-primary">{t("pricing.plans.pro.price")}</div>
                 <p className="text-sm text-brand-primary">
                   {t("pricing.plans.pro.billing")}
                 </p>
@@ -271,7 +271,7 @@ export const PricingCards = memo(function PricingCards() {
                 </CardHeader>
                 <CardContent className="flex-1 space-y-6">
                   <div>
-                    <div className="text-4xl font-bold text-brand-primary">€29</div>
+                    <div className="text-4xl font-bold text-brand-primary">{t("pricing.plans.starter.price")}</div>
                     <p className="text-sm text-brand-primary">
                       {t("pricing.plans.starter.billing")}
                     </p>
@@ -317,7 +317,7 @@ export const PricingCards = memo(function PricingCards() {
                 </CardHeader>
                 <CardContent className="flex-1 space-y-6">
                   <div>
-                    <div className="text-4xl font-bold text-brand-primary">€79</div>
+                    <div className="text-4xl font-bold text-brand-primary">{t("pricing.plans.pro.price")}</div>
                     <p className="text-sm text-brand-primary">
                       {t("pricing.plans.pro.billing")}
                     </p>

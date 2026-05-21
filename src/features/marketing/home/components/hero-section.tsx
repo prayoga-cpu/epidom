@@ -1,20 +1,7 @@
 "use client";
 
-/**
- * Hero Section Component - PREMIUM Edition
- *
- * Features:
- * - Smooth entrance animations
- * - Floating decorative elements
- * - Glassmorphism effects
- * - Interactive hover states
- * - Mobile device mockup alongside desktop
- *
- * @component
- */
-
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Calendar, Sparkles } from "lucide-react";
+import { ArrowRight, Calendar, Shield, Zap, CreditCard } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -41,191 +28,157 @@ export function HeroSection() {
     window.open("https://calendly.com/prayogadevelopment/30min", "_blank");
   };
 
-  // Return placeholder during SSR to avoid hydration mismatch
   if (!mounted) {
-    return <SSRPlaceholder height="calc(100vh - 4rem)" className="bg-white" />;
+    return <SSRPlaceholder height="calc(100vh - 4rem)" className="bg-bg-warm" />;
   }
 
   return (
-    <section className="relative flex min-h-[calc(100vh-4rem)] w-full flex-col overflow-hidden bg-white">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 z-0">
-        {/* Floating gradient orbs */}
-        <div className="absolute top-20 left-10 h-72 w-72 animate-pulse rounded-full bg-gray-200/30 blur-3xl" />
-        <div className="absolute right-10 bottom-20 h-96 w-96 animate-pulse rounded-full bg-gray-300/20 blur-3xl delay-1000" />
-        <div className="bg-gradient-radial absolute top-1/2 left-1/2 h-[800px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full from-gray-100/50 to-transparent" />
+    <section className="bg-bg-warm relative flex min-h-[calc(100vh-4rem)] w-full flex-col overflow-hidden">
+      {/* Subtle warm gradient blobs */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-amber-100/40 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-[400px] w-[400px] rounded-full bg-orange-50/50 blur-3xl" />
       </div>
 
-      {/* Main Content */}
-      <div className="relative z-10 flex w-full flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:px-8 lg:pt-32 lg:pb-20">
-        <Container maxWidth="7xl" className="w-full">
-          <div className="grid w-full grid-cols-1 content-center gap-12 lg:grid-cols-2 lg:gap-16">
-            {/* Left Column: Text Content */}
+      <div className="relative z-10 flex w-full flex-1 items-center justify-center px-4 py-16 sm:px-6 lg:px-8 lg:pt-28 lg:pb-20">
+        <Container maxWidth="6xl" className="w-full">
+          <div className="grid w-full grid-cols-1 items-center gap-14 lg:grid-cols-2 lg:gap-20">
+
+            {/* Left: Text */}
             <div
-              className={`z-10 flex flex-col justify-center text-center transition-all duration-1000 lg:text-left ${
-                mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+              className={`flex flex-col text-center transition-all duration-700 lg:text-left ${
+                mounted ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
               }`}
             >
-              <div className="space-y-6 lg:space-y-8">
-                {/* Headline with gradient - using globals.css animation */}
-                <h1 className="text-4xl leading-[1.1] font-extrabold tracking-tight sm:text-5xl md:text-5xl lg:text-[3.25rem] xl:text-[4rem]">
-                  <span className="text-brand-primary">{t("home.hero.headlinePart1")}</span>{" "}
-                  <span className="relative inline-block px-2">
-                    <span className="text-brand-primary font-serif text-[1.1em] italic">
-                      {t("home.hero.headlineHighlight")}
-                    </span>
-                    {/* Subtle underline SVG for emphasis */}
-                    <svg
-                      className="text-brand-primary/20 absolute -bottom-2 left-0 h-3 w-full"
-                      viewBox="0 0 100 10"
-                      preserveAspectRatio="none"
-                    >
-                      <path
-                        d="M0 5 Q 50 10 100 5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        fill="none"
-                      />
-                    </svg>
-                  </span>{" "}
-                  <span className="text-brand-primary">{t("home.hero.headlinePart2")}</span>
-                </h1>
+              {/* Badge */}
+              <div className="mb-6 flex justify-center lg:justify-start">
+                <span className="bg-brand-primary/8 text-brand-primary inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-1.5 text-sm font-medium">
+                  ✨ {t("home.hero.badge")}
+                </span>
+              </div>
 
-                {/* Description */}
-                <p className="text-brand-primary/70 mx-auto max-w-xl text-lg leading-relaxed sm:text-xl lg:mx-0 lg:text-lg xl:text-xl">
-                  {t("home.hero.description")}
-                </p>
+              {/* Headline */}
+              <h1 className="text-brand-primary mb-6 text-4xl leading-[1.1] font-bold tracking-tight sm:text-5xl lg:text-[3rem] xl:text-[3.5rem]">
+                {t("home.hero.headlinePart1")}
+                <br />
+                <span className="font-serif italic">{t("home.hero.headlineHighlight")}</span>
+              </h1>
 
-                {/* CTA Buttons */}
-                <div className="flex flex-col items-center gap-4 pt-2 sm:flex-row lg:justify-start">
-                  <Button
-                    onClick={handleStartFree}
-                    className="group bg-brand-primary hover:bg-brand-primary/90 relative cursor-pointer overflow-hidden rounded-full px-8 py-6 text-base font-semibold text-white transition-all duration-300 hover:scale-105 hover:shadow-xl"
-                  >
-                    <span className="relative z-10 flex items-center">
-                      {t("home.hero.ctaStartFree")}
-                      <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                    </span>
-                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                  </Button>
+              {/* Description */}
+              <p className="text-brand-primary/65 mb-8 text-lg leading-[1.7] sm:text-xl lg:text-lg xl:text-xl">
+                {t("home.hero.description")}
+              </p>
 
-                  <Button
-                    onClick={handleDemo}
-                    variant="outline"
-                    className="group border-brand-primary/30 text-brand-primary hover:bg-brand-primary hover:border-brand-primary cursor-pointer rounded-full border-2 px-8 py-6 text-base font-semibold transition-all duration-300 hover:text-white"
-                  >
-                    <Calendar className="mr-2 h-5 w-5" />
-                    {t("home.hero.ctaDemo")}
-                  </Button>
-                </div>
+              {/* CTAs */}
+              <div className="mb-6 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
+                <Button
+                  onClick={handleStartFree}
+                  className="group bg-brand-primary hover:bg-brand-primary/90 w-full cursor-pointer rounded-full px-8 py-6 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:shadow-xl sm:w-auto"
+                >
+                  {t("home.hero.ctaStartFree")}
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </Button>
+                <Button
+                  onClick={handleDemo}
+                  variant="outline"
+                  className="border-brand-primary/20 text-brand-primary hover:bg-brand-primary/5 w-full cursor-pointer rounded-full border px-8 py-6 text-base font-semibold transition-all duration-200 sm:w-auto"
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {t("home.hero.ctaDemo")}
+                </Button>
+              </div>
+
+              {/* Trust pills */}
+              <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 lg:justify-start">
+                {[
+                  { icon: CreditCard, text: t("home.hero.trustNoCard") },
+                  { icon: Zap, text: t("home.hero.trustSetup") },
+                  { icon: Shield, text: t("home.hero.trustQris") },
+                ].map(({ icon: Icon, text }) => (
+                  <span key={text} className="text-brand-primary/50 flex items-center gap-1.5 text-sm">
+                    <Icon className="h-3.5 w-3.5" />
+                    {text}
+                  </span>
+                ))}
               </div>
             </div>
 
-            {/* Right Column: Dashboard Mockup with Devices */}
+            {/* Right: Phone mockup */}
             <div
-              className={`relative flex h-full w-full flex-col justify-center transition-all delay-300 duration-1000 ${
-                mounted ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+              className={`relative flex justify-center transition-all delay-200 duration-700 lg:justify-end ${
+                mounted ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
               }`}
             >
-              {/* Desktop Browser Window */}
-              <div className="relative w-full">
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-2xl lg:aspect-[16/10] lg:rounded-2xl">
-                  {/* Browser Header - Glassmorphism */}
-                  <div className="flex h-8 shrink-0 items-center gap-2 border-b border-gray-200/50 bg-gray-50/80 px-3 backdrop-blur-md lg:h-10 lg:px-4">
-                    <div className="flex gap-1.5" aria-hidden="true">
-                      <div className="h-2.5 w-2.5 rounded-full bg-red-400 shadow-inner lg:h-3 lg:w-3" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-yellow-400 shadow-inner lg:h-3 lg:w-3" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-green-400 shadow-inner lg:h-3 lg:w-3" />
+              {/* Browser/Desktop frame */}
+              <div className="relative w-full max-w-lg">
+                <div className="overflow-hidden rounded-2xl border border-neutral-200/70 bg-white shadow-2xl shadow-neutral-200/50">
+                  {/* Browser chrome */}
+                  <div className="flex h-9 items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-4">
+                    <div className="flex gap-1.5">
+                      <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
                     </div>
-                    <div className="ml-2 flex h-5 max-w-[240px] flex-1 items-center rounded-full border border-gray-200/50 bg-white/80 px-3 lg:ml-4 lg:h-6 lg:max-w-[300px]">
-                      <div
-                        className="mr-2 h-3 w-3 animate-pulse rounded-full bg-green-500"
-                        aria-hidden="true"
-                      />
-                      <span className="text-[10px] font-medium text-gray-600 lg:text-xs">
-                        {t("home.hero.mockupUrl")}
-                      </span>
+                    <div className="ml-3 flex h-5 flex-1 max-w-xs items-center rounded-full border border-neutral-200 bg-white px-3">
+                      <div className="mr-2 h-2 w-2 rounded-full bg-green-500" />
+                      <span className="text-[10px] text-neutral-500">{t("home.hero.mockupUrl")}</span>
                     </div>
                   </div>
-
-                  {/* Dashboard Image */}
-                  <div className="relative h-full w-full bg-gray-50">
+                  {/* Screenshot */}
+                  <div className="relative aspect-[4/3] bg-neutral-50">
                     {!imageLoaded && (
-                      <Skeleton className="absolute inset-0 z-10 h-full w-full bg-gray-100" />
+                      <Skeleton className="absolute inset-0 h-full w-full" />
                     )}
                     <Image
                       src="/images/dashboard.png"
-                      alt="Epidom Dashboard"
+                      alt="Epidom — halaman menu dan kasir"
                       fill
                       className="object-cover object-left-top"
                       onLoad={() => setImageLoaded(true)}
                       onError={() => setImageLoaded(true)}
                       priority
-                      sizes="(max-width: 768px) 100vw, 800px"
+                      sizes="(max-width: 768px) 100vw, 600px"
                       unoptimized
                     />
                   </div>
                 </div>
 
-                {/* Mobile Phone Mockup - Overlapping */}
-                <div className="absolute -bottom-8 -left-8 hidden w-32 md:block lg:w-40">
-                  <div className="relative aspect-[9/19] w-full overflow-hidden rounded-3xl border-4 border-black bg-black shadow-2xl">
-                    {/* Phone notch */}
-                    <div
-                      className="absolute top-0 left-1/2 z-20 h-5 w-16 -translate-x-1/2 rounded-b-xl bg-black"
-                      aria-hidden="true"
-                    />
-
-                    {/* Phone screen */}
-                    <div className="relative h-full w-full overflow-hidden bg-white">
+                {/* Phone overlay */}
+                <div className="absolute -bottom-6 -left-6 hidden w-28 md:block lg:w-32">
+                  <div className="overflow-hidden rounded-3xl border-4 border-neutral-900 bg-neutral-900 shadow-2xl">
+                    <div className="absolute top-0 left-1/2 z-10 h-4 w-12 -translate-x-1/2 rounded-b-xl bg-neutral-900" />
+                    <div className="relative aspect-[9/19] bg-white">
                       <Image
                         src="/images/tracking.png"
-                        alt="Epidom Mobile App"
+                        alt="Epidom mobile — storefront pelanggan"
                         fill
                         className="object-cover object-top"
-                        sizes="160px"
+                        sizes="128px"
                         loading="lazy"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Floating notification card - using globals.css animation */}
-                <div className="animate-bounce-slow absolute -top-4 -right-4 hidden rounded-xl border border-gray-100 bg-white p-3 shadow-xl md:block lg:-top-6 lg:-right-6 lg:p-4">
+                {/* Floating order notification */}
+                <div className="absolute -top-4 -right-4 hidden rounded-xl border border-neutral-100 bg-white p-3 shadow-xl md:block">
                   <div className="flex items-center gap-3">
-                    <div
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-emerald-500 text-white"
-                      aria-hidden="true"
-                    >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 text-green-600 text-sm font-bold">
                       ✓
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-900">
-                        {t("home.hero.notificationTitle")}
-                      </p>
-                      <p className="text-[10px] text-gray-500">
-                        {t("home.hero.notificationDetail")}
-                      </p>
+                      <p className="text-xs font-semibold text-neutral-900">{t("home.hero.notificationTitle")}</p>
+                      <p className="text-[10px] text-neutral-400">{t("home.hero.notificationDetail")}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Floating stats card */}
-                <div className="absolute right-8 -bottom-4 hidden rounded-xl border border-gray-100 bg-white/90 p-3 shadow-xl backdrop-blur-sm md:block lg:right-12 lg:p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="text-brand-primary text-2xl font-bold">
-                      {t("home.hero.statsValue")}
-                    </div>
-                    <div className="text-xs text-gray-500">{t("home.hero.statsLabel")}</div>
-                  </div>
+                {/* Floating stats */}
+                <div className="absolute right-4 -bottom-4 hidden rounded-xl border border-neutral-100 bg-white/95 p-3 shadow-xl backdrop-blur-sm md:block">
+                  <p className="text-brand-primary text-xl font-bold leading-none">{t("home.hero.statsValue")}</p>
+                  <p className="mt-0.5 text-[10px] text-neutral-400">{t("home.hero.statsLabel")}</p>
                 </div>
               </div>
-
-              {/* Decorative glow */}
-              <div
-                className="absolute top-1/2 left-1/2 -z-10 h-full w-full -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-gray-200/20 via-transparent to-gray-200/20 blur-3xl"
-                aria-hidden="true"
-              />
             </div>
           </div>
         </Container>

@@ -1,15 +1,5 @@
 "use client";
 
-/**
- * Site Footer Component
- *
- * Global footer displayed across all marketing pages.
- * Displays company information, contact details, and copyright.
- * Uses brand primary color (#444444) with white text.
- *
- * @component
- */
-
 import { memo } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -50,18 +40,20 @@ export const SiteFooter = memo(function SiteFooter() {
             <ul className="space-y-2 text-sm leading-7 sm:text-base">
               <li>
                 <Link
-                  href="mailto:info@epidom.com"
+                  href="mailto:support@epidom.id"
                   className="text-white/80 no-underline transition-opacity hover:text-white hover:opacity-80"
                 >
-                  info@epidom.com
+                  support@epidom.id
                 </Link>
               </li>
               <li>
                 <Link
-                  href="mailto:mrcaoevan@gmail.com"
+                  href="https://wa.me/6281234567890"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-white/80 no-underline transition-opacity hover:text-white hover:opacity-80"
                 >
-                  mrcaoevan@gmail.com
+                  WhatsApp
                 </Link>
               </li>
             </ul>

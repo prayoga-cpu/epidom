@@ -6,10 +6,10 @@
  */
 
 export type PlanType = "starter" | "pro" | "enterprise";
-export type StripePlanType = "STARTER" | "PRO";
+export type StripePlanType = "FREE" | "FREE" | "POS" | "OPERATIONS";
 
 export const VALID_PLANS: readonly PlanType[] = ["starter", "pro", "enterprise"] as const;
-export const STRIPE_PLANS: readonly StripePlanType[] = ["STARTER", "PRO"] as const;
+export const STRIPE_PLANS: readonly StripePlanType[] = ["POS", "OPERATIONS"] as const;
 
 /**
  * Validates if a string is a valid plan type
@@ -26,12 +26,12 @@ export function getValidPlan(plan: string | undefined): PlanType {
 }
 
 /**
- * Converts plan to Stripe format (STARTER or PRO)
+ * Converts plan to Stripe format (POS or OPERATIONS)
  * Only valid for starter and pro plans
  */
 export function toStripePlan(plan: PlanType): StripePlanType | null {
-  if (plan === "starter") return "STARTER";
-  if (plan === "pro") return "PRO";
+  if (plan === "starter") return "POS";
+  if (plan === "pro") return "OPERATIONS";
   return null; // Enterprise doesn't use Stripe
 }
 

@@ -30,7 +30,7 @@ export function SupplierCard() {
     return data.suppliers.slice(0, 4);
   }, [data]);
 
-  // Check if subscription is locked (STARTER plan)
+  // Check if subscription is locked (POS plan)
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
     (error && (isSubscriptionError(error) || (typeof error === "object" && error !== null && ("code" in error && error.code === "SUBSCRIPTION_FEATURE_LOCKED") || ("status" in error && error.status === 403))));

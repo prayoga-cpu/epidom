@@ -1,0 +1,35 @@
+"use client";
+
+import { KdsOrderCard } from "./kds-order-card";
+import type { PosOrderDisplay } from "../../types/pos.types";
+
+interface KdsColumnProps {
+  title: string;
+  orders: PosOrderDisplay[];
+  storeId: string;
+  emptyLabel?: string;
+}
+
+export function KdsColumn({ title, orders, storeId, emptyLabel }: KdsColumnProps) {
+  return (
+    <div className="flex min-w-[300px] max-w-sm flex-1 flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold tracking-tight">{title}</h2>
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold">
+          {orders.length}
+        </span>
+      </div>
+      <div className="flex flex-col gap-3 overflow-y-auto pb-4">
+        {orders.length === 0 ? (
+          <div className="flex h-32 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+            {emptyLabel ?? "Tidak ada pesanan"}
+          </div>
+        ) : (
+          orders.map((order) => (
+            <KdsOrderCard key={order.id} order={order} storeId={storeId} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

@@ -70,7 +70,7 @@ export interface StoreDto {
 export interface SubscriptionDto {
   id: string;
   userId: string;
-  plan: "STARTER" | "PRO" | "ENTERPRISE";
+  plan: "FREE" | "FREE" | "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE";
   status: "ACTIVE" | "CANCELED" | "PAST_DUE" | "INCOMPLETE";
   currentPeriodStart: Date | null;
   currentPeriodEnd: Date | null;

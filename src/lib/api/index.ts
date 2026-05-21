@@ -19,6 +19,11 @@
  */
 
 export * from "./client";
-export * from "./auth.api";
+
+// User and Auth APIs
 export * from "./user.api";
+export * from "./auth.api";
+
+// Business and Store APIs
 export * from "./business.api";
+export * from "./storefront.api";

@@ -1,101 +1,68 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+Major changes to Epidom, in reverse chronological order. Each entry is dated and references the phase if applicable.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
----
-
-## [Unreleased]
-
-### Added
-
-- Comprehensive technical documentation
-- Material section state management hook
-
-### Changed
-
-- Removed unused debug API endpoint
-
-### Fixed
-
-- Minor API route consistency improvements
+For the active task list and roadmap, see `/docs/roadmap.md` and `/docs/PHASE_0_CLEANUP.md`.
 
 ---
 
-## [1.0.0] - 2024-12-22
+## 2026-05, Phase 0 — Cleanup & Re-alignment
 
-### Added
+The codebase moves from "cookie-bar inventory app for France" to "storefront-first F&B platform for Indonesia."
 
-- **Core Features**
-  - Material (ingredient) management with stock tracking
-  - Product catalog with cost/price management
-  - Recipe management with ingredient linking
-  - Production batch tracking
-  - Supplier management
-  - Supplier order processing
+### Strategy
+- New positioning documented in `/docs/STRATEGY.md`
+- Target market shifted to Indonesia
+- French market paused, `fr` locale frozen
+- Cookie-bar positioning removed from all user-facing surfaces
 
-- **Dashboard**
-  - Overview with quick stats
-  - Low stock alerts
-  - Production schedule
-  - Stock movement history
+### Schema
+- Renamed `SubscriptionPlan` enum: `STARTER`/`PRO`/`ENTERPRISE` → `FREE`/`POS`/`OPERATIONS`/`ENTERPRISE`
+- Migration manually scripted to preserve existing subscriber data
+- Storefront-related models (`Storefront`, `MenuCategory`, `MenuItem`) added as commented scaffolding for Phase 1
 
-- **Authentication**
-  - Email/password authentication
-  - Google OAuth support
-  - Session management with Better Auth
+### Codebase
+- Removed packages: `leaflet`, `react-leaflet`, `maplibre-gl`, `@types/leaflet`, `mathjs`
+- Hidden behind feature flags: `management/`, `data/`, `tracking/`, `alerts/` dashboard sections (return in Phase 4)
+- Archived: `/marketing/` (old strategy docs) → `_archive/marketing-old/`
+- Archived: outdated marketing pages (`services`, etc.)
 
-- **Billing**
-  - Stripe subscription integration
-  - Starter and Pro plans
-  - Customer portal
-  - Webhook handling
+### Docs
+- New: `AGENTS.md` at root for AI coding tools
+- New: `docs/STRATEGY.md`, `docs/roadmap.md`, `docs/PHASE_0_CLEANUP.md`
+- Updated: `docs/README.md`, `docs/ARCHITECTURE.md`, `docs/FEATURES.md`, `docs/BILLING.md`, `docs/ENVIRONMENT.md`, `docs/DATABASE.md`
+- Removed/redirected: `CLAUDE.md` (superseded by `AGENTS.md`)
 
-- **Multi-tenant**
-  - Business and store management
-  - Store-scoped data isolation
-
-- **Internationalization**
-  - English (en)
-  - French (fr)
-  - Indonesian (id)
-
-- **API**
-  - RESTful API design
-  - Rate limiting
-  - Comprehensive error handling
-  - CSV export functionality
+### Pricing
+- Indonesia primary pricing: Rp 0 / Rp 99,000 / Rp 249,000 / Rp 499,000+
+- Annual discount: 20%
+- 14-day trial on paid tiers
+- Stripe products renamed in dashboard
 
 ---
 
-## Template for Future Releases
+## 2026-Q1, original codebase
 
-```markdown
-## [X.Y.Z] - YYYY-MM-DD
+Project existed as a SaaS ERP positioned for cookie bars in France with €29/€79/Custom tiers. Built features included:
 
-### Added
+- Better Auth integration with Google OAuth
+- Multi-tenant Business → Store hierarchy
+- Materials, Recipes, Production Batches, Stock Movements
+- Suppliers, Supplier Orders
+- Stripe subscriptions + Stripe Connect 80/20 scaffolding
+- AI-powered CSV import via OpenAI and Google AI
+- Trilingual UI (EN, FR, ID)
+- shadcn/ui design system
+- Vercel-hosted with Vercel Blob for images
 
-- New features
+This was the launching point for Phase 0 cleanup. The features above are not deleted — they are paused and return in Phase 4 (operations) and Phase 5 (enterprise).
 
-### Changed
+---
 
-- Changes to existing functionality
+## How to update this file
 
-### Deprecated
-
-- Features to be removed in future
-
-### Removed
-
-- Removed features
-
-### Fixed
-
-- Bug fixes
-
-### Security
-
-- Security improvements
-```
+- Append to the top under the current month's heading
+- Group by `### Strategy / Schema / Codebase / Docs / Pricing / Bugs`
+- One bullet per change, present tense, action-first
+- Link to the PR or commit if helpful
+- Don't rewrite history. Add corrections as new entries.

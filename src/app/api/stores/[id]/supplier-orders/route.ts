@@ -12,7 +12,7 @@ import { createSupplierOrderSchema } from "@/lib/validation/inventory.schemas";
  */
 export const GET = withApiHandler(
   async (request, { storeId, userId }) => {
-    // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
+    // Check subscription plan - Supplier Management is OPERATIONS/ENTERPRISE only
     const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
@@ -59,7 +59,7 @@ export const GET = withApiHandler(
  */
 export const POST = withApiHandler(
   async (request, { storeId, userId }) => {
-    // Check subscription plan - Supplier Management is PRO/ENTERPRISE only
+    // Check subscription plan - Supplier Management is OPERATIONS/ENTERPRISE only
     const hasAccess = await subscriptionService.hasSupplierManagementAccess(userId);
     if (!hasAccess) {
       return NextResponse.json(
