@@ -314,10 +314,7 @@ export class ProductionBatchService {
 
           return batch as ProductionBatchWithRelations;
         },
-        {
-          maxWait: 10000, // Maximum time to wait for transaction to start (10s)
-          timeout: 20000, // Maximum time for transaction to complete (20s)
-        }
+        TRANSACTION_TIMEOUTS
       );
     } catch (error) {
       // Handle transaction-specific errors with user-friendly messages
@@ -431,10 +428,7 @@ export class ProductionBatchService {
 
         return updatedBatch;
       },
-      {
-        maxWait: 10000,
-        timeout: 20000,
-      }
+      TRANSACTION_TIMEOUTS
     );
   }
 
@@ -558,10 +552,7 @@ export class ProductionBatchService {
 
         return updatedBatch;
       },
-      {
-        maxWait: 10000,
-        timeout: 20000,
-      }
+      TRANSACTION_TIMEOUTS
     );
   }
 

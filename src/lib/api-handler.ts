@@ -18,8 +18,8 @@ import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 /**
  * Context passed to API route handlers
  */
-export type ApiContext = {
-  params: any; // Route params (can vary, storeId is type-checked separately)
+export type ApiContext<TParams = any> = {
+  params: TParams; // Route params (can vary, storeId is type-checked separately)
   session: NonNullable<Session>;
   userId: string;
   storeId?: string;
@@ -28,7 +28,7 @@ export type ApiContext = {
 /**
  * API route handler function signature
  */
-type ApiHandler = (request: Request, context: ApiContext) => Promise<Response>;
+type ApiHandler<TParams = any> = (request: Request, context: ApiContext<TParams>) => Promise<Response>;
 
 /**
  * Options for the API handler wrapper
@@ -45,8 +45,11 @@ interface HandlerOptions {
  * 3. Store Ownership Verification (optional)
  * 4. Error Handling
  */
-export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}) => {
-  return async (request: Request, { params }: { params: Promise<any> }) => {
+export const withApiHandler = <TParams = any>(
+  handler: ApiHandler<TParams>, 
+  options: HandlerOptions = {}
+) => {
+  return async (request: Request, { params }: { params: Promise<TParams> | TParams }) => {
     const resolvedParams = await params;
     const endpoint = options.rateLimitEndpoint || new URL(request.url).pathname;
 
@@ -93,7 +96,8 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
       let storeId: string | undefined;
 
       if (options.requireStoreAuth) {
-        storeId = resolvedParams.id || resolvedParams.storeId;
+        const paramsRecord = resolvedParams as Record<string, string>;
+        storeId = paramsRecord.id || paramsRecord.storeId;
 
         if (!storeId) {
           throw new Error("Store ID not found in route parameters");

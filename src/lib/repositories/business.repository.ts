@@ -80,15 +80,17 @@ export class BusinessRepository extends BaseRepository {
    */
   async upsert(
     userId: string,
-    data: Omit<Business, "id" | "userId" | "createdAt" | "updatedAt">
+    data: Prisma.BusinessCreateWithoutUserInput | Prisma.BusinessUpdateWithoutUserInput
   ): Promise<Business> {
+    // If it's an update payload missing name, and the business doesn't exist,
+    // Prisma will throw a constraint error, which is expected behavior for a missing required field.
     return this.db.business.upsert({
       where: { userId },
       create: {
         userId,
-        ...data,
+        ...(data as any),
       },
-      update: data,
+      update: data as any,
     });
   }
 

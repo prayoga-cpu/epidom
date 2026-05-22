@@ -8,6 +8,12 @@ const globalForPrisma = globalThis as unknown as {
 // Slow query threshold in milliseconds
 const SLOW_QUERY_THRESHOLD = 500;
 
+// Standard transaction settings for long-running operations
+export const TRANSACTION_TIMEOUTS = {
+  maxWait: 10000, // Maximum time to wait for transaction to start (10s)
+  timeout: 20000, // Maximum time for transaction to complete (20s)
+};
+
 // Helper function to add connection pool parameters to DATABASE_URL
 function getDatabaseUrl(): string {
   const baseUrl = process.env.DATABASE_URL || "";

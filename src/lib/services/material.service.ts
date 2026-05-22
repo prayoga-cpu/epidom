@@ -5,7 +5,7 @@ import {
   MaterialWithSuppliers,
   MaterialFilters,
 } from "@/lib/repositories/material.repository";
-import { prisma } from "@/lib/prisma";
+import { prisma, TRANSACTION_TIMEOUTS } from "@/lib/prisma";
 import { supplierRepository } from "@/lib/repositories/supplier.repository";
 import { toDecimal } from "@/lib/utils/types.server";
 import type { CreateMaterialInput, UpdateMaterialInput, UpdateMaterialSupplierInput, AddMaterialSupplierInput } from "@/lib/validation/inventory.schemas";
@@ -110,10 +110,7 @@ export class MaterialService {
 
         return material;
       },
-      {
-        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
-        timeout: 10000, // Maximum time for transaction to complete (10s)
-      }
+      TRANSACTION_TIMEOUTS
     );
   }
 
@@ -192,10 +189,7 @@ export class MaterialService {
           movement,
         };
       },
-      {
-        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
-        timeout: 10000, // Maximum time for transaction to complete (10s)
-      }
+      TRANSACTION_TIMEOUTS
     );
   }
 
@@ -303,10 +297,7 @@ export class MaterialService {
             data: updateData,
           });
         },
-        {
-          maxWait: 5000, // Maximum time to wait for transaction to start (5s)
-          timeout: 10000, // Maximum time for transaction to complete (10s)
-        }
+        TRANSACTION_TIMEOUTS
       );
     }
 
@@ -536,10 +527,7 @@ export class MaterialService {
           },
         });
       },
-      {
-        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
-        timeout: 10000, // Maximum time for transaction to complete (10s)
-      }
+      TRANSACTION_TIMEOUTS
     );
   }
 }

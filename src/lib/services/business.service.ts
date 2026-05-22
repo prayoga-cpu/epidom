@@ -1,4 +1,5 @@
 import { Business, Prisma } from "@prisma/client";
+import { logger } from "@/lib/logger";
 import { businessRepository, BusinessRepository } from "@/lib/repositories/business.repository";
 import { storeRepository, StoreRepository } from "@/lib/repositories/store.repository";
 import {
@@ -9,7 +10,7 @@ import {
 } from "@/lib/validation/business.schemas";
 import { BusinessDto, BusinessWithStoresDto, StoreDto } from "@/types/dto";
 import { getStorageAdapter } from "@/lib/storage";
-import { prisma } from "@/lib/prisma";
+import { prisma, TRANSACTION_TIMEOUTS } from "@/lib/prisma";
 import { subscriptionRepository } from "@/lib/repositories/subscription.repository";
 import { SubscriptionStatus } from "@prisma/client";
 import { getStoreLimit, canCreateStore } from "@/config/stripe.config";
@@ -114,12 +115,7 @@ export class BusinessService {
     userId: string,
     input: CreateBusinessInput | UpdateBusinessInput
   ): Promise<Business> {
-    /**
-     * Type assertion needed because upsert method accepts union type but repository expects specific type
-     * Actual type: CreateBusinessInput | UpdateBusinessInput
-     * TODO: Create proper type guard or overload repository method
-     */
-    return this.businessRepo.upsert(userId, input as any);
+    return this.businessRepo.upsert(userId, input);
   }
 
   /**
@@ -229,8 +225,7 @@ export class BusinessService {
         // SERIALIZABLE can cause deadlocks in production environments
         // ReadCommitted with FOR UPDATE lock is sufficient for preventing race conditions
         isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-        maxWait: 5000, // Maximum time to wait for transaction to start (5s)
-        timeout: 10000, // Maximum time for transaction to complete (10s)
+        ...TRANSACTION_TIMEOUTS,
       }
     );
   }
@@ -353,6 +348,11 @@ export class BusinessService {
         store._count.productionBatches;
 
       if (totalRelatedRecords > 0) {
+        logger.warn("Cascade deleting store with related records", {
+          storeId,
+          totalRelatedRecords,
+          counts: store._count,
+        });
       }
 
       // Delete the store (cascade will handle related data)
@@ -369,7 +369,11 @@ export class BusinessService {
         const storage = getStorageAdapter();
         await storage.delete(store.image);
       } catch (error) {
-        // Continue even if image deletion fails
+        logger.warn("Failed to delete store image from storage", {
+          storeId,
+          imageUrl: store.image,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
   }
