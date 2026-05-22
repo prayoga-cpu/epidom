@@ -7,7 +7,7 @@ import {
 import { recipeRepository } from "../repositories/recipe.repository";
 import { materialRepository } from "../repositories/material.repository";
 import { productRepository } from "../repositories/product.repository";
-import { prisma } from "../prisma";
+import { prisma, TRANSACTION_TIMEOUTS } from "../prisma";
 import { convertStockToIngredientUnit } from "../utils/unit-conversion";
 
 /**
