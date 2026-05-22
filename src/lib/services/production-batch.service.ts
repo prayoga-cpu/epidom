@@ -3,12 +3,12 @@ import {
   productionBatchRepository,
   ProductionBatchWithRelations,
   ProductionBatchFilters,
-} from "../repositories/production-batch.repository";
-import { recipeRepository } from "../repositories/recipe.repository";
-import { materialRepository } from "../repositories/material.repository";
-import { productRepository } from "../repositories/product.repository";
-import { prisma, TRANSACTION_TIMEOUTS } from "../prisma";
-import { convertStockToIngredientUnit } from "../utils/unit-conversion";
+} from "@/lib/repositories/production-batch.repository";
+import { recipeRepository } from "@/lib/repositories/recipe.repository";
+import { materialRepository } from "@/lib/repositories/material.repository";
+import { productRepository } from "@/lib/repositories/product.repository";
+import { prisma, TRANSACTION_TIMEOUTS } from "@/lib/prisma";
+import { convertStockToIngredientUnit } from "@/lib/utils/unit-conversion";
 
 /**
  * Production Batch Service
@@ -17,6 +17,12 @@ import { convertStockToIngredientUnit } from "../utils/unit-conversion";
  * Handles material validation, stock movements, and production workflows.
  */
 export class ProductionBatchService {
+  constructor(
+    private readonly batchRepo = productionBatchRepository,
+    private readonly recipeRepo = recipeRepository,
+    private readonly materialRepo = materialRepository,
+    private readonly productRepo = productRepository
+  ) {}
   /**
    * Calculate batch multiplier based on planned quantity and recipe yield
    * @param plannedQuantity - Total planned quantity (units)
@@ -34,14 +40,14 @@ export class ProductionBatchService {
     storeId: string,
     filters: ProductionBatchFilters = {}
   ): Promise<{ batches: ProductionBatchWithRelations[]; total: number }> {
-    return productionBatchRepository.findAll(storeId, filters);
+    return this.batchRepo.findAll(storeId, filters);
   }
 
   /**
    * Get production batch by ID
    */
   async getProductionBatchById(batchId: string): Promise<ProductionBatchWithRelations | null> {
-    return productionBatchRepository.findById(batchId);
+    return this.batchRepo.findById(batchId);
   }
 
   /**
@@ -51,7 +57,7 @@ export class ProductionBatchService {
     storeId: string,
     recipeId: string
   ): Promise<ProductionBatchWithRelations[]> {
-    return productionBatchRepository.getActiveBatchesByRecipe(storeId, recipeId);
+    return this.batchRepo.getActiveBatchesByRecipe(storeId, recipeId);
   }
 
   /**
@@ -71,7 +77,7 @@ export class ProductionBatchService {
       status: "sufficient" | "low" | "insufficient";
     }>;
   }> {
-    const recipe = await recipeRepository.findById(recipeId);
+    const recipe = await this.recipeRepo.findById(recipeId);
     if (!recipe) {
       throw new Error("Recipe not found");
     }
@@ -125,19 +131,19 @@ export class ProductionBatchService {
     notes?: string;
   }): Promise<ProductionBatchWithRelations> {
     // Validate recipe exists and belongs to store
-    const recipe = await recipeRepository.findById(data.recipeId);
+    const recipe = await this.recipeRepo.findById(data.recipeId);
     if (!recipe || recipe.storeId !== data.storeId) {
       throw new Error("Recipe not found or does not belong to this store");
     }
 
     // Validate product exists and belongs to store
-    const product = await productRepository.findById(data.productId);
+    const product = await this.productRepo.findById(data.productId);
     if (!product || product.storeId !== data.storeId) {
       throw new Error("Product not found or does not belong to this store");
     }
 
     // Validate product and recipe are linked through RecipeProduct junction table
-    const isLinked = await recipeRepository.isProductLinked(data.productId, data.recipeId);
+    const isLinked = await this.recipeRepo.isProductLinked(data.productId, data.recipeId);
 
     if (!isLinked) {
       throw new Error(
@@ -166,7 +172,7 @@ export class ProductionBatchService {
     }
 
     // Generate batch number
-    const batchNumber = await productionBatchRepository.generateBatchNumber(data.storeId, "BATCH");
+    const batchNumber = await this.batchRepo.generateBatchNumber(data.storeId, "BATCH");
 
     // Start transaction with enhanced error handling and timeout
     try {
@@ -365,13 +371,13 @@ export class ProductionBatchService {
     actualQuantity: number
   ): Promise<ProductionBatch> {
     // Verify batch belongs to store
-    const belongsToStore = await productionBatchRepository.belongsToStore(batchId, storeId);
+    const belongsToStore = await this.batchRepo.belongsToStore(batchId, storeId);
     if (!belongsToStore) {
       throw new Error("Production batch not found or does not belong to this store");
     }
 
     // Get batch details
-    const batch = await productionBatchRepository.findById(batchId);
+    const batch = await this.batchRepo.findById(batchId);
     if (!batch) {
       throw new Error("Production batch not found");
     }
@@ -441,13 +447,13 @@ export class ProductionBatchService {
     restoreMaterials: boolean = false
   ): Promise<ProductionBatch> {
     // Verify batch belongs to store
-    const belongsToStore = await productionBatchRepository.belongsToStore(batchId, storeId);
+    const belongsToStore = await this.batchRepo.belongsToStore(batchId, storeId);
     if (!belongsToStore) {
       throw new Error("Production batch not found or does not belong to this store");
     }
 
     // Get batch details
-    const batch = await productionBatchRepository.findById(batchId);
+    const batch = await this.batchRepo.findById(batchId);
     if (!batch) {
       throw new Error("Production batch not found");
     }
@@ -569,7 +575,7 @@ export class ProductionBatchService {
     }
   ): Promise<ProductionBatch> {
     // Verify batch belongs to store
-    const belongsToStore = await productionBatchRepository.belongsToStore(batchId, storeId);
+    const belongsToStore = await this.batchRepo.belongsToStore(batchId, storeId);
     if (!belongsToStore) {
       throw new Error("Production batch not found or does not belong to this store");
     }
@@ -586,7 +592,7 @@ export class ProductionBatchService {
       updateData.notes = data.notes;
     }
 
-    return productionBatchRepository.update(batchId, updateData);
+    return this.batchRepo.update(batchId, updateData);
   }
 
   /**
@@ -594,13 +600,13 @@ export class ProductionBatchService {
    */
   async deleteProductionBatch(batchId: string, storeId: string): Promise<ProductionBatch> {
     // Verify batch belongs to store
-    const belongsToStore = await productionBatchRepository.belongsToStore(batchId, storeId);
+    const belongsToStore = await this.batchRepo.belongsToStore(batchId, storeId);
     if (!belongsToStore) {
       throw new Error("Production batch not found or does not belong to this store");
     }
 
     // Get batch to check status
-    const batch = await productionBatchRepository.findById(batchId);
+    const batch = await this.batchRepo.findById(batchId);
     if (!batch) {
       throw new Error("Production batch not found");
     }
@@ -610,7 +616,7 @@ export class ProductionBatchService {
       throw new Error("Can only delete planned batches. Cancel in-progress batches instead.");
     }
 
-    return productionBatchRepository.delete(batchId);
+    return this.batchRepo.delete(batchId);
   }
 
   /**
@@ -621,7 +627,7 @@ export class ProductionBatchService {
     startDate: Date,
     endDate: Date
   ): Promise<ProductionBatch[]> {
-    return productionBatchRepository.getBatchesDueSoon(storeId, startDate, endDate);
+    return this.batchRepo.getBatchesDueSoon(storeId, startDate, endDate);
   }
 }
 
