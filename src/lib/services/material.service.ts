@@ -6,7 +6,9 @@ import {
   MaterialFilters,
 } from "@/lib/repositories/material.repository";
 import { prisma } from "@/lib/prisma";
+import { supplierRepository } from "@/lib/repositories/supplier.repository";
 import { toDecimal } from "@/lib/utils/types.server";
+import type { CreateMaterialInput, UpdateMaterialInput, UpdateMaterialSupplierInput, AddMaterialSupplierInput } from "@/lib/validation/inventory.schemas";
 
 /**
  * Material (Ingredient) Service
@@ -20,46 +22,6 @@ import { toDecimal } from "@/lib/utils/types.server";
  *
  * Implements business rules and validation
  */
-
-export interface CreateMaterialInput {
-  storeId: string;
-  sku: string;
-  name: string;
-  description?: string;
-  category?: string;
-  unit: string;
-  unitCost: number;
-  currentStock?: number;
-  minStock?: number;
-  maxStock?: number;
-  suppliers?: Array<{
-    supplierId: string;
-    price: number;
-    isPreferred?: boolean;
-  }>;
-}
-
-export interface UpdateMaterialInput {
-  sku?: string;
-  name?: string;
-  description?: string;
-  category?: string;
-  unit?: string;
-  unitCost?: number;
-  currentStock?: number;
-  minStock?: number;
-  maxStock?: number;
-  suppliers?: Array<{
-    supplierId: string;
-    price: number;
-    isPreferred?: boolean;
-  }>;
-}
-
-export interface UpdateSupplierInput {
-  price?: number;
-  isPreferred?: boolean;
-}
 
 export class MaterialService {
   constructor(private readonly materialRepo: MaterialRepository = materialRepository) {}
@@ -415,10 +377,7 @@ export class MaterialService {
     }
 
     // Verify supplier belongs to same store
-    const supplier = await prisma.supplier.findUnique({
-      where: { id: supplierId },
-      select: { storeId: true },
-    });
+    const supplier = await supplierRepository.findById(supplierId);
 
     if (!supplier || supplier.storeId !== storeId) {
       throw new Error("Supplier not found or does not belong to this store");
@@ -453,7 +412,7 @@ export class MaterialService {
     materialId: string,
     storeId: string,
     supplierId: string,
-    input: UpdateSupplierInput
+    input: UpdateMaterialSupplierInput
   ): Promise<void> {
     // Verify material belongs to store
     const belongsToStore = await this.materialRepo.belongsToStore(materialId, storeId);

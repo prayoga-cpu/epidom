@@ -610,6 +610,16 @@ export class RecipeRepository extends BaseRepository {
     });
     return recipe?.storeId === storeId;
   }
+
+  /**
+   * Check if a product is linked to a recipe
+   */
+  async isProductLinked(productId: string, recipeId: string): Promise<boolean> {
+    const link = await this.db.recipeProduct.findFirst({
+      where: { productId, recipeId },
+    });
+    return !!link;
+  }
 }
 
 // Export singleton instance

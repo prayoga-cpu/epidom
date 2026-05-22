@@ -137,12 +137,7 @@ export class ProductionBatchService {
     }
 
     // Validate product and recipe are linked through RecipeProduct junction table
-    const isLinked = await prisma.recipeProduct.findFirst({
-      where: {
-        productId: data.productId,
-        recipeId: data.recipeId,
-      },
-    });
+    const isLinked = await recipeRepository.isProductLinked(data.productId, data.recipeId);
 
     if (!isLinked) {
       throw new Error(

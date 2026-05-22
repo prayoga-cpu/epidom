@@ -112,11 +112,11 @@ describe("MaterialService", () => {
         sku: "EXISTING-SKU",
         name: "New Material",
         unit: "kg",
-        unitCost: 10,
+        unitCost: 10, currentStock: 0, minStock: 0, maxStock: 0,
       };
 
       await expect(service.createMaterial(input)).rejects.toThrow(
-        "A material with this SKU already exists"
+        "Material with SKU 'EXISTING-SKU' already exists"
       );
     });
 
@@ -128,7 +128,7 @@ describe("MaterialService", () => {
         sku: "NEW-SKU",
         name: "New Material",
         unit: "kg",
-        unitCost: 10,
+        unitCost: 10, currentStock: 0, minStock: 0, maxStock: 0,
         suppliers: [
           { supplierId: "sup-1", price: 10, isPreferred: true },
           { supplierId: "sup-2", price: 12, isPreferred: true },
@@ -166,7 +166,7 @@ describe("MaterialService", () => {
 
       await expect(
         service.updateMaterial("mat-1", "store-1", { sku: "EXISTING-SKU" })
-      ).rejects.toThrow("A material with this SKU already exists");
+      ).rejects.toThrow("Material with SKU 'EXISTING-SKU' already exists");
     });
   });
 

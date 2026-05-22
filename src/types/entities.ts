@@ -16,20 +16,27 @@ export enum MaterialCategory {
   OTHER = "other",
 }
 
-export enum ProductionStatus {
-  PLANNED = "PLANNED",
-  IN_PROGRESS = "IN_PROGRESS",
-  COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
-}
+import {
+  ProductionStatus,
+  OrderStatus,
+  MovementType,
+  AlertType,
+  AlertSeverity,
+  SubscriptionPlan,
+  SubscriptionStatus,
+  SupplierOrderStatus,
+} from "@prisma/client";
 
-export enum OrderStatus {
-  PENDING = "pending",
-  PROCESSING = "processing",
-  IN_STOCK = "in_stock",
-  DELIVERED = "delivered",
-  CANCELLED = "cancelled",
-}
+export {
+  ProductionStatus,
+  OrderStatus,
+  MovementType,
+  AlertType,
+  AlertSeverity,
+  SubscriptionPlan,
+  SubscriptionStatus,
+  SupplierOrderStatus,
+};
 
 export enum PaymentStatus {
   PENDING = "pending",
@@ -38,23 +45,6 @@ export enum PaymentStatus {
   OVERDUE = "overdue",
   CANCELLED = "cancelled",
   REFUNDED = "refunded",
-}
-
-export enum MovementType {
-  IN = "in",
-  OUT = "out",
-  ADJUSTMENT = "adjustment",
-  PRODUCTION = "production",
-  WASTE = "waste",
-  RETURN = "return",
-}
-
-export enum AlertType {
-  LOW_STOCK = "low_stock",
-  EXPIRY_WARNING = "expiry_warning",
-  QUALITY_ISSUE = "quality_issue",
-  SUPPLIER_DELAY = "supplier_delay",
-  OVERSTOCK = "overstock",
 }
 
 export enum AlertPriority {

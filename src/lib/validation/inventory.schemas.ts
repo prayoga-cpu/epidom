@@ -79,6 +79,7 @@ export const createIngredientSchema = baseIngredientSchema
   );
 
 export type CreateIngredientInput = z.infer<typeof createIngredientSchema>;
+export type CreateMaterialInput = CreateIngredientInput;
 
 // Form schema for client-side (without storeId, making default fields optional)
 const baseIngredientFormSchema = z.object({
@@ -142,6 +143,7 @@ export const updateIngredientSchema = baseIngredientSchema
   );
 
 export type UpdateIngredientInput = z.infer<typeof updateIngredientSchema>;
+export type UpdateMaterialInput = UpdateIngredientInput;
 
 // Update form schema for client-side (includes suppliers)
 export const updateIngredientFormSchema = baseIngredientFormSchema.partial();
