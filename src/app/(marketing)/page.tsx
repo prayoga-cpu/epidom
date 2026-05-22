@@ -46,7 +46,7 @@ export default function HomePage() {
     <>
       <ProductStructuredData />
 
-      <main className="w-full overflow-x-hidden bg-white">
+      <main className="w-full overflow-x-hidden">
         <LandingPageSections />
       </main>
     </>

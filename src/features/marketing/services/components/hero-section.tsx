@@ -1,55 +1,36 @@
 "use client";
 
-/**
- * Services Hero Section
- *
- * Hero banner for services page with title and feature highlights.
- * Grid layout: text content (left) + feature block (right).
- *
- * @component
- */
-
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Container } from "@/features/marketing/shared/components/container";
 
 export function HeroSection() {
   const { t } = useI18n();
 
   return (
-    <section className="relative z-10 overflow-visible bg-white py-8 md:py-4 lg:py-16">
-      <Container maxWidth="7xl">
-        <div className="grid grid-cols-1 items-center gap-6 md:gap-6 lg:grid-cols-12">
-          {/* Left Column - Text Content */}
-          <div className="space-y-4 md:space-y-6 lg:col-span-8">
-            <h1 className="text-brand-primary text-3xl leading-[1.1] font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-              {t("services.heroTitle")}
-            </h1>
-
-            <p className="text-brand-primary/60 max-w-3xl text-lg leading-relaxed md:text-xl">
-              {t("services.heroDesc")}
-            </p>
-          </div>
-
-          {/* Right Column - Feature Block */}
-          <div className="flex justify-center lg:col-span-4">
-            <div className="w-full md:w-fit">
-              <div className="bg-brand-primary rounded-2xl p-6 text-left text-white md:p-8">
-                <div className="space-y-4 md:space-y-5">
-                  <div className="text-lg font-semibold md:text-xl lg:text-2xl">
-                    {t("services.featureBlock.management")}
-                  </div>
-                  <div className="text-lg font-semibold md:text-xl lg:text-2xl">
-                    {t("services.featureBlock.tracking")}
-                  </div>
-                  <div className="text-lg font-semibold md:text-xl lg:text-2xl">
-                    {t("services.featureBlock.data")}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Container>
+    <section
+      style={{
+        paddingTop: 140,
+        paddingBottom: 60,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ position: "absolute", top: -200, right: -100, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(217,174,59,0.18), transparent 60%)", pointerEvents: "none" }} />
+      <div className="epi-container" style={{ position: "relative" }}>
+        <div className="epi-eyebrow" style={{ marginBottom: 16 }}>{t("redesign.servicesPage.eyebrow")}</div>
+        <h1
+          className="epi-display"
+          style={{ fontSize: "clamp(48px, 8vw, 128px)", margin: 0, lineHeight: 0.95, paddingBottom: 12, color: "var(--epi-cream-50)" }}
+        >
+          {t("redesign.servicesPage.title1")}<br />
+          <span style={{ color: "var(--epi-gold-400)" }}>{t("redesign.servicesPage.titleAccent")}</span>
+        </h1>
+        <p
+          className="epi-script"
+          style={{ fontSize: "clamp(20px, 2.4vw, 28px)", color: "var(--epi-cream-100)", marginTop: 20, maxWidth: 640, display: "block" }}
+        >
+          {t("redesign.servicesPage.script")}
+        </p>
+      </div>
     </section>
   );
 }

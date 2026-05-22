@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { HeroSection } from "@/features/marketing/services/components/hero-section";
 import { FeaturesShowcaseSection } from "@/features/marketing/services/components/features-showcase-section";
+import { ClosingCtaSection } from "@/features/marketing/home/components/closing-cta-section";
 
 export const metadata: Metadata = {
   title: "Fitur — EPIDOM",
@@ -26,13 +27,10 @@ export const metadata: Metadata = {
 
 export default function ServicesPage() {
   return (
-    <main className="w-full overflow-x-hidden bg-bg-warm pt-20 md:pt-24">
-      <div className="animate-slide-up">
-        <HeroSection />
-      </div>
-      <div className="animate-slide-up-delayed">
-        <FeaturesShowcaseSection />
-      </div>
+    <main className="w-full overflow-x-hidden">
+      <HeroSection />
+      <FeaturesShowcaseSection />
+      <ClosingCtaSection />
     </main>
   );
 }

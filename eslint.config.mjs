@@ -1,10 +1,5 @@
 const eslintConfig = [
   {
-    rules: {
-      // Basic rules for Next.js project
-      "no-unused-vars": "warn",
-      "no-console": "warn",
-    },
     ignores: [
       "node_modules/**",
       ".next/**",
@@ -12,6 +7,13 @@ const eslintConfig = [
       "build/**",
       "next-env.d.ts",
     ],
+  },
+  {
+    rules: {
+      // Basic rules for Next.js project
+      "no-unused-vars": "warn",
+      "no-console": "warn",
+    },
   },
 ];
 

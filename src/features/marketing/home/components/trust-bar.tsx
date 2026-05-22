@@ -1,46 +1,61 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Container } from "@/features/marketing/shared/components/container";
+
+const shops = [
+  "Warung Sari",
+  "Café Bretonne",
+  "Maison Lacroix",
+  "Kopi Tujuh",
+  "Cookie Atelier",
+  "Le Petit Bar",
+];
 
 export function TrustBar() {
   const { t } = useI18n();
 
-  const stats = [
-    { value: t("home.trustBar.stat1Value"), label: t("home.trustBar.stat1Label") },
-    { value: t("home.trustBar.stat2Value"), label: t("home.trustBar.stat2Label") },
-    { value: t("home.trustBar.stat3Value"), label: t("home.trustBar.stat3Label") },
-  ];
-
   return (
-    <section className="border-y border-neutral-100 bg-white py-12">
-      <Container maxWidth="6xl">
-        <p className="mb-8 text-center text-sm font-medium tracking-widest text-neutral-400 uppercase">
-          {t("home.trustBar.heading")}
-        </p>
-
-        {/* Stats row */}
-        <div className="flex flex-col items-center justify-center gap-8 sm:flex-row sm:gap-16 lg:gap-24">
-          {stats.map((stat, i) => (
-            <div key={i} className="text-center">
-              <p className="text-brand-primary text-3xl font-bold lg:text-4xl">{stat.value}</p>
-              <p className="mt-1 text-sm text-neutral-500">{stat.label}</p>
-            </div>
+    <section
+      style={{
+        padding: "40px 0",
+        borderTop: "1px solid rgba(255,255,255,0.08)",
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+      }}
+    >
+      <div
+        className="epi-container"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 40,
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 12,
+            letterSpacing: "0.20em",
+            textTransform: "uppercase",
+            color: "var(--epi-cream-50)",
+            opacity: 0.5,
+            fontFamily: "var(--epi-font-body)",
+          }}
+        >
+          {t("redesign.trust.label")}
+        </div>
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
+          {shops.map((name) => (
+            <span
+              key={name}
+              className="epi-script"
+              style={{ color: "var(--epi-cream-50)", opacity: 0.72, fontSize: 22, letterSpacing: "0.01em" }}
+            >
+              {name}
+            </span>
           ))}
         </div>
-
-        {/* Logo placeholder row */}
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-6 opacity-40">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className="h-8 w-24 rounded-md bg-neutral-200"
-              aria-hidden="true"
-            />
-          ))}
-        </div>
-        <p className="mt-4 text-center text-xs text-neutral-300">{t("home.trustBar.logoNote")}</p>
-      </Container>
+      </div>
     </section>
   );
 }

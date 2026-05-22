@@ -1,187 +1,225 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Calendar, Shield, Zap, CreditCard } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Container } from "@/features/marketing/shared/components/container";
-import { useState, useEffect } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { SSRPlaceholder } from "@/components/shared";
+import { PosDashboard } from "@/features/marketing/shared/components/pos-dashboard";
+import { PhoneMenu } from "@/features/marketing/shared/components/phone-menu";
 
 export function HeroSection() {
   const router = useRouter();
   const { t } = useI18n();
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const handleStartFree = () => {
-    router.push("/register");
-  };
-
-  const handleDemo = () => {
-    window.open("https://calendly.com/prayogadevelopment/30min", "_blank");
-  };
-
-  if (!mounted) {
-    return <SSRPlaceholder height="calc(100vh - 4rem)" className="bg-bg-warm" />;
-  }
 
   return (
-    <section className="bg-bg-warm relative flex min-h-[calc(100vh-4rem)] w-full flex-col overflow-hidden">
-      {/* Subtle warm gradient blobs */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-amber-100/40 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-[400px] w-[400px] rounded-full bg-orange-50/50 blur-3xl" />
-      </div>
+    <section
+      style={{
+        position: "relative",
+        paddingTop: 140,
+        paddingBottom: 100,
+        overflow: "hidden",
+      }}
+    >
+      {/* Background glows */}
+      <div
+        style={{
+          position: "absolute", width: 900, height: 900, borderRadius: "50%",
+          top: -300, right: -200,
+          background: "radial-gradient(circle, rgba(217,174,59,0.22), transparent 60%)",
+          pointerEvents: "none", zIndex: 0,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute", width: 700, height: 700, borderRadius: "50%",
+          top: 100, left: -200,
+          background: "radial-gradient(circle, rgba(91,136,178,0.18), transparent 60%)",
+          pointerEvents: "none", zIndex: 0,
+        }}
+      />
+      <div className="epi-hero-pattern" />
 
-      <div className="relative z-10 flex w-full flex-1 items-center justify-center px-4 py-16 sm:px-6 lg:px-8 lg:pt-28 lg:pb-20">
-        <Container maxWidth="6xl" className="w-full">
-          <div className="grid w-full grid-cols-1 items-center gap-14 lg:grid-cols-2 lg:gap-20">
-
-            {/* Left: Text */}
-            <div
-              className={`flex flex-col text-center transition-all duration-700 lg:text-left ${
-                mounted ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-              }`}
-            >
-              {/* Badge */}
-              <div className="mb-6 flex justify-center lg:justify-start">
-                <span className="bg-brand-primary/8 text-brand-primary inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-1.5 text-sm font-medium">
-                  ✨ {t("home.hero.badge")}
-                </span>
-              </div>
-
-              {/* Headline */}
-              <h1 className="text-brand-primary mb-6 text-4xl leading-[1.1] font-bold tracking-tight sm:text-5xl lg:text-[3rem] xl:text-[3.5rem]">
-                {t("home.hero.headlinePart1")}
-                <br />
-                <span className="font-serif italic">{t("home.hero.headlineHighlight")}</span>
-              </h1>
-
-              {/* Description */}
-              <p className="text-brand-primary/65 mb-8 text-lg leading-[1.7] sm:text-xl lg:text-lg xl:text-xl">
-                {t("home.hero.description")}
-              </p>
-
-              {/* CTAs */}
-              <div className="mb-6 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
-                <Button
-                  onClick={handleStartFree}
-                  className="group bg-brand-primary hover:bg-brand-primary/90 w-full cursor-pointer rounded-full px-8 py-6 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:shadow-xl sm:w-auto"
-                >
-                  {t("home.hero.ctaStartFree")}
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                </Button>
-                <Button
-                  onClick={handleDemo}
-                  variant="outline"
-                  className="border-brand-primary/20 text-brand-primary hover:bg-brand-primary/5 w-full cursor-pointer rounded-full border px-8 py-6 text-base font-semibold transition-all duration-200 sm:w-auto"
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {t("home.hero.ctaDemo")}
-                </Button>
-              </div>
-
-              {/* Trust pills */}
-              <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 lg:justify-start">
-                {[
-                  { icon: CreditCard, text: t("home.hero.trustNoCard") },
-                  { icon: Zap, text: t("home.hero.trustSetup") },
-                  { icon: Shield, text: t("home.hero.trustQris") },
-                ].map(({ icon: Icon, text }) => (
-                  <span key={text} className="text-brand-primary/50 flex items-center gap-1.5 text-sm">
-                    <Icon className="h-3.5 w-3.5" />
-                    {text}
-                  </span>
-                ))}
-              </div>
+      <div className="epi-container">
+        <div
+          className="grid-cols-1 lg:grid-cols-[1.05fr_1fr]"
+          style={{
+            position: "relative", zIndex: 1,
+            display: "grid",
+            gridTemplateColumns: "1.05fr 1fr",
+            gap: 56,
+            alignItems: "center",
+          }}
+        >
+          {/* Left — copy */}
+          <div>
+            <div className="epi-pill">
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--epi-gold-500)", boxShadow: "0 0 12px var(--epi-gold-500)", flexShrink: 0 }} />
+              {t("redesign.hero.badge")}
             </div>
 
-            {/* Right: Phone mockup */}
-            <div
-              className={`relative flex justify-center transition-all delay-200 duration-700 lg:justify-end ${
-                mounted ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-              }`}
+            <h1
+              className="epi-display"
+              style={{
+                fontSize: "clamp(56px, 8vw, 124px)",
+                lineHeight: 0.88,
+                margin: "24px 0 0",
+                color: "var(--epi-cream-50)",
+              }}
             >
-              {/* Browser/Desktop frame */}
-              <div className="relative w-full max-w-lg">
-                <div className="overflow-hidden rounded-2xl border border-neutral-200/70 bg-white shadow-2xl shadow-neutral-200/50">
-                  {/* Browser chrome */}
-                  <div className="flex h-9 items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-4">
-                    <div className="flex gap-1.5">
-                      <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
-                    </div>
-                    <div className="ml-3 flex h-5 flex-1 max-w-xs items-center rounded-full border border-neutral-200 bg-white px-3">
-                      <div className="mr-2 h-2 w-2 rounded-full bg-green-500" />
-                      <span className="text-[10px] text-neutral-500">{t("home.hero.mockupUrl")}</span>
-                    </div>
+              {t("redesign.hero.headline1")}<br />
+              {t("redesign.hero.headline2")}<br />
+              <span style={{ color: "var(--epi-gold-400)" }}>{t("redesign.hero.headlineAccent")}</span>
+              <span
+                className="epi-script"
+                style={{
+                  color: "var(--epi-gold-300)",
+                  textTransform: "lowercase",
+                  fontSize: "0.32em",
+                  display: "block",
+                  lineHeight: 1.1,
+                  marginTop: 8,
+                }}
+              >
+                {t("redesign.hero.serifAccent")}
+              </span>
+            </h1>
+
+            <p
+              style={{
+                color: "var(--epi-cream-50)", opacity: 0.72,
+                fontSize: "clamp(15px, 1.4vw, 18px)",
+                lineHeight: 1.6,
+                maxWidth: 580,
+                marginTop: 28,
+                fontFamily: "var(--epi-font-body)",
+              }}
+            >
+              {t("redesign.hero.lede")}
+            </p>
+
+            <div
+              className="flex flex-col sm:flex-row flex-wrap"
+              style={{ gap: 14, marginTop: 36 }}
+            >
+              <button
+                onClick={() => router.push("/register")}
+                className="cursor-pointer transition-all hover:-translate-y-px active:translate-y-0"
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  height: 56, padding: "0 30px", borderRadius: 999,
+                  background: "var(--epi-gold-500)", color: "var(--epi-navy-900)",
+                  fontSize: 14, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase",
+                  border: "1px solid transparent",
+                  boxShadow: "0 8px 24px -10px rgba(217,174,59,0.6)",
+                  fontFamily: "var(--epi-font-body)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t("redesign.hero.ctaPrimary")}
+              </button>
+              <button
+                onClick={() => router.push("/services")}
+                className="cursor-pointer transition-all hover:-translate-y-px"
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  height: 56, padding: "0 30px", borderRadius: 999,
+                  background: "transparent", color: "var(--epi-cream-50)",
+                  fontSize: 14, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  fontFamily: "var(--epi-font-body)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t("redesign.hero.ctaSecondary")}
+              </button>
+            </div>
+
+            {/* Proof stats */}
+            <div
+              style={{
+                display: "flex", gap: 36, marginTop: 44, paddingTop: 28,
+                borderTop: "1px solid rgba(255,255,255,0.10)",
+                flexWrap: "wrap",
+              }}
+            >
+              {[
+                { v: t("redesign.hero.proof1Val"), l: t("redesign.hero.proof1Label") },
+                { v: t("redesign.hero.proof2Val"), l: t("redesign.hero.proof2Label") },
+                { v: t("redesign.hero.proof3Val"), l: t("redesign.hero.proof3Label") },
+                { v: t("redesign.hero.proof4Val"), l: t("redesign.hero.proof4Label") },
+              ].map((p, i) => (
+                <div key={i} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div
+                    className="epi-display"
+                    style={{ fontSize: 36, color: "var(--epi-cream-50)", letterSpacing: "0.02em" }}
+                  >
+                    {p.v}
                   </div>
-                  {/* Screenshot */}
-                  <div className="relative aspect-[4/3] bg-neutral-50">
-                    {!imageLoaded && (
-                      <Skeleton className="absolute inset-0 h-full w-full" />
-                    )}
-                    <Image
-                      src="/images/dashboard.png"
-                      alt="Epidom — halaman menu dan kasir"
-                      fill
-                      className="object-cover object-left-top"
-                      onLoad={() => setImageLoaded(true)}
-                      onError={() => setImageLoaded(true)}
-                      priority
-                      sizes="(max-width: 768px) 100vw, 600px"
-                      unoptimized
-                    />
+                  <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--epi-cream-50)", opacity: 0.5 }}>
+                    {p.l}
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
 
-                {/* Phone overlay */}
-                <div className="absolute -bottom-6 -left-6 hidden w-28 md:block lg:w-32">
-                  <div className="overflow-hidden rounded-3xl border-4 border-neutral-900 bg-neutral-900 shadow-2xl">
-                    <div className="absolute top-0 left-1/2 z-10 h-4 w-12 -translate-x-1/2 rounded-b-xl bg-neutral-900" />
-                    <div className="relative aspect-[9/19] bg-white">
-                      <Image
-                        src="/images/tracking.png"
-                        alt="Epidom mobile — storefront pelanggan"
-                        fill
-                        className="object-cover object-top"
-                        sizes="128px"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
+          {/* Right — mockups */}
+          <div className="hidden lg:block" style={{ position: "relative", minHeight: 540 }}>
+            <div
+              style={{
+                position: "absolute", inset: -30,
+                background: "radial-gradient(circle, rgba(91,136,178,0.18), transparent 70%)",
+                filter: "blur(40px)", zIndex: -1,
+              }}
+            />
+            {/* Dashboard behind */}
+            <div
+              className="epi-float-dash"
+              style={{ position: "absolute", right: 0, top: 40, width: "95%", transformOrigin: "top right" }}
+            >
+              <PosDashboard />
+            </div>
+            {/* Phone overlapping */}
+            <div
+              className="epi-float-phone"
+              style={{ position: "absolute", left: -10, bottom: 0, width: 240, zIndex: 2 }}
+            >
+              <PhoneMenu />
+            </div>
+            {/* Floating notification chip — dark glass */}
+            <div
+              className="epi-float-chip"
+              style={{
+                position: "absolute", right: -10, top: -10,
+                padding: "11px 16px", borderRadius: 14,
+                background: "rgba(6,15,27,0.82)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid rgba(255,255,255,0.11)",
+                boxShadow: "0 16px 40px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
+                zIndex: 3,
+                display: "flex", gap: 10, alignItems: "center",
+                fontFamily: "var(--epi-font-body)",
+                color: "var(--epi-cream-50)",
+              }}
+            >
+              {/* Pulsing live dot */}
+              <span style={{ position: "relative", width: 8, height: 8, flexShrink: 0 }}>
+                <span style={{
+                  position: "absolute", inset: 0, borderRadius: "50%",
+                  background: "#22c55e",
+                  boxShadow: "0 0 6px rgba(34,197,94,0.7)",
+                }} />
+              </span>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(251,249,228,0.45)", marginBottom: 2 }}>
+                  {t("redesign.hero.waChip")}
                 </div>
-
-                {/* Floating order notification */}
-                <div className="absolute -top-4 -right-4 hidden rounded-xl border border-neutral-100 bg-white p-3 shadow-xl md:block">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 text-green-600 text-sm font-bold">
-                      ✓
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-neutral-900">{t("home.hero.notificationTitle")}</p>
-                      <p className="text-[10px] text-neutral-400">{t("home.hero.notificationDetail")}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating stats */}
-                <div className="absolute right-4 -bottom-4 hidden rounded-xl border border-neutral-100 bg-white/95 p-3 shadow-xl backdrop-blur-sm md:block">
-                  <p className="text-brand-primary text-xl font-bold leading-none">{t("home.hero.statsValue")}</p>
-                  <p className="mt-0.5 text-[10px] text-neutral-400">{t("home.hero.statsLabel")}</p>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--epi-cream-50)" }}>
+                  {t("redesign.hero.waDetail")}
                 </div>
               </div>
             </div>
           </div>
-        </Container>
+        </div>
       </div>
     </section>
   );

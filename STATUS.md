@@ -6,6 +6,22 @@
 
 ---
 
+## ✅ Marketing Site — Dark Navy Redesign (2026-05-22)
+
+### Completed
+- [x] Full dark-navy redesign: new hero, 13 home sections, services & pricing pages
+- [x] Floating pill navbar (lowercase links, custom lang switcher)
+- [x] i18n for EN / ID / FR (FR deprecated — no new keys going forward)
+- [x] Locale-driven pricing (USD / IDR / EUR)
+- [x] Dashboard mockup (PosDashboard + PhoneMenu) in hero with dark glass notification chip
+- [x] Terms & Refund Policy pages redesigned in dark theme with sticky TOC sidebar
+- [x] 9 placeholder footer pages (blog, careers, changelog, cookie-policy, gdpr, partners, press, privacy, status)
+- [x] About page (/about) — accessible via footer link and direct URL, not in navbar
+- [x] Footer expanded to 5 columns (Brand / Product / Company / Legal / Contact)
+- [x] SVG icons throughout marketing (lucide-react kept for dashboard nav only)
+
+---
+
 ## ✅ Phase 3 — Lightweight POS (all milestones done)
 
 Milestones completed: POS Cashier + Order Queue, KDS + Table Management, Offline PWA + Thermal Printing, Payment/Notification/Inngest/SSE integrations, Public order routes.

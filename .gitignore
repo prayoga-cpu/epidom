@@ -43,3 +43,11 @@ epidom-web
 
 # log
 *.log
+
+# Local seed/demo scripts
+register-dummy.ts
+seed-dummy.ts
+seed-storefront-items.ts
+
+# Puppeteer cache
+.puppeteer_cache/

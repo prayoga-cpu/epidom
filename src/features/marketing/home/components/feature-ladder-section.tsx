@@ -1,115 +1,135 @@
 "use client";
 
+import React from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Container } from "@/features/marketing/shared/components/container";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Check } from "lucide-react";
-import Link from "next/link";
-
-const TIERS = [
-  {
-    nameKey: "home.featureLadder.tier1Name",
-    priceKey: "home.featureLadder.tier1Price",
-    items: [
-      "home.featureLadder.tier1f1",
-      "home.featureLadder.tier1f2",
-      "home.featureLadder.tier1f3",
-    ],
-    highlight: false,
-  },
-  {
-    nameKey: "home.featureLadder.tier2Name",
-    priceKey: "home.featureLadder.tier2Price",
-    items: [
-      "home.featureLadder.tier2f1",
-      "home.featureLadder.tier2f2",
-      "home.featureLadder.tier2f3",
-    ],
-    highlight: false,
-  },
-  {
-    nameKey: "home.featureLadder.tier3Name",
-    priceKey: "home.featureLadder.tier3Price",
-    items: [
-      "home.featureLadder.tier3f1",
-      "home.featureLadder.tier3f2",
-      "home.featureLadder.tier3f3",
-      "home.featureLadder.tier3f4",
-    ],
-    highlight: true,
-  },
-  {
-    nameKey: "home.featureLadder.tier4Name",
-    priceKey: "home.featureLadder.tier4Price",
-    items: [
-      "home.featureLadder.tier4f1",
-      "home.featureLadder.tier4f2",
-      "home.featureLadder.tier4f3",
-    ],
-    highlight: false,
-  },
-] as const;
+import { useRouter } from "next/navigation";
+import { PhoneMenu } from "@/features/marketing/shared/components/phone-menu";
+import { PhoneKDS } from "@/features/marketing/shared/components/phone-kds";
 
 export function FeatureLadderSection() {
   const { t } = useI18n();
+  const router = useRouter();
+
+  const cardBase: React.CSSProperties = {
+    position: "relative",
+    padding: 32,
+    borderRadius: 26,
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    gap: 20,
+    minHeight: 540,
+  };
 
   return (
-    <section className="bg-bg-warm py-24">
-      <Container maxWidth="6xl">
-        {/* Header */}
-        <div className="mb-14 text-center">
-          <h2 className="text-brand-primary mb-4 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-            {t("home.featureLadder.headline")}
+    <section className="epi-section">
+      <div className="epi-container">
+        {/* Heading */}
+        <div style={{ textAlign: "center", maxWidth: 720, margin: "0 auto" }}>
+          <div className="epi-eyebrow" style={{ marginBottom: 16 }}>{t("redesign.coreProducts.eyebrow")}</div>
+          <h2
+            className="epi-display"
+            style={{ fontSize: "clamp(40px, 5vw, 72px)", margin: 0, lineHeight: 0.95, color: "var(--epi-cream-50)" }}
+          >
+            {t("redesign.coreProducts.title1")}<br />
+            {t("redesign.coreProducts.title2")}
           </h2>
-          <p className="text-brand-primary/60 mx-auto max-w-xl text-lg leading-[1.7]">
-            {t("home.featureLadder.subheadline")}
+          <p style={{ color: "var(--epi-cream-50)", opacity: 0.72, marginTop: 20, fontSize: 17, lineHeight: 1.55, maxWidth: 640, marginInline: "auto" }}>
+            {t("redesign.coreProducts.sub")}
           </p>
         </div>
 
-        {/* Tier cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {TIERS.map(({ nameKey, priceKey, items, highlight }) => (
-            <div
-              key={nameKey}
-              className={`flex flex-col rounded-2xl border p-6 transition-all duration-200 ${
-                highlight
-                  ? "bg-brand-primary border-brand-primary text-white shadow-xl"
-                  : "border-neutral-150 bg-white text-neutral-800 shadow-sm hover:shadow-md"
-              }`}
-            >
-              {highlight && (
-                <span className="mb-3 inline-block w-fit rounded-full bg-white/20 px-3 py-0.5 text-xs font-semibold text-white">
-                  {t("home.featureLadder.popular")}
-                </span>
-              )}
-              <p className={`text-xs font-semibold tracking-widest uppercase mb-2 ${highlight ? "text-white/60" : "text-neutral-400"}`}>
-                {t(nameKey)}
-              </p>
-              <p className={`text-2xl font-bold mb-6 ${highlight ? "text-white" : "text-brand-primary"}`}>
-                {t(priceKey)}
-              </p>
-              <ul className="flex-1 space-y-2.5">
-                {items.map((key) => (
-                  <li key={key} className="flex items-start gap-2.5 text-sm">
-                    <Check className={`mt-0.5 h-4 w-4 shrink-0 ${highlight ? "text-white/70" : "text-green-500"}`} />
-                    <span className={highlight ? "text-white/80" : "text-neutral-600"}>{t(key)}</span>
-                  </li>
-                ))}
-              </ul>
+        {/* 3 module cards */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-3"
+          style={{ marginTop: 64, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}
+        >
+          {/* Card 1 — Menu Page */}
+          <div style={{ ...cardBase, background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", border: "1px solid rgba(255,255,255,0.10)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(217,174,59,0.18)", border: "1px solid rgba(217,174,59,0.32)", display: "grid", placeItems: "center", color: "var(--epi-gold-300)", fontSize: 18 }}>⛓</div>
+              <span style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--epi-gold-400)" }}>{t("redesign.coreProducts.p1tag")}</span>
             </div>
-          ))}
+            <div>
+              <div className="epi-display" style={{ fontSize: 32, letterSpacing: "0.04em", color: "var(--epi-cream-50)", lineHeight: 1 }}>
+                {t("redesign.coreProducts.p1title1")}<br />{t("redesign.coreProducts.p1title2")}
+              </div>
+              <p style={{ color: "var(--epi-cream-50)", opacity: 0.6, fontSize: 14, lineHeight: 1.6, marginTop: 14 }}>{t("redesign.coreProducts.p1body")}</p>
+            </div>
+            <div style={{ flex: 1, display: "grid", placeItems: "center", minHeight: 280 }}>
+              <PhoneMenu />
+            </div>
+          </div>
+
+          {/* Card 2 — Accept Orders */}
+          <div style={{
+            ...cardBase,
+            background: "linear-gradient(160deg, rgba(217,174,59,0.16), rgba(217,174,59,0.02))",
+            border: "1px solid rgba(217,174,59,0.40)",
+          }}>
+            <div style={{ position: "absolute", top: -60, right: -60, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(217,174,59,0.20), transparent 60%)" }} />
+            <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(217,174,59,0.20)", border: "1px solid rgba(217,174,59,0.40)", display: "grid", placeItems: "center", color: "var(--epi-gold-300)", fontSize: 18 }}>💳</div>
+              <span style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--epi-gold-300)" }}>{t("redesign.coreProducts.p2tag")}</span>
+            </div>
+            <div style={{ position: "relative" }}>
+              <div className="epi-display" style={{ fontSize: 32, letterSpacing: "0.04em", color: "var(--epi-cream-50)", lineHeight: 1 }}>
+                {t("redesign.coreProducts.p2title1")}<br />{t("redesign.coreProducts.p2title2")}
+              </div>
+              <p style={{ color: "var(--epi-cream-50)", opacity: 0.6, fontSize: 14, lineHeight: 1.6, marginTop: 14 }}>{t("redesign.coreProducts.p2body")}</p>
+            </div>
+            <div style={{ position: "relative", flex: 1, padding: 18, borderRadius: 16, background: "rgba(6,15,27,0.5)", border: "1px solid rgba(245,244,220,0.10)", display: "flex", flexDirection: "column", gap: 10, minHeight: 280 }}>
+              <div style={{ fontSize: 10, color: "var(--epi-cream-50)", opacity: 0.4, letterSpacing: "0.16em", textTransform: "uppercase" }}>{t("redesign.coreProducts.p2checkoutLabel")}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {[
+                  { n: "QRIS", c: "#0066B3" }, { n: "GoPay", c: "#00AED5" }, { n: "OVO", c: "#4C2A86" },
+                  { n: "Card", c: "#1F4373" }, { n: "Bank", c: "#3A5B7A" }, { n: "Cash", c: "#5A4A2A" },
+                ].map((p, i) => (
+                  <div key={i} style={{ padding: "12px 10px", borderRadius: 10, background: `linear-gradient(140deg, ${p.c}, rgba(6,15,27,0.4))`, border: "1px solid rgba(245,244,220,0.10)", fontSize: 11, color: "var(--epi-cream-50)", textAlign: "center", fontWeight: 500 }}>{p.n}</div>
+                ))}
+              </div>
+              <div style={{ marginTop: "auto", padding: "14px 16px", borderRadius: 12, background: "rgba(217,174,59,0.14)", border: "1px solid rgba(217,174,59,0.30)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--epi-gold-300)", letterSpacing: "0.10em", textTransform: "uppercase" }}>{t("redesign.coreProducts.p2orderName")}</div>
+                  <div style={{ fontSize: 14, color: "var(--epi-cream-50)", fontWeight: 600 }}>{t("redesign.coreProducts.p2orderVal")}</div>
+                </div>
+                <div style={{ padding: "6px 12px", borderRadius: 999, background: "#25D366", color: "white", fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", fontWeight: 600 }}>→ WhatsApp</div>
+              </div>
+              <div style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.03)", fontSize: 11, color: "var(--epi-cream-50)", opacity: 0.6, display: "flex", justifyContent: "space-between" }}>
+                <span>{t("redesign.coreProducts.p2feeLabel")}</span>
+                <span style={{ color: "var(--epi-gold-400)" }}>{t("redesign.coreProducts.p2settled")}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3 — POS & Kitchen */}
+          <div style={{ ...cardBase, background: "linear-gradient(180deg, rgba(91,136,178,0.10), rgba(91,136,178,0.02))", border: "1px solid rgba(91,136,178,0.30)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(91,136,178,0.20)", border: "1px solid rgba(91,136,178,0.40)", display: "grid", placeItems: "center", color: "var(--epi-navy-400)", fontSize: 18 }}>🍳</div>
+              <span style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--epi-navy-400)" }}>{t("redesign.coreProducts.p3tag")}</span>
+            </div>
+            <div>
+              <div className="epi-display" style={{ fontSize: 32, letterSpacing: "0.04em", color: "var(--epi-cream-50)", lineHeight: 1 }}>
+                {t("redesign.coreProducts.p3title1")}<br />{t("redesign.coreProducts.p3title2")}
+              </div>
+              <p style={{ color: "var(--epi-cream-50)", opacity: 0.6, fontSize: 14, lineHeight: 1.6, marginTop: 14 }}>{t("redesign.coreProducts.p3body")}</p>
+            </div>
+            <div style={{ flex: 1, display: "grid", placeItems: "center", minHeight: 280 }}>
+              <PhoneKDS />
+            </div>
+          </div>
         </div>
 
-        {/* Link to full pricing */}
-        <div className="mt-10 text-center">
-          <Button variant="outline" className="border-brand-primary/20 text-brand-primary hover:bg-brand-primary/5 rounded-full px-8" asChild>
-            <Link href="/pricing">
-              {t("home.featureLadder.viewFull")}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+        <div style={{ textAlign: "center", marginTop: 36 }}>
+          <button
+            onClick={() => router.push("/services")}
+            className="cursor-pointer transition-all hover:-translate-y-px"
+            style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.18)", color: "var(--epi-cream-50)", padding: "14px 28px", borderRadius: 999, fontSize: 14, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "var(--epi-font-body)" }}
+          >
+            {t("redesign.coreProducts.fullFeatureList")}
+          </button>
         </div>
-      </Container>
+      </div>
     </section>
   );
 }

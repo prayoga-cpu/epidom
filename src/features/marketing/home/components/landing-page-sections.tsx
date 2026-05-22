@@ -4,11 +4,16 @@ import { SectionErrorBoundary } from "@/components/shared";
 import {
   HeroSection,
   TrustBar,
-  WhatYouGetSection,
   HowItWorksSection,
-  FeatureLadderSection,
   PainGainSection,
+  FeatureLadderSection,
+  WhatYouGetSection,
+  DashboardPreviewSection,
+  UseCasesSection,
+  HowToUseSection,
   SocialProofSection,
+  PricingSection,
+  FaqSection,
   ClosingCtaSection,
 } from "@/features/marketing/home/components";
 
@@ -23,27 +28,47 @@ export function LandingPageSections() {
         <TrustBar />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="What You Get">
-        <WhatYouGetSection />
-      </SectionErrorBoundary>
-
       <SectionErrorBoundary sectionName="How It Works">
         <HowItWorksSection />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="Feature Ladder">
+      <SectionErrorBoundary sectionName="Old vs New">
+        <PainGainSection />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="Core Products">
         <FeatureLadderSection />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="Pain Gain">
-        <PainGainSection />
+      <SectionErrorBoundary sectionName="Features Grid">
+        <WhatYouGetSection />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="Dashboard Preview">
+        <DashboardPreviewSection />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="Use Cases">
+        <UseCasesSection />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="Setup Steps">
+        <HowToUseSection />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Testimonials">
         <SocialProofSection />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="CTA">
+      <SectionErrorBoundary sectionName="Pricing Teaser">
+        <PricingSection />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="FAQ">
+        <FaqSection />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="CTA Banner">
         <ClosingCtaSection />
       </SectionErrorBoundary>
     </>

@@ -1,68 +1,72 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Container } from "@/features/marketing/shared/components/container";
-import { Star } from "lucide-react";
-
-const TESTIMONIALS = [
-  { nameKey: "home.testimonials.t1Name", roleKey: "home.testimonials.t1Role", quoteKey: "home.testimonials.t1Quote" },
-  { nameKey: "home.testimonials.t2Name", roleKey: "home.testimonials.t2Role", quoteKey: "home.testimonials.t2Quote" },
-  { nameKey: "home.testimonials.t3Name", roleKey: "home.testimonials.t3Role", quoteKey: "home.testimonials.t3Quote" },
-] as const;
 
 export function SocialProofSection() {
   const { t } = useI18n();
 
+  const testimonials = [1, 2, 3, 4, 5, 6].map((n) => ({
+    quote: t(`redesign.testimonials.t${n}q`),
+    name: t(`redesign.testimonials.t${n}n`),
+    role: t(`redesign.testimonials.t${n}r`),
+    city: t(`redesign.testimonials.t${n}c`),
+  }));
+
   return (
-    <section className="bg-bg-warm py-24">
-      <Container maxWidth="6xl">
-        {/* Header */}
-        <div className="mb-14 text-center">
-          <h2 className="text-brand-primary mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
-            {t("home.testimonials.headline")}
+    <section className="epi-section epi-warm-section">
+      <div className="epi-container">
+        {/* Heading */}
+        <div style={{ textAlign: "center", maxWidth: 720, margin: "0 auto", marginBottom: 56 }}>
+          <div className="epi-eyebrow" style={{ marginBottom: 16, color: "var(--epi-gold-600)" }}>{t("redesign.testimonials.eyebrow")}</div>
+          <h2
+            className="epi-display"
+            style={{ fontSize: "clamp(40px, 5vw, 72px)", margin: 0, lineHeight: 0.95, color: "var(--epi-navy-900)" }}
+          >
+            {t("redesign.testimonials.title1")}<br />
+            {t("redesign.testimonials.title2")}
           </h2>
-          <p className="text-brand-primary/60 text-lg">{t("home.testimonials.subheadline")}</p>
         </div>
 
-        {/* Testimonial cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          {TESTIMONIALS.map(({ nameKey, roleKey, quoteKey }) => (
+        {/* 3×2 card grid */}
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+          style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}
+        >
+          {testimonials.map((t2, i) => (
             <div
-              key={nameKey}
-              className="flex flex-col rounded-2xl border border-neutral-100 bg-white p-7 shadow-sm"
+              key={i}
+              style={{
+                padding: 28,
+                borderRadius: 22,
+                background: i === 1 || i === 4 ? "rgba(217,174,59,0.08)" : "rgba(255,255,255,0.55)",
+                border: "1px solid",
+                borderColor: i === 1 || i === 4 ? "rgba(217,174,59,0.28)" : "rgba(6,15,27,0.08)",
+                display: "flex", flexDirection: "column", gap: 24,
+              }}
             >
-              {/* Stars */}
-              <div className="mb-4 flex gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+              <div style={{ display: "flex", gap: 2 }}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <svg key={s} width="14" height="14" viewBox="0 0 16 16" fill="var(--epi-gold-500)">
+                    <path d="M8 1l2.2 4.5L15 6.3l-3.5 3.4.8 4.8L8 12.2 3.7 14.5l.8-4.8L1 6.3l4.8-.8z" />
+                  </svg>
                 ))}
               </div>
-              {/* Quote */}
-              <p className="text-brand-primary/75 mb-6 flex-1 text-sm leading-[1.7] italic">
-                &ldquo;{t(quoteKey)}&rdquo;
+              <p style={{ fontSize: 15, lineHeight: 1.55, color: "var(--epi-navy-900)", flex: 1, margin: 0 }}>
+                &ldquo;{t2.quote}&rdquo;
               </p>
-              {/* Author */}
-              <div className="flex items-center gap-3">
-                <div className="bg-brand-primary/10 text-brand-primary flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold">
-                  {t(nameKey).charAt(0)}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 18, borderTop: "1px solid rgba(6,15,27,0.08)" }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(140deg, var(--epi-navy-500), var(--epi-navy-700))", display: "grid", placeItems: "center", color: "var(--epi-gold-400)", fontFamily: "var(--epi-font-display)", fontSize: 16, letterSpacing: "0.06em" }}>
+                  {t2.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
                 </div>
-                <div>
-                  <p className="text-brand-primary text-sm font-semibold">{t(nameKey)}</p>
-                  <p className="text-brand-primary/50 text-xs">{t(roleKey)}</p>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--epi-navy-900)" }}>{t2.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--epi-navy-700)", opacity: 0.7 }}>{t2.role} · {t2.city}</div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-
-        {/* Rating badge */}
-        <div className="mt-10 flex justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-neutral-100 bg-white px-4 py-2 text-sm text-neutral-600 shadow-sm">
-            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-            {t("home.testimonials.ratingBadge")}
-          </span>
-        </div>
-      </Container>
+      </div>
     </section>
   );
 }

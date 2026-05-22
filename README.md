@@ -11,7 +11,7 @@ It provides a customizable public storefront page, POS, operations (shift, KDS, 
 - **State Management**: TanStack Query (React Query) v5
 - **UI Components**: shadcn/ui
 - **Styling**: Tailwind CSS 4
-- **Internationalization**: Custom i18n provider (ID primarily, EN secondary)
+- **Internationalization**: Custom i18n provider (ID primary, EN secondary; FR deprecated)
 - **Email**: Resend
 
 ## Developer Setup
@@ -110,7 +110,7 @@ src/
 │   ├── auth-client.ts     # Client auth hooks
 │   ├── prisma.ts          # DB client
 │   └── validation/        # Zod schemas
-├── locales/               # i18n translations (EN/FR/ID)
+├── locales/               # i18n translations (ID primary, EN secondary)
 ├── types/                 # TypeScript type definitions
 └── utils/                 # Helper utilities
 ```
@@ -139,7 +139,7 @@ src/
 
 ### ✅ Internationalization (i18n)
 
-- English (EN), French (FR), Indonesian (ID)
+- Indonesian (ID, primary), English (EN, secondary) — FR deprecated
 - Language switcher on marketing pages
 
 ### ✅ Dashboard

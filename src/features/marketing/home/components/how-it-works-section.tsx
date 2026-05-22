@@ -1,50 +1,75 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Container } from "@/features/marketing/shared/components/container";
-
-const STEPS = [
-  { num: "01", titleKey: "home.howItWorks.step1Title", descKey: "home.howItWorks.step1Desc" },
-  { num: "02", titleKey: "home.howItWorks.step2Title", descKey: "home.howItWorks.step2Desc" },
-  { num: "03", titleKey: "home.howItWorks.step3Title", descKey: "home.howItWorks.step3Desc" },
-] as const;
 
 export function HowItWorksSection() {
   const { t } = useI18n();
 
+  const steps = [
+    { n: t("redesign.oneLink.step1n"), t: t("redesign.oneLink.step1t"), b: t("redesign.oneLink.step1b") },
+    { n: t("redesign.oneLink.step2n"), t: t("redesign.oneLink.step2t"), b: t("redesign.oneLink.step2b") },
+    { n: t("redesign.oneLink.step3n"), t: t("redesign.oneLink.step3t"), b: t("redesign.oneLink.step3b") },
+  ];
+
   return (
-    <section className="bg-white py-24">
-      <Container maxWidth="6xl">
-        {/* Header */}
-        <div className="mb-16 text-center">
-          <h2 className="text-brand-primary mb-4 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-            {t("home.howItWorks.headline")}
+    <section className="epi-section">
+      <div className="epi-container">
+        {/* Heading */}
+        <div style={{ textAlign: "center", maxWidth: 720, margin: "0 auto" }}>
+          <div className="epi-eyebrow" style={{ marginBottom: 16 }}>{t("redesign.oneLink.eyebrow")}</div>
+          <h2
+            className="epi-display"
+            style={{ fontSize: "clamp(40px, 5vw, 72px)", margin: 0, lineHeight: 0.95, color: "var(--epi-cream-50)" }}
+          >
+            {t("redesign.oneLink.title1")}<br />
+            {t("redesign.oneLink.title2")}
           </h2>
-          <p className="text-brand-primary/60 mx-auto max-w-xl text-lg leading-[1.7]">
-            {t("home.howItWorks.subheadline")}
+          <p style={{ color: "var(--epi-cream-50)", opacity: 0.72, marginTop: 20, fontSize: 17, lineHeight: 1.55, maxWidth: 640, marginInline: "auto" }}>
+            {t("redesign.oneLink.sub")}
           </p>
         </div>
 
-        {/* Steps */}
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-12">
-          {STEPS.map(({ num, titleKey, descKey }, i) => (
-            <div key={num} className="relative flex flex-col items-center text-center sm:items-start sm:text-left">
-              {/* Connector line (desktop only) */}
-              {i < STEPS.length - 1 && (
-                <div className="absolute top-8 left-[calc(50%+2rem)] hidden h-px w-[calc(100%-4rem)] bg-neutral-100 sm:block" style={{ left: "calc(3.5rem + 1rem)", width: "calc(100% - 3.5rem - 2rem)" }} />
-              )}
-
-              {/* Step number */}
-              <div className="bg-bg-warm text-brand-primary/20 mb-5 flex h-14 w-14 items-center justify-center rounded-2xl text-2xl font-bold tracking-tight">
-                {num}
+        {/* Steps grid */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-3"
+          style={{ marginTop: 64, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18, position: "relative" }}
+        >
+          {/* Gold connector */}
+          <div
+            className="hidden md:block"
+            style={{
+              position: "absolute", top: 50,
+              left: "12%", right: "12%",
+              height: 1,
+              background: "linear-gradient(90deg, transparent, rgba(217,174,59,0.5), rgba(217,174,59,0.5), transparent)",
+            }}
+          />
+          {steps.map((s, i) => (
+            <div
+              key={i}
+              style={{
+                padding: 32, borderRadius: 22,
+                background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+                border: "1px solid rgba(255,255,255,0.10)",
+                position: "relative", minHeight: 260,
+              }}
+            >
+              <div style={{
+                width: 56, height: 56, borderRadius: "50%",
+                background: "var(--epi-navy-900)",
+                border: "1px solid rgba(217,174,59,0.4)",
+                display: "grid", placeItems: "center",
+                fontFamily: "var(--epi-font-display)", fontSize: 22, letterSpacing: "0.04em",
+                color: "var(--epi-gold-400)", marginBottom: 24,
+              }}>{s.n}</div>
+              <div style={{ fontFamily: "var(--epi-font-display)", fontSize: 26, letterSpacing: "0.04em", color: "var(--epi-cream-50)", marginBottom: 10 }}>
+                {s.t}
               </div>
-
-              <h3 className="text-brand-primary mb-2 text-lg font-semibold">{t(titleKey)}</h3>
-              <p className="text-brand-primary/60 text-sm leading-[1.7]">{t(descKey)}</p>
+              <div style={{ color: "var(--epi-cream-50)", opacity: 0.72, fontSize: 14, lineHeight: 1.6 }}>{s.b}</div>
             </div>
           ))}
         </div>
-      </Container>
+      </div>
     </section>
   );
 }
