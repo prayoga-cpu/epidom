@@ -100,10 +100,10 @@ export async function getSession() {
       const parts = sessionTokenCookie.split(".");
       if (parts.length >= 1 && parts[0]) {
         sessionToken = parts[0];
-        // Only log in development to avoid log spam in production
-        if (process.env.NODE_ENV === "development") {
-          console.warn("[getSession] Signature verification failed, using token directly");
-        }
+        
+        // SECURITY WARNING: This fallback weakens security as it bypasses signature verification.
+        // TODO(SECURITY): Remove this fallback by Q3 2026 once all legacy tokens expire.
+        console.warn("[SECURITY_WARNING] getSession: Signature verification failed, falling back to raw token extraction! This is a security risk.");
       }
     }
 
