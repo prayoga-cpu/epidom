@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getExchangeRate, refreshExchangeRate } from "@/lib/services/exchange-rate.service";
+import { exchangeRateService } from "@/lib/services/exchange-rate.service";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 
@@ -22,7 +22,7 @@ export async function GET() {
     // Note: Public access allowed for frontend pricing display
     // If strict auth is needed later, wrap with withApiHandler
 
-    const rateData = await getExchangeRate();
+    const rateData = await exchangeRateService.getExchangeRate();
 
     return NextResponse.json(
       createSuccessResponse({
@@ -57,7 +57,7 @@ export const POST = withApiHandler(
     // const user = await userService.getUser(userId);
     // if (user.role !== 'ADMIN') throw new Error('Forbidden');
 
-    const rateData = await refreshExchangeRate();
+    const rateData = await exchangeRateService.refreshExchangeRate();
 
     return NextResponse.json(
       createSuccessResponse({
