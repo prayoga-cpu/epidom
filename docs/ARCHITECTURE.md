@@ -221,8 +221,8 @@ Events that trigger notifications:
 Inngest, from Phase 2 onwards.
 
 ```
-src/lib/jobs/
-├── client.ts                 # Inngest client
+src/lib/inngest/
+├── client.ts
 └── functions/
     ├── send-order-notification.ts
     ├── retry-failed-webhook.ts
@@ -231,6 +231,38 @@ src/lib/jobs/
 ```
 
 All async work that takes more than 1 second goes through Inngest. API routes stay fast.
+
+### Phase 5: Aggregator email ingestion pipeline
+
+Merchants forward aggregator order emails to `orders@epidom.id` with a subject prefix `[@their-slug]`.
+
+```
+Aggregator email (GoFood / GrabFood / ShopeeFood / Tokopedia)
+  ↓  merchant forwards with [@slug] prefix
+POST /api/webhooks/email
+  → validate Resend inbound payload (Zod)
+  → extract slug, look up storefront.storeId
+  → detect platform from from-address + subject
+  → create AggregatorEmail { parseStatus: "pending" }
+  → inngest.send("aggregator/email.received")   ← async, fire-and-forget
+  ↓
+Inngest: parse-aggregator-email (retries: 2)
+  → if no OPENAI_API_KEY → set parseStatus="manual", return
+  → call OpenAI gpt-4o with structured Zod schema
+  → create Order + OrderItems (source=GOFOOD|…, status=CONFIRMED, paymentStatus=PAID)
+  → update AggregatorEmail { parseStatus: "success", parsedOrderId }
+```
+
+Commission rates (hardcoded, update as official rates change):
+
+| Platform | Commission |
+|----------|-----------|
+| GoFood | 20% |
+| GrabFood | 20% |
+| ShopeeFood | 20% |
+| Tokopedia | 15% |
+
+These feed directly into `/api/stores/[id]/finance/channels` net-revenue calculations.
 
 ---
 

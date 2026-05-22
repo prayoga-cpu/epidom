@@ -6,6 +6,33 @@ For the active task list and roadmap, see `/docs/roadmap.md` and `/docs/PHASE_0_
 
 ---
 
+## 2026-05, Phase 5 — Aggregator + Finance
+
+### Schema
+- Added `AggregatorPlatform` enum: `GOFOOD | GRABFOOD | SHOPEEFOOD | TOKOPEDIA`
+- Added `AggregatorConnection` model — tracks which aggregator channels a store has connected
+- Added `AggregatorEmail` model — raw audit log of all inbound emails with `parseStatus` lifecycle (`pending → success | failed | manual`)
+- Extended `Order.source` enum with `GOFOOD | GRABFOOD | SHOPEEFOOD | TOKOPEDIA`
+- Migration: `phase5_aggregator_finance`
+
+### Codebase
+- `POST /api/webhooks/email` — Resend inbound email webhook; extracts `[@slug]` from subject, detects platform, stores `AggregatorEmail`, fires Inngest job
+- `src/lib/inngest/functions/parse-aggregator-email.ts` — parses email body with OpenAI gpt-4o (structured Zod schema), creates `Order + OrderItems`; falls back to `parseStatus="manual"` when `OPENAI_API_KEY` is absent
+- `src/config/aggregator.config.ts` — commission rates (20% GoFood/GrabFood/ShopeeFood, 15% Tokopedia), platform labels, OrderSource mappings
+- `GET /api/stores/[id]/finance/summary` — revenue, COGS (via `StockMovement.SALE`), gross profit, gross margin %, daily buckets
+- `GET /api/stores/[id]/finance/channels` — per-channel P&L with commission deductions, sorted by revenue
+- `GET /api/stores/[id]/finance/top-items` — top N items by revenue with order count and qty sold
+- `GET /api/owner/summary` — cross-store rollup (ENTERPRISE only); revenue + order + pending counts per store, sorted descending
+- Finance UI (`src/features/dashboard/finance/`) — date range picker, KPI cards, 3 tabs (channel / top-items / daily), Excel export via `XLSX`
+- Owner dashboard UI (`src/features/dashboard/owner/`) — KPI cards + per-store table; shows plan-locked card for non-ENTERPRISE
+- All finance/owner routes gated to ENTERPRISE plan via `requirePlan()` or inline plan check
+
+### Docs
+- `docs/DATABASE.md` — updated Phase 5 section with correct `AggregatorEmail` and `AggregatorConnection` schemas
+- `docs/ARCHITECTURE.md` — added aggregator email pipeline diagram and commission rate table
+
+---
+
 ## 2026-05, Phase 0 — Cleanup & Re-alignment
 
 The codebase moves from "cookie-bar inventory app for France" to "storefront-first F&B platform for Indonesia."

@@ -325,21 +325,54 @@ Order gets `shiftId` relation.
 
 ### Phase 5 additions
 
+Two new models track aggregator email ingestion. The `Order.source` enum was also extended with `GOFOOD | GRABFOOD | SHOPEEFOOD | TOKOPEDIA`.
+
 ```prisma
+enum AggregatorPlatform {
+  GOFOOD
+  GRABFOOD
+  SHOPEEFOOD
+  TOKOPEDIA
+}
+
 model AggregatorConnection {
-  id              String   @id @default(cuid())
-  storeId         String
-  aggregator      OrderSource
-  externalId      String?  // their merchant ID with the aggregator
-  emailParserKey  String?  // for v1 email forwarding flow
-  isActive        Boolean  @default(true)
-  
-  store           Store    @relation(fields: [storeId], references: [id])
-  
-  @@unique([storeId, aggregator])
+  id          String             @id @default(cuid())
+  storeId     String
+  platform    AggregatorPlatform
+  displayName String?            // e.g. "Warung Bahagia - GoFood"
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  store       Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, platform])
+  @@index([storeId])
   @@map("aggregator_connections")
 }
+
+model AggregatorEmail {
+  id            String              @id @default(cuid())
+  storeId       String
+  platform      AggregatorPlatform?
+  fromAddress   String
+  subject       String
+  bodyText      String              @db.Text
+  bodyHtml      String?             @db.Text
+  parsedOrderId String?             // null until parsing succeeds
+  parseStatus   String              @default("pending") // pending | success | failed | manual
+  parseError    String?
+  createdAt     DateTime            @default(now())
+
+  store         Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([parseStatus])
+  @@map("aggregator_emails")
+}
 ```
+
+`parseStatus` lifecycle: `pending` → `success` (OpenAI parsed + Order created) | `failed` (parse error, Inngest will retry) | `manual` (no `OPENAI_API_KEY` — body stored for human review).
 
 ---
 

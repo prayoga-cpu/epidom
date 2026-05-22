@@ -56,9 +56,9 @@ Milestones completed: Schema + Aggregator Foundation, Email Ingestion, Finance R
 ### Phase 5 Definition of Done — Pending
 
 - [ ] All acceptance criteria above pass.
-- [ ] Tests cover critical paths added in Phase 5 (aggregator ingestion, finance summary, owner rollup).
-- [ ] `/docs` updated to reflect Phase 5 changes (ARCHITECTURE, FEATURES, DATABASE).
-- [ ] `docs/CHANGELOG.md` has Phase 5 entry.
+- [x] Tests cover critical paths added in Phase 5 (aggregator ingestion, finance summary, owner rollup).
+- [x] `/docs` updated to reflect Phase 5 changes (ARCHITECTURE, DATABASE).
+- [x] `docs/CHANGELOG.md` has Phase 5 entry.
 - [ ] At least 5 friendly users have used aggregator + finance without manual intervention.
 
 ---
