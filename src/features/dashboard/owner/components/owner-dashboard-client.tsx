@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { apiClient } from "@/lib/api/client";
-import { formatCurrency } from "@/lib/utils/formatting";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { Store, TrendingUp, ShoppingCart, Clock } from "lucide-react";
 
 interface StoreMetric {
@@ -49,6 +49,7 @@ function today() {
 
 export function OwnerDashboardClient() {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const [from, setFrom] = useState(startOfMonth());
   const [to, setTo] = useState(today());
 
@@ -99,7 +100,7 @@ export function OwnerDashboardClient() {
                 <TrendingUp className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">{formatCurrency(data.totalRevenue)}</p>
+                <p className="text-2xl font-bold">{formatPrice(data.totalRevenue)}</p>
               </CardContent>
             </Card>
             <Card>
@@ -153,7 +154,7 @@ export function OwnerDashboardClient() {
                   ) : data.stores.map((store) => (
                     <TableRow key={store.storeId}>
                       <TableCell className="font-medium">{store.name}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(store.revenue)}</TableCell>
+                      <TableCell className="text-right">{formatPrice(store.revenue)}</TableCell>
                       <TableCell className="text-right">{store.orderCount}</TableCell>
                       <TableCell className="text-right">
                         {store.pendingOrders > 0 ? (

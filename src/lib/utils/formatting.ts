@@ -173,7 +173,7 @@ export function formatCompactNumber(
 // CURRENCY FORMATTING
 // ============================================================================
 
-export type Currency = "EUR" | "USD";
+export type Currency = "EUR" | "USD" | "IDR";
 
 /**
  * Map currency to appropriate locale
@@ -184,6 +184,8 @@ export function getCurrencyLocale(currency: Currency): string {
       return "fr-FR";
     case "USD":
       return "en-US";
+    case "IDR":
+      return "id-ID";
     default:
       return "en-US";
   }
@@ -212,14 +214,16 @@ export function convertCurrency(
  */
 export function formatCurrency(
   value: number | null | undefined,
-  currency: string = "EUR",
-  locale: string = "fr-FR"
+  currency: string = "IDR",
+  locale: string = "id-ID"
 ): string {
   if (value === null || value === undefined) return "";
-
+  const fractionDigits = currency === "IDR" ? 0 : 2;
   return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: currency,
+    currency,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(value);
 }
 
@@ -240,12 +244,13 @@ export function formatPriceWithConversion(
 
   const convertedPrice = convertCurrency(priceInEur, targetCurrency, exchangeRate);
   const locale = getCurrencyLocale(targetCurrency);
+  const fractionDigits = targetCurrency === "IDR" ? 0 : 2;
 
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: targetCurrency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(convertedPrice);
 }
 

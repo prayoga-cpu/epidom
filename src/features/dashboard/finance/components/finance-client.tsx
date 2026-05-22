@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api/client";
-import { formatCurrency } from "@/lib/utils/formatting";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -63,6 +63,7 @@ function today() {
 
 export function FinanceClient({ storeId }: FinanceClientProps) {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const [from, setFrom] = useState(startOfMonth());
   const [to, setTo] = useState(today());
 
@@ -158,7 +159,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
               <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.financeRevenue")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{formatCurrency(s.revenue)}</p>
+              <p className="text-2xl font-bold">{formatPrice(s.revenue)}</p>
               <p className="text-muted-foreground text-xs">{s.orderCount} {t("pages.financeOrders")}</p>
             </CardContent>
           </Card>
@@ -167,7 +168,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
               <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.financeCogs")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{formatCurrency(s.cogs)}</p>
+              <p className="text-2xl font-bold">{formatPrice(s.cogs)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -175,7 +176,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
               <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.financeGrossProfit")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{formatCurrency(s.grossProfit)}</p>
+              <p className="text-2xl font-bold">{formatPrice(s.grossProfit)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -217,11 +218,11 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
                     <TableRow key={c.source}>
                       <TableCell className="font-medium">{c.label}</TableCell>
                       <TableCell className="text-right">{c.orderCount}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(c.revenue)}</TableCell>
+                      <TableCell className="text-right">{formatPrice(c.revenue)}</TableCell>
                       <TableCell className="text-right text-orange-600">
-                        {c.commissionPct > 0 ? `-${c.commissionPct}% (${formatCurrency(c.commissionAmount)})` : "—"}
+                        {c.commissionPct > 0 ? `-${c.commissionPct}% (${formatPrice(c.commissionAmount)})` : "—"}
                       </TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(c.netRevenue)}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatPrice(c.netRevenue)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -251,7 +252,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
                       <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell className="text-right">{item.totalQuantity}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(item.totalRevenue)}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatPrice(item.totalRevenue)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -277,7 +278,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
                   ) : (s?.buckets ?? []).map((b) => (
                     <TableRow key={b.date}>
                       <TableCell>{b.date}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(b.revenue)}</TableCell>
+                      <TableCell className="text-right">{formatPrice(b.revenue)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

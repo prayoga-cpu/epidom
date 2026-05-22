@@ -152,7 +152,7 @@ export function EditPersonalInfoDialog({
                       placeholder={t("profile.forms.phonePlaceholder")}
                       value={field.value || ""}
                       onChange={field.onChange}
-                      defaultCountry="FR"
+                      defaultCountry="ID"
                     />
                   </FormControl>
                   <FormMessage />
@@ -197,8 +197,9 @@ export function EditPersonalInfoDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="EUR">EUR (€)</SelectItem>
-                        <SelectItem value="USD">USD ($)</SelectItem>
+                        <SelectItem value="IDR">IDR (Rp) — Indonesia</SelectItem>
+                        <SelectItem value="USD">USD ($) — US Dollar</SelectItem>
+                        <SelectItem value="EUR">EUR (€) — Euro</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

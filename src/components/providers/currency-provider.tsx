@@ -2,8 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useUser } from "@/lib/auth-client";
+import type { Currency } from "@/lib/utils/formatting";
 
-export type Currency = "EUR" | "USD";
+export type { Currency };
 
 interface ExchangeRateData {
   fromCurrency: string;
@@ -18,162 +19,127 @@ interface CurrencyContextValue {
   exchangeRate: number;
   isLoading: boolean;
   error: string | null;
-  formatPrice: (priceInEur: number | null | undefined) => string;
-  convertPrice: (priceInEur: number) => number;
-  convertToBase: (priceInUserCurrency: number) => number;
+  formatPrice: (value: number | null | undefined) => string;
+  convertPrice: (value: number) => number;
+  convertToBase: (valueInUserCurrency: number) => number;
   refreshExchangeRate: () => Promise<void>;
 }
 
 const CurrencyContext = createContext<CurrencyContextValue | undefined>(undefined);
 
-interface CurrencyProviderProps {
-  children: ReactNode;
-}
+const FRACTION_DIGITS: Record<Currency, number> = {
+  EUR: 2,
+  USD: 2,
+  IDR: 0,
+};
 
-/**
- * Currency Provider
- *
- * Provides currency context throughout the application
- * - Reads user's currency preference from profile API
- * - Fetches EUR to USD exchange rate from API
- * - Provides formatPrice() helper for automatic conversion and formatting
- * - Caches exchange rate to minimize API calls
- */
-export function CurrencyProvider({ children }: CurrencyProviderProps) {
+const CURRENCY_LOCALE: Record<Currency, string> = {
+  EUR: "fr-FR",
+  USD: "en-US",
+  IDR: "id-ID",
+};
+
+export function CurrencyProvider({ children }: { children: ReactNode }) {
   const { user, loading: userLoading } = useUser();
-  const [userCurrency, setUserCurrency] = useState<Currency>("EUR");
-  const [exchangeRate, setExchangeRate] = useState<number>(1.1); // Default fallback
+  // Default to IDR — primary market is Indonesia
+  const [userCurrency, setUserCurrency] = useState<Currency>("IDR");
+  const [exchangeRate, setExchangeRate] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch user's currency preference from profile
   useEffect(() => {
     if (!user?.id || userLoading) return;
-
     fetch("/api/user/profile")
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.data?.currency) {
-          setUserCurrency(data.data.currency as Currency);
+          const c = data.data.currency as string;
+          if (c === "EUR" || c === "USD" || c === "IDR") {
+            setUserCurrency(c);
+          }
         }
       })
-      .catch(() => {
-        // Use default EUR
-      });
+      .catch(() => {});
   }, [user?.id, userLoading]);
 
-  // Get user's currency preference (default to EUR)
-  const currency: Currency = userCurrency;
-
-  // Fetch exchange rate on mount and when currency changes
+  // Fetch exchange rate only for USD (EUR and IDR are base currencies for their markets)
   useEffect(() => {
-    // If user hasn't loaded yet, wait
-    if (userLoading) {
-      return;
-    }
-    // If user prefers EUR, no need to fetch exchange rate
-    if (currency === "EUR") {
+    if (userLoading) return;
+    if (userCurrency !== "USD") {
       setExchangeRate(1.0);
       setIsLoading(false);
       return;
     }
-
-    // Fetch EUR to USD exchange rate
     fetchExchangeRate();
-  }, [currency, userLoading]);
+  }, [userCurrency, userLoading]);
 
   const fetchExchangeRate = async () => {
     try {
       setIsLoading(true);
       setError(null);
-
       const response = await fetch("/api/exchange-rates");
       const result = await response.json();
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to fetch exchange rate");
-      }
-
+      if (!response.ok || !result.success) throw new Error(result.error || "Failed to fetch exchange rate");
       const rateData: ExchangeRateData = result.data;
       setExchangeRate(rateData.rate);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch exchange rate");
-      // Keep using fallback rate (1.1)
+      setExchangeRate(1.1);
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Convert price from EUR to user's currency
-   */
-  const convertPrice = (priceInEur: number): number => {
-    if (currency === "EUR") {
-      return priceInEur;
-    }
-    return priceInEur * exchangeRate;
+  /** Convert stored value to display currency. IDR and EUR are stored as-is. */
+  const convertPrice = (value: number): number => {
+    if (userCurrency === "USD") return value * exchangeRate;
+    return value;
   };
 
-  /**
-   * Convert price from user's currency back to EUR (base currency)
-   * Used when saving prices entered in USD
-   */
-  const convertToBase = (priceInUserCurrency: number): number => {
-    if (currency === "EUR") {
-      return priceInUserCurrency;
-    }
-    return priceInUserCurrency / exchangeRate;
+  const convertToBase = (valueInUserCurrency: number): number => {
+    if (userCurrency === "USD") return valueInUserCurrency / exchangeRate;
+    return valueInUserCurrency;
   };
 
-  /**
-   * Format price with currency symbol and conversion
-   * Automatically converts EUR to USD if needed
-   */
-  const formatPrice = (priceInEur: number | null | undefined): string => {
-    if (priceInEur === null || priceInEur === undefined || isNaN(priceInEur)) {
-      return currency === "EUR" ? "€0.00" : "$0.00";
+  const formatPrice = (value: number | null | undefined): string => {
+    if (value === null || value === undefined || isNaN(value)) {
+      const fd = FRACTION_DIGITS[userCurrency];
+      return new Intl.NumberFormat(CURRENCY_LOCALE[userCurrency], {
+        style: "currency",
+        currency: userCurrency,
+        minimumFractionDigits: fd,
+        maximumFractionDigits: fd,
+      }).format(0);
     }
-
-    const convertedPrice = convertPrice(priceInEur);
-
-    // Map currency to locale for proper formatting
-    const locale = currency === "EUR" ? "fr-FR" : "en-US";
-
-    return new Intl.NumberFormat(locale, {
+    const converted = convertPrice(value);
+    const fd = FRACTION_DIGITS[userCurrency];
+    return new Intl.NumberFormat(CURRENCY_LOCALE[userCurrency], {
       style: "currency",
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(convertedPrice);
+      currency: userCurrency,
+      minimumFractionDigits: fd,
+      maximumFractionDigits: fd,
+    }).format(converted);
   };
 
-  /**
-   * Manually refresh exchange rate
-   */
-  const refreshExchangeRate = async () => {
-    await fetchExchangeRate();
-  };
-
-  const value: CurrencyContextValue = {
-    currency,
-    exchangeRate,
-    isLoading,
-    error,
-    formatPrice,
-    convertPrice,
-    convertToBase,
-    refreshExchangeRate,
-  };
-
-  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
+  return (
+    <CurrencyContext.Provider value={{
+      currency: userCurrency,
+      exchangeRate,
+      isLoading,
+      error,
+      formatPrice,
+      convertPrice,
+      convertToBase,
+      refreshExchangeRate: fetchExchangeRate,
+    }}>
+      {children}
+    </CurrencyContext.Provider>
+  );
 }
 
-/**
- * Hook to use currency context
- */
 export function useCurrency(): CurrencyContextValue {
   const context = useContext(CurrencyContext);
-  if (context === undefined) {
-    throw new Error("useCurrency must be used within a CurrencyProvider");
-  }
+  if (!context) throw new Error("useCurrency must be used within a CurrencyProvider");
   return context;
 }
