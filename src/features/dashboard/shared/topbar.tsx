@@ -1,7 +1,6 @@
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Search, Menu } from "lucide-react";
+import { Search, Menu, Sun, Moon } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { StoreSwitcher } from "./store-switcher";
 import { useI18n } from "../../../components/lang/i18n-provider";
@@ -9,9 +8,29 @@ import LangSwitcher from "../../../components/lang/lang-switcher";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import { NavUser } from "./nav-user";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { useTheme } from "next-themes";
+import { EpidomLogo } from "@/features/marketing/shared/components/epidom-logo";
+
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <div className="h-9 w-9" />;
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-9 w-9 shrink-0 hover:bg-white/10" style={{ color: "var(--epi-cream-50)" }}
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+      aria-label="Toggle theme"
+    >
+      {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </Button>
+  );
+}
 
 export function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -21,8 +40,10 @@ export function Topbar() {
   return (
     <header
       role="banner"
-      className="bg-primary text-primary-foreground navbar-no-transition navbar-static fixed top-0 z-10 w-full rounded-none shadow"
+      className="navbar-no-transition navbar-static fixed top-0 z-10 w-full rounded-none shadow"
       style={{
+        background: "var(--epi-navy-850)",
+        color: "var(--epi-cream-50)",
         animation: "none !important",
         transition: "none !important",
         transform: "none !important",
@@ -39,26 +60,18 @@ export function Topbar() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-primary-foreground h-9 w-9 shrink-0 hover:bg-white/10"
+                  className="h-9 w-9 shrink-0 hover:bg-white/10" style={{ color: "var(--epi-cream-50)" }}
                 >
                   <Menu className="size-5" />
                   <span className="sr-only">{t("common.nav.openMenu")}</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="h-[100dvh] w-[280px] p-0">
+              <SheetContent side="left" className="h-[100dvh] w-[min(280px,85vw)] p-0">
                 <Sidebar mode="mobile" />
               </SheetContent>
             </Sheet>
             <div className="flex min-w-0 items-center justify-center">
-              <Image
-                src="/images/logo-white.png"
-                alt="EPIDOM logo"
-                width={100}
-                height={30}
-                className="h-6 w-auto object-contain sm:h-7"
-                style={{ maxWidth: "min(80px, 25vw)" }}
-                priority
-              />
+              <EpidomLogo size={22} />
             </div>
           </div>
 
@@ -68,7 +81,7 @@ export function Topbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="text-primary-foreground h-9 w-9 shrink-0 hover:bg-white/10"
+              className="h-9 w-9 shrink-0 hover:bg-white/10" style={{ color: "var(--epi-cream-50)" }}
               onClick={() => setSearchOpen(true)}
             >
               <Search className="size-5" />
@@ -82,8 +95,11 @@ export function Topbar() {
 
             {/* Language switcher - hidden on mobile, shown on tablet+ */}
             <div className="hidden sm:block">
-              <LangSwitcher className="text-foreground border bg-white" />
+              <LangSwitcher />
             </div>
+
+            {/* Theme toggle */}
+            <ThemeToggle />
 
             {/* Profile */}
             <NavUser />
@@ -92,7 +108,7 @@ export function Topbar() {
             <Button
               size="sm"
               variant="ghost"
-              className="text-primary-foreground h-9 shrink-0 rounded-xl hover:bg-red-500/20 hover:text-white sm:px-2"
+              className="h-9 shrink-0 rounded-xl hover:bg-red-500/20 sm:px-2" style={{ color: "var(--epi-cream-50)" }}
               onClick={() => {
                 signOut().then(() => (window.location.href = "/login"));
               }}
@@ -118,19 +134,12 @@ export function Topbar() {
                   <span className="sr-only">{t("common.nav.openMenu")}</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="h-[100dvh] w-[280px] p-0">
+              <SheetContent side="left" className="h-[100dvh] w-[min(280px,85vw)] p-0">
                 <Sidebar mode="mobile" />
               </SheetContent>
             </Sheet>
-            <div className="flex w-[100px] items-center justify-center rounded-md bg-transparent">
-              <Image
-                src="/images/logo-white.png"
-                alt="EPIDOM logo"
-                width={100}
-                height={30}
-                className="w-auto object-contain"
-                priority
-              />
+            <div className="flex items-center">
+              <EpidomLogo size={26} />
             </div>
           </div>
 
@@ -138,7 +147,7 @@ export function Topbar() {
           <div className="hidden w-full items-center justify-end md:flex">
             <Button
               variant="outline"
-              className="text-muted-foreground relative h-9 w-80 max-w-xl justify-start rounded-full bg-white text-sm font-normal sm:max-w-2xl"
+              className="text-muted-foreground relative h-9 w-80 max-w-xl justify-start rounded-full bg-background text-sm font-normal sm:max-w-2xl"
               onClick={() => setSearchOpen(true)}
             >
               <Search className="mr-1 hidden size-4 shrink-0 sm:inline" />
@@ -158,7 +167,10 @@ export function Topbar() {
             </div>
             {/* Language switcher */}
             <div className="hidden sm:flex sm:items-center">
-              <LangSwitcher className="text-foreground border bg-white" />
+              <LangSwitcher />
+            </div>
+            <div className="flex items-center">
+              <ThemeToggle />
             </div>
             <div className="flex items-center">
               <NavUser />

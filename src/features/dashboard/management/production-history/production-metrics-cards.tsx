@@ -81,7 +81,7 @@ export function ProductionMetricsCards({ batches }: ProductionMetricsCardsProps)
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-4">
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (

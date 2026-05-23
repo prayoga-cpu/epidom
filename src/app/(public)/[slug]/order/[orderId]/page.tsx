@@ -11,7 +11,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { orderId } = await params;
   return {
-    title: `Status Pesanan ${orderId.slice(-6).toUpperCase()} | Epidom`,
+    title: `Order Status ${orderId.slice(-6).toUpperCase()} | Epidom`,
   };
 }
 

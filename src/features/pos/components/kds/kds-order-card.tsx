@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { KdsTimer } from "./kds-timer";
 import { CheckCircle, ChefHat } from "lucide-react";
+import { useI18n } from "@/components/lang/i18n-provider";
 import type { PosOrderDisplay } from "../../types/pos.types";
 
 interface KdsOrderCardProps {
@@ -23,58 +24,41 @@ const ITEM_STATUS_COLORS: Record<string, string> = {
 };
 
 export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
 
-  const handleItemStatus = async (
-    itemId: string,
-    currentStatus: string
-  ) => {
+  const handleItemStatus = async (itemId: string, currentStatus: string) => {
     const next =
-      currentStatus === "PENDING"
-        ? "PREPARING"
-        : currentStatus === "PREPARING"
-        ? "READY"
-        : null;
+      currentStatus === "PENDING" ? "PREPARING"
+      : currentStatus === "PREPARING" ? "READY"
+      : null;
     if (!next) return;
 
-    // Optimistic update
     queryClient.setQueryData(["pos", "orders", storeId], (old: any[]) => {
       if (!old) return [];
       return old.map((o) => {
         if (o.id !== order.id) return o;
-        return {
-          ...o,
-          items: o.items.map((i: any) =>
-            i.id === itemId ? { ...i, status: next } : i
-          ),
-        };
+        return { ...o, items: o.items.map((i: any) => i.id === itemId ? { ...i, status: next } : i) };
       });
     });
 
     try {
-      await apiClient.patch(
-        `/stores/${storeId}/pos/orders/${order.id}/items/${itemId}`,
-        { status: next }
-      );
+      await apiClient.patch(`/stores/${storeId}/pos/orders/${order.id}/items/${itemId}`, { status: next });
     } catch {
-      toast.error("Gagal update status item");
+      toast.error(t("pos.kds.updateFailed"));
     }
   };
 
   const handleOrderReady = async () => {
     queryClient.setQueryData(["pos", "orders", storeId], (old: any[]) => {
       if (!old) return [];
-      return old.map((o) =>
-        o.id === order.id ? { ...o, status: "READY" } : o
-      );
+      return old.map((o) => o.id === order.id ? { ...o, status: "READY" } : o);
     });
     try {
-      await apiClient.patch(`/stores/${storeId}/pos/orders/${order.id}`, {
-        status: "READY",
-      });
-      toast.success(`Order ${order.orderNumber} siap disajikan!`);
+      await apiClient.patch(`/stores/${storeId}/pos/orders/${order.id}`, { status: "READY" });
+      toast.success(`${order.orderNumber} ${t("pos.kds.readyToServe").toLowerCase()}`);
     } catch {
-      toast.error("Gagal update status pesanan");
+      toast.error(t("pos.kds.updateFailed"));
     }
   };
 
@@ -85,36 +69,26 @@ export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
   return (
     <div
       className={`flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm transition-all ${
-        order.status === "READY"
-          ? "border-emerald-500/50 shadow-emerald-500/10 shadow-md"
-          : ""
+        order.status === "READY" ? "border-emerald-500/50 shadow-emerald-500/10 shadow-md" : ""
       }`}
     >
-      {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <span className="font-bold">{order.orderNumber}</span>
             {order.tableLabel || order.tableNumber ? (
-              <Badge variant="outline" className="text-xs">
-                {order.tableLabel || order.tableNumber}
-              </Badge>
+              <Badge variant="outline" className="text-xs">{order.tableLabel || order.tableNumber}</Badge>
             ) : (
-              <Badge variant="secondary" className="text-xs">
-                Takeaway
-              </Badge>
+              <Badge variant="secondary" className="text-xs">{t("pos.checkout.takeaway")}</Badge>
             )}
           </div>
           <KdsTimer startTime={order.createdAt} />
         </div>
         {order.customerName && (
-          <span className="text-xs text-muted-foreground">
-            {order.customerName}
-          </span>
+          <span className="text-xs text-muted-foreground">{order.customerName}</span>
         )}
       </div>
 
-      {/* Items */}
       <div className="flex flex-col gap-2 border-t pt-3">
         {order.items
           .filter((i) => i.status !== "CANCELLED")
@@ -129,55 +103,42 @@ export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
             >
               <div className="flex items-center gap-2">
                 <span className="font-semibold">{item.quantity}×</span>
-                <span className="font-medium leading-tight">
-                  {item.menuItem?.name ?? item.name}
-                </span>
+                <span className="font-medium leading-tight">{item.menuItem?.name ?? item.name}</span>
               </div>
               <span className="text-xs font-semibold uppercase tracking-wide">
                 {item.status === "PENDING"
-                  ? "Tap → Proses"
+                  ? t("pos.kds.preparing")
                   : item.status === "PREPARING"
-                  ? "Tap → Selesai"
+                  ? t("pos.kds.tapToComplete")
                   : item.status === "READY"
-                  ? "✓ Siap"
+                  ? t("pos.kds.checkReady")
                   : item.status}
               </span>
             </button>
           ))}
       </div>
 
-      {/* Notes */}
       {order.notes && (
         <div className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-          <span className="font-semibold">Catatan: </span>
+          <span className="font-semibold">{t("common.notes")}: </span>
           {order.notes}
         </div>
       )}
 
-      {/* Mark all ready */}
       {!allItemsDone ? (
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full"
-          onClick={handleOrderReady}
-        >
+        <Button size="sm" variant="outline" className="w-full" onClick={handleOrderReady}>
           <ChefHat className="mr-2 h-4 w-4" />
-          Tandai Semua Selesai
+          {t("pos.kds.markAllComplete")}
         </Button>
       ) : order.status !== "READY" ? (
-        <Button
-          size="sm"
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-          onClick={handleOrderReady}
-        >
+        <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOrderReady}>
           <CheckCircle className="mr-2 h-4 w-4" />
-          Pesanan Siap Disajikan
+          {t("pos.kds.orderReadyTitle")}
         </Button>
       ) : (
         <div className="flex items-center justify-center gap-2 rounded-md bg-emerald-500/10 py-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
           <CheckCircle className="h-4 w-4" />
-          Siap Disajikan
+          {t("pos.kds.readyToServe")}
         </div>
       )}
     </div>

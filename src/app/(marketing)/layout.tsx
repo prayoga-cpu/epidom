@@ -32,7 +32,7 @@ const imFell = IM_Fell_French_Canon({
 
 export const metadata: Metadata = {
   title: "Epidom",
-  description: "Epidom - Your comprehensive inventory management solution",
+  description: "Epidom — menu page, online orders, and POS cashier for F&B businesses. Free forever.",
   generator: "Next.js",
 };
 

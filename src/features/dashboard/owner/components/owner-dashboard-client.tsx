@@ -81,11 +81,11 @@ export function OwnerDashboardClient() {
       {/* Date range */}
       <div className="flex flex-wrap gap-4">
         <div className="space-y-1">
-          <Label htmlFor="from">Dari</Label>
+          <Label htmlFor="from">{t("common.datePicker.from")}</Label>
           <Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="to">Sampai</Label>
+          <Label htmlFor="to">{t("common.datePicker.to")}</Label>
           <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
         </div>
       </div>
@@ -134,7 +134,7 @@ export function OwnerDashboardClient() {
 
           {/* Per-store table */}
           <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-[480px]">
+            <div className="min-w-[380px]">
               <Table>
                 <TableHeader>
                   <TableRow>

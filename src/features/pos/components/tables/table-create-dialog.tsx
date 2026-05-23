@@ -7,30 +7,15 @@ import { z } from "zod";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useI18n } from "@/components/lang/i18n-provider";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const schema = z.object({
-  label: z.string().min(1, "Label wajib diisi").max(50),
-  capacity: z.coerce.number().int().min(1).max(50),
-});
-
-type FormValues = z.infer<typeof schema>;
 
 interface TableCreateDialogProps {
   storeId: string;
@@ -39,15 +24,17 @@ interface TableCreateDialogProps {
   editTable?: { id: string; label: string; capacity: number } | null;
 }
 
-export function TableCreateDialog({
-  storeId,
-  open,
-  onOpenChange,
-  editTable,
-}: TableCreateDialogProps) {
+export function TableCreateDialog({ storeId, open, onOpenChange, editTable }: TableCreateDialogProps) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEdit = !!editTable;
+
+  const schema = z.object({
+    label: z.string().min(1, t("pos.tables.labelRequired")).max(50),
+    capacity: z.coerce.number().int().min(1).max(50),
+  });
+  type FormValues = z.infer<typeof schema>;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -62,16 +49,16 @@ export function TableCreateDialog({
     try {
       if (isEdit) {
         await apiClient.patch(`/stores/${storeId}/tables/${editTable!.id}`, values);
-        toast.success("Meja berhasil diperbarui");
+        toast.success(t("common.actions.saveChanges"));
       } else {
         await apiClient.post(`/stores/${storeId}/tables`, values);
-        toast.success("Meja baru ditambahkan");
+        toast.success(t("pos.tables.add"));
       }
       queryClient.invalidateQueries({ queryKey: ["tables", storeId] });
       onOpenChange(false);
       form.reset();
     } catch (err: any) {
-      const msg = err?.response?.data?.error?.message ?? "Gagal menyimpan meja";
+      const msg = err?.response?.data?.error?.message ?? t("pos.tables.saveFailed");
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -82,7 +69,7 @@ export function TableCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Meja" : "Tambah Meja"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("pos.tables.edit") : t("pos.tables.add")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -91,7 +78,7 @@ export function TableCreateDialog({
               name="label"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Label Meja</FormLabel>
+                  <FormLabel>{t("pos.tables.label")}</FormLabel>
                   <FormControl>
                     <Input placeholder="A1, B2, VIP 1..." {...field} />
                   </FormControl>
@@ -104,7 +91,7 @@ export function TableCreateDialog({
               name="capacity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Kapasitas (orang)</FormLabel>
+                  <FormLabel>{t("pos.tables.capacityPax")}</FormLabel>
                   <FormControl>
                     <Input type="number" min={1} max={50} {...field} />
                   </FormControl>
@@ -113,16 +100,11 @@ export function TableCreateDialog({
               )}
             />
             <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                Batal
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+                {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Menyimpan..." : isEdit ? "Simpan" : "Tambah"}
+                {isSubmitting ? t("common.actions.saving") : isEdit ? t("common.actions.save") : t("common.actions.add")}
               </Button>
             </DialogFooter>
           </form>

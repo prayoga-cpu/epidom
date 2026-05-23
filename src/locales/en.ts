@@ -27,7 +27,7 @@ export const en = {
       homepage: "Homepage",
       searchAriaLabel: "Search",
       stores: "My Stores",
-      profile: "Operationsfile",
+      profile: "Profile",
       startFree: "Start Free",
     },
     language: {
@@ -49,7 +49,7 @@ export const en = {
     category: "Category",
     recipe: "Recipe",
     price: "Price",
-    profit: "Operationsfit",
+    profit: "Profit",
     email: "Email",
     phone: "Phone",
     location: "Location",
@@ -57,7 +57,7 @@ export const en = {
     delivery: "Delivery",
     name: "Name",
     material: "Material",
-    product: "Operationsduct",
+    product: "Product",
     actions: {
       cancel: "Cancel",
       save: "Save",
@@ -86,6 +86,7 @@ export const en = {
       select: "Select",
       apply: "Apply",
       complete: "Complete",
+      remove: "Remove",
     },
     pagination: {
       rowsPerPage: "Rows per page",
@@ -103,7 +104,7 @@ export const en = {
       email: "Invalid email address",
       invalidFormat: "Invalid format",
       unexpectedError: "An unexpected error occurred",
-      productNameMin: "Operationsduct name must be at least 2 characters",
+      productNameMin: "Product name must be at least 2 characters",
       supplierNameMin: "Supplier name must be at least 2 characters",
       categoryRequired: "Please enter a category",
       unitRequired: "Please enter a unit",
@@ -131,6 +132,8 @@ export const en = {
       pickDate: "Pick a date",
       pickDateRange: "Pick a date range",
       selectPreset: "Select preset",
+      from: "From",
+      to: "To",
       presets: {
         today: "Today",
         last7Days: "Last 7 days",
@@ -142,7 +145,7 @@ export const en = {
     },
     metrics: {
       plannedQuantity: "Planned Quantity",
-      producedQuantity: "Operationsduced Quantity",
+      producedQuantity: "Produced Quantity",
     },
     loading: "Loading...",
     goHome: "Go to Homepage",
@@ -179,12 +182,12 @@ export const en = {
       notificationDetail: "Iced Latte x2 — Rp 28.000",
       statsValue: "98%",
       statsLabel: "Waste Reduced",
-      socialOperationsofMini: "Trusted by 500+ F&B businesses in Indonesia",
+      socialProofMini: "Trusted by 500+ F&B businesses in Indonesia",
       trustNoCard: "No credit card",
       trustSetup: "5-min setup",
       trustQris: "QRIS ready",
     },
-    socialOperationsof: {
+    socialProof: {
       trustedBy: "Trusted by warungs, cafes, and restaurants Worldwide",
       yourBrand: "Your warung, cafe, and restaurant Here",
       instagramTitle: "Get us Feedback",
@@ -203,10 +206,10 @@ export const en = {
       headline: "Create, Tracking, Alerts",
       description:
         "We are popular on solving restaurant's overwhelmed management to smart expiry alerts, especially in Indonesia 🇫🇷.",
-      aiGenerated: "AI Generated Contents: Operationsfile, Dashboard, Management, Tracking, Data, Alerts.",
+      aiGenerated: "AI Generated Contents: Profile, Dashboard, Management, Tracking, Data, Alerts.",
       features: {
         profile: {
-          title: "Operationsfile",
+          title: "Profile",
           description: "Manage your business profile and team members with ease",
         },
         dashboard: {
@@ -437,7 +440,7 @@ export const en = {
         "The software provides real-time tracking of raw materials, from their arrival to their actual use. Through clear stock history, threshold alerts, and consumption analytics, Epidom helps prevent shortages as well as overstocking. Businesses can plan their purchases more efficiently and better anticipate upcoming needs.",
     },
     data: {
-      title: "Dedicated Operationsduction Tools and Traceability",
+      title: "Dedicated Production Tools and Traceability",
       description1:
         "Epidom also includes dedicated production tools, allowing users to monitor recipe evolution, waste levels, and quantities used over specific periods. These features enhance traceability and provide a deep understanding of consumption patterns.",
       description2: "They contribute to cost optimization and help reduce food waste.",
@@ -484,7 +487,7 @@ export const en = {
         },
         thumbs: {
           products: {
-            title: "Operationsducts",
+            title: "Products",
             desc: "Catalog with cost and unit details.",
           },
           recipes: {
@@ -794,7 +797,7 @@ export const en = {
       refund: "I have read and agree to the",
       refundLink: "Refund Policy",
     },
-    processing: "Operationscessing...",
+    processing: "Processing...",
     completePayment: "Complete Payment",
     summary: {
       title: "Order Summary",
@@ -807,7 +810,7 @@ export const en = {
       billingInfo2: "Cancel anytime from your dashboard",
     },
     security: {
-      title: "Secure Payment Operationscessing",
+      title: "Secure Payment Processing",
       feature1: {
         title: "PCI DSS Compliant",
         description: "Your card data is never stored on our servers",
@@ -833,7 +836,7 @@ export const en = {
       agreeToTermsError: "Please agree to the Terms of Service and Refund Policy to continue.",
       redirecting: "Redirecting to checkout...",
       signUpLogin: "Sign Up / Log In to Continue",
-      proceedToCheckout: "Operationsceed to Secure Checkout",
+      proceedToCheckout: "Proceed to Secure Checkout",
       checkoutSessionError: "Failed to create checkout session",
       checkoutUrlError: "No checkout URL returned",
       checkoutError: "Failed to start checkout. Please try again.",
@@ -902,7 +905,7 @@ export const en = {
   },
   storeNew: {
     title: "Add New Store",
-    desc: "Operationsvide a name, city/location, and an optional thumbnail URL.",
+    desc: "Provide a name, city/location, and an optional thumbnail URL.",
     labels: {
       name: "Store name",
       city: "City / Location",
@@ -935,12 +938,12 @@ export const en = {
     },
   },
   profileEdit: {
-    title: "Edit Operationsfile",
+    title: "Edit Profile",
     desc: "Update your account details.",
     labels: { email: "Email", role: "Role" },
     save: "Save changes",
     cancel: "Cancel",
-    toastUpdated: "Operationsfile updated",
+    toastUpdated: "Profile updated",
   },
   password: {
     title: "Change Password",
@@ -1203,7 +1206,7 @@ export const en = {
     successDesc: "We'll reach out with trial access details soon.",
   },
   nav: {
-    profile: "Operationsfile",
+    profile: "Profile",
     dashboard: "Dashboard",
     storefront: "Storefront",
     management: "Management",
@@ -1221,7 +1224,7 @@ export const en = {
     tryEpidom: "Try Epidom",
   },
   sidebar: {
-    inventoryOperationsduction: "Inventory & Operationsduction",
+    inventoryProduction: "Inventory & Production",
   },
   pages: {
     stockLevel: "Stock Level",
@@ -1233,11 +1236,11 @@ export const en = {
     ordersTitle: "Orders to Place",
     materialsList: "Raw Materials List",
     recipesList: "Recipes List",
-    productsList: "Operationsducts List",
+    productsList: "Products List",
     suppliersList: "Suppliers List",
     manageData: "Manage Data",
     ingredient: "Ingredient",
-    productSheet: "Operationsduct Sheet",
+    productSheet: "Product Sheet",
     supplier: "Supplier",
     stockSheet: "Stock Sheet",
     history: "History",
@@ -1249,12 +1252,12 @@ export const en = {
     currentQty: "Current Qty",
     dateTime: "Date & Time",
     delivered: "Delivered",
-    processing: "Operationscessing",
+    processing: "Processing",
     inStock: "In Stock",
     adjustStock: "Adjust Stock",
-    prodHistory: "Operationsduction History",
+    prodHistory: "Production History",
     prodHistoryDesc: "Last 7 days of production",
-    productDesignation: "Operationsduct Designation",
+    productDesignation: "Product Designation",
     trackingStatus: "Tracking Status",
     usedQty: "Used Qty",
     usersList: "Users List",
@@ -1276,6 +1279,8 @@ export const en = {
     financeCommission: "Commission",
     financeNetRevenue: "Net Revenue",
     financeQtySold: "Qty Sold",
+    financePeriod: "Period",
+    financeSummarySheet: "Summary",
     ownerTitle: "Owner Dashboard",
     ownerDesc: "Summary across all stores in your business",
     ownerTotalRevenue: "Total Revenue",
@@ -1303,6 +1308,10 @@ export const en = {
     staffRole: "Role",
     staffActive: "Active",
     staffInactive: "Inactive",
+    posOrdersDesc: "Manage orders from your online store and cashier in real-time.",
+    kdsTitle: "Kitchen Display System",
+    kdsDesc: "Real-time kitchen view · Tap items to update status",
+    tablesDesc: "Monitor dine-in table status in real-time",
   },
   dashboard: {
     title: "Dashboard",
@@ -1348,10 +1357,10 @@ export const en = {
     percentUsed: "used",
     openOrders: "Total open orders",
     plusToday: "+2 today",
-    productionHistory: "Operationsduction History (7 days)",
+    productionHistory: "Production History (7 days)",
     currentWorkflow: "Current Workflow",
     inStock: "In Stock",
-    processing: "Operationscessing",
+    processing: "Processing",
     delivered: "Delivered",
     recipesUsedWeek: "Recipes used this week",
     upFromLastWeek: "+12% from last week",
@@ -1382,7 +1391,7 @@ export const en = {
     },
   },
   data: {
-    productDesignation: "Operationsduct Designation",
+    productDesignation: "Product Designation",
     supplierEmail: "Email",
     supplierName: "Name",
     supplierPhone: "Phone",
@@ -1428,7 +1437,7 @@ export const en = {
         costPlaceholder: "25.00",
         location: "Storage Location",
         locationPlaceholder: "Location",
-        barcode: "Barcode/Operationsduct Code",
+        barcode: "Barcode/Product Code",
         barcodePlaceholder: "Barcode",
         notes: "Notes (Optional)",
         notesPlaceholder: "Additional information about this raw material...",
@@ -1451,7 +1460,7 @@ export const en = {
       categories: {
         raw: "Raw Materials",
         packaging: "Packaging",
-        dairy: "Dairy Operationsducts",
+        dairy: "Dairy Products",
         grains: "Grains & Flour",
         spices: "Spices & Seasonings",
         other: "Other",
@@ -1551,13 +1560,13 @@ export const en = {
         yieldQuantity: "Yield Quantity",
         yieldUnit: "Yield Unit",
         selectUnit: "Select unit",
-        productionTime: "Operationsduction Time (minutes)",
+        productionTime: "Production Time (minutes)",
         productionTimePlaceholder: "180",
         productionTimeHint: "Total time to produce this recipe",
         instructions: "Cooking Instructions",
         instructionsPlaceholder:
           "1. Preheat oven to 220°C\n2. Mix dry ingredients in a large bowl\n3. Add water and knead for 10 minutes\n4. Let rest for 1 hour\n5. Shape into loaves\n6. Bake for 35-40 minutes",
-        instructionsHint: "Operationsvide step-by-step instructions for making this recipe",
+        instructionsHint: "Provide step-by-step instructions for making this recipe",
       },
 
       // Steps
@@ -1597,7 +1606,7 @@ export const en = {
       review: {
         title: "Review Your Recipe",
         yield: "Yield",
-        productionTime: "Operationsduction Time",
+        productionTime: "Production Time",
         minutes: "minutes",
         ingredientsCount: "Ingredients ({count})",
         costAnalysis: "Cost Analysis",
@@ -1631,7 +1640,7 @@ export const en = {
         breadPastries: "Bread & Pastries",
         cakesDesserts: "Cakes & Desserts",
         confectionery: "Confectionery",
-        dairyOperationsducts: "Dairy Operationsducts",
+        dairyProducts: "Dairy Products",
         beverages: "Beverages",
         saucesCondiments: "Sauces & Condiments",
         other: "Other",
@@ -1708,9 +1717,9 @@ export const en = {
         costAnalysisPricing: "Cost Analysis & Pricing",
         costPerUnit: "Cost per {unit}",
         suggestedPrice: "Suggested Price (2.5x markup)",
-        profitPerUnit: "Operationsfit per {unit}",
+        profitPerUnit: "Profit per {unit}",
         costBreakdown: "Cost Breakdown",
-        productionMetrics: "Operationsduction Metrics",
+        productionMetrics: "Production Metrics",
         costPerMinute: "Cost per Minute",
         outputPerHour: "Output per Hour",
         laborCost: "Labor Cost (estimate)",
@@ -1718,8 +1727,8 @@ export const en = {
         laborCostEstimate20: "@ $20/hr: {price}",
         breakEvenUnits: "Break-even Units/Day",
         breakEvenWithOverhead: "With $200 overhead: {units} {unit}",
-        linkedOperationsducts: "Linked Operationsducts ({count})",
-        linkedOperationsductsHint:
+        linkedProducts: "Linked Products ({count})",
+        linkedProductsHint:
           "💡 These products can be produced using this recipe. A product can be linked to multiple recipes (e.g., 10 baguettes or 50 baguettes).",
         pricingRecommendations: "Pricing Recommendations",
         wholesalePricing: "Wholesale (30% margin): {price}",
@@ -1728,13 +1737,13 @@ export const en = {
       },
     },
 
-    // Operationsducts section
+    // Products section
     products: {
-      pageTitle: "Operationsducts",
-      addTitle: "Add New Operationsduct",
-      addButton: "Add Operationsduct",
-      editTitle: "Edit Operationsduct",
-      detailsTitle: "Operationsduct Details",
+      pageTitle: "Products",
+      addTitle: "Add New Product",
+      addButton: "Add Product",
+      editTitle: "Edit Product",
+      detailsTitle: "Product Details",
       addDescription:
         "Add a new product to your inventory. Link it to a recipe for automatic cost calculation.",
       editDescription: "Update product information",
@@ -1749,13 +1758,13 @@ export const en = {
 
       // Form fields
       form: {
-        name: "Operationsduct Name",
+        name: "Product Name",
         namePlaceholder: "e.g., Baguette Tradition",
         sku: "SKU",
         skuPlaceholder: "e.g., BAG-TRD",
         skuHint: "Stock Keeping Unit (optional)",
         description: "Description",
-        descriptionPlaceholder: "Operationsduct description...",
+        descriptionPlaceholder: "Product description...",
         linkedRecipe: "Linked Recipe",
         linkedRecipes: "Linked Recipes",
         selectRecipe: "Select a recipe (optional)",
@@ -1772,9 +1781,9 @@ export const en = {
         categoryPlaceholder: "e.g., Bread, Pastry",
         imageUrl: "Image URL",
         imageUrlPlaceholder: "https://example.com/image.jpg",
-        imageUrlHint: "Operationsduct image URL (optional)",
+        imageUrlHint: "Product image URL (optional)",
         costPrice: "Cost Price",
-        costPriceHint: "Operationsduction cost",
+        costPriceHint: "Production cost",
         wholesalePrice: "Wholesale Price",
         wholesalePriceHint: "B2B price (optional)",
         retailPrice: "Retail Price",
@@ -1807,35 +1816,35 @@ export const en = {
 
       // Tooltips
       tooltips: {
-        view: "View Operationsduct",
-        edit: "Edit Operationsduct",
-        delete: "Delete Operationsduct",
+        view: "View Product",
+        edit: "Edit Product",
+        delete: "Delete Product",
       },
 
       // Toasts
       toasts: {
         adding: "Adding product...",
         added: {
-          title: "Operationsduct Added Successfully",
+          title: "Product Added Successfully",
           description: "{name} has been added to your products.",
         },
         updated: {
-          title: "Operationsduct Updated Successfully",
+          title: "Product Updated Successfully",
           description: "{name} has been updated.",
         },
         deleted: {
-          title: "Operationsduct Deleted",
+          title: "Product Deleted",
           description: "{name} has been deleted successfully.",
         },
         bulkDeleted: {
-          title: "Operationsducts Deleted",
+          title: "Products Deleted",
           description: "{count} products have been deleted successfully.",
         },
       },
 
       // Details section
       details: {
-        profitMargin: "Operationsfit Margin",
+        profitMargin: "Profit Margin",
         onRetailSales: "on retail sales",
         atCostPrice: "at cost price",
         sellingPrice: "Selling Price",
@@ -1844,8 +1853,8 @@ export const en = {
         financialSummary: "Financial Summary",
         stockValueAtCost: "Stock Value (at cost)",
         potentialRevenue: "Potential Revenue (retail)",
-        potentialOperationsfit: "Potential Operationsfit",
-        profitPerUnit: "Operationsfit per unit",
+        potentialProfit: "Potential Profit",
+        profitPerUnit: "Profit per unit",
         criticalStockAlert: "⚠️ Critical stock level! Immediate restocking required.",
         lowStockAlert: "⚠️ Stock is running low. Consider restocking soon.",
         overstockedAlert:
@@ -1854,7 +1863,7 @@ export const en = {
 
       // Delete confirmation
       deleteConfirm: {
-        title: "Delete Operationsduct",
+        title: "Delete Product",
         description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
       },
     },
@@ -1995,8 +2004,8 @@ export const en = {
     costHighLow: "Cost (High-Low)",
     priceLowHigh: "Price (Low-High)",
     priceHighLow: "Price (High-Low)",
-    profitLowHigh: "Operationsfit (Low-High)",
-    profitHighLow: "Operationsfit (High-Low)",
+    profitLowHigh: "Profit (Low-High)",
+    profitHighLow: "Profit (High-Low)",
     categoryAZ: "Category (A-Z)",
     categoryZA: "Category (Z-A)",
     ratingLowHigh: "Rating (Low-High)",
@@ -2024,8 +2033,8 @@ export const en = {
   },
   tables: {
     order: "Order",
-    product: "Operationsduct",
-    products: "Operationsducts",
+    product: "Product",
+    products: "Products",
     date: "Date",
     status: "Status",
     actions: "Actions",
@@ -2050,12 +2059,12 @@ export const en = {
     addMaterial: "Add Raw Material",
     archive: "Archive",
     details: "Details",
-    editOperationsfile: "Edit Operationsfile",
+    editProfile: "Edit Profile",
     filter: "Filter",
     invite: "Invite User",
     manage: "Manage",
     markDelivered: "Mark as Delivered",
-    markOperationscessing: "Mark as Operationscessing",
+    markProcessing: "Mark as Processing",
     note: "Note",
     searchByEmail: "Search by email...",
     searchByName: "Search by name...",
@@ -2068,7 +2077,7 @@ export const en = {
   messages: {
     passwordsDoNotMatch: "Passwords do not match",
     noResults: "No results found",
-    profileUpdated: "Operationsfile updated successfully",
+    profileUpdated: "Profile updated successfully",
     selectOrder: "Select an order to view details",
     selectDelivery: "Select a delivery to view details",
     invalidCredentials: "Invalid email or password",
@@ -2080,15 +2089,15 @@ export const en = {
     noMatchingFilters: "No items match your filters. Try adjusting your search.",
     noMaterialsFound: "No raw materials found",
     noRecipesFound: "No recipes found",
-    noOperationsductsFound: "No products found",
+    noProductsFound: "No products found",
     noSuppliersFound: "No suppliers found",
     getStartedMaterial: "Get started by adding your first raw material",
     getStartedRecipe: "Get started by creating your first recipe",
-    getStartedOperationsduct: "Get started by adding your first product",
+    getStartedProduct: "Get started by adding your first product",
     getStartedSupplier: "Get started by adding your first supplier",
     errorLoadingMaterials: "Error loading raw materials",
     errorLoadingRecipes: "Error loading recipes",
-    errorLoadingOperationsducts: "Error loading products",
+    errorLoadingProducts: "Error loading products",
     errorLoadingSuppliers: "Error loading suppliers",
     noDataToExport: "No data to export",
     noDataToExportDesc: "There is no data available to export.",
@@ -2235,7 +2244,7 @@ export const en = {
   },
   profile: {
     // Page title
-    title: "Operationsfile Settings",
+    title: "Profile Settings",
     loading: "Loading profile...",
     failedToLoad: "Failed to load profile",
     user: "User",
@@ -2260,7 +2269,7 @@ export const en = {
       timezone: "Timezone",
       currency: "Currency",
       memberSince: "Member since",
-      avatar: "Operationsfile Picture",
+      avatar: "Profile Picture",
       changeAvatar: "Change Avatar",
       uploadAvatar: "Upload Avatar",
     },
@@ -2343,7 +2352,7 @@ export const en = {
         alertsDesc: "Get notified when stock levels are low or critical",
         orders: "Order Updates",
         ordersDesc: "Receive updates on order status changes",
-        production: "Operationsduction Updates",
+        production: "Production Updates",
         productionDesc: "Get notified about production batch progress",
       },
     },
@@ -2365,7 +2374,7 @@ export const en = {
       actions: {
         login: "Logged in",
         logout: "Logged out",
-        updateOperationsfile: "Updated profile",
+        updateProfile: "Updated profile",
         updateBusiness: "Updated business information",
         createMaterial: "Created raw material",
         updateMaterial: "Updated raw material",
@@ -2375,7 +2384,7 @@ export const en = {
         deleteRecipe: "Deleted recipe",
         createOrder: "Created order",
         updateOrder: "Updated order",
-        createOperationsduction: "Started production batch",
+        createProduction: "Started production batch",
       },
     },
 
@@ -2386,7 +2395,7 @@ export const en = {
       editBusinessInfo: "Edit Business Information",
       editBusinessInfoDescription: "Update your business contact information and details",
       addBusinessInfoDescription: "Add your business information to complete your profile",
-      editAvatar: "Edit Operationsfile Picture",
+      editAvatar: "Edit Profile Picture",
       editAvatarDescription: "Upload a new profile picture or remove the current one.",
       cropAvatarDescription: "Crop and adjust your profile picture.",
       previewAvatarDescription: "Preview your new profile picture.",
@@ -2410,7 +2419,7 @@ export const en = {
       edit: "Edit",
       save: "Save Changes",
       cancel: "Cancel",
-      update: "Update Operationsfile",
+      update: "Update Profile",
       delete: "Delete",
       invite: "Invite",
       remove: "Remove",
@@ -2430,7 +2439,7 @@ export const en = {
     // Toast messages
     toasts: {
       profileUpdated: {
-        title: "Operationsfile Updated",
+        title: "Profile Updated",
         description: "Your profile has been updated successfully.",
       },
       businessUpdated: {
@@ -2451,7 +2460,7 @@ export const en = {
       },
       avatarUploaded: {
         title: "Avatar Updated",
-        description: "Operationsfile picture updated successfully.",
+        description: "Profile picture updated successfully.",
       },
       logoUploaded: {
         title: "Logo Updated",
@@ -2477,13 +2486,13 @@ export const en = {
     cropper: {
       zoom: "Zoom",
       rotation: "Rotation",
-      processing: "Operationscessing...",
+      processing: "Processing...",
     },
 
     // Legacy keys (maintain backward compatibility)
     address: "Address",
     businessName: "Business Name",
-    updateOperationsfile: "Update Operationsfile",
+    updateProfile: "Update Profile",
   },
   stores: {
     title: "Your Stores",
@@ -2518,8 +2527,8 @@ export const en = {
   tabs: {
     delivery: "Delivery",
     supplierDeliveries: "Supplier Deliveries",
-    recipeOperationsduction: "Recipe Operationsduction",
-    productionHistory: "Operationsduction History",
+    recipeProduction: "Recipe Production",
+    productionHistory: "Production History",
     editStock: "Edit Stock",
     managePermissions: "Manage Permissions",
     stockLevels: "Stock Levels",
@@ -2527,7 +2536,7 @@ export const en = {
   },
   management: {
     deliveries: "Deliveries",
-    production: "Operationsduction",
+    production: "Production",
     history: "History",
     stock: "Stock",
     // Delivery Tab
@@ -2722,9 +2731,9 @@ export const en = {
       itemType: "Item Type",
       selectItemType: "Select item type",
       material: "Raw Material",
-      product: "Operationsduct",
+      product: "Product",
       selectMaterial: "Select Raw Material",
-      selectOperationsduct: "Select Operationsduct",
+      selectProduct: "Select Product",
 
       // Stock Status
       inStock: "In Stock",
@@ -2843,9 +2852,9 @@ export const en = {
         },
       },
     },
-    // Recipe Operationsduction Tab
-    recipeOperationsduction: {
-      title: "Recipe Operationsduction",
+    // Recipe Production Tab
+    recipeProduction: {
+      title: "Recipe Production",
       description: "Start new production batches and monitor active production",
       availableRecipes: "Available Recipes",
       selectRecipeToStart: "Select a recipe to start production",
@@ -2856,14 +2865,14 @@ export const en = {
 
       // Recipe Details
       yield: "Yield",
-      productionTime: "Operationsduction Time",
+      productionTime: "Production Time",
       minutes: "minutes",
       costPerBatch: "Cost per Batch",
       costPerUnit: "Cost per Unit",
-      startOperationsduction: "Start Operationsduction",
+      startProduction: "Start Production",
       insufficientMaterials: "Insufficient raw materials to start production",
-      noLinkedOperationsducts: "No products linked to this recipe",
-      noLinkedOperationsductsHint: "Please link a product to this recipe before starting production.",
+      noLinkedProducts: "No products linked to this recipe",
+      noLinkedProductsHint: "Please link a product to this recipe before starting production.",
       insufficientMaterialsWarning: "Some raw materials are below required levels",
       insufficientMaterialsHint:
         "Please restock insufficient raw materials before starting production",
@@ -2887,7 +2896,7 @@ export const en = {
 
       // Active Batches
       activeBatches: "Active Batches",
-      activeBatchesDescription: "Operationsduction batches currently in progress",
+      activeBatchesDescription: "Production batches currently in progress",
       started: "Started",
       completed: "Completed",
       quantity: "Quantity",
@@ -2896,15 +2905,15 @@ export const en = {
       // Batch Statuses
       statuses: {
         planned: "Planned",
-        inOperationsgress: "In Operationsgress",
+        inProgress: "In Progress",
         completed: "Completed",
         cancelled: "Cancelled",
       },
 
-      // Start Operationsduction Dialog
+      // Start Production Dialog
       dialogs: {
-        startOperationsduction: {
-          title: "Start Operationsduction Batch",
+        startProduction: {
+          title: "Start Production Batch",
           description: "Create a new production batch for this recipe",
         },
       },
@@ -2914,32 +2923,32 @@ export const en = {
       timePerBatch: "Time per Batch",
       batchQuantity: "Number of Batches",
       batchQuantityHint: "How many batches do you want to produce?",
-      productionSummary: "Operationsduction Summary",
+      productionSummary: "Production Summary",
       totalYield: "Total Yield",
       totalTime: "Total Time",
       totalCost: "Total Cost",
       targetCompletionDate: "Target Completion Date",
       targetCompletionDateHint: "When should this production be completed?",
-      notes: "Operationsduction Notes",
+      notes: "Production Notes",
       notesPlaceholder: "Add any special instructions or notes...",
       notesHint: "Optional notes about this production batch",
 
       // Toast Messages
       toasts: {
         productionStarted: {
-          title: "Operationsduction Started",
+          title: "Production Started",
           description: "Batch {batchNumber} has been created successfully",
         },
         productionFailed: {
-          title: "Failed to Start Operationsduction",
+          title: "Failed to Start Production",
           description: "There was an error starting the production batch. Please try again.",
         },
       },
     },
 
-    // Operationsduction History Tab
+    // Production History Tab
     productionHistory: {
-      title: "Operationsduction History",
+      title: "Production History",
       description: "View and analyze completed production batches",
       filters: "Filters",
       filtersDescription: "Filter batches by status, recipe, or date range",
@@ -2968,7 +2977,7 @@ export const en = {
       // Batch Statuses
       statuses: {
         planned: "Planned",
-        inOperationsgress: "In Operationsgress",
+        inProgress: "In Progress",
         completed: "Completed",
         cancelled: "Cancelled",
       },
@@ -2986,7 +2995,7 @@ export const en = {
         totalOutput: "Total Output",
         totalOutputDescription: "Total units produced",
         plannedQuantity: "Planned Quantity",
-        producedQuantity: "Operationsduced Quantity",
+        producedQuantity: "Produced Quantity",
         units: "units",
       },
 
@@ -3010,7 +3019,7 @@ export const en = {
       costPerUnit: "Cost/Unit",
       totalCost: "Total Cost",
 
-      productionTimeline: "Operationsduction Timeline",
+      productionTimeline: "Production Timeline",
       completedAt: "Completed At",
       duration: "Duration",
       totalDuration: "Total Duration",
@@ -3035,7 +3044,7 @@ export const en = {
       in: "Stock In",
       out: "Stock Out",
       adjustment: "Adjustment",
-      production: "Operationsduction",
+      production: "Production",
       waste: "Waste",
       return: "Return",
     },
@@ -3043,7 +3052,7 @@ export const en = {
     // Table headers
     dateTime: "Date & Time",
     material: "Raw Material",
-    product: "Operationsduct",
+    product: "Product",
     type: "Type",
     quantity: "Quantity",
     reason: "Reason",
@@ -3088,7 +3097,7 @@ export const en = {
 
     // Forms
     selectMaterial: "Select Raw Material",
-    selectOperationsduct: "Select Operationsduct",
+    selectProduct: "Select Product",
     selectItem: "Select Item",
     movementType: "Movement Type",
     enterQuantity: "Enter Quantity",
@@ -3097,12 +3106,12 @@ export const en = {
     referenceNumber: "Reference Number",
     itemType: "Item Type",
     materialType: "Raw Material",
-    productType: "Operationsduct",
+    productType: "Product",
 
     // Reasons
     reasons: {
       purchase: "Purchase Order",
-      production: "Used in Operationsduction",
+      production: "Used in Production",
       sale: "Sale",
       damage: "Damaged",
       expired: "Expired",
@@ -3375,7 +3384,7 @@ export const en = {
       content: "To use EPIDOM, you must create an account. You are responsible for:",
       item1: "Maintaining the confidentiality of your account credentials",
       item2: "All activities that occur under your account",
-      item3: "Operationsviding accurate and complete information when creating your account",
+      item3: "Providing accurate and complete information when creating your account",
       item4: "Notifying us immediately of any unauthorized use of your account",
     },
     section4: {
@@ -3396,7 +3405,7 @@ export const en = {
       item4: "Respecting intellectual property rights and not infringing on others' rights",
     },
     section6: {
-      title: "6. Intellectual Operationsperty",
+      title: "6. Intellectual property",
       content:
         "All content, features, and functionality of EPIDOM, including but not limited to text, graphics, logos, and software, are the property of EPIDOM and are protected by international copyright, trademark, and other intellectual property laws.",
     },
@@ -3438,15 +3447,15 @@ export const en = {
       item3: "You were charged incorrectly due to a billing error on our part",
     },
     section2: {
-      title: "2. Refund Operationscess",
+      title: "2. Refund process",
       content: "To request a refund, please follow these steps:",
       step1: "Contact our support team at support@epidom.com with your refund request",
-      step2: "Operationsvide your account email and subscription details",
+      step2: "Provide your account email and subscription details",
       step3: "Explain the reason for your refund request",
       step4: "We will review your request and respond within 5-7 business days",
     },
     section3: {
-      title: "3. Operationscessing Time",
+      title: "3. Processing Time",
       content:
         "Once your refund is approved, it will be processed within 5-10 business days. The refund will be credited to the original payment method used for the purchase.",
     },
@@ -3485,7 +3494,7 @@ export const en = {
       active: "Active",
       message:
         "Thank you for your purchase! Your subscription is now active and you can start using all the features immediately.",
-      continueToOperationsfile: "Continue to Operationsfile",
+      continueToProfile: "Continue to Profile",
       viewDashboard: "View Dashboard",
       confirmationEmail:
         "A confirmation email has been sent to your registered email address with receipt and subscription details.",
@@ -3524,7 +3533,7 @@ export const en = {
       businessAddress: "Business Address",
       businessAddressPlaceholder: "e.g. 123 Baker Street, London",
       continueButton: "Continue to Next Step",
-      savingOperationsfile: "Saving Operationsfile...",
+      savingProfile: "Saving Profile...",
       stepIndicator: "Step 1 of 2: Business Information",
       profileCreated: "Business profile created!",
     },
@@ -3569,7 +3578,7 @@ export const en = {
       dropZone: "Drag & drop your CSV file here",
       browse: "or click to browse",
       supports: "Supports .csv files up to 10MB • Any language • Any format",
-      processing: "Operationscessing...",
+      processing: "Processing...",
       analyzing: "System is analyzing your file",
       dropToUpload: "Drop your file here",
       error: "Please upload a CSV file",
@@ -3577,7 +3586,7 @@ export const en = {
       entities: {
         auto: "Auto-detect (Recommended)",
         material: "Materials (Bahan Baku)",
-        product: "Operationsducts (Operationsduk Jual)",
+        product: "Products (Produk Jual)",
         supplier: "Suppliers (Pemasok)",
         recipe: "Recipes (Resep)",
       },
@@ -3612,7 +3621,7 @@ export const en = {
       },
       tabs: {
         materials: "Materials",
-        products: "Operationsducts",
+        products: "Products",
         suppliers: "Suppliers",
         recipes: "Recipes",
       },
@@ -3716,7 +3725,9 @@ export const en = {
       paymentMethod: "Payment Method",
       cash: "Cash",
       qris: "QRIS",
+      orderType: "Order Type",
       table: "Table",
+      tableOptional: "Table (optional)",
       takeaway: "Takeaway",
       dineIn: "Dine In",
       amountTendered: "Amount Tendered",
@@ -3725,8 +3736,10 @@ export const en = {
       customerName: "Customer Name (optional)",
       customerPhone: "Phone Number (optional)",
       notes: "Notes (optional)",
+      notesPlaceholder: "Notes for the kitchen...",
       processing: "Processing...",
       success: "Order created successfully!",
+      orderFailed: "Failed to create order. Please try again.",
     },
     queue: {
       title: "Queue",
@@ -3737,6 +3750,7 @@ export const en = {
       orderNumber: "Order No.",
       ago: "ago",
       justNow: "Just now",
+      updateFailed: "Failed to update order status",
     },
     status: {
       pending: "Pending",
@@ -3777,6 +3791,16 @@ export const en = {
       },
       empty: "No tables yet",
       emptyDesc: "Add tables to manage dine-in orders more efficiently",
+      addFirst: "Add First Table",
+      countHint: "tables registered · Tap to change status",
+      confirmDelete: "Delete table",
+      deleting: "Deleting...",
+      updateFailed: "Failed to update table status",
+      deleteFailed: "Failed to delete table",
+      statusUpdated: "status updated",
+      labelRequired: "Label is required",
+      capacityPax: "Capacity (people)",
+      saveFailed: "Failed to save table",
     },
     kds: {
       title: "Kitchen Display",
@@ -3787,6 +3811,18 @@ export const en = {
       timer: "Time",
       allDone: "All orders done",
       newOrderAlert: "New order incoming!",
+      noActiveOrders: "No active orders to process",
+      processingColumn: "🔥 In Progress",
+      readyColumn: "✅ Ready to Serve",
+      emptyDefault: "No orders",
+      emptyProcessing: "No orders being processed",
+      emptyReady: "No orders ready yet",
+      updateFailed: "Failed to update order status",
+      tapToComplete: "Tap → Complete",
+      checkReady: "✓ Ready",
+      markAllComplete: "Mark All Complete",
+      orderReadyTitle: "Order Ready to Serve",
+      readyToServe: "Ready to Serve",
     },
     menu: {
       all: "All",
@@ -3803,6 +3839,16 @@ export const en = {
       queued: "Offline — order saved locally",
       queuedDesc: "Will be submitted automatically when connection returns.",
     },
+    orderCard: {
+      customer: "Customer",
+      table: "Table",
+      type: "Type",
+      itemsLabel: "Order Items",
+      moreItems: "more items",
+      confirm: "Confirm",
+      startProcess: "Start Processing",
+      complete: "Complete",
+    },
     print: {
       title: "Print Receipt",
       prompt: "Order created successfully.",
@@ -3811,6 +3857,8 @@ export const en = {
       printing: "Printing...",
       success: "Receipt printed!",
       failed: "Failed to print receipt",
+      bluetoothUnsupported: "This browser does not support Bluetooth printing. Use Chrome on Android/Desktop.",
+      connectFailed: "Failed to connect to printer. Make sure the Bluetooth printer is on.",
     },
   },
 
@@ -4152,6 +4200,93 @@ export const en = {
       cmp_recipes: "Recipes & COGS",               cmp_stock: "Auto stock & alerts",
       cmp_daily: "Daily reports email",            cmp_multi: "Multi-outlet dashboard",
       cmp_api: "API access",
+    },
+  },
+
+  storefront: {
+    editor: {
+      title: "Online Store & Menu",
+      subtitle: "Manage your store profile, bio link, and food/drink menu.",
+      tabs: {
+        settings: "Profile & Display",
+        menu: "Menu",
+        analytics: "Analytics",
+      },
+    },
+    settings: {
+      saveSuccess: "Store settings saved.",
+      saveFailed: "Failed to save settings.",
+      urlTaken: "This URL is already taken by another store.",
+      urlUnavailable: "URL not available.",
+      storeActive: "Your online store is active and accessible by customers.",
+      storeHidden: "Online store is hidden. Customers cannot access your link.",
+      storeActiveLabel: "Store Active",
+      publishStatus: "Publication Status",
+      slugLabel: "Store URL (Slug)",
+      slugDesc: "Choose a unique name for your store link.",
+      slugPlaceholder: "your-store-name",
+      displayName: "Display Name",
+      displayNamePlaceholder: "Store Name",
+      tagline: "Slogan / Tagline",
+      taglinePlaceholder: "Always Delicious!",
+      description: "Short Description",
+      descriptionPlaceholder: "Tell a bit about your store...",
+      profileSection: "Store Profile",
+      profileDesc: "Basic information displayed on your store page.",
+      visualSection: "Visual & Theme",
+      visualDesc: "Customize colors and images to match your brand.",
+      logoUrl: "Logo / Avatar URL",
+      heroImageUrl: "Cover Image URL",
+      themeColor: "Theme Color",
+      contactSection: "Contact & Orders",
+      contactDesc: "Where should orders and customers be directed?",
+      whatsappNumber: "WhatsApp Number (For Orders)",
+      whatsappDesc: "Customer orders will be sent to this number.",
+      gofoodUrl: "GoFood Link",
+      grabfoodUrl: "GrabFood Link",
+      shopeefoodUrl: "ShopeeFood Link",
+      customLinksSection: "Additional Links (Linktree)",
+      customLinksDesc: "Add custom links like Website, Promo, etc.",
+      linkTitlePlaceholder: "Link Title (e.g: Official Website)",
+      addLink: "Add Link",
+      cancelButton: "Cancel",
+      saveButton: "Save Settings",
+      savingButton: "Saving...",
+    },
+    menu: {
+      title: "Menu & Categories",
+      desc: "Manage the order of categories and your food/drink menu.",
+      addCategory: "Add Category",
+      addCategoryPlaceholder: "New Category Name (e.g: Cold Drinks)",
+      addItem: "Add Menu Item",
+      deleteConfirm: "Delete this category and all its items?",
+      categoryAdded: "Category added",
+      categoryAddFailed: "Failed to add category",
+      categoryDeleted: "Category deleted",
+      categoryDeleteFailed: "Failed to delete category",
+      noCategories: "No menu categories yet.",
+      noCategoriesDesc: "Add your first category to get started.",
+      noItemsInCategory: "No items in this category yet.",
+      itemsCount: "items",
+      imageAlt: "Photo",
+      available: "Available",
+      unavailable: "Sold Out",
+      editItem: "Edit",
+    },
+    analytics: {
+      totalVisitors: "Total Visitors",
+      totalVisitorsDesc: "Times store viewed",
+      menuViewed: "Menu Viewed",
+      menuViewedDesc: "Clicks on menu",
+      chatConversion: "Chat Conversion",
+      chatConversionDesc: "Clicks on WhatsApp button",
+      comingSoon: "Coming Soon",
+      featureInDev: "Feature in development",
+      trendLastWeek: "+12% from last week",
+      visitorChart: "Visitor Chart",
+      visitorChartDesc: "Daily visitor count visualization will appear here.",
+      dataCollecting: "Data being collected",
+      dataCollectingDesc: "Chart will appear after at least 10 visitors.",
     },
   },
 };

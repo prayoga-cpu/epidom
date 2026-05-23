@@ -38,6 +38,9 @@ import {
   printReceipt,
   type ReceiptData,
 } from "@/lib/pwa/thermal-printer";
+import type { Currency } from "@/components/providers/currency-provider";
+
+const CURRENCY_SYMBOL: Record<Currency, string> = { IDR: "Rp", USD: "$", EUR: "€" };
 
 interface PosCheckoutDialogProps {
   open: boolean;
@@ -54,7 +57,7 @@ export function PosCheckoutDialog({
   storeName,
   cashierName,
 }: PosCheckoutDialogProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { currency } = useCurrency();
   const cart = usePosCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,7 +107,7 @@ export function PosCheckoutDialog({
   const buildReceipt = (data: CreatePosOrderInput, orderNumber: string): ReceiptData => ({
     storeName: storeName ?? "Epidom POS",
     orderNumber,
-    date: new Intl.DateTimeFormat("id-ID", {
+    date: new Intl.DateTimeFormat(locale === "id" ? "id-ID" : locale === "fr" ? "fr-FR" : "en-US", {
       dateStyle: "short",
       timeStyle: "short",
     }).format(new Date()),
@@ -126,7 +129,7 @@ export function PosCheckoutDialog({
 
   const handlePrint = async (receipt: ReceiptData) => {
     if (!isBluetoothSupported()) {
-      toast.error("Browser ini tidak mendukung cetak Bluetooth. Gunakan Chrome di Android/Desktop.");
+      toast.error(t("pos.print.bluetoothUnsupported"));
       return;
     }
     setIsPrinting(true);
@@ -134,7 +137,7 @@ export function PosCheckoutDialog({
       if (!isPrinterConnected()) {
         const connected = await connectPrinter();
         if (!connected) {
-          toast.error("Gagal terhubung ke printer. Pastikan printer Bluetooth menyala.");
+          toast.error(t("pos.print.connectFailed"));
           return;
         }
       }
@@ -178,7 +181,7 @@ export function PosCheckoutDialog({
       cart.clearCart();
       onOpenChange(false);
     } catch (error) {
-      toast.error("Gagal membuat pesanan. Coba lagi.");
+      toast.error(t("pos.checkout.orderFailed"));
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -201,7 +204,7 @@ export function PosCheckoutDialog({
                   name="orderType"
                   render={({ field }) => (
                     <FormItem className="space-y-3">
-                      <FormLabel>Tipe Pesanan</FormLabel>
+                      <FormLabel>{t("pos.checkout.orderType")}</FormLabel>
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
@@ -274,7 +277,7 @@ export function PosCheckoutDialog({
                         <FormControl>
                           <div className="relative">
                             <span className="absolute left-3 top-2.5 text-sm text-muted-foreground">
-                              Rp
+                              {CURRENCY_SYMBOL[currency]}
                             </span>
                             <Input
                               type="number"
@@ -321,7 +324,7 @@ export function PosCheckoutDialog({
                   name="tableNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("pos.checkout.table")} (opsional)</FormLabel>
+                      <FormLabel>{t("pos.checkout.tableOptional")}</FormLabel>
                       <FormControl>
                         <Input placeholder="A1, B2..." {...field} />
                       </FormControl>
@@ -338,7 +341,7 @@ export function PosCheckoutDialog({
                     <FormLabel>{t("pos.checkout.notes")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Catatan untuk dapur..."
+                        placeholder={t("pos.checkout.notesPlaceholder")}
                         className="resize-none"
                         {...field}
                       />
@@ -354,7 +357,7 @@ export function PosCheckoutDialog({
                   onClick={() => onOpenChange(false)}
                   disabled={isSubmitting}
                 >
-                  Batal
+                  {t("common.actions.cancel")}
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (

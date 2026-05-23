@@ -4,6 +4,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { useI18n } from "@/components/lang/i18n-provider";
 import type { CartItem } from "../types/pos.types";
 
 interface PosCartItemProps {
@@ -13,6 +14,7 @@ interface PosCartItemProps {
 }
 
 export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemProps) {
+  const { t } = useI18n();
   const { currency } = useCurrency();
 
   return (
@@ -72,7 +74,7 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
           className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
           onClick={() => onRemove(item.id)}
         >
-          Remove
+          {t("common.actions.remove")}
         </Button>
       </div>
     </div>

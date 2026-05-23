@@ -28,11 +28,11 @@ export function NavUser() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="text-primary-foreground flex h-9 items-center gap-2 overflow-hidden rounded-2xl px-2 hover:bg-white/10 hover:text-white sm:max-w-[160px] sm:px-2.5 lg:max-w-[180px]"
+          className="flex h-9 items-center gap-2 overflow-hidden rounded-2xl px-2 hover:bg-white/10 sm:max-w-[160px] sm:px-2.5 lg:max-w-[180px]" style={{ color: "var(--epi-cream-50)" }}
         >
           <Avatar className="size-7 shrink-0">
             {profile?.image && <AvatarImage src={profile.image} alt={user?.name ?? "User"} />}
-            <AvatarFallback className="text-foreground bg-white text-xs">
+            <AvatarFallback className="text-foreground bg-[var(--epi-navy-700)] text-xs" style={{ color: "var(--epi-cream-50)" }}>
               {user?.name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
             </AvatarFallback>
           </Avatar>

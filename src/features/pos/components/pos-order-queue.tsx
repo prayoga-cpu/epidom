@@ -32,7 +32,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     try {
       await apiClient.patch(`/stores/${storeId}/pos/orders/${orderId}`, { status });
     } catch (error) {
-      toast.error("Gagal memperbarui status pesanan");
+      toast.error(t("pos.queue.updateFailed"));
       // Revert will happen automatically on next SSE poll
     }
   };

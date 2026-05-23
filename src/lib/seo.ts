@@ -46,32 +46,31 @@ export interface SEOConfig {
 }
 
 const defaultSEO: SEOConfig = {
-  title: "EPIDOM - Food Inventory Management Solution",
+  title: "Epidom — Online Store, Menu & POS for F&B",
   description:
-    "Revolutionary food inventory management system for restaurants, cafes, and food service businesses. Track stock, reduce waste, and optimize your kitchen operations with EPIDOM.",
+    "Create a menu page, accept online orders, manage your POS cashier and kitchen — all in one platform. Free forever for cafés, warungs, and restaurants.",
   keywords: [
-    "food inventory management",
-    "restaurant management",
-    "kitchen inventory",
-    "food waste reduction",
-    "stock management",
-    "inventory tracking",
-    "restaurant software",
-    "food service management",
-    "EPIDOM",
+    "f&b pos app",
+    "digital menu page",
+    "online food ordering",
+    "restaurant cashier software",
+    "kitchen display system",
+    "qris payments",
+    "inventory management",
+    "epidom",
   ],
   openGraph: {
-    title: "EPIDOM - Food Inventory Management Solution",
+    title: "Epidom — Online Store, Menu & POS for F&B",
     description:
-      "Revolutionary food inventory management system for restaurants, cafes, and food service businesses.",
-    url: "https://epidom.com",
-    siteName: "EPIDOM",
+      "Create a menu page, accept online orders, manage your POS cashier and kitchen. Free forever.",
+    url: "https://epidom.id",
+    siteName: "Epidom",
     images: [
       {
-        url: "https://epidom.com/images/og-image.jpg",
+        url: "https://epidom.id/images/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "EPIDOM - Food Inventory Management",
+        alt: "Epidom — F&B Online Store & POS Platform",
       },
     ],
     locale: "en_US",
@@ -81,10 +80,10 @@ const defaultSEO: SEOConfig = {
     card: "summary_large_image",
     site: "@epidom",
     creator: "@epidom",
-    title: "EPIDOM - Food Inventory Management Solution",
+    title: "Epidom — Online Store, Menu & POS for F&B",
     description:
-      "Revolutionary food inventory management system for restaurants and food service businesses.",
-    images: ["https://epidom.com/images/twitter-card.jpg"],
+      "Create a menu page, accept online orders, and manage your POS cashier. Free forever for F&B businesses.",
+    images: ["https://epidom.id/images/twitter-card.jpg"],
   },
   robots: {
     index: true,
@@ -117,7 +116,7 @@ export function generateMetadata(config: Partial<SEOConfig> = {}): Metadata {
       address: false,
       telephone: false,
     },
-    metadataBase: new URL("https://epidom.com"),
+    metadataBase: new URL("https://epidom.id"),
     alternates: {
       canonical: seo.canonical || seo.alternates?.canonical,
       languages: seo.alternates?.languages,
@@ -170,7 +169,7 @@ export function generateStructuredData(
   type: "website" | "organization" | "product" | "service",
   data?: any
 ) {
-  const baseUrl = "https://epidom.com";
+  const baseUrl = "https://epidom.id";
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -182,9 +181,9 @@ export function generateStructuredData(
           : type === "product"
             ? "SoftwareApplication"
             : "Service",
-    name: "EPIDOM",
+    name: "Epidom",
     description:
-      "Revolutionary food inventory management system for restaurants, cafes, and food service businesses.",
+      "Online store, menu page, and POS cashier platform for cafés, warungs, and restaurants.",
     url: baseUrl,
     logo: `${baseUrl}/images/logo-black.png`,
     image: `${baseUrl}/images/og-image.jpg`,
@@ -195,15 +194,8 @@ export function generateStructuredData(
     ],
     contactPoint: {
       "@type": "ContactPoint",
-      telephone: "+1-555-EPIDOM",
       contactType: "customer service",
-      email: "mrcaoevan@gmail.com",
-    },
-    address: {
-      "@type": "PostalAddress",
-      addressCountry: "US",
-      addressLocality: "San Francisco",
-      addressRegion: "CA",
+      email: "prayogadevelopment@gmail.com",
     },
     foundingDate: "2024",
     ...data,

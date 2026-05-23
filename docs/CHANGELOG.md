@@ -6,6 +6,32 @@ For the active task list and roadmap, see `/docs/roadmap.md` and `/docs/PHASE_0_
 
 ---
 
+## 2026-05-24 — UI System Sync (Dark/Light Mode + Brand Tokens)
+
+### Codebase
+- Added `next-themes` ThemeProvider to `(app)/layout.tsx` with `defaultTheme="dark"`, `suppressHydrationWarning` on `<html>` and `<body>`
+- Bridged `--epi-navy-*` tokens into shadcn `.dark` CSS block (`--background`, `--card`, `--sidebar`, `--border`, `--muted`, `--primary: epi-gold-400`)
+- Light mode `:root` updated to cream palette (`--background: #FBF9E4`, body gradient)
+- Added `--chart-grid`, `--chart-axis`, `--chart-line` CSS vars; production history chart now adapts to both modes
+- Dashboard topbar: `bg-primary` → explicit `var(--epi-navy-850)` inline style; PNG logo → `EpidomLogo` SVG component; inline `ThemeToggle` (Sun/Moon)
+- Auth pages redesigned to epi dark-navy: gold CTA buttons, cream text, gold focus rings on inputs, navy-900 background
+- Auth visual right panel: replaced zinc/orange blobs with epi-gold + navy radial gradients
+- Onboarding: orange-500 accent → `--epi-gold-500` (progress bar, buttons, step badges)
+- Cookie consent bar: dark glass style matching marketing site
+- Sheet z-index: z-50 → z-[70] to fix mobile sheet/floating-nav overlap ("EPIDOMDOM" bug)
+- Global `.dark` CSS overrides: `text-gray/slate/zinc/neutral/black-*` all resolve to `--epi-cream-50`
+- NavUser, StoreSwitcher, ProfileNav, Profile layout, Stores page, StoreCard — comprehensive semantic token pass
+- Storefront editor tabs, menu editor, analytics, publication toggle card — slate/white → semantic tokens
+- Create store button: `--color-brand-primary` → `--epi-gold-500` fill
+- POS order card: channel + status badges moved to shared right-side `flex-col`
+
+### Bugs
+- Fixed React hydration mismatch caused by Grammarly browser extension injecting `data-gr-*` onto `<body>`
+- Fixed 140+ `Operations` text corruptions across `en.ts`, `id.ts`, `fr.ts` (a prior regex replaced "Pro" → "Operations", breaking "Profile", "Product", "Production", "Progress", "Processing", "Proceed", "Provide", "Property", "Proof", "Produk", "Produksi", "Profil", "Promo")
+- Added missing translation keys to `id.ts` (18 keys) and `fr.ts` (162 keys)
+
+---
+
 ## 2026-05, Phase 5 — Aggregator + Finance
 
 ### Schema

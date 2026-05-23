@@ -11,8 +11,8 @@ import { RouteLoadingIndicator } from "@/components/navigation/route-loading-ind
 import { AlertsPrefetch } from "@/features/dashboard/alerts/components/alerts-prefetch";
 
 export const metadata: Metadata = {
-  title: "Epidom - Admin Dashboard",
-  description: "an open source ERP for small food manufacturers",
+  title: "Epidom — Dashboard",
+  description: "Manage your store, orders, menu, inventory, and reports with Epidom.",
   icons: {
     icon: "/favicon.ico",
   },

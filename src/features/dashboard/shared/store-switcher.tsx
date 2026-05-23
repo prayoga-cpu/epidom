@@ -81,7 +81,7 @@ export function StoreSwitcher() {
           role="combobox"
           aria-expanded={open}
           aria-label={t("dashboard.storeSelector.label")}
-          className="h-9 w-[140px] justify-between rounded-2xl text-xs text-black sm:w-[160px] sm:text-sm lg:w-[180px] lg:text-sm"
+          className="h-9 w-[140px] justify-between rounded-2xl text-xs text-foreground sm:w-[160px] sm:text-sm lg:w-[180px] lg:text-sm"
         >
           <div className="flex min-w-0 items-center gap-1.5 truncate sm:gap-2">
             <Store className="text-muted-foreground h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />

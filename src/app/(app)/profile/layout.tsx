@@ -16,10 +16,12 @@ export const metadata: Metadata = {
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider>
-      <div className="flex min-h-screen flex-col bg-neutral-50">
+      <div className="flex min-h-screen flex-col bg-background">
         <SiteHeader variant="authenticated" showNav={true} showLogout={true} />
-        <ProfileNav />
-        <main className="flex flex-1 flex-col overflow-y-auto pt-6 sm:pt-8 md:pt-0">{children}</main>
+        <div className="flex flex-1 flex-col pt-20 sm:pt-24">
+          <ProfileNav />
+          <main className="flex flex-1 flex-col overflow-y-auto">{children}</main>
+        </div>
       </div>
     </I18nProvider>
   );

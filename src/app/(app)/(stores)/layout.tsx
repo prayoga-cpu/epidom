@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function StoresLayout({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider>
-      <div className="flex h-screen flex-col overflow-hidden bg-neutral-50">
+      <div className="flex h-screen flex-col overflow-hidden bg-background">
         <SiteHeader variant="authenticated" showNav={true} showLogout={true} />
         <main className="flex flex-1 flex-col overflow-hidden pt-20 sm:pt-24 md:pt-20">
           {children}

@@ -94,10 +94,10 @@ describe("Stripe Webhook Handler", () => {
         })
       );
 
-      // Verify expiration date is set (end of 2025)
+      // Verify expiration date is set (end of 2026, matching PROMO_END_DATE)
       const createCall = (subscriptionRepository.create as any).mock.calls[0][0];
       const endDate = new Date(createCall.currentPeriodEnd);
-      expect(endDate.getUTCFullYear()).toBe(2025);
+      expect(endDate.getUTCFullYear()).toBe(2026);
       expect(endDate.getUTCMonth()).toBe(11); // December (0-indexed)
       expect(endDate.getUTCDate()).toBe(31);
     });

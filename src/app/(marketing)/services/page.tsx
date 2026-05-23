@@ -4,23 +4,23 @@ import { FeaturesShowcaseSection } from "@/features/marketing/services/component
 import { ClosingCtaSection } from "@/features/marketing/home/components/closing-cta-section";
 
 export const metadata: Metadata = {
-  title: "Fitur — EPIDOM",
+  title: "Features — EPIDOM",
   description:
-    "Semua fitur Epidom dalam satu halaman: halaman menu gratis, kasir (POS), dapur (KDS), manajemen stok, laporan operasional, dan multi-outlet untuk bisnis F&B Indonesia.",
+    "Everything Epidom offers: free menu page, POS cashier, kitchen display (KDS), inventory management, operational reports, and multi-outlet — for F&B businesses worldwide.",
   keywords: [
-    "fitur epidom",
-    "aplikasi kasir warung",
-    "pos restoran indonesia",
-    "manajemen stok kafe",
-    "halaman menu digital",
-    "qris pembayaran",
+    "epidom features",
+    "f&b pos app",
+    "restaurant cashier app",
+    "cafe inventory management",
+    "digital menu page",
+    "qris payments",
     "kitchen display system",
-    "laporan operasional f&b",
+    "f&b operational reports",
   ],
   openGraph: {
-    title: "Fitur Lengkap EPIDOM — Platform F&B Indonesia",
+    title: "Full Features — EPIDOM F&B Platform",
     description:
-      "Dari halaman menu gratis hingga kasir dan laporan operasional. Satu platform untuk warung, kafe, dan restoran Indonesia.",
+      "From free menu page to POS cashier and operational reports. One platform for cafés, warungs, and restaurants.",
     type: "website",
   },
 };

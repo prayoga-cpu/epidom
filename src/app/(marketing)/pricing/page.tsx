@@ -2,20 +2,21 @@ import type { Metadata } from "next";
 import { PricingPageClient } from "@/features/marketing/pricing/components/pricing-page-client";
 
 export const metadata: Metadata = {
-  title: "Harga — EPIDOM",
+  title: "Pricing — EPIDOM",
   description:
-    "Mulai gratis, berkembang sesuai kebutuhan. Paket harga Epidom untuk kafe, restoran, dan toko F&B di Indonesia.",
+    "Start free, grow as you need. Epidom pricing plans for cafés, restaurants, and F&B businesses worldwide.",
   keywords: [
-    "harga epidom",
-    "paket epidom",
-    "biaya aplikasi kasir",
-    "harga pos restoran",
-    "epidom gratis",
+    "epidom pricing",
+    "epidom plans",
+    "pos cashier cost",
+    "restaurant pos price",
+    "free pos for restaurants",
+    "epidom free plan",
   ],
   openGraph: {
-    title: "Harga EPIDOM — Mulai Gratis",
+    title: "Pricing — EPIDOM · Start Free",
     description:
-      "Mulai gratis, berkembang sesuai kebutuhan. Paket harga Epidom untuk kafe, restoran, dan toko F&B di Indonesia.",
+      "Start free, grow as you need. Epidom pricing plans for cafés, restaurants, and F&B businesses worldwide.",
     type: "website",
   },
 };

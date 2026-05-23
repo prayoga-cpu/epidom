@@ -4,6 +4,7 @@ import { usePosOrders } from "../../hooks/use-pos-orders";
 import { KdsColumn } from "./kds-column";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChefHat } from "lucide-react";
+import { useI18n } from "@/components/lang/i18n-provider";
 import type { PosOrderDisplay } from "../../types/pos.types";
 
 interface KdsShellProps {
@@ -11,6 +12,7 @@ interface KdsShellProps {
 }
 
 export function KdsShell({ storeId }: KdsShellProps) {
+  const { t } = useI18n();
   const { data: orders, isLoading } = usePosOrders(storeId);
 
   if (isLoading) {
@@ -41,8 +43,8 @@ export function KdsShell({ storeId }: KdsShellProps) {
         <div className="rounded-full bg-muted p-6">
           <ChefHat className="h-10 w-10 opacity-40" />
         </div>
-        <p className="text-lg font-medium text-foreground">Semua pesanan selesai</p>
-        <p className="text-sm">Tidak ada pesanan aktif yang perlu diproses</p>
+        <p className="text-lg font-medium text-foreground">{t("pos.kds.allDone")}</p>
+        <p className="text-sm">{t("pos.kds.noActiveOrders")}</p>
       </div>
     );
   }
@@ -50,16 +52,16 @@ export function KdsShell({ storeId }: KdsShellProps) {
   return (
     <div className="flex h-full gap-4 overflow-x-auto p-6">
       <KdsColumn
-        title="🔥 Sedang Diproses"
+        title={t("pos.kds.processingColumn")}
         orders={preparing}
         storeId={storeId}
-        emptyLabel="Tidak ada pesanan yang sedang diproses"
+        emptyLabel={t("pos.kds.emptyProcessing")}
       />
       <KdsColumn
-        title="✅ Siap Disajikan"
+        title={t("pos.kds.readyColumn")}
         orders={ready}
         storeId={storeId}
-        emptyLabel="Belum ada pesanan yang siap"
+        emptyLabel={t("pos.kds.emptyReady")}
       />
     </div>
   );

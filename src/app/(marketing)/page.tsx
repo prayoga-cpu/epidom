@@ -21,23 +21,24 @@ import { ProductStructuredData } from "@/components/seo/structured-data";
 import { LandingPageSections } from "@/features/marketing/home/components/landing-page-sections";
 
 export const metadata = generateMetadata({
-  title: "Epidom — Toko Online, Menu, dan Kasir untuk UMKM F&B Indonesia",
+  title: "Epidom — Online Store, Menu & POS for F&B Businesses",
   description:
-    "Bikin halaman menu untuk Instagram, terima pesanan QRIS, kelola kasir, semua gratis. Untuk warung, kafe, dan resto Indonesia.",
+    "Create a menu page for Instagram, accept QRIS payments, manage your cashier — all free. For cafés, warungs, and restaurants worldwide.",
   keywords: [
-    "aplikasi kasir gratis",
-    "menu QR resto",
-    "halaman pesanan instagram",
-    "toko online F&B",
-    "POS UMKM",
-    "QRIS resto",
-    "Epidom",
+    "free pos app",
+    "digital menu qr code",
+    "online food ordering",
+    "f&b storefront",
+    "restaurant pos cashier",
+    "qris payments",
+    "kitchen display system",
+    "epidom",
   ],
   openGraph: {
-    title: "Epidom — Toko Online dan Kasir untuk F&B",
-    description: "Halaman menu, pesanan online, dan kasir dalam satu link.",
+    title: "Epidom — Online Store & POS for F&B",
+    description: "Menu page, online orders, and POS cashier in one link. Free forever.",
     url: "https://epidom.id",
-    locale: "id_ID",
+    locale: "en_US",
   },
 });
 

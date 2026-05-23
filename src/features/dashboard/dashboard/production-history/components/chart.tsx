@@ -78,14 +78,13 @@ export function Chart({ chartData }: Chart) {
       <AreaChart data={chartData} margin={{ left: 12, right: 12 }}>
         <defs>
           <linearGradient id="colorQty" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+            <stop offset="5%" stopColor="var(--chart-line)" stopOpacity={0.35} />
+            <stop offset="95%" stopColor="var(--chart-line)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid
-          stroke="gray"
+          stroke="var(--chart-grid)"
           strokeWidth={1}
-          opacity={0.5}
           strokeDasharray="5"
           horizontal={true}
           vertical={false}
@@ -93,29 +92,29 @@ export function Chart({ chartData }: Chart) {
         <XAxis
           dataKey="date"
           tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-          stroke="gray"
+          stroke="var(--chart-axis)"
           tickFormatter={formatXAxisTick}
         />
         <YAxis
           domain={yAxisDomain}
           tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-          stroke="gray"
+          stroke="var(--chart-axis)"
           width={30}
         />
         <Tooltip content={<CustomTooltip />} />
         <Area
           type="monotone"
           dataKey="quantity"
-          stroke="hsl(var(--primary))"
+          stroke="var(--chart-line)"
           strokeWidth={3}
           fill="url(#colorQty)"
           dot={{
             r: 5,
-            fill: "hsl(var(--primary))",
+            fill: "var(--chart-line)",
             strokeWidth: 2,
-            stroke: "hsl(var(--card))",
+            stroke: "var(--card)",
           }}
-          activeDot={{ r: 7, fill: "hsl(var(--primary))" }}
+          activeDot={{ r: 7, fill: "var(--chart-line)" }}
         />
       </AreaChart>
     </ResponsiveContainer>

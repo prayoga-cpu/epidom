@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `Checkout - ${storefront.displayName} | Epidom`,
-    description: `Selesaikan pesanan Anda di ${storefront.displayName}.`,
+    description: `Complete your order at ${storefront.displayName}.`,
   };
 }
 

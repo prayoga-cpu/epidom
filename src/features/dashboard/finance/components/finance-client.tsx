@@ -88,39 +88,36 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
   function exportXlsx() {
     const wb = XLSX.utils.book_new();
 
-    // Summary sheet
     if (summary.data) {
       const s = summary.data;
       const rows = [
-        ["Periode", `${from} — ${to}`],
-        ["Total Pesanan", s.orderCount],
-        ["Pendapatan", s.revenue],
-        ["HPP (COGS)", s.cogs],
-        ["Laba Kotor", s.grossProfit],
-        ["Margin Kotor (%)", s.grossMarginPct],
+        [t("pages.financePeriod"), `${from} — ${to}`],
+        [t("pages.financeOrders"), s.orderCount],
+        [t("pages.financeRevenue"), s.revenue],
+        [t("pages.financeCogs"), s.cogs],
+        [t("pages.financeGrossProfit"), s.grossProfit],
+        [t("pages.financeMargin"), s.grossMarginPct],
       ];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Ringkasan");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), t("pages.financeSummarySheet"));
     }
 
-    // Channels sheet
     if (channels.data?.channels?.length) {
-      const header = ["Channel", "Pesanan", "Pendapatan", "Komisi (%)", "Komisi (Rp)", "Bersih"];
+      const header = [t("pages.financeChannel"), t("pages.financeOrders"), t("pages.financeRevenue"), t("pages.financeCommission") + " (%)", t("pages.financeCommission"), t("pages.financeNetRevenue")];
       const rows = channels.data.channels.map((c) => [
         c.label, c.orderCount, c.revenue, c.commissionPct, c.commissionAmount, c.netRevenue,
       ]);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), "Per Channel");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), t("pages.financeChannels"));
     }
 
-    // Top items sheet
     if (topItems.data?.items?.length) {
-      const header = ["Item", "Pesanan", "Qty Terjual", "Pendapatan"];
+      const header = [t("common.item"), t("pages.financeOrders"), t("pages.financeQtySold"), t("pages.financeRevenue")];
       const rows = topItems.data.items.map((i) => [
         i.name, i.orderCount, i.totalQuantity, i.totalRevenue,
       ]);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), "Top Item");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), t("pages.financeTopItems"));
     }
 
-    XLSX.writeFile(wb, `laporan-keuangan-${from}-${to}.xlsx`);
+    XLSX.writeFile(wb, `finance-report-${from}-${to}.xlsx`);
   }
 
   const s = summary.data;
@@ -200,7 +197,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
         {/* Channels tab */}
         <TabsContent value="channels">
           <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-[600px]">
+            <div className="min-w-[520px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -234,7 +231,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
         {/* Top items tab */}
         <TabsContent value="items">
           <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-[500px]">
+            <div className="min-w-[400px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -264,7 +261,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
         {/* Daily breakdown tab */}
         <TabsContent value="daily">
           <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-[400px]">
+            <div className="min-w-[320px]">
               <Table>
                 <TableHeader>
                   <TableRow>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/lang/i18n-provider";
 import { KdsOrderCard } from "./kds-order-card";
 import type { PosOrderDisplay } from "../../types/pos.types";
 
@@ -11,6 +12,8 @@ interface KdsColumnProps {
 }
 
 export function KdsColumn({ title, orders, storeId, emptyLabel }: KdsColumnProps) {
+  const { t } = useI18n();
+
   return (
     <div className="flex min-w-[300px] max-w-sm flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -22,7 +25,7 @@ export function KdsColumn({ title, orders, storeId, emptyLabel }: KdsColumnProps
       <div className="flex flex-col gap-3 overflow-y-auto pb-4">
         {orders.length === 0 ? (
           <div className="flex h-32 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
-            {emptyLabel ?? "Tidak ada pesanan"}
+            {emptyLabel ?? t("pos.kds.emptyDefault")}
           </div>
         ) : (
           orders.map((order) => (

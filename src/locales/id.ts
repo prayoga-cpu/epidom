@@ -27,7 +27,7 @@ export const id = {
       homepage: "Halaman utama",
       searchAriaLabel: "Cari",
       stores: "Toko Saya",
-      profile: "Operationsfil",
+      profile: "Profil",
       startFree: "Mulai Gratis",
     },
     language: {
@@ -57,7 +57,7 @@ export const id = {
     delivery: "Pengiriman",
     name: "Nama",
     material: "Material",
-    product: "Operationsduk",
+    product: "Produk",
     notAvailable: "T/A",
     type: "Tipe",
     date: "Tanggal",
@@ -73,6 +73,8 @@ export const id = {
       pickDate: "Pilih tanggal",
       pickDateRange: "Pilih rentang tanggal",
       selectPreset: "Pilih preset",
+      from: "Dari",
+      to: "Sampai",
       presets: {
         today: "Hari ini",
         last7Days: "7 hari terakhir",
@@ -139,6 +141,11 @@ export const id = {
       select: "Pilih",
       apply: "Terapkan",
       complete: "Selesaikan",
+      remove: "Hapus",
+    },
+    pagination: {
+      rowsPerPage: "Baris per halaman",
+      page: "Halaman",
     },
     loading: "Memuat...",
     goHome: "Kembali ke Beranda",
@@ -175,12 +182,12 @@ export const id = {
       notificationDetail: "Kopi Susu x2 — Rp 28.000",
       statsValue: "98%",
       statsLabel: "Limbah Berkurang",
-      socialOperationsofMini: "Dipercaya oleh 500+ warung, kafe, dan resto di Indonesia",
+      socialProofMini: "Dipercaya oleh 500+ warung, kafe, dan resto di Indonesia",
       trustNoCard: "Tanpa kartu kredit",
       trustSetup: "Setup 5 menit",
       trustQris: "QRIS siap pakai",
     },
-    socialOperationsof: {
+    socialProof: {
       trustedBy: "Dipercaya oleh warung, kafe, dan resto Seluruh Dunia",
       yourBrand: "warung, kafe, dan resto Anda Di Sini",
       instagramTitle: "Berikan Kami Masukan",
@@ -199,10 +206,10 @@ export const id = {
       headline: "Buat, Lacak, Peringatan",
       description:
         "Kami populer dalam membantu manajemen warung, kafe, dan resto yang kewalahan dengan peringatan kedaluwarsa cerdas, khususnya di Indonesia 🇫🇷.",
-      aiGenerated: "Konten Generatif Sistem: Operationsfil, Dasbor, Manajemen, Pelacakan, Data, Peringatan.",
+      aiGenerated: "Konten Generatif Sistem: Profil, Dasbor, Manajemen, Pelacakan, Data, Peringatan.",
       features: {
         profile: {
-          title: "Operationsfil",
+          title: "Profil",
           description: "Kelola profil bisnis dan anggota tim Anda dengan mudah",
         },
         dashboard: {
@@ -442,7 +449,7 @@ export const id = {
         "Perangkat lunak ini menyediakan pelacakan waktu nyata bahan baku, dari kedatangan hingga penggunaan aktualnya. Melalui riwayat stok yang jelas, peringatan ambang batas, dan analitik konsumsi, Epidom membantu mencegah kekurangan serta kelebihan stok. Bisnis dapat merencanakan pembelian mereka dengan lebih efisien dan lebih baik mengantisipasi kebutuhan yang akan datang.",
     },
     data: {
-      title: "Alat Operationsduksi Khusus dan Ketertelusuran",
+      title: "Alat Produksi Khusus dan Ketertelusuran",
       description1:
         "Epidom juga mencakup alat produksi khusus, memungkinkan pengguna untuk memantau evolusi resep, tingkat limbah, dan kuantitas yang digunakan selama periode tertentu. Fitur-fitur ini meningkatkan ketertelusuran dan memberikan pemahaman mendalam tentang pola konsumsi.",
       description2:
@@ -490,7 +497,7 @@ export const id = {
         },
         thumbs: {
           products: {
-            title: "Operationsduk",
+            title: "Produk",
             desc: "Katalog dengan detail biaya dan satuan.",
           },
           recipes: {
@@ -946,12 +953,12 @@ export const id = {
     },
   },
   profileEdit: {
-    title: "Edit Operationsfil",
+    title: "Edit Profil",
     desc: "Perbarui detail akun Anda.",
     labels: { email: "Email", role: "Peran" },
     save: "Simpan perubahan",
     cancel: "Batal",
-    toastUpdated: "Operationsfil diperbarui",
+    toastUpdated: "Profil diperbarui",
   },
   password: {
     title: "Ubah Kata Sandi",
@@ -1220,7 +1227,7 @@ export const id = {
     successDesc: "Kami akan segera menghubungi dengan detail akses trial.",
   },
   nav: {
-    profile: "Operationsfil",
+    profile: "Profil",
     dashboard: "Dasbor",
     storefront: "Toko Online",
     management: "Manajemen",
@@ -1238,7 +1245,7 @@ export const id = {
     tryEpidom: "Coba Epidom",
   },
   sidebar: {
-    inventoryOperationsduction: "Inventaris & Operationsduksi",
+    inventoryProduction: "Inventaris & Produksi",
   },
   pages: {
     stockLevel: "Tingkat Stok",
@@ -1250,11 +1257,11 @@ export const id = {
     ordersTitle: "Pesanan untuk Dibuat",
     materialsList: "Daftar Bahan Mentah",
     recipesList: "Daftar Resep",
-    productsList: "Daftar Operationsduk",
+    productsList: "Daftar Produk",
     suppliersList: "Daftar Pemasok",
     manageData: "Kelola Data",
     ingredient: "Bahan",
-    productSheet: "Lembar Operationsduk",
+    productSheet: "Lembar Produk",
     supplier: "Pemasok",
     stockSheet: "Lembar Stok",
     history: "Riwayat",
@@ -1269,9 +1276,9 @@ export const id = {
     processing: "Sedang Diproses",
     inStock: "Dalam Stok",
     adjustStock: "Sesuaikan Stok",
-    prodHistory: "Riwayat Operationsduksi",
+    prodHistory: "Riwayat Produksi",
     prodHistoryDesc: "7 hari terakhir produksi",
-    productDesignation: "Penamaan Operationsduk",
+    productDesignation: "Penamaan Produk",
     trackingStatus: "Status Pelacakan",
     usedQty: "Jumlah Terpakai",
     usersList: "Daftar Pengguna",
@@ -1293,6 +1300,8 @@ export const id = {
     financeCommission: "Komisi",
     financeNetRevenue: "Bersih",
     financeQtySold: "Qty Terjual",
+    financePeriod: "Periode",
+    financeSummarySheet: "Ringkasan",
     ownerTitle: "Owner Dashboard",
     ownerDesc: "Ringkasan semua toko dalam bisnis Anda",
     ownerTotalRevenue: "Total Pendapatan",
@@ -1320,6 +1329,10 @@ export const id = {
     staffRole: "Peran",
     staffActive: "Aktif",
     staffInactive: "Nonaktif",
+    posOrdersDesc: "Kelola pesanan dari toko online dan kasir secara real-time.",
+    kdsTitle: "Kitchen Display System",
+    kdsDesc: "Tampilan dapur real-time · Tap item untuk update status",
+    tablesDesc: "Pantau status meja dine-in secara real-time",
   },
   dashboard: {
     title: "Dasbor",
@@ -1365,7 +1378,7 @@ export const id = {
     percentUsed: "digunakan",
     openOrders: "Total pesanan terbuka",
     plusToday: "+2 hari ini",
-    productionHistory: "Riwayat Operationsduksi (7 hari)",
+    productionHistory: "Riwayat Produksi (7 hari)",
     currentWorkflow: "Alur Kerja Saat Ini",
     inStock: "Dalam Stok",
     processing: "Sedang Diproses",
@@ -1399,7 +1412,7 @@ export const id = {
     },
   },
   data: {
-    productDesignation: "Penamaan Operationsduk",
+    productDesignation: "Penamaan Produk",
     supplierEmail: "Email",
     supplierName: "Nama",
     supplierPhone: "Telepon",
@@ -1438,11 +1451,15 @@ export const id = {
         minStock: "Stok Min.",
         cost: "Biaya per Satuan ($)",
         costPlaceholder: "25.00",
+        location: "Lokasi Penyimpanan",
+        locationPlaceholder: "Lokasi",
+        barcode: "Barcode/Kode Produk",
+        barcodePlaceholder: "Barcode",
         notes: "Catatan (Opsional)",
         notesPlaceholder: "Informasi tambahan tentang bahan mentah ini...",
         description: "Deskripsi",
         descriptionPlaceholder: "Informasi tambahan tentang bahan mentah ini...",
-        categoryPlaceholder: "contoh: Biji-bijian, Operationsduk Susu",
+        categoryPlaceholder: "contoh: Biji-bijian, Produk Susu",
         selectSupplierPlaceholder: "Pilih pemasok...",
         unitCost: "Biaya per Satuan",
         currentStock: "Stok Saat Ini",
@@ -1465,7 +1482,7 @@ export const id = {
       categories: {
         raw: "Bahan Mentah",
         packaging: "Kemasan",
-        dairy: "Operationsduk Susu",
+        dairy: "Produk Susu",
         grains: "Biji-bijian & Tepung",
         spices: "Rempah & Bumbu",
         other: "Lainnya",
@@ -1565,7 +1582,7 @@ export const id = {
         yieldQuantity: "Jumlah Hasil",
         yieldUnit: "Satuan Hasil",
         selectUnit: "Pilih satuan",
-        productionTime: "Waktu Operationsduksi (menit)",
+        productionTime: "Waktu Produksi (menit)",
         productionTimePlaceholder: "180",
         productionTimeHint: "Total waktu untuk memproduksi resep ini",
         instructions: "Instruksi Memasak",
@@ -1611,7 +1628,7 @@ export const id = {
       review: {
         title: "Tinjau Resep Anda",
         yield: "Hasil",
-        productionTime: "Waktu Operationsduksi",
+        productionTime: "Waktu Produksi",
         minutes: "menit",
         ingredientsCount: "Bahan ({count})",
         costAnalysis: "Analisis Biaya",
@@ -1645,7 +1662,7 @@ export const id = {
         breadPastries: "Roti & Kue",
         cakesDesserts: "Kue & Dessert",
         confectionery: "Permen",
-        dairyOperationsducts: "Operationsduk Susu",
+        dairyProducts: "Produk Susu",
         beverages: "Minuman",
         saucesCondiments: "Saus & Bumbu",
         other: "Lainnya",
@@ -1725,7 +1742,7 @@ export const id = {
         suggestedPrice: "Harga Saran (markup 2,5x)",
         profitPerUnit: "Laba per {unit}",
         costBreakdown: "Rincian Biaya",
-        productionMetrics: "Metrik Operationsduksi",
+        productionMetrics: "Metrik Produksi",
         costPerMinute: "Biaya per Menit",
         outputPerHour: "Output per Jam",
         laborCost: "Biaya Tenaga Kerja (perkiraan)",
@@ -1733,9 +1750,9 @@ export const id = {
         laborCostEstimate20: "@ $20/jam: {price}",
         breakEvenUnits: "Unit Break-even/Hari",
         breakEvenWithOverhead: "Dengan overhead $200: {units} {unit}",
-        linkedOperationsducts: "Operationsduk Terkait ({count})",
-        linkedOperationsductsHint:
-          "💡 Operationsduk-produk ini dapat diproduksi menggunakan resep ini. Operationsduk dapat dihubungkan ke beberapa resep (mis: 10 baguette atau 50 baguette).",
+        linkedProducts: "Produk Terkait ({count})",
+        linkedProductsHint:
+          "💡 Produk-produk ini dapat diproduksi menggunakan resep ini. Produk dapat dihubungkan ke beberapa resep (mis: 10 baguette atau 50 baguette).",
         pricingRecommendations: "Rekomendasi Harga",
         wholesalePricing: "Grosir (margin 30%): {price}",
         retailPricing: "Eceran (margin 60%): {price}",
@@ -1744,7 +1761,7 @@ export const id = {
 
       // Legacy keys (for backward compatibility)
       productsUsingRecipe: {
-        title: "Operationsduk yang Menggunakan Resep Ini",
+        title: "Produk yang Menggunakan Resep Ini",
         emptyState: "Tidak ada produk yang saat ini menggunakan resep ini",
         stockLabel: "Stok",
         retailPrice: "Harga Eceran",
@@ -1752,16 +1769,16 @@ export const id = {
       },
     },
 
-    // Operationsducts section
+    // Products section
     products: {
-      pageTitle: "Operationsduk",
+      pageTitle: "Produk",
       limitBadge: "produk",
       limitTooltip:
         "Anda telah mencapai batas produk paket Anda ({current}/{limit}). Upgrade ke Operations untuk produk tak terbatas.",
-      addTitle: "Tambah Operationsduk Baru",
-      addButton: "Tambah Operationsduk",
-      editTitle: "Edit Operationsduk",
-      detailsTitle: "Detail Operationsduk",
+      addTitle: "Tambah Produk Baru",
+      addButton: "Tambah Produk",
+      editTitle: "Edit Produk",
+      detailsTitle: "Detail Produk",
       addDescription:
         "Tambahkan produk baru ke inventaris Anda. Hubungkan ke resep untuk perhitungan biaya otomatis.",
       editDescription: "Perbarui informasi produk",
@@ -1776,7 +1793,7 @@ export const id = {
 
       // Form fields
       form: {
-        name: "Nama Operationsduk",
+        name: "Nama Produk",
         namePlaceholder: "contoh: Baguette Tradisi",
         sku: "SKU",
         skuPlaceholder: "contoh: BAG-TRD",
@@ -1790,7 +1807,7 @@ export const id = {
         noRecipe: "Tanpa resep",
         recipeHint: "Hubungkan ke resep produksi",
         recipeHintMultiple:
-          "Operationsduk dapat diproduksi dengan beberapa resep (mis: 10 baguette atau 50 baguette)",
+          "Produk dapat diproduksi dengan beberapa resep (mis: 10 baguette atau 50 baguette)",
         addNewRecipe: "Tambah Resep Baru",
         selectedRecipes: "Resep Terpilih",
         noRecipesAvailable: "Tidak ada resep tersedia",
@@ -1834,28 +1851,28 @@ export const id = {
 
       // Tooltips
       tooltips: {
-        view: "Lihat Operationsduk",
-        edit: "Edit Operationsduk",
-        delete: "Hapus Operationsduk",
+        view: "Lihat Produk",
+        edit: "Edit Produk",
+        delete: "Hapus Produk",
       },
 
       // Toasts
       toasts: {
         adding: "Menambahkan produk...",
         added: {
-          title: "Operationsduk Berhasil Ditambahkan",
+          title: "Produk Berhasil Ditambahkan",
           description: "{name} telah ditambahkan ke produk Anda.",
         },
         updated: {
-          title: "Operationsduk Berhasil Diperbarui",
+          title: "Produk Berhasil Diperbarui",
           description: "{name} telah diperbarui.",
         },
         deleted: {
-          title: "Operationsduk Berhasil Dihapus",
+          title: "Produk Berhasil Dihapus",
           description: "{name} telah berhasil dihapus.",
         },
         bulkDeleted: {
-          title: "Operationsduk Berhasil Dihapus",
+          title: "Produk Berhasil Dihapus",
           description: "{count} produk telah berhasil dihapus.",
         },
       },
@@ -1871,7 +1888,7 @@ export const id = {
         financialSummary: "Ringkasan Keuangan",
         stockValueAtCost: "Nilai Stok (pada harga pokok)",
         potentialRevenue: "Pendapatan Potensial (eceran)",
-        potentialOperationsfit: "Laba Potensial",
+        potentialProfit: "Laba Potensial",
         profitPerUnit: "Laba per satuan",
         criticalStockAlert: "⚠️ Tingkat stok kritis! Pengisian ulang segera diperlukan.",
         lowStockAlert: "⚠️ Stok mulai menipis. Pertimbangkan untuk mengisi ulang segera.",
@@ -1991,6 +2008,12 @@ export const id = {
     allCategories: "Semua Kategori",
     allTerms: "Semua Syarat",
     allRatings: "Semua Penilaian",
+    placeholderCategory: "Kategori",
+    placeholderSupplier: "Pemasok",
+    placeholderStockStatus: "Status Stok",
+    placeholderSortBy: "Urutkan berdasarkan",
+    placeholderPaymentTerms: "Syarat Pembayaran",
+    placeholderRating: "Penilaian",
     cod: "Bayar di Tempat",
     net15: "Net 15",
     net30: "Net 30",
@@ -2010,8 +2033,8 @@ export const id = {
     costHighLow: "Biaya (Tinggi-Rendah)",
     priceLowHigh: "Harga (Rendah-Tinggi)",
     priceHighLow: "Harga (Tinggi-Rendah)",
-    profitLowHigh: "Operationsfit (Rendah-Tinggi)",
-    profitHighLow: "Operationsfit (Tinggi-Rendah)",
+    profitLowHigh: "Profit (Rendah-Tinggi)",
+    profitHighLow: "Profit (Tinggi-Rendah)",
     categoryAZ: "Kategori (A-Z)",
     categoryZA: "Kategori (Z-A)",
     ratingLowHigh: "Penilaian (Rendah-Tinggi)",
@@ -2039,8 +2062,8 @@ export const id = {
   },
   tables: {
     order: "Pesanan",
-    product: "Operationsduk",
-    products: "Operationsduk",
+    product: "Produk",
+    products: "Produk",
     date: "Tanggal",
     status: "Status",
     actions: "Aksi",
@@ -2065,12 +2088,12 @@ export const id = {
     addMaterial: "Tambah Bahan Mentah",
     archive: "Arsip",
     details: "Detail",
-    editOperationsfile: "Edit Operationsfil",
+    editProfile: "Edit Profil",
     filter: "Filter",
     invite: "Undang Pengguna",
     manage: "Kelola",
     markDelivered: "Tandai sebagai Dikirim",
-    markOperationscessing: "Tandai sebagai Diproses",
+    markProcessing: "Tandai sebagai Diproses",
     note: "Catatan",
     searchByEmail: "Cari berdasarkan email...",
     searchByName: "Cari berdasarkan nama...",
@@ -2083,7 +2106,7 @@ export const id = {
   messages: {
     passwordsDoNotMatch: "Kata sandi tidak cocok",
     noResults: "Tidak ada hasil ditemukan",
-    profileUpdated: "Operationsfil berhasil diperbarui",
+    profileUpdated: "Profil berhasil diperbarui",
     selectOrder: "Pilih pesanan untuk melihat detail",
     selectDelivery: "Pilih pengiriman untuk melihat detail",
     invalidCredentials: "Email atau kata sandi tidak valid",
@@ -2095,15 +2118,15 @@ export const id = {
     noMatchingFilters: "Tidak ada item yang cocok dengan filter Anda. Coba sesuaikan pencarian.",
     noMaterialsFound: "Tidak ada bahan mentah ditemukan",
     noRecipesFound: "Tidak ada resep ditemukan",
-    noOperationsductsFound: "Tidak ada produk ditemukan",
+    noProductsFound: "Tidak ada produk ditemukan",
     noSuppliersFound: "Tidak ada pemasok ditemukan",
     getStartedMaterial: "Mulai dengan menambahkan bahan mentah pertama Anda",
     getStartedRecipe: "Mulai dengan membuat resep pertama Anda",
-    getStartedOperationsduct: "Mulai dengan menambahkan produk pertama Anda",
+    getStartedProduct: "Mulai dengan menambahkan produk pertama Anda",
     getStartedSupplier: "Mulai dengan menambahkan pemasok pertama Anda",
     errorLoadingMaterials: "Kesalahan memuat bahan mentah",
     errorLoadingRecipes: "Kesalahan memuat resep",
-    errorLoadingOperationsducts: "Kesalahan memuat produk",
+    errorLoadingProducts: "Kesalahan memuat produk",
     errorLoadingSuppliers: "Kesalahan memuat pemasok",
     noDataToExport: "Tidak ada data untuk diekspor",
     noDataToExportDesc: "Tidak ada data yang tersedia untuk diekspor.",
@@ -2250,7 +2273,7 @@ export const id = {
   },
   profile: {
     // Judul halaman
-    title: "Pengaturan Operationsfil",
+    title: "Pengaturan Profil",
     loading: "Memuat profil...",
     failedToLoad: "Gagal memuat profil",
     user: "Pengguna",
@@ -2274,7 +2297,7 @@ export const id = {
       timezone: "Zona Waktu",
       currency: "Mata Uang",
       memberSince: "Anggota sejak",
-      avatar: "Foto Operationsfil",
+      avatar: "Foto Profil",
       changeAvatar: "Ubah Avatar",
       uploadAvatar: "Unggah Avatar",
     },
@@ -2356,7 +2379,7 @@ export const id = {
         alertsDesc: "Dapatkan notifikasi saat tingkat stok rendah atau kritis",
         orders: "Pembaruan Pesanan",
         ordersDesc: "Terima pembaruan tentang perubahan status pesanan",
-        production: "Pembaruan Operationsduksi",
+        production: "Pembaruan Produksi",
         productionDesc: "Dapatkan notifikasi tentang progres batch produksi",
       },
     },
@@ -2378,7 +2401,7 @@ export const id = {
       actions: {
         login: "Masuk",
         logout: "Keluar",
-        updateOperationsfile: "Operationsfil diperbarui",
+        updateProfile: "Profil diperbarui",
         updateBusiness: "Informasi bisnis diperbarui",
         createMaterial: "Bahan mentah dibuat",
         updateMaterial: "Bahan mentah diperbarui",
@@ -2388,7 +2411,7 @@ export const id = {
         deleteRecipe: "Resep dihapus",
         createOrder: "Pesanan dibuat",
         updateOrder: "Pesanan diperbarui",
-        createOperationsduction: "Batch produksi dimulai",
+        createProduction: "Batch produksi dimulai",
       },
     },
 
@@ -2399,7 +2422,7 @@ export const id = {
       editBusinessInfo: "Edit Informasi Bisnis",
       editBusinessInfoDescription: "Perbarui informasi kontak dan detail bisnis Anda",
       addBusinessInfoDescription: "Tambahkan informasi bisnis Anda untuk melengkapi profil",
-      editAvatar: "Edit Foto Operationsfil",
+      editAvatar: "Edit Foto Profil",
       editAvatarDescription: "Unggah foto profil baru atau hapus foto yang ada.",
       cropAvatarDescription: "Potong dan sesuaikan foto profil Anda.",
       previewAvatarDescription: "Pratinjau foto profil baru Anda.",
@@ -2423,7 +2446,7 @@ export const id = {
       edit: "Edit",
       save: "Simpan Perubahan",
       cancel: "Batal",
-      update: "Perbarui Operationsfil",
+      update: "Perbarui Profil",
       delete: "Hapus",
       remove: "Hapus",
       removeAvatar: "Hapus Avatar",
@@ -2442,8 +2465,8 @@ export const id = {
     // Pesan toast
     toasts: {
       profileUpdated: {
-        title: "Operationsfil Diperbarui",
-        description: "Operationsfil Anda telah berhasil diperbarui.",
+        title: "Profil Diperbarui",
+        description: "Profil Anda telah berhasil diperbarui.",
       },
       businessUpdated: {
         title: "Info Bisnis Diperbarui",
@@ -2495,7 +2518,7 @@ export const id = {
     // Kunci warisan (menjaga kompatibilitas mundur)
     address: "Alamat",
     businessName: "Nama Bisnis",
-    updateOperationsfile: "Perbarui Operationsfil",
+    updateProfile: "Perbarui Profil",
   },
   stores: {
     title: "Toko Anda",
@@ -2530,8 +2553,8 @@ export const id = {
   tabs: {
     delivery: "Pengiriman",
     supplierDeliveries: "Pengiriman Supplier",
-    recipeOperationsduction: "Operationsduksi Resep",
-    productionHistory: "Riwayat Operationsduksi",
+    recipeProduction: "Produksi Resep",
+    productionHistory: "Riwayat Produksi",
     editStock: "Edit Stok",
     managePermissions: "Kelola Izin",
     stockLevels: "Level Stok",
@@ -2539,7 +2562,7 @@ export const id = {
   },
   management: {
     deliveries: "Pengiriman",
-    production: "Operationsduksi",
+    production: "Produksi",
     history: "Riwayat",
     stock: "Stok",
     // Delivery Tab
@@ -2584,6 +2607,9 @@ export const id = {
         updateStatus: "Perbarui Status",
         print: "Cetak",
         delete: "Hapus",
+        viewDelivery: "Lihat Pengiriman",
+        editDelivery: "Edit Pengiriman",
+        printDelivery: "Cetak Pengiriman",
       },
       details: {
         title: "Detail Pengiriman",
@@ -2732,9 +2758,9 @@ export const id = {
       itemType: "Tipe Item",
       selectItemType: "Pilih tipe item",
       material: "Bahan Mentah",
-      product: "Operationsduk",
+      product: "Produk",
       selectMaterial: "Pilih Bahan Mentah",
-      selectOperationsduct: "Pilih Operationsduk",
+      selectProduct: "Pilih Produk",
 
       // Stock Status
       inStock: "Tersedia",
@@ -2850,9 +2876,9 @@ export const id = {
         },
       },
     },
-    // Recipe Operationsduction Tab
-    recipeOperationsduction: {
-      title: "Operationsduksi Resep",
+    // Recipe Production Tab
+    recipeProduction: {
+      title: "Produksi Resep",
       description: "Memulai batch produksi baru dan memantau produksi aktif",
       availableRecipes: "Resep Tersedia",
       selectRecipeToStart: "Pilih resep untuk memulai produksi",
@@ -2863,14 +2889,14 @@ export const id = {
 
       // Recipe Details
       yield: "Hasil",
-      productionTime: "Waktu Operationsduksi",
+      productionTime: "Waktu Produksi",
       minutes: "menit",
       costPerBatch: "Biaya per Batch",
       costPerUnit: "Biaya per Unit",
-      startOperationsduction: "Mulai Operationsduksi",
+      startProduction: "Mulai Produksi",
       insufficientMaterials: "Bahan mentah tidak mencukupi untuk memulai produksi",
-      noLinkedOperationsducts: "Tidak ada produk yang terhubung ke resep ini",
-      noLinkedOperationsductsHint: "Mohon hubungkan produk ke resep ini sebelum memulai produksi.",
+      noLinkedProducts: "Tidak ada produk yang terhubung ke resep ini",
+      noLinkedProductsHint: "Mohon hubungkan produk ke resep ini sebelum memulai produksi.",
       insufficientMaterialsWarning: "Beberapa bahan mentah di bawah level yang diperlukan",
       insufficientMaterialsHint: "Mohon restock bahan mentah yang kurang sebelum memulai produksi",
 
@@ -2902,15 +2928,15 @@ export const id = {
       // Batch Statuses
       statuses: {
         planned: "Direncanakan",
-        inOperationsgress: "Sedang Berjalan",
+        inProgress: "Sedang Berjalan",
         completed: "Selesai",
         cancelled: "Dibatalkan",
       },
 
-      // Start Operationsduction Dialog
+      // Start Production Dialog
       dialogs: {
-        startOperationsduction: {
-          title: "Mulai Batch Operationsduksi",
+        startProduction: {
+          title: "Mulai Batch Produksi",
           description: "Buat batch produksi baru untuk resep ini",
         },
       },
@@ -2920,32 +2946,32 @@ export const id = {
       timePerBatch: "Waktu per Batch",
       batchQuantity: "Jumlah Batch",
       batchQuantityHint: "Berapa banyak batch yang ingin Anda produksi?",
-      productionSummary: "Ringkasan Operationsduksi",
+      productionSummary: "Ringkasan Produksi",
       totalYield: "Total Hasil",
       totalTime: "Total Waktu",
       totalCost: "Total Biaya",
       targetCompletionDate: "Target Tanggal Selesai",
       targetCompletionDateHint: "Kapan produksi ini harus selesai?",
-      notes: "Catatan Operationsduksi",
+      notes: "Catatan Produksi",
       notesPlaceholder: "Tambahkan instruksi atau catatan khusus...",
       notesHint: "Catatan opsional tentang batch produksi ini",
 
       // Toast Messages
       toasts: {
         productionStarted: {
-          title: "Operationsduksi Dimulai",
+          title: "Produksi Dimulai",
           description: "Batch {batchNumber} berhasil dibuat",
         },
         productionFailed: {
-          title: "Gagal Memulai Operationsduksi",
+          title: "Gagal Memulai Produksi",
           description: "Terjadi kesalahan saat memulai batch produksi. Silakan coba lagi.",
         },
       },
     },
 
-    // Operationsduction History Tab
+    // Production History Tab
     productionHistory: {
-      title: "Riwayat Operationsduksi",
+      title: "Riwayat Produksi",
       description: "Lihat dan analisis batch produksi yang telah selesai",
       filters: "Filter",
       filtersDescription: "Filter batch berdasarkan status, resep, atau rentang tanggal",
@@ -2974,7 +3000,7 @@ export const id = {
       // Batch Statuses
       statuses: {
         planned: "Direncanakan",
-        inOperationsgress: "Sedang Berjalan",
+        inProgress: "Sedang Berjalan",
         completed: "Selesai",
         cancelled: "Dibatalkan",
       },
@@ -3016,7 +3042,7 @@ export const id = {
       costPerUnit: "Biaya/Unit",
       totalCost: "Total Biaya",
 
-      productionTimeline: "Timeline Operationsduksi",
+      productionTimeline: "Timeline Produksi",
       completedAt: "Selesai Pada",
       duration: "Durasi",
       totalDuration: "Durasi Total",
@@ -3041,7 +3067,7 @@ export const id = {
       in: "Masuk Stok",
       out: "Keluar Stok",
       adjustment: "Penyesuaian",
-      production: "Operationsduksi",
+      production: "Produksi",
       waste: "Limbah",
       return: "Pengembalian",
     },
@@ -3049,7 +3075,7 @@ export const id = {
     // Table headers
     dateTime: "Tanggal & Waktu",
     material: "Bahan Mentah",
-    product: "Operationsduk",
+    product: "Produk",
     type: "Tipe",
     quantity: "Jumlah",
     reason: "Alasan",
@@ -3093,7 +3119,7 @@ export const id = {
 
     // Forms
     selectMaterial: "Pilih Bahan Mentah",
-    selectOperationsduct: "Pilih Operationsduk",
+    selectProduct: "Pilih Produk",
     selectItem: "Pilih Item",
     movementType: "Tipe Pergerakan",
     enterQuantity: "Masukkan Jumlah",
@@ -3102,12 +3128,12 @@ export const id = {
     referenceNumber: "Nomor Referensi",
     itemType: "Tipe Item",
     materialType: "Bahan Mentah",
-    productType: "Operationsduk",
+    productType: "Produk",
 
     // Reasons
     reasons: {
       purchase: "Pesanan Pembelian",
-      production: "Digunakan dalam Operationsduksi",
+      production: "Digunakan dalam Produksi",
       sale: "Penjualan",
       damage: "Rusak",
       expired: "Kadaluarsa",
@@ -3355,7 +3381,7 @@ export const id = {
     needBank: "Detail rekening bank untuk pembayaran",
     needIdentity: "Verifikasi identitas (mungkin memerlukan dokumen)",
     processTime:
-      "Operationsses ini ditangani dengan aman oleh Stripe dan biasanya memakan waktu 5-10 menit.",
+      "Proses ini ditangani dengan aman oleh Stripe dan biasanya memakan waktu 5-10 menit.",
     completeSetup: "Selesaikan Pengaturan Pembayaran",
     redirectingToStripe: "Mengalihkan ke Stripe...",
     secureOnboarding: "Anda akan dialihkan ke halaman onboarding aman Stripe",
@@ -3447,7 +3473,7 @@ export const id = {
       item3: "Anda ditagih secara tidak benar karena kesalahan penagihan dari pihak kami",
     },
     section2: {
-      title: "2. Operationsses Pengembalian Dana",
+      title: "2. Proses Pengembalian Dana",
       content: "Untuk meminta pengembalian dana, silakan ikuti langkah-langkah berikut:",
       step1:
         "Hubungi tim dukungan kami di support@epidom.com dengan permintaan pengembalian dana Anda",
@@ -3496,7 +3522,7 @@ export const id = {
       active: "Aktif",
       message:
         "Terima kasih atas pembelian Anda! Langganan Anda sekarang aktif dan Anda dapat mulai menggunakan semua fitur segera.",
-      continueToOperationsfile: "Lanjutkan ke Operationsfil",
+      continueToProfile: "Lanjutkan ke Profil",
       viewDashboard: "Lihat Dasbor",
       confirmationEmail:
         "Email konfirmasi telah dikirim ke alamat email terdaftar Anda dengan tanda terima dan detail langganan.",
@@ -3522,12 +3548,26 @@ export const id = {
     canceledTitle: "Validasi kartu dibatalkan",
     canceledMessage:
       "Anda perlu memvalidasi kartu untuk mengakses fitur OPERATIONS. Tidak ada biaya yang dikenakan.",
-    cardTitle: "Operationsmo Tahun Baru",
+    cardTitle: "Promo Tahun Baru",
     cardDescription: "Dapatkan paket OPERATIONS gratis hingga 31 Desember 2025",
     whatYouGet: "Yang akan Anda dapatkan:",
+    businessSetup: {
+      title: "Siapkan Bisnis Anda",
+      subtitle:
+        "Mari mulai dengan menyiapkan profil bisnis Anda. Ini akan menjadi fondasi dasbor Anda.",
+      businessName: "Nama Bisnis",
+      businessNamePlaceholder: "mis. Toko Roti Epidom",
+      businessAddress: "Alamat Bisnis",
+      businessAddressPlaceholder: "mis. Jl. Sudirman No. 123, Jakarta",
+      continueButton: "Lanjutkan ke Langkah Berikutnya",
+      savingProfile: "Menyimpan Profil...",
+      stepIndicator: "Langkah 1 dari 2: Informasi Bisnis",
+      profileCreated: "Profil bisnis berhasil dibuat!",
+    },
+    stepIndicator: "Langkah 2 dari 2: Aktivasi Paket",
     features: {
       fullAccess: "Akses penuh ke semua fitur OPERATIONS",
-      unlimited: "Operationsduk dan resep tanpa batas",
+      unlimited: "Produk dan resep tanpa batas",
       analytics: "Analitik dan laporan lanjutan",
       emailSupport: "Dukungan email prioritas",
       whatsappSupport: "Saluran dukungan WhatsApp",
@@ -3580,7 +3620,7 @@ export const id = {
       entities: {
         auto: "Deteksi Otomatis (Disarankan)",
         material: "Bahan Baku (Materials)",
-        product: "Operationsduk Jual (Operationsducts)",
+        product: "Produk Jual (Products)",
         supplier: "Pemasok (Suppliers)",
         recipe: "Resep (Recipes)",
       },
@@ -3615,7 +3655,7 @@ export const id = {
       },
       tabs: {
         materials: "Bahan Baku",
-        products: "Operationsduk",
+        products: "Produk",
         suppliers: "Pemasok",
         recipes: "Resep",
       },
@@ -3711,7 +3751,9 @@ export const id = {
       paymentMethod: "Metode Pembayaran",
       cash: "Tunai",
       qris: "QRIS",
+      orderType: "Tipe Pesanan",
       table: "Meja",
+      tableOptional: "Meja (opsional)",
       takeaway: "Bawa Pulang",
       dineIn: "Makan di Tempat",
       amountTendered: "Uang Diterima",
@@ -3720,8 +3762,10 @@ export const id = {
       customerName: "Nama Pelanggan (opsional)",
       customerPhone: "No. HP (opsional)",
       notes: "Catatan (opsional)",
+      notesPlaceholder: "Catatan untuk dapur...",
       processing: "Memproses...",
       success: "Pesanan berhasil dibuat!",
+      orderFailed: "Gagal membuat pesanan. Coba lagi.",
     },
     queue: {
       title: "Antrian",
@@ -3732,6 +3776,7 @@ export const id = {
       orderNumber: "No. Pesanan",
       ago: "yang lalu",
       justNow: "Baru saja",
+      updateFailed: "Gagal memperbarui status pesanan",
     },
     status: {
       pending: "Menunggu",
@@ -3772,6 +3817,16 @@ export const id = {
       },
       empty: "Belum ada meja",
       emptyDesc: "Tambahkan meja untuk memudahkan manajemen pesanan dine-in",
+      addFirst: "Tambah Meja Pertama",
+      countHint: "meja terdaftar · Tap untuk ganti status",
+      confirmDelete: "Hapus meja",
+      deleting: "Menghapus...",
+      updateFailed: "Gagal memperbarui status meja",
+      deleteFailed: "Gagal menghapus meja",
+      statusUpdated: "status diperbarui",
+      labelRequired: "Label wajib diisi",
+      capacityPax: "Kapasitas (orang)",
+      saveFailed: "Gagal menyimpan meja",
     },
     kds: {
       title: "Layar Dapur",
@@ -3782,6 +3837,18 @@ export const id = {
       timer: "Waktu",
       allDone: "Semua pesanan selesai",
       newOrderAlert: "Pesanan baru masuk!",
+      noActiveOrders: "Tidak ada pesanan aktif yang perlu diproses",
+      processingColumn: "🔥 Sedang Diproses",
+      readyColumn: "✅ Siap Disajikan",
+      emptyDefault: "Tidak ada pesanan",
+      emptyProcessing: "Tidak ada pesanan yang sedang diproses",
+      emptyReady: "Belum ada pesanan yang siap",
+      updateFailed: "Gagal update status pesanan",
+      tapToComplete: "Tap → Selesai",
+      checkReady: "✓ Siap",
+      markAllComplete: "Tandai Semua Selesai",
+      orderReadyTitle: "Pesanan Siap Disajikan",
+      readyToServe: "Siap Disajikan",
     },
     menu: {
       all: "Semua",
@@ -3798,6 +3865,16 @@ export const id = {
       queued: "Offline — pesanan disimpan lokal",
       queuedDesc: "Akan dikirim otomatis saat koneksi kembali.",
     },
+    orderCard: {
+      customer: "Pelanggan",
+      table: "Meja",
+      type: "Tipe",
+      itemsLabel: "Item Pesanan",
+      moreItems: "item lainnya",
+      confirm: "Konfirmasi",
+      startProcess: "Mulai Proses",
+      complete: "Selesaikan",
+    },
     print: {
       title: "Cetak Struk",
       prompt: "Pesanan berhasil dibuat.",
@@ -3806,6 +3883,8 @@ export const id = {
       printing: "Mencetak...",
       success: "Struk berhasil dicetak!",
       failed: "Gagal mencetak struk",
+      bluetoothUnsupported: "Browser ini tidak mendukung cetak Bluetooth. Gunakan Chrome di Android/Desktop.",
+      connectFailed: "Gagal terhubung ke printer. Pastikan printer Bluetooth menyala.",
     },
   },
 
@@ -4147,6 +4226,93 @@ export const id = {
       cmp_recipes: "Resep & HPP",                   cmp_stock: "Stok otomatis & peringatan",
       cmp_daily: "Email laporan harian",            cmp_multi: "Dashboard multi-outlet",
       cmp_api: "Akses API",
+    },
+  },
+
+  storefront: {
+    editor: {
+      title: "Toko Online & Menu",
+      subtitle: "Kelola tampilan profil toko, link bio, dan daftar menu makanan/minuman Anda.",
+      tabs: {
+        settings: "Profil & Tampilan",
+        menu: "Daftar Menu",
+        analytics: "Statistik",
+      },
+    },
+    settings: {
+      saveSuccess: "Pengaturan toko berhasil disimpan.",
+      saveFailed: "Gagal menyimpan pengaturan.",
+      urlTaken: "URL ini sudah digunakan toko lain.",
+      urlUnavailable: "URL tidak tersedia.",
+      storeActive: "Toko online Anda sedang aktif dan bisa diakses pelanggan.",
+      storeHidden: "Toko online disembunyikan. Pelanggan tidak bisa mengakses link Anda.",
+      storeActiveLabel: "Toko Aktif",
+      publishStatus: "Status Publikasi",
+      slugLabel: "URL Toko (Slug)",
+      slugDesc: "Pilih nama unik untuk link toko Anda.",
+      slugPlaceholder: "nama-toko-anda",
+      displayName: "Nama Tampilan",
+      displayNamePlaceholder: "Nama Toko",
+      tagline: "Slogan / Tagline",
+      taglinePlaceholder: "Pasti Enak!",
+      description: "Deskripsi Singkat",
+      descriptionPlaceholder: "Jelaskan sedikit tentang toko Anda...",
+      profileSection: "Profil Toko",
+      profileDesc: "Informasi dasar yang akan ditampilkan di halaman toko Anda.",
+      visualSection: "Visual & Tema",
+      visualDesc: "Sesuaikan warna dan gambar agar sesuai dengan brand Anda.",
+      logoUrl: "URL Logo / Avatar",
+      heroImageUrl: "URL Gambar Latar (Cover)",
+      themeColor: "Warna Tema",
+      contactSection: "Kontak & Order",
+      contactDesc: "Ke mana pesanan dan pelanggan harus diarahkan?",
+      whatsappNumber: "Nomor WhatsApp (Untuk Order)",
+      whatsappDesc: "Pesanan dari pelanggan akan dikirim ke nomor ini.",
+      gofoodUrl: "Link GoFood",
+      grabfoodUrl: "Link GrabFood",
+      shopeefoodUrl: "Link ShopeeFood",
+      customLinksSection: "Link Tambahan (Linktree)",
+      customLinksDesc: "Tambahkan link bebas seperti Website, Promo, dsb.",
+      linkTitlePlaceholder: "Judul Link (Cth: Website Resmi)",
+      addLink: "Tambah Link",
+      cancelButton: "Batal",
+      saveButton: "Simpan Pengaturan",
+      savingButton: "Menyimpan...",
+    },
+    menu: {
+      title: "Daftar Menu & Kategori",
+      desc: "Atur urutan kategori dan menu makanan/minuman Anda.",
+      addCategory: "Tambah Kategori",
+      addCategoryPlaceholder: "Nama Kategori Baru (Cth: Minuman Dingin)",
+      addItem: "Tambah Menu",
+      deleteConfirm: "Hapus kategori ini dan semua menunya?",
+      categoryAdded: "Kategori ditambahkan",
+      categoryAddFailed: "Gagal menambahkan kategori",
+      categoryDeleted: "Kategori dihapus",
+      categoryDeleteFailed: "Gagal menghapus kategori",
+      noCategories: "Belum ada kategori menu.",
+      noCategoriesDesc: "Tambahkan kategori pertama Anda untuk mulai.",
+      noItemsInCategory: "Belum ada menu di kategori ini.",
+      itemsCount: "menu",
+      imageAlt: "Foto",
+      available: "Tersedia",
+      unavailable: "Habis",
+      editItem: "Edit",
+    },
+    analytics: {
+      totalVisitors: "Total Pengunjung",
+      totalVisitorsDesc: "Kali toko dilihat",
+      menuViewed: "Menu Dilihat",
+      menuViewedDesc: "Klik pada menu",
+      chatConversion: "Konversi Chat",
+      chatConversionDesc: "Klik tombol WhatsApp",
+      comingSoon: "Coming Soon",
+      featureInDev: "Fitur dalam pengembangan",
+      trendLastWeek: "+12% dari minggu lalu",
+      visitorChart: "Grafik Pengunjung",
+      visitorChartDesc: "Visualisasi jumlah pengunjung harian akan tampil di sini.",
+      dataCollecting: "Data sedang dikumpulkan",
+      dataCollectingDesc: "Grafik akan muncul setelah ada minimal 10 pengunjung.",
     },
   },
 };

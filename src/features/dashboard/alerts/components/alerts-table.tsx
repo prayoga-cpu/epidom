@@ -128,7 +128,7 @@ export function AlertsTable({ alerts, onViewDetails, onCreateOrder }: AlertsTabl
 
             {/* Materials Table with Progress Bars */}
             <div className="-mx-4 overflow-x-auto sm:mx-0">
-              <div className="min-w-[720px] px-4 sm:px-0">
+              <div className="min-w-[580px] px-4 sm:px-0">
                 <div className="overflow-hidden rounded-lg border shadow-sm">
                   <div className="from-foreground/90 to-foreground/80 text-background flex bg-gradient-to-r px-4 py-3 text-xs font-bold">
                     <div className="w-2/6">{t("alerts.table.material")}</div>

@@ -3,35 +3,37 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, MousePointerClick, TrendingUp } from "lucide-react";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface StorefrontAnalyticsProps {
   storefront: any;
 }
 
 export function StorefrontAnalytics({ storefront }: StorefrontAnalyticsProps) {
-  // Placeholder data for MVP, viewCount is real from db
+  const { t } = useI18n();
+
   const stats = [
     {
-      title: "Total Pengunjung",
+      title: t("storefront.analytics.totalVisitors"),
       value: storefront?.viewCount?.toLocaleString() || "0",
-      description: "Kali toko dilihat",
+      description: t("storefront.analytics.totalVisitorsDesc"),
       icon: Eye,
-      trend: "+12% dari minggu lalu",
+      trend: t("storefront.analytics.trendLastWeek"),
     },
     {
-      title: "Menu Dilihat",
-      value: "Coming Soon",
-      description: "Klik pada menu",
+      title: t("storefront.analytics.menuViewed"),
+      value: t("storefront.analytics.comingSoon"),
+      description: t("storefront.analytics.menuViewedDesc"),
       icon: MousePointerClick,
-      trend: "Fitur dalam pengembangan",
+      trend: t("storefront.analytics.featureInDev"),
     },
     {
-      title: "Konversi Chat",
-      value: "Coming Soon",
-      description: "Klik tombol WhatsApp",
+      title: t("storefront.analytics.chatConversion"),
+      value: t("storefront.analytics.comingSoon"),
+      description: t("storefront.analytics.chatConversionDesc"),
       icon: TrendingUp,
-      trend: "Fitur dalam pengembangan",
-    }
+      trend: t("storefront.analytics.featureInDev"),
+    },
   ];
 
   return (
@@ -40,17 +42,13 @@ export function StorefrontAnalytics({ storefront }: StorefrontAnalyticsProps) {
         {stats.map((stat, index) => (
           <Card key={index}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stat.description}
-              </p>
-              <p className="text-xs text-blue-500 mt-2 font-medium bg-blue-50 w-fit px-2 py-0.5 rounded">
+              <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+              <p className="text-xs text-muted-foreground mt-2 font-medium bg-muted w-fit px-2 py-0.5 rounded">
                 {stat.trend}
               </p>
             </CardContent>
@@ -60,14 +58,14 @@ export function StorefrontAnalytics({ storefront }: StorefrontAnalyticsProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Grafik Pengunjung</CardTitle>
-          <CardDescription>Visualisasi jumlah pengunjung harian akan tampil di sini.</CardDescription>
+          <CardTitle>{t("storefront.analytics.visitorChart")}</CardTitle>
+          <CardDescription>{t("storefront.analytics.visitorChartDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px] w-full bg-slate-50 rounded-xl border border-dashed flex flex-col items-center justify-center text-slate-400">
+          <div className="h-[300px] w-full bg-muted/40 rounded-xl border border-dashed flex flex-col items-center justify-center text-muted-foreground">
             <TrendingUp className="h-10 w-10 mb-3 opacity-20" />
-            <p className="font-medium">Data sedang dikumpulkan</p>
-            <p className="text-sm mt-1">Grafik akan muncul setelah ada minimal 10 pengunjung.</p>
+            <p className="font-medium">{t("storefront.analytics.dataCollecting")}</p>
+            <p className="text-sm mt-1">{t("storefront.analytics.dataCollectingDesc")}</p>
           </div>
         </CardContent>
       </Card>

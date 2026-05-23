@@ -136,7 +136,7 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
       </div>
 
       <div className="-mx-4 overflow-x-auto sm:mx-0">
-        <div className="min-w-[640px]">
+        <div className="min-w-[520px]">
           <Table>
             <TableHeader>
               <TableRow>

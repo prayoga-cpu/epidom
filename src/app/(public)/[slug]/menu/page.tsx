@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   return {
     title: `Menu - ${storefront.displayName} | Epidom Storefront`,
-    description: `Lihat menu makanan dan minuman dari ${storefront.displayName} dan pesan langsung lewat WhatsApp.`,
+    description: `View the menu from ${storefront.displayName} and order directly via WhatsApp.`,
   };
 }
 
