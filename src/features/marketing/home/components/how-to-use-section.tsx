@@ -17,8 +17,7 @@ export function HowToUseSection() {
     <section className="epi-section epi-warm-section">
       <div className="epi-container">
         <div
-          className="grid grid-cols-1 lg:grid-cols-2"
-          style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64, alignItems: "center" }}
+          className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16 items-center"
         >
           {/* Left — copy */}
           <div>

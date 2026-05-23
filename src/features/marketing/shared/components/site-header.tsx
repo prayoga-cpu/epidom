@@ -37,15 +37,20 @@ export const SiteHeader = memo(function SiteHeader({
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const variant = useMemo(() => variantOverride ?? "landing", [variantOverride]);
   const navigationItems = useMemo(() => getNavigationByVariant(variant), [variant]);
 
-  const handleLogin      = () => router.push("/login");
-  const handleStartFree  = () => router.push("/register");
+  const handleLogin = () => router.push("/login");
+  const handleStartFree = () => router.push("/register");
   const handleGoToStores = () => router.push("/stores");
-  const handleLogout     = async () => { await signOut(); router.push("/"); };
+  const handleLogout = async () => {
+    await signOut();
+    router.push("/");
+  };
 
   const renderDesktopNavLink = (item: NavItem) => {
     const isActive = pathname === item.href;
@@ -56,7 +61,7 @@ export const SiteHeader = memo(function SiteHeader({
           aria-current={isActive ? "page" : undefined}
           className={`transition-colors ${
             isActive
-              ? "text-[var(--epi-cream-50)] font-semibold"
+              ? "font-semibold text-[var(--epi-cream-50)]"
               : "text-[var(--epi-cream-50)]/60 hover:text-[var(--epi-cream-50)]/90"
           }`}
           style={{
@@ -86,8 +91,8 @@ export const SiteHeader = memo(function SiteHeader({
             aria-current={isActive ? "page" : undefined}
             className={`flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               isActive
-                ? "text-[var(--epi-gold-400)] bg-white/5"
-                : "text-[var(--epi-cream-50)]/60 hover:text-[var(--epi-cream-50)] hover:bg-white/5"
+                ? "bg-white/5 text-[var(--epi-gold-400)]"
+                : "text-[var(--epi-cream-50)]/60 hover:bg-white/5 hover:text-[var(--epi-cream-50)]"
             }`}
           >
             <Icon className="mr-3 h-5 w-5" />
@@ -105,7 +110,7 @@ export const SiteHeader = memo(function SiteHeader({
       return (
         <button
           onClick={handleLogout}
-          className="rounded-full px-5 py-2 text-sm font-medium uppercase tracking-widest cursor-pointer transition-all"
+          className="cursor-pointer rounded-full px-5 py-2 text-sm font-medium tracking-widest uppercase transition-all"
           style={{
             background: "var(--epi-gold-500)",
             color: "var(--epi-navy-900)",
@@ -121,7 +126,7 @@ export const SiteHeader = memo(function SiteHeader({
       return (
         <button
           onClick={handleGoToStores}
-          className="rounded-full px-5 py-2 text-sm font-medium cursor-pointer transition-all hover:-translate-y-px"
+          className="cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-all hover:-translate-y-px"
           style={{
             background: "var(--epi-gold-500)",
             color: "var(--epi-navy-900)",
@@ -137,7 +142,7 @@ export const SiteHeader = memo(function SiteHeader({
     return (
       <button
         onClick={handleStartFree}
-        className="rounded-full px-5 py-2 text-sm font-medium cursor-pointer transition-all hover:-translate-y-px active:translate-y-0"
+        className="cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-all hover:-translate-y-px active:translate-y-0"
         style={{
           background: "var(--epi-gold-500)",
           color: "var(--epi-navy-900)",
@@ -153,19 +158,22 @@ export const SiteHeader = memo(function SiteHeader({
   };
 
   return (
-    <nav className="epi-floating-nav" role="navigation" aria-label="Main header">
+    <nav className="epi-floating-nav backdrop-blur-xs" role="navigation" aria-label="Main header">
       <EpidomLogo href="/" size={30} />
 
       {/* Desktop nav links */}
       {showNav && (
-        <ul className="epi-nav-items hidden items-center gap-6 lg:flex" aria-label="Main navigation">
+        <ul
+          className="epi-nav-items hidden items-center gap-6 lg:flex"
+          aria-label="Main navigation"
+        >
           {navigationItems.map(renderDesktopNavLink)}
         </ul>
       )}
 
       {/* Right side */}
       <div className="flex items-center gap-3">
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden items-center gap-3 lg:flex">
           <LangSwitcher />
           {mounted && <DesktopCTA />}
         </div>
@@ -173,22 +181,32 @@ export const SiteHeader = memo(function SiteHeader({
         {/* Mobile hamburger */}
         {!mounted ? (
           <button
-            className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10 lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-white/10 lg:hidden"
             aria-label={t("common.nav.openMenu")}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="M4 6h16M4 12h16M4 18h16"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         ) : (
           <Sheet>
             <SheetTrigger asChild>
               <button
-                className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10 lg:hidden cursor-pointer"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-white/10 lg:hidden"
                 aria-label={t("common.nav.openMenu")}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path
+                    d="M4 6h16M4 12h16M4 18h16"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
             </SheetTrigger>
@@ -200,11 +218,14 @@ export const SiteHeader = memo(function SiteHeader({
             >
               <SheetTitle className="sr-only">{t("common.nav.navTitle")}</SheetTitle>
 
-              <div className="flex items-center justify-between p-6" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+              <div
+                className="flex items-center justify-between p-6"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+              >
                 <EpidomLogo href="/" size={24} />
                 <SheetClose asChild>
                   <button
-                    className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-white/10 cursor-pointer"
+                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full hover:bg-white/10"
                     aria-label={t("common.nav.closeMenu")}
                   >
                     <ChevronRight className="h-4 w-4 text-[var(--epi-cream-50)]" />
@@ -216,14 +237,12 @@ export const SiteHeader = memo(function SiteHeader({
                 {showNav && (
                   <div>
                     <div
-                      className="px-3 py-2 text-xs font-semibold tracking-wider uppercase mb-2"
+                      className="mb-2 px-3 py-2 text-xs font-semibold tracking-wider uppercase"
                       style={{ color: "var(--epi-cream-50)", opacity: 0.4 }}
                     >
                       {t("common.nav.menu")}
                     </div>
-                    <ul className="space-y-1">
-                      {navigationItems.map(renderMobileNavLink)}
-                    </ul>
+                    <ul className="space-y-1">{navigationItems.map(renderMobileNavLink)}</ul>
                   </div>
                 )}
               </nav>
@@ -233,12 +252,14 @@ export const SiteHeader = memo(function SiteHeader({
                   <div className="flex-1">
                     {BUTTON_MODE === "waitlist" ? (
                       <SheetClose asChild>
-                        <div><WaitlistDialog variant="sidebar" /></div>
+                        <div>
+                          <WaitlistDialog variant="sidebar" />
+                        </div>
                       </SheetClose>
                     ) : showLogout && session?.user ? (
                       <button
                         onClick={handleLogout}
-                        className="w-full rounded-full py-3 text-sm font-medium uppercase tracking-widest cursor-pointer"
+                        className="w-full cursor-pointer rounded-full py-3 text-sm font-medium tracking-widest uppercase"
                         style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}
                       >
                         {t("common.actions.logout")}
@@ -247,8 +268,11 @@ export const SiteHeader = memo(function SiteHeader({
                       <SheetClose asChild>
                         <button
                           onClick={handleGoToStores}
-                          className="w-full rounded-full py-3 text-sm font-medium uppercase tracking-widest cursor-pointer"
-                          style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}
+                          className="w-full cursor-pointer rounded-full py-3 text-sm font-medium tracking-widest uppercase"
+                          style={{
+                            background: "var(--epi-gold-500)",
+                            color: "var(--epi-navy-900)",
+                          }}
                         >
                           {t("common.nav.stores")}
                         </button>
@@ -257,15 +281,20 @@ export const SiteHeader = memo(function SiteHeader({
                       <SheetClose asChild>
                         <button
                           onClick={handleStartFree}
-                          className="w-full rounded-full py-3 text-sm font-medium uppercase tracking-widest cursor-pointer"
-                          style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}
+                          className="w-full cursor-pointer rounded-full py-3 text-sm font-medium tracking-widest uppercase"
+                          style={{
+                            background: "var(--epi-gold-500)",
+                            color: "var(--epi-navy-900)",
+                          }}
                         >
                           {t("nav.tryEpidom")} →
                         </button>
                       </SheetClose>
                     )}
                   </div>
-                  <div className="flex-shrink-0"><LangSwitcher /></div>
+                  <div className="flex-shrink-0">
+                    <LangSwitcher />
+                  </div>
                 </div>
               </div>
             </SheetContent>

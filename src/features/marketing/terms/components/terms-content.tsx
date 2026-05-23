@@ -31,7 +31,7 @@ export function TermsContent() {
       }} />
 
       {/* Hero */}
-      <section style={{ padding: "140px 48px 60px", maxWidth: 1120, margin: "0 auto", position: "relative", zIndex: 1 }}>
+      <section className="pt-28 pb-12 lg:pt-36 relative z-10" style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px" }}>
         <div className="epi-eyebrow" style={{ marginBottom: 20, color: "var(--epi-gold-500)" }}>Legal</div>
         <h1 className="epi-display" style={{
           fontSize: "clamp(56px, 9vw, 120px)", lineHeight: 0.91,
@@ -45,10 +45,10 @@ export function TermsContent() {
       </section>
 
       {/* Body: sidebar + content */}
-      <section style={{ maxWidth: 1120, margin: "0 auto", padding: "0 48px 120px", display: "grid", gridTemplateColumns: "220px 1fr", gap: 64, position: "relative", zIndex: 1, alignItems: "start" }} className="grid-cols-1! lg:grid-cols-[220px_1fr]!">
+      <section className="grid grid-cols-1 gap-8 lg:grid-cols-[220px_1fr] lg:gap-16 items-start relative z-10" style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px 120px" }}>
 
         {/* Sticky TOC */}
-        <aside style={{ position: "sticky", top: 100 }}>
+        <aside className="hidden lg:block sticky top-24">
           <div style={{
             borderRadius: 16, border: "1px solid rgba(217,174,59,0.14)",
             background: "rgba(255,255,255,0.02)", padding: "24px 20px",

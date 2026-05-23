@@ -31,8 +31,7 @@ export function HowItWorksSection() {
 
         {/* Steps grid */}
         <div
-          className="grid grid-cols-1 md:grid-cols-3"
-          style={{ marginTop: 64, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18, position: "relative" }}
+          className="grid grid-cols-1 gap-4 mt-16 md:grid-cols-3 relative"
         >
           {/* Gold connector */}
           <div
@@ -48,10 +47,10 @@ export function HowItWorksSection() {
             <div
               key={i}
               style={{
-                padding: 32, borderRadius: 22,
+                padding: "24px 20px", borderRadius: 22,
                 background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
                 border: "1px solid rgba(255,255,255,0.10)",
-                position: "relative", minHeight: 260,
+                position: "relative",
               }}
             >
               <div style={{

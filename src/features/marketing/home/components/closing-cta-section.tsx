@@ -22,14 +22,13 @@ export function ClosingCtaSection() {
     <section style={{ padding: "120px 0 80px" }}>
       <div className="epi-container">
         <div
+          className="px-6 py-14 sm:px-16 sm:py-20 lg:px-20 lg:py-24 text-center"
           style={{
             position: "relative",
             borderRadius: 32,
-            padding: "88px 64px",
             background: "linear-gradient(160deg, #0E1F38 0%, #060F1B 100%)",
             border: "1px solid rgba(255,255,255,0.08)",
             overflow: "hidden",
-            textAlign: "center",
           }}
         >
           {/* Glow */}

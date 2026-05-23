@@ -41,8 +41,7 @@ export function FeatureLadderSection() {
 
         {/* 3 module cards */}
         <div
-          className="grid grid-cols-1 md:grid-cols-3"
-          style={{ marginTop: 64, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}
+          className="grid grid-cols-1 gap-4 mt-16 md:grid-cols-3"
         >
           {/* Card 1 — Menu Page */}
           <div style={{ ...cardBase, background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", border: "1px solid rgba(255,255,255,0.10)" }}>

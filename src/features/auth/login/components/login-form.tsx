@@ -86,17 +86,18 @@ export function LoginForm() {
   return (
     <div className="w-full space-y-8">
       <div className="space-y-2 text-center">
-        <h1 className="text-brand-primary text-2xl font-bold tracking-tight">
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--epi-cream-50)" }}>
           {t("auth.welcome")}
         </h1>
-        <p className="text-gray-500">{t("auth.signInToContinue")}</p>
+        <p style={{ color: "rgba(251,249,228,0.55)" }}>{t("auth.signInToContinue")}</p>
       </div>
 
       <Button
         variant="outline"
         type="button"
         disabled={isPending}
-        className="h-12 w-full rounded-xl border-gray-200 font-medium text-gray-700 hover:bg-gray-50"
+        className="h-12 w-full rounded-xl font-medium hover:bg-white/5"
+        style={{ borderColor: "rgba(255,255,255,0.12)", color: "var(--epi-cream-50)" }}
         onClick={async () => {
           await authClient.signIn.social({
             provider: "google",
@@ -110,10 +111,10 @@ export function LoginForm() {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-gray-200" />
+          <span className="w-full border-t border-white/10" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-gray-500">Or continue with email</span>
+          <span className="px-2" style={{ background: "var(--epi-navy-900)", color: "rgba(251,249,228,0.4)" }}>Or continue with email</span>
         </div>
       </div>
 
@@ -125,14 +126,14 @@ export function LoginForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700">{t("auth.email")}</FormLabel>
+                  <FormLabel style={{ color: "var(--epi-cream-50)" }}>{t("auth.email")}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
                       placeholder={t("auth.emailPlaceholder") || "name@company.com"}
                       disabled={isPending}
                       autoComplete="email"
-                      className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
+                      className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
                       {...field}
                     />
                   </FormControl>
@@ -147,10 +148,10 @@ export function LoginForm() {
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center justify-between">
-                    <FormLabel className="text-gray-700">{t("auth.password")}</FormLabel>
+                    <FormLabel style={{ color: "var(--epi-cream-50)" }}>{t("auth.password")}</FormLabel>
                     <Link
                       href="/forgot-password"
-                      className="text-brand-primary hover:text-brand-primary/80 text-sm font-medium transition-colors"
+                      className="text-sm font-medium transition-colors hover:underline" style={{ color: "var(--epi-gold-400)" }}
                     >
                       {t("auth.forgotPassword")}
                     </Link>
@@ -160,7 +161,7 @@ export function LoginForm() {
                       type="password"
                       disabled={isPending}
                       autoComplete="current-password"
-                      className="focus:border-brand-primary h-12 rounded-xl border-gray-200 bg-gray-50 transition-all focus:bg-white"
+                      className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
                       {...field}
                     />
                   </FormControl>
@@ -172,7 +173,8 @@ export function LoginForm() {
 
           <Button
             type="submit"
-            className="bg-brand-primary shadow-brand-primary/25 hover:bg-brand-primary/90 hover:shadow-brand-primary/40 h-12 w-full rounded-xl text-base font-semibold text-white shadow-lg transition-all hover:scale-[1.02]"
+            className="h-12 w-full rounded-xl text-base font-semibold transition-all hover:scale-[1.02]"
+            style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}
             disabled={isPending}
           >
             {isPending ? t("messages.loggingIn") || "Logging in..." : t("auth.loginButton")}
@@ -180,11 +182,11 @@ export function LoginForm() {
         </form>
       </Form>
 
-      <p className="text-center text-sm text-gray-600">
+      <p className="text-center text-sm" style={{ color: "rgba(251,249,228,0.55)" }}>
         {t("auth.dontHaveAccount")}{" "}
         <Link
           href="/register"
-          className="text-brand-primary hover:text-brand-primary/80 font-semibold transition-colors"
+          className="font-semibold transition-colors hover:underline" style={{ color: "var(--epi-gold-400)" }}
         >
           {t("auth.registerButton")}
         </Link>

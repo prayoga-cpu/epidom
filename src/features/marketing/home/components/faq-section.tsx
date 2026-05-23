@@ -16,11 +16,10 @@ export function FaqSection() {
     <section className="epi-section">
       <div className="epi-container">
         <div
-          className="grid grid-cols-1 lg:grid-cols-2"
-          style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 80, alignItems: "start" }}
+          className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20 items-start"
         >
           {/* Left — sticky heading */}
-          <div style={{ position: "sticky", top: 120 }}>
+          <div className="lg:sticky lg:top-28">
             <div className="epi-eyebrow" style={{ marginBottom: 16 }}>{t("redesign.faq.eyebrow")}</div>
             <h2
               className="epi-display"

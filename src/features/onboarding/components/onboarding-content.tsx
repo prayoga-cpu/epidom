@@ -22,10 +22,10 @@ import { storefrontApi } from "@/lib/api";
 
 const CONTAINER_STYLES = "flex min-h-screen flex-col items-center justify-center bg-slate-50/50 px-4 py-12 md:px-8";
 const CONTENT_WRAPPER_STYLES = "animate-in fade-in slide-in-from-bottom-4 w-full max-w-2xl duration-700";
-const CARD_STYLES = "overflow-hidden border-0 shadow-2xl ring-1 ring-slate-200/60";
+const CARD_STYLES = "overflow-hidden border-0 shadow-2xl ring-1 ring-[rgba(217,174,59,0.18)]";
 const CARD_CONTENT_STYLES = "p-8 md:p-12";
-const INPUT_STYLES = "h-12 rounded-xl border-slate-200 bg-white px-4 text-sm transition-all focus:ring-2 focus:ring-orange-500/20";
-const BUTTON_STYLES = "group bg-orange-500 hover:bg-orange-600 h-12 w-full rounded-xl text-sm font-semibold text-white shadow-lg transition-all";
+const INPUT_STYLES = "h-12 rounded-xl border-slate-200 bg-white px-4 text-sm transition-all focus:ring-2 focus:ring-[rgba(217,174,59,0.25)]";
+const BUTTON_STYLES = "group h-12 w-full rounded-xl text-sm font-semibold shadow-lg transition-all bg-[var(--epi-gold-500)] hover:bg-[var(--epi-gold-600)] text-[var(--epi-navy-900)]";
 
 export function OnboardingContent() {
   const { t } = useI18n();
@@ -191,20 +191,20 @@ export function OnboardingContent() {
       <div className="flex justify-center mb-6">
         <div className="flex gap-2">
           {[1, 2, 3, 4, 5].map((s) => (
-            <div key={s} className={cn("h-1.5 w-8 rounded-full transition-all", s <= stepNum ? "bg-orange-500" : "bg-slate-200")} />
+            <div key={s} className={cn("h-1.5 w-8 rounded-full transition-all", s <= stepNum ? "bg-[var(--epi-gold-500)]" : "bg-slate-200")} />
           ))}
         </div>
       </div>
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-100 text-orange-600">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "rgba(217,174,59,0.12)", color: "var(--epi-gold-500)" }}>
         <Icon className="h-7 w-7" />
       </div>
-      <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-[var(--epi-navy-900)]">{title}</h1>
       <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
     </div>
   );
 
   if (isSessionPending) {
-    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
+    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="animate-spin" style={{ color: "var(--epi-gold-500)" }} /></div>;
   }
 
   return (
@@ -248,8 +248,8 @@ export function OnboardingContent() {
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Button variant="outline" onClick={() => setStep(3)} className="h-12 rounded-xl">Lewati</Button>
-                  <Button onClick={handleGenerateLogo} disabled={isSubmitting} className="h-12 rounded-xl bg-slate-900 text-white hover:bg-slate-800">
+                  <Button variant="outline" onClick={() => setStep(3)} className="h-12 rounded-xl border-[rgba(217,174,59,0.3)] text-[var(--epi-navy-900)] hover:bg-[rgba(217,174,59,0.08)]">Lewati</Button>
+                  <Button onClick={handleGenerateLogo} disabled={isSubmitting} className="h-12 rounded-xl" style={{ background: "var(--epi-navy-800)", color: "var(--epi-gold-400)" }}>
                     {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : "Buat AI Logo"}
                   </Button>
                 </div>
@@ -304,7 +304,7 @@ export function OnboardingContent() {
                       onClick={() => setThemeColor(color)}
                       className={cn(
                         "w-12 h-12 rounded-full border-2 transition-all",
-                        themeColor === color ? "border-slate-900 scale-110 shadow-lg" : "border-transparent"
+                        themeColor === color ? "border-[var(--epi-navy-900)] scale-110 shadow-lg" : "border-transparent"
                       )}
                       style={{ backgroundColor: color }}
                     />

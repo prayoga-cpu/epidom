@@ -276,6 +276,15 @@ body.dialog-open {
   animation: marquee-scroll 30s linear infinite;
 }
 
+@keyframes marquee-half {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee-half {
+  animation: marquee-half 32s linear infinite;
+}
+
 /* Radial gradient background utility */
 .bg-gradient-radial {
   background: radial-gradient(circle, var(--tw-gradient-stops));
@@ -598,19 +607,19 @@ body.dialog-open {
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: #FBF9E4;
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+  --popover: #ffffff;
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.35 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
+  --muted: #EEE9C4;
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --accent: #F5F4DC;
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
@@ -621,7 +630,10 @@ body.dialog-open {
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
+  --chart-grid: oklch(0.556 0 0 / 0.10);
+  --chart-axis: oklch(0.556 0 0 / 0.18);
+  --chart-line: var(--epi-gold-500);
+  --sidebar: #F5F4DC;
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -644,37 +656,41 @@ body.dialog-open {
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* epi-navy bridged: dark mode uses the brand palette */
+  --background: var(--epi-navy-900);           /* #060F1B */
+  --foreground: var(--epi-cream-50);           /* #FBF9E4 */
+  --card: var(--epi-navy-850);                 /* #0A1628 */
+  --card-foreground: var(--epi-cream-50);
+  --popover: var(--epi-navy-850);
+  --popover-foreground: var(--epi-cream-50);
+  --primary: var(--epi-gold-400);              /* #E5C45C — gold accent */
+  --primary-foreground: var(--epi-navy-900);
+  --secondary: var(--epi-navy-800);            /* #0E1F38 */
+  --secondary-foreground: var(--epi-cream-100);
+  --muted: var(--epi-navy-800);
+  --muted-foreground: rgba(251,249,228,0.55);
+  --accent: var(--epi-navy-700);               /* #122C4F */
+  --accent-foreground: var(--epi-cream-50);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: rgba(255,255,255,0.08);
+  --input: rgba(255,255,255,0.08);
+  --ring: var(--epi-gold-500);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --chart-grid: rgba(251,249,228,0.09);
+  --chart-axis: rgba(251,249,228,0.14);
+  --chart-line: var(--epi-gold-400);
+  --sidebar: var(--epi-navy-850);
+  --sidebar-foreground: var(--epi-cream-50);
+  --sidebar-primary: var(--epi-gold-400);
+  --sidebar-primary-foreground: var(--epi-navy-900);
+  --sidebar-accent: var(--epi-navy-800);
+  --sidebar-accent-foreground: var(--epi-cream-50);
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-ring: var(--epi-gold-500);
 }
 
 /* ========================================
@@ -688,11 +704,10 @@ body.dialog-open {
   body {
     @apply text-foreground;
     background: linear-gradient(
-      0deg,
-      rgba(209, 209, 209, 1) 0%,
-      rgba(240, 240, 240, 1) 20%,
-      rgba(240, 240, 240, 1) 86%,
-      rgba(230, 230, 230, 1) 100%
+      135deg,
+      #F5F4DC 0%,
+      #FBF9E4 40%,
+      #FEFDF6 100%
     );
     background-attachment: fixed;
     min-height: 100vh;
@@ -701,16 +716,39 @@ body.dialog-open {
   .dark body {
     background: linear-gradient(
       135deg,
-      oklch(0.12 0.04 220) 0%,
-      oklch(0.14 0.035 240) 20%,
-      oklch(0.16 0.025 260) 40%,
-      oklch(0.145 0 0) 60%,
-      oklch(0.13 0.03 280) 80%,
-      oklch(0.11 0.045 240) 100%
+      var(--epi-navy-950) 0%,
+      var(--epi-navy-900) 30%,
+      var(--epi-navy-850) 60%,
+      var(--epi-navy-900) 100%
     );
     background-attachment: fixed;
     min-height: 100vh;
+    color: var(--epi-cream-50);
   }
+}
+
+/* ========================================
+   DARK MODE TEXT OVERRIDES
+   Force gray-scale text classes to render light in dark mode.
+   Targets Tailwind gray/slate/zinc/neutral classes that don't
+   automatically switch via CSS variables.
+   ======================================== */
+
+.dark .text-gray-900, .dark .text-gray-800, .dark .text-gray-700,
+.dark .text-slate-900, .dark .text-slate-800, .dark .text-slate-700,
+.dark .text-zinc-900, .dark .text-zinc-800, .dark .text-zinc-700,
+.dark .text-neutral-900, .dark .text-neutral-800, .dark .text-neutral-700,
+.dark .text-black { color: var(--epi-cream-50) !important; }
+
+.dark .text-gray-600, .dark .text-gray-500,
+.dark .text-slate-600, .dark .text-slate-500,
+.dark .text-zinc-600, .dark .text-zinc-500,
+.dark .text-neutral-600, .dark .text-neutral-500 {
+  color: rgba(251,249,228,0.6) !important;
+}
+
+.dark .text-gray-400, .dark .text-slate-400, .dark .text-zinc-400 {
+  color: rgba(251,249,228,0.4) !important;
 }
 
 /* ========================================

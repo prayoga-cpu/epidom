@@ -100,12 +100,12 @@ export function WhatYouGetSection() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 18 }}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
           {features.map((f, i) => (
             <div
               key={i}
               className="group transition-all hover:-translate-y-1"
-              style={{ padding: 28, borderRadius: 22, background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", border: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", gap: 14 }}
+              style={{ padding: "20px 18px", borderRadius: 22, background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", border: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", gap: 14 }}
             >
               <div style={{
                 width: 44, height: 44, borderRadius: 12,

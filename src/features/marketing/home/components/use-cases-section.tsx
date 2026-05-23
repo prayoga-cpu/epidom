@@ -60,7 +60,6 @@ export function UseCasesSection() {
             position: "relative",
             borderRadius: 32,
             overflow: "hidden",
-            minHeight: 480,
             background: "linear-gradient(160deg, #0E1F38, #060F1B)",
             border: "1px solid rgba(255,255,255,0.08)",
           }}
@@ -69,8 +68,7 @@ export function UseCasesSection() {
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(6,15,27,0.92) 0%, rgba(6,15,27,0.55) 60%, rgba(6,15,27,0.3) 100%)" }} />
 
           <div
-            className="grid grid-cols-1 lg:grid-cols-2"
-            style={{ position: "relative", padding: "56px 56px", display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 48, alignItems: "center" }}
+            className="grid grid-cols-1 gap-8 p-8 lg:grid-cols-[1.3fr_1fr] lg:gap-12 lg:p-14 items-center relative"
           >
             {/* Left */}
             <div>
@@ -89,7 +87,7 @@ export function UseCasesSection() {
                   { v: t(`redesign.useCases.${uc}_stat2v` as const), l: t(`redesign.useCases.${uc}_stat2l` as const) },
                 ].map((s, i) => (
                   <div key={i}>
-                    <div className="epi-display" style={{ fontSize: 56, color: "var(--epi-gold-400)", letterSpacing: "0.02em", lineHeight: 1 }}>{s.v}</div>
+                    <div className="epi-display" style={{ fontSize: "clamp(36px, 8vw, 56px)", color: "var(--epi-gold-400)", letterSpacing: "0.02em", lineHeight: 1 }}>{s.v}</div>
                     <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--epi-cream-50)", opacity: 0.4, marginTop: 8 }}>{s.l}</div>
                   </div>
                 ))}
@@ -97,7 +95,7 @@ export function UseCasesSection() {
             </div>
 
             {/* Right — quote card */}
-            <div style={{ padding: 32, borderRadius: 22, background: "rgba(245,244,220,0.06)", border: "1px solid rgba(245,244,220,0.18)", backdropFilter: "blur(12px)" }}>
+            <div style={{ padding: "24px 20px", borderRadius: 22, background: "rgba(245,244,220,0.06)", border: "1px solid rgba(245,244,220,0.18)", backdropFilter: "blur(12px)" }}>
               <div className="epi-display" style={{ fontSize: 50, color: "var(--epi-gold-300)", lineHeight: 0.6, marginBottom: 14 }}>&ldquo;</div>
               <p className="epi-script" style={{ fontSize: 22, color: "var(--epi-cream-50)", lineHeight: 1.35 }}>
                 {t(`redesign.useCases.${uc}_quote` as const)}

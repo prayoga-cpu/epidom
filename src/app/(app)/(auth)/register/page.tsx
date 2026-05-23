@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function RegisterPage() {
   return (
-    <div className="grid h-screen w-full grid-cols-1 overflow-hidden bg-white md:grid-cols-2">
+    <div className="grid h-screen w-full grid-cols-1 overflow-hidden md:grid-cols-2" style={{ background: "var(--epi-navy-900)" }}>
       {/* Left: Form Area */}
       {/* Removed justify-center to allow scroll on overflow */}
       <div className="scrollbar-hide animate-in fade-in slide-in-from-left-4 relative flex h-full flex-col items-center overflow-y-auto p-8 duration-700">
@@ -14,14 +14,10 @@ export default function RegisterPage() {
           <div className="mb-8 flex justify-center">
             <div className="relative h-8 w-32">
               <Image
-                src="/images/logo-black.png"
+                src="/images/logo-white.png"
                 alt="Epidom"
                 fill
                 className="object-contain"
-                style={{
-                  filter:
-                    "invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)",
-                }}
                 priority
               />
             </div>
@@ -32,7 +28,7 @@ export default function RegisterPage() {
 
         {/* Footer - In flow */}
         <div className="mt-8 w-full shrink-0 text-center">
-          <p className="text-xs text-gray-400">© 2025 Epidom. All rights reserved.</p>
+          <p className="text-xs" style={{ color: "rgba(251,249,228,0.4)" }}>© 2025 Epidom. All rights reserved.</p>
         </div>
       </div>
 

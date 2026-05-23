@@ -43,8 +43,7 @@ export function PricingSection() {
 
         {/* Tier cards */}
         <div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-          style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           {tiers.map((tier, i) => (
             <div
@@ -52,7 +51,7 @@ export function PricingSection() {
               onClick={() => router.push("/pricing")}
               className="cursor-pointer transition-all hover:-translate-y-1"
               style={{
-                padding: 28,
+                padding: "22px 20px",
                 borderRadius: 22,
                 background: tier.highlight
                   ? "linear-gradient(160deg, rgba(217,174,59,0.18), rgba(217,174,59,0.04))"

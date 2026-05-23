@@ -88,16 +88,17 @@ export function CookieConsentBar() {
   if (!isVisible) return null;
 
   return (
-    <div className="bg-background border-border fixed right-0 bottom-0 left-0 z-50 border-t shadow-lg animate-slide-up">
+    <div className="fixed right-0 bottom-0 left-0 z-50 border-t shadow-2xl animate-slide-up backdrop-blur-xl" style={{ background: "rgba(6,15,27,0.92)", borderColor: "rgba(255,255,255,0.08)" }}>
       <Container maxWidth="7xl" className="py-6">
         {!showSettings ? (
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1">
-              <p className="text-foreground mb-2 text-sm font-medium">{t("cookie.title")}</p>
-              <p className="text-muted-foreground text-xs">{t("cookie.description")}</p>
+              <p className="mb-2 text-sm font-medium" style={{ color: "var(--epi-cream-50)" }}>{t("cookie.title")}</p>
+              <p className="text-xs" style={{ color: "rgba(251,249,228,0.55)" }}>{t("cookie.description")}</p>
               <button
                 onClick={() => setShowSettings(true)}
-                className="text-muted-foreground hover:text-foreground mt-2 text-xs underline"
+                className="mt-2 text-xs underline hover:opacity-80"
+                style={{ color: "rgba(251,249,228,0.55)" }}
               >
                 {t("cookie.customize")}
               </button>
@@ -108,11 +109,12 @@ export function CookieConsentBar() {
                 variant="outline"
                 size="sm"
                 onClick={handleReject}
-                className="bg-transparent whitespace-nowrap"
+                className="whitespace-nowrap"
+                style={{ background: "transparent", borderColor: "rgba(255,255,255,0.18)", color: "var(--epi-cream-50)" }}
               >
                 {t("cookie.reject")}
               </Button>
-              <Button size="sm" onClick={handleAccept} className="whitespace-nowrap">
+              <Button size="sm" onClick={handleAccept} className="whitespace-nowrap" style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)", border: "none" }}>
                 {t("cookie.accept")}
               </Button>
             </div>
@@ -120,30 +122,30 @@ export function CookieConsentBar() {
         ) : (
           <div className="space-y-4">
             <div>
-              <p className="text-foreground mb-2 text-sm font-medium">{t("cookie.settingsTitle")}</p>
-              <p className="text-muted-foreground text-xs">{t("cookie.settingsDescription")}</p>
+              <p className="mb-2 text-sm font-medium" style={{ color: "var(--epi-cream-50)" }}>{t("cookie.settingsTitle")}</p>
+              <p className="text-xs" style={{ color: "rgba(251,249,228,0.55)" }}>{t("cookie.settingsDescription")}</p>
             </div>
 
             <div className="space-y-3">
               {/* Essential Cookies - Always enabled */}
-              <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center justify-between rounded-lg border p-3" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
                 <div className="flex-1">
-                  <p className="text-foreground text-sm font-medium">{t("cookie.essential.title")}</p>
-                  <p className="text-muted-foreground text-xs">{t("cookie.essential.description")}</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--epi-cream-50)" }}>{t("cookie.essential.title")}</p>
+                  <p className="text-xs" style={{ color: "rgba(251,249,228,0.55)" }}>{t("cookie.essential.description")}</p>
                 </div>
-                <div className="text-muted-foreground text-sm font-medium">Always</div>
+                <div className="text-sm font-medium" style={{ color: "rgba(251,249,228,0.4)" }}>Always</div>
               </div>
 
               {/* Analytics Cookies */}
-              <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center justify-between rounded-lg border p-3" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
                 <div className="flex-1">
-                  <p className="text-foreground text-sm font-medium">{t("cookie.analytics.title")}</p>
-                  <p className="text-muted-foreground text-xs">{t("cookie.analytics.description")}</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--epi-cream-50)" }}>{t("cookie.analytics.title")}</p>
+                  <p className="text-xs" style={{ color: "rgba(251,249,228,0.55)" }}>{t("cookie.analytics.description")}</p>
                 </div>
                 <button
                   onClick={() => handleToggleCategory("analytics")}
                   className={`relative h-6 w-11 rounded-full transition-colors ${
-                    preferences?.analytics ? "bg-primary" : "bg-muted"
+                    preferences?.analytics ? "bg-[var(--epi-gold-500)]" : "bg-[rgba(255,255,255,0.12)]"
                   }`}
                 >
                   <span
@@ -155,15 +157,15 @@ export function CookieConsentBar() {
               </div>
 
               {/* Marketing Cookies */}
-              <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center justify-between rounded-lg border p-3" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
                 <div className="flex-1">
-                  <p className="text-foreground text-sm font-medium">{t("cookie.marketing.title")}</p>
-                  <p className="text-muted-foreground text-xs">{t("cookie.marketing.description")}</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--epi-cream-50)" }}>{t("cookie.marketing.title")}</p>
+                  <p className="text-xs" style={{ color: "rgba(251,249,228,0.55)" }}>{t("cookie.marketing.description")}</p>
                 </div>
                 <button
                   onClick={() => handleToggleCategory("marketing")}
                   className={`relative h-6 w-11 rounded-full transition-colors ${
-                    preferences?.marketing ? "bg-primary" : "bg-muted"
+                    preferences?.marketing ? "bg-[var(--epi-gold-500)]" : "bg-[rgba(255,255,255,0.12)]"
                   }`}
                 >
                   <span
@@ -180,11 +182,12 @@ export function CookieConsentBar() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowSettings(false)}
-                className="bg-transparent whitespace-nowrap"
+                className="whitespace-nowrap"
+                style={{ background: "transparent", borderColor: "rgba(255,255,255,0.18)", color: "var(--epi-cream-50)" }}
               >
                 {t("cookie.back")}
               </Button>
-              <Button size="sm" onClick={handleSaveSettings} className="whitespace-nowrap">
+              <Button size="sm" onClick={handleSaveSettings} className="whitespace-nowrap" style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)", border: "none" }}>
                 {t("cookie.save")}
               </Button>
             </div>

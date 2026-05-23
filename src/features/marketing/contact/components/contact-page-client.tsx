@@ -53,7 +53,7 @@ export function ContactPageClient() {
 
       {/* Main content: form + channels */}
       <section style={{ paddingBottom: 120 }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "start" }} className="grid-cols-1! lg:grid-cols-2!">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12 items-start" style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px" }}>
 
           {/* Contact Form */}
           <div style={{

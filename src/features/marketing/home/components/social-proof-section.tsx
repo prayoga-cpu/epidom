@@ -12,8 +12,11 @@ export function SocialProofSection() {
     city: t(`redesign.testimonials.t${n}c`),
   }));
 
+  // Duplicate for seamless loop
+  const doubled = [...testimonials, ...testimonials];
+
   return (
-    <section className="epi-section epi-warm-section">
+    <section className="epi-section epi-warm-section overflow-hidden">
       <div className="epi-container">
         {/* Heading */}
         <div style={{ textAlign: "center", maxWidth: 720, margin: "0 auto", marginBottom: 56 }}>
@@ -26,22 +29,33 @@ export function SocialProofSection() {
             {t("redesign.testimonials.title2")}
           </h2>
         </div>
+      </div>
 
-        {/* 3×2 card grid */}
+      {/* Marquee track — bleeds outside epi-container intentionally */}
+      <div className="relative">
+        {/* Left fade */}
+        <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-[var(--epi-cream-100)] to-transparent sm:w-24" />
+        {/* Right fade */}
+        <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-[var(--epi-cream-100)] to-transparent sm:w-24" />
+
         <div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-          style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}
+          className="flex gap-4 animate-marquee-half"
+          style={{ width: "max-content" }}
+          onMouseEnter={(e) => (e.currentTarget.style.animationPlayState = "paused")}
+          onMouseLeave={(e) => (e.currentTarget.style.animationPlayState = "running")}
         >
-          {testimonials.map((t2, i) => (
+          {doubled.map((t2, i) => (
             <div
               key={i}
               style={{
-                padding: 28,
+                width: 300,
+                flexShrink: 0,
+                padding: 24,
                 borderRadius: 22,
-                background: i === 1 || i === 4 ? "rgba(217,174,59,0.08)" : "rgba(255,255,255,0.55)",
+                background: i % 6 === 1 || i % 6 === 4 ? "rgba(217,174,59,0.08)" : "rgba(255,255,255,0.55)",
                 border: "1px solid",
-                borderColor: i === 1 || i === 4 ? "rgba(217,174,59,0.28)" : "rgba(6,15,27,0.08)",
-                display: "flex", flexDirection: "column", gap: 24,
+                borderColor: i % 6 === 1 || i % 6 === 4 ? "rgba(217,174,59,0.28)" : "rgba(6,15,27,0.08)",
+                display: "flex", flexDirection: "column", gap: 20,
               }}
             >
               <div style={{ display: "flex", gap: 2 }}>
@@ -51,16 +65,16 @@ export function SocialProofSection() {
                   </svg>
                 ))}
               </div>
-              <p style={{ fontSize: 15, lineHeight: 1.55, color: "var(--epi-navy-900)", flex: 1, margin: 0 }}>
+              <p style={{ fontSize: 14, lineHeight: 1.55, color: "var(--epi-navy-900)", flex: 1, margin: 0 }}>
                 &ldquo;{t2.quote}&rdquo;
               </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 18, borderTop: "1px solid rgba(6,15,27,0.08)" }}>
-                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(140deg, var(--epi-navy-500), var(--epi-navy-700))", display: "grid", placeItems: "center", color: "var(--epi-gold-400)", fontFamily: "var(--epi-font-display)", fontSize: 16, letterSpacing: "0.06em" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 16, borderTop: "1px solid rgba(6,15,27,0.08)" }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(140deg, var(--epi-navy-500), var(--epi-navy-700))", display: "grid", placeItems: "center", color: "var(--epi-gold-400)", fontFamily: "var(--epi-font-display)", fontSize: 14, letterSpacing: "0.06em" }}>
                   {t2.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--epi-navy-900)" }}>{t2.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--epi-navy-700)", opacity: 0.7 }}>{t2.role} · {t2.city}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--epi-navy-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t2.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--epi-navy-700)", opacity: 0.7 }}>{t2.role} · {t2.city}</div>
                 </div>
               </div>
             </div>

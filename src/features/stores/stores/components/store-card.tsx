@@ -39,7 +39,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
   };
 
   return (
-    <Card className={`group relative flex h-full flex-col overflow-hidden border border-neutral-200/80 bg-white p-0 shadow-sm transition-all duration-300 ${
+    <Card className={`group relative flex h-full flex-col overflow-hidden border border-border bg-card p-0 shadow-sm transition-all duration-300 ${
       isBlocked
         ? "opacity-75 cursor-not-allowed"
         : "hover:border-[var(--color-brand-primary)]/30 hover:shadow-xl hover:-translate-y-1"
@@ -53,7 +53,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 bg-white/95 p-0 shadow-md backdrop-blur-sm hover:bg-white transition-all"
+                className="h-8 w-8 bg-card/95 p-0 shadow-md backdrop-blur-sm hover:bg-card transition-all"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreVertical className="h-4 w-4" />
@@ -90,7 +90,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
 
       {/* Blocked Overlay - Branded Design */}
       {isBlocked && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gradient-to-br from-white/95 via-white/90 to-neutral-50/95 backdrop-blur-md rounded-lg border-2 border-[var(--color-brand-primary)]/20 shadow-lg">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gradient-to-br from-card/95 via-card/90 to-muted/95 backdrop-blur-md rounded-lg border-2 border-[var(--color-brand-primary)]/20 shadow-lg">
           {/* Decorative Pattern Background */}
           <div className="absolute inset-0 opacity-[0.03] overflow-hidden rounded-lg">
             <div className="absolute inset-0" style={{
@@ -110,7 +110,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
             </p>
 
             {/* Description */}
-            <p className="text-xs leading-relaxed text-neutral-600 sm:text-sm max-w-[200px] mx-auto">
+            <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm max-w-[200px] mx-auto">
               {t("stores.renewSubscription") || "Renew your subscription to access this store"}
             </p>
 
@@ -131,7 +131,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
           className="flex h-full flex-col cursor-not-allowed"
         >
           {/* Store Image Container - Enhanced with overlay on hover */}
-          <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-neutral-100 via-neutral-50 to-neutral-200">
+          <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
             {hasImage ? (
               <Image
                 src={store.image!}
@@ -145,7 +145,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
               />
             ) : (
               // Attractive placeholder when no image
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-neutral-100 via-neutral-50 to-neutral-200 p-6">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted p-6">
                 {/* Decorative Pattern - Subtle grid */}
                 <div className="absolute inset-0 opacity-[0.03]">
                   <svg className="h-full w-full" fill="none" viewBox="0 0 400 300">
@@ -169,15 +169,15 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
           </div>
 
           {/* Store Info Section - Enhanced */}
-          <CardContent className="flex flex-1 flex-col gap-2.5 bg-white p-4 sm:gap-3 sm:p-5 md:p-6">
+          <CardContent className="flex flex-1 flex-col gap-2.5 bg-card p-4 sm:gap-3 sm:p-5 md:p-6">
             {/* Store Name */}
             <div className="flex items-start justify-between gap-2 sm:gap-3">
-              <h3 className="line-clamp-2 flex-1 text-base leading-tight font-semibold text-[var(--color-brand-primary)] transition-colors group-hover:text-[var(--color-brand-primary)]/80 sm:text-lg md:text-xl">
+              <h3 className="line-clamp-2 flex-1 text-base leading-tight font-semibold text-foreground transition-colors group-hover:text-foreground/80 sm:text-lg md:text-xl">
                 {store.name}
               </h3>
               {/* Arrow indicator for clickable action */}
               <ArrowRight
-                className="mt-0.5 h-4 w-4 flex-shrink-0 text-neutral-400 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[var(--color-brand-primary)] sm:mt-1 sm:h-5 sm:w-5"
+                className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground transition-all duration-300 group-hover:translate-x-1 group-hover:text-foreground sm:mt-1 sm:h-5 sm:w-5"
                 aria-hidden="true"
               />
             </div>
@@ -186,14 +186,14 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
             {store.city && (
               <div className="flex items-start gap-2 sm:gap-2.5">
                 <MapPin
-                  className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-neutral-500 sm:h-4 sm:w-4"
+                  className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground sm:h-4 sm:w-4"
                   aria-hidden="true"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase mb-0.5">
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-0.5">
                     {t("stores.city")}
                   </p>
-                  <p className="truncate text-xs font-medium text-neutral-700 sm:text-sm md:text-base">
+                  <p className="truncate text-xs font-medium text-foreground sm:text-sm md:text-base">
                     {store.city}
                   </p>
                 </div>
@@ -208,7 +208,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
           className="flex h-full flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
         >
           {/* Store Image Container - Enhanced with overlay on hover */}
-          <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-neutral-100 via-neutral-50 to-neutral-200">
+          <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
             {hasImage ? (
               <Image
                 src={store.image!}
@@ -222,7 +222,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
               />
             ) : (
               // Attractive placeholder when no image
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-neutral-100 via-neutral-50 to-neutral-200 p-6">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted p-6">
                 {/* Decorative Pattern - Subtle grid */}
                 <div className="absolute inset-0 opacity-[0.03]">
                   <svg className="h-full w-full" fill="none" viewBox="0 0 400 300">
@@ -246,15 +246,15 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
           </div>
 
           {/* Store Info Section - Enhanced */}
-          <CardContent className="flex flex-1 flex-col gap-2.5 bg-white p-4 sm:gap-3 sm:p-5 md:p-6">
+          <CardContent className="flex flex-1 flex-col gap-2.5 bg-card p-4 sm:gap-3 sm:p-5 md:p-6">
             {/* Store Name */}
             <div className="flex items-start justify-between gap-2 sm:gap-3">
-              <h3 className="line-clamp-2 flex-1 text-base leading-tight font-semibold text-[var(--color-brand-primary)] transition-colors group-hover:text-[var(--color-brand-primary)]/80 sm:text-lg md:text-xl">
+              <h3 className="line-clamp-2 flex-1 text-base leading-tight font-semibold text-foreground transition-colors group-hover:text-foreground/80 sm:text-lg md:text-xl">
                 {store.name}
               </h3>
               {/* Arrow indicator for clickable action */}
               <ArrowRight
-                className="mt-0.5 h-4 w-4 flex-shrink-0 text-neutral-400 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[var(--color-brand-primary)] sm:mt-1 sm:h-5 sm:w-5"
+                className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground transition-all duration-300 group-hover:translate-x-1 group-hover:text-foreground sm:mt-1 sm:h-5 sm:w-5"
                 aria-hidden="true"
               />
             </div>
@@ -263,14 +263,14 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
             {store.city && (
               <div className="flex items-start gap-2 sm:gap-2.5">
                 <MapPin
-                  className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-neutral-500 sm:h-4 sm:w-4"
+                  className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground sm:h-4 sm:w-4"
                   aria-hidden="true"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase mb-0.5">
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase mb-0.5">
                     {t("stores.city")}
                   </p>
-                  <p className="truncate text-xs font-medium text-neutral-700 sm:text-sm md:text-base">
+                  <p className="truncate text-xs font-medium text-foreground sm:text-sm md:text-base">
                     {store.city}
                   </p>
                 </div>

@@ -10,8 +10,9 @@ It provides a customizable public storefront page, POS, operations (shift, KDS, 
 - **Payment**: Stripe (SaaS subscription billing) & Xendit (end-customer QRIS payments)
 - **State Management**: TanStack Query (React Query) v5
 - **UI Components**: shadcn/ui
-- **Styling**: Tailwind CSS 4
-- **Internationalization**: Custom i18n provider (ID primary, EN secondary; FR deprecated)
+- **Styling**: Tailwind CSS 4 with epi-* dark-navy design tokens
+- **Theme**: next-themes (dark/light toggle, default dark, epi-navy palette)
+- **Internationalization**: Custom i18n provider (EN / ID / FR — EN primary for dashboard)
 - **Email**: Resend
 
 ## Developer Setup
@@ -126,9 +127,10 @@ src/
 
 ### ✅ Payment System
 
-- Stripe Checkout Sessions (Starter & Pro plans)
-- 80/20 revenue split (via Stripe Connect)
+- Stripe Checkout Sessions (FREE / POS / OPERATIONS / ENTERPRISE plans)
+- 80/20 revenue split (via Stripe Connect scaffolding)
 - Webhook handling for payment events
+- Xendit QRIS end-customer payments (stub if key absent)
 
 ### ✅ Store Management
 
@@ -139,15 +141,26 @@ src/
 
 ### ✅ Internationalization (i18n)
 
-- Indonesian (ID, primary), English (EN, secondary) — FR deprecated
-- Language switcher on marketing pages
+- English (EN), Indonesian (ID), French (FR) — full translations across dashboard and marketing
+- Language switcher on marketing pages and dashboard topbar
+
+### ✅ Dark / Light Mode
+
+- `next-themes` with class-based dark mode, default dark
+- epi-navy-* design tokens bridged into shadcn CSS vars
+- Cream light mode (`#FBF9E4` base) with matching gradient body
 
 ### ✅ Dashboard
 
 - Revenue analytics & business insights
-- Complete Inventory Management (Real-time sync)
+- Complete Inventory Management (real-time sync)
 - Production planning & batch tracking
 - Role-based access control per store
+- Finance reports: revenue, COGS, gross margin, channel P&L, top items
+- Multi-outlet owner rollup dashboard (ENTERPRISE)
+- Aggregator email ingestion (GoFood / GrabFood / ShopeeFood / Tokopedia via Inngest + OpenAI)
+- Storefront editor: profile, menu categories, analytics
+- POS Cashier, KDS, Table Management, Order Queue
 
 ## Development Workflow
 

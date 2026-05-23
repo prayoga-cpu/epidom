@@ -39,14 +39,7 @@ export function HeroSection() {
 
       <div className="epi-container">
         <div
-          className="grid-cols-1 lg:grid-cols-[1.05fr_1fr]"
-          style={{
-            position: "relative", zIndex: 1,
-            display: "grid",
-            gridTemplateColumns: "1.05fr 1fr",
-            gap: 56,
-            alignItems: "center",
-          }}
+          className="grid grid-cols-1 gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-14 items-center relative z-10"
         >
           {/* Left — copy */}
           <div>

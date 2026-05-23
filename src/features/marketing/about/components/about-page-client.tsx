@@ -23,7 +23,7 @@ export function AboutPageClient() {
           pointerEvents: "none",
         }} />
 
-        <div style={{ maxWidth: 1120, margin: "0 auto", padding: "140px 48px 0", width: "100%" }}>
+        <div className="pt-24 lg:pt-36" style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px", paddingBottom: 0, width: "100%" }}>
           {/* Eyebrow */}
           <div className="epi-eyebrow" style={{ marginBottom: 28, color: "var(--epi-gold-500)" }}>
             {t("about.eyebrow")}
@@ -63,10 +63,7 @@ export function AboutPageClient() {
 
       {/* ── Story + Numbers ── */}
       <section style={{ padding: "80px 0 100px" }}>
-        <div style={{
-          maxWidth: 1120, margin: "0 auto", padding: "0 48px",
-          display: "grid", gridTemplateColumns: "1fr 420px", gap: 80, alignItems: "start",
-        }} className="grid-cols-1! lg:grid-cols-[1fr_420px]!">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_420px] lg:gap-20 items-start" style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px" }}>
 
           {/* Story text */}
           <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
@@ -120,7 +117,7 @@ export function AboutPageClient() {
           <div className="epi-eyebrow" style={{ marginBottom: 48, color: "var(--epi-gold-500)" }}>
             {t("about.valuesEyebrow")}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 28 }} className="grid-cols-1! sm:grid-cols-3!">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3" style={{ gap: 28 }}>
             {VALUES.map((v) => (
               <div
                 key={v}
@@ -154,7 +151,7 @@ export function AboutPageClient() {
 
       {/* ── Team ── */}
       <section style={{ padding: "80px 0", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto", padding: "0 48px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }} className="grid-cols-1! lg:grid-cols-2!">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-20 items-center" style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px" }}>
           <div>
             <div className="epi-eyebrow" style={{ marginBottom: 18, color: "var(--epi-gold-500)" }}>
               {t("about.teamEyebrow")}

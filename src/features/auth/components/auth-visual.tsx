@@ -75,16 +75,16 @@ export function AuthVisual() {
   }, []);
 
   return (
-    <div className="relative hidden h-full w-full overflow-hidden bg-zinc-950 text-white md:flex md:flex-col">
+    <div className="relative hidden h-full w-full overflow-hidden text-white md:flex md:flex-col" style={{ background: "var(--epi-navy-900)" }}>
       {/* Background Gradients & Effects */}
       <div className="pointer-events-none absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-zinc-950 to-zinc-950" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(217,174,59,0.08) 0%, var(--epi-navy-900) 50%, var(--epi-navy-950) 100%)" }} />
 
         {/* Animated Blobs */}
-        <div className="absolute top-1/4 right-0 h-[500px] w-[500px] animate-pulse rounded-full bg-orange-500/10 blur-[120px]" />
+        <div className="absolute top-1/4 right-0 h-[500px] w-[500px] animate-pulse rounded-full blur-[120px]" style={{ background: "rgba(217,174,59,0.1)" }} />
         <div
-          className="absolute bottom-0 left-0 h-[500px] w-[500px] animate-pulse rounded-full bg-purple-500/10 blur-[100px]"
-          style={{ animationDelay: "2s" }}
+          className="absolute bottom-0 left-0 h-[500px] w-[500px] animate-pulse rounded-full blur-[100px]"
+          style={{ background: "rgba(6,26,57,0.7)", animationDelay: "2s" }}
         />
 
         {/* Grid Pattern */}
@@ -127,8 +127,8 @@ export function AuthVisual() {
                 }}
               >
                 {/* Main Image Card */}
-                <div className="relative h-full w-full rounded-xl border border-white/10 bg-zinc-900/50 p-2 shadow-2xl backdrop-blur-xl">
-                  <div className="relative h-full w-full overflow-hidden rounded-lg bg-zinc-800">
+                <div className="relative h-full w-full rounded-xl border p-2 shadow-2xl backdrop-blur-xl" style={{ borderColor: "rgba(217,174,59,0.18)", background: "rgba(10,22,40,0.6)" }}>
+                  <div className="relative h-full w-full overflow-hidden rounded-lg" style={{ background: "var(--epi-navy-800)" }}>
                     <Image
                       src={slide.image}
                       alt={slide.title}
@@ -147,12 +147,12 @@ export function AuthVisual() {
                 {/* Sliding Notification Card */}
                 <div
                   className={cn(
-                    "absolute top-8 -right-8 w-64 rounded-xl border border-white/10 bg-zinc-800/90 p-4 shadow-xl backdrop-blur-md transition-all delay-300 duration-700",
+                    "absolute top-8 -right-8 w-64 rounded-xl border p-4 shadow-xl backdrop-blur-md transition-all delay-300 duration-700",
                     index === currentSlide
                       ? "translate-x-0 translate-z-[40px] opacity-100"
                       : "translate-x-4 translate-z-[40px] opacity-0"
                   )}
-                  style={{ transform: "translateZ(40px)" }}
+                  style={{ transform: "translateZ(40px)", background: "rgba(10,22,40,0.92)", borderColor: "rgba(255,255,255,0.1)" }}
                 >
                   <div className="flex items-start gap-4">
                     <div

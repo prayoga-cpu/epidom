@@ -93,14 +93,10 @@ export const SiteFooter = memo(function SiteFooter() {
       <Container maxWidth="7xl" className="relative z-10 px-4 sm:px-6 lg:px-8">
         {/* Top grid */}
         <div
+          className="grid grid-cols-2 gap-8 pb-16 sm:grid-cols-3 lg:grid-cols-[1.4fr_repeat(4,1fr)]"
           style={{
-            display: "grid",
-            gridTemplateColumns: "1.4fr repeat(4, 1fr)",
-            gap: "40px 32px",
-            paddingBottom: 64,
             borderBottom: "1px solid rgba(255,255,255,0.07)",
           }}
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid!"
         >
           {/* Brand */}
           <div>
@@ -261,7 +257,7 @@ export const SiteFooter = memo(function SiteFooter() {
         </div>
 
         {/* PRIONATION credit */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+        <div className="my-4 md:mb-7" style={{ display: "flex", justifyContent: "center" }}>
           <div
             style={{
               display: "inline-flex",
