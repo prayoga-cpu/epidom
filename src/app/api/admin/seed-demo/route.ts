@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "better-auth/crypto";
 
-const DEMO_EMAIL = "demo@epidom.com";
+const DEMO_EMAIL = "demo@epidom.fr";
 const DEMO_PASSWORD = "password123";
 const DEMO_NAME = "Demo User";
 

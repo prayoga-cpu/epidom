@@ -10,7 +10,7 @@ import { PrionationMark } from "./prionation-mark";
 const SOCIAL = [
   {
     label: "Instagram",
-    href: "https://instagram.com/epidom.id",
+    href: "https://instagram.com/epidom.fr",
     icon: (
       <svg
         width="15"
@@ -205,11 +205,11 @@ export const SiteFooter = memo(function SiteFooter() {
               <li>
                 <ContactRow icon={<MailIcon />}>
                   <Link
-                    href="mailto:support@epidom.id"
+                    href="mailto:support@epidom.fr"
                     style={linkStyle}
                     className="hover:text-[rgba(251,249,228,0.9)]"
                   >
-                    support@epidom.id
+                    support@epidom.fr
                   </Link>
                 </ContactRow>
               </li>
@@ -325,7 +325,7 @@ export const SiteFooter = memo(function SiteFooter() {
                 {l.label}
               </Link>
             ))}
-            <span>epidom.id</span>
+            <span>epidom.fr</span>
           </div>
         </div>
       </Container>

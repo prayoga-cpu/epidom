@@ -174,8 +174,8 @@ export function ContactPageClient() {
               icon={<MailIconLg />}
               title={t("contact.page.channel1title")}
               body={t("contact.page.channel1body")}
-              cta="support@epidom.id"
-              href="mailto:support@epidom.id"
+              cta="support@epidom.fr"
+              href="mailto:support@epidom.fr"
             />
             <ChannelCard
               icon={<WaIconLg />}

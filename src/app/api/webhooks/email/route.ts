@@ -2,7 +2,7 @@
  * POST /api/webhooks/email
  *
  * Inbound email webhook — compatible with Resend inbound email format.
- * Merchants forward aggregator order emails to orders@epidom.id.
+ * Merchants forward aggregator order emails to orders@epidom.fr.
  * The subject must contain their store slug so we can route to the right store.
  *
  * Expected subject format: "[slug] Original subject…"

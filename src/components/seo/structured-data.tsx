@@ -29,7 +29,7 @@ export function WebsiteStructuredData() {
           "@type": "SearchAction",
           target: {
             "@type": "EntryPoint",
-            urlTemplate: "https://epidom.com/search?q={search_term_string}",
+            urlTemplate: "https://epidom.fr/search?q={search_term_string}",
           },
           "query-input": "required name=search_term_string",
         },

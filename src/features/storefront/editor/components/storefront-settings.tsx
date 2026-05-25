@@ -131,7 +131,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                   <FormControl>
                     <div className="flex rounded-md border border-input shadow-sm focus-within:ring-1 focus-within:ring-ring">
                       <div className="bg-muted px-3 py-2 text-sm text-muted-foreground border-r flex items-center">
-                        epidom.com/@
+                        epidom.fr/@
                       </div>
                       <input {...field} className="flex-1 bg-transparent px-3 py-2 text-sm outline-none" placeholder={t("storefront.settings.slugPlaceholder")} />
                     </div>

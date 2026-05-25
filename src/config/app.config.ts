@@ -83,7 +83,7 @@ export const dateFormats = {
  * Contact information
  */
 export const contact = {
-  email: "support@epidom.com",
+  email: "support@epidom.fr",
   phone: "+1 (555) 123-4567",
   address: "123 Main St, City, Country",
 } as const;

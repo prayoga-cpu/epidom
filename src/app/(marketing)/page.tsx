@@ -37,7 +37,7 @@ export const metadata = generateMetadata({
   openGraph: {
     title: "Epidom — Online Store & POS for F&B",
     description: "Menu page, online orders, and POS cashier in one link. Free forever.",
-    url: "https://epidom.id",
+    url: "https://epidom.fr",
     locale: "en_US",
   },
 });

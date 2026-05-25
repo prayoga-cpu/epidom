@@ -63,11 +63,11 @@ const defaultSEO: SEOConfig = {
     title: "Epidom — Online Store, Menu & POS for F&B",
     description:
       "Create a menu page, accept online orders, manage your POS cashier and kitchen. Free forever.",
-    url: "https://epidom.id",
+    url: "https://epidom.fr",
     siteName: "Epidom",
     images: [
       {
-        url: "https://epidom.id/images/og-image.jpg",
+        url: "https://epidom.fr/images/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "Epidom — F&B Online Store & POS Platform",
@@ -83,7 +83,7 @@ const defaultSEO: SEOConfig = {
     title: "Epidom — Online Store, Menu & POS for F&B",
     description:
       "Create a menu page, accept online orders, and manage your POS cashier. Free forever for F&B businesses.",
-    images: ["https://epidom.id/images/twitter-card.jpg"],
+    images: ["https://epidom.fr/images/twitter-card.jpg"],
   },
   robots: {
     index: true,
@@ -116,7 +116,7 @@ export function generateMetadata(config: Partial<SEOConfig> = {}): Metadata {
       address: false,
       telephone: false,
     },
-    metadataBase: new URL("https://epidom.id"),
+    metadataBase: new URL("https://epidom.fr"),
     alternates: {
       canonical: seo.canonical || seo.alternates?.canonical,
       languages: seo.alternates?.languages,
@@ -169,7 +169,7 @@ export function generateStructuredData(
   type: "website" | "organization" | "product" | "service",
   data?: any
 ) {
-  const baseUrl = "https://epidom.id";
+  const baseUrl = "https://epidom.fr";
 
   const structuredData = {
     "@context": "https://schema.org",

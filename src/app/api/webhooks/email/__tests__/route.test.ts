@@ -28,7 +28,7 @@ function makeRequest(body: unknown, headers: Record<string, string> = {}) {
 
 const basePayload = {
   from: "noreply@gofood.co.id",
-  to: "orders@epidom.id",
+  to: "orders@epidom.fr",
   subject: "[@warung-sari] GoFood — Pesanan Baru #12345",
   text: "Pelanggan: Maya\nTotal: Rp 56.000",
 };

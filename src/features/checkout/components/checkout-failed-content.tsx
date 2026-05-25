@@ -39,7 +39,7 @@ export function CheckoutFailedContent() {
   };
 
   const handleContact = () => {
-    window.location.href = "mailto:support@epidom.com";
+    window.location.href = "mailto:support@epidom.fr";
   };
 
   return (
