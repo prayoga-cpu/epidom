@@ -136,7 +136,7 @@ export class StorefrontService {
     }
 
     // Verify slug uniqueness if slug is being changed
-    if (input.slug !== existingStorefront.slug) {
+    if (input.slug && input.slug !== existingStorefront.slug) {
       const slugExists = await prisma.storefront.findUnique({
         where: { slug: input.slug },
       });

@@ -45,14 +45,15 @@ export const updateStorefrontSchema = z.object({
     .string()
     .min(3, "Slug must be at least 3 characters")
     .max(50, "Slug must not exceed 50 characters")
-    .regex(/^[a-z0-9-]+$/, "Slug must only contain lowercase letters, numbers, and hyphens"),
-  displayName: nameSchema,
+    .regex(/^[a-z0-9-]+$/, "Slug must only contain lowercase letters, numbers, and hyphens")
+    .optional(),
+  displayName: nameSchema.optional(),
   tagline: z.string().max(150, "Tagline must not exceed 150 characters").optional().or(z.literal("")),
   description: z.string().max(500, "Description must not exceed 500 characters").optional().or(z.literal("")),
   logoUrl: urlSchema,
   heroImageUrl: urlSchema,
-  themeColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Invalid hex color format"),
-  fontFamily: z.string().default("Inter"),
+  themeColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Invalid hex color format").optional(),
+  fontFamily: z.string().default("Inter").optional(),
   
   whatsappNumber: phoneSchema,
   instagramUrl: urlSchema,

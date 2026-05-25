@@ -21,18 +21,18 @@ import { cn } from "@/lib/utils";
 import { storefrontApi } from "@/lib/api";
 
 const CONTAINER_STYLES =
-  "flex min-h-screen flex-col items-center justify-center bg-slate-50/50 px-4 py-12 md:px-8";
+  "flex min-h-screen flex-col items-center justify-center bg-background px-4 py-12 md:px-8";
 const CONTENT_WRAPPER_STYLES =
   "animate-in fade-in slide-in-from-bottom-4 w-full max-w-2xl duration-700";
 const CARD_STYLES =
-  "overflow-hidden border-0 shadow-2xl ring-1 ring-[var(--epi-gold-500)]/20";
+  "overflow-hidden border border-border shadow-2xl";
 const CARD_CONTENT_STYLES = "p-8 md:p-12";
 const INPUT_STYLES =
-  "h-12 rounded-xl border-slate-200 bg-white px-4 text-sm transition-all focus:ring-2 focus:ring-[var(--epi-gold-500)]/25";
+  "h-12 rounded-xl border-border bg-background px-4 text-sm text-foreground transition-all focus:ring-2 focus:ring-[var(--epi-gold-500)]/30";
 const BUTTON_PRIMARY =
   "group h-12 w-full rounded-xl text-sm font-semibold shadow-lg transition-all bg-[var(--epi-gold-500)] hover:bg-[var(--epi-gold-600)] text-[var(--epi-navy-900)]";
 const BUTTON_SECONDARY =
-  "h-12 rounded-xl border border-[var(--epi-gold-500)]/30 text-[var(--epi-navy-900)] hover:bg-[var(--epi-gold-500)]/8";
+  "h-12 rounded-xl border border-[var(--epi-gold-500)]/30 text-foreground hover:bg-[var(--epi-gold-500)]/10";
 
 export function OnboardingContent() {
   const { t } = useI18n();
@@ -230,8 +230,8 @@ export function OnboardingContent() {
       >
         <Icon className="h-7 w-7" />
       </div>
-      <h1 className="text-2xl font-bold tracking-tight text-[var(--epi-navy-900)]">{title}</h1>
-      <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
+      <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
     </div>
   );
 
@@ -261,7 +261,7 @@ export function OnboardingContent() {
                 />
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold">
+                    <label className="mb-2 block text-sm font-semibold text-foreground">
                       {t(`${ss}.step1.nameLabel`)}
                     </label>
                     <Input
@@ -272,7 +272,7 @@ export function OnboardingContent() {
                     />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-semibold">
+                    <label className="mb-2 block text-sm font-semibold text-foreground">
                       {t(`${ss}.step1.taglineLabel`)}
                     </label>
                     <Input
@@ -315,7 +315,7 @@ export function OnboardingContent() {
                       className="h-32 w-32 rounded-full border-4 border-slate-100 shadow-md"
                     />
                   ) : (
-                    <div className="flex h-32 w-32 items-center justify-center rounded-full border border-dashed bg-slate-100 text-slate-400">
+                    <div className="flex h-32 w-32 items-center justify-center rounded-full border border-dashed bg-muted text-muted-foreground">
                       <ImageIcon className="h-8 w-8" />
                     </div>
                   )}
@@ -435,7 +435,7 @@ export function OnboardingContent() {
                 />
                 <div className="rounded-2xl border border-dashed bg-slate-50 p-6 text-center">
                   <h3 className="mb-1 text-lg font-bold">{name}</h3>
-                  <p className="mb-4 text-sm text-slate-500">{tagline}</p>
+                  <p className="mb-4 text-sm text-muted-foreground">{tagline}</p>
                   <div
                     className="mb-4 h-32 w-full overflow-hidden rounded-xl"
                     style={{ backgroundColor: themeColor + "20" }}
