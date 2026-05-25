@@ -8,7 +8,15 @@ import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/services/em
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-  trustedOrigins: ["http://localhost:3000", process.env.NEXT_PUBLIC_APP_URL || ""].filter(Boolean),
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://epidom.fr",
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : undefined,
+  ].filter((v): v is string => Boolean(v)),
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
