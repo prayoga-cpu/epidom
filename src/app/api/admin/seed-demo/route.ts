@@ -5,6 +5,7 @@ import { hashPassword } from "better-auth/crypto";
 const DEMO_EMAIL = "demo@epidom.fr";
 const DEMO_PASSWORD = "password123";
 const DEMO_NAME = "Demo User";
+const DEMO_STORE_NAME = "Demo Store";
 
 export async function POST(req: Request) {
   const secret = process.env.SEED_DEMO_SECRET;
@@ -20,31 +21,20 @@ export async function POST(req: Request) {
   const hashedPassword = await hashPassword(DEMO_PASSWORD);
   const now = new Date();
 
-  // Upsert user with emailVerified: true
+  // 1. Upsert user with emailVerified: true
   const user = await prisma.user.upsert({
     where: { email: DEMO_EMAIL },
-    update: {
-      name: DEMO_NAME,
-      emailVerified: true,
-      updatedAt: now,
-    },
-    create: {
-      email: DEMO_EMAIL,
-      name: DEMO_NAME,
-      emailVerified: true,
-      createdAt: now,
-      updatedAt: now,
-    },
+    update: { name: DEMO_NAME, emailVerified: true, updatedAt: now },
+    create: { email: DEMO_EMAIL, name: DEMO_NAME, emailVerified: true, createdAt: now, updatedAt: now },
   });
 
-  // Upsert credential account with correct scrypt hash
-  const existing = await prisma.account.findFirst({
+  // 2. Upsert credential account with correct scrypt hash
+  const existingAccount = await prisma.account.findFirst({
     where: { userId: user.id, providerId: "credential" },
   });
-
-  if (existing) {
+  if (existingAccount) {
     await prisma.account.update({
-      where: { id: existing.id },
+      where: { id: existingAccount.id },
       data: { password: hashedPassword, updatedAt: now },
     });
   } else {
@@ -60,10 +50,31 @@ export async function POST(req: Request) {
     });
   }
 
+  // 3. Upsert Business
+  const business = await prisma.business.upsert({
+    where: { userId: user.id },
+    update: { name: DEMO_STORE_NAME, updatedAt: now },
+    create: { userId: user.id, name: DEMO_STORE_NAME, createdAt: now, updatedAt: now },
+  });
+
+  // 4. Ensure at least one Store exists
+  let store = await prisma.store.findFirst({
+    where: { businessId: business.id },
+    select: { id: true },
+  });
+  if (!store) {
+    store = await prisma.store.create({
+      data: { businessId: business.id, name: DEMO_STORE_NAME },
+      select: { id: true },
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     email: DEMO_EMAIL,
     password: DEMO_PASSWORD,
     userId: user.id,
+    businessId: business.id,
+    storeId: store.id,
   });
 }

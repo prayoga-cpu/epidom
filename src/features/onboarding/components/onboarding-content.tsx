@@ -56,8 +56,8 @@ export function OnboardingContent() {
         const res = await fetch("/api/user/profile");
         if (res.ok) {
           const { data } = await res.json();
-          if (data?.business?.id) {
-            setStoreId(data.business.id);
+          if (data?.business?.stores?.[0]?.id) {
+            setStoreId(data.business.stores[0].id);
           }
           // If storefront is already published, skip
           if (data?.business?.storefront?.isPublished) {
@@ -87,12 +87,12 @@ export function OnboardingContent() {
       });
       if (res.ok) {
         const { data } = await res.json();
-        setStoreId(data.id);
+        setStoreId(data.storeId);
         
         // Also update the storefront draft
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-        await storefrontApi.updateStorefront(data.id, { 
-          displayName: name, 
+        await storefrontApi.updateStorefront(data.storeId, {
+          displayName: name,
           tagline,
           slug,
           isPublished: false

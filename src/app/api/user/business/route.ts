@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { businessService } from "@/lib/services";
+import { prisma } from "@/lib/prisma";
 import { createBusinessSchema, updateBusinessSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api";
 import { withApiHandler } from "@/lib/api-handler";
@@ -54,6 +55,8 @@ export const POST = withApiHandler(
 /**
  * PATCH /api/user/business
  * Update or create (upsert) business for the current user.
+ * Also provisions a default Store if one doesn't exist yet,
+ * and returns storeId so the onboarding can use storefront APIs immediately.
  */
 export const PATCH = withApiHandler(
   async (request, { userId }) => {
@@ -62,7 +65,20 @@ export const PATCH = withApiHandler(
 
     const business = await businessService.upsertBusiness(userId, input);
 
-    return NextResponse.json(createSuccessResponse(business));
+    // Ensure a default Store exists for this business (bypass subscription check
+    // here — the first store is provisioned automatically during onboarding).
+    let store = await prisma.store.findFirst({
+      where: { businessId: business.id },
+      select: { id: true },
+    });
+    if (!store) {
+      store = await prisma.store.create({
+        data: { businessId: business.id, name: input.name || "My Store" },
+        select: { id: true },
+      });
+    }
+
+    return NextResponse.json(createSuccessResponse({ ...business, storeId: store.id }));
   },
   {
     rateLimitEndpoint: "/api/user/business",
