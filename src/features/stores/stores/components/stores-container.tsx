@@ -1,22 +1,38 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StoreCard } from "./store-card";
 import { CreateStoreDialog } from "./create-store-dialog";
 import { useStores } from "../hooks/use-stores";
 import { useSubscriptionStatus } from "../hooks/use-subscription-status";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Store } from "lucide-react";
+import { AlertCircle, Store, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function StoresContainer() {
   const { t } = useI18n();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: stores, isLoading, error, refetch } = useStores();
   const { data: subscriptionStatus, isLoading: isLoadingSubscription } = useSubscriptionStatus();
+  const [isActivating, setIsActivating] = useState(false);
+
+  async function handleActivateFree() {
+    setIsActivating(true);
+    try {
+      const res = await fetch("/api/subscriptions/activate-free", { method: "POST" });
+      if (res.ok) {
+        await queryClient.invalidateQueries({ queryKey: ["subscription-status"] });
+        await queryClient.invalidateQueries({ queryKey: ["stores"] });
+      }
+    } finally {
+      setIsActivating(false);
+    }
+  }
   /**
    * GATEKEEPER LOGIC:
    * Protects the /stores route from incomplete users.
@@ -35,21 +51,11 @@ export function StoresContainer() {
           const business = profile.business;
           const subscription = profile.subscription;
 
-          // Conditions for redirection:
-          // 1. Plan is NOT active (if plan is active, we let them in regardless of business info)
-          const isPlanActive = subscription?.status === "ACTIVE";
-
-          if (!isPlanActive) {
-            // 2. Business Profile is Incomplete
-            const DEFAULT_BUSINESS_NAME = "My Business";
-            const isDefaultName = business?.name === DEFAULT_BUSINESS_NAME;
-            const isAddressMissing = !business?.address || business.address.trim() === "";
-            const isIncomplete = !business || isDefaultName || isAddressMissing;
-
-            if (isIncomplete) {
-               // Redirect to onboarding to fix profile/payment
-               router.replace("/onboarding");
-            }
+          // Redirect to onboarding only if the user has no business set up at all
+          // (subscription is always active now via free plan provisioning)
+          const hasStore = business?.stores?.length > 0;
+          if (!business || !hasStore) {
+            router.replace("/onboarding");
           }
         }
       } catch (error) {
@@ -94,32 +100,46 @@ export function StoresContainer() {
         ? currentStoreCount < storeLimit // Calculate from current count
         : canCreateMoreFromSubscription; // Fallback to subscription status
 
-    // No subscription - show "Subscribe to Create Store" button
+    // No subscription - activate free plan directly
     if (!hasSubscription || subscription?.status !== "ACTIVE") {
       return (
         <Button
           size="lg"
-          onClick={() => router.push("/pricing")}
+          onClick={handleActivateFree}
+          disabled={isActivating}
           style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}
           className="w-full rounded-full px-4 py-2.5 text-xs font-semibold shadow-md transition-all hover:opacity-90 hover:shadow-lg sm:w-auto sm:px-6 sm:py-3 sm:text-sm md:px-8 md:py-3.5 md:text-base"
         >
-          {t("stores.subscribeToCreateStore")}
-          <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:ml-2 sm:h-4 sm:w-4" />
+          {isActivating ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              {t("stores.subscribeToCreateStore")}
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:ml-2 sm:h-4 sm:w-4" />
+            </>
+          )}
         </Button>
       );
     }
 
-    // Has subscription but limit reached - show "Upgrade Plan" button
+    // Has subscription but limit reached - activate free upgrade directly
     if (!canCreateMore) {
       return (
         <Button
           size="lg"
-          onClick={() => router.push("/pricing")}
+          onClick={handleActivateFree}
+          disabled={isActivating}
           style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}
           className="w-full rounded-full px-4 py-2.5 text-xs font-semibold shadow-md transition-all hover:opacity-90 hover:shadow-lg sm:w-auto sm:px-6 sm:py-3 sm:text-sm md:px-8 md:py-3.5 md:text-base"
         >
-          {t("stores.upgradePlan")}
-          <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:ml-2 sm:h-4 sm:w-4" />
+          {isActivating ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              {t("stores.upgradePlan")}
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:ml-2 sm:h-4 sm:w-4" />
+            </>
+          )}
         </Button>
       );
     }

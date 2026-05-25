@@ -36,11 +36,27 @@ export function PricingCards({ yearly }: { yearly: boolean }) {
     return yearly ? t("redesign.pricingPage.billedYearly") : t("redesign.pricingPage.billedMonthly");
   }
 
-  function handleCta(tierKey: string) {
+  const [isActivating, setIsActivating] = useState(false);
+
+  async function handleCta(tierKey: string) {
     if (tierKey === "t4") {
       window.open("https://calendly.com/prayogadevelopment/30min", "_blank");
-    } else {
+      return;
+    }
+    setIsActivating(true);
+    try {
+      const res = await fetch("/api/subscriptions/activate-free", { method: "POST" });
+      if (res.status === 401) {
+        router.push("/register");
+      } else if (res.ok) {
+        router.push("/stores");
+      } else {
+        router.push("/register");
+      }
+    } catch {
       router.push("/register");
+    } finally {
+      setIsActivating(false);
     }
   }
 
@@ -98,10 +114,11 @@ export function PricingCards({ yearly }: { yearly: boolean }) {
 
               <button
                 onClick={() => handleCta(key)}
-                className="cursor-pointer transition-all hover:-translate-y-px"
+                disabled={isActivating}
+                className="cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ width: "100%", padding: "14px 0", borderRadius: 999, background: highlight ? "var(--epi-gold-500)" : "transparent", color: highlight ? "var(--epi-navy-900)" : "var(--epi-cream-50)", border: `1px solid ${highlight ? "transparent" : "rgba(255,255,255,0.18)"}`, fontSize: 14, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "var(--epi-font-body)" }}
               >
-                {t(`redesign.pricingPage.${key}cta` as const)}
+                {isActivating ? "…" : t(`redesign.pricingPage.${key}cta` as const)}
               </button>
 
               <div style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />

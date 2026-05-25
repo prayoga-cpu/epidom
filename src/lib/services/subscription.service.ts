@@ -317,6 +317,35 @@ export class SubscriptionService {
   }
 
   /**
+   * Provision a free OPERATIONS subscription for a user, bypassing Stripe.
+   * Used while payment is not yet wired up, and for the demo account.
+   * Uses "free_<userId>" as a placeholder stripeCustomerId (guaranteed unique).
+   */
+  async activateFree(userId: string): Promise<void> {
+    const now = new Date();
+    const periodEnd = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
+    const existing = await this.subscriptionRepo.findByUserId(userId);
+
+    if (existing) {
+      await this.subscriptionRepo.update(userId, {
+        plan: SubscriptionPlan.OPERATIONS,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodStart: existing.currentPeriodStart ?? now,
+        currentPeriodEnd: existing.currentPeriodEnd ?? periodEnd,
+      });
+    } else {
+      await this.subscriptionRepo.create({
+        userId,
+        stripeCustomerId: `free_${userId}`,
+        plan: SubscriptionPlan.OPERATIONS,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+      });
+    }
+  }
+
+  /**
    * Validate if user can downgrade to a plan
    * Returns false if user has more stores than the target plan allows
    */

@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { businessService } from "@/lib/services";
+import { businessService, subscriptionService } from "@/lib/services";
 import { prisma } from "@/lib/prisma";
 import { createBusinessSchema, updateBusinessSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api";
@@ -77,6 +77,9 @@ export const PATCH = withApiHandler(
         select: { id: true },
       });
     }
+
+    // Provision free OPERATIONS subscription so the user has full access immediately.
+    await subscriptionService.activateFree(userId);
 
     return NextResponse.json(createSuccessResponse({ ...business, storeId: store.id }));
   },
