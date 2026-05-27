@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, LoginInput } from "../../validation/auth.schemas";
 import { useLogin } from "../../hooks/use-auth";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 
@@ -30,6 +30,9 @@ export function LoginForm() {
   const registered = searchParams.get("registered");
 
   const { mutate: login, isPending, error } = useLogin();
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   // Use ref to track if toast has already been shown
   const toastShownRef = useRef(false);
@@ -77,7 +80,16 @@ export function LoginForm() {
         window.location.href = redirectUrl;
       },
       onError: (err) => {
-        toast.error(err.message || t("messages.invalidCredentials"));
+        const msg = err?.message || "";
+        // Detect unverified email errors by message content
+        if (/verify|verification|not verified/i.test(msg)) {
+          // Capture email from form to allow resending
+          const emailFromForm = form.getValues().email;
+          setUnverifiedEmail(emailFromForm || null);
+          toast.error(msg || t("messages.invalidCredentials"));
+        } else {
+          toast.error(msg || t("messages.invalidCredentials"));
+        }
         // User stays on login page to retry
       },
     });
@@ -96,8 +108,8 @@ export function LoginForm() {
         variant="outline"
         type="button"
         disabled={isPending}
-        className="h-12 w-full rounded-xl font-medium hover:bg-white/5"
-        style={{ borderColor: "rgba(255,255,255,0.12)", color: "var(--epi-cream-50)" }}
+        className="h-12 w-full rounded-xl font-medium bg-transparent hover:bg-white/5"
+        style={{ borderColor: "rgba(255,255,255,0.18)", color: "var(--epi-cream-50)" }}
         onClick={async () => {
           await authClient.signIn.social({
             provider: "google",
@@ -111,7 +123,7 @@ export function LoginForm() {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-white/10" />
+          <span className="w-full border-t border-white/15" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="px-2" style={{ background: "var(--epi-navy-900)", color: "rgba(251,249,228,0.4)" }}>Or continue with email</span>
@@ -182,8 +194,48 @@ export function LoginForm() {
         </form>
       </Form>
 
+      {unverifiedEmail && (
+           <div className="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="font-medium">{t("auth.verifyEmail.notice") || "Email not verified"}</p>
+                 <p className="mt-1 text-xs">{t("auth.verifyEmail.checkYourEmail") || "Please verify your email before signing in."}</p>
+               </div>
+               <div className="ml-4">
+                 <button
+                   type="button"
+                   className="inline-flex items-center rounded-md border border-transparent bg-yellow-600 px-3 py-2 text-xs font-medium text-white hover:bg-yellow-700"
+                   onClick={async () => {
+                     setIsResending(true);
+                     try {
+                       const { error } = await authClient.sendVerificationEmail({
+                         email: unverifiedEmail,
+                         callbackURL: "/onboarding",
+                       });
+
+                       if (error) {
+                         toast.error(error.message || t("auth.verifyEmail.resendError"));
+                       } else {
+                         setResendSuccess(true);
+                         toast.success(t("auth.verifyEmail.resendSuccess"));
+                       }
+                     } catch {
+                       toast.error(t("auth.verifyEmail.resendError"));
+                     } finally {
+                       setIsResending(false);
+                     }
+                   }}
+                   disabled={isResending || resendSuccess}
+                 >
+                   {isResending ? t("auth.verifyEmail.resending") || "Sending..." : resendSuccess ? t("auth.verifyEmail.resendSuccess") || "Sent" : t("auth.verifyEmail.resendButton")}
+                 </button>
+               </div>
+             </div>
+           </div>
+      )}
+
       <p className="text-center text-sm" style={{ color: "rgba(251,249,228,0.55)" }}>
-        {t("auth.dontHaveAccount")}{" "}
+        {t("auth.dontHaveAccount")} {" "}
         <Link
           href="/register"
           className="font-semibold transition-colors hover:underline" style={{ color: "var(--epi-gold-400)" }}

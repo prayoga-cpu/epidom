@@ -139,6 +139,7 @@ export async function POST(
           orderType: input.orderType as OrderType,
           tableNumber: input.tableNumber,
           tableId: input.tableId,
+          shiftId: input.shiftId,
           paymentMethod: input.paymentMethod as PaymentMethod,
           paymentStatus: input.paymentMethod === "CASH" ? "PAID" : "PENDING",
           status: input.paymentMethod === "CASH" ? "CONFIRMED" : "PENDING",

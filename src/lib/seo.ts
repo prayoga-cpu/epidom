@@ -185,7 +185,7 @@ export function generateStructuredData(
     description:
       "Online store, menu page, and POS cashier platform for cafés, warungs, and restaurants.",
     url: baseUrl,
-    logo: `${baseUrl}/images/logo-black.png`,
+    logo: `${baseUrl}/images/logo.svg`,
     image: `${baseUrl}/images/og-image.jpg`,
     sameAs: [
       "https://twitter.com/epidom",

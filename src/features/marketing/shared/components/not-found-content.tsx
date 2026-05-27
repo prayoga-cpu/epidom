@@ -11,6 +11,7 @@
 
 import { FileQuestion, Home, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Container } from "./container";
@@ -22,6 +23,12 @@ interface NotFoundContentProps {
 
 export function NotFoundContent({ showDashboardButton = false }: NotFoundContentProps) {
   const { t } = useI18n();
+  const pathname = usePathname();
+  // Extract storeId from /store/[storeId]/... pattern if present
+  const storeIdMatch = pathname?.match(/\/store\/([^/]+)/);
+  const dashboardHref = storeIdMatch
+    ? `/store/${storeIdMatch[1]}/dashboard`
+    : "/stores";
 
   return (
     <Container maxWidth="2xl">
@@ -48,7 +55,7 @@ export function NotFoundContent({ showDashboardButton = false }: NotFoundContent
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             {showDashboardButton && (
-              <Link href="/dashboard" className="flex-1 sm:flex-auto">
+              <Link href={dashboardHref} className="flex-1 sm:flex-auto">
                 <Button
                   variant="outline"
                   className="w-full gap-2 border-2 border-brand-primary text-brand-primary"

@@ -122,6 +122,28 @@ Milestones completed: Schema + Aggregator Foundation, Email Ingestion, Finance R
 
 ---
 
+## ✅ Beta Polish + Reservations (2026-05-28)
+
+### Completed
+- [x] **Staff email invitations** — `email` + `inviteStatus` added to `StaffMember` (migration `20260527170327_add_staff_email_invite_status`). POST /staff optionally sends PIN via `sendStaffPinEmail()` (Resend). Invite status badges in staff table (Pending / Invited).
+- [x] **Staff edit dialog** — role change, reset/set PIN (blank by default), "Send new PIN to email" checkbox (appears when PIN filled + email set). PATCH /staff/[staffId] handles email send.
+- [x] **Owner pinned row** — current logged-in user shown at top of staff table with Crown icon + Owner badge; separate from staff CRUD.
+- [x] **BETA badge** — violet chip on NavUser dropdown label and profile-header card.
+- [x] **Account Settings card on profile** — data usage tiles (Stores / Products / Orders / Staff), account created date, linked accounts list, Change Password dialog, Delete Account dialog (requires exact email confirmation).
+- [x] **Shifts page fix** — triple API path bug (`/api/stores/...` → `/stores/...`); broken i18n keys hardcoded; currency now uses `formatPrice()` from `useCurrency()`; sortable column headers (date / name / opening cash, default date desc).
+- [x] **Finance report fix** — `finance/layout.tsx` was ENTERPRISE-gated (redirected beta users); replaced with simple session check.
+- [x] **Finance client fix** — same API double-prefix bug fixed; hardcoded i18n keys resolved.
+- [x] **Table reservations — full end-to-end** (migration `20260527172232_add_reservations`):
+  - `reservationEnabled` toggle per table (Switch on table card, PATCH persisted)
+  - Reservation count badge + Sheet side panel in Tables Manager (confirm / cancel / complete / delete)
+  - `acceptsReservations` toggle in Storefront Settings
+  - "Reserve a Table" button + bottom-sheet booking form on public storefront
+  - Public API: `POST /api/public/reservations` (validates storefront + table), `GET` returns reservable tables + existing reservations for a date
+  - Dashboard API: `GET/POST /api/stores/[id]/reservations`, `PATCH/DELETE /api/stores/[id]/reservations/[id]`
+- [x] `pnpm type-check` — clean after all changes
+
+---
+
 ## Developer / Operator To-Do
 
 *(Completed items marked below — remaining items still require manual action)*
@@ -134,6 +156,7 @@ Milestones completed: Schema + Aggregator Foundation, Email Ingestion, Finance R
 - [ ] **Payments (Xendit)**: Add `XENDIT_SECRET_KEY` + `XENDIT_WEBHOOK_TOKEN` to `.env`. In Xendit dashboard, set webhook URL to `https://yourdomain.com/api/webhooks/xendit`.
 - [ ] **Notifications**: Add `FONNTE_API_TOKEN` to `.env`. Ensure the Fonnte device is online and linked to the merchant's WhatsApp.
 - [ ] **Storefront**: Enable `acceptsOrders: true` on any storefront that should show the Order & Pay flow.
+- [ ] **Storefront reservations**: Enable `acceptsReservations: true` and toggle `reservationEnabled` per table for storefronts that want the booking form.
 - [ ] **Store phone**: Ensure the `Store.phone` field is filled in — used as merchant WhatsApp number for notifications.
 
 ---

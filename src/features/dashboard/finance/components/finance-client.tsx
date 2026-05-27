@@ -68,7 +68,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
   const [to, setTo] = useState(today());
 
   const params = `from=${from}T00:00:00Z&to=${to}T23:59:59Z`;
-  const base = `/api/stores/${storeId}/finance`;
+  const base = `/stores/${storeId}/finance`;
 
   const summary = useQuery({
     queryKey: ["finance-summary", storeId, from, to],
@@ -210,7 +210,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
                 </TableHeader>
                 <TableBody>
                   {channels.isLoading ? (
-                    <TableRow><TableCell colSpan={5} className="text-muted-foreground py-8 text-center">{t("common.loading")}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-muted-foreground py-8 text-center">Loading...</TableCell></TableRow>
                   ) : (channels.data?.channels ?? []).map((c) => (
                     <TableRow key={c.source}>
                       <TableCell className="font-medium">{c.label}</TableCell>
@@ -243,7 +243,7 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
                 </TableHeader>
                 <TableBody>
                   {topItems.isLoading ? (
-                    <TableRow><TableCell colSpan={4} className="text-muted-foreground py-8 text-center">{t("common.loading")}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="text-muted-foreground py-8 text-center">Loading...</TableCell></TableRow>
                   ) : (topItems.data?.items ?? []).map((item, i) => (
                     <TableRow key={item.name}>
                       <TableCell className="text-muted-foreground">{i + 1}</TableCell>
@@ -265,13 +265,13 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead>Date</TableHead>
                     <TableHead className="text-right">{t("pages.financeRevenue")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {summary.isLoading ? (
-                    <TableRow><TableCell colSpan={2} className="text-muted-foreground py-8 text-center">{t("common.loading")}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={2} className="text-muted-foreground py-8 text-center">Loading...</TableCell></TableRow>
                   ) : (s?.buckets ?? []).map((b) => (
                     <TableRow key={b.date}>
                       <TableCell>{b.date}</TableCell>

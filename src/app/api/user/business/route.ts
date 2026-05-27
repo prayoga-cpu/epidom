@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { createBusinessSchema, updateBusinessSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api";
 import { withApiHandler } from "@/lib/api-handler";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/user/business
@@ -72,14 +73,26 @@ export const PATCH = withApiHandler(
       select: { id: true },
     });
     if (!store) {
-      store = await prisma.store.create({
-        data: { businessId: business.id, name: input.name || "My Store" },
-        select: { id: true },
-      });
+      try {
+        logger.info("Creating default store for business", { businessId: business.id, name: input.name });
+        store = await prisma.store.create({
+          data: { businessId: business.id, name: input.name || "My Store" },
+          select: { id: true },
+        });
+        logger.info("Created default store", { storeId: store.id });
+      } catch (err) {
+        logger.error("Failed to create default store", err, { businessId: business.id, input });
+        return NextResponse.json(createErrorResponse(ApiErrorCode.DATABASE_ERROR, "Failed to create store"), { status: 500 });
+      }
     }
 
     // Provision free OPERATIONS subscription so the user has full access immediately.
-    await subscriptionService.activateFree(userId);
+    try {
+      await subscriptionService.activateFree(userId);
+    } catch (err) {
+      logger.error("Failed to activate free subscription", err, { userId });
+      return NextResponse.json(createErrorResponse(ApiErrorCode.SUBSCRIPTION_INACTIVE, "Failed to activate subscription"), { status: 500 });
+    }
 
     return NextResponse.json(createSuccessResponse({ ...business, storeId: store.id }));
   },

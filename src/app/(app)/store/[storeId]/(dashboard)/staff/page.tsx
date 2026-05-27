@@ -10,5 +10,12 @@ export default async function StaffPage({ params }: { params: Promise<{ storeId:
     redirect("/login");
   }
 
-  return <StaffClient storeId={storeId} />;
+  return (
+    <StaffClient
+      storeId={storeId}
+      currentUserId={session.user.id}
+      currentUserName={session.user.name ?? ""}
+      currentUserEmail={session.user.email ?? ""}
+    />
+  );
 }

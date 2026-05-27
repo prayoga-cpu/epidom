@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useState } from "react";
 import { PosCheckoutDialog } from "./pos-checkout-dialog";
+import { usePosSession } from "../hooks/use-pos-session";
 
 interface PosCartProps {
   storeId: string;
@@ -20,6 +21,7 @@ export function PosCart({ storeId, storeName }: PosCartProps) {
   const { t } = useI18n();
   const { currency } = useCurrency();
   const cart = usePosCart();
+  const { staffName, shiftId } = usePosSession();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   const totalItems = cart.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
@@ -101,6 +103,8 @@ export function PosCart({ storeId, storeName }: PosCartProps) {
         onOpenChange={setIsCheckoutOpen}
         storeId={storeId}
         storeName={storeName}
+        cashierName={staffName ?? undefined}
+        shiftId={shiftId ?? undefined}
       />
     </div>
   );

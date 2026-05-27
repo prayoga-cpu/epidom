@@ -161,6 +161,12 @@ src/
 - Aggregator email ingestion (GoFood / GrabFood / ShopeeFood / Tokopedia via Inngest + OpenAI)
 - Storefront editor: profile, menu categories, analytics
 - POS Cashier, KDS, Table Management, Order Queue
+- Staff PIN login with email invitation flow (PIN delivered via Resend)
+- Table Reservations: per-table toggle, public booking form, dashboard management panel
+- Finance reports (accessible in beta without plan gate)
+- Shifts: currency-aware formatting, sortable columns (date / name / opening cash)
+- Account Settings: data usage stats, linked accounts, change password, delete account
+- BETA badge on user profile
 
 ## Development Workflow
 

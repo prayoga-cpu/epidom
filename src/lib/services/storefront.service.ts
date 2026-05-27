@@ -127,16 +127,17 @@ export class StorefrontService {
    * Update storefront settings
    */
   async updateStorefront(storeId: string, input: UpdateStorefrontInput) {
-    const existingStorefront = await prisma.storefront.findUnique({
+    let existingStorefront = await prisma.storefront.findUnique({
       where: { storeId },
     });
 
     if (!existingStorefront) {
-      throw new Error("Storefront not found");
+      // Auto-create draft storefront (same as getStorefrontByStoreId)
+      existingStorefront = await this.getStorefrontByStoreId(storeId) as any;
     }
 
     // Verify slug uniqueness if slug is being changed
-    if (input.slug && input.slug !== existingStorefront.slug) {
+    if (input.slug && input.slug !== existingStorefront!.slug) {
       const slugExists = await prisma.storefront.findUnique({
         where: { slug: input.slug },
       });
@@ -166,6 +167,7 @@ export class StorefrontService {
         customLinks: input.customLinks === undefined ? undefined : (input.customLinks as Prisma.InputJsonValue),
         isPublished: input.isPublished,
         acceptsOrders: input.acceptsOrders,
+        acceptsReservations: input.acceptsReservations,
         openingHours: input.openingHours === undefined ? undefined : (input.openingHours as Prisma.InputJsonValue),
       },
     });

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -38,8 +39,8 @@ import {
   type CloseShiftInput,
 } from "@/lib/validation/operations.schemas";
 import { apiClient } from "@/lib/api/client";
-import { Clock, Plus, X } from "lucide-react";
-import { formatDateTime, formatCurrency } from "@/lib/utils/formatting";
+import { Clock, Plus, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { formatDateTime } from "@/lib/utils/formatting";
 
 interface StaffMember {
   id: string;
@@ -60,24 +61,61 @@ interface Shift {
   _count: { orders: number };
 }
 
+type SortField = "date" | "name" | "openingCash";
+type SortDir = "asc" | "desc";
+
 interface ShiftsClientProps {
   storeId: string;
   staff: StaffMember[];
 }
 
+function SortIcon({ field, active, dir }: { field: string; active: boolean; dir: SortDir }) {
+  if (!active) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 opacity-40" />;
+  return dir === "asc"
+    ? <ArrowUp className="ml-1 inline h-3.5 w-3.5" />
+    : <ArrowDown className="ml-1 inline h-3.5 w-3.5" />;
+}
+
 export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const queryClient = useQueryClient();
   const [openOpen, setOpenOpen] = useState(false);
   const [closeTarget, setCloseTarget] = useState<Shift | null>(null);
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const { data, isLoading } = useQuery({
     queryKey: ["shifts", storeId],
-    queryFn: () => apiClient.get<{ shifts: Shift[]; total: number }>(`/api/stores/${storeId}/shifts`),
+    queryFn: () => apiClient.get<{ shifts: Shift[]; total: number }>(`/stores/${storeId}/shifts`),
   });
 
-  const shifts = data?.shifts ?? [];
-  const openShift = shifts.find((s) => !s.closedAt);
+  const rawShifts = data?.shifts ?? [];
+  const openShift = rawShifts.find((s) => !s.closedAt);
+
+  const shifts = useMemo(() => {
+    const sorted = [...rawShifts].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "date") {
+        cmp = new Date(a.openedAt).getTime() - new Date(b.openedAt).getTime();
+      } else if (sortField === "name") {
+        cmp = a.staffMember.name.localeCompare(b.staffMember.name);
+      } else if (sortField === "openingCash") {
+        cmp = Number(a.openingCash) - Number(b.openingCash);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [rawShifts, sortField, sortDir]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  };
 
   const openForm = useForm<OpenShiftInput>({
     resolver: zodResolver(openShiftSchema),
@@ -91,7 +129,7 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
 
   const openMutation = useMutation({
     mutationFn: (body: OpenShiftInput) =>
-      apiClient.post(`/api/stores/${storeId}/shifts`, body),
+      apiClient.post(`/stores/${storeId}/shifts`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
       setOpenOpen(false);
@@ -101,13 +139,16 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
 
   const closeMutation = useMutation({
     mutationFn: ({ shiftId, body }: { shiftId: string; body: CloseShiftInput }) =>
-      apiClient.patch(`/api/stores/${storeId}/shifts/${shiftId}`, body),
+      apiClient.patch(`/stores/${storeId}/shifts/${shiftId}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
       setCloseTarget(null);
       closeForm.reset();
     },
   });
+
+  const fmtCash = (val: string | number | null) =>
+    val != null ? formatPrice(Number(val)) : "—";
 
   return (
     <div className="min-h-[calc(100vh-150px)] space-y-4">
@@ -136,23 +177,47 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
       </div>
 
       <div className="-mx-4 overflow-x-auto sm:mx-0">
-        <div className="min-w-[520px]">
+        <div className="min-w-[560px]">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("common.name")}</TableHead>
-                <TableHead>{t("pages.openingCash")}</TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-semibold hover:text-foreground"
+                    onClick={() => toggleSort("name")}
+                  >
+                    {t("common.name")}
+                    <SortIcon field="name" active={sortField === "name"} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-semibold hover:text-foreground"
+                    onClick={() => toggleSort("openingCash")}
+                  >
+                    {t("pages.openingCash")}
+                    <SortIcon field="openingCash" active={sortField === "openingCash"} dir={sortDir} />
+                  </button>
+                </TableHead>
                 <TableHead>{t("pages.closingCash")}</TableHead>
                 <TableHead>{t("pages.cashDifference")}</TableHead>
-                <TableHead>{t("common.status")}</TableHead>
-                <TableHead>{t("common.date")}</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-semibold hover:text-foreground"
+                    onClick={() => toggleSort("date")}
+                  >
+                    Date
+                    <SortIcon field="date" active={sortField === "date"} dir={sortDir} />
+                  </button>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
-                    {t("common.loading")}
+                    Loading...
                   </TableCell>
                 </TableRow>
               ) : shifts.length === 0 ? (
@@ -168,21 +233,17 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
                 shifts.map((shift) => (
                   <TableRow key={shift.id}>
                     <TableCell className="font-medium">{shift.staffMember.name}</TableCell>
-                    <TableCell>{formatCurrency(Number(shift.openingCash))}</TableCell>
-                    <TableCell>
-                      {shift.closingCash ? formatCurrency(Number(shift.closingCash)) : "—"}
-                    </TableCell>
+                    <TableCell>{fmtCash(shift.openingCash)}</TableCell>
+                    <TableCell>{fmtCash(shift.closingCash)}</TableCell>
                     <TableCell>
                       {shift.cashDifference != null ? (
                         <span
                           className={
-                            Number(shift.cashDifference) < 0
-                              ? "text-destructive"
-                              : "text-green-600"
+                            Number(shift.cashDifference) < 0 ? "text-destructive" : "text-green-600"
                           }
                         >
                           {Number(shift.cashDifference) >= 0 ? "+" : ""}
-                          {formatCurrency(Number(shift.cashDifference))}
+                          {fmtCash(shift.cashDifference)}
                         </span>
                       ) : (
                         "—"
@@ -215,10 +276,10 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
             className="space-y-4"
           >
             <div className="space-y-1">
-              <Label>{t("nav.staff")}</Label>
+              <Label>Staff</Label>
               <Select onValueChange={(v) => openForm.setValue("staffId", v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder={t("nav.staff")} />
+                  <SelectValue placeholder="Select staff" />
                 </SelectTrigger>
                 <SelectContent>
                   {staff.map((s) => (
@@ -251,7 +312,7 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpenOpen(false)}>
-                {t("common.cancel")}
+                {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={openMutation.isPending}>
                 {t("pages.openShift")}
@@ -285,12 +346,12 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="notes">{t("common.notes")}</Label>
+                <Label htmlFor="notes">Notes</Label>
                 <Input id="notes" {...closeForm.register("notes")} />
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setCloseTarget(null)}>
-                  {t("common.cancel")}
+                  {t("common.actions.cancel")}
                 </Button>
                 <Button type="submit" variant="destructive" disabled={closeMutation.isPending}>
                   {t("pages.closeShift")}

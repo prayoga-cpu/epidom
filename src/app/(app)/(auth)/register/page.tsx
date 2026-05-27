@@ -1,6 +1,6 @@
 import { RegisterForm } from "@/features/auth/register/components/register-form";
 import { AuthVisual } from "@/features/auth/components/auth-visual";
-import Image from "next/image";
+import { EpidomLogo } from "@/features/marketing/shared/components/epidom-logo";
 
 export default function RegisterPage() {
   return (
@@ -12,15 +12,7 @@ export default function RegisterPage() {
         <div className="my-auto w-full max-w-[380px]">
           {/* Logo */}
           <div className="mb-8 flex justify-center">
-            <div className="relative h-8 w-32">
-              <Image
-                src="/images/logo-white.png"
-                alt="Epidom"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
+            <EpidomLogo size={28} href="/" />
           </div>
 
           <RegisterForm />

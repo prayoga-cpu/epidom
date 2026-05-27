@@ -86,7 +86,11 @@ async function createProduct(storeId: string, data: CreateProductInput): Promise
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.error || "Failed to create product");
+    const details = error.error?.details;
+    const detail = Array.isArray(details) && details.length > 0
+      ? `${details[0].field}: ${details[0].message}`
+      : null;
+    throw new Error(detail || error.error?.message || error.error || "Failed to create product");
   }
 
   const responseData = await response.json();

@@ -22,7 +22,7 @@ import React, { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Container } from "./container";
-import { LogoWithSkeleton } from "./logo-with-skeleton";
+import { EpidomLogo } from "./epidom-logo";
 import { ChevronDown, BarChart3, PieChart, Layers } from "lucide-react";
 
 export const Hero = React.memo(function Hero() {
@@ -41,12 +41,7 @@ export const Hero = React.memo(function Hero() {
             <div className="z-10 flex flex-col justify-center text-center lg:text-left">
               {/* Logo (Mobile Only) */}
               <div className="mb-6 flex justify-center lg:hidden">
-                <LogoWithSkeleton
-                  src="/images/logo-black.png"
-                  alt="EPIDOM"
-                  filter="invert(27%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(80%)"
-                  wrapperClassName="relative h-7 w-[110px]"
-                />
+                <EpidomLogo size={28} href="/" />
               </div>
 
               <div className="space-y-6 lg:space-y-8">

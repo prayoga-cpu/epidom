@@ -1,4 +1,5 @@
 import type React from "react";
+import { Bebas_Neue } from "next/font/google";
 
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { WebVitalsReporter } from "@/components/analytics/web-vitals-reporter";
@@ -8,6 +9,13 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
 import { Metadata } from "next";
+
+const bebasNeue = Bebas_Neue({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-bebas-neue",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   icons: {
@@ -22,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body suppressHydrationWarning>
+      <body className={bebasNeue.variable} suppressHydrationWarning>
         <ErrorBoundary>
           <QueryProvider>
             <PwaProvider />

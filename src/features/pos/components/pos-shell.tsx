@@ -9,6 +9,7 @@ import { PosCart } from "./pos-cart";
 import { PosOfflineBanner } from "./pos-offline-banner";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosCart } from "../hooks/use-pos-cart";
+import { PosStaffGate } from "./pos-staff-gate";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -27,6 +28,7 @@ export function PosShell({ store }: PosShellProps) {
   const { data: menuData, isLoading } = usePosMenu(store.id);
 
   return (
+    <PosStaffGate storeId={store.id}>
     <div className="flex h-screen w-full flex-col overflow-hidden bg-muted/10">
       <PosHeader store={store} />
       <PosOfflineBanner storeId={store.id} />
@@ -75,5 +77,6 @@ export function PosShell({ store }: PosShellProps) {
         </div>
       </div>
     </div>
+    </PosStaffGate>
   );
 }

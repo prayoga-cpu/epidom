@@ -66,6 +66,7 @@ export const updateStorefrontSchema = z.object({
   
   isPublished: z.boolean().default(false),
   acceptsOrders: z.boolean().default(false),
+  acceptsReservations: z.boolean().default(false),
   openingHours: openingHoursSchema.optional(),
 });
 

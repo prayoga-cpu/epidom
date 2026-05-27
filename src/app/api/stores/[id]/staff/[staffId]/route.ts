@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { updateStaffSchema } from "@/lib/validation/operations.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
-import { hash } from "bcryptjs";
+import { hash, compare } from "bcryptjs";
+import { sendStaffPinEmail } from "@/lib/services/email.service";
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +29,30 @@ export const PATCH = withApiHandler(
       );
     }
 
-    const { pin, ...rest } = parsed.data;
+    const { pin, email, sendPinEmail, ...rest } = parsed.data;
     const updateData: Record<string, unknown> = { ...rest };
+
+    if (email !== undefined) {
+      updateData.email = email && email.trim() !== "" ? email.trim() : null;
+    }
     if (pin) updateData.pin = await hash(pin, 10);
+
+    const store = await prisma.store.findUnique({ where: { id: storeId! }, select: { name: true } });
 
     const staff = await prisma.staffMember.update({
       where: { id: staffId },
       data: updateData,
-      select: { id: true, name: true, role: true, isActive: true, updatedAt: true },
+      select: { id: true, name: true, email: true, role: true, isActive: true, inviteStatus: true, updatedAt: true },
     });
+
+    // Send PIN email if requested and we have an email + a PIN
+    if (sendPinEmail && pin) {
+      const targetEmail = (updateData.email as string | null) ?? existing.email;
+      if (targetEmail) {
+        await sendStaffPinEmail(targetEmail, existing.name, store?.name ?? "your store", pin);
+        await prisma.staffMember.update({ where: { id: staffId }, data: { inviteStatus: "accepted" } });
+      }
+    }
 
     return NextResponse.json(createSuccessResponse({ staff }));
   },
@@ -55,7 +71,6 @@ export const DELETE = withApiHandler(
       );
     }
 
-    // Soft-delete: deactivate rather than hard delete (preserve shift history)
     await prisma.staffMember.update({
       where: { id: staffId },
       data: { isActive: false },

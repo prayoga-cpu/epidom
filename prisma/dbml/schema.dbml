@@ -11,9 +11,9 @@ Table user {
   createdAt DateTime [not null]
   updatedAt DateTime [not null]
   phone String
-  locale String [not null, default: 'en']
-  timezone String [not null, default: 'UTC']
-  currency String [not null, default: 'EUR']
+  locale String [not null, default: 'id']
+  timezone String [not null, default: 'Asia/Jakarta']
+  currency String [not null, default: 'IDR']
   stripeConnectAccountId String
   stripeConnectOnboarded Boolean [not null, default: false]
   sessions session [not null]
@@ -72,9 +72,9 @@ Table businesses {
   email String
   logo String
   website String
-  currency String [not null, default: 'EUR']
-  timezone String [not null, default: 'UTC']
-  locale String [not null, default: 'en']
+  currency String [not null, default: 'IDR']
+  timezone String [not null, default: 'Asia/Jakarta']
+  locale String [not null, default: 'id']
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   user user [not null]
@@ -107,6 +107,7 @@ Table stores {
   tables tables [not null]
   staffMembers staff_members [not null]
   shifts shifts [not null]
+  reservations reservations [not null]
   aggregatorConnections aggregator_connections [not null]
   aggregatorEmails aggregator_emails [not null]
 }
@@ -433,25 +434,46 @@ Table tables {
   label String [not null]
   capacity Int [not null, default: 4]
   status TableStatus [not null, default: 'AVAILABLE']
+  reservationEnabled Boolean [not null, default: false]
   positionX Int
   positionY Int
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   store stores [not null]
   orders orders [not null]
+  reservations reservations [not null]
 
   indexes {
     (storeId, label) [unique]
   }
 }
 
+Table reservations {
+  id String [pk]
+  storeId String [not null]
+  tableId String
+  guestName String [not null]
+  guestPhone String
+  guestEmail String
+  partySize Int [not null, default: 1]
+  scheduledAt DateTime [not null]
+  notes String
+  status ReservationStatus [not null, default: 'PENDING']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+  table tables
+}
+
 Table staff_members {
   id String [pk]
   storeId String [not null]
   name String [not null]
+  email String
   role StaffRole [not null, default: 'CASHIER']
   pin String [not null]
   isActive Boolean [not null, default: true]
+  inviteStatus String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   store stores [not null]
@@ -568,6 +590,7 @@ Table storefronts {
   customLinks Json
   isPublished Boolean [not null, default: false]
   acceptsOrders Boolean [not null, default: false]
+  acceptsReservations Boolean [not null, default: false]
   openingHours Json
   viewCount Int [not null, default: 0]
   store stores [not null]
@@ -717,6 +740,13 @@ Enum OrderItemStatus {
   CANCELLED
 }
 
+Enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
 Enum StaffRole {
   OWNER
   MANAGER
@@ -800,6 +830,10 @@ Ref: order_items.menuItemId > menu_items.id [delete: Set Null]
 Ref: alerts.userId > user.id [delete: Cascade]
 
 Ref: tables.storeId > stores.id [delete: Cascade]
+
+Ref: reservations.storeId > stores.id [delete: Cascade]
+
+Ref: reservations.tableId > tables.id [delete: Set Null]
 
 Ref: staff_members.storeId > stores.id [delete: Cascade]
 

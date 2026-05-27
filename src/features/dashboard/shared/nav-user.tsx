@@ -42,8 +42,11 @@ export function NavUser() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[200px]">
-        <DropdownMenuLabel className="truncate">
-          {user?.name ?? user?.email}
+        <DropdownMenuLabel className="flex items-center gap-2">
+          <span className="truncate flex-1">{user?.name ?? user?.email}</span>
+          <span className="shrink-0 rounded-full border border-violet-400/40 bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-600">
+            Beta
+          </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push(`/store/${storeId}/profile`)}>

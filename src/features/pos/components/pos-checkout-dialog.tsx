@@ -48,6 +48,7 @@ interface PosCheckoutDialogProps {
   storeId: string;
   storeName?: string;
   cashierName?: string;
+  shiftId?: string;
 }
 
 export function PosCheckoutDialog({
@@ -56,6 +57,7 @@ export function PosCheckoutDialog({
   storeId,
   storeName,
   cashierName,
+  shiftId,
 }: PosCheckoutDialogProps) {
   const { t, locale } = useI18n();
   const { currency } = useCurrency();
@@ -169,7 +171,7 @@ export function PosCheckoutDialog({
 
       const result = await apiClient.post<{ orderNumber: string }>(
         `/stores/${storeId}/pos/orders`,
-        data
+        { ...data, shiftId }
       );
 
       const orderNumber = (result as any)?.orderNumber ?? "—";

@@ -6,14 +6,7 @@ import { I18nProvider } from "@/components/lang/i18n-provider";
 import { CookieConsentBar } from "@/features/marketing/shared/components/cookie-consent-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { LoadingPage } from "@/features/loading/loading-page";
-import { Bebas_Neue, Jost, IM_Fell_French_Canon } from "next/font/google";
-
-const bebasNeue = Bebas_Neue({
-  subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-bebas-neue",
-  display: "swap",
-});
+import { Jost, IM_Fell_French_Canon } from "next/font/google";
 
 const jost = Jost({
   subsets: ["latin"],
@@ -43,7 +36,7 @@ export default function LandingLayout({
 }>) {
   return (
     <div
-      className={`${bebasNeue.variable} ${jost.variable} ${imFell.variable} epidom-dark-page`}
+      className={`${jost.variable} ${imFell.variable} epidom-dark-page`}
       style={{ fontFamily: "var(--epi-font-body)" }}
     >
       <ErrorBoundary>

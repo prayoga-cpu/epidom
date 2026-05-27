@@ -46,25 +46,30 @@ export async function sendVerificationEmail(
   name: string | null,
   verificationUrl: string
 ): Promise<SendEmailResult> {
-  // In development without API key, log to console
+  // In development, always log verification URL for easier testing
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n📧 [DEV] Verification Email");
+    console.log("To:", email);
+    console.log("URL:", verificationUrl);
+    console.log("");
+  }
+
+  // If no API key, short-circuit to dev-mode (still logged above)
   if (!process.env.RESEND_API_KEY) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("\n📧 [DEV] Verification Email");
-      console.log("To:", email);
-      console.log("URL:", verificationUrl);
-      console.log("");
-    }
     return { success: true, messageId: "dev-mode" };
   }
 
   try {
     const resend = getResendClient()!;
+    console.log(`[Email] Sending verification email to ${email}`);
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: email,
       subject: `Verify your email for ${APP_NAME}`,
       html: generateVerificationEmailHtml(name, verificationUrl),
     });
+
+    console.log("[Email] Resend response:", data ? JSON.stringify(data) : "<no-data>");
 
     if (error) {
       console.error("[Email] Failed to send verification email:", error);
@@ -89,14 +94,16 @@ export async function sendPasswordResetEmail(
   name: string | null,
   resetUrl: string
 ): Promise<SendEmailResult> {
-  // In development without API key, log to console
+  // In development, always log password reset URL for easier testing
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🔑 [DEV] Password Reset Email");
+    console.log("To:", email);
+    console.log("URL:", resetUrl);
+    console.log("");
+  }
+
+  // If no API key, short-circuit to dev-mode (still logged above)
   if (!process.env.RESEND_API_KEY) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("\n🔑 [DEV] Password Reset Email");
-      console.log("To:", email);
-      console.log("URL:", resetUrl);
-      console.log("");
-    }
     return { success: true, messageId: "dev-mode" };
   }
 
@@ -267,4 +274,55 @@ function generatePasswordResetEmailHtml(name: string | null, resetUrl: string): 
 </body>
 </html>
   `.trim();
+}
+
+/**
+ * Send staff PIN invitation email
+ */
+export async function sendStaffPinEmail(
+  email: string,
+  staffName: string,
+  storeName: string,
+  pin: string
+): Promise<SendEmailResult> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n👤 [DEV] Staff PIN Email");
+    console.log("To:", email);
+    console.log("PIN:", pin);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: email,
+      subject: `Your ${APP_NAME} Staff PIN for ${storeName}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #444;">Welcome to ${storeName}, ${staffName}!</h2>
+  <p>You have been added as a staff member on <strong>${APP_NAME}</strong>.</p>
+  <p>Your POS login PIN is:</p>
+  <div style="text-align: center; margin: 30px 0;">
+    <span style="font-size: 48px; font-weight: bold; letter-spacing: 16px; color: #444; background: #f5f5f5; padding: 20px 30px; border-radius: 8px; display: inline-block;">${pin}</span>
+  </div>
+  <p style="color: #888; font-size: 13px;">Keep this PIN private. You can change it by contacting your manager.</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
 }

@@ -14,6 +14,7 @@ const updateTableSchema = z.object({
   label: z.string().min(1).max(50).optional(),
   capacity: z.number().int().min(1).max(50).optional(),
   status: z.enum(["AVAILABLE", "OCCUPIED", "RESERVED", "CLEANING"]).optional(),
+  reservationEnabled: z.boolean().optional(),
 });
 
 /** GET /api/stores/[id]/tables */
@@ -38,6 +39,7 @@ export async function GET(
         take: 1,
         orderBy: { createdAt: "desc" },
       },
+      _count: { select: { reservations: { where: { status: { in: ["PENDING", "CONFIRMED"] } } } } },
     },
   });
 

@@ -36,6 +36,7 @@ export const createPosOrderSchema = z.object({
   customerPhone: z.string().optional(),
   notes: z.string().optional(),
   amountTendered: z.number().optional(),
+  shiftId: z.string().cuid().optional(),
 });
 
 export type CreatePosOrderInput = z.infer<typeof createPosOrderSchema>;

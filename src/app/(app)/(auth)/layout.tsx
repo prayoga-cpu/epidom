@@ -10,8 +10,8 @@ import { SessionProvider } from "@/components/providers/session-provider";
 import { LoadingPage } from "@/features/loading/loading-page";
 
 export const metadata: Metadata = {
-  title: "Epidom — Sign In",
-  description: "Sign in to your Epidom dashboard to manage your store, orders, and menu.",
+  title: "Epidom — Log In",
+  description: "Log in to your Epidom dashboard to manage your store, orders, and menu.",
 };
 
 export default function LoginLayout({

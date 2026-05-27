@@ -293,7 +293,7 @@ export const SiteHeader = memo(function SiteHeader({
                     )}
                   </div>
                   <div className="flex-shrink-0">
-                    <LangSwitcher />
+                    <LangSwitcher dropUp />
                   </div>
                 </div>
               </div>

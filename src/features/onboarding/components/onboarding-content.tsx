@@ -65,7 +65,7 @@ export function OnboardingContent() {
             setStoreId(data.business.stores[0].id);
           }
           if (data?.business?.storefront?.isPublished) {
-            router.push("/dashboard");
+            router.push("/stores");
           }
         }
       } catch (_) {}
@@ -186,7 +186,7 @@ export function OnboardingContent() {
         logoUrl,
       } as any);
       toast.success(t("onboarding.storeSetup.step5.publishSuccess"));
-      router.push("/storefront");
+      router.push("/stores");
     } catch (_) {
       toast.error(t("onboarding.storeSetup.step5.publishFailed"));
     } finally {

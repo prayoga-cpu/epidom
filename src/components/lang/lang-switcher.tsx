@@ -8,7 +8,7 @@ const OPTS = [
   { label: "Français",  value: "fr", short: "FR", flag: "🇫🇷" },
 ] as const;
 
-export default function LangSwitcher({ className = "" }: { className?: string }) {
+export default function LangSwitcher({ className = "", dropUp = false }: { className?: string; dropUp?: boolean }) {
   const { locale, setLocale } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
@@ -78,7 +78,9 @@ export default function LangSwitcher({ className = "" }: { className?: string })
           role="listbox"
           style={{
             position: "absolute",
-            top: "calc(100% + 8px)",
+            ...(dropUp
+              ? { bottom: "calc(100% + 8px)" }
+              : { top: "calc(100% + 8px)" }),
             right: 0,
             minWidth: 160,
             borderRadius: 14,

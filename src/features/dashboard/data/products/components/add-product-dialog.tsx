@@ -145,13 +145,14 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
 
       // Map form fields to API schema
       // Note: retailPrice maps to sellingPrice
+      const round2 = (n: number) => Math.round(n * 100) / 100;
       const apiData = {
         sku: data.sku,
         name: data.name,
         description: data.description,
         category: data.category,
-        costPrice: convertToBase(costPrice), // Convert to EUR
-        sellingPrice: convertToBase(retailPrice), // Convert to EUR
+        costPrice: round2(convertToBase(costPrice)),
+        sellingPrice: round2(convertToBase(retailPrice)),
         currentStock: currentStock,
         unit: data.unit,
         minStock: minStock,

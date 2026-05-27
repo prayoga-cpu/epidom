@@ -4,6 +4,7 @@ import { createStaffSchema } from "@/lib/validation/operations.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { hash } from "bcryptjs";
+import { sendStaffPinEmail } from "@/lib/services/email.service";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +15,12 @@ export const GET = withApiHandler(
       select: {
         id: true,
         name: true,
+        email: true,
         role: true,
         isActive: true,
+        inviteStatus: true,
         createdAt: true,
         updatedAt: true,
-        // Never return pin hash
       },
       orderBy: { name: "asc" },
     });
@@ -38,13 +40,32 @@ export const POST = withApiHandler(
       );
     }
 
-    const { name, role, pin } = parsed.data;
+    const { name, email, role, pin, sendInvite } = parsed.data;
     const pinHash = await hash(pin, 10);
+    const emailVal = email && email.trim() !== "" ? email.trim() : undefined;
+
+    const store = await prisma.store.findUnique({ where: { id: storeId! }, select: { name: true } });
 
     const staff = await prisma.staffMember.create({
-      data: { storeId: storeId!, name, role, pin: pinHash },
-      select: { id: true, name: true, role: true, isActive: true, createdAt: true },
+      data: {
+        storeId: storeId!,
+        name,
+        email: emailVal,
+        role,
+        pin: pinHash,
+        inviteStatus: emailVal && sendInvite ? "pending" : null,
+      },
+      select: { id: true, name: true, email: true, role: true, isActive: true, inviteStatus: true, createdAt: true },
     });
+
+    // Send PIN email if requested
+    if (emailVal && sendInvite) {
+      await sendStaffPinEmail(emailVal, name, store?.name ?? "your store", pin);
+      await prisma.staffMember.update({
+        where: { id: staff.id },
+        data: { inviteStatus: "accepted" },
+      });
+    }
 
     return NextResponse.json(createSuccessResponse({ staff }), { status: 201 });
   },

@@ -72,6 +72,9 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
             <div className="w-full flex-1 space-y-2 text-center sm:text-left">
               <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <h1 className="text-xl font-bold sm:text-2xl">{user.name || t("profile.user")}</h1>
+                <Badge className="bg-violet-500/15 text-violet-600 border-violet-400/40 border font-semibold tracking-wide text-[10px] px-2 py-0.5 uppercase">
+                  Beta
+                </Badge>
                 {subscription && (
                   <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                     <Badge className={getPlanBadgeColor(subscription.plan)}>

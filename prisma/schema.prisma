@@ -130,6 +130,7 @@ model Store {
   tables                  Table[]
   staffMembers            StaffMember[]
   shifts                  Shift[]
+  reservations            Reservation[]
   aggregatorConnections   AggregatorConnection[]
   aggregatorEmails        AggregatorEmail[]
 
@@ -626,21 +627,52 @@ enum OrderItemStatus {
 }
 
 model Table {
-  id        String      @id @default(cuid())
-  storeId   String
-  label     String
-  capacity  Int         @default(4)
-  status    TableStatus @default(AVAILABLE)
-  positionX Int?
-  positionY Int?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  store     Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  orders    Order[]
+  id                 String        @id @default(cuid())
+  storeId            String
+  label              String
+  capacity           Int           @default(4)
+  status             TableStatus   @default(AVAILABLE)
+  reservationEnabled Boolean       @default(false)
+  positionX          Int?
+  positionY          Int?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  store              Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orders             Order[]
+  reservations       Reservation[]
 
   @@unique([storeId, label])
   @@index([storeId])
   @@map("tables")
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Reservation {
+  id           String            @id @default(cuid())
+  storeId      String
+  tableId      String?
+  guestName    String
+  guestPhone   String?
+  guestEmail   String?
+  partySize    Int               @default(1)
+  scheduledAt  DateTime
+  notes        String?
+  status       ReservationStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  store        Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  table        Table?            @relation(fields: [tableId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([tableId])
+  @@index([scheduledAt])
+  @@map("reservations")
 }
 
 // =============================================================================
@@ -655,16 +687,18 @@ enum StaffRole {
 }
 
 model StaffMember {
-  id         String     @id @default(cuid())
-  storeId    String
-  name       String
-  role       StaffRole  @default(CASHIER)
-  pin        String     // bcrypt hash — never store plaintext
-  isActive   Boolean    @default(true)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  store      Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  shifts     Shift[]
+  id              String     @id @default(cuid())
+  storeId         String
+  name            String
+  email           String?
+  role            StaffRole  @default(CASHIER)
+  pin             String     // bcrypt hash — never store plaintext
+  isActive        Boolean    @default(true)
+  inviteStatus    String?    // "pending" | "accepted" | null
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  store           Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shifts          Shift[]
 
   @@index([storeId])
   @@map("staff_members")
@@ -811,9 +845,10 @@ model Storefront {
   googleMapsUrl   String?
   customLinks     Json?
   
-  isPublished     Boolean  @default(false)
-  acceptsOrders   Boolean  @default(false)
-  openingHours    Json?
+  isPublished          Boolean  @default(false)
+  acceptsOrders        Boolean  @default(false)
+  acceptsReservations  Boolean  @default(false)
+  openingHours         Json?
   viewCount       Int      @default(0)
   
   store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)

@@ -57,8 +57,8 @@ export function RegisterForm() {
         variant="outline"
         type="button"
         disabled={isPending}
-        className="h-12 w-full rounded-xl font-medium hover:bg-white/5"
-        style={{ borderColor: "rgba(255,255,255,0.12)", color: "var(--epi-cream-50)" }}
+        className="h-12 w-full rounded-xl font-medium bg-transparent hover:bg-white/5"
+        style={{ borderColor: "rgba(255,255,255,0.18)", color: "var(--epi-cream-50)" }}
         onClick={async () => {
           await authClient.signIn.social({
             provider: "google",
@@ -72,7 +72,7 @@ export function RegisterForm() {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-white/10" />
+          <span className="w-full border-t border-white/15" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="px-2" style={{ background: "var(--epi-navy-900)", color: "rgba(251,249,228,0.4)" }}>Or continue with email</span>

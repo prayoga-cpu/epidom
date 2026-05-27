@@ -46,6 +46,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
       customLinks: Array.isArray(initialData?.customLinks) ? initialData.customLinks : [],
       isPublished: initialData?.isPublished ?? false,
       acceptsOrders: initialData?.acceptsOrders ?? false,
+      acceptsReservations: initialData?.acceptsReservations ?? false,
     },
   });
 
@@ -209,6 +210,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                   <FormItem>
                     <FormLabel>{t("storefront.settings.heroImageUrl")}</FormLabel>
                     <FormControl><Input placeholder="https://..." {...field} /></FormControl>
+                    <FormDescription>Recommended: 16:9 ratio — min 1200×675px, ideal 1920×1080px</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -247,8 +249,20 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("storefront.settings.whatsappNumber")}</FormLabel>
-                  <FormControl><Input placeholder="08123456789" {...field} /></FormControl>
-                  <FormDescription>{t("storefront.settings.whatsappDesc")}</FormDescription>
+                  <FormControl>
+                    <div className="flex rounded-md border border-input shadow-sm focus-within:ring-1 focus-within:ring-ring">
+                      <div className="bg-muted px-3 py-2 text-sm text-muted-foreground border-r flex items-center select-none">
+                        +
+                      </div>
+                      <input
+                        {...field}
+                        inputMode="numeric"
+                        className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
+                        placeholder="628123456789"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription>Include country code without +. Example: 628123456789 (Indonesia)</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -294,6 +308,49 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                 </FormItem>
               )} />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Storefront Features */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Storefront Features</CardTitle>
+            <CardDescription>Control what customers can do on your public storefront page.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="acceptsOrders"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4 gap-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base font-semibold">Online Orders</FormLabel>
+                    <FormDescription>Let customers place orders directly from your storefront.</FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="acceptsReservations"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4 gap-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base font-semibold">Table Reservations</FormLabel>
+                    <FormDescription>
+                      Let customers book a table from your storefront. Enable reservation per-table in{" "}
+                      <strong>Operations → Tables</strong>.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
           </CardContent>
         </Card>
 

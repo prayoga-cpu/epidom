@@ -3,7 +3,7 @@ import { LoginForm } from "@/features/auth/login/components/login-form";
 import { AuthVisual } from "@/features/auth/components/auth-visual";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import Image from "next/image";
+import { EpidomLogo } from "@/features/marketing/shared/components/epidom-logo";
 
 function LoginFormSkeleton() {
   return (
@@ -37,15 +37,7 @@ export default function LoginPage() {
         <div className="my-auto w-full max-w-[380px]">
           {/* Logo */}
           <div className="mb-8 flex justify-center">
-            <div className="relative h-8 w-32">
-              <Image
-                src="/images/logo-white.png"
-                alt="Epidom"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
+            <EpidomLogo size={28} href="/" />
           </div>
 
           <Suspense fallback={<LoginFormSkeleton />}>
