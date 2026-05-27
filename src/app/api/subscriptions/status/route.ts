@@ -6,6 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { subscriptionRepository, storeRepository, userRepository } from "@/lib/repositories";
+import { subscriptionService } from "@/lib/services";
 import { getStoreLimit } from "@/config/stripe.config";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
@@ -16,11 +17,18 @@ import { withApiHandler } from "@/lib/api-handler";
  * Retrieves:
  * - Current subscription details (Plan, Status, etc.)
  * - Store usage limits (Important for UI logic)
+ *
+ * During beta: auto-provisions a free OPERATIONS plan if none exists.
  */
 export const GET = withApiHandler(
   async (request, { userId }) => {
-    // Get subscription
-    const subscription = await subscriptionRepository.findByUserId(userId);
+    // Get subscription — auto-provision free plan if missing (beta bypass)
+    let subscription = await subscriptionRepository.findByUserId(userId);
+
+    if (!subscription) {
+      await subscriptionService.activateFree(userId);
+      subscription = await subscriptionRepository.findByUserId(userId);
+    }
 
     if (!subscription) {
       return NextResponse.json(
