@@ -324,25 +324,22 @@ export class SubscriptionService {
   async activateFree(userId: string): Promise<void> {
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
-    const existing = await this.subscriptionRepo.findByUserId(userId);
-
-    if (existing) {
-      await this.subscriptionRepo.update(userId, {
+    // Atomic upsert — safe against concurrent calls (status check + onboarding PATCH firing simultaneously)
+    await (this.subscriptionRepo as any).db.subscription.upsert({
+      where: { userId },
+      update: {
         plan: SubscriptionPlan.OPERATIONS,
         status: SubscriptionStatus.ACTIVE,
-        currentPeriodStart: existing.currentPeriodStart ?? now,
-        currentPeriodEnd: existing.currentPeriodEnd ?? periodEnd,
-      });
-    } else {
-      await this.subscriptionRepo.create({
+      },
+      create: {
         userId,
         stripeCustomerId: `free_${userId}`,
         plan: SubscriptionPlan.OPERATIONS,
         status: SubscriptionStatus.ACTIVE,
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
-      });
-    }
+      },
+    });
   }
 
   /**
