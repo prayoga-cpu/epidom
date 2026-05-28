@@ -97,6 +97,10 @@ const updateSchema = z.discriminatedUnion("action", [
     newPassword: z.string().min(8).max(128),
   }),
   z.object({
+    action: z.literal("temp-password"),
+    userId: z.string(),
+  }),
+  z.object({
     action: z.literal("delete-user"),
     userId: z.string(),
   }),
@@ -197,6 +201,41 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true });
+  }
+
+  if (input.action === "temp-password") {
+    // Generate a readable 12-char temp password, e.g. "Kx7#mP2@nQ9w"
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
+    const temp = Array.from({ length: 12 }, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join("");
+
+    const hashed = await bcrypt.hash(temp, 12);
+
+    const existing = await prisma.account.findFirst({
+      where: { userId: input.userId, providerId: "credential" },
+    });
+
+    if (existing) {
+      await prisma.account.update({
+        where: { id: existing.id },
+        data: { password: hashed },
+      });
+    } else {
+      await prisma.account.create({
+        data: {
+          accountId: input.userId,
+          providerId: "credential",
+          userId: input.userId,
+          password: hashed,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    // Return the plaintext temp password — shown once to admin, never stored
+    return NextResponse.json({ tempPassword: temp });
   }
 
   if (input.action === "delete-user") {

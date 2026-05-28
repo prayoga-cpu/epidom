@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield, Users, Store, Crown, Search, ChevronDown, Trash2, Calendar, ShieldCheck, ShieldOff, Infinity, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Shield, Users, Store, Crown, Search, ChevronDown, Trash2, Calendar, ShieldCheck, ShieldOff, Infinity, KeyRound, Eye, EyeOff, LogIn, Copy, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,6 +115,12 @@ export function AdminDashboard() {
   const [pwTarget, setPwTarget] = useState<UserRow | null>(null);
   const [newPw, setNewPw] = useState("");
   const [showPw, setShowPw] = useState(false);
+
+  // Temp password dialog state
+  const [tempPwUser, setTempPwUser] = useState<UserRow | null>(null);
+  const [tempPw, setTempPw] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [tempLoading, setTempLoading] = useState(false);
 
   const { data, isLoading } = useQuery<{ users: UserRow[] }>({
     queryKey: ["admin-users"],
@@ -430,6 +436,34 @@ export function AdminDashboard() {
                                   <KeyRound className="mr-2 h-3.5 w-3.5" />
                                   {user.hasPassword ? "Reset Password" : "Set Password"}
                                 </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-emerald-400 focus:text-emerald-400 focus:bg-emerald-500/10"
+                                  disabled={tempLoading}
+                                  onClick={async () => {
+                                    setTempPwUser(user);
+                                    setTempPw(null);
+                                    setCopied(false);
+                                    setTempLoading(true);
+                                    try {
+                                      const res = await fetch("/api/admin/users", {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ action: "temp-password", userId: user.id }),
+                                      });
+                                      const json = await res.json();
+                                      if (!res.ok) throw new Error(json.error ?? "Failed");
+                                      setTempPw(json.tempPassword);
+                                    } catch (e: any) {
+                                      toast.error(e.message || "Failed to generate temp password");
+                                      setTempPwUser(null);
+                                    } finally {
+                                      setTempLoading(false);
+                                    }
+                                  }}
+                                >
+                                  <LogIn className="mr-2 h-3.5 w-3.5" />
+                                  Get Temp Access
+                                </DropdownMenuItem>
 
                                 <DropdownMenuSeparator />
 
@@ -495,6 +529,78 @@ export function AdminDashboard() {
           {filtered.length} of {users.length} users — Master Admin Panel v2
         </p>
       </div>
+
+      {/* Temp access dialog */}
+      <Dialog open={!!tempPwUser} onOpenChange={(open) => { if (!open) { setTempPwUser(null); setTempPw(null); setCopied(false); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LogIn className="h-4 w-4 text-emerald-400" />
+              Temporary Access
+            </DialogTitle>
+            <DialogDescription>
+              A one-time temp password has been set for{" "}
+              <strong>{tempPwUser?.email}</strong>. Use it to log in as this user.
+              It replaces their existing password — remember to reset it after.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {!tempPw ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-emerald-400" />
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground">Login credentials:</p>
+                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Email</p>
+                      <p className="text-sm font-mono text-foreground">{tempPwUser?.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Temp Password</p>
+                      <p className="text-base font-mono font-bold tracking-widest text-emerald-500">{tempPw}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 h-8 gap-1.5"
+                      onClick={() => {
+                        navigator.clipboard.writeText(tempPw);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                    >
+                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied ? "Copied!" : "Copy"}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-amber-500/80">
+                  ⚠ This password is shown only once and will not be displayed again.
+                  After logging in, reset the account password or the user can change it themselves.
+                </p>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setTempPwUser(null); setTempPw(null); setCopied(false); }}>
+              Close
+            </Button>
+            {tempPw && (
+              <Button
+                onClick={() => window.open("/login", "_blank")}
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Open Login Page
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Password reset dialog */}
       <Dialog open={!!pwTarget} onOpenChange={(open) => { if (!open) setPwTarget(null); }}>
