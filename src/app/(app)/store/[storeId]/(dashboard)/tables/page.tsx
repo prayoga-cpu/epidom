@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { TablesManager } from "@/features/pos/components/tables/tables-manager";
+import { ReservationList } from "@/features/pos/components/tables/reservation-list";
 import { TablesPageHeader } from "@/features/pos/components/pos-page-headers";
 
 export const metadata = { title: "Tables | Epidom" };
@@ -21,6 +22,7 @@ export default async function TablesPage({
       <TablesPageHeader />
       <div className="flex-1 min-h-0 overflow-y-auto">
         <TablesManager storeId={storeId} />
+        <ReservationList storeId={storeId} />
       </div>
     </div>
   );

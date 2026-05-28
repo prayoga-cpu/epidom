@@ -8,6 +8,7 @@ import LangSwitcher from "../../../components/lang/lang-switcher";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import { NavUser } from "./nav-user";
+import { NotificationBell } from "./notification-bell";
 import { useState, useEffect } from "react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
@@ -101,6 +102,9 @@ export function Topbar() {
             {/* Theme toggle */}
             <ThemeToggle />
 
+            {/* Notifications */}
+            <NotificationBell />
+
             {/* Profile */}
             <NavUser />
 
@@ -171,6 +175,9 @@ export function Topbar() {
             </div>
             <div className="flex items-center">
               <ThemeToggle />
+            </div>
+            <div className="flex items-center">
+              <NotificationBell />
             </div>
             <div className="flex items-center">
               <NavUser />

@@ -22,6 +22,7 @@ export const GET = withApiHandler(
   async (req, { storeId }) => {
     const url = new URL(req.url);
     const status = url.searchParams.get("status");
+    const tableId = url.searchParams.get("tableId");
     const from = url.searchParams.get("from");
     const to = url.searchParams.get("to");
 
@@ -29,6 +30,7 @@ export const GET = withApiHandler(
       where: {
         storeId,
         ...(status ? { status: status as any } : {}),
+        ...(tableId ? { tableId } : {}),
         ...(from || to
           ? {
               scheduledAt: {
@@ -41,7 +43,7 @@ export const GET = withApiHandler(
       include: {
         table: { select: { id: true, label: true, capacity: true } },
       },
-      orderBy: { scheduledAt: "asc" },
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json(createSuccessResponse({ reservations }));
