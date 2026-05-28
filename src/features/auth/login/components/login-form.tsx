@@ -28,6 +28,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || searchParams.get("callbackUrl");
   const registered = searchParams.get("registered");
+  const oauthError = searchParams.get("error");
 
   const { mutate: login, isPending, error } = useLogin();
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
@@ -36,6 +37,23 @@ export function LoginForm() {
 
   // Use ref to track if toast has already been shown
   const toastShownRef = useRef(false);
+
+  // Show error toast for OAuth failures redirected back here by Better Auth
+  useEffect(() => {
+    if (oauthError && !toastShownRef.current) {
+      toastShownRef.current = true;
+      const messages: Record<string, string> = {
+        internal_server_error: t("messages.oauthInternalError") || "Sign-in failed due to a server error. Please try again.",
+        account_not_linked: t("messages.accountNotLinked") || "This Google account is not linked. Sign in with email first.",
+        state_mismatch: t("messages.oauthStateMismatch") || "Login session expired. Please try again.",
+        please_restart_the_process: t("messages.oauthRestart") || "Login session expired. Please try again.",
+      };
+      toast.error(messages[oauthError] || t("messages.oauthGenericError") || "Sign-in failed. Please try again.");
+      const cleaned = new URLSearchParams(searchParams.toString());
+      cleaned.delete("error");
+      router.replace(cleaned.toString() ? `/login?${cleaned.toString()}` : "/login", { scroll: false });
+    }
+  }, [oauthError, searchParams, router, t]);
 
   // Show success toast for new registrations (only once)
   useEffect(() => {

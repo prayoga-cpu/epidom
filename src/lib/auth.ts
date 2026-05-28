@@ -25,6 +25,10 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
   },
+  onAPIError: {
+    // Redirect OAuth errors to the login page instead of Better Auth's raw HTML error page
+    errorURL: "/login",
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,

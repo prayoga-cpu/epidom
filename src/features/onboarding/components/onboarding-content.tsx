@@ -64,9 +64,6 @@ export function OnboardingContent() {
           if (data?.business?.stores?.[0]?.id) {
             setStoreId(data.business.stores[0].id);
           }
-          if (data?.business?.storefront?.isPublished) {
-            router.push("/stores");
-          }
         }
       } catch (_) {}
     }
@@ -185,6 +182,8 @@ export function OnboardingContent() {
         isPublished: true,
         logoUrl,
       } as any);
+      // Mark onboarding as permanently completed so future visits redirect server-side
+      await fetch("/api/onboarding/complete", { method: "POST" });
       toast.success(t("onboarding.storeSetup.step5.publishSuccess"));
       router.push("/stores");
     } catch (_) {

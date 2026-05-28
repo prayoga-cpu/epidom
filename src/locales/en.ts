@@ -30,6 +30,9 @@ export const en = {
       profile: "Profile",
       startFree: "Start Free",
     },
+    pwa: {
+      installApp: "Install app",
+    },
     language: {
       label: "Language",
       en: "English",

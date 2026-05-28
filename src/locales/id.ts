@@ -30,6 +30,9 @@ export const id = {
       profile: "Profil",
       startFree: "Mulai Gratis",
     },
+    pwa: {
+      installApp: "Pasang aplikasi",
+    },
     language: {
       label: "Bahasa",
       en: "Inggris",

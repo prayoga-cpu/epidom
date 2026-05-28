@@ -1,7 +1,10 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { OnboardingContent } from "@/features/onboarding/components/onboarding-content";
+import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 function OnboardingSkeleton() {
   return (
@@ -35,7 +38,39 @@ function OnboardingSkeleton() {
   );
 }
 
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  const session = await getSession();
+
+  if (!session) {
+    redirect("/login?callbackUrl=/onboarding");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      hasOnboarded: true,
+      business: {
+        select: {
+          stores: {
+            select: {
+              storefront: { select: { isPublished: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Redirect away if onboarding was already completed, or if the store is
+  // already published (backward-compat for users who registered before this flag existed).
+  const hasPublishedStore = user?.business?.stores?.some(
+    (s) => s.storefront?.isPublished
+  );
+
+  if (user?.hasOnboarded || hasPublishedStore) {
+    redirect("/stores");
+  }
+
   return (
     <Suspense fallback={<OnboardingSkeleton />}>
       <OnboardingContent />

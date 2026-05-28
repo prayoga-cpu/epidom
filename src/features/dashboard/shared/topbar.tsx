@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Search, Menu, Sun, Moon } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { StoreSwitcher } from "./store-switcher";
+import { PwaInstallButton } from "./pwa-install-button";
 import { useI18n } from "../../../components/lang/i18n-provider";
 import LangSwitcher from "../../../components/lang/lang-switcher";
 import { LogOut } from "lucide-react";
@@ -99,6 +100,9 @@ export function Topbar() {
               <LangSwitcher />
             </div>
 
+            {/* PWA install */}
+            <PwaInstallButton />
+
             {/* Theme toggle */}
             <ThemeToggle />
 
@@ -172,6 +176,9 @@ export function Topbar() {
             {/* Language switcher */}
             <div className="hidden sm:flex sm:items-center">
               <LangSwitcher />
+            </div>
+            <div className="flex items-center">
+              <PwaInstallButton />
             </div>
             <div className="flex items-center">
               <ThemeToggle />

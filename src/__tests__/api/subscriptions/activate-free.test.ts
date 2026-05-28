@@ -8,10 +8,12 @@ vi.mock("@/lib/api-handler", () => ({
     async (req: NextRequest, _ctx?: unknown) => fn(req, { userId: "user-1", storeId: undefined }),
 }));
 
-const mockActivateFree = vi.fn().mockResolvedValue(undefined);
-vi.mock("@/lib/services", () => ({
-  subscriptionService: { activateFree: mockActivateFree },
-}));
+// var avoids TDZ — vi.mock factory is hoisted above const/let declarations.
+var mockActivateFree: any;
+vi.mock("@/lib/services", () => {
+  mockActivateFree = vi.fn().mockResolvedValue(undefined);
+  return { subscriptionService: { activateFree: mockActivateFree } };
+});
 
 vi.mock("@/types/api", () => ({
   createSuccessResponse: (data: object) => ({ success: true, data }),

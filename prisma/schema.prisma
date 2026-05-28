@@ -28,6 +28,7 @@ model User {
   stripeConnectAccountId String?
   stripeConnectOnboarded Boolean       @default(false)
   isAdmin                Boolean       @default(false)
+  hasOnboarded           Boolean       @default(false)
 
   sessions               Session[]
   accounts               Account[]

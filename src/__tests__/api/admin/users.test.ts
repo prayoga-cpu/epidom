@@ -11,24 +11,16 @@ vi.mock("@/lib/admin", () => ({
 }));
 vi.mock("bcryptjs", () => ({ default: { hash: vi.fn().mockResolvedValue("hashed-pw") } }));
 
-const mockPrisma = {
-  user: {
-    findUnique: vi.fn(),
-    findMany: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  account: {
-    findMany: vi.fn(),
-    findFirst: vi.fn(),
-    update: vi.fn(),
-    create: vi.fn(),
-  },
-  subscription: {
-    upsert: vi.fn(),
-  },
-};
-vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }));
+// var avoids TDZ — vi.mock factory is hoisted above const/let declarations.
+var mockPrisma: any;
+vi.mock("@/lib/prisma", () => {
+  mockPrisma = {
+    user: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    account: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
+    subscription: { upsert: vi.fn() },
+  };
+  return { prisma: mockPrisma };
+});
 
 import { getSession } from "@/lib/auth";
 import { PATCH } from "@/app/api/admin/users/route";

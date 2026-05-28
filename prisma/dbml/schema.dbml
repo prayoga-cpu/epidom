@@ -17,6 +17,7 @@ Table user {
   stripeConnectAccountId String
   stripeConnectOnboarded Boolean [not null, default: false]
   isAdmin Boolean [not null, default: false]
+  hasOnboarded Boolean [not null, default: false]
   sessions session [not null]
   accounts account [not null]
   alerts alerts [not null]

@@ -2,19 +2,23 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MovementType, AlertType, AlertSeverity } from "@prisma/client";
 
 // ── Prisma mock ───────────────────────────────────────────────────────────────
+// var (not const/let) avoids TDZ when vi.mock factory is hoisted above declarations.
 
-const txMock = {
-  material: { update: vi.fn().mockResolvedValue({}) },
-  stockMovement: { create: vi.fn().mockResolvedValue({}) },
-};
+var txMock: any;
+var prismaMock: any;
 
-const prismaMock = {
-  order: { findUnique: vi.fn() },
-  alert: { findFirst: vi.fn(), create: vi.fn() },
-  $transaction: vi.fn((fn: any, _opts?: any) => fn(txMock)),
-};
-
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/prisma", () => {
+  txMock = {
+    material: { update: vi.fn().mockResolvedValue({}) },
+    stockMovement: { create: vi.fn().mockResolvedValue({}) },
+  };
+  prismaMock = {
+    order: { findUnique: vi.fn() },
+    alert: { findFirst: vi.fn(), create: vi.fn() },
+    $transaction: vi.fn((fn: any, _opts?: any) => fn(txMock)),
+  };
+  return { prisma: prismaMock };
+});
 vi.mock("@/lib/utils/types.server", () => ({
   toDecimal: (n: number) => n,
 }));
