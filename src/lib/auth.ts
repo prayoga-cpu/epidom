@@ -12,6 +12,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     "http://localhost:3000",
     "https://epidom.fr",
+    "https://www.epidom.fr",
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
     process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -53,7 +54,9 @@ export const auth = betterAuth({
             await prisma.user.update({
               where: { id: user.id },
               data: { isAdmin: true },
-            });
+            }).catch((err) =>
+              console.error("[auth] failed to set isAdmin on master email:", err)
+            );
           }
         },
       },
