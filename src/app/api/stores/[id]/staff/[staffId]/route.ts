@@ -49,8 +49,11 @@ export const PATCH = withApiHandler(
     if (sendPinEmail && pin) {
       const targetEmail = (updateData.email as string | null) ?? existing.email;
       if (targetEmail) {
-        await sendStaffPinEmail(targetEmail, existing.name, store?.name ?? "your store", pin);
-        await prisma.staffMember.update({ where: { id: staffId }, data: { inviteStatus: "accepted" } });
+        sendStaffPinEmail(targetEmail, existing.name, store?.name ?? "your store", pin)
+          .then(() =>
+            prisma.staffMember.update({ where: { id: staffId }, data: { inviteStatus: "accepted" } })
+          )
+          .catch((err) => console.error("[staff/resend-pin] email send failed:", err));
       }
     }
 

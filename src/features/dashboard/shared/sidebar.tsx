@@ -10,48 +10,52 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Search } from "lucide-react";
+import { Search, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlertsCount } from "@/features/dashboard/alerts/hooks/use-alerts-count";
 import { useCurrentStore } from "./hooks/use-current-store";
-import { dashboardNavigation, type NavSection } from "@/config/navigation.config";
+import { dashboardNavigation, type NavSection, type PlanTier } from "@/config/navigation.config";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { StoreSwitcher } from "./store-switcher";
+import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
+
+const PLAN_ORDER: PlanTier[] = ["FREE", "POS", "OPERATIONS", "ENTERPRISE"];
+
+function planRank(plan: PlanTier): number {
+  return PLAN_ORDER.indexOf(plan);
+}
+
+const PLAN_LABELS: Record<PlanTier, string> = {
+  FREE: "Free",
+  POS: "POS",
+  OPERATIONS: "Operations",
+  ENTERPRISE: "Enterprise",
+};
 
 interface SidebarProps {
   mode?: "desktop" | "mobile";
   navigation?: NavSection[];
 }
 
-/**
- * Sidebar Component
- *
- * Renders navigation links from config following Open/Closed Principle.
- * Navigation items are defined in config/navigation.config.ts
- *
- * @param {SidebarProps} props - Component props
- * @param {"desktop" | "mobile"} [props.mode="desktop"] - Display mode
- * @param {NavSection[]} [props.navigation] - Custom navigation configuration
- * @returns {JSX.Element} Sidebar component
- */
 export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
 
-  // ✅ Call useAlertsCount unconditionally at the top level (Rules of Hooks)
   const alertsCount = useAlertsCount();
+  const { data: subData } = useSubscriptionStatus();
 
-  // Helper function to get badge count for a navigation item
+  const currentPlan: PlanTier = (subData?.subscription?.plan as PlanTier) ?? "FREE";
+
+  function hasAccess(requiredPlan?: PlanTier): boolean {
+    if (!requiredPlan) return true;
+    return planRank(currentPlan) >= planRank(requiredPlan);
+  }
+
   const getBadgeCount = (badgeKey?: string): number | null => {
     if (!badgeKey) return null;
-
-    const badgeCounts: Record<string, number> = {
-      alerts: alertsCount,
-    };
-
-    return badgeCounts[badgeKey] ?? null;
+    return badgeKey === "alerts" ? alertsCount : null;
   };
 
   return (
@@ -90,6 +94,31 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                   const label = t(item.labelKey);
                   const Icon = item.icon;
                   const badge = getBadgeCount(item.badgeKey);
+                  const locked = !hasAccess(item.requiredPlan);
+                  const upgradeLabel = item.requiredPlan
+                    ? `Upgrade to ${PLAN_LABELS[item.requiredPlan]}`
+                    : undefined;
+
+                  if (locked) {
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href="/pricing"
+                          title={upgradeLabel}
+                          className="group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition text-muted-foreground/40 hover:bg-amber-500/8 hover:text-amber-500/70 cursor-pointer"
+                        >
+                          <span className="flex items-center gap-3">
+                            <Icon className="size-4" aria-hidden />
+                            <span>{label}</span>
+                          </span>
+                          <span className="flex items-center gap-1 text-[10px] font-medium text-amber-500/50 group-hover:text-amber-500 transition-colors whitespace-nowrap">
+                            <Lock className="size-3" />
+                            {item.requiredPlan && PLAN_LABELS[item.requiredPlan]}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  }
 
                   return (
                     <li key={item.href}>
@@ -146,4 +175,3 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
     </aside>
   );
 }
-

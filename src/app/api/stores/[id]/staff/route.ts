@@ -58,13 +58,16 @@ export const POST = withApiHandler(
       select: { id: true, name: true, email: true, role: true, isActive: true, inviteStatus: true, createdAt: true },
     });
 
-    // Send PIN email if requested
+    // Fire-and-forget: don't block the response on email delivery
     if (emailVal && sendInvite) {
-      await sendStaffPinEmail(emailVal, name, store?.name ?? "your store", pin);
-      await prisma.staffMember.update({
-        where: { id: staff.id },
-        data: { inviteStatus: "accepted" },
-      });
+      sendStaffPinEmail(emailVal, name, store?.name ?? "your store", pin)
+        .then(() =>
+          prisma.staffMember.update({
+            where: { id: staff.id },
+            data: { inviteStatus: "accepted" },
+          })
+        )
+        .catch((err) => console.error("[staff/invite] email send failed:", err));
     }
 
     return NextResponse.json(createSuccessResponse({ staff }), { status: 201 });

@@ -123,9 +123,12 @@ export function NotificationBell() {
 
                 return (
                   <li key={n.id}>
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleClick(n)}
-                      className="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                      onKeyDown={(e) => e.key === "Enter" && handleClick(n)}
+                      className="group flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
                     >
                       <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${color}`}>
                         <Icon className="h-3.5 w-3.5" />
@@ -146,7 +149,7 @@ export function NotificationBell() {
                       >
                         <X className="h-3 w-3 text-muted-foreground" />
                       </button>
-                    </button>
+                    </div>
                   </li>
                 );
               })}
@@ -158,7 +161,7 @@ export function NotificationBell() {
         {all.length > 0 && (
           <div className="border-t border-border px-4 py-2">
             <button
-              onClick={() => { setOpen(false); router.push(`/store/${storeId}/pos`); }}
+              onClick={() => { setOpen(false); if (storeId) router.push(`/store/${storeId}/pos`); }}
               className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
               View all orders →

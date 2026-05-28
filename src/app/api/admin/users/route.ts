@@ -112,8 +112,21 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const input = updateSchema.parse(body);
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+  const input = parsed.data;
 
   if (
     (input.action === "set-admin" || input.action === "delete-user") &&
@@ -173,7 +186,6 @@ export async function PATCH(req: NextRequest) {
   if (input.action === "reset-password") {
     const hashed = await bcrypt.hash(input.newPassword, 12);
 
-    // Upsert the credential account — create if they only have OAuth
     const existing = await prisma.account.findFirst({
       where: { userId: input.userId, providerId: "credential" },
     });
@@ -184,10 +196,6 @@ export async function PATCH(req: NextRequest) {
         data: { password: hashed },
       });
     } else {
-      const user = await prisma.user.findUnique({
-        where: { id: input.userId },
-        select: { email: true },
-      });
       await prisma.account.create({
         data: {
           accountId: input.userId,
@@ -200,11 +208,16 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
+    // Ensure email is verified so better-auth's requireEmailVerification gate passes
+    await prisma.user.update({
+      where: { id: input.userId },
+      data: { emailVerified: true },
+    });
+
     return NextResponse.json({ ok: true });
   }
 
   if (input.action === "temp-password") {
-    // Generate a readable 12-char temp password, e.g. "Kx7#mP2@nQ9w"
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
     const temp = Array.from({ length: 12 }, () =>
       chars[Math.floor(Math.random() * chars.length)]
@@ -234,6 +247,12 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
+    // Ensure email is verified so better-auth's requireEmailVerification gate passes
+    await prisma.user.update({
+      where: { id: input.userId },
+      data: { emailVerified: true },
+    });
+
     // Return the plaintext temp password — shown once to admin, never stored
     return NextResponse.json({ tempPassword: temp });
   }
@@ -242,4 +261,6 @@ export async function PATCH(req: NextRequest) {
     await prisma.user.delete({ where: { id: input.userId } });
     return NextResponse.json({ deleted: true });
   }
+
+  return NextResponse.json({ error: "Unhandled action" }, { status: 400 });
 }

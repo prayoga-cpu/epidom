@@ -163,22 +163,26 @@ export function BillingContainer() {
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <h3 className="text-2xl font-bold">
-                  {subscription?.plan === "POS"
-                    ? t("profile.subscription.plans.starter")
-                    : subscription?.plan === "OPERATIONS"
-                      ? t("profile.subscription.plans.pro")
-                      : t("profile.subscription.plans.enterprise")}
+                  {subscription?.plan === "FREE"
+                    ? "Free"
+                    : subscription?.plan === "POS"
+                      ? t("profile.subscription.plans.starter")
+                      : subscription?.plan === "OPERATIONS"
+                        ? t("profile.subscription.plans.pro")
+                        : t("profile.subscription.plans.enterprise")}
                 </h3>
                 <Badge className={getStatusColor(subscription?.status)}>
                   {getStatusLabel(subscription?.status, t)}
                 </Badge>
               </div>
               <p className="text-muted-foreground text-sm">
-                {subscription?.plan === "POS"
-                  ? t("profile.subscription.pricing.starter")
-                  : subscription?.plan === "OPERATIONS"
-                    ? t("profile.subscription.pricing.pro")
-                    : t("profile.subscription.pricing.enterprise")}
+                {subscription?.plan === "FREE"
+                  ? "Free forever"
+                  : subscription?.plan === "POS"
+                    ? t("profile.subscription.pricing.starter")
+                    : subscription?.plan === "OPERATIONS"
+                      ? t("profile.subscription.pricing.pro")
+                      : t("profile.subscription.pricing.enterprise")}
               </p>
             </div>
             {subscription?.plan === "POS" && (

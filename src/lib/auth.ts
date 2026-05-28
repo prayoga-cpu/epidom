@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { createHmac, timingSafeEqual } from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/services/email.service";
+import { isAdminEmail } from "@/lib/admin";
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET,
@@ -44,6 +45,20 @@ export const auth = betterAuth({
     },
   },
   plugins: [],
+  databaseHooks: {
+    user: {
+      create: {
+        async after(user) {
+          if (isAdminEmail(user.email)) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { isAdmin: true },
+            });
+          }
+        },
+      },
+    },
+  },
 });
 
 /**

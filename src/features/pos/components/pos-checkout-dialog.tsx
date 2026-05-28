@@ -1,7 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePosCart } from "../hooks/use-pos-cart";
@@ -90,8 +90,7 @@ export function PosCheckoutDialog({
   const amountTendered = form.watch("amountTendered");
   const change = amountTendered ? Math.max(0, amountTendered - cart.total) : 0;
 
-  // Sync form items when cart changes
-  useState(() => {
+  useEffect(() => {
     if (open) {
       form.setValue(
         "items",
@@ -104,7 +103,7 @@ export function PosCheckoutDialog({
         }))
       );
     }
-  });
+  }, [open, cart.items]);
 
   const buildReceipt = (data: CreatePosOrderInput, orderNumber: string): ReceiptData => ({
     storeName: storeName ?? "Epidom POS",

@@ -142,18 +142,23 @@ export function AdminDashboard() {
       }),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      if ((vars as any).action === "delete-user") {
+      const action = (vars as any).action;
+      if (action === "delete-user") {
         setDeleteTarget(null);
         setDeleteConfirm("");
         toast.success("Account deleted");
-      } else if ((vars as any).action === "reset-password") {
+      } else if (action === "reset-password") {
         setPwTarget(null);
         setNewPw("");
         toast.success("Password updated");
-      } else if ((vars as any).action === "set-admin") {
+      } else if (action === "set-admin") {
         toast.success((vars as any).isAdmin ? "Admin access granted" : "Admin access revoked");
-      } else if ((vars as any).action === "set-period") {
-        toast.success("Subscription period updated");
+      } else if (action === "set-period") {
+        toast.success("Subscription period updated — reloading…");
+        setTimeout(() => window.location.reload(), 800);
+      } else if (action === "set-plan") {
+        toast.success("Plan updated — reloading…");
+        setTimeout(() => window.location.reload(), 800);
       } else {
         toast.success("Subscription updated");
       }

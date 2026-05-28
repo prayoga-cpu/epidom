@@ -321,20 +321,20 @@ export class SubscriptionService {
    * Used while payment is not yet wired up, and for the demo account.
    * Uses "free_<userId>" as a placeholder stripeCustomerId (guaranteed unique).
    */
-  async activateFree(userId: string): Promise<void> {
+  async activateFree(userId: string, plan: SubscriptionPlan = SubscriptionPlan.OPERATIONS): Promise<void> {
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
     // Atomic upsert — safe against concurrent calls (status check + onboarding PATCH firing simultaneously)
     await (this.subscriptionRepo as any).db.subscription.upsert({
       where: { userId },
       update: {
-        plan: SubscriptionPlan.OPERATIONS,
+        plan,
         status: SubscriptionStatus.ACTIVE,
       },
       create: {
         userId,
         stripeCustomerId: `free_${userId}`,
-        plan: SubscriptionPlan.OPERATIONS,
+        plan,
         status: SubscriptionStatus.ACTIVE,
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
