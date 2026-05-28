@@ -27,6 +27,7 @@ model User {
   currency               String        @default("IDR")
   stripeConnectAccountId String?
   stripeConnectOnboarded Boolean       @default(false)
+  isAdmin                Boolean       @default(false)
 
   sessions               Session[]
   accounts               Account[]

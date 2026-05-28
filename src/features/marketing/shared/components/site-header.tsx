@@ -175,7 +175,7 @@ export const SiteHeader = memo(function SiteHeader({
       {/* Right side */}
       <div className="flex items-center gap-3">
         <div className="hidden items-center gap-3 lg:flex">
-          {mounted && isAdminEmail(session?.user?.email) && (
+          {mounted && isAdminEmail(session?.user?.email) && ( // DB isAdmin not checked here — email check is sufficient for header
             <button
               onClick={() => router.push("/admin")}
               className="flex items-center gap-1.5 cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-all border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"

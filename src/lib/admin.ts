@@ -1,8 +1,9 @@
 /**
  * Master admin configuration.
- * Accounts in this list bypass subscription management and can manage all users.
+ * Accounts in this list are always admins regardless of DB flag.
+ * Additional admins can be granted via the admin panel (stored in User.isAdmin).
  */
-export const ADMIN_EMAILS = [
+export const HARDCODED_ADMIN_EMAILS = [
   "prayogadevelopment@gmail.com",
   "mrcaoevan@gmail.com",
   "darwin.prayoga13@gmail.com",
@@ -10,5 +11,10 @@ export const ADMIN_EMAILS = [
 
 export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
-  return (ADMIN_EMAILS as readonly string[]).includes(email.toLowerCase().trim());
+  return (HARDCODED_ADMIN_EMAILS as readonly string[]).includes(email.toLowerCase().trim());
+}
+
+/** Check admin status by combining hardcoded list + DB flag. Use in server contexts. */
+export function isAdminUser(email: string | null | undefined, isAdminFlag: boolean): boolean {
+  return isAdminFlag || isAdminEmail(email);
 }

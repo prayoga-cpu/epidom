@@ -57,7 +57,7 @@ export function NavUser() {
         <DropdownMenuItem onClick={() => router.push(`/store/${storeId}/dashboard`)}>
           {t("nav.dashboard")}
         </DropdownMenuItem>
-        {isAdminEmail(user?.email) && (
+        {(isAdminEmail(user?.email) || (profile as any)?.isAdmin) && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield, Users, Store, Crown, Search, ChevronDown } from "lucide-react";
+import { Shield, Users, Store, Crown, Search, ChevronDown, Trash2, Calendar, ShieldCheck, ShieldOff, Infinity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,8 +29,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ADMIN_EMAILS } from "@/lib/admin";
+import { HARDCODED_ADMIN_EMAILS } from "@/lib/admin";
+import { useUser } from "@/lib/auth-client";
 
 type Plan = "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE";
 type SubStatus = "ACTIVE" | "CANCELED" | "PAST_DUE" | "INCOMPLETE";
@@ -39,10 +48,12 @@ interface UserRow {
   id: string;
   name: string | null;
   email: string;
+  isAdmin: boolean;
   createdAt: string;
   subscription: {
     plan: Plan;
     status: SubStatus;
+    currentPeriodStart: string | null;
     currentPeriodEnd: string | null;
     stripeCustomerId: string;
   } | null;
@@ -69,10 +80,34 @@ const statusColors: Record<SubStatus, string> = {
   INCOMPLETE: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
 };
 
+const PERIOD_OPTIONS = [
+  { label: "1 month", months: 1 },
+  { label: "2 months", months: 2 },
+  { label: "3 months", months: 3 },
+  { label: "6 months", months: 6 },
+  { label: "1 year", months: 12 },
+  { label: "2 years", months: 24 },
+  { label: "Lifetime ∞", months: null },
+];
+
+function formatPeriodEnd(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  const lifetime = new Date();
+  lifetime.setFullYear(lifetime.getFullYear() + 50);
+  if (d > lifetime) return "Lifetime ∞";
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 export function AdminDashboard() {
   const queryClient = useQueryClient();
+  const { user: me } = useUser();
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState<Plan | "ALL">("ALL");
+
+  // Delete dialog state
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
 
   const { data, isLoading } = useQuery<{ users: UserRow[] }>({
     queryKey: ["admin-users"],
@@ -80,17 +115,33 @@ export function AdminDashboard() {
   });
 
   const mutation = useMutation({
-    mutationFn: (vars: { userId: string; plan: Plan; status: SubStatus }) =>
+    mutationFn: (body: Record<string, unknown>) =>
       fetch("/api/admin/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(vars),
-      }).then((r) => r.json()),
-    onSuccess: () => {
+        body: JSON.stringify(body),
+      }).then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(err.error ?? "Request failed");
+        }
+        return r.json();
+      }),
+    onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      toast.success("Subscription updated");
+      if ((vars as any).action === "delete-user") {
+        setDeleteTarget(null);
+        setDeleteConfirm("");
+        toast.success("Account deleted");
+      } else if ((vars as any).action === "set-admin") {
+        toast.success((vars as any).isAdmin ? "Admin access granted" : "Admin access revoked");
+      } else if ((vars as any).action === "set-period") {
+        toast.success("Subscription period updated");
+      } else {
+        toast.success("Subscription updated");
+      }
     },
-    onError: () => toast.error("Failed to update"),
+    onError: (e: Error) => toast.error(e.message || "Failed"),
   });
 
   const users = data?.users ?? [];
@@ -109,7 +160,7 @@ export function AdminDashboard() {
     total: users.length,
     active: users.filter((u) => u.subscription?.status === "ACTIVE").length,
     enterprise: users.filter((u) => u.subscription?.plan === "ENTERPRISE").length,
-    noSub: users.filter((u) => !u.subscription).length,
+    admins: users.filter((u) => u.isAdmin || (HARDCODED_ADMIN_EMAILS as readonly string[]).includes(u.email)).length,
   };
 
   return (
@@ -140,8 +191,8 @@ export function AdminDashboard() {
           {[
             { label: "Total Users", value: stats.total, icon: Users, color: "text-blue-400" },
             { label: "Active Subs", value: stats.active, icon: Crown, color: "text-emerald-400" },
-            { label: "Enterprise", value: stats.enterprise, icon: Shield, color: "text-violet-400" },
-            { label: "No Subscription", value: stats.noSub, icon: Store, color: "text-amber-400" },
+            { label: "Enterprise", value: stats.enterprise, icon: Store, color: "text-violet-400" },
+            { label: "Admins", value: stats.admins, icon: Shield, color: "text-red-400" },
           ].map(({ label, value, icon: Icon, color }) => (
             <div key={label} className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center justify-between mb-1">
@@ -179,131 +230,270 @@ export function AdminDashboard() {
 
         {/* Table */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">User</TableHead>
-                <TableHead className="text-muted-foreground">Business</TableHead>
-                <TableHead className="text-muted-foreground">Plan</TableHead>
-                <TableHead className="text-muted-foreground">Status</TableHead>
-                <TableHead className="text-muted-foreground">Joined</TableHead>
-                <TableHead className="text-right text-muted-foreground">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    Loading users...
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">User</TableHead>
+                  <TableHead className="text-muted-foreground">Business</TableHead>
+                  <TableHead className="text-muted-foreground">Plan</TableHead>
+                  <TableHead className="text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-muted-foreground">Period End</TableHead>
+                  <TableHead className="text-muted-foreground">Joined</TableHead>
+                  <TableHead className="text-right text-muted-foreground">Actions</TableHead>
                 </TableRow>
-              )}
-              {!isLoading && filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    No users found
-                  </TableCell>
-                </TableRow>
-              )}
-              {filtered.map((user) => {
-                const isAdmin = (ADMIN_EMAILS as readonly string[]).includes(user.email);
-                const plan = user.subscription?.plan ?? "FREE";
-                const status = user.subscription?.status ?? "INCOMPLETE";
-
-                return (
-                  <TableRow key={user.id} className="border-border">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground uppercase">
-                          {(user.name?.[0] ?? user.email[0]).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                            {user.name ?? "—"}
-                            {isAdmin && (
-                              <span className="inline-flex items-center gap-0.5 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-red-400">
-                                <Shield className="h-2.5 w-2.5" /> Admin
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{user.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {user.business ? (
-                        <div>
-                          <p className="text-sm text-foreground">{user.business.name}</p>
-                          <p className="text-xs text-muted-foreground">{user.business._count.stores} store{user.business._count.stores !== 1 ? "s" : ""}</p>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No business</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${planColors[plan as Plan]}`}>
-                        {plan}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}>
-                        {status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1">
-                            Edit <ChevronDown className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuLabel className="text-xs text-muted-foreground">Set Plan</DropdownMenuLabel>
-                          {PLAN_ORDER.map((p) => (
-                            <DropdownMenuItem
-                              key={p}
-                              disabled={plan === p || mutation.isPending}
-                              onClick={() =>
-                                mutation.mutate({ userId: user.id, plan: p, status: "ACTIVE" })
-                              }
-                            >
-                              <span className={`mr-2 h-2 w-2 rounded-full inline-block ${plan === p ? "bg-emerald-400" : "bg-muted"}`} />
-                              {p}
-                              {plan === p && <span className="ml-auto text-[10px] text-muted-foreground">current</span>}
-                            </DropdownMenuItem>
-                          ))}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel className="text-xs text-muted-foreground">Set Status</DropdownMenuLabel>
-                          {(["ACTIVE", "CANCELED", "INCOMPLETE"] as SubStatus[]).map((s) => (
-                            <DropdownMenuItem
-                              key={s}
-                              disabled={status === s || mutation.isPending}
-                              onClick={() =>
-                                mutation.mutate({ userId: user.id, plan: plan as Plan, status: s })
-                              }
-                            >
-                              <span className={`mr-2 h-2 w-2 rounded-full inline-block ${s === "ACTIVE" ? "bg-emerald-400" : s === "CANCELED" ? "bg-red-400" : "bg-zinc-400"}`} />
-                              {s}
-                              {status === s && <span className="ml-auto text-[10px] text-muted-foreground">current</span>}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      Loading users...
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                )}
+                {!isLoading && filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      No users found
+                    </TableCell>
+                  </TableRow>
+                )}
+                {filtered.map((user) => {
+                  const isHardcodedAdmin = (HARDCODED_ADMIN_EMAILS as readonly string[]).includes(user.email);
+                  const isAdminUser = user.isAdmin || isHardcodedAdmin;
+                  const plan = user.subscription?.plan ?? "FREE";
+                  const status = user.subscription?.status ?? "INCOMPLETE";
+                  const isSelf = me?.id === user.id;
+
+                  return (
+                    <TableRow key={user.id} className="border-border">
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase ${isAdminUser ? "bg-red-500/15 text-red-400 border border-red-500/30" : "bg-muted text-foreground"}`}>
+                            {(user.name?.[0] ?? user.email[0]).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5 flex-wrap">
+                              {user.name ?? "—"}
+                              {isAdminUser && (
+                                <span className="inline-flex items-center gap-0.5 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-red-400">
+                                  <Shield className="h-2.5 w-2.5" />
+                                  {isHardcodedAdmin ? "Master" : "Admin"}
+                                </span>
+                              )}
+                              {isSelf && (
+                                <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-blue-400">
+                                  You
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {user.business ? (
+                          <div>
+                            <p className="text-sm text-foreground">{user.business.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {user.business._count.stores} store{user.business._count.stores !== 1 ? "s" : ""}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No business</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${planColors[plan as Plan]}`}>
+                          {plan}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}>
+                          {status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatPeriodEnd(user.subscription?.currentPeriodEnd)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1">
+                              Manage <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+
+                            {/* Plan */}
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">Set Plan</DropdownMenuLabel>
+                            {PLAN_ORDER.map((p) => (
+                              <DropdownMenuItem
+                                key={p}
+                                disabled={plan === p || mutation.isPending}
+                                onClick={() =>
+                                  mutation.mutate({ action: "set-plan", userId: user.id, plan: p, status: "ACTIVE" })
+                                }
+                              >
+                                <span className={`mr-2 h-2 w-2 rounded-full inline-block ${plan === p ? "bg-emerald-400" : "bg-muted"}`} />
+                                {p}
+                                {plan === p && <span className="ml-auto text-[10px] text-muted-foreground">current</span>}
+                              </DropdownMenuItem>
+                            ))}
+
+                            <DropdownMenuSeparator />
+
+                            {/* Period */}
+                            <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3" /> Set Duration
+                            </DropdownMenuLabel>
+                            {PERIOD_OPTIONS.map(({ label, months }) => (
+                              <DropdownMenuItem
+                                key={label}
+                                disabled={mutation.isPending}
+                                onClick={() =>
+                                  mutation.mutate({
+                                    action: "set-period",
+                                    userId: user.id,
+                                    ...(months === null ? { lifetime: true } : { months }),
+                                  })
+                                }
+                              >
+                                {months === null
+                                  ? <Infinity className="mr-2 h-3.5 w-3.5 text-violet-400" />
+                                  : <Calendar className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                                }
+                                {label}
+                              </DropdownMenuItem>
+                            ))}
+
+                            <DropdownMenuSeparator />
+
+                            {/* Status */}
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">Set Status</DropdownMenuLabel>
+                            {(["ACTIVE", "CANCELED", "INCOMPLETE"] as SubStatus[]).map((s) => (
+                              <DropdownMenuItem
+                                key={s}
+                                disabled={status === s || mutation.isPending}
+                                onClick={() =>
+                                  mutation.mutate({ action: "set-plan", userId: user.id, plan: plan as Plan, status: s })
+                                }
+                              >
+                                <span className={`mr-2 h-2 w-2 rounded-full inline-block ${s === "ACTIVE" ? "bg-emerald-400" : s === "CANCELED" ? "bg-red-400" : "bg-zinc-400"}`} />
+                                {s}
+                                {status === s && <span className="ml-auto text-[10px] text-muted-foreground">current</span>}
+                              </DropdownMenuItem>
+                            ))}
+
+                            {!isSelf && (
+                              <>
+                                <DropdownMenuSeparator />
+
+                                {/* Admin access */}
+                                <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <Shield className="h-3 w-3" /> Admin Access
+                                </DropdownMenuLabel>
+                                {!isHardcodedAdmin && (
+                                  user.isAdmin ? (
+                                    <DropdownMenuItem
+                                      className="text-orange-400 focus:text-orange-400"
+                                      disabled={mutation.isPending}
+                                      onClick={() =>
+                                        mutation.mutate({ action: "set-admin", userId: user.id, isAdmin: false })
+                                      }
+                                    >
+                                      <ShieldOff className="mr-2 h-3.5 w-3.5" />
+                                      Revoke Admin
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      className="text-red-400 focus:text-red-400"
+                                      disabled={mutation.isPending}
+                                      onClick={() =>
+                                        mutation.mutate({ action: "set-admin", userId: user.id, isAdmin: true })
+                                      }
+                                    >
+                                      <ShieldCheck className="mr-2 h-3.5 w-3.5" />
+                                      Grant Admin
+                                    </DropdownMenuItem>
+                                  )
+                                )}
+                                {isHardcodedAdmin && (
+                                  <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                                    <Shield className="mr-2 h-3.5 w-3.5" /> Hardcoded master
+                                  </DropdownMenuItem>
+                                )}
+
+                                <DropdownMenuSeparator />
+
+                                {/* Delete */}
+                                <DropdownMenuItem
+                                  className="text-red-500 focus:text-red-500 focus:bg-red-500/10"
+                                  onClick={() => { setDeleteTarget(user); setDeleteConfirm(""); }}
+                                >
+                                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                  Delete Account
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         <p className="text-center text-xs text-muted-foreground pb-4">
-          {filtered.length} of {users.length} users — Master Admin Panel v1
+          {filtered.length} of {users.length} users — Master Admin Panel v2
         </p>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDeleteConfirm(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-500">Delete Account</DialogTitle>
+            <DialogDescription>
+              This permanently deletes <strong>{deleteTarget?.email}</strong> and all their data
+              (stores, products, orders, subscriptions). This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <p className="text-xs text-muted-foreground">
+              Type the email address to confirm:
+            </p>
+            <Input
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder={deleteTarget?.email}
+              className="font-mono text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteConfirm(""); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteConfirm !== deleteTarget?.email || mutation.isPending}
+              onClick={() => {
+                if (deleteTarget) {
+                  mutation.mutate({ action: "delete-user", userId: deleteTarget.id });
+                }
+              }}
+            >
+              Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
