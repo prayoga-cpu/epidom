@@ -99,7 +99,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   // SETUP MODE: Card validation for free promo
   if (session.mode === "setup" && promotion === "new_year_2025") {
-    const promoEndDate = new Date(process.env.PROMO_END_DATE || "2025-12-31T23:59:59Z");
+    const promoEndDate = new Date(process.env.PROMO_END_DATE || "2026-12-31T23:59:59Z");
     const now = new Date();
 
     const existingSubscription = await subscriptionRepository.findByUserId(userId);
