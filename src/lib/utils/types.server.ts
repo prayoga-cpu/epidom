@@ -6,6 +6,7 @@
  */
 
 import { Prisma } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/client";
 
 /**
  * Convert number to Prisma Decimal for database operations
@@ -14,7 +15,6 @@ import { Prisma } from "@prisma/client";
  * ⚠️ SERVER-ONLY: This function uses Prisma Decimal which requires Node.js built-in modules
  */
 export function toDecimal(value: number | string | null | undefined): Prisma.Decimal {
-  const { Decimal } = require("@prisma/client/runtime/library");
   if (value === null || value === undefined) {
     return new Decimal(0);
   }
