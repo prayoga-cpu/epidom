@@ -1,18 +1,8 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-function getDatabaseUrl(): string {
-  const baseUrl = process.env.DATABASE_URL || "";
-  const separator = baseUrl.includes("?") ? "&" : "?";
-  return `${baseUrl}${separator}connection_limit=20&pool_timeout=30&connect_timeout=10&statement_timeout=25000&pgbouncer=true`;
-}
-
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: getDatabaseUrl(),
-    },
-  },
-});
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const storeId = "cmi4exhjs0006vi6cyf45rulf";

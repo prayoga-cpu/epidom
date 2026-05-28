@@ -4,7 +4,7 @@
  * These types represent order-related data structures
  */
 
-import { Decimal } from "@prisma/client/runtime/library";
+import type { Decimal } from "@prisma/client/runtime/client";
 import { ProductDto } from "./inventory.dto";
 
 // Order DTO

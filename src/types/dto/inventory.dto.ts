@@ -5,7 +5,7 @@
  * (products, ingredients, recipes, suppliers, stock movements)
  */
 
-import { Decimal } from "@prisma/client/runtime/library";
+import type { Decimal } from "@prisma/client/runtime/client";
 
 // Product DTO
 export interface ProductDto {

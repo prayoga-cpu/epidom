@@ -10,7 +10,7 @@ import type {
 import type { Material, Product } from "@prisma/client";
 import type { MaterialsResponse } from "@/features/dashboard/data/materials/hooks/use-materials";
 import type { ProductsResponse } from "@/features/dashboard/data/products/hooks/use-products";
-import { Decimal } from "@prisma/client/runtime/library";
+import type { Decimal } from "@prisma/client/runtime/client";
 
 export interface StockAdjustmentInput {
   materialId?: string;
