@@ -8,10 +8,11 @@ import { WaitlistDialog } from "@/features/marketing/shared/components/waitlist-
 import { usePathname, useRouter } from "next/navigation";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Shield } from "lucide-react";
 import { EpidomLogo } from "./epidom-logo";
 import { useSession, signOut } from "@/lib/auth-client";
 import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
+import { isAdminEmail } from "@/lib/admin";
 
 /**
  * BUTTON MODE SELECTION
@@ -174,6 +175,14 @@ export const SiteHeader = memo(function SiteHeader({
       {/* Right side */}
       <div className="flex items-center gap-3">
         <div className="hidden items-center gap-3 lg:flex">
+          {mounted && isAdminEmail(session?.user?.email) && (
+            <button
+              onClick={() => router.push("/admin")}
+              className="flex items-center gap-1.5 cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-all border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+            >
+              <Shield className="h-3 w-3" /> Admin
+            </button>
+          )}
           <LangSwitcher />
           {mounted && <DesktopCTA />}
         </div>

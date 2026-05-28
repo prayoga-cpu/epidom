@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "./hooks/use-current-store";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
+import { isAdminEmail } from "@/lib/admin";
+import { Shield } from "lucide-react";
 
 export function NavUser() {
   const router = useRouter();
@@ -55,6 +57,18 @@ export function NavUser() {
         <DropdownMenuItem onClick={() => router.push(`/store/${storeId}/dashboard`)}>
           {t("nav.dashboard")}
         </DropdownMenuItem>
+        {isAdminEmail(user?.email) && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => router.push("/admin")}
+              className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
+            >
+              <Shield className="mr-2 h-3.5 w-3.5" />
+              Admin Panel
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
