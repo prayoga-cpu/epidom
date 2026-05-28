@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield, Users, Store, Crown, Search, ChevronDown, Trash2, Calendar, ShieldCheck, ShieldOff, Infinity } from "lucide-react";
+import { Shield, Users, Store, Crown, Search, ChevronDown, Trash2, Calendar, ShieldCheck, ShieldOff, Infinity, KeyRound, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,8 @@ interface UserRow {
   email: string;
   isAdmin: boolean;
   createdAt: string;
+  providers: string[];
+  hasPassword: boolean;
   subscription: {
     plan: Plan;
     status: SubStatus;
@@ -109,6 +111,11 @@ export function AdminDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
 
+  // Password reset dialog state
+  const [pwTarget, setPwTarget] = useState<UserRow | null>(null);
+  const [newPw, setNewPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
+
   const { data, isLoading } = useQuery<{ users: UserRow[] }>({
     queryKey: ["admin-users"],
     queryFn: () => fetch("/api/admin/users").then((r) => r.json()),
@@ -133,6 +140,10 @@ export function AdminDashboard() {
         setDeleteTarget(null);
         setDeleteConfirm("");
         toast.success("Account deleted");
+      } else if ((vars as any).action === "reset-password") {
+        setPwTarget(null);
+        setNewPw("");
+        toast.success("Password updated");
       } else if ((vars as any).action === "set-admin") {
         toast.success((vars as any).isAdmin ? "Admin access granted" : "Admin access revoked");
       } else if ((vars as any).action === "set-period") {
@@ -235,6 +246,7 @@ export function AdminDashboard() {
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="text-muted-foreground">User</TableHead>
+                  <TableHead className="text-muted-foreground">Login</TableHead>
                   <TableHead className="text-muted-foreground">Business</TableHead>
                   <TableHead className="text-muted-foreground">Plan</TableHead>
                   <TableHead className="text-muted-foreground">Status</TableHead>
@@ -246,14 +258,14 @@ export function AdminDashboard() {
               <TableBody>
                 {isLoading && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       Loading users...
                     </TableCell>
                   </TableRow>
                 )}
                 {!isLoading && filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -289,6 +301,24 @@ export function AdminDashboard() {
                             </p>
                             <p className="text-xs text-muted-foreground">{user.email}</p>
                           </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {(user.providers ?? []).map((p) => (
+                            <span key={p} className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                              p === "credential"
+                                ? "bg-blue-500/15 text-blue-400 border-blue-500/30"
+                                : p === "google"
+                                ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                : "bg-zinc-500/15 text-zinc-400 border-zinc-500/30"
+                            }`}>
+                              {p === "credential" ? "🔑 Password" : p === "google" ? "G Google" : p}
+                            </span>
+                          ))}
+                          {(user.providers ?? []).length === 0 && (
+                            <span className="text-[10px] text-muted-foreground">—</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -392,6 +422,17 @@ export function AdminDashboard() {
                               <>
                                 <DropdownMenuSeparator />
 
+                                {/* Password reset */}
+                                <DropdownMenuItem
+                                  className="text-blue-400 focus:text-blue-400 focus:bg-blue-500/10"
+                                  onClick={() => { setPwTarget(user); setNewPw(""); setShowPw(false); }}
+                                >
+                                  <KeyRound className="mr-2 h-3.5 w-3.5" />
+                                  {user.hasPassword ? "Reset Password" : "Set Password"}
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
                                 {/* Admin access */}
                                 <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                   <Shield className="h-3 w-3" /> Admin Access
@@ -454,6 +495,61 @@ export function AdminDashboard() {
           {filtered.length} of {users.length} users — Master Admin Panel v2
         </p>
       </div>
+
+      {/* Password reset dialog */}
+      <Dialog open={!!pwTarget} onOpenChange={(open) => { if (!open) setPwTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-blue-400" />
+              {pwTarget?.hasPassword ? "Reset Password" : "Set Password"}
+            </DialogTitle>
+            <DialogDescription>
+              {pwTarget?.hasPassword
+                ? `Replace the existing password for ${pwTarget?.email}.`
+                : `Create a password login for ${pwTarget?.email}. They currently sign in via OAuth only.`}
+              <br />
+              <span className="text-xs text-muted-foreground mt-1 inline-block">
+                Passwords are hashed with bcrypt before saving — not stored in plaintext.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <p className="text-xs text-muted-foreground">New password (min 8 characters)</p>
+            <div className="relative">
+              <Input
+                type={showPw ? "text" : "password"}
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                placeholder="Enter new password"
+                className="pr-10 font-mono text-sm"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPwTarget(null)}>Cancel</Button>
+            <Button
+              disabled={newPw.length < 8 || mutation.isPending}
+              onClick={() => {
+                if (pwTarget) {
+                  mutation.mutate({ action: "reset-password", userId: pwTarget.id, newPassword: newPw });
+                }
+              }}
+            >
+              <KeyRound className="mr-2 h-4 w-4" />
+              {pwTarget?.hasPassword ? "Update Password" : "Set Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDeleteConfirm(""); } }}>

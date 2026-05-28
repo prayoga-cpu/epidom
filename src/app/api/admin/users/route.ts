@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdminUser } from "@/lib/admin";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -17,7 +18,7 @@ async function requireAdmin() {
 
 /**
  * GET /api/admin/users
- * List all users with subscription, business, store count.
+ * List all users with subscription, business, store count, and login methods.
  */
 export async function GET() {
   if (!(await requireAdmin())) {
@@ -32,6 +33,9 @@ export async function GET() {
       email: true,
       isAdmin: true,
       createdAt: true,
+      accounts: {
+        select: { providerId: true },
+      },
       subscription: {
         select: {
           plan: true,
@@ -51,41 +55,53 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({ users });
+  // Derive login methods without exposing password hashes
+  const sanitized = await Promise.all(
+    users.map(async (u) => {
+      const accounts = await prisma.account.findMany({
+        where: { userId: u.id },
+        select: { providerId: true, password: true },
+      });
+      const providers = accounts.map((a) => a.providerId);
+      const hasPassword = accounts.some(
+        (a) => a.providerId === "credential" && !!a.password
+      );
+      return { ...u, accounts: undefined, providers, hasPassword };
+    })
+  );
+
+  return NextResponse.json({ users: sanitized });
 }
 
 const updateSchema = z.discriminatedUnion("action", [
-  // Set plan + status
   z.object({
     action: z.literal("set-plan"),
     userId: z.string(),
     plan: z.enum(["FREE", "POS", "OPERATIONS", "ENTERPRISE"]),
     status: z.enum(["ACTIVE", "CANCELED", "PAST_DUE", "INCOMPLETE"]),
   }),
-  // Set subscription period
   z.object({
     action: z.literal("set-period"),
     userId: z.string(),
-    months: z.number().int().min(1).max(1200).optional(), // null = lifetime
+    months: z.number().int().min(1).max(1200).optional(),
     lifetime: z.boolean().optional(),
   }),
-  // Grant / revoke admin
   z.object({
     action: z.literal("set-admin"),
     userId: z.string(),
     isAdmin: z.boolean(),
   }),
-  // Delete account
+  z.object({
+    action: z.literal("reset-password"),
+    userId: z.string(),
+    newPassword: z.string().min(8).max(128),
+  }),
   z.object({
     action: z.literal("delete-user"),
     userId: z.string(),
   }),
 ]);
 
-/**
- * PATCH /api/admin/users
- * Perform admin actions on a user.
- */
 export async function PATCH(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) {
@@ -95,7 +111,6 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const input = updateSchema.parse(body);
 
-  // Prevent self-demotion / self-deletion
   if (
     (input.action === "set-admin" || input.action === "delete-user") &&
     input.userId === admin.id
@@ -123,19 +138,13 @@ export async function PATCH(req: NextRequest) {
 
   if (input.action === "set-period") {
     const now = new Date();
-    // lifetime = 200 years from now
     const LIFETIME = new Date(now.getTime() + 200 * 365 * 24 * 60 * 60 * 1000);
     const periodEnd = input.lifetime
       ? LIFETIME
       : new Date(now.getTime() + (input.months ?? 1) * 30 * 24 * 60 * 60 * 1000);
-
     const subscription = await prisma.subscription.upsert({
       where: { userId: input.userId },
-      update: {
-        status: "ACTIVE",
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-      },
+      update: { status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd },
       create: {
         userId: input.userId,
         stripeCustomerId: `admin_${input.userId}`,
@@ -155,6 +164,39 @@ export async function PATCH(req: NextRequest) {
       select: { id: true, email: true, isAdmin: true },
     });
     return NextResponse.json({ user });
+  }
+
+  if (input.action === "reset-password") {
+    const hashed = await bcrypt.hash(input.newPassword, 12);
+
+    // Upsert the credential account — create if they only have OAuth
+    const existing = await prisma.account.findFirst({
+      where: { userId: input.userId, providerId: "credential" },
+    });
+
+    if (existing) {
+      await prisma.account.update({
+        where: { id: existing.id },
+        data: { password: hashed },
+      });
+    } else {
+      const user = await prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { email: true },
+      });
+      await prisma.account.create({
+        data: {
+          accountId: input.userId,
+          providerId: "credential",
+          userId: input.userId,
+          password: hashed,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    return NextResponse.json({ ok: true });
   }
 
   if (input.action === "delete-user") {
