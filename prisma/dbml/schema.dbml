@@ -16,6 +16,7 @@ Table user {
   currency String [not null, default: 'IDR']
   stripeConnectAccountId String
   stripeConnectOnboarded Boolean [not null, default: false]
+  isAdmin Boolean [not null, default: false]
   sessions session [not null]
   accounts account [not null]
   alerts alerts [not null]
