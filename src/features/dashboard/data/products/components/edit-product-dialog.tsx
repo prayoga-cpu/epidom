@@ -36,8 +36,8 @@ type ProductWithRecipes = Product & {
   recipeProducts?: Array<RecipeProduct & { recipe: Recipe }>;
 };
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useUpdateProduct } from "../hooks/use-products";
-import { toast as sonnerToast } from "sonner";
+import { useUpdateProduct, useLinkedMenuItem } from "../hooks/use-products";
+import { toast as sonnerToast, toast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
 
@@ -91,6 +91,7 @@ export function EditProductDialog({
   const { t } = useI18n();
   const { currency, convertPrice, convertToBase } = useCurrency();
   const updateProduct = useUpdateProduct(storeId, product.id);
+  const { data: linkedMenuItem } = useLinkedMenuItem(storeId, product.id);
 
   const isSubmittingRef = useRef(false);
   const savedFormDataRef = useRef<ProductFormValues | null>(null);
@@ -223,11 +224,34 @@ export function EditProductDialog({
 
       const promise = updateProduct.mutateAsync(apiData);
 
+      // Detect name/price drift vs linked MenuItem — offer sync after save
+      const prevName = product.name;
+      const prevPrice = Number(product.sellingPrice);
+      const nameChanged = data.name !== prevName;
+      const priceChanged = Math.abs(convertToBase(retailPrice) - prevPrice) > 0.001;
+      const hasDrift = linkedMenuItem && (nameChanged || priceChanged);
+
       sonnerToast.promise(promise, {
         loading: t("common.actions.saving"),
         success: () => {
           isSubmittingRef.current = false;
           savedFormDataRef.current = null;
+          if (hasDrift) {
+            // Offer to propagate the change to the linked MenuItem
+            toast({
+              description: `${t("data.products.toasts.syncMenuPrompt") || "Price/name changed. Sync to POS menu?"}`,
+              action: {
+                label: t("data.products.toasts.syncMenuAction") || "Sync",
+                onClick: async () => {
+                  await fetch(`/api/stores/${storeId}/storefront/items/${linkedMenuItem.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: data.name, price: convertToBase(retailPrice) }),
+                  });
+                },
+              },
+            });
+          }
           return t("data.products.toasts.updated.title") || "Product updated";
         },
         error: (err) => {

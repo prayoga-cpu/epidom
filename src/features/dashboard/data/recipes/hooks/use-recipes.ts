@@ -537,3 +537,20 @@ export function useExportRecipes() {
       exportRecipes(storeId, filters),
   });
 }
+
+/**
+ * Fetch 30-day POS order counts per recipe.
+ * Returns a Map<recipeId, orderCount> for O(1) badge lookups.
+ */
+export function useRecipeDemand(storeId: string): Map<string, number> {
+  const { data } = useQuery<{ recipeId: string; orderCount30d: number }[]>({
+    queryKey: ["recipe-demand", storeId],
+    queryFn: () =>
+      fetch(`/api/stores/${storeId}/recipes/demand`)
+        .then((r) => r.json())
+        .then((d) => d?.data ?? []),
+    enabled: !!storeId,
+    staleTime: 5 * 60 * 1000,
+  });
+  return new Map((data ?? []).map((r) => [r.recipeId, r.orderCount30d]));
+}

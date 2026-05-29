@@ -1412,6 +1412,10 @@ export const en = {
     title: "Dashboard",
     description:
       "Welcome to the dashboard. Here you can see the current status of your orders, recipes, and stock.",
+    recentMovements: {
+      title: "Recent Stock Movements",
+      empty: "No stock movements yet",
+    },
     storeSelector: {
       label: "Select store",
       select: "Select store",
@@ -1624,6 +1628,7 @@ export const en = {
     // Recipes section
     recipes: {
       pageTitle: "Recipes",
+      demandBadge: "last 30d",
       addTitle: "Create New Recipe",
       addButton: "Add Recipe",
       editTitle: "Edit Recipe",
@@ -1835,6 +1840,7 @@ export const en = {
     // Products section
     products: {
       pageTitle: "Products",
+      inMenu: "In Menu",
       addTitle: "Add New Product",
       addButton: "Add Product",
       editTitle: "Edit Product",
@@ -1914,12 +1920,15 @@ export const en = {
         view: "View Product",
         edit: "Edit Product",
         addToMenu: "Add to POS menu",
+        alreadyInMenu: "Already in POS menu",
         delete: "Delete Product",
       },
 
       // Toasts
       toasts: {
         addedToMenu: "added to POS menu",
+        syncMenuPrompt: "Price/name changed. Sync to POS menu?",
+        syncMenuAction: "Sync",
         adding: "Adding product...",
         added: {
           title: "Product Added Successfully",
@@ -3130,12 +3139,17 @@ export const en = {
     },
   },
   tracking: {
+    tabs: {
+      levels: "Stock Levels",
+      movements: "Recent Movements",
+    },
+
     // Page titles
     stockLevels: "Stock Levels",
     movementHistory: "Movement History",
     analytics: "Analytics",
 
-    // Movement types
+    // Movement types + tab UI strings
     movements: {
       in: "Stock In",
       out: "Stock Out",
@@ -3143,6 +3157,8 @@ export const en = {
       production: "Production",
       waste: "Waste",
       return: "Return",
+      searchPlaceholder: "Search item…",
+      empty: "No movements found",
     },
 
     // Table headers

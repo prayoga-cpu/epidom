@@ -38,6 +38,7 @@ import {
   useDeleteRecipe,
   useBulkDeleteRecipes,
   useExportRecipes,
+  useRecipeDemand,
   type RecipeWithIngredients,
 } from "../hooks/use-recipes";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
@@ -145,6 +146,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
   const deleteRecipe = useDeleteRecipe(storeId);
   const bulkDeleteRecipes = useBulkDeleteRecipes(storeId);
   const exportRecipes = useExportRecipes();
+  const recipeDemand = useRecipeDemand(storeId);
 
   const recipes = recipesData?.recipes || [];
   const total = recipesData?.total || 0;
@@ -444,11 +446,18 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                       <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
                         {recipe.name}
                       </h3>
-                      {recipe.category && (
-                        <Badge variant="secondary" className="mt-1 text-xs">
-                          {getTranslatedCategory(recipe.category, t)}
-                        </Badge>
-                      )}
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {recipe.category && (
+                          <Badge variant="secondary" className="text-xs">
+                            {getTranslatedCategory(recipe.category, t)}
+                          </Badge>
+                        )}
+                        {(recipeDemand.get(recipe.id) ?? 0) > 0 && (
+                          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs">
+                            {recipeDemand.get(recipe.id)}× {t("data.recipes.demandBadge") || "last 30d"}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="bg-primary/10 ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
                       <ChefHat className="text-primary h-4 w-4" />

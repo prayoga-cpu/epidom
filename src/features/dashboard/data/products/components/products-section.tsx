@@ -49,6 +49,7 @@ import {
   useBulkDeleteProducts,
   useExportProducts,
   useAddProductToMenu,
+  useProductMenuStatus,
   type Product,
 } from "../hooks/use-products";
 import { useProductUsage } from "../hooks/use-product-usage";
@@ -113,6 +114,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const bulkDeleteProducts = useBulkDeleteProducts(storeId);
   const exportProducts = useExportProducts();
   const addToMenu = useAddProductToMenu(storeId);
+  const { menuLinkedIds } = useProductMenuStatus(storeId);
   const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
 
   const products = data?.products || [];
@@ -577,34 +579,48 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                           <p>{t("data.products.tooltips.edit")}</p>
                         </TooltipContent>
                       </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="h-8 w-full flex-1 text-xs text-green-600 hover:text-green-700"
-                            disabled={addToMenu.isPending}
-                            onClick={async () => {
-                              try {
-                                await addToMenu.mutateAsync(product);
-                                toast.success(
-                                  t("data.products.toasts.addedToMenu") ||
-                                    `"${product.name}" added to POS menu`
-                                );
-                              } catch (err) {
-                                toast.error(
-                                  err instanceof Error ? err.message : "Failed to add to menu"
-                                );
-                              }
-                            }}
-                          >
-                            <UtensilsCrossed className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{t("data.products.tooltips.addToMenu") || "Add to POS menu"}</p>
-                        </TooltipContent>
-                      </Tooltip>
+                      {menuLinkedIds.has(product.id) ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex h-8 w-full items-center justify-center rounded-md border border-green-200 bg-green-50 px-1 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+                              <UtensilsCrossed className="mr-1 h-3 w-3" />
+                              {t("data.products.inMenu") || "In Menu"}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{t("data.products.tooltips.alreadyInMenu") || "Already in POS menu"}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-8 w-full flex-1 text-xs text-green-600 hover:text-green-700"
+                              disabled={addToMenu.isPending}
+                              onClick={async () => {
+                                try {
+                                  await addToMenu.mutateAsync(product);
+                                  toast.success(
+                                    t("data.products.toasts.addedToMenu") ||
+                                      `"${product.name}" added to POS menu`
+                                  );
+                                } catch (err) {
+                                  toast.error(
+                                    err instanceof Error ? err.message : "Failed to add to menu"
+                                  );
+                                }
+                              }}
+                            >
+                              <UtensilsCrossed className="h-3 w-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{t("data.products.tooltips.addToMenu") || "Add to POS menu"}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button

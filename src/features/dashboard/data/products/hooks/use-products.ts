@@ -4,6 +4,14 @@ import type { Product } from "@prisma/client";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
 
+export interface LinkedMenuItem {
+  id: string;
+  name: string;
+  price: number;
+  productId: string | null;
+  isAvailable: boolean;
+}
+
 // Re-export for convenience
 export type { Product };
 
@@ -461,6 +469,7 @@ export function useExportProducts() {
  */
 export function useAddProductToMenu(storeId: string) {
   const queryClient = useQueryClient();
+  const linkedKey = ["storefront-items-linked", storeId];
 
   return useMutation({
     mutationFn: async (product: Pick<Product, "id" | "name" | "sellingPrice" | "category">) => {
@@ -508,8 +517,66 @@ export function useAddProductToMenu(storeId: string) {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onMutate: async (product) => {
+      // Optimistic update: immediately show "In Menu" badge without waiting for server
+      await queryClient.cancelQueries({ queryKey: linkedKey });
+      const previous = queryClient.getQueryData<LinkedMenuItem[]>(linkedKey);
+      queryClient.setQueryData<LinkedMenuItem[]>(linkedKey, (old) => [
+        ...(old ?? []),
+        { id: "__optimistic__", name: product.name, price: Number(product.sellingPrice), productId: product.id, isAvailable: true },
+      ]);
+      return { previous };
+    },
+    onError: (_err, _product, context: any) => {
+      // Roll back optimistic update on failure
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(linkedKey, context.previous);
+      }
+    },
+    onSettled: () => {
+      // Always refetch to replace optimistic entry with real server data
+      queryClient.invalidateQueries({ queryKey: linkedKey });
       queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId] });
     },
+  });
+}
+
+/**
+ * Returns a Set of productIds that already have a linked MenuItem in the storefront.
+ * Used by the product cards to show an "In Menu" badge instead of the add button.
+ */
+export function useProductMenuStatus(storeId: string): { menuLinkedIds: Set<string>; isLoading: boolean } {
+  const { data, isLoading } = useQuery<LinkedMenuItem[]>({
+    queryKey: ["storefront-items-linked", storeId],
+    queryFn: () =>
+      fetch(`/api/stores/${storeId}/storefront/items`)
+        .then((r) => r.json())
+        .then((d) => (d?.data ?? []) as LinkedMenuItem[]),
+    enabled: !!storeId,
+    staleTime: 0,              // always considered stale → refetches on focus/invalidation
+    refetchOnWindowFocus: true,
+    select: (items) => items.filter((i) => !!i.productId),
+  });
+
+  const menuLinkedIds = new Set<string>(
+    (data ?? []).map((i) => i.productId).filter(Boolean) as string[]
+  );
+  return { menuLinkedIds, isLoading };
+}
+
+/**
+ * Returns the MenuItem linked to a specific productId (if any).
+ * Used in the edit dialog to detect drift and offer sync.
+ */
+export function useLinkedMenuItem(storeId: string, productId: string | null) {
+  return useQuery<LinkedMenuItem | null>({
+    queryKey: ["storefront-items-linked", storeId, productId],
+    queryFn: () =>
+      fetch(`/api/stores/${storeId}/storefront/items?productId=${productId}`)
+        .then((r) => r.json())
+        .then((d) => (d?.data?.[0] ?? null) as LinkedMenuItem | null),
+    enabled: !!storeId && !!productId,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 }

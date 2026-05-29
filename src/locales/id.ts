@@ -1341,6 +1341,10 @@ export const id = {
     title: "Dasbor",
     description:
       "Selamat datang di dasbor. Di sini Anda dapat melihat status terkini pesanan, resep, dan stok Anda.",
+    recentMovements: {
+      title: "Pergerakan Stok Terkini",
+      empty: "Belum ada pergerakan stok",
+    },
     storeSelector: {
       label: "Pilih toko",
       select: "Pilih toko",
@@ -1555,6 +1559,7 @@ export const id = {
     // Recipes section
     recipes: {
       pageTitle: "Resep",
+      demandBadge: "30h terakhir",
       addTitle: "Buat Resep Baru",
       addButton: "Tambah Resep",
       editTitle: "Edit Resep",
@@ -1775,6 +1780,7 @@ export const id = {
     // Products section
     products: {
       pageTitle: "Produk",
+      inMenu: "Di Menu",
       limitBadge: "produk",
       limitTooltip:
         "Anda telah mencapai batas produk paket Anda ({current}/{limit}). Upgrade ke Operations untuk produk tak terbatas.",
@@ -1857,12 +1863,15 @@ export const id = {
         view: "Lihat Produk",
         edit: "Edit Produk",
         addToMenu: "Tambahkan ke menu POS",
+        alreadyInMenu: "Sudah ada di menu POS",
         delete: "Hapus Produk",
       },
 
       // Toasts
       toasts: {
         addedToMenu: "ditambahkan ke menu POS",
+        syncMenuPrompt: "Harga/nama berubah. Sinkronkan ke menu POS?",
+        syncMenuAction: "Sinkronkan",
         adding: "Menambahkan produk...",
         added: {
           title: "Produk Berhasil Ditambahkan",
@@ -3062,12 +3071,18 @@ export const id = {
     },
   },
   tracking: {
+    // Tabs
+    tabs: {
+      levels: "Level Stok",
+      movements: "Pergerakan Terkini",
+    },
+
     // Page titles
     stockLevels: "Level Stok",
     movementHistory: "Riwayat Pergerakan",
     analytics: "Analitik",
 
-    // Movement types
+    // Movement types + tab UI strings
     movements: {
       in: "Masuk Stok",
       out: "Keluar Stok",
@@ -3075,6 +3090,8 @@ export const id = {
       production: "Produksi",
       waste: "Limbah",
       return: "Pengembalian",
+      searchPlaceholder: "Cari item…",
+      empty: "Belum ada pergerakan",
     },
 
     // Table headers

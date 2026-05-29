@@ -38,7 +38,18 @@ const SupplierCard = dynamic(
     })),
   {
     loading: () => <CardSkeleton rows={3} />,
-    ssr: false, // Prevent SSR to avoid hydration mismatch
+    ssr: false,
+  }
+);
+
+const RecentMovementsCard = dynamic(
+  () =>
+    import("../recent-movements/recent-movements-card").then((mod) => ({
+      default: mod.RecentMovementsCard,
+    })),
+  {
+    loading: () => <CardSkeleton rows={5} />,
+    ssr: false,
   }
 );
 
@@ -97,6 +108,11 @@ export function DashboardClient({
       <div className="grid w-full gap-4 md:grid-cols-2">
         <TrackingCard stockLevels={stockLevels} />
         <SupplierCard />
+      </div>
+
+      {/* Recent Stock Movements — POS sales, production, manual adjustments */}
+      <div className="w-full">
+        <RecentMovementsCard />
       </div>
     </div>
   );

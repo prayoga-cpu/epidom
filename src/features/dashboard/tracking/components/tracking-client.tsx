@@ -1,7 +1,9 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StockLevelsTab } from "./stock-levels-tab";
+import { MovementsTab } from "./movements-tab";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 
 interface TrackingClientProps {
@@ -22,8 +24,24 @@ export function TrackingClient({ initialMaterials, storeId }: TrackingClientProp
         </div>
       </div>
 
-      <StockLevelsTab initialMaterials={initialMaterials} />
+      <Tabs defaultValue="levels">
+        <TabsList className="mb-4">
+          <TabsTrigger value="levels">
+            {t("tracking.tabs.levels") || "Stock Levels"}
+          </TabsTrigger>
+          <TabsTrigger value="movements">
+            {t("tracking.tabs.movements") || "Recent Movements"}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="levels">
+          <StockLevelsTab initialMaterials={initialMaterials} />
+        </TabsContent>
+
+        <TabsContent value="movements">
+          <MovementsTab storeId={storeId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
-
