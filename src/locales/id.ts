@@ -1856,11 +1856,13 @@ export const id = {
       tooltips: {
         view: "Lihat Produk",
         edit: "Edit Produk",
+        addToMenu: "Tambahkan ke menu POS",
         delete: "Hapus Produk",
       },
 
       // Toasts
       toasts: {
+        addedToMenu: "ditambahkan ke menu POS",
         adding: "Menambahkan produk...",
         added: {
           title: "Produk Berhasil Ditambahkan",

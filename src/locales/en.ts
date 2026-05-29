@@ -1913,11 +1913,13 @@ export const en = {
       tooltips: {
         view: "View Product",
         edit: "Edit Product",
+        addToMenu: "Add to POS menu",
         delete: "Delete Product",
       },
 
       // Toasts
       toasts: {
+        addedToMenu: "added to POS menu",
         adding: "Adding product...",
         added: {
           title: "Product Added Successfully",

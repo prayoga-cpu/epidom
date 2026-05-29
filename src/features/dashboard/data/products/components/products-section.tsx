@@ -37,6 +37,7 @@ import {
   ChevronRight,
   Plus,
   Sparkles,
+  UtensilsCrossed,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils/formatting";
@@ -47,6 +48,7 @@ import {
   useDeleteProduct,
   useBulkDeleteProducts,
   useExportProducts,
+  useAddProductToMenu,
   type Product,
 } from "../hooks/use-products";
 import { useProductUsage } from "../hooks/use-product-usage";
@@ -110,6 +112,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const deleteProduct = useDeleteProduct(storeId);
   const bulkDeleteProducts = useBulkDeleteProducts(storeId);
   const exportProducts = useExportProducts();
+  const addToMenu = useAddProductToMenu(storeId);
   const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
 
   const products = data?.products || [];
@@ -543,7 +546,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
 
                   {/* Hover Actions */}
                   {!bulkSelectMode && (
-                    <div className="mt-2 grid grid-cols-3 gap-1 transition-opacity">
+                    <div className="mt-2 grid grid-cols-4 gap-1 transition-opacity">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -572,6 +575,34 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{t("data.products.tooltips.edit")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 w-full flex-1 text-xs text-green-600 hover:text-green-700"
+                            disabled={addToMenu.isPending}
+                            onClick={async () => {
+                              try {
+                                await addToMenu.mutateAsync(product);
+                                toast.success(
+                                  t("data.products.toasts.addedToMenu") ||
+                                    `"${product.name}" added to POS menu`
+                                );
+                              } catch (err) {
+                                toast.error(
+                                  err instanceof Error ? err.message : "Failed to add to menu"
+                                );
+                              }
+                            }}
+                          >
+                            <UtensilsCrossed className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("data.products.tooltips.addToMenu") || "Add to POS menu"}</p>
                         </TooltipContent>
                       </Tooltip>
                       <Tooltip>

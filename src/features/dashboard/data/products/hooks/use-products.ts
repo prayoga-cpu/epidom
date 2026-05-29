@@ -453,3 +453,35 @@ export function useExportProducts() {
       exportProducts(storeId, filters),
   });
 }
+
+/**
+ * Add a product to the store's POS menu as a MenuItem.
+ * Uses the existing storefront items endpoint.
+ */
+export function useAddProductToMenu(storeId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (product: Pick<Product, "id" | "name" | "sellingPrice">) => {
+      const response = await fetch(`/api/stores/${storeId}/storefront/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: product.name,
+          price: Number(product.sellingPrice),
+          productId: product.id,
+          isAvailable: true,
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || error.error || "Failed to add to menu");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate POS menu cache so the new item appears immediately
+      queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId] });
+    },
+  });
+}
