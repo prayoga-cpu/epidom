@@ -57,6 +57,28 @@ export function getStatusLabel(
 }
 
 /**
+ * Plan prices per currency. Primary market is Indonesia (IDR).
+ * USD and EUR are shown for international users.
+ */
+const PLAN_PRICES: Record<string, Record<string, string>> = {
+  POS: {
+    IDR: "Rp 99.000/bln",
+    USD: "$6/month",
+    EUR: "€19/month",
+  },
+  OPERATIONS: {
+    IDR: "Rp 249.000/bln",
+    USD: "$15/month",
+    EUR: "€49/month",
+  },
+  ENTERPRISE: {
+    IDR: "Sesuai Permintaan",
+    USD: "Custom",
+    EUR: "Custom",
+  },
+};
+
+/**
  * Plan details type
  */
 export interface PlanDetails {
@@ -67,31 +89,36 @@ export interface PlanDetails {
 }
 
 /**
- * Get plan details
+ * Get plan details, with price localised to the user's active currency.
+ * Pass currency from useCurrency() so the price updates when the user
+ * changes their currency setting without a page reload.
  */
 export function getPlanDetails(
   plan: string | undefined,
-  t: (key: string) => string
+  t: (key: string) => string,
+  currency: string = "IDR"
 ): PlanDetails {
+  const curr = currency === "IDR" || currency === "USD" || currency === "EUR" ? currency : "IDR";
+
   switch (plan) {
     case "OPERATIONS":
       return {
-        name: t("profile.subscription.plans.pro") || "Pro",
-        price: t("profile.subscription.pricing.pro") || "€79/month",
+        name: t("profile.subscription.plans.pro") || "Operations",
+        price: PLAN_PRICES.OPERATIONS[curr],
         color: "text-purple-600",
         badgeColor: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
       };
     case "ENTERPRISE":
       return {
         name: t("profile.subscription.plans.enterprise") || "Enterprise",
-        price: t("profile.subscription.pricing.enterprise") || "Custom",
+        price: PLAN_PRICES.ENTERPRISE[curr],
         color: "text-blue-600",
         badgeColor: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
       };
     default:
       return {
-        name: t("profile.subscription.plans.starter") || "Starter",
-        price: t("profile.subscription.pricing.starter") || "€29/month",
+        name: t("profile.subscription.plans.starter") || "POS",
+        price: PLAN_PRICES.POS[curr],
         color: "text-green-600",
         badgeColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
       };

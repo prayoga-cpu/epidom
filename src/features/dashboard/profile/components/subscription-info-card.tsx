@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useState } from "react";
 import { getStatusColor, getStatusLabel, getPlanDetails } from "@/lib/utils/subscription-helpers";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDate } from "@/lib/utils/format-date";
 
 interface SubscriptionInfoCardProps {
@@ -22,6 +23,7 @@ interface SubscriptionInfoCardProps {
 
 export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps) {
   const { t } = useI18n();
+  const { currency } = useCurrency();
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
 
@@ -78,7 +80,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
     );
   }
 
-  const planDetails = getPlanDetails(subscription.plan, t);
+  const planDetails = getPlanDetails(subscription.plan, t, currency);
   const isActive = subscription.status === "ACTIVE";
   const isPastDue = subscription.status === "PAST_DUE";
 
