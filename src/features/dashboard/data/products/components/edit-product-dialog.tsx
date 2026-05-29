@@ -37,7 +37,7 @@ type ProductWithRecipes = Product & {
 };
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUpdateProduct, useLinkedMenuItem } from "../hooks/use-products";
-import { toast as sonnerToast, toast } from "sonner";
+import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
 
@@ -238,19 +238,22 @@ export function EditProductDialog({
           savedFormDataRef.current = null;
           if (hasDrift) {
             // Offer to propagate the change to the linked MenuItem
-            toast({
-              description: `${t("data.products.toasts.syncMenuPrompt") || "Price/name changed. Sync to POS menu?"}`,
-              action: {
-                label: t("data.products.toasts.syncMenuAction") || "Sync",
-                onClick: async () => {
-                  await fetch(`/api/stores/${storeId}/storefront/items/${linkedMenuItem.id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name: data.name, price: convertToBase(retailPrice) }),
-                  });
+            sonnerToast(
+              t("data.products.toasts.syncMenuPrompt") || "Price/name changed. Sync to POS menu?",
+              {
+                action: {
+                  label: t("data.products.toasts.syncMenuAction") || "Sync",
+                  onClick: async () => {
+                    await fetch(`/api/stores/${storeId}/storefront/items/${linkedMenuItem.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ name: data.name, price: convertToBase(retailPrice) }),
+                    });
+                    sonnerToast.success(t("data.products.toasts.syncMenuDone") || "POS menu updated");
+                  },
                 },
-              },
-            });
+              }
+            );
           }
           return t("data.products.toasts.updated.title") || "Product updated";
         },

@@ -1,8 +1,55 @@
 # STATUS.md
 
-## Current Phase: i18n Dashboard Refactor — ✅ COMPLETE (2026-05-24)
+## Current State: Phase 5 + Maintenance — ✅ PRODUCTION LIVE (2026-05-29)
 
 *(AI Agents: Update this checklist every time you finish a task)*
+
+---
+
+## ✅ 2026-05-29 — Integration, Auth & UX Sprint
+
+### Auth & Production Fixes
+- [x] **SW clone bug** — `sw.js` was calling `response.clone()` inside an async `.then()` causing "body already used" errors on login. Fixed to clone synchronously before `caches.open()`.
+- [x] **Prisma 6 → 7 migration** — Removed `url`/`directUrl` from `schema.prisma`; created `prisma.config.ts` for CLI; swapped `PrismaClient datasources` option for `@prisma/adapter-pg` driver adapter; fixed `Decimal` import path (`runtime/library` → `runtime/client`).
+- [x] **DB connection** — Added `DIRECT_URL` (Neon non-pooled endpoint) for `prisma migrate deploy`; `DATABASE_URL` remains pooled for runtime.
+- [x] **OAuth error UX** — `onAPIError.errorURL: "/login"` routes all Better Auth OAuth failures to `/login?error=<code>` with a readable toast instead of the raw Better Auth HTML error page.
+- [x] **Onboarding save bug** — `storefrontApi.createCategory()` returns the inner data directly (apiClient strips wrapper); was reading `.data?.id` → always undefined → menu items silently skipped. Fixed to `.id`.
+- [x] **`hasOnboarded` flag** — New `User.hasOnboarded Boolean` column; migration applied; `POST /api/onboarding/complete` marks it on publish; `/onboarding` page redirects server-side for completed users (backward-compat also checks `storefront.isPublished`).
+- [x] **Currency sync** — `CurrencyProvider` now uses `useQuery` with the same `["profile", userId]` key as `useProfile`; `select()` normalises all cache shapes (full object / API envelope / legacy string) so currency updates instantly when user changes it in profile settings.
+- [x] **Subscription pricing per currency** — `getPlanDetails()` now accepts `currency` param; `SubscriptionInfoCard` reads live currency; prices shown as IDR / USD / EUR correctly.
+- [x] **Pricing labels fixed** — id.ts had `Rp 429.000` and `Rp 1.169.000`; corrected to `Rp 99.000` (POS) and `Rp 249.000` (OPERATIONS).
+
+### Data / Management / Tracking Integration
+- [x] **"Add to POS menu" button** on product cards in Data page — finds or creates matching `MenuCategory`, creates `MenuItem` with `productId`, shows "In Menu" badge immediately via optimistic update (`onMutate` + `onSettled` invalidation).
+- [x] **Sync-to-menu prompt** in edit-product-dialog — after saving, if name or price changed and a linked MenuItem exists, a toast offers one-click sync to update the MenuItem.
+- [x] **"In Menu" badge** — `useProductMenuStatus` queries all linked MenuItems; `staleTime: 0` + `refetchOnWindowFocus: true` so badge is always fresh.
+- [x] **Recipe demand badge** — "47× last 30d" badge on recipe cards via `GET /api/stores/[id]/recipes/demand` (SQL aggregation through Recipe→Product→MenuItem→OrderItem chain).
+- [x] **Tracking: Recent Movements tab** — store-wide stock movement list with type filter, item search, source context (POS order # / Batch #), color-coded type badges.
+- [x] **Dashboard: Recent Movements card** — last 8 stock movements with type and source on the main dashboard.
+- [x] **Stock movements API** — added `take` param + store-wide scoping (filters through `material.storeId` / `product.storeId` relation).
+- [x] **GET /storefront/items** — new endpoint with optional `?productId=` filter for linked-item lookup.
+- [x] **GET /storefront/categories** — new GET handler alongside existing POST.
+- [x] **Removed `data-manage.tsx`** — orphaned placeholder with hardcoded dummy data.
+
+### Storefront
+- [x] **Photo upload for logo and cover image** — replaced plain URL text inputs with `ImageUpload` component (drag-and-drop, Vercel Blob, compression, preview); logo: 1:1 · 400×400 min · 2 MB; cover: 16:9 · 1920×1080 ideal · 5 MB. Guide text below each field.
+
+### PWA
+- [x] **Install button** — `usePwaInstall` hook + `PwaInstallButton` in topbar; auto-hides when already in standalone mode.
+
+### Tests
+- [x] **311 tests passing** (25 files) — includes new auth suite (17 tests: getSession, /api/session, useLogin/useRegister) and 3 pre-existing vi.mock hoisting fixes.
+
+---
+
+## Developer / Operator To-Do (still pending)
+- [ ] Set `DIRECT_URL` in Vercel env vars (Neon non-pooled URL = `POSTGRES_URL_NON_POOLING`)
+- [ ] Set `DATABASE_URL` in Vercel env vars (Neon pooled URL)
+- [ ] Forward aggregator order emails to `orders@epidom.id` with subject prefix `[@slug] Original subject`
+- [ ] Add `XENDIT_SECRET_KEY` + `XENDIT_WEBHOOK_TOKEN` (Xendit dashboard → webhook URL `/api/webhooks/xendit`)
+- [ ] Add `FONNTE_API_TOKEN` (Fonnte device must be online)
+- [ ] Enable `acceptsOrders: true` on storefronts that should show Order & Pay
+- [ ] Enable `acceptsReservations: true` + toggle `reservationEnabled` per table
 
 ---
 

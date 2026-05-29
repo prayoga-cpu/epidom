@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { updateStorefrontSchema, UpdateStorefrontInput } from "@/lib/validation/storefront.schemas";
@@ -13,8 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, ExternalLink, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { ImageUpload } from "@/components/shared/image-upload";
+
+type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid_chars" | "too_short";
 
 interface StorefrontSettingsProps {
   storeId: string;
@@ -25,6 +27,9 @@ interface StorefrontSettingsProps {
 export function StorefrontSettings({ storeId, initialData, onSuccess }: StorefrontSettingsProps) {
   const { t } = useI18n();
   const [isSaving, setIsSaving] = useState(false);
+  const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
+  const slugDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialSlug = useRef<string>(initialData?.slug || "");
 
   const form = useForm<any>({
     resolver: zodResolver(updateStorefrontSchema),
@@ -57,15 +62,24 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
   });
 
   const onSubmit = async (data: UpdateStorefrontInput) => {
+    // Block save if the slug is known to be unavailable
+    if (slugStatus === "taken" || slugStatus === "invalid_chars" || slugStatus === "too_short") {
+      form.setError("slug", { message: t("storefront.settings.urlTaken") });
+      toast.error(t("storefront.settings.urlUnavailable"));
+      return;
+    }
     setIsSaving(true);
     try {
       await storefrontApi.updateStorefront(storeId, data);
       toast.success(t("storefront.settings.saveSuccess"));
+      initialSlug.current = (data.slug || "").trim().toLowerCase();
+      setSlugStatus("idle");
       onSuccess();
     } catch (error: any) {
       if (error.response?.status === 409) {
         form.setError("slug", { message: t("storefront.settings.urlTaken") });
         toast.error(t("storefront.settings.urlUnavailable"));
+        setSlugStatus("taken");
       } else {
         toast.error(t("storefront.settings.saveFailed"));
       }
@@ -74,8 +88,52 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
     }
   };
 
+  const checkSlug = (value: string) => {
+    if (slugDebounceRef.current) clearTimeout(slugDebounceRef.current);
+    const slug = value.trim().toLowerCase();
+
+    // Same as the saved slug — no need to check
+    if (slug === initialSlug.current) { setSlugStatus("idle"); return; }
+    if (slug.length < 2)              { setSlugStatus("too_short"); return; }
+    if (!/^[a-z0-9-]+$/.test(slug))  { setSlugStatus("invalid_chars"); return; }
+
+    setSlugStatus("checking");
+    slugDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/stores/${storeId}/storefront/check-slug?slug=${encodeURIComponent(slug)}`);
+        const json = await res.json();
+        setSlugStatus(json.data?.available ? "available" : "taken");
+      } catch {
+        setSlugStatus("idle");
+      }
+    }, 500);
+  };
+
   const domain = typeof window !== "undefined" ? window.location.origin : "";
   const publicUrl = `${domain}/@${form.watch("slug")}`;
+
+  const slugStatusIcon = () => {
+    if (slugStatus === "checking")  return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+    if (slugStatus === "available") return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+    if (slugStatus === "taken" || slugStatus === "invalid_chars" || slugStatus === "too_short")
+      return <XCircle className="h-4 w-4 text-destructive" />;
+    return null;
+  };
+
+  const slugStatusText = () => {
+    if (slugStatus === "checking")     return t("storefront.settings.slugChecking");
+    if (slugStatus === "available")    return t("storefront.settings.slugAvailable");
+    if (slugStatus === "taken")        return t("storefront.settings.slugTaken");
+    if (slugStatus === "invalid_chars")return t("storefront.settings.slugInvalidChars");
+    if (slugStatus === "too_short")    return t("storefront.settings.slugTooShort");
+    return t("storefront.settings.slugDesc");
+  };
+
+  const slugStatusColor = () => {
+    if (slugStatus === "available") return "text-green-600 dark:text-green-400";
+    if (slugStatus === "taken" || slugStatus === "invalid_chars" || slugStatus === "too_short") return "text-destructive";
+    return "text-muted-foreground";
+  };
 
   return (
     <Form {...form}>
@@ -131,14 +189,31 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                 <FormItem>
                   <FormLabel>{t("storefront.settings.slugLabel")}</FormLabel>
                   <FormControl>
-                    <div className="flex rounded-md border border-input shadow-sm focus-within:ring-1 focus-within:ring-ring">
-                      <div className="bg-muted px-3 py-2 text-sm text-muted-foreground border-r flex items-center">
+                    <div className={`flex rounded-md border shadow-sm focus-within:ring-1 focus-within:ring-ring transition-colors ${
+                      slugStatus === "taken" || slugStatus === "invalid_chars" || slugStatus === "too_short"
+                        ? "border-destructive"
+                        : slugStatus === "available"
+                          ? "border-green-500"
+                          : "border-input"
+                    }`}>
+                      <div className="bg-muted px-3 py-2 text-sm text-muted-foreground border-r flex items-center select-none">
                         epidom.fr/@
                       </div>
-                      <input {...field} className="flex-1 bg-transparent px-3 py-2 text-sm outline-none" placeholder={t("storefront.settings.slugPlaceholder")} />
+                      <input
+                        {...field}
+                        className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
+                        placeholder={t("storefront.settings.slugPlaceholder")}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          checkSlug(e.target.value);
+                        }}
+                      />
+                      {slugStatus !== "idle" && (
+                        <div className="flex items-center pr-3">{slugStatusIcon()}</div>
+                      )}
                     </div>
                   </FormControl>
-                  <FormDescription>{t("storefront.settings.slugDesc")}</FormDescription>
+                  <FormDescription className={slugStatusColor()}>{slugStatusText()}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -423,7 +498,16 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
           <Button type="button" variant="outline" onClick={() => form.reset()}>
             {t("storefront.settings.cancelButton")}
           </Button>
-          <Button type="submit" disabled={isSaving}>
+          <Button
+            type="submit"
+            disabled={
+              isSaving ||
+              slugStatus === "checking" ||
+              slugStatus === "taken" ||
+              slugStatus === "invalid_chars" ||
+              slugStatus === "too_short"
+            }
+          >
             {isSaving ? t("storefront.settings.savingButton") : t("storefront.settings.saveButton")}
           </Button>
         </div>

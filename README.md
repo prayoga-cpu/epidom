@@ -1,183 +1,202 @@
-**EPIDOM** - A free, all-in-one operating system for small Indonesian food & beverage businesses (warung, café, restaurant, cookie bar, home kitchen).
-It provides a customizable public storefront page, POS, operations (shift, KDS, inventory), and finance reports.
+# EPIDOM
+
+**EPIDOM** is a free, all-in-one operating system for small Indonesian food & beverage businesses — warung, café, restaurant, cookie bar, home kitchen. The wedge is a customizable public storefront page (replaces Linktree + Google Drive menu + WhatsApp ordering). The ladder upsells to POS, operations (shift, KDS, inventory), and finance reports.
+
+---
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router with Turbopack), React 19
-- **Language**: TypeScript
-- **Database**: PostgreSQL + Prisma ORM
-- **Authentication**: **Better Auth** (Email/Password + Google OAuth)
-- **Payment**: Stripe (SaaS subscription billing) & Xendit (end-customer QRIS payments)
-- **State Management**: TanStack Query (React Query) v5
-- **UI Components**: shadcn/ui
-- **Styling**: Tailwind CSS 4 with epi-* dark-navy design tokens
-- **Theme**: next-themes (dark/light toggle, default dark, epi-navy palette)
-- **Internationalization**: Custom i18n provider (EN / ID / FR — EN primary for dashboard)
-- **Email**: Resend
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router, Turbopack), React 19 |
+| Language | TypeScript 5 |
+| Database | PostgreSQL 16 + Prisma ORM 7 (pg driver adapter) |
+| Auth | Better Auth (email/password + Google OAuth) |
+| Payments | Stripe (SaaS billing) · Xendit (QRIS/GoPay/OVO/DANA) |
+| State | TanStack Query v5 |
+| UI | shadcn/ui (New York) · Tailwind CSS 4 · Radix · Lucide |
+| Theme | next-themes · epi-navy dark tokens · epi-cream light |
+| i18n | Custom provider — `id` primary, `en` secondary |
+| Email | Resend |
+| Storage | Vercel Blob |
+| Background jobs | Inngest |
+| Hosting | Vercel |
+
+---
 
 ## Developer Setup
 
 ### Prerequisites
 
-- Node.js 18+ (recommended: 20 LTS)
-- pnpm package manager
-- PostgreSQL 14+ database
-- Stripe account (for payment testing)
+- Node.js 20 LTS
+- pnpm ≥ 9
+- PostgreSQL 14+ (local) **or** a Neon/Vercel Postgres database
 
-### 1. Install Dependencies
+### 1. Install
 
 ```bash
 pnpm install
 ```
 
-### 2. Setup Environment Variables
+### 2. Environment Variables
 
-Create a `.env` file in the root directory (see `.env.example`):
+Copy `.env.example` to `.env` and fill in values. The two most critical for database:
 
 ```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/epidom"
-
-# Better Auth Configuration
-BETTER_AUTH_SECRET="generate-strong-random-key"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-
-# Authentication Providers (Google OAuth)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-
-# Stripe Configuration
-STRIPE_SECRET_KEY="sk_test_..."
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
-
-# Email (Resend)
-RESEND_API_KEY="re_..."
-EMAIL_FROM="EPIDOM <noreply@yourdomain.com>"
+# Pooled endpoint — used by the app at runtime
+DATABASE_URL="postgresql://user:pass@host-pooler.region.neon.tech/db?sslmode=require"
+# Direct endpoint — used by Prisma CLI for migrations
+DIRECT_URL="postgresql://user:pass@host.region.neon.tech/db?sslmode=require"
 ```
 
-### 3. Setup Database
+See `.env.example` for the complete reference.
+
+### 3. Database
 
 ```bash
-# Create database schema and run migrations
-pnpm prisma migrate dev
-
-# (Optional) Open Prisma Studio to view data
-pnpm prisma studio
+pnpm prisma migrate deploy   # apply all migrations
+pnpm tsx seed-dummy.ts       # seed demo@epidom.com / password123
 ```
 
-### 4. Run Development Server
+### 4. Run
 
 ```bash
-pnpm dev
+pnpm dev        # Turbopack dev server → http://localhost:3000
+pnpm build      # production build (runs migrate deploy first)
+pnpm start      # serve production build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
-
-## Available Scripts
+### 5. Other Scripts
 
 ```bash
-# Development
-pnpm dev              # Start development server with Turbopack
-
-# Production
-pnpm build            # Build for production
-pnpm start            # Start production server
-
-# Database
-pnpm prisma migrate dev      # Create and run migrations
-pnpm prisma migrate reset    # Reset database (DEVELOPMENT ONLY!)
-pnpm prisma studio          # Open Prisma Studio UI
-
-# Linting & Type Checking
-pnpm lint             # Run ESLint
-pnpm type-check       # Run TypeScript type checking
+pnpm type-check            # tsc --noEmit
+pnpm lint                  # ESLint
+pnpm test                  # Vitest (~311 tests)
+pnpm prisma studio         # DB GUI
+pnpm prisma migrate reset  # ⚠️ wipes local DB — dev only
 ```
+
+---
 
 ## Project Structure
 
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── (app)/             # Protected routes (requires subscription)
-│   ├── (marketing)/       # Public marketing routes
-│   ├── api/               # API routes & webhooks
-│   └── layout.tsx         # Root layout with providers
-├── components/            # Shared React components
-├── features/              # Feature modules (auth, dashboard, etc.)
-├── hooks/                 # Custom React hooks
-├── lib/                   # Utilities & services
-│   ├── auth.ts            # Better Auth server config
-│   ├── auth-client.ts     # Client auth hooks
-│   ├── prisma.ts          # DB client
-│   └── validation/        # Zod schemas
-├── locales/               # i18n translations (ID primary, EN secondary)
-├── types/                 # TypeScript type definitions
-└── utils/                 # Helper utilities
+├── app/
+│   ├── (app)/             # Authenticated app surface
+│   │   ├── (auth)/        # Login, register, password reset, onboarding
+│   │   ├── admin/         # Admin panel (master accounts only)
+│   │   ├── owner/         # Multi-outlet owner dashboard
+│   │   ├── profile/       # User profile & subscription
+│   │   ├── stores/        # Store selector
+│   │   └── store/[storeId]/(dashboard)/
+│   │       ├── dashboard/ # Stock overview, alerts, production chart
+│   │       ├── data/      # Products · Materials · Recipes · Suppliers
+│   │       ├── management/# Deliveries · Production · History · Stock
+│   │       ├── tracking/  # Stock levels + Recent movements
+│   │       ├── alerts/    # Low-stock & critical alerts
+│   │       ├── storefront/# Storefront editor + analytics
+│   │       ├── pos/       # POS cashier
+│   │       ├── pos/orders/# Order queue
+│   │       ├── pos/kds/   # Kitchen Display System
+│   │       ├── pos/tables/# Table management + reservations
+│   │       ├── staff/     # Staff management
+│   │       ├── shifts/    # Shift management
+│   │       └── finance/   # Finance reports
+│   ├── (marketing)/       # Public marketing site
+│   ├── (public)/          # Public storefronts /@slug
+│   └── api/               # REST API routes
+├── features/              # Feature modules (one folder per domain)
+├── components/            # Shared UI (shadcn primitives, providers)
+├── hooks/                 # Shared custom hooks
+├── lib/                   # Auth, Prisma, services, validation, utils
+├── locales/               # id.ts (primary) · en.ts
+└── types/                 # TypeScript DTOs
 ```
 
-## Key Features
+---
 
-### ✅ Authentication
+## Feature Map
 
-- **Better Auth** integration
-- Secure session management (HMAC signed cookies)
-- Google OAuth & Credential login
-- Protected routes middleware
+### Auth & Onboarding
+- Email/password + Google OAuth via Better Auth
+- Email verification with resend flow
+- Guided 5-step onboarding (business → logo → menu → theme → publish)
+- `hasOnboarded` flag — `/onboarding` redirects server-side once complete
+- OAuth errors redirect to `/login` with human-readable toast
+- PWA install button in topbar (hides when already installed/standalone)
 
-### ✅ Payment System
+### Storefront (`/@slug`)
+- Customizable public menu page
+- Photo upload: logo (1:1 · 400×400 min · 2 MB) and cover (16:9 · 1920×1080 ideal · 5 MB)
+- Theme color, tagline, description, social links, custom links
+- Online ordering (customer checkout + order tracking)
+- Table reservations (public booking form)
+- GoFood / GrabFood / ShopeeFood / Tokopedia aggregator links
 
-- Stripe Checkout Sessions (FREE / POS / OPERATIONS / ENTERPRISE plans)
-- 80/20 revenue split (via Stripe Connect scaffolding)
-- Webhook handling for payment events
-- Xendit QRIS end-customer payments (stub if key absent)
+### POS & Operations (POS+ plan)
+- POS cashier — menu grid, cart, checkout (CASH / CARD / TRANSFER / QRIS)
+- Order types: DINE_IN, TAKEOUT, DELIVERY
+- Kitchen Display System (KDS)
+- Real-time order queue (SSE)
+- Table management + reservations dashboard
+- Staff PIN login + email invitation
+- Shift management with cash reconciliation
 
-### ✅ Store Management
+### Inventory (OPERATIONS+ plan)
+- **Data** — Products, Materials, Recipes, Suppliers (CRUD, bulk delete, CSV export, AI Smart Import)
+- "Add to POS menu" on product cards — finds/creates matching category, shows "In Menu" badge instantly (optimistic update)
+- Sync-to-menu prompt when product price/name changes and a linked MenuItem exists
+- POS demand badge on recipe cards (30-day order count)
+- **Management** — Deliveries, Production batches, Production history, Stock adjustment
+- **Tracking** — Stock Levels tab + Recent Movements tab (with POS order # / batch # source)
+- Automatic stock deduction on order → DELIVERED (serializable transaction)
+- LOW_STOCK / CRITICAL_STOCK alerts with notification bell
 
-- Multi-store support (Business -> Stores)
-- Inventory/materials tracking
-- Recipe & product management
-- Production batch tracking
+### Finance & Reporting (OPERATIONS+ plan)
+- Daily / weekly / monthly P&L: revenue, COGS, gross margin %
+- Per-channel breakdown (DIRECT, GOFOOD, GRABFOOD, SHOPEEFOOD, TOKOPEDIA)
+- Top-selling items, shift reconciliation, CSV/Excel export
 
-### ✅ Internationalization (i18n)
+### Multi-outlet & Admin
+- Owner dashboard — rolls up all stores (ENTERPRISE)
+- Admin panel — subscriptions, passwords, account management (master accounts)
+- Aggregator email ingestion via Inngest + OpenAI
 
-- English (EN), Indonesian (ID), French (FR) — full translations across dashboard and marketing
-- Language switcher on marketing pages and dashboard topbar
+### Billing
+- Plans: FREE · POS (Rp 99,000/mo) · OPERATIONS (Rp 249,000/mo) · ENTERPRISE
+- Stripe Checkout + Customer Portal
+- Subscription price on profile updates live per user currency (IDR / USD / EUR)
 
-### ✅ Dark / Light Mode
+---
 
-- `next-themes` with class-based dark mode, default dark
-- epi-navy-* design tokens bridged into shadcn CSS vars
-- Cream light mode (`#FBF9E4` base) with matching gradient body
+## Database Schema (key relationships)
 
-### ✅ Dashboard
+```
+User → Business → Store → Storefront → MenuItem → MenuCategory
+                         → Product ← RecipeProduct → Recipe → RecipeIngredient → Material
+                         → Order → OrderItem
+                         → StockMovement
+                         → ProductionBatch
+                         → Staff · Shift · Table · Reservation
+                         → Alert · Subscription
+```
 
-- Revenue analytics & business insights
-- Complete Inventory Management (real-time sync)
-- Production planning & batch tracking
-- Role-based access control per store
-- Finance reports: revenue, COGS, gross margin, channel P&L, top items
-- Multi-outlet owner rollup dashboard (ENTERPRISE)
-- Aggregator email ingestion (GoFood / GrabFood / ShopeeFood / Tokopedia via Inngest + OpenAI)
-- Storefront editor: profile, menu categories, analytics
-- POS Cashier, KDS, Table Management, Order Queue
-- Staff PIN login with email invitation flow (PIN delivered via Resend)
-- Table Reservations: per-table toggle, public booking form, dashboard management panel
-- Finance reports (accessible in beta without plan gate)
-- Shifts: currency-aware formatting, sortable columns (date / name / opening cash)
-- Account Settings: data usage stats, linked accounts, change password, delete account
-- BETA badge on user profile
+All queries scope to `storeId`. Money uses `Prisma.Decimal` (never Float).
 
-## Development Workflow
+---
 
-### Adding a New Page
+## Key Patterns
 
-1. Create route folder in `src/app/(app)/` or `src/app/(marketing)/`
-2. Add `page.tsx`
-3. Import feature components from `src/features/...`
+- **API handler** — `withApiHandler()` in `src/lib/api-handler.ts` — auth, rate-limiting, store ownership, error serialization
+- **Plan gating** — `requirePlan(storeId, "OPERATIONS")` in layout; sidebar shows locked state gracefully
+- **Currency** — `CurrencyProvider` shares React Query cache with `useProfile`; `formatPrice()` auto-converts; propagates instantly on profile update
+- **i18n** — `useI18n()` everywhere; `id.ts` primary, `en.ts` secondary
 
-### Database Changes
+---
 
-1. Update `prisma/schema.prisma`
-2. Run `pnpm prisma migrate dev --name describe_change`
-3. Test with `pnpm prisma studio`
+## Deployment (Vercel)
+
+1. Add `DATABASE_URL` + `DIRECT_URL` (Neon pooled vs direct endpoints) in Vercel env vars
+2. `pnpm build` runs `prisma migrate deploy && next build` automatically
+3. Service worker at `/public/sw.js` — cache-first static, network-first navigation, never intercepts `/api/`
