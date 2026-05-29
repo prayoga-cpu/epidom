@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, ExternalLink } from "lucide-react";
+import { ImageUpload } from "@/components/shared/image-upload";
 
 interface StorefrontSettingsProps {
   storeId: string;
@@ -191,14 +192,25 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
             <CardDescription>{t("storefront.settings.visualDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="logoUrl"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t("storefront.settings.logoUrl")}</FormLabel>
-                    <FormControl><Input placeholder="https://..." {...field} /></FormControl>
+                    <FormControl>
+                      <ImageUpload
+                        value={field.value || undefined}
+                        onChange={(url) => field.onChange(url ?? "")}
+                        aspectRatio="1/1"
+                        maxSize={2}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t("storefront.settings.logoGuide") ||
+                        "Square · 400×400 px min, 1:1 ratio · max 2 MB · PNG or WebP recommended"}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -209,8 +221,18 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t("storefront.settings.heroImageUrl")}</FormLabel>
-                    <FormControl><Input placeholder="https://..." {...field} /></FormControl>
-                    <FormDescription>Recommended: 16:9 ratio — min 1200×675px, ideal 1920×1080px</FormDescription>
+                    <FormControl>
+                      <ImageUpload
+                        value={field.value || undefined}
+                        onChange={(url) => field.onChange(url ?? "")}
+                        aspectRatio="16/9"
+                        maxSize={5}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t("storefront.settings.heroGuide") ||
+                        "Banner · 1920×1080 px ideal (16:9) · min 1200×675 px · max 5 MB · JPEG or WebP"}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
