@@ -2,7 +2,9 @@
 // Supports offline POS shell loading. Orders use IndexedDB queue (idb-keyval),
 // not SW background-sync, for broader browser compatibility (including iOS Safari).
 
-const CACHE_NAME = "epidom-v1";
+// Bump this version on any precached-asset change (e.g. favicon) so the
+// activate handler purges the old cache and install re-precaches fresh copies.
+const CACHE_NAME = "epidom-v2";
 
 // Minimal precache: only assets that are stable across builds
 const PRECACHE = ["/favicon.ico"];
