@@ -47,24 +47,35 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Use React Query with the same key as useProfile so cache invalidation
-  // on profile update (e.g. currency change) propagates here automatically.
-  const { data: profileData } = useQuery({
+  // Use the same query key as use-profile.ts so this reads from the shared
+  // cache and re-runs when the profile is invalidated after a currency update.
+  // select() extracts just the currency regardless of what shape the cache
+  // holds (full profile object vs. raw API envelope).
+  const { data: currencyFromProfile } = useQuery<any, Error, string | undefined>({
     queryKey: ["profile", user?.id],
     queryFn: () =>
       fetch("/api/user/profile")
         .then((r) => r.json())
-        .then((d) => d?.data?.currency as string | undefined),
+        .then((d) => (d?.success && d?.data ? d.data : d)),
     enabled: !!user?.id && !userLoading,
     staleTime: 5 * 60 * 1000,
+    select: (data: any): string | undefined => {
+      // data can be: full profile object { currency, ... }
+      //           or API envelope        { success, data: { currency, ... } }
+      //           or just a string       "EUR" (legacy cache entry)
+      if (typeof data === "string") return data;
+      if (data?.currency) return data.currency as string;
+      if (data?.data?.currency) return data.data.currency as string;
+      return undefined;
+    },
   });
 
   useEffect(() => {
-    if (!profileData) return;
-    if (profileData === "EUR" || profileData === "USD" || profileData === "IDR") {
-      setUserCurrency(profileData);
+    if (!currencyFromProfile) return;
+    if (currencyFromProfile === "EUR" || currencyFromProfile === "USD" || currencyFromProfile === "IDR") {
+      setUserCurrency(currencyFromProfile);
     }
-  }, [profileData]);
+  }, [currencyFromProfile]);
 
   // Fetch exchange rate only for USD
   useEffect(() => {
