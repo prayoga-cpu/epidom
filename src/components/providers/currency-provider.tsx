@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/lib/auth-client";
 import type { Currency } from "@/lib/utils/formatting";
 
@@ -41,29 +42,31 @@ const CURRENCY_LOCALE: Record<Currency, string> = {
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const { user, loading: userLoading } = useUser();
-  // Default to IDR — primary market is Indonesia
   const [userCurrency, setUserCurrency] = useState<Currency>("IDR");
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch user's currency preference from profile
-  useEffect(() => {
-    if (!user?.id || userLoading) return;
-    fetch("/api/user/profile")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.data?.currency) {
-          const c = data.data.currency as string;
-          if (c === "EUR" || c === "USD" || c === "IDR") {
-            setUserCurrency(c);
-          }
-        }
-      })
-      .catch(() => {});
-  }, [user?.id, userLoading]);
+  // Use React Query with the same key as useProfile so cache invalidation
+  // on profile update (e.g. currency change) propagates here automatically.
+  const { data: profileData } = useQuery({
+    queryKey: ["profile", user?.id],
+    queryFn: () =>
+      fetch("/api/user/profile")
+        .then((r) => r.json())
+        .then((d) => d?.data?.currency as string | undefined),
+    enabled: !!user?.id && !userLoading,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  // Fetch exchange rate only for USD (EUR and IDR are base currencies for their markets)
+  useEffect(() => {
+    if (!profileData) return;
+    if (profileData === "EUR" || profileData === "USD" || profileData === "IDR") {
+      setUserCurrency(profileData);
+    }
+  }, [profileData]);
+
+  // Fetch exchange rate only for USD
   useEffect(() => {
     if (userLoading) return;
     if (userCurrency !== "USD") {

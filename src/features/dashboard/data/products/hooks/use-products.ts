@@ -456,13 +456,41 @@ export function useExportProducts() {
 
 /**
  * Add a product to the store's POS menu as a MenuItem.
- * Uses the existing storefront items endpoint.
+ * Finds or creates a MenuCategory matching the product's category so the
+ * item shows up grouped correctly in the POS.
  */
 export function useAddProductToMenu(storeId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (product: Pick<Product, "id" | "name" | "sellingPrice">) => {
+    mutationFn: async (product: Pick<Product, "id" | "name" | "sellingPrice" | "category">) => {
+      // Resolve category: find existing or create new one matching the product's category
+      let categoryId: string | null = null;
+      if (product.category) {
+        try {
+          const existing: any[] = await fetch(`/api/stores/${storeId}/storefront/categories`)
+            .then((r) => r.json())
+            .then((d) => d?.data ?? []);
+          const match = existing.find(
+            (c: any) => c.name?.toLowerCase() === product.category?.toLowerCase()
+          );
+          if (match) {
+            categoryId = match.id;
+          } else {
+            const created = await fetch(`/api/stores/${storeId}/storefront/categories`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: product.category, displayOrder: existing.length }),
+            })
+              .then((r) => r.json())
+              .then((d) => d?.data);
+            categoryId = created?.id ?? null;
+          }
+        } catch {
+          // non-fatal — item will still be created without a category
+        }
+      }
+
       const response = await fetch(`/api/stores/${storeId}/storefront/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -470,6 +498,7 @@ export function useAddProductToMenu(storeId: string) {
           name: product.name,
           price: Number(product.sellingPrice),
           productId: product.id,
+          categoryId,
           isAvailable: true,
         }),
       });
@@ -480,7 +509,6 @@ export function useAddProductToMenu(storeId: string) {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate POS menu cache so the new item appears immediately
       queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId] });
     },
   });

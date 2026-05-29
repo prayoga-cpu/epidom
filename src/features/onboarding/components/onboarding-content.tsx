@@ -86,25 +86,26 @@ export function OnboardingContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, address: "Online" }),
       });
-      if (res.ok) {
-        const { data } = await res.json();
-        setStoreId(data.storeId);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to save business");
 
-        const slug = name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)+/g, "");
-        await storefrontApi.updateStorefront(data.storeId, {
-          displayName: name,
-          tagline,
-          slug,
-          isPublished: false,
-        } as any);
+      const { data } = json;
+      setStoreId(data.storeId);
 
-        setStep(2);
-      }
-    } catch (_) {
-      toast.error(t("onboarding.storeSetup.step1.saveFailed"));
+      const slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+      await storefrontApi.updateStorefront(data.storeId, {
+        displayName: name,
+        tagline,
+        slug,
+        isPublished: false,
+      } as any);
+
+      setStep(2);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("onboarding.storeSetup.step1.saveFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -148,26 +149,25 @@ export function OnboardingContent() {
     if (!storeId) return;
     setIsSubmitting(true);
     try {
-      const categoryRes = await storefrontApi.createCategory(storeId, {
+      // apiClient returns the inner data payload directly — no .data wrapper
+      const category = await storefrontApi.createCategory(storeId, {
         name: t("onboarding.storeSetup.step3.defaultCategoryName"),
         displayOrder: 0,
       });
-      const categoryId = categoryRes.data?.id;
+      const categoryId = category?.id;
 
-      if (categoryId) {
-        for (const item of menuItems) {
-          if (!item.name.trim()) continue;
-          await storefrontApi.createItem(storeId, {
-            name: item.name,
-            price: item.price,
-            categoryId,
-            isAvailable: true,
-          } as any);
-        }
+      for (const item of menuItems) {
+        if (!item.name.trim()) continue;
+        await storefrontApi.createItem(storeId, {
+          name: item.name,
+          price: item.price,
+          categoryId: categoryId ?? null,
+          isAvailable: true,
+        } as any);
       }
       setStep(4);
-    } catch (_) {
-      toast.error(t("onboarding.storeSetup.step3.saveFailed"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("onboarding.storeSetup.step3.saveFailed"));
     } finally {
       setIsSubmitting(false);
     }

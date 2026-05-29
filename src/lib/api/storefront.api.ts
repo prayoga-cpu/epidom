@@ -20,6 +20,10 @@ export class StorefrontApi {
 
   // ============ Category Operations ============
 
+  async getCategories(storeId: string): Promise<any[]> {
+    return apiClient.get(`/stores/${storeId}/storefront/categories`);
+  }
+
   async createCategory(storeId: string, input: CreateMenuCategoryInput): Promise<any> {
     return apiClient.post(`/stores/${storeId}/storefront/categories`, input);
   }

@@ -2348,8 +2348,8 @@ export const id = {
         enterprise: "Enterprise",
       },
       pricing: {
-        starter: "Rp 429.000/bulan",
-        pro: "Rp 1.169.000/bulan",
+        starter: "Rp 99.000/bulan",
+        pro: "Rp 249.000/bulan",
         enterprise: "Sesuai Permintaan",
       },
       status: {
