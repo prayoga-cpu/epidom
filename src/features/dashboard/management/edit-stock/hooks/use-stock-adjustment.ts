@@ -108,8 +108,8 @@ export function useStockAdjustment(storeId: string) {
               ...oldData,
               materials: oldData.materials.map((m) => {
                 if (m.id === input.materialId) {
-                  const currentStock = Number(m.currentStock) || 0;
-                  return { ...m, currentStock: (currentStock + adjustment) as unknown as Decimal };
+                  const currentStock = m.currentStock || 0;
+                  return { ...m, currentStock: currentStock + adjustment };
                 }
                 return m;
               }),
@@ -157,8 +157,8 @@ export function useStockAdjustment(storeId: string) {
               ...oldData,
               products: oldData.products.map((p) => {
                 if (p.id === input.productId) {
-                  const currentStock = Number(p.currentStock) || 0;
-                  return { ...p, currentStock: (currentStock + adjustment) as unknown as Decimal };
+                  const currentStock = p.currentStock || 0;
+                  return { ...p, currentStock: currentStock + adjustment };
                 }
                 return p;
               }),
@@ -201,7 +201,7 @@ export function useStockAdjustment(storeId: string) {
               ...oldData,
               materials: oldData.materials.map((m) =>
                 m.id === input.materialId
-                  ? { ...m, currentStock: realStock as unknown as Decimal }
+                  ? { ...m, currentStock: realStock }
                   : m
               ),
             };
@@ -244,7 +244,7 @@ export function useStockAdjustment(storeId: string) {
               ...oldData,
               products: oldData.products.map((p) =>
                 p.id === input.productId
-                  ? { ...p, currentStock: realStock as unknown as Decimal }
+                  ? { ...p, currentStock: realStock }
                   : p
               ),
             };

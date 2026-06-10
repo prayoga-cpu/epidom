@@ -48,7 +48,7 @@ export class BusinessService {
     // Check if user already has a business
     const existingBusiness = await this.businessRepo.findByUserId(userId);
     if (existingBusiness) {
-      throw new Error("User already has a business");
+      throw new DuplicateError("Business");
     }
 
     // Create business
@@ -64,7 +64,7 @@ export class BusinessService {
   async getBusinessById(businessId: string): Promise<Business> {
     const business = await this.businessRepo.findById(businessId);
     if (!business) {
-      throw new Error("Business not found");
+      throw new BusinessNotFoundError();
     }
     return business;
   }
@@ -82,7 +82,7 @@ export class BusinessService {
   async getBusinessWithStores(businessId: string): Promise<BusinessWithStoresDto> {
     const business = await this.businessRepo.getWithStores(businessId);
     if (!business) {
-      throw new Error("Business not found");
+      throw new BusinessNotFoundError();
     }
     return business;
   }
@@ -98,10 +98,10 @@ export class BusinessService {
     // Verify business exists and belongs to user
     const business = await this.businessRepo.findById(businessId);
     if (!business) {
-      throw new Error("Business not found");
+      throw new BusinessNotFoundError();
     }
     if (business.userId !== userId) {
-      throw new Error("Unauthorized to update this business");
+      throw new ForbiddenError("Unauthorized to update this business");
     }
 
     // Update business
@@ -125,10 +125,10 @@ export class BusinessService {
     // Verify business belongs to user
     const business = await this.businessRepo.findById(businessId);
     if (!business) {
-      throw new Error("Business not found");
+      throw new BusinessNotFoundError();
     }
     if (business.userId !== userId) {
-      throw new Error("Unauthorized to delete this business");
+      throw new ForbiddenError("Unauthorized to delete this business");
     }
 
     await this.businessRepo.delete(businessId);
@@ -160,11 +160,11 @@ export class BusinessService {
         });
 
         if (!business) {
-          throw new Error("Business not found");
+          throw new BusinessNotFoundError();
         }
 
         if (business.userId !== userId) {
-          throw new Error("Unauthorized to create store for this business");
+          throw new ForbiddenError("Unauthorized to create store for this business");
         }
 
         // 2. Check subscription and store limit WITHIN transaction (prevents race condition)
@@ -175,7 +175,7 @@ export class BusinessService {
         });
 
         if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
-          throw new Error("No active subscription found. Please subscribe to create stores.");
+          throw new SubscriptionInactiveError();
         }
 
         // Count current stores WITHIN transaction (with lock, this is accurate)
@@ -190,9 +190,7 @@ export class BusinessService {
         const allowed = canCreateStore(subscription.plan, currentStoreCount);
 
         if (!allowed) {
-          throw new Error(
-            `You have reached your plan's store limit (${currentStoreCount}/${limit}). Upgrade to Pro to add more stores.`
-          );
+          throw new StoreLimitExceededError(currentStoreCount, limit);
         }
 
         // 3. Check if store name already exists for this business (within transaction)
@@ -207,7 +205,7 @@ export class BusinessService {
         });
 
         if (nameExists) {
-          throw new Error("A store with this name already exists in your business");
+          throw new ConflictError("A store with this name already exists in your business");
         }
 
         // 4. Create store (within transaction)
@@ -243,7 +241,7 @@ export class BusinessService {
   async getStoreById(storeId: string): Promise<StoreDto> {
     const store = await this.storeRepo.findById(storeId);
     if (!store) {
-      throw new Error("Store not found");
+      throw new StoreNotFoundError(storeId);
     }
     return store as unknown as StoreDto;
   }
@@ -260,13 +258,13 @@ export class BusinessService {
     // Verify store belongs to business
     const belongsToBusiness = await this.storeRepo.belongsToBusiness(storeId, businessId);
     if (!belongsToBusiness) {
-      throw new Error("Store does not belong to this business");
+      throw new ForbiddenError("Store does not belong to this business");
     }
 
     // Verify business belongs to user
     const business = await this.businessRepo.findById(businessId);
     if (!business || business.userId !== userId) {
-      throw new Error("Unauthorized to update this store");
+      throw new ForbiddenError("Unauthorized to update this store");
     }
 
     // If updating name, check if new name already exists
@@ -277,7 +275,7 @@ export class BusinessService {
         storeId // Exclude current store from check
       );
       if (nameExists) {
-        throw new Error("A store with this name already exists in your business");
+        throw new ConflictError("A store with this name already exists in your business");
       }
     }
 
@@ -327,15 +325,15 @@ export class BusinessService {
       });
 
       if (!store) {
-        throw new Error("Store not found");
+        throw new StoreNotFoundError(storeId);
       }
 
       if (store.businessId !== businessId) {
-        throw new Error("Store does not belong to this business");
+        throw new ForbiddenError("Store does not belong to this business");
       }
 
       if (store.business.userId !== userId) {
-        throw new Error("Unauthorized to delete this store");
+        throw new ForbiddenError("Unauthorized to delete this store");
       }
 
       // Log warning if store has related data (for debugging)

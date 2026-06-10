@@ -1,11 +1,12 @@
 "use client";
 
+import type { SerializeDecimal } from "@/types/prisma";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StockLevelsTab } from "./stock-levels-tab";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 
 interface TrackingClientProps {
-  initialMaterials?: MaterialWithSuppliers[];
+  initialMaterials?: SerializeDecimal<MaterialWithSuppliers>[];
   storeId: string;
 }
 

@@ -19,18 +19,11 @@ import {
   Mail,
   MapPin,
   Package,
-<<<<<<< HEAD
-  Loader2,
-=======
->>>>>>> dev
   AlertCircle,
   CheckCircle,
   ArrowRight,
 } from "lucide-react";
-<<<<<<< HEAD
-=======
 import { LottieLoader } from "@/components/ui/lottie-loader";
->>>>>>> dev
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -338,11 +331,7 @@ export function OrdersView() {
                         >
                           {placingOrder === order.id ? (
                             <>
-<<<<<<< HEAD
-                              <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
-=======
                               <LottieLoader size="xs" className="mr-1 hidden sm:inline" />
->>>>>>> dev
                               {t("alerts.placing")}
                             </>
                           ) : (

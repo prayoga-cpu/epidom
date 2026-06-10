@@ -1,5 +1,6 @@
 "use client";
 
+import type { SerializeDecimal } from "@/types/prisma";
 import { useState, useMemo, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
@@ -91,7 +92,7 @@ const SUPPLIER_PREFETCH_FILTERS = {
 };
 
 interface MaterialsSectionProps {
-  initialMaterials?: MaterialWithSuppliers[];
+  initialMaterials?: SerializeDecimal<MaterialWithSuppliers>[];
 }
 
 export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {}) {
@@ -219,7 +220,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
     handleView,
     handleEdit,
     handleDeleteClick: handleDeleteClickDialog,
-  } = useDialogState<MaterialWithSuppliers>();
+  } = useDialogState<SerializeDecimal<MaterialWithSuppliers>>();
 
   const {
     bulkSelectMode,
@@ -494,7 +495,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
               const stockStatusKey = getStockStatusKey(currentStock, minStock, maxStock);
               const materialIsSelected = isSelected(material.id);
               const primarySupplier =
-                material.materialSuppliers?.find((s) => s.isPreferred) ||
+                material.materialSuppliers?.find((s: any) => s.isPreferred) ||
                 material.materialSuppliers?.[0];
 
               return (

@@ -1,3 +1,4 @@
+import { NotFoundError, DuplicateError, ForbiddenError, ValidationError } from "@/lib/errors";
 import { Product } from "@prisma/client";
 import {
   productRepository,
@@ -59,18 +60,18 @@ export class ProductService {
     // Validate SKU uniqueness within store
     const skuExists = await productRepository.existsBySku(data.storeId, data.sku);
     if (skuExists) {
-      throw new Error(`Product with SKU "${data.sku}" already exists in this store`);
+      throw new DuplicateError("Product", "SKU", data.sku!);
     }
 
     // Validate product name uniqueness within store
     const nameExists = await productRepository.existsByName(data.storeId, data.name);
     if (nameExists) {
-      throw new Error(`Product with name "${data.name}" already exists in this store`);
+      throw new DuplicateError("Product", "name", data.name!);
     }
 
     // Validate price logic
     if (data.sellingPrice < data.costPrice) {
-      throw new Error("Selling price cannot be less than cost price");
+      throw new ValidationError("Selling price cannot be less than cost price");
     }
 
     // Create product first
@@ -128,19 +129,19 @@ export class ProductService {
     // Get current product to check if values are actually changing
     const currentProduct = await productRepository.findById(productId);
     if (!currentProduct) {
-      throw new Error("Product not found");
+      throw new NotFoundError("Product");
     }
 
     // Verify product belongs to store
     if (currentProduct.storeId !== storeId) {
-      throw new Error("Product does not belong to this store");
+      throw new ForbiddenError("Product does not belong to this store");
     }
 
     // If SKU is being updated and is different from current SKU, validate uniqueness
     if (data.sku && data.sku !== currentProduct.sku) {
       const skuExists = await productRepository.existsBySku(storeId, data.sku, productId);
       if (skuExists) {
-        throw new Error(`Product with SKU "${data.sku}" already exists in this store`);
+        throw new DuplicateError("Product", "SKU", data.sku!);
       }
     }
 
@@ -148,14 +149,14 @@ export class ProductService {
     if (data.name && data.name !== currentProduct.name) {
       const nameExists = await productRepository.existsByName(storeId, data.name, productId);
       if (nameExists) {
-        throw new Error(`Product with name "${data.name}" already exists in this store`);
+        throw new DuplicateError("Product", "name", data.name!);
       }
     }
 
     // If both prices provided, validate price logic
     if (data.sellingPrice !== undefined && data.costPrice !== undefined) {
       if (data.sellingPrice < data.costPrice) {
-        throw new Error("Selling price cannot be less than cost price");
+        throw new ValidationError("Selling price cannot be less than cost price");
       }
     }
 
@@ -193,7 +194,7 @@ export class ProductService {
     // Verify product belongs to store
     const belongsToStore = await productRepository.belongsToStore(productId, storeId);
     if (!belongsToStore) {
-      throw new Error("Product does not belong to this store");
+      throw new ForbiddenError("Product does not belong to this store");
     }
 
     return productRepository.delete(productId);
@@ -212,7 +213,7 @@ export class ProductService {
     const invalidProducts = products.filter((p) => p.storeId !== storeId);
 
     if (invalidProducts.length > 0) {
-      throw new Error("One or more products do not belong to this store");
+      throw new ForbiddenError("One or more products do not belong to this store");
     }
 
     return productRepository.bulkDelete(productIds);

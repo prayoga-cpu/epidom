@@ -1,4 +1,5 @@
 "use client";
+import type { SerializeDecimal } from "@/types/prisma";
 
 import { useEffect, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -45,7 +46,7 @@ import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/numb
 interface EditMaterialDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  material: MaterialWithSuppliers | null;
+  material: SerializeDecimal<MaterialWithSuppliers> | null;
 }
 
 export function EditMaterialDialog({ open, onOpenChange, material }: EditMaterialDialogProps) {

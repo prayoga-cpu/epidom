@@ -1,5 +1,7 @@
 "use client";
 
+import type { SerializeDecimal } from "@/types/prisma";
+import type { ProductWithRelations } from "@/lib/repositories/product.repository";
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -76,7 +78,7 @@ type ProductFormValues = z.infer<ReturnType<typeof createProductSchema>>;
 
 interface EditProductDialogProps {
   storeId: string;
-  product: ProductWithRecipes;
+  product: SerializeDecimal<ProductWithRelations>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -143,7 +145,7 @@ export function EditProductDialog({
       const maxStock = Number(product.maxStock) || 0;
 
       // Extract recipe IDs from recipeProducts
-      const recipeIds = product.recipeProducts?.map((rp) => rp.recipeId) || [];
+      const recipeIds = product.recipeProducts?.map((rp: any) => rp.recipeId) || [];
 
       form.reset({
         name: product.name || "",

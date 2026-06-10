@@ -47,6 +47,7 @@ import {
   useBulkDeleteSuppliers,
   useExportSuppliers,
 } from "../hooks/use-suppliers";
+import type { SerializeDecimal } from "@/types/prisma";
 import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -64,7 +65,7 @@ import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
 
 interface SuppliersSectionProps {
-  initialSuppliers?: SupplierWithRelations[];
+  initialSuppliers?: SerializeDecimal<SupplierWithRelations>[];
 }
 
 export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {}) {
@@ -122,7 +123,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
     handleView,
     handleEdit,
     handleDeleteClick: handleDeleteClickDialog,
-  } = useDialogState<SupplierWithRelations>();
+  } = useDialogState<SerializeDecimal<SupplierWithRelations>>();
 
   const {
     bulkSelectMode,

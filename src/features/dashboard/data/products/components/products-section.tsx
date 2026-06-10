@@ -2,6 +2,7 @@
 
 import { CsvImportWizard } from "../../components/csv-import-wizard";
 
+import type { SerializeDecimal } from "@/types/prisma";
 import { useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
@@ -52,6 +53,7 @@ import {
   type Product,
 } from "../hooks/use-products";
 import { useProductUsage } from "../hooks/use-product-usage";
+import type { ProductWithRelations } from "@/lib/repositories/product.repository";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import {
   ItemCardGrid,
@@ -67,7 +69,7 @@ import { useDialogState } from "../../hooks/use-dialog-state";
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
 interface ProductsSectionProps {
-  initialProducts?: Product[];
+  initialProducts?: SerializeDecimal<ProductWithRelations>[];
 }
 
 export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) {
@@ -139,7 +141,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     handleView,
     handleEdit,
     handleDeleteClick: handleDeleteClickDialog,
-  } = useDialogState<Product>();
+  } = useDialogState<SerializeDecimal<ProductWithRelations>>();
 
   const {
     bulkSelectMode,
@@ -155,7 +157,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   // Helper function to determine stock status
-  const getStockStatus = (product: Product): StockFilter => {
+  const getStockStatus = (product: SerializeDecimal<ProductWithRelations>): StockFilter => {
     const currentStock = Number(product.currentStock) || 0;
     const minStockLevel = Number(product.minStock) || 0;
     if (currentStock === 0) return "critical";
@@ -177,7 +179,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   };
 
   // Helper function to calculate profit margin
-  const getProfitMargin = (product: Product): number => {
+  const getProfitMargin = (product: SerializeDecimal<ProductWithRelations>): number => {
     const selling = Number(product.sellingPrice) || 0;
     const cost = Number(product.costPrice) || 0;
     if (selling === 0) return 0;
@@ -695,12 +697,14 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
               setDeleteDialogOpen(true);
             }}
           />
-          <EditProductDialog
-            storeId={storeId}
-            product={selectedProduct}
-            open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
-          />
+          {selectedProduct && (
+            <EditProductDialog
+              storeId={storeId}
+              product={selectedProduct}
+              open={editDialogOpen}
+              onOpenChange={setEditDialogOpen}
+            />
+          )}
           <ConfirmationDialog
             title={t("data.products.toasts.deleted.title")}
             description={

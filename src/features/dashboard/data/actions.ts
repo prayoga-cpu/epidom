@@ -6,6 +6,8 @@ import { ENTITY_UNIQUE_FIELDS } from "@/lib/ai/import-schema";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
+import { parseNumber } from "@/lib/utils/number-parser";
 
 // Schema for bulk import validation
 const bulkImportSchema = z.object({
@@ -25,66 +27,6 @@ interface ImportResult {
     failed: number;
     errors: Array<{ index: number; message: string }>;
   };
-}
-
-// Helper to safely parse numbers from global formats (Rp 10.000, $5,000.00, 1.500,50 etc)
-function parseGlobalNumber(value: any): number {
-  if (value === undefined || value === null || value === "") return 0;
-  if (typeof value === "number") return value;
-
-  let str = String(value).trim();
-  // Remove currency symbols and non-numeric chars except . , -
-  str = str.replace(/[^0-9.,-]/g, "");
-
-  if (!str) return 0;
-
-  // Heuristic to detect format:
-  // If connection contains both . and , -> last one is usually decimal
-  // 10.000,00 -> remove thousand sep (.), replace decimal (,) with .
-  // 10,000.00 -> remove thousand sep (,), keep decimal (.)
-
-  if (str.includes(",") && str.includes(".")) {
-    const lastDot = str.lastIndexOf(".");
-    const lastComma = str.lastIndexOf(",");
-    if (lastComma > lastDot) {
-      // European/Indo format: 1.000,00 -> 1000.00
-      str = str.replace(/\./g, "").replace(",", ".");
-    } else {
-      // US format: 1,000.00 -> 1000.00
-      str = str.replace(/,/g, "");
-    }
-  } else if (str.includes(",")) {
-    // Ambiguous: 10,000 (ten thousand) vs 10,5 (ten point five)
-    // If we have 3 digits after comma, likely thousand separator (10,000)
-    // If 2 digits, likely decimal (10,50) - BUT THIS IS RISKY
-    // Safe bet for commerce: if comma is being used and no dots, treat as thousand separator IF it makes sense?
-    // Actually, widespread convention in data:
-    // If it looks like 10,000 it is 10000.
-    // If it looks like 5,5 it is 5.5.
-
-    // Safer approach: Standardize to US float for storage
-    // If >1 commas, it's definitely update separators (1,000,000) -> remove all
-    if ((str.match(/,/g) || []).length > 1) {
-       str = str.replace(/,/g, "");
-    } else {
-       // Single comma. 10,000 or 0,5?
-       // Check if followed by 3 digits exactly at end -> likely thousand sep
-       if (/,\d{3}$/.test(str)) {
-          str = str.replace(/,/g, "");
-       } else {
-          // Likely decimal
-          str = str.replace(",", ".");
-       }
-    }
-  }
-  // Remove remaining thousand separators (dots if used as such not handled above?)
-  // If we have multiple dots: 1.000.000 -> remove all
-  if ((str.match(/\./g) || []).length > 1) {
-      str = str.replace(/\./g, "");
-  }
-
-  const result = parseFloat(str);
-  return isNaN(result) ? 0 : result;
 }
 
 /**
@@ -165,7 +107,7 @@ export async function bulkImportData(
 
     return result;
   } catch (error) {
-    console.error("Bulk Import Error:", error);
+    logger.error("Bulk Import Error", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "An unexpected error occurred during import.",
@@ -279,7 +221,7 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
           ? {
               create: {
                 supplierId,
-                price: parseGlobalNumber(item.supplierPrice) || parseGlobalNumber(item.unitCost) || 0,
+                price: parseNumber(item.supplierPrice, { defaultValue: parseNumber(item.unitCost, { defaultValue: 0 }) }),
                 isPreferred: true,
               },
             }
@@ -295,10 +237,10 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
             description: item.description || undefined,
             category: item.category || undefined,
             unit: item.unit || "kg",
-            unitCost: parseGlobalNumber(item.unitCost) || 0,
-            currentStock: parseGlobalNumber(item.currentStock) || 0,
-            minStock: parseGlobalNumber(item.minStock) || 0,
-            maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
+            unitCost: parseNumber(item.unitCost, { defaultValue: 0 }),
+            currentStock: parseNumber(item.currentStock, { defaultValue: 0 }),
+            minStock: parseNumber(item.minStock, { defaultValue: 0 }),
+            maxStock: item.maxStock ? parseNumber(item.maxStock, { defaultValue: 0 }) : undefined,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             // Create relation to supplier
@@ -327,7 +269,7 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
       },
     };
   } catch (error) {
-    console.error("Material import error:", error);
+    logger.error("Material import error", error);
     return {
       success: false,
       error: `Material import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -385,11 +327,11 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
                 description: item.description || undefined,
                 category: item.category || undefined,
                 unit: item.unit || "pcs",
-                costPrice: parseGlobalNumber(item.costPrice) || 0,
-                sellingPrice: parseGlobalNumber(item.sellingPrice) || 0,
-                currentStock: parseGlobalNumber(item.currentStock) || 0,
-                minStock: parseGlobalNumber(item.minStock) || 0,
-                maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
+                costPrice: parseNumber(item.costPrice, { defaultValue: 0 }),
+                sellingPrice: parseNumber(item.sellingPrice, { defaultValue: 0 }),
+                currentStock: parseNumber(item.currentStock, { defaultValue: 0 }),
+                minStock: parseNumber(item.minStock, { defaultValue: 0 }),
+                maxStock: item.maxStock ? parseNumber(item.maxStock, { defaultValue: 0 }) : undefined,
                 updatedAt: new Date(), // Always update timestamp
             };
 
@@ -414,7 +356,7 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
         } catch (error) {
             const msg = error instanceof Error ? error.message : "Unknown error";
             errors.push({ index: i + 1, message: msg.slice(0, 100) });
-            console.error(`Product import error at row ${i+1}:`, error);
+            logger.error(`Product import error at row ${i+1}`, error);
         }
     }
 
@@ -429,7 +371,7 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
       },
     };
   } catch (error) {
-    console.error("Product import fatal error:", error);
+    logger.error("Product import fatal error", error);
     return {
       success: false,
       error: `Product import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -443,7 +385,7 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
 async function importSuppliers(data: any[], storeId: string): Promise<ImportResult> {
   try {
     // Debug: Log raw data received
-    console.log("[importSuppliers] Raw data received:", JSON.stringify(data, null, 2));
+    logger.debug("[importSuppliers] Raw data received", { recordCount: data.length });
 
     const validData = data.filter(
       (item) => item.name && typeof item.name === "string" && item.name.trim()
@@ -471,7 +413,7 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
         updatedAt: item.updatedAt,
       };
       // Debug: Log cleaned data
-      console.log("[importSuppliers] Cleaned supplier:", cleaned);
+      logger.debug("[importSuppliers] Cleaned supplier", { cleaned });
       return cleaned;
     });
 
@@ -491,7 +433,7 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
       },
     };
   } catch (error) {
-    console.error("Supplier import error:", error);
+    logger.error("Supplier import error", error);
     return {
       success: false,
       error: `Supplier import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -524,7 +466,7 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
     // but for counting we need the base name.
 
     // Get yield quantity - if empty, this might be a continuation row
-    const yieldQty = parseGlobalNumber(item.yieldQuantity);
+    const yieldQty = parseNumber(item.yieldQuantity, { defaultValue: 0 });
 
     // Build group key: name + yield (or inherit from previous if continuation row)
     let groupKey: string;
@@ -574,7 +516,7 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
       // If this name appears in multiple variants (count > 1), we append suffix.
       // Else we use the clean base name.
       let finalName = baseName;
-      const yieldQuantity = parseGlobalNumber(mainRow.yieldQuantity) || parseGlobalNumber(yieldQtyFromKey) || 1;
+      const yieldQuantity = parseNumber(mainRow.yieldQuantity, { defaultValue: parseNumber(yieldQtyFromKey, { defaultValue: 1 }) });
       const yieldUnit = mainRow.yieldUnit || "unit";
 
       if (nameCounts[baseName] > 1) {
@@ -633,14 +575,14 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
                 sku:
                   row.ingredient_sku ||
                   `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-                unitCost: parseGlobalNumber(row.ingredient_price) || 0,
-                currentStock: parseGlobalNumber(row.ingredient_stock) || 0,
+                unitCost: parseNumber(row.ingredient_price, { defaultValue: 0 }),
+                currentStock: parseNumber(row.ingredient_stock, { defaultValue: 0 }),
                 category: "Imported",
                 materialSuppliers: supplierId
                   ? {
                       create: {
                         supplierId,
-                        price: parseGlobalNumber(row.ingredient_price) || 0,
+                        price: parseNumber(row.ingredient_price, { defaultValue: 0 }),
                         isPreferred: true,
                       },
                     }
@@ -653,7 +595,7 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
           if (!ingredientsToCreate.some((i) => i.materialId === material!.id)) {
             ingredientsToCreate.push({
               materialId: material.id,
-              quantity: parseGlobalNumber(row.ingredient_qty) || parseGlobalNumber(row.ingredientQuantity) || 1,
+              quantity: parseNumber(row.ingredient_qty, { defaultValue: parseNumber(row.ingredientQuantity, { defaultValue: 1 }) }),
               unit: row.ingredient_unit || row.ingredientUnit || "kg",
             });
           }
@@ -683,9 +625,9 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
                 category: mainRow.category || undefined,
                 yieldQuantity,
                 yieldUnit,
-                productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
+                productionTimeMinutes: parseNumber(mainRow.productionTimeMinutes, { defaultValue: 0 }),
                 instructions: instructions || undefined,
-                costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+                costPerBatch: parseNumber(mainRow.costPerBatch, { defaultValue: 0 }),
                 updatedAt: new Date(),
                 // For ingredients, simpler to delete all and recreate for accuracy in sync
                 ingredients: {
@@ -704,9 +646,9 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
                 category: mainRow.category || null,
                 yieldQuantity,
                 yieldUnit,
-                productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
+                productionTimeMinutes: parseNumber(mainRow.productionTimeMinutes, { defaultValue: 0 }),
                 instructions: instructions || null,
-                costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+                costPerBatch: parseNumber(mainRow.costPerBatch, { defaultValue: 0 }),
                 createdAt: mainRow.createdAt || new Date(),
                 updatedAt: mainRow.updatedAt || new Date(),
                 ingredients: ingredientsToCreate.length > 0
@@ -882,7 +824,7 @@ export async function bulkImportMultiEntity(
     const summary = { ...defaultSummary };
 
     // Debug: Log grouped counts
-    console.log("[Smart Import] Entity grouping:", {
+    logger.debug("[Smart Import] Entity grouping", {
       suppliers: grouped.supplier.length,
       materials: grouped.material.length,
       recipes: grouped.recipe.length,
@@ -933,7 +875,7 @@ export async function bulkImportMultiEntity(
       summary,
     };
   } catch (error) {
-    console.error("Multi-Entity Import Error:", error);
+    logger.error("Multi-Entity Import Error", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "An unexpected error occurred during import.",

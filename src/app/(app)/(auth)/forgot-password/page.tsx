@@ -8,10 +8,7 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-<<<<<<< HEAD
-=======
 import { LottieLoader } from "@/components/ui/lottie-loader";
->>>>>>> dev
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -72,11 +69,7 @@ export default function ForgotPasswordPage() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isPending}>
-<<<<<<< HEAD
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-=======
                 {isPending && <LottieLoader size="xs" className="mr-2" />}
->>>>>>> dev
                 Send Reset Link
               </Button>
               <div className="text-center text-sm">

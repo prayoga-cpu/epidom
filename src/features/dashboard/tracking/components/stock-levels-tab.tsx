@@ -29,6 +29,8 @@ import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { ProductWithRelations } from "@/lib/repositories/product.repository";
+import type { Product } from "@prisma/client";
+import type { SerializeDecimal } from "@/types/prisma";
 
 function getStockStatus(currentStock: number, minStock: number, maxStock: number) {
   if (currentStock === 0) {
@@ -65,8 +67,8 @@ type StockItem = {
 };
 
 interface StockLevelsTabProps {
-  initialMaterials?: MaterialWithSuppliers[];
-  initialProducts?: ProductWithRelations[];
+  initialMaterials?: SerializeDecimal<MaterialWithSuppliers>[];
+  initialProducts?: SerializeDecimal<Product>[];
 }
 
 export function StockLevelsTab({ initialMaterials }: StockLevelsTabProps = {}) {

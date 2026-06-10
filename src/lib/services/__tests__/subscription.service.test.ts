@@ -315,7 +315,7 @@ describe("SubscriptionService", () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
 
       await expect(service.cancelSubscription("user-1")).rejects.toThrow(
-        "No active subscription found"
+        "Active Subscription not found"
       );
     });
 
@@ -326,7 +326,7 @@ describe("SubscriptionService", () => {
       });
 
       await expect(service.cancelSubscription("user-1")).rejects.toThrow(
-        "No active subscription found"
+        "Active Subscription not found"
       );
     });
   });
@@ -336,7 +336,7 @@ describe("SubscriptionService", () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
 
       await expect(service.reactivateSubscription("user-1")).rejects.toThrow(
-        "No subscription found"
+        "Subscription not found"
       );
     });
   });
@@ -347,7 +347,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         service.createPortalSession("user-1", "https://example.com/return")
-      ).rejects.toThrow("No subscription found");
+      ).rejects.toThrow("Subscription not found");
     });
   });
 });

@@ -13,6 +13,7 @@
  */
 
 import { Resend } from "resend";
+import { logger } from "@/lib/logger";
 
 // Lazy-initialized Resend client to avoid build errors when API key is not set
 let resendClient: Resend | null = null;
@@ -49,10 +50,10 @@ export async function sendVerificationEmail(
   // In development without API key, log to console
   if (!process.env.RESEND_API_KEY) {
     if (process.env.NODE_ENV === "development") {
-      console.log("\n📧 [DEV] Verification Email");
-      console.log("To:", email);
-      console.log("URL:", verificationUrl);
-      console.log("");
+      logger.debug("[DEV] Verification Email", {
+        to: email,
+        urlPreview: verificationUrl.slice(0, 60),
+      });
     }
     return { success: true, messageId: "dev-mode" };
   }
@@ -67,13 +68,13 @@ export async function sendVerificationEmail(
     });
 
     if (error) {
-      console.error("[Email] Failed to send verification email:", error);
+      logger.error("[Email] Failed to send verification email", { error });
       return { success: false, error: error.message };
     }
 
     return { success: true, messageId: data?.id };
   } catch (error) {
-    console.error("[Email] Verification email error:", error);
+    logger.error("[Email] Verification email error", { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -92,10 +93,10 @@ export async function sendPasswordResetEmail(
   // In development without API key, log to console
   if (!process.env.RESEND_API_KEY) {
     if (process.env.NODE_ENV === "development") {
-      console.log("\n🔑 [DEV] Password Reset Email");
-      console.log("To:", email);
-      console.log("URL:", resetUrl);
-      console.log("");
+      logger.debug("[DEV] Password Reset Email", {
+        to: email,
+        urlPreview: resetUrl.slice(0, 60),
+      });
     }
     return { success: true, messageId: "dev-mode" };
   }
@@ -110,13 +111,13 @@ export async function sendPasswordResetEmail(
     });
 
     if (error) {
-      console.error("[Email] Failed to send password reset email:", error);
+      logger.error("[Email] Failed to send password reset email", { error });
       return { success: false, error: error.message };
     }
 
     return { success: true, messageId: data?.id };
   } catch (error) {
-    console.error("[Email] Password reset email error:", error);
+    logger.error("[Email] Password reset email error", { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

@@ -64,7 +64,7 @@ export class SubscriptionService {
     // Get user
     const user = await this.userRepo.findById(userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new NotFoundError("User");
     }
 
     // Check if user already has a subscription
@@ -98,7 +98,7 @@ export class SubscriptionService {
       try {
         epidomOwner = await this.getEpidomOwner();
         if (!epidomOwner || !epidomOwner.stripeConnectAccountId) {
-          throw new Error(
+          throw new ValidationError(
             "Payment system not configured. Epidom owner must complete Stripe Connect onboarding first."
           );
         }
@@ -217,7 +217,7 @@ export class SubscriptionService {
   ): Promise<Stripe.BillingPortal.Session> {
     const subscription = await this.subscriptionRepo.findByUserId(userId);
     if (!subscription) {
-      throw new Error("No subscription found for user");
+      throw new NotFoundError("Subscription");
     }
 
     const session = await stripe.billingPortal.sessions.create({
@@ -342,7 +342,7 @@ export class SubscriptionService {
   async cancelSubscription(userId: string): Promise<void> {
     const subscription = await this.subscriptionRepo.findByUserId(userId);
     if (!subscription || !subscription.stripeSubscriptionId) {
-      throw new Error("No active subscription found");
+      throw new NotFoundError("Active Subscription");
     }
 
     // Cancel at period end in Stripe
@@ -363,7 +363,7 @@ export class SubscriptionService {
   async reactivateSubscription(userId: string): Promise<void> {
     const subscription = await this.subscriptionRepo.findByUserId(userId);
     if (!subscription || !subscription.stripeSubscriptionId) {
-      throw new Error("No subscription found");
+      throw new NotFoundError("Subscription");
     }
 
     // Reactivate in Stripe
@@ -455,7 +455,7 @@ export class SubscriptionService {
     // Option 1: Use environment variable
     const ownerEmail = process.env.EPIDOM_OWNER_EMAIL;
     if (!ownerEmail) {
-      throw new Error(
+      throw new ValidationError(
         "EPIDOM_OWNER_EMAIL environment variable not set. " +
           "Please set this to the email of the Epidom business owner."
       );
@@ -463,13 +463,13 @@ export class SubscriptionService {
     const owner = await this.userRepo.findByEmail(ownerEmail);
 
     if (!owner) {
-      throw new Error(
+      throw new NotFoundError(
         `Epidom owner not found. User with email "${ownerEmail}" does not exist. ` +
           "Please create the owner account first or update EPIDOM_OWNER_EMAIL in .env file."
       );
     }
     if (!owner.stripeConnectAccountId) {
-      throw new Error(
+      throw new ValidationError(
         `Epidom owner found but Stripe Connect account not configured. ` +
           `User "${ownerEmail}" must complete Stripe Connect onboarding first. ` +
           `Go to Profile page and complete the Payment Setup.`

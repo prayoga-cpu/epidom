@@ -1,5 +1,6 @@
 "use client";
 
+import type { SerializeDecimal } from "@/types/prisma";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CreateIngredientInput,
@@ -13,7 +14,7 @@ import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 
 export interface MaterialsResponse {
-  materials: MaterialWithSuppliers[];
+  materials: SerializeDecimal<MaterialWithSuppliers>[];
   total: number;
 }
 
@@ -83,7 +84,7 @@ export function useMaterials(
  * Fetch a single material by ID
  */
 export function useMaterial(storeId: string, id: string) {
-  return useQuery<MaterialWithSuppliers>({
+  return useQuery<SerializeDecimal<MaterialWithSuppliers>>({
     queryKey: materialKeys.detail(storeId, id),
     queryFn: async () => {
       const response = await fetch(`/api/stores/${storeId}/materials/${id}`);
@@ -93,7 +94,7 @@ export function useMaterial(storeId: string, id: string) {
         throw new Error(errorData.error?.message || "Failed to fetch material");
       }
 
-      const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
+      const data: ApiSuccessResponse<SerializeDecimal<MaterialWithSuppliers>> = await response.json();
       return data.data;
     },
     enabled: !!storeId && !!id,
@@ -108,7 +109,7 @@ export function useCreateMaterial(storeId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<
-    MaterialWithSuppliers,
+    SerializeDecimal<MaterialWithSuppliers>,
     Error,
     Omit<CreateIngredientInput, "storeId">,
     { previousMaterials: MaterialsResponse | undefined }
@@ -127,7 +128,7 @@ export function useCreateMaterial(storeId: string) {
         throw new Error(errorData.error?.message || "Failed to create material");
       }
 
-      const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
+      const data: ApiSuccessResponse<SerializeDecimal<MaterialWithSuppliers>> = await response.json();
       return data.data;
     },
     onMutate: async (newMaterial) => {
@@ -154,7 +155,7 @@ export function useCreateMaterial(storeId: string) {
           minStock: newMaterial.minStock ?? 0,
           maxStock: newMaterial.maxStock ?? 1000,
           materialSuppliers: [], // Use materialSuppliers, not suppliers
-        } as unknown as MaterialWithSuppliers;
+        } as unknown as SerializeDecimal<MaterialWithSuppliers>;
 
         queryClient.setQueryData<MaterialsResponse>(materialKeys.list(storeId), {
           ...previousMaterials,
@@ -229,11 +230,11 @@ export function useUpdateMaterial(storeId: string, id: string) {
   const queryClient = useQueryClient();
 
   return useMutation<
-    MaterialWithSuppliers,
+    SerializeDecimal<MaterialWithSuppliers>,
     Error,
     UpdateIngredientInput,
     {
-      previousMaterial: MaterialWithSuppliers | undefined;
+      previousMaterial: SerializeDecimal<MaterialWithSuppliers> | undefined;
       previousQueries: Array<[readonly unknown[], MaterialsResponse | undefined]>;
     }
   >({
@@ -251,7 +252,7 @@ export function useUpdateMaterial(storeId: string, id: string) {
         throw new Error(errorData.error?.message || "Failed to update material");
       }
 
-      const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
+      const data: ApiSuccessResponse<SerializeDecimal<MaterialWithSuppliers>> = await response.json();
       return data.data;
     },
     onMutate: async (newData) => {
@@ -260,7 +261,7 @@ export function useUpdateMaterial(storeId: string, id: string) {
       await queryClient.cancelQueries({ queryKey: materialKeys.detail(storeId, id) });
 
       // Snapshot previous values for rollback
-      const previousMaterial = queryClient.getQueryData<MaterialWithSuppliers>(
+      const previousMaterial = queryClient.getQueryData<SerializeDecimal<MaterialWithSuppliers>>(
         materialKeys.detail(storeId, id)
       );
       const previousQueries = queryClient.getQueriesData<MaterialsResponse>({
@@ -269,11 +270,11 @@ export function useUpdateMaterial(storeId: string, id: string) {
 
       // Optimistically update detail cache
       if (previousMaterial) {
-        queryClient.setQueryData<MaterialWithSuppliers>(materialKeys.detail(storeId, id), {
+        queryClient.setQueryData<SerializeDecimal<MaterialWithSuppliers>>(materialKeys.detail(storeId, id), {
           ...previousMaterial,
           ...newData,
           updatedAt: new Date(), // Update timestamp
-        } as MaterialWithSuppliers);
+        } as SerializeDecimal<MaterialWithSuppliers>);
       }
 
       // Optimistically update all list caches
@@ -289,7 +290,7 @@ export function useUpdateMaterial(storeId: string, id: string) {
                     ...m,
                     ...newData,
                     updatedAt: new Date(),
-                  } as MaterialWithSuppliers)
+                  } as SerializeDecimal<MaterialWithSuppliers>)
                 : m
             ),
           };

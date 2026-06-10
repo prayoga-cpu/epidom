@@ -247,11 +247,7 @@ export function BillingContainer() {
                 className="gap-2"
               >
                 {actionLoading ? (
-<<<<<<< HEAD
-                  <Loader2 className="h-4 w-4 animate-spin" />
-=======
                   <LottieLoader size="xs" />
->>>>>>> dev
                 ) : (
                   <XCircle className="h-4 w-4" />
                 )}

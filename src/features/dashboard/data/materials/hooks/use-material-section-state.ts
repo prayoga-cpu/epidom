@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { SerializeDecimal } from "@/types/prisma";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import {
   useMaterials,
@@ -68,7 +69,7 @@ const DEFAULT_FILTERS: MaterialFiltersState = {
 
 interface UseMaterialSectionStateOptions {
   storeId: string;
-  initialMaterials?: MaterialWithSuppliers[];
+  initialMaterials?: SerializeDecimal<MaterialWithSuppliers>[];
   t: (key: string) => string;
 }
 
@@ -224,7 +225,7 @@ export function useMaterialSectionState({
   // Action Handlers
   // ========================================
   const handleDeleteConfirm = useCallback(
-    async (material: MaterialWithSuppliers | null, onSuccess?: () => void) => {
+    async (material: SerializeDecimal<MaterialWithSuppliers> | null, onSuccess?: () => void) => {
       if (!material) return;
 
       try {

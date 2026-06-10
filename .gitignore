@@ -43,3 +43,6 @@ epidom-web
 
 # log
 *.log
+
+# Test fixtures output
+src/test/fixtures/*.csv

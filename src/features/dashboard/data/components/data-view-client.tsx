@@ -7,6 +7,7 @@
 
 "use client";
 
+import type { SerializeDecimal } from "@/types/prisma";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -181,10 +182,10 @@ function TabContentSkeleton() {
 }
 
 interface DataViewClientProps {
-  initialMaterials?: MaterialWithSuppliers[];
+  initialMaterials?: SerializeDecimal<MaterialWithSuppliers>[];
   initialRecipes?: RecipeWithIngredients[];
-  initialProducts?: Product[];
-  initialSuppliers?: SupplierWithRelations[];
+  initialProducts?: SerializeDecimal<Product>[];
+  initialSuppliers?: SerializeDecimal<SupplierWithRelations>[];
   storeId: string;
 }
 

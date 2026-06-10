@@ -25,11 +25,7 @@ export function ManagementRowOne() {
               <span className="text-brand-primary/50 text-xs font-bold tracking-widest uppercase">
                 {t("services.management.title")}
               </span>
-<<<<<<< HEAD
-              <h2 className="text-brand-primary text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-=======
               <h2 className="text-brand-primary text-3xl leading-[1.1] font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
->>>>>>> dev
                 {t("services.management.subtitle")}
               </h2>
               <p className="text-brand-primary/60 text-lg leading-relaxed">

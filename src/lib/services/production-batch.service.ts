@@ -9,6 +9,7 @@ import { materialRepository } from "@/lib/repositories/material.repository";
 import { productRepository } from "@/lib/repositories/product.repository";
 import { prisma, TRANSACTION_TIMEOUTS } from "@/lib/prisma";
 import { convertStockToIngredientUnit } from "@/lib/utils/unit-conversion";
+import { NotFoundError, ForbiddenError, ValidationError, DatabaseError, DatabaseTimeoutError } from "@/lib/errors";
 
 /**
  * Production Batch Service
@@ -79,7 +80,7 @@ export class ProductionBatchService {
   }> {
     const recipe = await this.recipeRepo.findById(recipeId);
     if (!recipe) {
-      throw new Error("Recipe not found");
+      throw new NotFoundError("Recipe");
     }
 
     const ingredients = recipe.ingredients.map((ingredient) => {
@@ -133,20 +134,20 @@ export class ProductionBatchService {
     // Validate recipe exists and belongs to store
     const recipe = await this.recipeRepo.findById(data.recipeId);
     if (!recipe || recipe.storeId !== data.storeId) {
-      throw new Error("Recipe not found or does not belong to this store");
+      throw new ForbiddenError("Recipe not found or does not belong to this store");
     }
 
     // Validate product exists and belongs to store
     const product = await this.productRepo.findById(data.productId);
     if (!product || product.storeId !== data.storeId) {
-      throw new Error("Product not found or does not belong to this store");
+      throw new ForbiddenError("Product not found or does not belong to this store");
     }
 
     // Validate product and recipe are linked through RecipeProduct junction table
     const isLinked = await this.recipeRepo.isProductLinked(data.productId, data.recipeId);
 
     if (!isLinked) {
-      throw new Error(
+      throw new ValidationError(
         "Product and recipe are not linked. Please link the product to this recipe first."
       );
     }
@@ -168,7 +169,7 @@ export class ProductionBatchService {
         .filter((ing) => ing.status === "insufficient")
         .map((ing) => ing.materialName)
         .join(", ");
-      throw new Error(`Insufficient materials: ${insufficientMaterials}`);
+      throw new ValidationError(`Insufficient materials: ${insufficientMaterials}`);
     }
 
     // Generate batch number
@@ -259,7 +260,7 @@ export class ProductionBatchService {
             const material = materialMap.get(ingredient.materialId);
 
             if (!material) {
-              throw new Error(
+              throw new ValidationError(
                 `Cannot start production: Material '${ingredient.material?.name || ingredient.materialId}' not found. Please check your recipe ingredients.`
               );
             }
@@ -281,7 +282,7 @@ export class ProductionBatchService {
 
             // CRITICAL: Prevent negative stock - validate within transaction
             if (newBalance < 0) {
-              throw new Error(
+              throw new ValidationError(
                 `Insufficient stock for material '${material.name}'. Required: ${deductionAmount.toFixed(2)} ${materialUnit}, Available: ${currentStock.toFixed(2)} ${materialUnit}.`
               );
             }
@@ -327,23 +328,19 @@ export class ProductionBatchService {
       if (error instanceof Error) {
         // Prisma transaction timeout error
         if (error.message.includes("Transaction") && error.message.includes("not found")) {
-          throw new Error(
-            `Production start failed due to database timeout. This may be caused by high server load. Please try again in a moment.`
-          );
+          throw new DatabaseTimeoutError();
         }
 
         // Connection pool exhaustion
         if (error.message.includes("Connection") || error.message.includes("pool")) {
-          throw new Error(
+          throw new DatabaseError(
             `Database connection unavailable. The server is currently busy. Please try again shortly.`
           );
         }
 
         // Statement timeout
         if (error.message.includes("statement timeout")) {
-          throw new Error(
-            `Production start took too long to complete. Please try again or contact support if the issue persists.`
-          );
+          throw new DatabaseTimeoutError();
         }
 
         // Re-throw with original message if it's already a user-friendly error
@@ -356,7 +353,7 @@ export class ProductionBatchService {
       }
 
       // Generic fallback error
-      throw new Error(
+      throw new DatabaseError(
         `Failed to start production batch. Please check your materials and try again. If the problem continues, contact support.`
       );
     }
@@ -373,18 +370,18 @@ export class ProductionBatchService {
     // Verify batch belongs to store
     const belongsToStore = await this.batchRepo.belongsToStore(batchId, storeId);
     if (!belongsToStore) {
-      throw new Error("Production batch not found or does not belong to this store");
+      throw new ForbiddenError("Production batch not found or does not belong to this store");
     }
 
     // Get batch details
     const batch = await this.batchRepo.findById(batchId);
     if (!batch) {
-      throw new Error("Production batch not found");
+      throw new NotFoundError("Production batch");
     }
 
     // Validate status
     if (batch.status !== ProductionStatus.IN_PROGRESS) {
-      throw new Error("Only batches in progress can be completed");
+      throw new ValidationError("Only batches in progress can be completed");
     }
 
     // Start transaction with timeout
@@ -396,7 +393,7 @@ export class ProductionBatchService {
         });
 
         if (!product) {
-          throw new Error("Product not found");
+          throw new NotFoundError("Product");
         }
 
         const newBalance = Number(product.currentStock) + actualQuantity;
@@ -449,22 +446,22 @@ export class ProductionBatchService {
     // Verify batch belongs to store
     const belongsToStore = await this.batchRepo.belongsToStore(batchId, storeId);
     if (!belongsToStore) {
-      throw new Error("Production batch not found or does not belong to this store");
+      throw new ForbiddenError("Production batch not found or does not belong to this store");
     }
 
     // Get batch details
     const batch = await this.batchRepo.findById(batchId);
     if (!batch) {
-      throw new Error("Production batch not found");
+      throw new NotFoundError("Production batch");
     }
 
     // Validate status
     if (batch.status === ProductionStatus.COMPLETED) {
-      throw new Error("Cannot cancel completed batches");
+      throw new ValidationError("Cannot cancel completed batches");
     }
 
     if (batch.status === ProductionStatus.CANCELLED) {
-      throw new Error("Batch is already cancelled");
+      throw new ValidationError("Batch is already cancelled");
     }
 
     // Start transaction with timeout
@@ -577,7 +574,7 @@ export class ProductionBatchService {
     // Verify batch belongs to store
     const belongsToStore = await this.batchRepo.belongsToStore(batchId, storeId);
     if (!belongsToStore) {
-      throw new Error("Production batch not found or does not belong to this store");
+      throw new ForbiddenError("Production batch not found or does not belong to this store");
     }
 
     // Convert number to Decimal if plannedQuantity is provided
@@ -602,18 +599,18 @@ export class ProductionBatchService {
     // Verify batch belongs to store
     const belongsToStore = await this.batchRepo.belongsToStore(batchId, storeId);
     if (!belongsToStore) {
-      throw new Error("Production batch not found or does not belong to this store");
+      throw new ForbiddenError("Production batch not found or does not belong to this store");
     }
 
     // Get batch to check status
     const batch = await this.batchRepo.findById(batchId);
     if (!batch) {
-      throw new Error("Production batch not found");
+      throw new NotFoundError("Production batch");
     }
 
     // Only allow deletion of PLANNED batches
     if (batch.status !== ProductionStatus.PLANNED) {
-      throw new Error("Can only delete planned batches. Cancel in-progress batches instead.");
+      throw new ValidationError("Can only delete planned batches. Cancel in-progress batches instead.");
     }
 
     return this.batchRepo.delete(batchId);

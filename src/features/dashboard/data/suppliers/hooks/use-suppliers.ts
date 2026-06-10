@@ -1,3 +1,4 @@
+import type { SerializeDecimal } from "@/types/prisma";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { CreateSupplierInput, UpdateSupplierInput } from "@/lib/validation/inventory.schemas";
@@ -7,7 +8,7 @@ import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 
 // Response interfaces
 export interface SuppliersResponse {
-  suppliers: SupplierWithRelations[];
+  suppliers: SerializeDecimal<SupplierWithRelations>[];
   total: number;
 }
 
@@ -130,7 +131,7 @@ export function useSupplierAccessStatus(storeId: string) {
 async function fetchSupplierById(
   storeId: string,
   supplierId: string
-): Promise<SupplierWithRelations> {
+): Promise<SerializeDecimal<SupplierWithRelations>> {
   const response = await fetch(`/api/stores/${storeId}/suppliers/${supplierId}`);
 
   if (!response.ok) {
@@ -159,7 +160,7 @@ async function fetchSupplierById(
 async function createSupplier(
   storeId: string,
   data: CreateSupplierInput
-): Promise<SupplierWithRelations> {
+): Promise<SerializeDecimal<SupplierWithRelations>> {
   const response = await fetch(`/api/stores/${storeId}/suppliers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -180,7 +181,7 @@ async function updateSupplier(
   storeId: string,
   supplierId: string,
   data: UpdateSupplierInput
-): Promise<SupplierWithRelations> {
+): Promise<SerializeDecimal<SupplierWithRelations>> {
   const response = await fetch(`/api/stores/${storeId}/suppliers/${supplierId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -380,7 +381,7 @@ export function useSupplier(storeId: string, supplierId: string | null) {
   // Use the access check hook to prevent race conditions
   const { hasNoAccess, isCheckingAccess } = useSupplierAccessStatus(storeId);
 
-  return useQuery<SupplierWithRelations>({
+  return useQuery<SerializeDecimal<SupplierWithRelations>>({
     queryKey: supplierKeys.detail(storeId, supplierId!),
     queryFn: () => fetchSupplierById(storeId, supplierId!),
     // Disable query if no access (fail open if checking)
@@ -458,11 +459,11 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<
-    SupplierWithRelations,
+    SerializeDecimal<SupplierWithRelations>,
     Error,
     UpdateSupplierInput,
     {
-      previousSupplier: SupplierWithRelations | undefined;
+      previousSupplier: SerializeDecimal<SupplierWithRelations> | undefined;
       previousQueries: Array<[readonly unknown[], SuppliersResponse | undefined]>;
     }
   >({
@@ -473,7 +474,7 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
       await queryClient.cancelQueries({ queryKey: supplierKeys.detail(storeId, supplierId) });
 
       // Snapshot previous values for rollback
-      const previousSupplier = queryClient.getQueryData<SupplierWithRelations>(
+      const previousSupplier = queryClient.getQueryData<SerializeDecimal<SupplierWithRelations>>(
         supplierKeys.detail(storeId, supplierId)
       );
       const previousQueries = queryClient.getQueriesData<SuppliersResponse>({
@@ -482,11 +483,11 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
 
       // Optimistically update detail cache
       if (previousSupplier) {
-        queryClient.setQueryData<SupplierWithRelations>(supplierKeys.detail(storeId, supplierId), {
+        queryClient.setQueryData<SerializeDecimal<SupplierWithRelations>>(supplierKeys.detail(storeId, supplierId), {
           ...previousSupplier,
           ...newData,
           updatedAt: new Date(),
-        } as SupplierWithRelations);
+        } as SerializeDecimal<SupplierWithRelations>);
       }
 
       // Optimistically update all list caches
@@ -502,7 +503,7 @@ export function useUpdateSupplier(storeId: string, supplierId: string) {
                     ...s,
                     ...newData,
                     updatedAt: new Date(),
-                  } as SupplierWithRelations)
+                  } as SerializeDecimal<SupplierWithRelations>)
                 : s
             ),
           };

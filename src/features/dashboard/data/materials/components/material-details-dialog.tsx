@@ -1,4 +1,5 @@
 "use client";
+import type { SerializeDecimal } from "@/types/prisma";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,8 @@ import { formatDate } from "@/lib/utils/format-date";
 interface MaterialDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  material: MaterialWithSuppliers | null;
-  onEdit?: (material: MaterialWithSuppliers) => void;
+  material: SerializeDecimal<MaterialWithSuppliers> | null;
+  onEdit?: (material: SerializeDecimal<MaterialWithSuppliers>) => void;
   onDelete?: (materialId: string) => Promise<void> | void;
 }
 

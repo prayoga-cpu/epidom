@@ -22,6 +22,7 @@ import {
   FileText,
   Package,
 } from "lucide-react";
+import type { SerializeDecimal } from "@/types/prisma";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { formatDate, formatCurrency, formatNumber } from "@/lib/utils/formatting";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -32,7 +33,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 interface SupplierDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  supplier: SupplierWithRelations;
+  supplier: SerializeDecimal<SupplierWithRelations>;
   onEdit?: () => void;
   onDelete?: () => Promise<void> | void;
 }

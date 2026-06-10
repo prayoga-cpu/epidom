@@ -175,48 +175,18 @@ export function LottieLoader({
 
         if (!containerRef.current || !isMounted) return;
 
-        // Try to load .lottie first (binary format, smaller), fallback to .json
-        let animationData;
-        const lottieUrl = "/animations/loader.lottie";
-        const jsonUrl = "/animations/loader.json";
-
-        try {
-          // Try .lottie first (binary format)
-          const response = await fetch(lottieUrl);
-          if (response.ok) {
-            // For .lottie files, we need to use path instead of animationData
-            animationRef.current = lottie.loadAnimation({
-              container: containerRef.current,
-              renderer: "svg",
-              loop: true,
-              autoplay: true,
-              path: lottieUrl,
-              rendererSettings: {
-                preserveAspectRatio: "xMidYMid meet",
-                className: "lottie-loader-svg",
-              },
-            });
-          } else {
-            throw new Error("No .lottie file, trying .json");
-          }
-        } catch {
-          // Fallback to JSON format
-          const response = await fetch(jsonUrl);
-          animationData = await response.json();
-
-          // Initialize animation with JSON data
-          animationRef.current = lottie.loadAnimation({
-            container: containerRef.current,
-            renderer: "svg",
-            loop: true,
-            autoplay: true,
-            animationData: animationData,
-            rendererSettings: {
-              preserveAspectRatio: "xMidYMid meet",
-              className: "lottie-loader-svg",
-            },
-          });
-        }
+        // Use the hardcoded minimalist loader animation data
+        animationRef.current = lottie.loadAnimation({
+          container: containerRef.current,
+          renderer: "svg",
+          loop: true,
+          autoplay: true,
+          animationData: loaderAnimationData,
+          rendererSettings: {
+            preserveAspectRatio: "xMidYMid meet",
+            className: "lottie-loader-svg",
+          },
+        });
 
         // Set speed
         if (animationRef.current) {

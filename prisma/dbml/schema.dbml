@@ -560,12 +560,8 @@ Ref: order_items.orderId > orders.id [delete: Cascade]
 
 Ref: order_items.productId > products.id [delete: Cascade]
 
-<<<<<<< HEAD
-Ref: alerts.userId > user.id [delete: Cascade]
-=======
 Ref: alerts.userId > user.id [delete: Cascade]
 
 Ref: ai_import_memories.storeId > stores.id [delete: Cascade]
 
 Ref: ai_import_sessions.storeId > stores.id [delete: Cascade]
->>>>>>> dev

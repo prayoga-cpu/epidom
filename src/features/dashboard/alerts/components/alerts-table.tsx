@@ -93,24 +93,6 @@ export function AlertsTable({ alerts, onViewDetails, onCreateOrder }: AlertsTabl
   }, [alerts, t]);
 
 
-<<<<<<< HEAD
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-destructive/10 mb-4 rounded-full p-3">
-            <AlertCircle className="text-destructive h-6 w-6" />
-          </div>
-          <h3 className="mb-2 text-lg font-semibold">{t("common.error")}</h3>
-          <p className="text-muted-foreground text-sm">
-            {error.message || t("alerts.errorLoading")}
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-=======
->>>>>>> dev
 
   if (alertsBySupplier.length === 0) {
     return (

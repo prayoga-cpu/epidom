@@ -122,7 +122,7 @@ describe("ProductService", () => {
       };
 
       await expect(service.createProduct(input)).rejects.toThrow(
-        'Product with SKU "EXISTING-SKU" already exists in this store'
+        "Product with SKU 'EXISTING-SKU' already exists"
       );
     });
 
@@ -139,7 +139,7 @@ describe("ProductService", () => {
       };
 
       await expect(service.createProduct(input)).rejects.toThrow(
-        'Product with name "Existing Name" already exists in this store'
+        "Product with name 'Existing Name' already exists"
       );
     });
 
@@ -186,7 +186,7 @@ describe("ProductService", () => {
 
       await expect(
         service.updateProduct("prod-1", "store-1", { sku: "EXISTING-SKU" })
-      ).rejects.toThrow('Product with SKU "EXISTING-SKU" already exists in this store');
+      ).rejects.toThrow("Product with SKU 'EXISTING-SKU' already exists");
     });
 
     it("should update product when valid", async () => {
@@ -212,7 +212,7 @@ describe("ProductService", () => {
 
     it("should delete product when valid", async () => {
       mockedProductRepo.belongsToStore.mockResolvedValue(true);
-      mockedProductRepo.delete.mockResolvedValue(undefined);
+      mockedProductRepo.delete.mockResolvedValue(mockProduct);
 
       await service.deleteProduct("prod-1", "store-1");
 
@@ -241,7 +241,7 @@ describe("ProductService", () => {
 
       const result = await service.bulkDeleteProducts(["prod-1", "prod-2"], "store-1");
 
-      expect(result.deletedCount).toBe(2);
+      expect(result.count).toBe(2);
     });
   });
 

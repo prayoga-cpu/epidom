@@ -12,6 +12,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 //   useMaterials,
 //   type MaterialsResponse,
 // } from "@/features/dashboard/data/materials/hooks/use-materials";
+import type { SerializeDecimal } from "@/types/prisma";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
@@ -43,9 +44,9 @@ const SupplierCard = dynamic(
 );
 
 interface DashboardClientProps {
-  initialStockLevels: MaterialWithSuppliers[];
-  initialSuppliers: SupplierWithRelations[];
-  initialProductionBatches: ProductionBatchWithRelations[];
+  initialStockLevels: SerializeDecimal<MaterialWithSuppliers>[];
+  initialSuppliers: SerializeDecimal<SupplierWithRelations>[];
+  initialProductionBatches: SerializeDecimal<ProductionBatchWithRelations>[];
   initialAlerts: Alert[];
   storeId: string;
 }

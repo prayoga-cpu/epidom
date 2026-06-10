@@ -23,6 +23,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import type { SerializeDecimal } from "@/types/prisma";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUpdateSupplier } from "../hooks/use-suppliers";
@@ -46,7 +47,7 @@ function createSupplierSchema(t: (key: string) => string) {
 type SupplierFormValues = z.infer<ReturnType<typeof createSupplierSchema>>;
 
 interface EditSupplierDialogProps {
-  supplier: SupplierWithRelations | null;
+  supplier: SerializeDecimal<SupplierWithRelations> | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

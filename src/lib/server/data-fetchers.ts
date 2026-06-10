@@ -11,6 +11,7 @@ import {
   type MaterialWithSuppliers,
   type MaterialFilters,
 } from "@/lib/repositories/material.repository";
+import type { SerializeDecimal } from "@/types/prisma";
 import { recipeRepository, type RecipeFilters } from "@/lib/repositories/recipe.repository";
 import { productRepository, type ProductFilters } from "@/lib/repositories/product.repository";
 import {
@@ -45,7 +46,7 @@ import {
  * Response types matching hook return types
  */
 export interface MaterialsResponse {
-  materials: MaterialWithSuppliers[];
+  materials: SerializeDecimal<MaterialWithSuppliers>[];
   total: number;
 }
 
@@ -55,17 +56,17 @@ export interface RecipesResponse {
 }
 
 export interface ProductsResponse {
-  products: Product[];
+  products: SerializeDecimal<Product>[];
   total: number;
 }
 
 export interface SuppliersResponse {
-  suppliers: SupplierWithRelations[];
+  suppliers: SerializeDecimal<SupplierWithRelations>[];
   total: number;
 }
 
 export interface ProductionBatchesResponse {
-  batches: ProductionBatchWithRelations[];
+  batches: SerializeDecimal<ProductionBatchWithRelations>[];
   total: number;
 }
 

@@ -1,6 +1,8 @@
+import type { SerializeDecimal } from "@/types/prisma";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateProductInput, UpdateProductInput } from "@/lib/validation/inventory.schemas";
 import type { Product } from "@prisma/client";
+import type { ProductWithRelations } from "@/lib/repositories/product.repository";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
 
@@ -8,7 +10,7 @@ import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
 export type { Product };
 
 export interface ProductsResponse {
-  products: Product[];
+  products: SerializeDecimal<ProductWithRelations>[];
   total: number;
 }
 
@@ -64,7 +66,7 @@ async function fetchProducts(
   return responseData.success === true ? responseData.data : responseData;
 }
 
-async function fetchProductById(storeId: string, productId: string): Promise<Product> {
+async function fetchProductById(storeId: string, productId: string): Promise<SerializeDecimal<Product>> {
   const response = await fetch(`/api/stores/${storeId}/products/${productId}`);
 
   if (!response.ok) {
@@ -77,7 +79,7 @@ async function fetchProductById(storeId: string, productId: string): Promise<Pro
   return responseData.success === true ? responseData.data : responseData;
 }
 
-async function createProduct(storeId: string, data: CreateProductInput): Promise<Product> {
+async function createProduct(storeId: string, data: CreateProductInput): Promise<SerializeDecimal<Product>> {
   const response = await fetch(`/api/stores/${storeId}/products`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -98,7 +100,7 @@ async function updateProduct(
   storeId: string,
   productId: string,
   data: UpdateProductInput
-): Promise<Product> {
+): Promise<SerializeDecimal<Product>> {
   const response = await fetch(`/api/stores/${storeId}/products/${productId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -278,11 +280,11 @@ export function useUpdateProduct(storeId: string, productId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<
-    Product,
+    SerializeDecimal<ProductWithRelations>,
     Error,
     UpdateProductInput,
     {
-      previousProduct: Product | undefined;
+      previousProduct: SerializeDecimal<ProductWithRelations> | undefined;
       previousQueries: Array<[readonly unknown[], ProductsResponse | undefined]>;
     }
   >({
@@ -293,7 +295,7 @@ export function useUpdateProduct(storeId: string, productId: string) {
       await queryClient.cancelQueries({ queryKey: productKeys.detail(storeId, productId) });
 
       // Snapshot previous values for rollback
-      const previousProduct = queryClient.getQueryData<Product>(
+      const previousProduct = queryClient.getQueryData<SerializeDecimal<ProductWithRelations>>(
         productKeys.detail(storeId, productId)
       );
       const previousQueries = queryClient.getQueriesData<ProductsResponse>({
@@ -302,11 +304,11 @@ export function useUpdateProduct(storeId: string, productId: string) {
 
       // Optimistically update detail cache
       if (previousProduct) {
-        queryClient.setQueryData<Product>(productKeys.detail(storeId, productId), {
+        queryClient.setQueryData<SerializeDecimal<Product>>(productKeys.detail(storeId, productId), {
           ...previousProduct,
           ...newData,
           updatedAt: new Date(),
-        } as Product);
+        } as SerializeDecimal<Product>);
       }
 
       // Optimistically update all list caches
@@ -322,7 +324,7 @@ export function useUpdateProduct(storeId: string, productId: string) {
                     ...p,
                     ...newData,
                     updatedAt: new Date(),
-                  } as Product)
+                  } as SerializeDecimal<Product>)
                 : p
             ),
           };

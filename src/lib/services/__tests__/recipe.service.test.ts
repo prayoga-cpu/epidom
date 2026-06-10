@@ -113,7 +113,7 @@ describe("RecipeService", () => {
       };
 
       await expect(service.createRecipe(input)).rejects.toThrow(
-        'Recipe with name "Existing Recipe" already exists'
+        "Recipe with name 'Existing Recipe' already exists"
       );
     });
 
@@ -142,7 +142,7 @@ describe("RecipeService", () => {
 
       await expect(
         service.updateRecipe("recipe-1", "other-store", { name: "Updated" })
-      ).rejects.toThrow("Recipe not found or does not belong to this store");
+      ).rejects.toThrow("Recipe with id 'recipe-1' not found");
     });
 
     it("should update recipe when valid", async () => {
@@ -166,7 +166,7 @@ describe("RecipeService", () => {
       mockedRecipeRepo.belongsToStore.mockResolvedValue(false);
 
       await expect(service.deleteRecipe("recipe-1", "other-store")).rejects.toThrow(
-        "Recipe not found or does not belong to this store"
+        "Recipe with id 'recipe-1' not found"
       );
     });
 
@@ -198,11 +198,11 @@ describe("RecipeService", () => {
         { ...mockRecipe, id: "recipe-1", storeId: "store-1" },
         { ...mockRecipe, id: "recipe-2", storeId: "store-1" },
       ]);
-      mockedRecipeRepo.bulkDelete.mockResolvedValue(2);
+      mockedRecipeRepo.bulkDelete.mockResolvedValue({ count: 2 });
 
       const result = await service.bulkDeleteRecipes(["recipe-1", "recipe-2"], "store-1");
 
-      expect(result).toBe(2);
+      expect(result.count).toBe(2);
     });
   });
 
@@ -212,7 +212,7 @@ describe("RecipeService", () => {
 
       await expect(
         service.addIngredient("recipe-1", "other-store", "mat-1", 100, "g")
-      ).rejects.toThrow("Recipe not found or does not belong to this store");
+      ).rejects.toThrow("Recipe with id 'recipe-1' not found");
     });
 
     it("should throw error if material does not belong to store", async () => {
@@ -223,7 +223,7 @@ describe("RecipeService", () => {
       } as any);
 
       await expect(service.addIngredient("recipe-1", "store-1", "mat-1", 100, "g")).rejects.toThrow(
-        "Material not found or does not belong to this store"
+        "Material with id 'mat-1' not found"
       );
     });
 
@@ -254,7 +254,7 @@ describe("RecipeService", () => {
 
       await expect(
         service.duplicateRecipe("recipe-1", "Copy of Cake", "other-store")
-      ).rejects.toThrow("Recipe not found or does not belong to this store");
+      ).rejects.toThrow("Recipe with id 'recipe-1' not found");
     });
 
     it("should duplicate recipe when valid", async () => {

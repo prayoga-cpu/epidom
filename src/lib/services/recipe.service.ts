@@ -1,4 +1,5 @@
 import { Recipe } from "@prisma/client";
+import { NotFoundError, DuplicateError, ForbiddenError, ValidationError } from "@/lib/errors";
 import {
   recipeRepository,
   RecipeWithIngredients,
@@ -52,7 +53,7 @@ export class RecipeService {
     // Validate recipe name uniqueness
     const exists = await recipeRepository.existsByName(data.storeId, data.name);
     if (exists) {
-      throw new Error(`Recipe with name "${data.name}" already exists`);
+      throw new DuplicateError("Recipe", "name", data.name);
     }
 
     // Validate all materials exist and belong to the same store
@@ -61,13 +62,13 @@ export class RecipeService {
       const materials = await materialRepository.findByIds(materialIds);
 
       if (materials.length !== materialIds.length) {
-        throw new Error("One or more materials not found");
+        throw new ValidationError("One or more materials not found");
       }
 
       // Check all materials belong to the same store
       const invalidMaterials = materials.filter((m) => m.storeId !== data.storeId);
       if (invalidMaterials.length > 0) {
-        throw new Error("Materials must belong to the same store as the recipe");
+        throw new ForbiddenError("Materials must belong to the same store as the recipe");
       }
     }
 
@@ -99,14 +100,14 @@ export class RecipeService {
     // Verify recipe belongs to store
     const belongsToStore = await recipeRepository.belongsToStore(recipeId, storeId);
     if (!belongsToStore) {
-      throw new Error("Recipe not found or does not belong to this store");
+      throw new NotFoundError("Recipe", recipeId);
     }
 
     // If updating name, check uniqueness
     if (data.name) {
       const exists = await recipeRepository.existsByName(storeId, data.name, recipeId);
       if (exists) {
-        throw new Error(`Recipe with name "${data.name}" already exists`);
+        throw new DuplicateError("Recipe", "name", data.name);
       }
     }
 
@@ -121,7 +122,7 @@ export class RecipeService {
     // Verify recipe belongs to store
     const belongsToStore = await recipeRepository.belongsToStore(recipeId, storeId);
     if (!belongsToStore) {
-      throw new Error("Recipe not found or does not belong to this store");
+      throw new NotFoundError("Recipe", recipeId);
     }
 
     return recipeRepository.delete(recipeId);
@@ -136,7 +137,7 @@ export class RecipeService {
     const invalidRecipes = recipes.filter((r) => r.storeId !== storeId);
 
     if (invalidRecipes.length > 0) {
-      throw new Error("Some recipes do not belong to this store");
+      throw new ForbiddenError("Some recipes do not belong to this store");
     }
 
     return recipeRepository.bulkDelete(recipeIds);
@@ -163,13 +164,13 @@ export class RecipeService {
     // Verify recipe belongs to store
     const belongsToStore = await recipeRepository.belongsToStore(recipeId, storeId);
     if (!belongsToStore) {
-      throw new Error("Recipe not found or does not belong to this store");
+      throw new NotFoundError("Recipe", recipeId);
     }
 
     // Verify material exists and belongs to same store
     const material = await materialRepository.findById(materialId);
     if (!material || material.storeId !== storeId) {
-      throw new Error("Material not found or does not belong to this store");
+      throw new NotFoundError("Material", materialId);
     }
 
     return recipeRepository.addIngredient(recipeId, materialId, quantity, unit, notes);
@@ -182,7 +183,7 @@ export class RecipeService {
     // Get ingredient to verify recipe ownership
     const recipe = await recipeRepository.findById(materialId);
     if (!recipe || recipe.storeId !== storeId) {
-      throw new Error("Recipe not found or does not belong to this store");
+      throw new NotFoundError("Recipe", materialId);
     }
 
     return recipeRepository.removeIngredient(materialId);
@@ -206,7 +207,7 @@ export class RecipeService {
     // Get ingredient to verify recipe ownership
     const recipe = await recipeRepository.findById(materialId);
     if (!recipe || recipe.storeId !== storeId) {
-      throw new Error("Recipe not found or does not belong to this store");
+      throw new NotFoundError("Recipe", materialId);
     }
 
     return recipeRepository.updateIngredient(materialId, data);
@@ -223,13 +224,13 @@ export class RecipeService {
     // Verify recipe belongs to store
     const belongsToStore = await recipeRepository.belongsToStore(recipeId, storeId);
     if (!belongsToStore) {
-      throw new Error("Recipe not found or does not belong to this store");
+      throw new NotFoundError("Recipe", recipeId);
     }
 
     // Validate new name uniqueness
     const exists = await recipeRepository.existsByName(storeId, newName);
     if (exists) {
-      throw new Error(`Recipe with name "${newName}" already exists`);
+      throw new DuplicateError("Recipe", "name", newName);
     }
 
     return recipeRepository.duplicate(recipeId, newName, storeId);
@@ -242,7 +243,7 @@ export class RecipeService {
     // Verify recipe belongs to store
     const belongsToStore = await recipeRepository.belongsToStore(recipeId, storeId);
     if (!belongsToStore) {
-      throw new Error("Recipe not found or does not belong to this store");
+      throw new NotFoundError("Recipe", recipeId);
     }
 
     return recipeRepository.recalculateCost(recipeId);

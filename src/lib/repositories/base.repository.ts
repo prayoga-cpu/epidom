@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -36,18 +36,24 @@ export abstract class BaseRepository {
   }
 
   /**
-   * Execute raw SQL query
-   * Use sparingly - prefer Prisma's type-safe queries
+   * Execute raw SQL query using Prisma's tagged template for automatic parameterization.
+   * Use sparingly - prefer Prisma's type-safe queries.
+   *
+   * @example
+   * await this.executeRaw(Prisma.sql`UPDATE "users" SET "name" = ${name} WHERE "id" = ${id}`);
    */
-  async executeRaw(query: string, params?: unknown[]): Promise<unknown> {
-    return this.db.$executeRawUnsafe(query, ...(params ?? []));
+  async executeRaw(query: Prisma.Sql): Promise<number> {
+    return this.db.$executeRaw(query);
   }
 
   /**
-   * Execute raw SQL query and return results
-   * Use sparingly - prefer Prisma's type-safe queries
+   * Execute raw SQL query and return results using Prisma's tagged template
+   * for automatic parameterization. Use sparingly - prefer Prisma's type-safe queries.
+   *
+   * @example
+   * const users = await this.queryRaw<User[]>(Prisma.sql`SELECT * FROM "users" WHERE "id" = ${id}`);
    */
-  async queryRaw<T = unknown>(query: string, params?: unknown[]): Promise<T> {
-    return this.db.$queryRawUnsafe(query, ...(params ?? [])) as Promise<T>;
+  async queryRaw<T = unknown>(query: Prisma.Sql): Promise<T> {
+    return this.db.$queryRaw<T>(query);
   }
 }

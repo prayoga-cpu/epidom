@@ -16,3 +16,9 @@ export * from "./user.repository";
 export * from "./business.repository";
 export * from "./store.repository";
 export * from "./subscription.repository";
+export * from "./material.repository";
+export * from "./product.repository";
+export * from "./production-batch.repository";
+export * from "./recipe.repository";
+export * from "./supplier.repository";
+

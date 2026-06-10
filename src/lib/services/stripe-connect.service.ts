@@ -1,5 +1,6 @@
 import { stripe } from "@/lib/stripe";
 import { userRepository, UserRepository } from "@/lib/repositories/user.repository";
+import { NotFoundError } from "@/lib/errors";
 import { STRIPE_CONFIG } from "@/config/stripe.config";
 import Stripe from "stripe";
 
@@ -28,7 +29,7 @@ export class StripeConnectService {
     // Check if user already has a Connect account
     const user = await this.userRepo.findById(userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new NotFoundError("User");
     }
 
     if (user.stripeConnectAccountId) {
@@ -85,7 +86,7 @@ export class StripeConnectService {
   ): Promise<string> {
     const user = await this.userRepo.findById(userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new NotFoundError("User");
     }
 
     // Get or create Connect account
@@ -172,7 +173,7 @@ export class StripeConnectService {
   async createDashboardLoginLink(userId: string): Promise<string> {
     const user = await this.userRepo.findById(userId);
     if (!user?.stripeConnectAccountId) {
-      throw new Error("No Stripe Connect account found");
+      throw new NotFoundError("Stripe Connect account");
     }
 
     const loginLink = await stripe.accounts.createLoginLink(user.stripeConnectAccountId);

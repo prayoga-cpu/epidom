@@ -74,11 +74,7 @@ export const PricingCards = memo(function PricingCards() {
         {/* ========================================
             PROMO BANNER (Copied from Homepage)
             ======================================== */}
-<<<<<<< HEAD
-        <div className="mb-16 from-brand-primary to-brand-primary relative overflow-hidden rounded-3xl bg-gradient-to-r via-gray-800 p-8 shadow-2xl transition-all duration-1000 md:p-12">
-=======
         <div className="mb-16 from-brand-primary to-brand-primary relative overflow-hidden rounded-3xl bg-gradient-to-r via-brand-primary/90 p-8 shadow-2xl transition-all duration-1000 md:p-12">
->>>>>>> dev
           {/* Background glow */}
           <div className="absolute inset-0" aria-hidden="true">
             <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-white/10 blur-3xl" />

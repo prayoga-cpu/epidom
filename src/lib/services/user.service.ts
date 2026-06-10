@@ -1,4 +1,5 @@
 import { User } from "@prisma/client";
+import { NotFoundError } from "@/lib/errors";
 import { userRepository, UserRepository } from "@/lib/repositories/user.repository";
 import { UpdateProfileInput } from "@/lib/validation/auth.schemas";
 import { UserProfileDto, UserDto } from "@/types/dto";
@@ -22,7 +23,7 @@ export class UserService {
   async getProfile(userId: string): Promise<UserProfileDto> {
     const profile = await this.userRepo.getProfile(userId);
     if (!profile) {
-      throw new Error("User not found");
+      throw new NotFoundError("User");
     }
     return profile;
   }
@@ -33,7 +34,7 @@ export class UserService {
   async getUserById(userId: string): Promise<User> {
     const user = await this.userRepo.findById(userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new NotFoundError("User");
     }
 
     return user;
@@ -46,7 +47,7 @@ export class UserService {
     // Validate user exists
     const user = await this.userRepo.findById(userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new NotFoundError("User");
     }
 
     // Update user
@@ -69,7 +70,7 @@ export class UserService {
   async deleteAccount(userId: string): Promise<void> {
     const user = await this.userRepo.findById(userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new NotFoundError("User");
     }
 
     await this.userRepo.delete(userId);
@@ -85,7 +86,7 @@ export class UserService {
   }> {
     const profile = await this.userRepo.getProfile(userId);
     if (!profile) {
-      throw new Error("User not found");
+      throw new NotFoundError("User");
     }
 
     const accountAge = Math.floor(

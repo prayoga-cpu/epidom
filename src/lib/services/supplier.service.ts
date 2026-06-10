@@ -1,4 +1,5 @@
 import { Supplier } from "@prisma/client";
+import { DuplicateError, ForbiddenError } from "@/lib/errors";
 import {
   supplierRepository,
   SupplierWithRelations,
@@ -47,7 +48,7 @@ export class SupplierService {
     // Validate supplier name uniqueness within store
     const nameExists = await supplierRepository.existsByName(data.storeId, data.name);
     if (nameExists) {
-      throw new Error(`Supplier with name "${data.name}" already exists in this store`);
+      throw new DuplicateError("Supplier", "name", data.name);
     }
 
     return supplierRepository.create({
@@ -86,14 +87,14 @@ export class SupplierService {
     // Verify supplier belongs to store
     const belongsToStore = await supplierRepository.belongsToStore(supplierId, storeId);
     if (!belongsToStore) {
-      throw new Error("Supplier does not belong to this store");
+      throw new ForbiddenError("Supplier does not belong to this store");
     }
 
     // If name is being updated, validate uniqueness within store
     if (data.name) {
       const nameExists = await supplierRepository.existsByName(storeId, data.name, supplierId);
       if (nameExists) {
-        throw new Error(`Supplier with name "${data.name}" already exists in this store`);
+        throw new DuplicateError("Supplier", "name", data.name);
       }
     }
 
@@ -108,7 +109,7 @@ export class SupplierService {
     // Verify supplier belongs to store
     const belongsToStore = await supplierRepository.belongsToStore(supplierId, storeId);
     if (!belongsToStore) {
-      throw new Error("Supplier does not belong to this store");
+      throw new ForbiddenError("Supplier does not belong to this store");
     }
 
     return supplierRepository.delete(supplierId);
@@ -127,7 +128,7 @@ export class SupplierService {
     const invalidSuppliers = suppliers.filter((s) => s.storeId !== storeId);
 
     if (invalidSuppliers.length > 0) {
-      throw new Error("One or more suppliers do not belong to this store");
+      throw new ForbiddenError("One or more suppliers do not belong to this store");
     }
 
     return supplierRepository.bulkDelete(supplierIds);

@@ -43,20 +43,12 @@ export function useRegister() {
         throw new Error(error.message || "Registration failed");
       }
 
-<<<<<<< HEAD
-      return session;
-    },
-    onSuccess: () => {
-      // Redirect to onboarding page or verify email page
-      router.push("/onboarding");
-=======
       // Return email for redirect
       return { session, email: data.email };
     },
     onSuccess: (data) => {
       // Redirect to verify-email-sent page with email parameter
       router.push(`/verify-email-sent?email=${encodeURIComponent(data.email)}`);
->>>>>>> dev
     },
   });
 }

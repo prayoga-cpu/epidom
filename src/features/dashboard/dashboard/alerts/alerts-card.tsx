@@ -4,14 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Alert, useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
-<<<<<<< HEAD
-import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
-import { DashboardCard } from "../components/dashboard-card";
-=======
 import { ArrowRight, AlertCircle } from "lucide-react";
 import { DashboardCard } from "../components/dashboard-card";
 import { LottieLoader } from "@/components/ui/lottie-loader";
->>>>>>> dev
 
 interface AlertsCardProps {
   initialAlerts: Alert[];

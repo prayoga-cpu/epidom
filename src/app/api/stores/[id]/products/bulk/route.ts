@@ -22,11 +22,7 @@ export const DELETE = withApiHandler(
     return NextResponse.json(
       createSuccessResponse({
         message: "Products deleted successfully",
-<<<<<<< HEAD
-        deletedCount: result.deletedCount,
-=======
         deletedCount: result.count,
->>>>>>> dev
       }),
       { status: 200 }
     );

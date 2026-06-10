@@ -9,6 +9,8 @@ import { prisma, TRANSACTION_TIMEOUTS } from "@/lib/prisma";
 import { supplierRepository } from "@/lib/repositories/supplier.repository";
 import { toDecimal } from "@/lib/utils/types.server";
 import type { CreateMaterialInput, UpdateMaterialInput, UpdateMaterialSupplierInput, AddMaterialSupplierInput } from "@/lib/validation/inventory.schemas";
+import { NotFoundError, DuplicateError, ValidationError, ForbiddenError, InsufficientStockError, ConflictError } from "@/lib/errors";
+
 
 /**
  * Material (Ingredient) Service
@@ -42,7 +44,7 @@ export class MaterialService {
   async getMaterialById(materialId: string): Promise<MaterialWithSuppliers> {
     const material = await this.materialRepo.findById(materialId);
     if (!material) {
-      throw new Error("Material not found");
+      throw new NotFoundError("Material");
     }
     return material;
   }
@@ -77,7 +79,7 @@ export class MaterialService {
     if (suppliers && suppliers.length > 0) {
       const preferredCount = suppliers.filter((s) => s.isPreferred).length;
       if (preferredCount > 1) {
-        throw new Error("Only one supplier can be marked as preferred");
+        throw new ValidationError("Only one supplier can be marked as preferred");
       }
     }
 
@@ -131,22 +133,22 @@ export class MaterialService {
     }
   ): Promise<{ material?: Material; product?: any; movement: any }> {
     if (!input.materialId && !input.productId) {
-      throw new Error("Either materialId or productId must be provided");
+      throw new ValidationError("Either materialId or productId must be provided");
     }
 
     // For now, only support materials (products can be added later)
     if (!input.materialId) {
-      throw new Error("Product stock adjustment not yet implemented");
+      throw new ValidationError("Product stock adjustment not yet implemented");
     }
 
     const material = await this.materialRepo.findById(input.materialId);
     if (!material) {
-      throw new Error("Material not found");
+      throw new NotFoundError("Material");
     }
 
     const belongsToStore = await this.materialRepo.belongsToStore(input.materialId, storeId);
     if (!belongsToStore) {
-      throw new Error("Material does not belong to this store");
+      throw new ForbiddenError("Material does not belong to this store");
     }
 
     const oldStock = Number(material.currentStock);
@@ -155,7 +157,7 @@ export class MaterialService {
     const newStock = isIncrease ? oldStock + adjustmentQuantity : oldStock - adjustmentQuantity;
 
     if (newStock < 0) {
-      throw new Error("Stock cannot be negative");
+      throw new InsufficientStockError(material.name, Math.abs(adjustmentQuantity), oldStock);
     }
 
     // Use transaction to ensure atomicity
@@ -204,19 +206,19 @@ export class MaterialService {
     // Verify material exists and belongs to store
     const material = await this.materialRepo.findById(materialId);
     if (!material) {
-      throw new Error("Material not found");
+      throw new NotFoundError("Material");
     }
 
     const belongsToStore = await this.materialRepo.belongsToStore(materialId, storeId);
     if (!belongsToStore) {
-      throw new Error("Material does not belong to this store");
+      throw new ForbiddenError("Material does not belong to this store");
     }
 
     // If updating SKU, check uniqueness
     if (input.sku && input.sku !== material.sku) {
       const skuExists = await this.materialRepo.existsBySku(storeId, input.sku, materialId);
       if (skuExists) {
-        throw new Error("A material with this SKU already exists in your store");
+        throw new DuplicateError("Material", "sku", sku);
       }
     }
 
@@ -224,7 +226,7 @@ export class MaterialService {
     if (input.suppliers && input.suppliers.length > 0) {
       const preferredCount = input.suppliers.filter((s) => s.isPreferred).length;
       if (preferredCount > 1) {
-        throw new Error("Only one supplier can be marked as preferred");
+        throw new ValidationError("Only one supplier can be marked as preferred");
       }
     }
 
@@ -326,7 +328,7 @@ export class MaterialService {
     // Verify ownership
     const belongsToStore = await this.materialRepo.belongsToStore(materialId, storeId);
     if (!belongsToStore) {
-      throw new Error("Material does not belong to this store");
+      throw new ForbiddenError("Material does not belong to this store");
     }
 
     // Use direct repository delete (relies on DB cascade)
@@ -344,7 +346,7 @@ export class MaterialService {
 
     const invalidMaterials = materials.filter((m) => m.storeId !== storeId);
     if (invalidMaterials.length > 0) {
-      throw new Error("Some materials do not belong to this store");
+      throw new ForbiddenError("Some materials do not belong to this store");
     }
 
     // Use direct repository bulk delete (relies on DB cascade)
@@ -364,20 +366,20 @@ export class MaterialService {
     // Verify material belongs to store
     const belongsToStore = await this.materialRepo.belongsToStore(materialId, storeId);
     if (!belongsToStore) {
-      throw new Error("Material does not belong to this store");
+      throw new ForbiddenError("Material does not belong to this store");
     }
 
     // Verify supplier belongs to same store
     const supplier = await supplierRepository.findById(supplierId);
 
     if (!supplier || supplier.storeId !== storeId) {
-      throw new Error("Supplier not found or does not belong to this store");
+      throw new NotFoundError("Supplier");
     }
 
     // Check if supplier is already linked
     const material = await this.materialRepo.findById(materialId);
     if (material?.materialSuppliers.some((s) => s.supplierId === supplierId)) {
-      throw new Error("Supplier is already linked to this material");
+      throw new ConflictError("Supplier is already linked to this material");
     }
 
     await this.materialRepo.addSupplier(materialId, supplierId, price, isPreferred);
@@ -390,7 +392,7 @@ export class MaterialService {
     // Verify material belongs to store
     const belongsToStore = await this.materialRepo.belongsToStore(materialId, storeId);
     if (!belongsToStore) {
-      throw new Error("Material does not belong to this store");
+      throw new ForbiddenError("Material does not belong to this store");
     }
 
     await this.materialRepo.removeSupplier(materialId, supplierId);
@@ -408,7 +410,7 @@ export class MaterialService {
     // Verify material belongs to store
     const belongsToStore = await this.materialRepo.belongsToStore(materialId, storeId);
     if (!belongsToStore) {
-      throw new Error("Material does not belong to this store");
+      throw new ForbiddenError("Material does not belong to this store");
     }
 
     await this.materialRepo.updateSupplier(materialId, supplierId, input);
@@ -498,12 +500,12 @@ export class MaterialService {
     // Verify material belongs to store
     const belongsToStore = await this.materialRepo.belongsToStore(materialId, storeId);
     if (!belongsToStore) {
-      throw new Error("Material does not belong to this store");
+      throw new ForbiddenError("Material does not belong to this store");
     }
 
     const material = await this.materialRepo.findById(materialId);
     if (!material) {
-      throw new Error("Material not found");
+      throw new NotFoundError("Material");
     }
 
     await prisma.$transaction(

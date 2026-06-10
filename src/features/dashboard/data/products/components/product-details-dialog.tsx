@@ -25,6 +25,7 @@ import {
 import type { ProductWithRelations } from "@/lib/repositories/product.repository";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/utils/formatting";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import type { SerializeDecimal } from "@/types/prisma";
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -33,7 +34,7 @@ import { getTranslatedCategory } from "../../recipes/utils/category-helpers";
 interface ProductDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  product: ProductWithRelations;
+  product: SerializeDecimal<ProductWithRelations>;
   onEdit?: () => void;
   onDelete?: () => Promise<void> | void;
 }
