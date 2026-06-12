@@ -84,46 +84,7 @@ export class SubscriptionService {
       throw new Error(`You already have an active ${plan} plan`);
     } */
 
-    // Get Epidom owner's Stripe Connect account (for receiving 80% revenue split)
-    //
-    // ENVIRONMENT VARIABLE: SKIP_STRIPE_CONNECT
-    // Purpose: Skip Stripe Connect validation during development/testing
-    // Values: "true" | "false" (default)
-    //
-    // When true: Allows checkout without Connect account (development only)
-    // When false: Requires EPIDOM_OWNER_EMAIL and Connect account setup
-    //
-    // ⚠️ PRODUCTION: Must be "false" or unset
-    //
-    const skipConnect = process.env.SKIP_STRIPE_CONNECT === "true";
-    let epidomOwner = null;
 
-    if (!skipConnect) {
-      try {
-        epidomOwner = await this.getEpidomOwner();
-        if (!epidomOwner || !epidomOwner.stripeConnectAccountId) {
-          throw new Error(
-            "Payment system not configured. Epidom owner must complete Stripe Connect onboarding first."
-          );
-        }
-      } catch (error: unknown) {
-        // Allow checkout without Connect for development if:
-        // 1. EPIDOM_OWNER_EMAIL not set, OR
-        // 2. Owner not found, OR
-        // 3. Owner doesn't have Connect account yet
-        if (process.env.NODE_ENV === "development") {
-          epidomOwner = null;
-        } else {
-          // In production, log internal error and throw user-friendly AppError
-          logger.error("Checkout failed due to Stripe Connect configuration issue", error);
-          throw new AppError(
-            "Payment system is currently undergoing setup or maintenance. Please try again later.",
-            ApiErrorCode.INTERNAL_ERROR,
-            500
-          );
-        }
-      }
-    }
 
     let stripeCustomerId: string;
 
@@ -186,15 +147,6 @@ export class SubscriptionService {
           plan: plan,
         },
         ...(trial ? { trial_period_days: 7 } : {}),
-        // Application fee: 20% goes to platform (you), 80% to connected account
-        // Only set if Epidom owner has Connect account configured
-        ...(epidomOwner?.stripeConnectAccountId && {
-          application_fee_percent: STRIPE_CONFIG.PLATFORM_FEE_PERCENT,
-          // Transfer 80% to Epidom owner
-          transfer_data: {
-            destination: epidomOwner.stripeConnectAccountId,
-          },
-        }),
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -477,35 +429,7 @@ export class SubscriptionService {
     };
   }
 
-  /**
-   * Get Epidom owner user from environment variable
-   */
-  private async getEpidomOwner() {
-    const ownerEmail = process.env.EPIDOM_OWNER_EMAIL;
-    if (!ownerEmail) {
-      throw new Error(
-        "EPIDOM_OWNER_EMAIL environment variable not set. " +
-          "Please set this to the email of the Epidom business owner."
-      );
-    }
-    const owner = await this.userRepo.findByEmail(ownerEmail);
 
-    if (!owner) {
-      throw new Error(
-        `Epidom owner not found. User with email "${ownerEmail}" does not exist. ` +
-          "Please create the owner account first or update EPIDOM_OWNER_EMAIL in .env file."
-      );
-    }
-    if (!owner.stripeConnectAccountId) {
-      throw new Error(
-        `Epidom owner found but Stripe Connect account not configured. ` +
-          `User "${ownerEmail}" must complete Stripe Connect onboarding first. ` +
-          `Go to Profile page and complete the Payment Setup.`
-      );
-    }
-
-    return owner;
-  }
 }
 
 // Export singleton instance
