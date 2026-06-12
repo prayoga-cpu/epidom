@@ -118,7 +118,7 @@ export class SubscriptionService {
 
     let stripeCustomerId: string;
 
-    if (subscription) {
+    if (subscription && !subscription.stripeCustomerId.startsWith("free_")) {
       // Use existing Stripe customer ID
       stripeCustomerId = subscription.stripeCustomerId;
 
@@ -144,6 +144,13 @@ export class SubscriptionService {
         },
       });
       stripeCustomerId = customer.id;
+
+      if (subscription && subscription.stripeCustomerId.startsWith("free_")) {
+        // Update local record to use real Stripe customer ID
+        await this.subscriptionRepo.update(userId, {
+          stripeCustomerId: stripeCustomerId,
+        });
+      }
     }
 
     // Get price ID for plan
@@ -164,9 +171,7 @@ export class SubscriptionService {
       // Important: This is how we implement the 80/20 split
       // The payment goes to your (developer) account
       // 80% will be transferred to the Epidom owner's connected account
-      payment_intent_data: {
-        application_fee_amount: undefined, // Set on subscription, not here
-      },
+      // Note: Application fee is set on the subscription, not here.
       subscription_data: {
         metadata: {
           userId: user.id,
@@ -317,11 +322,11 @@ export class SubscriptionService {
   }
 
   /**
-   * Provision a free OPERATIONS subscription for a user, bypassing Stripe.
-   * Used while payment is not yet wired up, and for the demo account.
+   * Provision a free subscription for a user, bypassing Stripe.
+   * Used for default plan on registration and offline/free tiers.
    * Uses "free_<userId>" as a placeholder stripeCustomerId (guaranteed unique).
    */
-  async activateFree(userId: string, plan: SubscriptionPlan = SubscriptionPlan.OPERATIONS): Promise<void> {
+  async activateFree(userId: string, plan: SubscriptionPlan = SubscriptionPlan.FREE): Promise<void> {
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
     // Atomic upsert — safe against concurrent calls (status check + onboarding PATCH firing simultaneously)
@@ -464,21 +469,9 @@ export class SubscriptionService {
   }
 
   /**
-   * Get Epidom owner user
-   * IMPORTANT: This is a placeholder. You need to implement a way to identify
-   * the Epidom owner (e.g., via environment variable, database flag, etc.)
-   *
-   * For now, you could:
-   * 1. Set an environment variable with the owner's email
-   * 2. Add an `isEpidomOwner` flag to the User model
-   * 3. Create a separate configuration table
+   * Get Epidom owner user from environment variable
    */
   private async getEpidomOwner() {
-    // TODO: Implement proper Epidom owner identification
-    // For now, return the first user with a Stripe Connect account
-    // This is a temporary solution - you should have a proper way to identify the owner
-
-    // Option 1: Use environment variable
     const ownerEmail = process.env.EPIDOM_OWNER_EMAIL;
     if (!ownerEmail) {
       throw new Error(

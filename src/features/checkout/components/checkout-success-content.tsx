@@ -64,59 +64,61 @@ export function CheckoutSuccessContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="flex min-h-screen items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md space-y-6 text-center">
+        <div className="w-full max-w-md space-y-8 text-center">
           {/* Success Icon */}
           <div className="flex justify-center">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-green-100 opacity-75 blur"></div>
-              <CheckCircle className="relative h-20 w-20 text-green-600" />
+              <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-2xl"></div>
+              <CheckCircle className="relative h-24 w-24 text-emerald-500" strokeWidth={1.5} />
             </div>
           </div>
 
           {/* Title */}
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900">{t("checkout.success.title")}</h1>
-            <p className="text-gray-600">{t("checkout.success.subtitle")}</p>
+          <div className="space-y-3">
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">{t("checkout.success.title")}</h1>
+            <p className="text-muted-foreground">{t("checkout.success.subtitle")}</p>
           </div>
 
           {/* Details */}
-          <div className="space-y-2 rounded-lg bg-gray-50 p-4 text-left">
+          <div className="space-y-4 rounded-2xl border bg-card p-6 text-left shadow-sm">
             {planName && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">{t("checkout.success.plan")}:</span>
-                <span className="font-semibold text-gray-900">{planName}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">{t("checkout.success.plan")}</span>
+                <span className="font-semibold text-foreground">{planName}</span>
               </div>
             )}
             {sessionId && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">{t("checkout.success.orderId")}:</span>
-                <span className="font-mono text-sm text-gray-600">
-                  {sessionId.substring(0, 12)}...
+              <div className="flex items-center justify-between border-t pt-4">
+                <span className="text-sm font-medium text-muted-foreground">{t("checkout.success.orderId")}</span>
+                <span className="font-mono text-sm text-muted-foreground">
+                  {sessionId.substring(0, 14)}...
                 </span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-gray-600">{t("checkout.success.status")}:</span>
-              <span className="font-semibold text-green-600">{t("checkout.success.active")}</span>
+            <div className="flex items-center justify-between border-t pt-4">
+              <span className="text-sm font-medium text-muted-foreground">{t("checkout.success.status")}</span>
+              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-500">
+                {t("checkout.success.active")}
+              </span>
             </div>
           </div>
 
           {/* Message */}
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-            <p className="text-sm text-blue-800">{t("checkout.success.message")}</p>
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+            <p className="text-sm text-blue-600 dark:text-blue-400">{t("checkout.success.message")}</p>
           </div>
 
           {/* Action Buttons */}
           <div className="space-y-3 pt-4">
-            <Button onClick={handleContinue} disabled={isLoading} className="w-full" size="lg">
+            <Button onClick={handleContinue} disabled={isLoading} className="w-full h-12 rounded-xl text-base" size="lg">
               {isLoading ? t("common.loading") : t("checkout.success.continueToProfile")}
             </Button>
           </div>
 
           {/* Footer Note */}
-          <p className="pt-4 text-xs text-gray-500">{t("checkout.success.confirmationEmail")}</p>
+          <p className="pt-2 text-xs text-muted-foreground">{t("checkout.success.confirmationEmail")}</p>
         </div>
       </div>
     </div>

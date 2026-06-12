@@ -76,6 +76,11 @@ const PLAN_PRICES: Record<string, Record<string, string>> = {
     USD: "Custom",
     EUR: "Custom",
   },
+  FREE: {
+    IDR: "Gratis / selamanya",
+    USD: "Free / forever",
+    EUR: "Gratuit / à vie",
+  },
 };
 
 /**
@@ -115,12 +120,26 @@ export function getPlanDetails(
         color: "text-blue-600",
         badgeColor: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
       };
-    default:
+    case "FREE":
       return {
-        name: t("profile.subscription.plans.starter") || "POS",
+        name: t("profile.subscription.plans.free") || "Starter Plan",
+        price: t("profile.subscription.plans.free_price") || PLAN_PRICES.FREE[curr],
+        color: "text-emerald-600",
+        badgeColor: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
+      };
+    case "POS":
+      return {
+        name: t("profile.subscription.plans.pos") || "POS",
         price: PLAN_PRICES.POS[curr],
         color: "text-green-600",
         badgeColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+      };
+    default:
+      return {
+        name: plan || "Unknown Plan",
+        price: "-",
+        color: "text-gray-600",
+        badgeColor: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
       };
   }
 }
@@ -134,8 +153,12 @@ export function getPlanBadgeColor(plan?: string): string {
       return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
     case "ENTERPRISE":
       return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-    default:
+    case "FREE":
+      return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300";
+    case "POS":
       return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+    default:
+      return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
   }
 }
 
@@ -148,8 +171,12 @@ export function getPlanLabel(plan: string | undefined, t: (key: string) => strin
       return t("profile.subscription.plans.pro") || plan || "";
     case "ENTERPRISE":
       return t("profile.subscription.plans.enterprise") || plan || "";
+    case "FREE":
+      return t("profile.subscription.plans.free") || "Starter Plan";
+    case "POS":
+      return t("profile.subscription.plans.pos") || "POS";
     default:
-      return t("profile.subscription.plans.starter") || plan || "";
+      return plan || "";
   }
 }
 

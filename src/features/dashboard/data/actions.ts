@@ -442,9 +442,6 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
  */
 async function importSuppliers(data: any[], storeId: string): Promise<ImportResult> {
   try {
-    // Debug: Log raw data received
-    console.log("[importSuppliers] Raw data received:", JSON.stringify(data, null, 2));
-
     const validData = data.filter(
       (item) => item.name && typeof item.name === "string" && item.name.trim()
     );
@@ -470,8 +467,6 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       };
-      // Debug: Log cleaned data
-      console.log("[importSuppliers] Cleaned supplier:", cleaned);
       return cleaned;
     });
 
@@ -880,15 +875,6 @@ export async function bulkImportMultiEntity(
 
     // 5. Import in dependency order
     const summary = { ...defaultSummary };
-
-    // Debug: Log grouped counts
-    console.log("[Smart Import] Entity grouping:", {
-      suppliers: grouped.supplier.length,
-      materials: grouped.material.length,
-      recipes: grouped.recipe.length,
-      products: grouped.product.length,
-      productRows: grouped.product.map((p) => ({ name: p.name, category: p.category })),
-    });
 
     // 5a. Suppliers first (no dependencies)
     if (grouped.supplier.length > 0) {

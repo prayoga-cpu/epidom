@@ -134,14 +134,6 @@ export function SmartImportDialog({
     setStep("importing");
 
     try {
-      // Debug: Log data being sent to backend (VISIBLE IN BROWSER CONSOLE)
-      console.log("[SmartImport] Sending data to backend:", {
-        rowCount: editedData.length,
-        sampleRow: editedData[0],
-        entityType: selectedEntityType || "material",
-        firstSupplier: editedData.find(d => d.category === "Suppliers" || d.supplierName || d.contactPerson)
-      });
-
       const result = await executeMutation.mutateAsync({
         sessionId: analysisResult.sessionId,
         storeId,

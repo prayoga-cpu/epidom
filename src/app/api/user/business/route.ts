@@ -86,9 +86,9 @@ export const PATCH = withApiHandler(
       }
     }
 
-    // Provision free OPERATIONS subscription so the user has full access immediately.
+    // Provision free default subscription for the user.
     try {
-      await subscriptionService.activateFree(userId);
+      await subscriptionService.activateFree(userId, "FREE");
     } catch (err) {
       logger.error("Failed to activate free subscription", err, { userId });
       return NextResponse.json(createErrorResponse(ApiErrorCode.SUBSCRIPTION_INACTIVE, "Failed to activate subscription"), { status: 500 });

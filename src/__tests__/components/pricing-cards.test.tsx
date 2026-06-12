@@ -126,30 +126,48 @@ describe("PricingCards", () => {
       );
     });
   });
-
-  it("Confirm calls activate-free API with correct plan (POS)", async () => {
-    mockFetch.mockResolvedValue({ ok: true, status: 200 });
+ 
+  it("Confirm calls checkout API with correct plan (POS)", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: { url: "https://checkout.stripe.com/test" } }),
+    });
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Get POS"));
     fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/subscriptions/activate-free",
+        "/api/subscriptions/checkout",
         expect.objectContaining({ body: JSON.stringify({ plan: "POS" }) })
       );
     });
   });
-
-  it("on success redirects to /stores via window.location.href (full reload)", async () => {
-    mockFetch.mockResolvedValue({ ok: true, status: 200 });
+ 
+  it("on success redirects to Stripe Checkout URL for paid plans", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: { url: "https://checkout.stripe.com/test" } }),
+    });
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Get POS"));
+    fireEvent.click(screen.getByText("Confirm"));
+    await waitFor(() => {
+      expect(window.location.href).toBe("https://checkout.stripe.com/test");
+    });
+  });
+
+  it("on success redirects to /stores for FREE plan", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200 });
+    render(<PricingCards yearly={false} />);
+    fireEvent.click(screen.getByText("Get Started"));
     fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() => {
       expect(window.location.href).toBe("/stores");
     });
   });
-
+ 
   it("on 401 redirects to /register", async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 401 });
     render(<PricingCards yearly={false} />);
@@ -159,9 +177,13 @@ describe("PricingCards", () => {
       expect(window.location.href).toBe("/register");
     });
   });
-
+ 
   it("dialog closes after successful activation", async () => {
-    mockFetch.mockResolvedValue({ ok: true, status: 200 });
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: { url: "https://checkout.stripe.com/test" } }),
+    });
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Get POS"));
     fireEvent.click(screen.getByText("Confirm"));

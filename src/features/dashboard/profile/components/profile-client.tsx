@@ -9,6 +9,7 @@ import { StripeConnectCard } from "./stripe-connect-card";
 import { AccountSettingsCard } from "./account-settings-card";
 import { useProfile } from "../hooks/use-profile";
 import type { ProfileData } from "../types";
+import { CurrencyProvider } from "@/components/providers/currency-provider";
 
 import { useSession } from "@/lib/auth-client";
 import { useEffect } from "react";
@@ -51,39 +52,41 @@ export function ProfileClient({ initialProfile, isOwner }: ProfileClientProps) {
   }
 
   return (
-    <div className="min-h-[calc(100vh-150px)] w-full space-y-4 sm:space-y-6">
-      <div className="mx-auto w-full max-w-7xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6 md:px-8 md:py-8">
-        <div className="animate-slide-up">
-          <ProfileHeader
-            user={profileData}
-            subscription={profileData.subscription}
-            onUpdate={undefined}
-          />
-        </div>
-
-        <div className="animate-slide-up-delayed grid gap-4 sm:gap-6 md:grid-cols-2">
-          <PersonalInfoCard user={profileData} onUpdate={undefined} />
-          <SubscriptionInfoCard subscription={profileData.subscription} />
-        </div>
-
-        <div className="animate-slide-up-delayed-2">
-          <BusinessInfoCard
-            business={profileData.business}
-            userId={profileData.id}
-            onUpdate={undefined}
-          />
-        </div>
-
-        <div className="animate-slide-up-delayed-3">
-          <AccountSettingsCard userEmail={profileData.email} />
-        </div>
-
-        {isOwner && (
-          <div className="animate-slide-up-delayed-3">
-            <StripeConnectCard />
+    <CurrencyProvider>
+      <div className="min-h-[calc(100vh-150px)] w-full space-y-4 sm:space-y-6">
+        <div className="mx-auto w-full max-w-7xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6 md:px-8 md:py-8">
+          <div className="animate-slide-up">
+            <ProfileHeader
+              user={profileData}
+              subscription={profileData.subscription}
+              onUpdate={undefined}
+            />
           </div>
-        )}
+
+          <div className="animate-slide-up-delayed grid gap-4 sm:gap-6 md:grid-cols-2">
+            <PersonalInfoCard user={profileData} onUpdate={undefined} />
+            <SubscriptionInfoCard subscription={profileData.subscription} />
+          </div>
+
+          <div className="animate-slide-up-delayed-2">
+            <BusinessInfoCard
+              business={profileData.business}
+              userId={profileData.id}
+              onUpdate={undefined}
+            />
+          </div>
+
+          <div className="animate-slide-up-delayed-3">
+            <AccountSettingsCard userEmail={profileData.email} />
+          </div>
+
+          {isOwner && (
+            <div className="animate-slide-up-delayed-3">
+              <StripeConnectCard />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </CurrencyProvider>
   );
 }

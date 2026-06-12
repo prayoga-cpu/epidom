@@ -188,7 +188,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                         className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5"
                       >
                         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-background border text-xs font-bold shrink-0">
-                          {PROVIDER_ICONS[acc.provider] ?? acc.provider[0].toUpperCase()}
+                          {PROVIDER_ICONS[acc.provider] ?? acc.provider?.[0]?.toUpperCase() ?? "A"}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{PROVIDER_LABELS[acc.provider] ?? acc.provider}</p>

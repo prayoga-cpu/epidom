@@ -1,6 +1,7 @@
 import type React from "react";
 import { I18nProvider } from "@/components/lang/i18n-provider";
 import { ThemeProvider } from "next-themes";
+import { CurrencyProvider } from "@/components/providers/currency-provider";
 
 export default function AppLayout({
   children,
@@ -9,7 +10,9 @@ export default function AppLayout({
 }>) {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-      <I18nProvider>{children}</I18nProvider>
+      <I18nProvider>
+        <CurrencyProvider>{children}</CurrencyProvider>
+      </I18nProvider>
     </ThemeProvider>
   );
 }

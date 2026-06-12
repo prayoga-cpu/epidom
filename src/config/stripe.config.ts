@@ -76,7 +76,7 @@ export const STRIPE_CONFIG = {
   PRICE_IDS: {
     FREE: "price_free_placeholder",
     POS: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS || "price_test_pos_placeholder",
-    OPERATIONS: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || "price_test_operations_placeholder",
+    OPERATIONS: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS || "price_test_operations_placeholder",
     // Enterprise is handled via sales contact, not Stripe Checkout
   },
 

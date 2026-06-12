@@ -84,12 +84,6 @@ export default async function proxy(req: NextRequest) {
     loginUrl.searchParams.set("callbackUrl", path);
     return NextResponse.redirect(loginUrl);
   }
-
-  // TODO: Re-implement subscription status check using Better Auth session data or DB check
-  // For now, we allow access if authenticated.
-  // To implement this efficiently in middleware without DB calls, we might need to use JWT strategy
-  // or cache the subscription status in the session cookie.
-
   return response;
 }
 

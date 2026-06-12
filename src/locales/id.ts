@@ -2353,6 +2353,8 @@ export const id = {
       pastDue: "Pembayaran Diperlukan",
       pastDueMessage: "Pembayaran Anda tertunda. Silakan perbarui metode pembayaran Anda.",
       plans: {
+        free: "Starter Plan",
+        free_price: "Gratis",
         starter: "POS",
         pro: "Operations",
         enterprise: "Enterprise",

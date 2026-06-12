@@ -38,12 +38,12 @@ describe("POST /api/subscriptions/activate-free", () => {
     mockActivateFree.mockClear();
   });
 
-  it("defaults to OPERATIONS when no body", async () => {
+  it("defaults to FREE when no body", async () => {
     const res = await POST(makeReq(), {} as any);
     expect(res.status).toBe(200);
-    expect(mockActivateFree).toHaveBeenCalledWith("user-1", "OPERATIONS");
+    expect(mockActivateFree).toHaveBeenCalledWith("user-1", "FREE");
     const body = await res.json();
-    expect(body.data.plan).toBe("OPERATIONS");
+    expect(body.data.plan).toBe("FREE");
   });
 
   it("activates FREE plan when requested", async () => {
@@ -61,9 +61,9 @@ describe("POST /api/subscriptions/activate-free", () => {
     expect(mockActivateFree).toHaveBeenCalledWith("user-1", "ENTERPRISE");
   });
 
-  it("ignores invalid plan value and falls back to OPERATIONS", async () => {
+  it("ignores invalid plan value and falls back to FREE", async () => {
     await POST(makeReq({ plan: "INVALID_PLAN" }), {} as any);
-    expect(mockActivateFree).toHaveBeenCalledWith("user-1", "OPERATIONS");
+    expect(mockActivateFree).toHaveBeenCalledWith("user-1", "FREE");
   });
 
   it("returns activated: true and the resolved plan", async () => {

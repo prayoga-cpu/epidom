@@ -2417,6 +2417,8 @@ export const en = {
       pastDue: "Payment Required",
       pastDueMessage: "Your payment is past due. Please update your payment method.",
       plans: {
+        free: "Starter Plan",
+        free_price: "Free",
         starter: "POS",
         pro: "Operations",
         enterprise: "Enterprise",

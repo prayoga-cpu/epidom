@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "better-auth/crypto";
 import { subscriptionService } from "@/lib/services";
+import { SubscriptionPlan } from "@prisma/client";
 
 const DEMO_EMAIL = "demo@epidom.fr";
 const DEMO_PASSWORD = "password123";
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
   }
 
   // 5. Provision free OPERATIONS subscription
-  await subscriptionService.activateFree(user.id);
+  await subscriptionService.activateFree(user.id, SubscriptionPlan.OPERATIONS);
 
   return NextResponse.json({
     ok: true,

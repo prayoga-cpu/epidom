@@ -26,7 +26,7 @@ export const GET = withApiHandler(
     let subscription = await subscriptionRepository.findByUserId(userId);
 
     if (!subscription) {
-      await subscriptionService.activateFree(userId);
+      await subscriptionService.activateFree(userId, "FREE");
       subscription = await subscriptionRepository.findByUserId(userId);
     }
 

@@ -93,7 +93,7 @@ export function ProductDetailsDialog({
   };
 
   // Get stock status color
-  const getStockStatusColor = () => {
+  const getStockStatusColor = (): "default" | "secondary" | "destructive" | "outline" => {
     const status = getStockStatus();
     const outOfStock = t("common.stockStatus.outOfStock");
     const critical = t("common.stockStatus.critical") || "Critical";
@@ -172,12 +172,7 @@ export function ProductDetailsDialog({
                   {formatNumber(Number(product.currentStock) || 0)}
                 </div>
                 <p className="text-muted-foreground text-xs">{product.unit}</p>
-                {/**
-                 * Type assertion needed because Badge variant type doesn't include all possible values
-                 * Actual type: "default" | "secondary" | "destructive" | "outline"
-                 * TODO: Update Badge component to accept all variant types or use type guard
-                 */}
-                <Badge variant={getStockStatusColor() as any} className="mt-2 text-xs">
+                <Badge variant={getStockStatusColor()} className="mt-2 text-xs">
                   {stockStatus}
                 </Badge>
               </CardContent>

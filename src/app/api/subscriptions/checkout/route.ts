@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { subscriptionService } from "@/lib/services";
+import { subscriptionRepository } from "@/lib/repositories/subscription.repository";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { checkoutSchema } from "@/lib/validation/subscription.schemas";
@@ -40,6 +41,21 @@ export const POST = withApiHandler(
         ? cancelUrl
         : `${origin}${cancelUrl}`
       : `${origin}/checkout/failed?reason=canceled`;
+
+    // Check if user already has a paid subscription
+    const subscription = await subscriptionRepository.findByUserId(userId);
+    if (subscription && subscription.status === "ACTIVE" && subscription.plan !== "FREE") {
+      // User is already paid. Redirect to Customer Portal to handle upgrade/downgrade prorations.
+      const portalSession = await subscriptionService.createPortalSession(userId, finalSuccessUrl);
+      return NextResponse.json(
+        createSuccessResponse({
+          sessionId: portalSession.id,
+          url: portalSession.url,
+          message: "Redirecting to portal for plan change",
+        }),
+        { status: 201 }
+      );
+    }
 
     // Create checkout session
     const checkoutSession = await subscriptionService.createCheckoutSession(

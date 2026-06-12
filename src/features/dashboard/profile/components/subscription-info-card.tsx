@@ -21,7 +21,7 @@ interface SubscriptionInfoCardProps {
   } | null;
 }
 
-export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps) {
+export function SubscriptionInfoCard({ subscription: initialSubscription }: SubscriptionInfoCardProps) {
   const { t } = useI18n();
   const { currency } = useCurrency();
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
@@ -52,33 +52,21 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
       }
 
       // Redirect to Stripe customer portal
-      window.location.href = data.url;
+      window.location.href = data.data.url;
     } catch (error: any) {
       setPortalError(error.message || "Failed to open billing portal");
       setIsLoadingPortal(false);
     }
   };
 
-  if (!subscription) {
-    return (
-      <Card className="border-2">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold">{t("profile.subscription.title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <CreditCard className="text-muted-foreground mb-4 h-12 w-12" />
-            <p className="text-muted-foreground mb-4">
-              {t("profile.subscription.noActiveSubscription")}
-            </p>
-            <Button asChild>
-              <Link href="/pricing">{t("profile.subscription.viewPlans")}</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Treat missing subscription as an active FREE plan
+  const subscription = initialSubscription || {
+    plan: "FREE",
+    status: "ACTIVE",
+    cancelAtPeriodEnd: false,
+    currentPeriodStart: null,
+    currentPeriodEnd: null,
+  };
 
   const planDetails = getPlanDetails(subscription.plan, t, currency);
   const isActive = subscription.status === "ACTIVE";
@@ -118,7 +106,7 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
           </div>
 
           {/* Billing Period */}
-          {subscription.currentPeriodStart && subscription.currentPeriodEnd && (
+          {subscription.plan !== "FREE" && subscription.currentPeriodStart && subscription.currentPeriodEnd && (
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="text-muted-foreground h-4 w-4" />
@@ -195,13 +183,18 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
 
         {/* Actions - Always at bottom */}
         <div className="mt-auto flex flex-col gap-2 pt-4 sm:flex-row">
-          <Button variant="outline" asChild className="w-full sm:flex-1">
-            <Link href="/pricing">{t("profile.subscription.changePlan")}</Link>
-          </Button>
-          {isActive && (
+          {subscription.plan === "FREE" ? (
+            <Button
+              variant="default"
+              asChild
+              className="w-full sm:flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md transition-all duration-300 hover:scale-[1.02] active:scale-95"
+            >
+              <Link href="/pricing">Upgrade Plan</Link>
+            </Button>
+          ) : (
             <Button
               variant="outline"
-              className="w-full gap-2 sm:flex-1"
+              className="group w-full gap-2 sm:flex-1 transition-all hover:border-emerald-500/50 hover:bg-emerald-500/5 active:scale-95"
               onClick={handleManageBilling}
               disabled={isLoadingPortal}
             >
@@ -214,7 +207,6 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
               ) : (
                 <>
                   {subscription.cancelAtPeriodEnd ? (
-                    // Show "Renew Subscription" when canceling
                     <>
                       <span className="hidden sm:inline">
                         {t("profile.subscription.renewSubscription")}
@@ -222,8 +214,14 @@ export function SubscriptionInfoCard({ subscription }: SubscriptionInfoCardProps
                       <span className="sm:hidden">{t("profile.subscription.renew")}</span>
                     </>
                   ) : (
-                    // Show "Manage Billing" normally
-                    t("profile.subscription.manageBilling")
+                    <div className="relative flex w-full overflow-hidden">
+                      <span className="w-full transition-transform duration-300 group-hover:-translate-y-[150%]">
+                        Change Plan
+                      </span>
+                      <span className="absolute inset-0 w-full translate-y-[150%] font-medium text-emerald-600 transition-transform duration-300 group-hover:translate-y-0 dark:text-emerald-400">
+                        or Manage your Billing
+                      </span>
+                    </div>
                   )}
                 </>
               )}

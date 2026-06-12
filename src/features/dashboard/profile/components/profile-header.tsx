@@ -36,15 +36,16 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
 
   const getInitials = () => {
-    if (user.name) {
+    if (user.name && user.name.trim().length > 0) {
       return user.name
+        .trim()
         .split(" ")
-        .map((n) => n[0])
+        .map((n) => n?.[0] || "")
         .join("")
         .toUpperCase()
         .slice(0, 2);
     }
-    return user.email[0].toUpperCase();
+    return user.email?.[0]?.toUpperCase() || "U";
   };
 
   return (

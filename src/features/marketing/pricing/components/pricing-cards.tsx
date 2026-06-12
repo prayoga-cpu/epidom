@@ -50,21 +50,38 @@ export function PricingCards({ yearly }: { yearly: boolean }) {
     if (!confirming) return;
     setIsActivating(true);
     try {
-      const res = await fetch("/api/subscriptions/activate-free", {
+      const isPaid = confirming.plan === "POS" || confirming.plan === "OPERATIONS";
+      const endpoint = isPaid ? "/api/subscriptions/checkout" : "/api/subscriptions/activate-free";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: confirming.plan }),
       });
+
       if (res.status === 401) {
         window.location.href = "/register";
-      } else if (res.ok) {
-        // Full navigation to flush React Query cache so new plan reflects immediately
-        window.location.href = "/stores";
-      } else {
-        window.location.href = "/register";
+        return;
       }
-    } catch {
-      window.location.href = "/register";
+
+      if (res.ok) {
+        if (isPaid) {
+          const result = await res.json();
+          if (result?.success && result?.data?.url) {
+            window.location.href = result.data.url;
+          } else {
+            alert(result?.error?.message || "Failed to initiate checkout. Please check Stripe configuration.");
+          }
+        } else {
+          // Full navigation to flush React Query cache so new plan reflects immediately
+          window.location.href = "/stores";
+        }
+      } else {
+        const errorData = await res.json().catch(() => null);
+        alert(errorData?.error?.message || "An error occurred during checkout. Please try again.");
+      }
+    } catch (err: any) {
+      alert(err.message || "A network error occurred. Please try again.");
     } finally {
       setIsActivating(false);
       setConfirming(null);
