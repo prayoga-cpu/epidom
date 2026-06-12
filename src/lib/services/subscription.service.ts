@@ -17,6 +17,9 @@ import {
   hasAdvancedReportsAccess,
 } from "@/config/stripe.config";
 import Stripe from "stripe";
+import { AppError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
+import { ApiErrorCode } from "@/types/api/responses";
 
 /**
  * Subscription Service
@@ -111,8 +114,13 @@ export class SubscriptionService {
         if (process.env.NODE_ENV === "development") {
           epidomOwner = null;
         } else {
-          // In production, throw the error
-          throw error;
+          // In production, log internal error and throw user-friendly AppError
+          logger.error("Checkout failed due to Stripe Connect configuration issue", error);
+          throw new AppError(
+            "Payment system is currently undergoing setup or maintenance. Please try again later.",
+            ApiErrorCode.INTERNAL_ERROR,
+            500
+          );
         }
       }
     }
