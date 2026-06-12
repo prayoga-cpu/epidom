@@ -12,28 +12,28 @@ datasource db {
 }
 
 model User {
-  id                     String        @id @default(cuid())
+  id                     String   @id @default(cuid())
   name                   String
-  email                  String        @unique
+  email                  String   @unique
   emailVerified          Boolean
   image                  String?
   createdAt              DateTime
   updatedAt              DateTime
   // Custom fields
   phone                  String?
-  locale                 String        @default("id")
-  timezone               String        @default("Asia/Jakarta")
-  currency               String        @default("IDR")
+  locale                 String   @default("id")
+  timezone               String   @default("Asia/Jakarta")
+  currency               String   @default("IDR")
   stripeConnectAccountId String?
-  stripeConnectOnboarded Boolean       @default(false)
-  isAdmin                Boolean       @default(false)
-  hasOnboarded           Boolean       @default(false)
+  stripeConnectOnboarded Boolean  @default(false)
+  isAdmin                Boolean  @default(false)
+  hasOnboarded           Boolean  @default(false)
 
-  sessions               Session[]
-  accounts               Account[]
-  alerts                 Alert[]
-  business               Business?
-  subscription           Subscription?
+  sessions     Session[]
+  accounts     Account[]
+  alerts       Alert[]
+  business     Business?
+  subscription Subscription?
 
   @@map("user")
 }
@@ -106,34 +106,34 @@ model Business {
 }
 
 model Store {
-  id                String            @id @default(cuid())
-  businessId        String
-  name              String
-  address           String?
-  city              String?
-  country           String?
-  phone             String?
-  email             String?
-  image             String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  ingredients       Material[]
-  orders            Order[]
-  productionBatches ProductionBatch[]
-  products          Product[]
-  recipes           Recipe[]
-  business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  supplierOrders    SupplierOrder[]
-  suppliers         Supplier[]
-  aiImportMemories  AIImportMemory[]
-  aiImportSessions  AIImportSession[]
-  storefront              Storefront?
-  tables                  Table[]
-  staffMembers            StaffMember[]
-  shifts                  Shift[]
-  reservations            Reservation[]
-  aggregatorConnections   AggregatorConnection[]
-  aggregatorEmails        AggregatorEmail[]
+  id                    String                 @id @default(cuid())
+  businessId            String
+  name                  String
+  address               String?
+  city                  String?
+  country               String?
+  phone                 String?
+  email                 String?
+  image                 String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  ingredients           Material[]
+  orders                Order[]
+  productionBatches     ProductionBatch[]
+  products              Product[]
+  recipes               Recipe[]
+  business              Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  supplierOrders        SupplierOrder[]
+  suppliers             Supplier[]
+  aiImportMemories      AIImportMemory[]
+  aiImportSessions      AIImportSession[]
+  storefront            Storefront?
+  tables                Table[]
+  staffMembers          StaffMember[]
+  shifts                Shift[]
+  reservations          Reservation[]
+  aggregatorConnections AggregatorConnection[]
+  aggregatorEmails      AggregatorEmail[]
 
   @@index([businessId])
   @@map("stores")
@@ -405,42 +405,43 @@ model SupplierOrderItem {
 }
 
 model Order {
-  id                  String          @id @default(cuid())
-  orderNumber         String          @unique
-  customerName        String
-  customerEmail       String?
-  customerPhone       String?
-  deliveryAddress     String?
-  status              OrderStatus     @default(PENDING)
-  orderDate           DateTime        @default(now())
-  dueDate             DateTime?
-  deliveredDate       DateTime?
-  subtotal            Decimal         @db.Decimal(10, 2)
-  tax                 Decimal         @default(0) @db.Decimal(10, 2)
-  delivery            Decimal         @default(0) @db.Decimal(10, 2)
-  total               Decimal         @db.Decimal(10, 2)
-  notes               String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  storeId             String
+  id                 String          @id @default(cuid())
+  orderNumber        String          @unique
+  customerName       String
+  customerEmail      String?
+  customerPhone      String?
+  deliveryAddress    String?
+  status             OrderStatus     @default(PENDING)
+  orderDate          DateTime        @default(now())
+  dueDate            DateTime?
+  deliveredDate      DateTime?
+  subtotal           Decimal         @db.Decimal(10, 2)
+  tax                Decimal         @default(0) @db.Decimal(10, 2)
+  delivery           Decimal         @default(0) @db.Decimal(10, 2)
+  total              Decimal         @db.Decimal(10, 2)
+  notes              String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  storeId            String
   // Phase 2 fields
-  storefrontId        String?
-  orderType           OrderType       @default(DINE_IN)
-  tableNumber         String?
-  paymentMethod       PaymentMethod   @default(CASH)
-  paymentStatus       PaymentStatus   @default(PENDING)
-  paymentProviderRef  String?
-  source              OrderSource     @default(MANUAL)
+  storefrontId       String?
+  orderType          OrderType       @default(DINE_IN)
+  tableNumber        String?
+  paymentMethod      PaymentMethod   @default(CASH)
+  paymentStatus      PaymentStatus   @default(PENDING)
+  paymentProviderRef String?
+  paymentQrString    String?         @db.Text
+  source             OrderSource     @default(MANUAL)
   // Phase 3 fields
-  tableId             String?
+  tableId            String?
   // Phase 4 fields
-  shiftId             String?
-  items               OrderItem[]
-  store               Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  storefront          Storefront?     @relation(fields: [storefrontId], references: [id], onDelete: SetNull)
-  table               Table?          @relation(fields: [tableId], references: [id], onDelete: SetNull)
-  shift               Shift?          @relation(fields: [shiftId], references: [id], onDelete: SetNull)
-  stockMovements      StockMovement[]
+  shiftId            String?
+  items              OrderItem[]
+  store              Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storefront         Storefront?     @relation(fields: [storefrontId], references: [id], onDelete: SetNull)
+  table              Table?          @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  shift              Shift?          @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  stockMovements     StockMovement[]
 
   @@index([storeId])
   @@index([status])
@@ -655,20 +656,20 @@ enum ReservationStatus {
 }
 
 model Reservation {
-  id           String            @id @default(cuid())
-  storeId      String
-  tableId      String?
-  guestName    String
-  guestPhone   String?
-  guestEmail   String?
-  partySize    Int               @default(1)
-  scheduledAt  DateTime
-  notes        String?
-  status       ReservationStatus @default(PENDING)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  store        Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  table        Table?            @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  id          String            @id @default(cuid())
+  storeId     String
+  tableId     String?
+  guestName   String
+  guestPhone  String?
+  guestEmail  String?
+  partySize   Int               @default(1)
+  scheduledAt DateTime
+  notes       String?
+  status      ReservationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  store       Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  table       Table?            @relation(fields: [tableId], references: [id], onDelete: SetNull)
 
   @@index([storeId])
   @@index([tableId])
@@ -688,39 +689,39 @@ enum StaffRole {
 }
 
 model StaffMember {
-  id              String     @id @default(cuid())
-  storeId         String
-  name            String
-  email           String?
-  role            StaffRole  @default(CASHIER)
-  pin             String     // bcrypt hash — never store plaintext
-  isActive        Boolean    @default(true)
-  inviteStatus    String?    // "pending" | "accepted" | null
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  store           Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  shifts          Shift[]
+  id           String    @id @default(cuid())
+  storeId      String
+  name         String
+  email        String?
+  role         StaffRole @default(CASHIER)
+  pin          String // bcrypt hash — never store plaintext
+  isActive     Boolean   @default(true)
+  inviteStatus String? // "pending" | "accepted" | null
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shifts       Shift[]
 
   @@index([storeId])
   @@map("staff_members")
 }
 
 model Shift {
-  id               String       @id @default(cuid())
-  storeId          String
-  staffMemberId    String
-  openedAt         DateTime     @default(now())
-  closedAt         DateTime?
-  openingCash      Decimal      @db.Decimal(12, 2)
-  closingCash      Decimal?     @db.Decimal(12, 2)
-  expectedCash     Decimal?     @db.Decimal(12, 2)  // calculated from orders
-  cashDifference   Decimal?     @db.Decimal(12, 2)  // closingCash - expectedCash
-  notes            String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  store            Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  staffMember      StaffMember  @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
-  orders           Order[]
+  id             String      @id @default(cuid())
+  storeId        String
+  staffMemberId  String
+  openedAt       DateTime    @default(now())
+  closedAt       DateTime?
+  openingCash    Decimal     @db.Decimal(12, 2)
+  closingCash    Decimal?    @db.Decimal(12, 2)
+  expectedCash   Decimal?    @db.Decimal(12, 2) // calculated from orders
+  cashDifference Decimal?    @db.Decimal(12, 2) // closingCash - expectedCash
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  store          Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember    StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  orders         Order[]
 
   @@index([storeId])
   @@index([staffMemberId])
@@ -740,14 +741,14 @@ enum AggregatorPlatform {
 }
 
 model AggregatorConnection {
-  id           String             @id @default(cuid())
-  storeId      String
-  platform     AggregatorPlatform
-  displayName  String?            // e.g. "Warung Bahagia - GoFood"
-  isActive     Boolean            @default(true)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  store        Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id          String             @id @default(cuid())
+  storeId     String
+  platform    AggregatorPlatform
+  displayName String? // e.g. "Warung Bahagia - GoFood"
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  store       Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@unique([storeId, platform])
   @@index([storeId])
@@ -756,18 +757,18 @@ model AggregatorConnection {
 
 // Raw inbound email audit log — keeps every forwarded email for debugging / re-parse
 model AggregatorEmail {
-  id           String             @id @default(cuid())
-  storeId      String
-  platform     AggregatorPlatform?
-  fromAddress  String
-  subject      String
-  bodyText     String             @db.Text
-  bodyHtml     String?            @db.Text
-  parsedOrderId String?           // null if parsing failed or pending
-  parseStatus  String             @default("pending") // pending | success | failed | manual
-  parseError   String?
-  createdAt    DateTime           @default(now())
-  store        Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id            String              @id @default(cuid())
+  storeId       String
+  platform      AggregatorPlatform?
+  fromAddress   String
+  subject       String
+  bodyText      String              @db.Text
+  bodyHtml      String?             @db.Text
+  parsedOrderId String? // null if parsing failed or pending
+  parseStatus   String              @default("pending") // pending | success | failed | manual
+  parseError    String?
+  createdAt     DateTime            @default(now())
+  store         Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([storeId])
   @@index([parseStatus])
@@ -782,10 +783,10 @@ model AIImportMemory {
   id            String   @id @default(cuid())
   storeId       String
   store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  memoryType    String   // FIELD_MAPPING, TYPO_CORRECTION, CATEGORY_PATTERN, etc.
-  sourcePattern String   // Original pattern (e.g., "Hrg Beli")
-  targetMapping String   // What it maps to (e.g., "unitCost")
-  entityType    String   // material, product, supplier, recipe
+  memoryType    String // FIELD_MAPPING, TYPO_CORRECTION, CATEGORY_PATTERN, etc.
+  sourcePattern String // Original pattern (e.g., "Hrg Beli")
+  targetMapping String // What it maps to (e.g., "unitCost")
+  entityType    String // material, product, supplier, recipe
   confidence    Float    @default(0.5) // 0.0 - 1.0
   usageCount    Int      @default(1) // How many times used
   successCount  Int      @default(0) // How many times correct
@@ -801,23 +802,23 @@ model AIImportMemory {
 }
 
 model AIImportSession {
-  id              String   @id @default(cuid())
-  storeId         String
-  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  fileName        String
-  fileSize        Int      @default(0)
-  rowCount        Int      @default(0)
-  entityType      String? // Detected or specified entity type
-  status          String   @default("pending") // pending, analyzing, preview, importing, completed, failed
-  analysisResult  Json? // Full AI analysis result
-  importResult    Json? // Import execution result
-  aiCallCount     Int      @default(0)
-  totalTokens     Int      @default(0)
+  id               String   @id @default(cuid())
+  storeId          String
+  store            Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  fileName         String
+  fileSize         Int      @default(0)
+  rowCount         Int      @default(0)
+  entityType       String? // Detected or specified entity type
+  status           String   @default("pending") // pending, analyzing, preview, importing, completed, failed
+  analysisResult   Json? // Full AI analysis result
+  importResult     Json? // Import execution result
+  aiCallCount      Int      @default(0)
+  totalTokens      Int      @default(0)
   processingTimeMs Int? // Total processing time
-  userCorrections Json? // What user changed from AI suggestions
-  errorMessage    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  userCorrections  Json? // What user changed from AI suggestions
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([storeId])
   @@index([status])
@@ -826,77 +827,76 @@ model AIImportSession {
 
 // PHASE 1 -- Public Storefront
 model Storefront {
-  id              String   @id @default(cuid())
-  storeId         String   @unique
-  slug            String   @unique
-  displayName     String
-  tagline         String?
-  description     String?
-  logoUrl         String?
-  heroImageUrl    String?
-  themeColor      String   @default("#FF6B35")
-  fontFamily      String   @default("Inter")
-  
-  whatsappNumber  String?
-  instagramUrl    String?
-  tiktokUrl       String?
-  gofoodUrl       String?
-  grabfoodUrl     String?
-  shopeefoodUrl   String?
-  googleMapsUrl   String?
-  customLinks     Json?
-  
-  isPublished          Boolean  @default(false)
-  acceptsOrders        Boolean  @default(false)
-  acceptsReservations  Boolean  @default(false)
-  openingHours         Json?
-  viewCount       Int      @default(0)
-  
-  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  menuCategories  MenuCategory[]
-  menuItems       MenuItem[]
-  orders          Order[]
+  id           String  @id @default(cuid())
+  storeId      String  @unique
+  slug         String  @unique
+  displayName  String
+  tagline      String?
+  description  String?
+  logoUrl      String?
+  heroImageUrl String?
+  themeColor   String  @default("#FF6B35")
+  fontFamily   String  @default("Inter")
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  whatsappNumber String?
+  instagramUrl   String?
+  tiktokUrl      String?
+  gofoodUrl      String?
+  grabfoodUrl    String?
+  shopeefoodUrl  String?
+  googleMapsUrl  String?
+  customLinks    Json?
+
+  isPublished         Boolean @default(false)
+  acceptsOrders       Boolean @default(false)
+  acceptsReservations Boolean @default(false)
+  openingHours        Json?
+  viewCount           Int     @default(0)
+
+  store          Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  menuCategories MenuCategory[]
+  menuItems      MenuItem[]
+  orders         Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([slug])
   @@map("storefronts")
 }
 
 model MenuCategory {
-  id            String       @id @default(cuid())
-  storefrontId  String
-  name          String
-  displayOrder  Int          @default(0)
-  
-  storefront    Storefront   @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
-  items         MenuItem[]
-  
+  id           String @id @default(cuid())
+  storefrontId String
+  name         String
+  displayOrder Int    @default(0)
+
+  storefront Storefront @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
+  items      MenuItem[]
+
   @@map("menu_categories")
 }
 
 model MenuItem {
-  id              String       @id @default(cuid())
-  storefrontId    String
-  categoryId      String?
-  productId       String?      // optional link to Product for inventory deduction
-  name            String
-  description     String?
-  price           Decimal      @db.Decimal(12, 2)
-  currency        String       @default("IDR")
-  imageUrl        String?
-  isAvailable     Boolean      @default(true)
-  isFeatured      Boolean      @default(false)
-  displayOrder    Int          @default(0)
-  modifiers       Json?        // [{name, options: [{name, priceAdd}]}]
-  
-  storefront      Storefront    @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
-  category        MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  product         Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
-  orderItems      OrderItem[]
+  id           String  @id @default(cuid())
+  storefrontId String
+  categoryId   String?
+  productId    String? // optional link to Product for inventory deduction
+  name         String
+  description  String?
+  price        Decimal @db.Decimal(12, 2)
+  currency     String  @default("IDR")
+  imageUrl     String?
+  isAvailable  Boolean @default(true)
+  isFeatured   Boolean @default(false)
+  displayOrder Int     @default(0)
+  modifiers    Json? // [{name, options: [{name, priceAdd}]}]
+
+  storefront Storefront    @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
+  category   MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  product    Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  orderItems OrderItem[]
 
   @@index([storefrontId])
   @@map("menu_items")
 }
-

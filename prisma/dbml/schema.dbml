@@ -370,6 +370,7 @@ Table orders {
   paymentMethod PaymentMethod [not null, default: 'CASH']
   paymentStatus PaymentStatus [not null, default: 'PENDING']
   paymentProviderRef String
+  paymentQrString String
   source OrderSource [not null, default: 'MANUAL']
   tableId String
   shiftId String

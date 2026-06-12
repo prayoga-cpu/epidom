@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUser } from "@/lib/auth-client";
+import { useToast } from "@/hooks/use-toast";
 
 const TIERS = [
   { idx: 0, key: "t1", highlight: false, plan: "FREE" },
@@ -19,6 +20,7 @@ const CUSTOM_PRICES = new Set(["Custom", "Sur devis", "Kustom"]);
 export function PricingCards({ yearly, currentPlan }: { yearly: boolean; currentPlan?: string | null }) {
   const { t } = useI18n();
   const { user, loading: userLoading } = useUser();
+  const { toast } = useToast();
 
   const [confirming, setConfirming] = useState<{ key: string; plan: string; name: string; trial?: boolean } | null>(null);
   const [isActivating, setIsActivating] = useState(false);
@@ -89,7 +91,10 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
           if (result?.success && result?.data?.url) {
             window.location.href = result.data.url;
           } else {
-            alert(result?.error?.message || "Failed to initiate checkout. Please check Stripe configuration.");
+            toast({
+              variant: "destructive",
+              description: result?.error?.message || "Failed to initiate checkout. Please check Stripe configuration.",
+            });
           }
         } else {
           // Full navigation to flush React Query cache so new plan reflects immediately
@@ -97,10 +102,16 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
         }
       } else {
         const errorData = await res.json().catch(() => null);
-        alert(errorData?.error?.message || "An error occurred during checkout. Please try again.");
+        toast({
+          variant: "destructive",
+          description: errorData?.error?.message || "An error occurred during checkout. Please try again.",
+        });
       }
     } catch (err: any) {
-      alert(err.message || "A network error occurred. Please try again.");
+      toast({
+        variant: "destructive",
+        description: err.message || "A network error occurred. Please try again.",
+      });
     } finally {
       setIsActivating(false);
       setConfirming(null);

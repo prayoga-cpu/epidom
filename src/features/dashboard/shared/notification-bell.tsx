@@ -14,6 +14,8 @@ import { useCurrentStore } from "./hooks/use-current-store";
 import { apiClient } from "@/lib/api/client";
 import type { NotificationItem } from "@/app/api/stores/[id]/notifications/route";
 import { formatDistanceToNow } from "date-fns";
+import { id, enUS, fr } from "date-fns/locale";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 const TYPE_ICON = {
   order: ShoppingBag,
@@ -34,6 +36,10 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   // Track which notifications the user dismissed locally this session
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const { t, locale } = useI18n();
+
+  const dateLocaleMap = { en: enUS, id, fr };
+  const dateLocale = dateLocaleMap[locale] ?? id;
 
   const { data } = useQuery({
     queryKey: ["notifications", storeId],
@@ -70,7 +76,7 @@ export function NotificationBell() {
           size="icon"
           className="relative h-9 w-9 shrink-0 hover:bg-white/10"
           style={{ color: "var(--epi-cream-50)" }}
-          aria-label="Notifications"
+          aria-label={t("notifications.title")}
         >
           <Bell className="size-4" />
           {unread > 0 && (
@@ -90,7 +96,7 @@ export function NotificationBell() {
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <Bell className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">Notifications</span>
+            <span className="text-sm font-semibold text-foreground">{t("notifications.title")}</span>
             {unread > 0 && (
               <span className="rounded-full bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-500">
                 {unread}
@@ -102,7 +108,7 @@ export function NotificationBell() {
               onClick={dismissAll}
               className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
-              Clear all
+              {t("notifications.clearAll")}
             </button>
           )}
         </div>
@@ -112,7 +118,7 @@ export function NotificationBell() {
           {all.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
               <Bell className="h-8 w-8 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">All caught up!</p>
+              <p className="text-sm text-muted-foreground">{t("notifications.allCaughtUp")}</p>
             </div>
           ) : (
             <ul className="divide-y divide-border">
@@ -138,14 +144,17 @@ export function NotificationBell() {
                         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{n.body}</p>
                         {!isZeroDate && (
                           <p className="mt-1 text-[10px] text-muted-foreground/60">
-                            {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(n.createdAt), {
+                              addSuffix: true,
+                              locale: dateLocale,
+                            })}
                           </p>
                         )}
                       </div>
                       <button
                         onClick={(e) => dismiss(n.id, e)}
                         className="ml-1 mt-0.5 shrink-0 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted"
-                        aria-label="Dismiss"
+                        aria-label={t("notifications.dismiss")}
                       >
                         <X className="h-3 w-3 text-muted-foreground" />
                       </button>
@@ -164,7 +173,7 @@ export function NotificationBell() {
               onClick={() => { setOpen(false); if (storeId) router.push(`/store/${storeId}/pos`); }}
               className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
-              View all orders →
+              {t("notifications.viewAllOrders")}
             </button>
           </div>
         )}

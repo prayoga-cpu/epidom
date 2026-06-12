@@ -1,19 +1,9 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  ArrowLeft, 
-  Search, 
-  ShoppingCart, 
-  Plus, 
-  Minus, 
-  X, 
-  MessageSquare,
-  Sparkles,
-  ChevronRight,
-  Check
-} from "lucide-react";
+import { Sparkles, ArrowLeft, Search, X, Plus, Minus, Check, ChevronRight, ShoppingCart, MessageSquare, Loader2, QrCode, CreditCard, Wallet, Banknote } from "lucide-react";
 
 interface ModifierOption {
   name: string;
@@ -69,6 +59,27 @@ interface CartItem {
   }[];
 }
 
+type PaymentMethod =
+  | "CASH"
+  | "QRIS"
+  | "GOPAY"
+  | "OVO"
+  | "DANA"
+  | "SHOPEEPAY"
+  | "BANK_TRANSFER"
+  | "STRIPE_CARD";
+
+const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; icon: React.ReactNode }[] = [
+  { value: "CASH", label: "Tunai / Cash", icon: <Banknote className="size-4" /> },
+  { value: "QRIS", label: "QRIS", icon: <QrCode className="size-4" /> },
+  { value: "GOPAY", label: "GoPay", icon: <Wallet className="size-4" /> },
+  { value: "OVO", label: "OVO", icon: <Wallet className="size-4" /> },
+  { value: "DANA", label: "DANA", icon: <Wallet className="size-4" /> },
+  { value: "SHOPEEPAY", label: "ShopeePay", icon: <Wallet className="size-4" /> },
+  { value: "BANK_TRANSFER", label: "Transfer Bank", icon: <CreditCard className="size-4" /> },
+  { value: "STRIPE_CARD", label: "Kartu Kredit/Debit", icon: <CreditCard className="size-4" /> },
+];
+
 export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -77,6 +88,19 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  
+  // Checkout form state
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [orderMethod, setOrderMethod] = useState<"DINE_IN" | "TAKEAWAY" | "DELIVERY">("DINE_IN");
+  const [tableNumber, setTableNumber] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   // Sync cart with localStorage
   React.useEffect(() => {
@@ -120,13 +144,6 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, ModifierOption[]>>({});
   const [itemQuantity, setItemQuantity] = useState(1);
   
-  // Checkout form state
-  const [customerName, setCustomerName] = useState("");
-  const [orderMethod, setOrderMethod] = useState<"dine_in" | "takeaway" | "delivery">("dine_in");
-  const [tableNumber, setTableNumber] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [notes, setNotes] = useState("");
-
   // Theme variable
   const themeStyle = {
     "--store-theme": storefront.themeColor,
@@ -269,7 +286,91 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
     setActiveItem(null);
   };
 
-  // Modify cart item quantity in checkout/cart list
+  // Submit order via API
+  const handleSendOrder = async () => {
+    setCheckoutError(null);
+
+    if (!customerName.trim()) {
+      setCheckoutError("Nama pelanggan wajib diisi.");
+      return;
+    }
+
+    if (orderMethod === "DELIVERY" && !deliveryAddress.trim()) {
+      setCheckoutError("Alamat pengantaran wajib diisi.");
+      return;
+    }
+
+    if (orderMethod === "DINE_IN" && !tableNumber.trim()) {
+      setCheckoutError("Nomor meja wajib diisi.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const formattedItems = cart.map((i) => {
+        // Flatten modifiers for API
+        const modifierSelections: Array<{modifierName: string, optionName: string, priceAdd: number}> = [];
+        i.selectedModifiers.forEach(group => {
+          group.options.forEach(opt => {
+            modifierSelections.push({
+              modifierName: group.groupName,
+              optionName: opt.name,
+              priceAdd: opt.priceAdd
+            });
+          });
+        });
+
+        return {
+          menuItemId: i.id,
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.price,
+          modifierSelections,
+        };
+      });
+
+      const res = await fetch("/api/public/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storefrontSlug: storefront.slug,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim() || undefined,
+          orderType: orderMethod,
+          tableNumber: tableNumber.trim() || undefined,
+          paymentMethod,
+          notes: notes.trim() || undefined,
+          items: formattedItems,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCheckoutError(data?.error?.message ?? "Gagal membuat pesanan.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Clear cart
+      setCart([]);
+      setIsCheckoutOpen(false);
+      setIsCartOpen(false);
+
+      const { orderId, paymentUrl } = data.data;
+
+      // Redirect to payment URL if applicable, then status page
+      if (paymentUrl && paymentMethod !== "CASH") {
+        window.location.href = paymentUrl;
+      } else {
+        router.push(`/@${storefront.slug}/order/${orderId}`);
+      }
+    } catch {
+      setCheckoutError("Terjadi kesalahan. Silakan coba lagi.");
+      setIsSubmitting(false);
+    }
+  };
   const updateCartQuantity = (uniqueId: string, delta: number) => {
     const updated = cart.map(item => {
       if (item.uniqueId === uniqueId) {
@@ -279,80 +380,6 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       return item;
     }).filter(Boolean) as CartItem[];
     setCart(updated);
-  };
-
-  // Submit order via WhatsApp link redirection
-  const handleSendOrder = () => {
-    if (!customerName.trim()) {
-      alert("Please enter your name");
-      return;
-    }
-
-    if (orderMethod === "delivery" && !deliveryAddress.trim()) {
-      alert("Please enter your delivery address");
-      return;
-    }
-
-    if (orderMethod === "dine_in" && !tableNumber.trim()) {
-      alert("Please enter your Table Number");
-      return;
-    }
-
-    if (!storefront.whatsappNumber) {
-      alert("WhatsApp ordering is not configured for this storefront.");
-      return;
-    }
-
-    // Format WhatsApp message
-    let message = `*HALO ${storefront.displayName.toUpperCase()}*\n`;
-    message += `Saya mau pesan makanan/minuman:\n\n`;
-
-    cart.forEach(item => {
-      const modsCost = item.selectedModifiers.reduce((s, g) => s + g.options.reduce((oSum, o) => oSum + o.priceAdd, 0), 0);
-      const singleTotal = item.price + modsCost;
-      
-      message += `• *${item.quantity}x ${item.name}* (${formatPrice(singleTotal)})\n`;
-      
-      item.selectedModifiers.forEach(group => {
-        message += `  _-[${group.groupName}]:_ ${group.options.map(o => `${o.name} (+${formatPrice(o.priceAdd)})`).join(", ")}\n`;
-      });
-    });
-
-    message += `\n*TOTAL PESANAN:* *${formatPrice(cartTotals.subtotal)}*\n\n`;
-    message += `*Detail Pemesan:*\n`;
-    message += `• Nama: ${customerName}\n`;
-    
-    if (orderMethod === "dine_in") {
-      message += `• Metode: Makan di tempat (Dine In) - Meja ${tableNumber}\n`;
-    } else if (orderMethod === "takeaway") {
-      message += `• Metode: Bawa pulang (Takeaway)\n`;
-    } else {
-      message += `• Metode: Kirim ke rumah (Delivery)\n`;
-      message += `• Alamat: ${deliveryAddress}\n`;
-    }
-
-    if (notes.trim()) {
-      message += `• Catatan: ${notes}\n`;
-    }
-
-    message += `\nTerima kasih!`;
-
-    // Encode URL and redirect
-    const cleanPhone = storefront.whatsappNumber.replace(/[^0-9]/g, "");
-    // Indonesian phone format correction (convert 08... to 628...)
-    let phoneFormatted = cleanPhone;
-    if (phoneFormatted.startsWith("0")) {
-      phoneFormatted = "62" + phoneFormatted.slice(1);
-    }
-    
-    const waUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(message)}`;
-    
-    // Clear cart and redirect
-    setCart([]);
-    setIsCheckoutOpen(false);
-    setIsCartOpen(false);
-    
-    window.open(waUrl, "_blank");
   };
 
   return (
@@ -579,7 +606,10 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 <span>{formatPrice(cartTotals.subtotal)}</span>
               </div>
               <button
-                onClick={() => setIsCheckoutOpen(true)}
+                onClick={() => {
+                  setIsCartOpen(false);
+                  setIsCheckoutOpen(true);
+                }}
                 className="w-full py-3 rounded-xl font-bold text-white shadow-md text-sm transition-transform active:scale-[0.98]"
                 style={{ backgroundColor: "var(--store-theme)" }}
               >
@@ -593,7 +623,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       </div>{/* end two-column wrapper */}
 
       {/* Sticky Floating Cart Bar — mobile only */}
-      {cart.length > 0 && !isCartOpen && !isCheckoutOpen && (
+      {cart.length > 0 && !isCartOpen && (
         <div className="md:hidden fixed bottom-4 left-4 right-4 max-w-md mx-auto z-40">
           <button 
             onClick={() => setIsCartOpen(true)}
@@ -612,10 +642,10 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 <p className="text-sm font-black">{formatPrice(cartTotals.subtotal)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1 font-bold text-xs bg-white/20 px-3 py-1.5 rounded-lg">
+            <button onClick={(e) => { e.stopPropagation(); setIsCheckoutOpen(true); }} className="flex items-center gap-1 font-bold text-xs bg-white/20 px-3 py-1.5 rounded-lg z-10">
               <span>Checkout</span>
               <ChevronRight className="size-4" />
-            </div>
+            </button>
           </button>
         </div>
       )}
@@ -720,7 +750,13 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
             </div>
 
             {/* Form */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-5">
+              {checkoutError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-sm font-semibold">
+                  {checkoutError}
+                </div>
+              )}
+
               {/* Customer Name */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Anda *</label>
@@ -734,14 +770,26 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 />
               </div>
 
+              {/* Customer Phone */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nomor WhatsApp</label>
+                <input
+                  type="tel"
+                  placeholder="Contoh: 08123456789 (Opsional)"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full h-11 border rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] border-slate-200"
+                />
+              </div>
+
               {/* Order Method */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Metode Makan *</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { key: "dine_in", label: "Makan Sini" },
-                    { key: "takeaway", label: "Bawa Pulang" },
-                    { key: "delivery", label: "Antar (Delivery)" }
+                    { key: "DINE_IN", label: "Makan Sini" },
+                    { key: "TAKEAWAY", label: "Bawa Pulang" },
+                    { key: "DELIVERY", label: "Antar (Delivery)" }
                   ].map(method => (
                     <button
                       key={method.key}
@@ -759,7 +807,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
               </div>
 
               {/* Conditional Fields */}
-              {orderMethod === "dine_in" && (
+              {orderMethod === "DINE_IN" && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nomor Meja *</label>
                   <input
@@ -773,7 +821,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 </div>
               )}
 
-              {orderMethod === "delivery" && (
+              {orderMethod === "DELIVERY" && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Alamat Lengkap *</label>
                   <textarea
@@ -786,6 +834,29 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                   />
                 </div>
               )}
+
+              {/* Payment Method Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Metode Pembayaran *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PAYMENT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setPaymentMethod(option.value)}
+                      className={`flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all ${
+                        paymentMethod === option.value
+                          ? "border-[var(--store-theme)] bg-orange-50/20 text-[var(--store-theme)]"
+                          : "border-slate-200 text-slate-700 hover:border-slate-300 bg-white"
+                      }`}
+                    >
+                      <div className={`p-1 rounded-md ${paymentMethod === option.value ? "bg-[var(--store-theme)] text-white" : "bg-slate-100 text-slate-500"}`}>
+                        {option.icon}
+                      </div>
+                      <span className="text-xs font-bold">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Order Notes */}
               <div className="space-y-1.5">
@@ -808,11 +879,18 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
               </div>
               <button
                 onClick={handleSendOrder}
-                className="w-full py-4 rounded-xl font-bold text-white shadow-md flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+                disabled={isSubmitting}
+                className="w-full py-4 rounded-xl font-bold text-white shadow-md flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100"
                 style={{ backgroundColor: "var(--store-theme)" }}
               >
-                <MessageSquare className="size-5" />
-                <span>Kirim Pesanan ke WhatsApp</span>
+                {isSubmitting ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : (
+                  <>
+                    <MessageSquare className="size-5" />
+                    <span>Bayar & Proses Pesanan</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

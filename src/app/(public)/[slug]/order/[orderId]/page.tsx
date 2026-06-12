@@ -62,6 +62,7 @@ export default async function OrderStatusPage({ params }: PageProps) {
         total: Number(order.total),
         currency: order.items[0]?.menuItem ? "IDR" : "IDR",
         createdAt: order.createdAt.toISOString(),
+        paymentQrString: order.paymentQrString,
         items: order.items.map((i) => ({
           id: i.id,
           name: i.menuItem?.name ?? "Item",

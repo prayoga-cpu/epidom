@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,6 +80,7 @@ async function postAccountAction(body: Record<string, unknown>) {
 }
 
 export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
+  const { t } = useI18n();
   const { data, isLoading } = useQuery({
     queryKey: ["account-settings"],
     queryFn: fetchAccountSettings,
@@ -102,7 +104,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
         newPassword: newPw,
       }),
     onSuccess: () => {
-      toast.success("Password changed successfully");
+      toast.success(t("profile.accountSettings.passwordChanged"));
       setPwDialog(false);
       setCurrentPw(""); setNewPw(""); setConfirmPw("");
     },
@@ -113,7 +115,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
     mutationFn: () =>
       postAccountAction({ action: "delete-account", confirmEmail: deleteConfirmEmail }),
     onSuccess: async () => {
-      toast.success("Account deleted. Signing out...");
+      toast.success(t("profile.accountSettings.accountDeleted"));
       await signOut();
       window.location.href = "/";
     },
@@ -122,11 +124,11 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
 
   const handleChangePw = () => {
     if (newPw !== confirmPw) {
-      toast.error("Passwords do not match");
+      toast.error(t("profile.accountSettings.passwordsDoNotMatch"));
       return;
     }
     if (newPw.length < 8) {
-      toast.error("Password must be at least 8 characters");
+      toast.error(t("profile.accountSettings.passwordMinLength"));
       return;
     }
     changePwMutation.mutate();
@@ -138,7 +140,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
         <CardHeader>
           <CardTitle className="text-xl font-bold flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-muted-foreground" />
-            Account Settings
+            {t("profile.accountSettings.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -152,7 +154,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
               {data?.createdAt && (
                 <div className="flex items-center gap-3 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">Account created</span>
+                  <span className="text-muted-foreground">{t("profile.accountSettings.accountCreated")}</span>
                   <span className="font-medium ml-auto">{formatDate(new Date(data.createdAt))}</span>
                 </div>
               )}
@@ -161,12 +163,14 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
 
               {/* Data Usage */}
               <div className="space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Data Usage</p>
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t("profile.accountSettings.dataUsage")}
+                </p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <DataStat icon={Store} label="Stores" value={data?.dataUsage.totalStores ?? 0} />
-                  <DataStat icon={Package} label="Products" value={data?.dataUsage.totalProducts ?? 0} />
-                  <DataStat icon={ShoppingCart} label="Orders" value={data?.dataUsage.totalOrders ?? 0} />
-                  <DataStat icon={Users} label="Staff" value={data?.dataUsage.totalStaff ?? 0} />
+                  <DataStat icon={Store} label={t("profile.accountSettings.stores")} value={data?.dataUsage.totalStores ?? 0} />
+                  <DataStat icon={Package} label={t("profile.accountSettings.products")} value={data?.dataUsage.totalProducts ?? 0} />
+                  <DataStat icon={ShoppingCart} label={t("profile.accountSettings.orders")} value={data?.dataUsage.totalOrders ?? 0} />
+                  <DataStat icon={Users} label={t("profile.accountSettings.staff")} value={data?.dataUsage.totalStaff ?? 0} />
                 </div>
               </div>
 
@@ -176,10 +180,10 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                   <Link2 className="h-4 w-4" />
-                  Linked Accounts
+                  {t("profile.accountSettings.linkedAccounts")}
                 </p>
                 {data?.linkedAccounts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No linked accounts</p>
+                  <p className="text-sm text-muted-foreground">{t("profile.accountSettings.noLinkedAccounts")}</p>
                 ) : (
                   <div className="space-y-2">
                     {data?.linkedAccounts.map((acc) => (
@@ -194,12 +198,12 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                           <p className="text-sm font-medium">{PROVIDER_LABELS[acc.provider] ?? acc.provider}</p>
                           {acc.connectedAt && (
                             <p className="text-xs text-muted-foreground">
-                              Connected {formatDate(new Date(acc.connectedAt))}
+                              {t("profile.accountSettings.connected")} {formatDate(new Date(acc.connectedAt))}
                             </p>
                           )}
                         </div>
                         <Badge variant="outline" className="text-emerald-600 border-emerald-400 text-xs shrink-0">
-                          Active
+                          {t("common.status.Active")}
                         </Badge>
                       </div>
                     ))}
@@ -211,7 +215,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
 
               {/* Actions */}
               <div className="space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Security</p>
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t("profile.accountSettings.security")}</p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   {data?.hasPasswordAccount && (
                     <Button
@@ -220,7 +224,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                       onClick={() => setPwDialog(true)}
                     >
                       <Key className="h-4 w-4" />
-                      Change Password
+                      {t("profile.accountSettings.changePassword")}
                     </Button>
                   )}
                   <Button
@@ -229,7 +233,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                     onClick={() => setDeleteDialog(true)}
                   >
                     <Trash2 className="h-4 w-4" />
-                    Delete Account
+                    {t("profile.accountSettings.deleteAccount")}
                   </Button>
                 </div>
               </div>
@@ -242,42 +246,42 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
       <Dialog open={pwDialog} onOpenChange={setPwDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription>Enter your current password and choose a new one.</DialogDescription>
+            <DialogTitle>{t("profile.accountSettings.changePassword")}</DialogTitle>
+            <DialogDescription>{t("profile.accountSettings.changePasswordDescription")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label>Current Password</Label>
+              <Label>{t("profile.accountSettings.currentPassword")}</Label>
               <Input
                 type="password"
                 value={currentPw}
                 onChange={(e) => setCurrentPw(e.target.value)}
-                placeholder="Current password"
+                placeholder={t("profile.accountSettings.currentPassword")}
               />
             </div>
             <div className="space-y-1">
-              <Label>New Password</Label>
+              <Label>{t("profile.accountSettings.newPassword")}</Label>
               <Input
                 type="password"
                 value={newPw}
                 onChange={(e) => setNewPw(e.target.value)}
-                placeholder="Min. 8 characters"
+                placeholder={t("profile.accountSettings.placeholderMinLength")}
               />
             </div>
             <div className="space-y-1">
-              <Label>Confirm New Password</Label>
+              <Label>{t("profile.accountSettings.confirmNewPassword")}</Label>
               <Input
                 type="password"
                 value={confirmPw}
                 onChange={(e) => setConfirmPw(e.target.value)}
-                placeholder="Repeat new password"
+                placeholder={t("profile.accountSettings.placeholderRepeatPassword")}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPwDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setPwDialog(false)}>{t("common.actions.cancel")}</Button>
             <Button onClick={handleChangePw} disabled={changePwMutation.isPending}>
-              {changePwMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Password"}
+              {changePwMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("profile.accountSettings.savePassword")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -287,14 +291,14 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
       <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">Delete Account</DialogTitle>
+            <DialogTitle className="text-destructive">{t("profile.accountSettings.deleteAccount")}</DialogTitle>
             <DialogDescription>
-              This is permanent. All your stores, products, orders, and data will be deleted and cannot be recovered.
+              {t("profile.accountSettings.deleteDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Label>
-              Type your email <span className="font-semibold">{userEmail}</span> to confirm
+              {t("profile.accountSettings.confirmEmailLabel").replace("{email}", userEmail)}
             </Label>
             <Input
               value={deleteConfirmEmail}
@@ -303,13 +307,13 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteDialog(false)}>{t("common.actions.cancel")}</Button>
             <Button
               variant="destructive"
               onClick={() => deleteAccountMutation.mutate()}
               disabled={deleteConfirmEmail !== userEmail || deleteAccountMutation.isPending}
             >
-              {deleteAccountMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete My Account"}
+              {deleteAccountMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("profile.accountSettings.deleteConfirmButton")}
             </Button>
           </DialogFooter>
         </DialogContent>

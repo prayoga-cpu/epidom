@@ -144,10 +144,13 @@ export async function POST(request: Request) {
           callbackUrl: `${appUrl}/api/webhooks/xendit`,
         });
 
-        if (payment.providerRef) {
+        if (payment.providerRef || payment.qrString) {
           await prisma.order.update({
             where: { id: order.id },
-            data: { paymentProviderRef: payment.providerRef },
+            data: { 
+              paymentProviderRef: payment.providerRef,
+              paymentQrString: payment.qrString || null,
+            },
           });
         }
 

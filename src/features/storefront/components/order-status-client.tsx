@@ -14,6 +14,7 @@ import {
   PackageCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { QRCodeSVG } from "qrcode.react";
 
 type OrderStatus = "PENDING" | "CONFIRMED" | "IN_PRODUCTION" | "READY" | "DELIVERED" | "CANCELLED";
 type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "REFUNDED";
@@ -57,6 +58,7 @@ interface OrderStatusClientProps {
     total: number;
     currency: string;
     createdAt: string;
+    paymentQrString?: string | null;
     items: OrderItem[];
   };
 }
@@ -169,7 +171,7 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
       } catch {
         // silently ignore poll errors
       }
-    }, 10_000);
+    }, 2_000);
 
     return () => clearInterval(interval);
   }, [currentStatus, currentPaymentStatus, order.id]);
@@ -220,7 +222,26 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
         {isPolling && (
           <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
             <RefreshCw className="size-3 animate-spin" />
-            <span>Update otomatis tiap 10 detik</span>
+            <span>Update otomatis tiap 2 detik</span>
+          </div>
+        )}
+
+        {/* QR Code Section for QRIS */}
+        {order.paymentMethod === "QRIS" && currentPaymentStatus === "PENDING" && order.paymentQrString && (
+          <div className="bg-white rounded-2xl border shadow-sm p-6 text-center space-y-4">
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg">Scan untuk Membayar</h3>
+              <p className="text-sm text-slate-500 mt-1">Gunakan aplikasi e-wallet atau m-banking kamu (GoPay, OVO, Dana, BCA, dll).</p>
+            </div>
+            <div className="flex justify-center p-4 bg-white rounded-xl border-2 border-slate-100 mx-auto w-fit">
+              <QRCodeSVG
+                value={order.paymentQrString}
+                size={200}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+            <p className="text-xs text-slate-400 font-medium">QRIS otomatis diperbarui setelah dibayar</p>
           </div>
         )}
 

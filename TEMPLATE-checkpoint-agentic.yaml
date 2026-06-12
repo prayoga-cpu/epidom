@@ -1,19 +1,22 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "fix checkout failed styling"
+task: "i18n profile account settings and notifications"
 gate: "ok"
-success: "checkout failed page text legible under dark theme"
+success: "Account settings and notification bell cards use translation strings for English and Indonesian. French translation is ignored since French is deprecated."
 
 evidence:
   changed_files:
-    - "src/app/(app)/checkout/failed/page.tsx"
-    - "src/app/(app)/checkout/success/page.tsx"
-    - "src/features/checkout/components/checkout-failed-content.tsx"
+    - "src/locales/en.ts"
+    - "src/locales/id.ts"
+    - "src/features/dashboard/profile/components/account-settings-card.tsx"
+    - "src/features/dashboard/shared/notification-bell.tsx"
+    - "src/__tests__/components/notification-bell.test.tsx"
   checks:
     - "rtk pnpm type-check"
     - "rtk pnpm lint"
-  rollback: "git checkout main && git reset --hard origin/main && git checkout feature-billing && git reset --hard origin/feature-billing"
+    - "rtk pnpm test"
+  rollback: "git checkout -- src/locales/en.ts src/locales/id.ts src/features/dashboard/profile/components/account-settings-card.tsx src/features/dashboard/shared/notification-bell.tsx src/__tests__/components/notification-bell.test.tsx"
 
 risks:
   sensitive_without_escalation: false

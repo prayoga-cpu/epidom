@@ -30,6 +30,20 @@ vi.mock("date-fns", () => ({
   formatDistanceToNow: () => "2 minutes ago",
 }));
 
+vi.mock("@/components/lang/i18n-provider", () => ({
+  useI18n: () => ({
+    t: (k: string) => {
+      if (k === "notifications.allCaughtUp") return "All caught up!";
+      if (k === "notifications.clearAll") return "Clear all";
+      if (k === "notifications.viewAllOrders") return "View all orders →";
+      if (k === "notifications.title") return "Notifications";
+      if (k === "notifications.dismiss") return "Dismiss";
+      return k;
+    },
+    locale: "en",
+  }),
+}));
+
 // Radix Popover — render children inline so we can interact with the content
 vi.mock("@/components/ui/popover", () => ({
   Popover: ({ children }: any) => <div>{children}</div>,
