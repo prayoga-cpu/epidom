@@ -69,6 +69,7 @@ export async function initiatePayment(
         provider: "none",
         providerRef: "",
         paymentUrl: req.successUrl,
+        qrString: req.paymentMethod === "QRIS" ? "dummy-qris-data-for-local-testing" : undefined,
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       };
     }
