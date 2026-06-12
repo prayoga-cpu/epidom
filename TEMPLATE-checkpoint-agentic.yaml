@@ -1,22 +1,19 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "Implement yearly pricing checkout flow and configure .env"
+task: "fix checkout failed styling"
 gate: "ok"
-success: "Pass yearly to checkout session, fallback removed from config, .env updated, type-check and lint pass"
+success: "checkout failed page text legible under dark theme"
 
 evidence:
-  changed_files: 
-    - src/config/stripe.config.ts
-    - src/lib/validation/subscription.schemas.ts
-    - src/app/api/subscriptions/checkout/route.ts
-    - src/lib/services/subscription.service.ts
-    - src/features/marketing/pricing/components/pricing-cards.tsx
-    - .env
-  checks: 
-    - pnpm type-check
-    - pnpm lint
-  rollback: "git checkout src/config/stripe.config.ts src/lib/validation/subscription.schemas.ts src/app/api/subscriptions/checkout/route.ts src/lib/services/subscription.service.ts src/features/marketing/pricing/components/pricing-cards.tsx .env"
+  changed_files:
+    - "src/app/(app)/checkout/failed/page.tsx"
+    - "src/app/(app)/checkout/success/page.tsx"
+    - "src/features/checkout/components/checkout-failed-content.tsx"
+  checks:
+    - "rtk pnpm type-check"
+    - "rtk pnpm lint"
+  rollback: "git checkout main && git reset --hard origin/main && git checkout feature-billing && git reset --hard origin/feature-billing"
 
 risks:
   sensitive_without_escalation: false
@@ -24,4 +21,4 @@ risks:
   claim_without_evidence: false
 
 not_verified: []
-next: "User to replace placeholder yearly price IDs in .env with live ones from Stripe Dashboard"
+next: "none"
