@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ export function SubscriptionLockedState({
         <h3 className="mb-2 text-lg font-semibold">{displayTitle}</h3>
         {message && <p className="text-muted-foreground text-sm mb-4">{displayMessage}</p>}
         <Button
-          onClick={() => router.push("/pricing")}
+          onClick={() => router.push("/pricing#plans")}
           className="mt-4 bg-[var(--color-brand-primary)] hover:opacity-90"
           size="sm"
         >

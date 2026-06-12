@@ -23,7 +23,7 @@ export const POST = withApiHandler(
   async (request, { userId }) => {
     // Parse and validate request body
     const body = await request.json();
-    const { plan, successUrl, cancelUrl } = checkoutSchema.parse(body);
+    const { plan, successUrl, cancelUrl, trial } = checkoutSchema.parse(body);
 
     // Get origin for building absolute URLs
     const origin =
@@ -46,7 +46,7 @@ export const POST = withApiHandler(
     const subscription = await subscriptionRepository.findByUserId(userId);
     if (subscription && subscription.status === "ACTIVE" && subscription.plan !== "FREE") {
       // User is already paid. Redirect to Customer Portal to handle upgrade/downgrade prorations.
-      const portalSession = await subscriptionService.createPortalSession(userId, finalSuccessUrl);
+      const portalSession = await subscriptionService.createPortalSession(userId, `${origin}/stores`);
       return NextResponse.json(
         createSuccessResponse({
           sessionId: portalSession.id,
@@ -62,7 +62,8 @@ export const POST = withApiHandler(
       userId,
       plan,
       finalSuccessUrl,
-      finalCancelUrl
+      finalCancelUrl,
+      trial
     );
 
     return NextResponse.json(

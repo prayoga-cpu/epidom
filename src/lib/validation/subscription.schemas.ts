@@ -10,6 +10,7 @@ export const checkoutSchema = z.object({
   }),
   successUrl: z.string().url("Invalid success URL").optional(),
   cancelUrl: z.string().url("Invalid cancel URL").optional(),
+  trial: z.boolean().optional(),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;

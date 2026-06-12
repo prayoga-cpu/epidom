@@ -189,7 +189,7 @@ export function SubscriptionInfoCard({ subscription: initialSubscription }: Subs
               asChild
               className="w-full sm:flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md transition-all duration-300 hover:scale-[1.02] active:scale-95"
             >
-              <Link href="/pricing">Upgrade Plan</Link>
+              <Link href="/pricing#plans">Upgrade Plan</Link>
             </Button>
           ) : (
             <Button

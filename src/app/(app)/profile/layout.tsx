@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { I18nProvider } from "@/components/lang/i18n-provider";
 import { SiteHeader } from "@/features/marketing/shared/components/site-header";
-import { ProfileNav } from "@/features/dashboard/profile/components/profile-nav";
 
 export const metadata: Metadata = {
   title: "Profile - EPIDOM",
@@ -19,7 +18,6 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
       <div className="flex min-h-screen flex-col bg-background">
         <SiteHeader variant="authenticated" showNav={true} showLogout={true} />
         <div className="flex flex-1 flex-col pt-20 sm:pt-24">
-          <ProfileNav />
           <main className="flex flex-1 flex-col overflow-y-auto">{children}</main>
         </div>
       </div>

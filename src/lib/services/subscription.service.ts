@@ -59,7 +59,8 @@ export class SubscriptionService {
     userId: string,
     plan: "FREE" | "FREE" | "POS" | "OPERATIONS",
     successUrl: string,
-    cancelUrl: string
+    cancelUrl: string,
+    trial?: boolean
   ): Promise<Stripe.Checkout.Session> {
     // Get user
     const user = await this.userRepo.findById(userId);
@@ -119,21 +120,20 @@ export class SubscriptionService {
     let stripeCustomerId: string;
 
     if (subscription && !subscription.stripeCustomerId.startsWith("free_")) {
-      // Use existing Stripe customer ID
-      stripeCustomerId = subscription.stripeCustomerId;
-
-      // IMPORTANT: DO NOT cancel existing subscriptions here!
-      // Canceling before payment confirmation means user loses their current plan if they click "back"
-      //
-      // The correct flow:
-      // 1. User has Starter plan (ACTIVE)
-      // 2. User clicks upgrade to Pro → creates checkout session
-      // 3. User pays successfully → webhook confirms → THEN cancel old subscription
-      // 4. If user cancels checkout → old subscription stays ACTIVE ✅
-      //
-      // Duplicate subscriptions will be handled by:
-      // - Webhook handler: Cancel old subscription when new one is confirmed
-      // - Audit function: Clean up any duplicates as safety measure
+      try {
+        const customer = await stripe.customers.retrieve(subscription.stripeCustomerId);
+        if (customer.deleted) throw new Error("Customer deleted");
+        stripeCustomerId = subscription.stripeCustomerId;
+      } catch (error) {
+        // Customer not found in Stripe, create a new one
+        const newCustomer = await stripe.customers.create({
+          email: user.email,
+          name: user.name || undefined,
+          metadata: { userId: user.id },
+        });
+        stripeCustomerId = newCustomer.id;
+        await this.subscriptionRepo.update(userId, { stripeCustomerId });
+      }
     } else {
       // Create new Stripe customer
       const customer = await stripe.customers.create({
@@ -177,6 +177,7 @@ export class SubscriptionService {
           userId: user.id,
           plan: plan,
         },
+        ...(trial ? { trial_period_days: 7 } : {}),
         // Application fee: 20% goes to platform (you), 80% to connected account
         // Only set if Epidom owner has Connect account configured
         ...(epidomOwner?.stripeConnectAccountId && {

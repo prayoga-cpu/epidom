@@ -31,8 +31,6 @@ export function RegisterForm() {
       email: "",
       password: "",
       confirmPassword: "",
-      businessName: "",
-      address: "",
     },
   });
 
@@ -168,53 +166,6 @@ export function RegisterForm() {
                   )}
                 />
               </div>
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <h3 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "rgba(251,249,228,0.4)" }}>
-              {t("auth.businessInfo")}
-            </h3>
-            <div className="grid gap-4">
-              <FormField
-                control={form.control}
-                name="businessName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel style={{ color: "var(--epi-cream-50)" }}>{t("auth.businessName")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("auth.businessNamePlaceholder") || "Epidom Bakery"}
-                        disabled={isPending}
-                        autoComplete="organization"
-                        className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel style={{ color: "var(--epi-cream-50)" }}>{t("auth.address")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="123 Main St, Paris"
-                        disabled={isPending}
-                        autoComplete="street-address"
-                        className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
           </section>
 

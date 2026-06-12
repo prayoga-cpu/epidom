@@ -6,10 +6,13 @@ import { PricingCards } from "./pricing-cards";
 import { FeatureComparison } from "./feature-comparison";
 import { PricingFaq } from "./pricing-faq";
 import { PricingCta } from "./pricing-cta";
+import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 
 export function PricingPageClient() {
   const { t } = useI18n();
   const [yearly, setYearly] = useState(true);
+  const { data: subData } = useSubscriptionStatus();
+  const currentPlan = subData?.hasSubscription ? subData.subscription?.plan : null;
 
   return (
     <>
@@ -40,7 +43,7 @@ export function PricingPageClient() {
         </div>
       </section>
 
-      <PricingCards yearly={yearly} />
+      <PricingCards yearly={yearly} currentPlan={currentPlan} />
       <FeatureComparison />
       <PricingFaq />
       <PricingCta />

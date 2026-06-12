@@ -103,7 +103,7 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                     return (
                       <li key={item.href}>
                         <Link
-                          href="/pricing"
+                          href="/pricing#plans"
                           title={upgradeLabel}
                           className="group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition text-muted-foreground/40 hover:bg-amber-500/8 hover:text-amber-500/70 cursor-pointer"
                         >

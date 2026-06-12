@@ -17,12 +17,6 @@ export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   name: nameSchema,
-  businessName: z
-    .string()
-    .min(2, "Business name must be at least 2 characters")
-    .max(100, "Business name must not exceed 100 characters")
-    .trim()
-    .optional(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

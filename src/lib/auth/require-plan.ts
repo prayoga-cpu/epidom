@@ -53,7 +53,7 @@ export async function requirePlan(
   const currentPlan: SubscriptionPlan = subscription?.plan ?? "FREE";
 
   if (planRank(currentPlan) < planRank(minPlan)) {
-    redirect(`/pricing?upgrade=true&required=${minPlan}`);
+    redirect(`/pricing?upgrade=true&required=${minPlan}#plans`);
   }
 
   return { userId };

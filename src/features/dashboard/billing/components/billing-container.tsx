@@ -88,7 +88,7 @@ export function BillingContainer() {
   };
 
   const handleUpgrade = () => {
-    router.push("/pricing");
+    router.push("/pricing#plans");
   };
 
   if (loading) {
@@ -309,7 +309,7 @@ function NoSubscriptionState() {
           <CreditCard className="text-muted-foreground mb-4 h-16 w-16" />
           <h2 className="mb-2 text-2xl font-bold">{t("billing.noSubscription")}</h2>
           <p className="text-muted-foreground mb-6">{t("billing.noSubscriptionDesc")}</p>
-          <Button onClick={() => router.push("/pricing")} size="lg" className="gap-2">
+          <Button onClick={() => router.push("/pricing#plans")} size="lg" className="gap-2">
             <ArrowUpCircle className="h-5 w-5" />
             {t("billing.viewPlans")}
           </Button>

@@ -200,6 +200,7 @@ Milestones completed: Schema + Aggregator Foundation, Email Ingestion, Finance R
 - [x] **AI Parsing**: `OPENAI_API_KEY` added to `.env` and Vercel (2026-05-23).
 - [x] **Background Jobs (Inngest)**: `INNGEST_EVENT_KEY` + `INNGEST_SIGNING_KEY` added to `.env` and Vercel (2026-05-23). Register serve URL (`/api/inngest`) in Inngest dashboard after next deploy.
 - [ ] **Aggregator**: Instruct merchants to forward aggregator order emails to `orders@epidom.id` with subject prefix `[@their-slug] Original subject`.
+- [ ] **Payments (Stripe)**: Set `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_*` with live keys in `.env` and Vercel.
 - [ ] **Payments (Xendit)**: Add `XENDIT_SECRET_KEY` + `XENDIT_WEBHOOK_TOKEN` to `.env`. In Xendit dashboard, set webhook URL to `https://yourdomain.com/api/webhooks/xendit`.
 - [ ] **Notifications**: Add `FONNTE_API_TOKEN` to `.env`. Ensure the Fonnte device is online and linked to the merchant's WhatsApp.
 - [ ] **Storefront**: Enable `acceptsOrders: true` on any storefront that should show the Order & Pay flow.

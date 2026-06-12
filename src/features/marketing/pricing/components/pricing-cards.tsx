@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useUser } from "@/lib/auth-client";
 
 const TIERS = [
   { idx: 0, key: "t1", highlight: false, plan: "FREE" },
@@ -15,11 +16,28 @@ const FEAT_COUNTS = [6, 6, 8, 8] as const;
 const FREE_PRICES = new Set(["$0", "0 €", "Rp 0", "€0"]);
 const CUSTOM_PRICES = new Set(["Custom", "Sur devis", "Kustom"]);
 
-export function PricingCards({ yearly }: { yearly: boolean }) {
+export function PricingCards({ yearly, currentPlan }: { yearly: boolean; currentPlan?: string | null }) {
   const { t } = useI18n();
+  const { user, loading: userLoading } = useUser();
 
-  const [confirming, setConfirming] = useState<{ key: string; plan: string; name: string } | null>(null);
+  const [confirming, setConfirming] = useState<{ key: string; plan: string; name: string; trial?: boolean } | null>(null);
   const [isActivating, setIsActivating] = useState(false);
+
+  useEffect(() => {
+    if (!userLoading && user && typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("trial") === "true") {
+        setConfirming({
+          key: "t3",
+          plan: "OPERATIONS",
+          // @ts-ignore
+          name: t("redesign.pricingPage.t3name"),
+          trial: true
+        });
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [user, userLoading, t]);
 
   function getPrice(tierKey: string) {
     const mo = t(`redesign.pricingPage.${tierKey}price_mo` as const);
@@ -37,13 +55,14 @@ export function PricingCards({ yearly }: { yearly: boolean }) {
     return yearly ? t("redesign.pricingPage.billedYearly") : t("redesign.pricingPage.billedMonthly");
   }
 
-  function handleCta(tierKey: string, plan: string) {
+  function handleCta(tierKey: string, plan: string, trial?: boolean) {
+    if (plan === currentPlan) return;
     if (tierKey === "t4") {
       window.open("https://calendly.com/prayogadevelopment/30min", "_blank");
       return;
     }
     const name = t(`redesign.pricingPage.${tierKey}name` as const);
-    setConfirming({ key: tierKey, plan, name });
+    setConfirming({ key: tierKey, plan, name, trial });
   }
 
   async function confirmActivate() {
@@ -56,7 +75,7 @@ export function PricingCards({ yearly }: { yearly: boolean }) {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: confirming.plan }),
+        body: JSON.stringify({ plan: confirming.plan, trial: confirming.trial }),
       });
 
       if (res.status === 401) {
@@ -90,7 +109,7 @@ export function PricingCards({ yearly }: { yearly: boolean }) {
 
   return (
     <>
-      <section style={{ padding: "40px 0 80px" }}>
+      <section id="plans" style={{ padding: "40px 0 80px", scrollMarginTop: 20 }}>
         <div className="epi-container">
           <div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
@@ -143,11 +162,17 @@ export function PricingCards({ yearly }: { yearly: boolean }) {
 
                 <button
                   onClick={() => handleCta(key, plan)}
-                  disabled={isActivating}
+                  disabled={isActivating || plan === currentPlan}
                   className="cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ width: "100%", padding: "14px 0", borderRadius: 999, background: highlight ? "var(--epi-gold-500)" : "transparent", color: highlight ? "var(--epi-navy-900)" : "var(--epi-cream-50)", border: `1px solid ${highlight ? "transparent" : "rgba(255,255,255,0.18)"}`, fontSize: 14, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "var(--epi-font-body)" }}
                 >
-                  {t(`redesign.pricingPage.${key}cta` as const)}
+                  {plan === currentPlan
+                    ? "Current Plan"
+                    : currentPlan === "FREE" && (plan === "POS" || plan === "OPERATIONS")
+                    ? "Upgrade Plan"
+                    : currentPlan && key !== "t4"
+                    ? "Switch Plan"
+                    : t(`redesign.pricingPage.${key}cta` as const)}
                 </button>
 
                 <div style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />
@@ -185,7 +210,13 @@ export function PricingCards({ yearly }: { yearly: boolean }) {
               <div style={{ color: "var(--epi-cream-50)", opacity: 0.6, fontSize: 14, marginTop: 4 }}>{t("redesign.pricingPage.trialBarSub")}</div>
             </div>
             <button
-              onClick={() => { window.location.href = "/register"; }}
+              onClick={() => {
+                if (user) {
+                  handleCta("t3", "OPERATIONS", true);
+                } else {
+                  window.location.href = "/register?callbackURL=/pricing?trial=true";
+                }
+              }}
               className="cursor-pointer transition-all hover:-translate-y-px"
               style={{ padding: "12px 28px", borderRadius: 999, background: "var(--epi-cream-50)", color: "var(--epi-navy-900)", fontSize: 14, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", border: "none", fontFamily: "var(--epi-font-body)", whiteSpace: "nowrap" }}
             >
