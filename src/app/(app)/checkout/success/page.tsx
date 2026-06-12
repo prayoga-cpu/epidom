@@ -4,8 +4,8 @@ import { CheckoutSuccessContent } from "@/features/checkout/components/checkout-
 
 function CheckoutSuccessSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex min-h-screen items-center justify-center px-4 py-12">
+    <div className="min-h-[100dvh] bg-background">
+      <div className="flex min-h-[100dvh] items-center justify-center px-4 py-12">
         <div className="w-full max-w-md space-y-6 text-center">
           <div className="flex justify-center">
             <Skeleton className="h-20 w-20 rounded-full" />

@@ -43,55 +43,63 @@ export function CheckoutFailedContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex min-h-screen items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md space-y-6 text-center">
+    <div className="min-h-[100dvh] bg-background">
+      <div className="flex min-h-[100dvh] items-center justify-center px-4 py-12 md:py-20">
+        <div className="w-full max-w-md space-y-8 text-center">
           {/* Error Icon */}
           <div className="flex justify-center">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-red-100 opacity-75 blur"></div>
-              <AlertCircle className="relative h-20 w-20 text-red-600" />
+              <div className="absolute inset-0 rounded-full bg-destructive/10 blur-xl"></div>
+              <AlertCircle className="relative h-20 w-20 text-destructive animate-pulse" strokeWidth={1.5} />
             </div>
           </div>
 
           {/* Title */}
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900">{t("checkout.failed.title")}</h1>
-            <p className="text-gray-600">{t("checkout.failed.subtitle")}</p>
+          <div className="space-y-3">
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">{t("checkout.failed.title")}</h1>
+            <p className="text-muted-foreground text-base">{t("checkout.failed.subtitle")}</p>
           </div>
 
           {/* Error Details */}
-          <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-4">
-            <div className="text-left">
-              <p className="mb-1 text-sm font-semibold text-red-800">
-                {t("checkout.failed.reason")}:
+          <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-left shadow-sm space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-destructive uppercase tracking-wider">
+                {t("checkout.failed.reason")}
               </p>
-              <p className="text-sm text-red-700">{getErrorMessage()}</p>
+              <p className="mt-1 text-base font-medium text-foreground">{getErrorMessage()}</p>
             </div>
             {sessionId && (
-              <div className="border-t border-red-200 pt-2 text-left">
-                <p className="font-mono text-xs text-red-600">{sessionId}</p>
+              <div className="border-t border-destructive/10 pt-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  ID Sesi
+                </p>
+                <p className="font-mono text-sm text-muted-foreground select-all break-all">{sessionId}</p>
               </div>
             )}
           </div>
 
           {/* Help Message */}
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-            <p className="text-sm leading-relaxed text-yellow-800">
+          <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-5 text-left">
+            <p className="text-sm leading-relaxed text-yellow-600 dark:text-yellow-400/90 font-medium">
               {t("checkout.failed.helpMessage")}
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-3 pt-4">
-            <Button onClick={handleRetry} disabled={isLoading} className="w-full" size="lg">
+          <div className="space-y-3 pt-2">
+            <Button
+              onClick={handleRetry}
+              disabled={isLoading}
+              className="w-full h-12 rounded-xl text-base font-semibold btn-smooth"
+              size="lg"
+            >
               {isLoading ? t("common.loading") : t("checkout.failed.tryAgainButton")}
             </Button>
             <Button
               onClick={handleGoHome}
               disabled={isLoading}
               variant="outline"
-              className="w-full"
+              className="w-full h-12 rounded-xl text-base font-semibold btn-smooth"
               size="lg"
             >
               <Home className="mr-2 h-4 w-4" />
@@ -100,12 +108,12 @@ export function CheckoutFailedContent() {
           </div>
 
           {/* Support Link */}
-          <div className="pt-4 text-center">
-            <p className="text-sm text-gray-600">
+          <div className="pt-2 text-center">
+            <p className="text-sm text-muted-foreground">
               {t("common.needHelp")}{" "}
               <button
                 onClick={handleContact}
-                className="font-semibold text-blue-600 hover:text-blue-700"
+                className="font-semibold text-primary hover:underline cursor-pointer"
               >
                 {t("common.contactSupport")}
               </button>
@@ -113,7 +121,7 @@ export function CheckoutFailedContent() {
           </div>
 
           {/* Footer Note */}
-          <p className="pt-4 text-xs text-gray-500">{t("checkout.failed.chargeNotApplied")}</p>
+          <p className="pt-2 text-xs text-muted-foreground">{t("checkout.failed.chargeNotApplied")}</p>
         </div>
       </div>
     </div>
