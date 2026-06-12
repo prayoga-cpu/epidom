@@ -63,7 +63,8 @@ export class SubscriptionService {
     plan: "FREE" | "FREE" | "POS" | "OPERATIONS",
     successUrl: string,
     cancelUrl: string,
-    trial?: boolean
+    trial?: boolean,
+    yearly: boolean = false
   ): Promise<Stripe.Checkout.Session> {
     // Get user
     const user = await this.userRepo.findById(userId);
@@ -137,7 +138,7 @@ export class SubscriptionService {
     }
 
     // Get price ID for plan
-    const priceId = STRIPE_CONFIG.PRICE_IDS[plan];
+    const priceId = STRIPE_CONFIG.PRICE_IDS[plan][yearly ? "YEARLY" : "MONTHLY"];
 
     // Calculate application fee (20% to platform)
     // Stripe will automatically transfer remaining 80% to connected account

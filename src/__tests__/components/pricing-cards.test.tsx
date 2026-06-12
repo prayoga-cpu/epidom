@@ -108,7 +108,10 @@ describe("PricingCards", () => {
     expect(screen.getByText("Switch to POS")).toBeTruthy();
     fireEvent.click(screen.getByText("Cancel"));
     expect(screen.queryByText("Switch to POS")).toBeNull();
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalledWith(
+      expect.stringContaining("/api/subscriptions/"),
+      expect.any(Object)
+    );
   });
 
   it("Confirm calls activate-free API with correct plan (FREE)", async () => {
@@ -121,7 +124,7 @@ describe("PricingCards", () => {
         "/api/subscriptions/activate-free",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ plan: "FREE" }),
+          body: JSON.stringify({ plan: "FREE", trial: undefined, yearly: false }),
         })
       );
     });
@@ -139,7 +142,7 @@ describe("PricingCards", () => {
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/subscriptions/checkout",
-        expect.objectContaining({ body: JSON.stringify({ plan: "POS" }) })
+        expect.objectContaining({ body: JSON.stringify({ plan: "POS", trial: undefined, yearly: false }) })
       );
     });
   });

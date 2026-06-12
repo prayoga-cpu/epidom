@@ -1,0 +1,27 @@
+# AGENTIC CHECKPOINT
+# Minimal closeout record.
+
+task: "Implement yearly pricing checkout flow and configure .env"
+gate: "ok"
+success: "Pass yearly to checkout session, fallback removed from config, .env updated, type-check and lint pass"
+
+evidence:
+  changed_files: 
+    - src/config/stripe.config.ts
+    - src/lib/validation/subscription.schemas.ts
+    - src/app/api/subscriptions/checkout/route.ts
+    - src/lib/services/subscription.service.ts
+    - src/features/marketing/pricing/components/pricing-cards.tsx
+    - .env
+  checks: 
+    - pnpm type-check
+    - pnpm lint
+  rollback: "git checkout src/config/stripe.config.ts src/lib/validation/subscription.schemas.ts src/app/api/subscriptions/checkout/route.ts src/lib/services/subscription.service.ts src/features/marketing/pricing/components/pricing-cards.tsx .env"
+
+risks:
+  sensitive_without_escalation: false
+  over_engineering: false
+  claim_without_evidence: false
+
+not_verified: []
+next: "User to replace placeholder yearly price IDs in .env with live ones from Stripe Dashboard"

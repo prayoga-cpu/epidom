@@ -75,7 +75,7 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: confirming.plan, trial: confirming.trial }),
+        body: JSON.stringify({ plan: confirming.plan, trial: confirming.trial, yearly }),
       });
 
       if (res.status === 401) {

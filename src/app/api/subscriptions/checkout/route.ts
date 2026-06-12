@@ -23,7 +23,7 @@ export const POST = withApiHandler(
   async (request, { userId }) => {
     // Parse and validate request body
     const body = await request.json();
-    const { plan, successUrl, cancelUrl, trial } = checkoutSchema.parse(body);
+    const { plan, successUrl, cancelUrl, trial, yearly } = checkoutSchema.parse(body);
 
     // Get origin for building absolute URLs
     const origin =
@@ -63,7 +63,8 @@ export const POST = withApiHandler(
       plan,
       finalSuccessUrl,
       finalCancelUrl,
-      trial
+      trial,
+      yearly
     );
 
     return NextResponse.json(

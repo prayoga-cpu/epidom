@@ -41,7 +41,7 @@ describe("Sidebar plan gating", () => {
       renderSidebar("FREE");
       const posLinks = screen.getAllByRole("link", { name: /nav\.pos/i });
       // The locked link points to /pricing, not the actual page
-      const lockedPos = posLinks.find((l) => l.getAttribute("href") === "/pricing");
+      const lockedPos = posLinks.find((l) => l.getAttribute("href") === "/pricing#plans");
       expect(lockedPos).toBeTruthy();
     });
 
@@ -54,8 +54,8 @@ describe("Sidebar plan gating", () => {
     it("shows Operations items as locked", () => {
       renderSidebar("FREE");
       const links = screen.getAllByRole("link");
-      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing");
-      // Multiple locked items should point to /pricing
+      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing#plans");
+      // Multiple locked items should point to /pricing#plans
       expect(pricingLinks.length).toBeGreaterThan(3);
     });
 
@@ -82,7 +82,7 @@ describe("Sidebar plan gating", () => {
         (l) => l.getAttribute("href") === "/store/store-1/management"
       );
       expect(mgmtLink).toBeUndefined();
-      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing");
+      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing#plans");
       expect(pricingLinks.length).toBeGreaterThan(0);
     });
   });
@@ -102,7 +102,7 @@ describe("Sidebar plan gating", () => {
       const links = screen.getAllByRole("link");
       const financeLink = links.find((l) => l.getAttribute("href") === "/store/store-1/finance");
       expect(financeLink).toBeUndefined();
-      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing");
+      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing#plans");
       expect(pricingLinks.length).toBeGreaterThan(0);
     });
   });
@@ -113,7 +113,7 @@ describe("Sidebar plan gating", () => {
       const links = screen.getAllByRole("link");
       const financeLink = links.find((l) => l.getAttribute("href") === "/store/store-1/finance");
       expect(financeLink).toBeTruthy();
-      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing");
+      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing#plans");
       expect(pricingLinks.length).toBe(0);
     });
   });
@@ -123,7 +123,7 @@ describe("Sidebar plan gating", () => {
       mockSubData.mockReturnValue({ data: null });
       expect(() => render(<Sidebar />)).not.toThrow();
       const links = screen.getAllByRole("link");
-      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing");
+      const pricingLinks = links.filter((l) => l.getAttribute("href") === "/pricing#plans");
       expect(pricingLinks.length).toBeGreaterThan(0);
     });
   });

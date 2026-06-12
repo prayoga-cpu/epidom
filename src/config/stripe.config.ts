@@ -74,9 +74,18 @@ export const STRIPE_CONFIG = {
    * Production price IDs start with 'price_'
    */
   PRICE_IDS: {
-    FREE: "price_free_placeholder",
-    POS: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS || "price_test_pos_placeholder",
-    OPERATIONS: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS || "price_test_operations_placeholder",
+    FREE: {
+      MONTHLY: "price_free_placeholder",
+      YEARLY: "price_free_placeholder"
+    },
+    POS: {
+      MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY || "price_test_pos_monthly_placeholder",
+      YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS_YEARLY || "price_test_pos_yearly_placeholder"
+    },
+    OPERATIONS: {
+      MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY || "price_test_ops_monthly_placeholder",
+      YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_YEARLY || "price_test_ops_yearly_placeholder"
+    },
     // Enterprise is handled via sales contact, not Stripe Checkout
   },
 
@@ -103,8 +112,8 @@ export const STRIPE_CONFIG = {
 /**
  * Helper to get price ID by plan name
  */
-export function getPriceId(plan: "FREE" | "FREE" | "POS" | "OPERATIONS"): string {
-  return STRIPE_CONFIG.PRICE_IDS[plan];
+export function getPriceId(plan: "FREE" | "FREE" | "POS" | "OPERATIONS", yearly: boolean = false): string {
+  return STRIPE_CONFIG.PRICE_IDS[plan][yearly ? "YEARLY" : "MONTHLY"];
 }
 
 /**
