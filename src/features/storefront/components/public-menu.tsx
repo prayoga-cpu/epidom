@@ -69,15 +69,15 @@ type PaymentMethod =
   | "BANK_TRANSFER"
   | "STRIPE_CARD";
 
-const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; icon: React.ReactNode }[] = [
-  { value: "CASH", label: "Tunai / Cash", icon: <Banknote className="size-4" /> },
-  { value: "QRIS", label: "QRIS", icon: <QrCode className="size-4" /> },
-  { value: "GOPAY", label: "GoPay", icon: <Wallet className="size-4" /> },
-  { value: "OVO", label: "OVO", icon: <Wallet className="size-4" /> },
-  { value: "DANA", label: "DANA", icon: <Wallet className="size-4" /> },
-  { value: "SHOPEEPAY", label: "ShopeePay", icon: <Wallet className="size-4" /> },
-  { value: "BANK_TRANSFER", label: "Transfer Bank", icon: <CreditCard className="size-4" /> },
-  { value: "STRIPE_CARD", label: "Kartu Kredit/Debit", icon: <CreditCard className="size-4" /> },
+const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; icon: React.ReactNode; isImage?: boolean }[] = [
+  { value: "CASH", label: "Tunai / Cash", icon: <Banknote className="size-5" /> },
+  { value: "QRIS", label: "QRIS", icon: <img src="/payment-logos/qris.svg" alt="QRIS" className="h-5 w-auto object-contain" />, isImage: true },
+  { value: "GOPAY", label: "GoPay", icon: <img src="/payment-logos/gopay.svg" alt="GoPay" className="h-5 w-auto object-contain" />, isImage: true },
+  { value: "OVO", label: "OVO", icon: <img src="/payment-logos/ovo.svg" alt="OVO" className="h-5 w-auto object-contain" />, isImage: true },
+  { value: "DANA", label: "DANA", icon: <img src="/payment-logos/dana.svg" alt="DANA" className="h-5 w-auto object-contain" />, isImage: true },
+  { value: "SHOPEEPAY", label: "ShopeePay", icon: <img src="/payment-logos/shopeepay.svg" alt="ShopeePay" className="h-5 w-auto object-contain" />, isImage: true },
+  { value: "BANK_TRANSFER", label: "Transfer Bank", icon: <CreditCard className="size-5" /> },
+  { value: "STRIPE_CARD", label: "Stripe (Card/Wallets)", icon: <CreditCard className="size-5" /> },
 ];
 
 export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
@@ -849,10 +849,10 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                           : "border-slate-200 text-slate-700 hover:border-slate-300 bg-white"
                       }`}
                     >
-                      <div className={`p-1 rounded-md ${paymentMethod === option.value ? "bg-[var(--store-theme)] text-white" : "bg-slate-100 text-slate-500"}`}>
+                      <div className={`p-1.5 rounded-md flex items-center justify-center min-w-[32px] ${option.isImage ? "bg-white border shadow-sm" : paymentMethod === option.value ? "bg-[var(--store-theme)] text-white" : "bg-slate-100 text-slate-500"}`}>
                         {option.icon}
                       </div>
-                      <span className="text-xs font-bold">{option.label}</span>
+                      <span className="text-xs font-bold whitespace-nowrap">{option.label}</span>
                     </button>
                   ))}
                 </div>
