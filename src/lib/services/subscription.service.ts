@@ -209,6 +209,9 @@ export class SubscriptionService {
     if (!subscription) {
       throw new Error("No subscription found for user");
     }
+    if (subscription.stripeCustomerId.startsWith("free_")) {
+      throw new Error("Cannot manage billing portal for free or non-Stripe subscriptions");
+    }
 
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,

@@ -42,9 +42,14 @@ export const POST = withApiHandler(
         : `${origin}${cancelUrl}`
       : `${origin}/checkout/failed?reason=canceled`;
 
-    // Check if user already has a paid subscription
+    // Check if user already has a paid subscription (with a real Stripe customer)
     const subscription = await subscriptionRepository.findByUserId(userId);
-    if (subscription && subscription.status === "ACTIVE" && subscription.plan !== "FREE") {
+    if (
+      subscription &&
+      subscription.status === "ACTIVE" &&
+      subscription.plan !== "FREE" &&
+      !subscription.stripeCustomerId.startsWith("free_")
+    ) {
       // User is already paid. Redirect to Customer Portal to handle upgrade/downgrade prorations.
       const portalSession = await subscriptionService.createPortalSession(userId, `${origin}/stores`);
       return NextResponse.json(

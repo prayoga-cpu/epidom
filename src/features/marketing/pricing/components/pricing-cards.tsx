@@ -24,11 +24,13 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
 
   const [confirming, setConfirming] = useState<{ key: string; plan: string; name: string; trial?: boolean } | null>(null);
   const [isActivating, setIsActivating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userLoading && user && typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get("trial") === "true") {
+        setErrorMsg(null);
         setConfirming({
           key: "t3",
           plan: "OPERATIONS",
@@ -64,12 +66,14 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
       return;
     }
     const name = t(`redesign.pricingPage.${tierKey}name` as const);
+    setErrorMsg(null);
     setConfirming({ key: tierKey, plan, name, trial });
   }
 
   async function confirmActivate() {
     if (!confirming) return;
     setIsActivating(true);
+    setErrorMsg(null);
     try {
       const isPaid = confirming.plan === "POS" || confirming.plan === "OPERATIONS";
       const endpoint = isPaid ? "/api/subscriptions/checkout" : "/api/subscriptions/activate-free";
@@ -91,10 +95,8 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
           if (result?.success && result?.data?.url) {
             window.location.href = result.data.url;
           } else {
-            toast({
-              variant: "destructive",
-              description: result?.error?.message || "Failed to initiate checkout. Please check Stripe configuration.",
-            });
+            setErrorMsg(result?.error?.message || "Failed to initiate checkout. Please check Stripe configuration.");
+            setIsActivating(false);
           }
         } else {
           // Full navigation to flush React Query cache so new plan reflects immediately
@@ -102,19 +104,12 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
         }
       } else {
         const errorData = await res.json().catch(() => null);
-        toast({
-          variant: "destructive",
-          description: errorData?.error?.message || "An error occurred during checkout. Please try again.",
-        });
+        setErrorMsg(errorData?.error?.message || "An error occurred during checkout. Please try again.");
+        setIsActivating(false);
       }
     } catch (err: any) {
-      toast({
-        variant: "destructive",
-        description: err.message || "A network error occurred. Please try again.",
-      });
-    } finally {
+      setErrorMsg(err.message || "A network error occurred. Please try again.");
       setIsActivating(false);
-      setConfirming(null);
     }
   }
 
@@ -257,6 +252,16 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
               <p style={{ color: "var(--epi-cream-50)", opacity: 0.6, fontSize: 14, marginTop: 10, lineHeight: 1.6 }}>
                 Your subscription will be updated to the <strong style={{ color: "var(--epi-cream-50)", opacity: 1 }}>{confirming.name}</strong> plan immediately. You can change this anytime from your billing settings.
               </p>
+              {errorMsg && (
+                <div style={{ marginTop: 16, padding: "12px 16px", borderRadius: 12, background: "rgba(220, 38, 38, 0.1)", border: "1px solid rgba(220, 38, 38, 0.2)", color: "rgb(252, 165, 165)", fontSize: 13, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span style={{ lineHeight: 1.5 }}>{errorMsg}</span>
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", gap: 12 }}>
               <button

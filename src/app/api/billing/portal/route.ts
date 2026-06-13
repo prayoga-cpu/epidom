@@ -20,9 +20,9 @@ export const POST = withApiHandler(
       select: { stripeCustomerId: true },
     });
 
-    if (!subscription?.stripeCustomerId) {
+    if (!subscription?.stripeCustomerId || subscription.stripeCustomerId.startsWith("free_")) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "No active subscription found"),
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "No active subscription found on Stripe"),
         { status: 404 }
       );
     }
