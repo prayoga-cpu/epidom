@@ -222,7 +222,6 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
         {isPolling && (
           <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
             <RefreshCw className="size-3 animate-spin" />
-            <span>Update otomatis tiap 2 detik</span>
           </div>
         )}
 
