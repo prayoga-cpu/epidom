@@ -70,14 +70,14 @@ type PaymentMethod =
   | "STRIPE_CARD";
 
 const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; icon: React.ReactNode; isImage?: boolean }[] = [
-  { value: "CASH", label: "Tunai / Cash", icon: <Banknote className="size-5" /> },
+  { value: "CASH", label: "Tunai", icon: <Banknote className="size-5" /> },
   { value: "QRIS", label: "QRIS", icon: <img src="/payment-logos/qris.svg" alt="QRIS" className="w-[50px] h-5 object-contain" />, isImage: true },
   { value: "GOPAY", label: "GoPay", icon: <img src="/payment-logos/gopay.svg" alt="GoPay" className="w-[50px] h-5 object-contain" />, isImage: true },
   { value: "OVO", label: "OVO", icon: <img src="/payment-logos/ovo.svg" alt="OVO" className="w-[50px] h-5 object-contain" />, isImage: true },
   { value: "DANA", label: "DANA", icon: <img src="/payment-logos/dana.svg" alt="DANA" className="w-[50px] h-5 object-contain" />, isImage: true },
   { value: "SHOPEEPAY", label: "ShopeePay", icon: <img src="/payment-logos/shopeepay.svg" alt="ShopeePay" className="w-[50px] h-5 object-contain" />, isImage: true },
-  { value: "BANK_TRANSFER", label: "Transfer Bank", icon: <CreditCard className="size-5" /> },
-  { value: "STRIPE_CARD", label: "Stripe (Card/Wallets)", icon: <CreditCard className="size-5" /> },
+  { value: "BANK_TRANSFER", label: "Transfer Bank", icon: <img src="/payment-logos/bank-transfer.svg" alt="Transfer Bank" className="w-[50px] h-5 object-contain" />, isImage: true },
+  { value: "STRIPE_CARD", label: "Stripe (Card/Wallets)", icon: <img src="/payment-logos/stripe.svg" alt="Stripe" className="w-[50px] h-5 object-contain" />, isImage: true },
 ];
 
 export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {

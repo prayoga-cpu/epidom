@@ -148,6 +148,7 @@ export async function createXenditPayment(
     return {
       providerRef: data.id,
       paymentUrl: req.successRedirectUrl,
+      qrString: data.account_number,
       expiresAt,
     };
   }

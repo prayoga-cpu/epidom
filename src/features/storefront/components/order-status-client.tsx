@@ -245,6 +245,40 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
           </div>
         )}
 
+        {/* Instructions for OVO */}
+        {order.paymentMethod === "OVO" && currentPaymentStatus === "PENDING" && (
+          <div className="bg-white rounded-2xl border shadow-sm p-6 text-center space-y-4">
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg">Selesaikan Pembayaran</h3>
+              <p className="text-sm text-slate-500 mt-1">Buka aplikasi OVO Anda dan cek notifikasi untuk menyelesaikan pembayaran ini.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Instructions for Bank Transfer (using qrString to store VA number) */}
+        {order.paymentMethod === "BANK_TRANSFER" && currentPaymentStatus === "PENDING" && order.paymentQrString && (
+          <div className="bg-white rounded-2xl border shadow-sm p-6 text-center space-y-4">
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg">Transfer Virtual Account</h3>
+              <p className="text-sm text-slate-500 mt-1">Silakan transfer ke nomor Virtual Account BNI di bawah ini:</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-100">
+              <p className="font-mono text-xl font-bold text-slate-800 tracking-wider">{order.paymentQrString}</p>
+            </div>
+            <p className="text-xs text-slate-400 font-medium">Otomatis diperbarui setelah dibayar</p>
+          </div>
+        )}
+
+        {/* Instructions for E-Wallets */}
+        {["GOPAY", "DANA", "SHOPEEPAY"].includes(order.paymentMethod) && currentPaymentStatus === "PENDING" && (
+          <div className="bg-white rounded-2xl border shadow-sm p-6 text-center space-y-4">
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg">Selesaikan di E-Wallet</h3>
+              <p className="text-sm text-slate-500 mt-1">Anda seharusnya dialihkan ke halaman pembayaran. Jika belum bayar, silakan coba pesan ulang.</p>
+            </div>
+          </div>
+        )}
+
         {/* Order Details */}
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b">
