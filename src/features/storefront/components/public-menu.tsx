@@ -71,11 +71,11 @@ type PaymentMethod =
 
 const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; icon: React.ReactNode; isImage?: boolean }[] = [
   { value: "CASH", label: "Tunai / Cash", icon: <Banknote className="size-5" /> },
-  { value: "QRIS", label: "QRIS", icon: <img src="/payment-logos/qris.svg" alt="QRIS" className="h-5 w-auto object-contain" />, isImage: true },
-  { value: "GOPAY", label: "GoPay", icon: <img src="/payment-logos/gopay.svg" alt="GoPay" className="h-5 w-auto object-contain" />, isImage: true },
-  { value: "OVO", label: "OVO", icon: <img src="/payment-logos/ovo.svg" alt="OVO" className="h-5 w-auto object-contain" />, isImage: true },
-  { value: "DANA", label: "DANA", icon: <img src="/payment-logos/dana.svg" alt="DANA" className="h-5 w-auto object-contain" />, isImage: true },
-  { value: "SHOPEEPAY", label: "ShopeePay", icon: <img src="/payment-logos/shopeepay.svg" alt="ShopeePay" className="h-5 w-auto object-contain" />, isImage: true },
+  { value: "QRIS", label: "QRIS", icon: <img src="/payment-logos/qris.svg" alt="QRIS" className="w-[50px] h-5 object-contain" />, isImage: true },
+  { value: "GOPAY", label: "GoPay", icon: <img src="/payment-logos/gopay.svg" alt="GoPay" className="w-[50px] h-5 object-contain" />, isImage: true },
+  { value: "OVO", label: "OVO", icon: <img src="/payment-logos/ovo.svg" alt="OVO" className="w-[50px] h-5 object-contain" />, isImage: true },
+  { value: "DANA", label: "DANA", icon: <img src="/payment-logos/dana.svg" alt="DANA" className="w-[50px] h-5 object-contain" />, isImage: true },
+  { value: "SHOPEEPAY", label: "ShopeePay", icon: <img src="/payment-logos/shopeepay.svg" alt="ShopeePay" className="w-[50px] h-5 object-contain" />, isImage: true },
   { value: "BANK_TRANSFER", label: "Transfer Bank", icon: <CreditCard className="size-5" /> },
   { value: "STRIPE_CARD", label: "Stripe (Card/Wallets)", icon: <CreditCard className="size-5" /> },
 ];
