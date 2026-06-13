@@ -80,6 +80,15 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; icon: React.ReactN
   { value: "STRIPE_CARD", label: "Stripe (Card/Wallets)", icon: <img src="/payment-logos/stripe.svg" alt="Stripe" className="w-[50px] h-5 object-contain" />, isImage: true },
 ];
 
+type VABankCode = "BNI" | "BRI" | "MANDIRI" | "PERMATA";
+
+const VA_BANKS: { code: VABankCode; label: string; color: string }[] = [
+  { code: "BNI", label: "BNI", color: "#FF6600" },
+  { code: "BRI", label: "BRI", color: "#00529C" },
+  { code: "MANDIRI", label: "Mandiri", color: "#003D79" },
+  { code: "PERMATA", label: "Permata", color: "#E31E25" },
+];
+
 export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -96,6 +105,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   const [tableNumber, setTableNumber] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [selectedBankCode, setSelectedBankCode] = useState<VABankCode>("BNI");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -340,6 +350,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
           orderType: orderMethod,
           tableNumber: tableNumber.trim() || undefined,
           paymentMethod,
+          bankCode: paymentMethod === "BANK_TRANSFER" ? selectedBankCode : undefined,
           notes: notes.trim() || undefined,
           items: formattedItems,
         }),
@@ -857,6 +868,42 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                   ))}
                 </div>
               </div>
+
+              {/* Bank Sub-selector (only when BANK_TRANSFER selected) */}
+              {paymentMethod === "BANK_TRANSFER" && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pilih Bank *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {VA_BANKS.map((bank) => (
+                      <button
+                        key={bank.code}
+                        onClick={() => setSelectedBankCode(bank.code)}
+                        className={`flex items-center gap-2.5 px-3 py-3 border rounded-lg transition-all ${
+                          selectedBankCode === bank.code
+                            ? "border-[var(--store-theme)] bg-orange-50/30 shadow-sm"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <div
+                          className="w-8 h-8 rounded-md flex items-center justify-center text-white text-[10px] font-black shrink-0"
+                          style={{ backgroundColor: bank.color }}
+                        >
+                          {bank.label.slice(0, 3)}
+                        </div>
+                        <span className={`text-sm font-bold ${selectedBankCode === bank.code ? "text-[var(--store-theme)]" : "text-slate-700"}`}>
+                          {bank.label}
+                        </span>
+                        {selectedBankCode === bank.code && (
+                          <div className="ml-auto w-4 h-4 rounded-full bg-[var(--store-theme)] flex items-center justify-center">
+                            <svg viewBox="0 0 12 12" className="w-2.5 h-2.5 fill-white"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-400">Nomor Virtual Account akan ditampilkan setelah pesanan dibuat.</p>
+                </div>
+              )}
 
               {/* Order Notes */}
               <div className="space-y-1.5">

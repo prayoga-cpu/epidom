@@ -255,18 +255,25 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
         )}
 
         {/* Instructions for Bank Transfer (using qrString to store VA number) */}
-        {order.paymentMethod === "BANK_TRANSFER" && currentPaymentStatus === "PENDING" && order.paymentQrString && (
-          <div className="bg-white rounded-2xl border shadow-sm p-6 text-center space-y-4">
-            <div>
-              <h3 className="font-bold text-slate-800 text-lg">Transfer Virtual Account</h3>
-              <p className="text-sm text-slate-500 mt-1">Silakan transfer ke nomor Virtual Account BNI di bawah ini:</p>
+        {order.paymentMethod === "BANK_TRANSFER" && currentPaymentStatus === "PENDING" && order.paymentQrString && (() => {
+          // Format stored as "BANK_CODE:ACCOUNT_NUMBER" e.g. "BNI:8808999949742598"
+          const parts = order.paymentQrString.split(":");
+          const bankName = parts.length === 2 ? parts[0] : "Bank";
+          const accountNumber = parts.length === 2 ? parts[1] : order.paymentQrString;
+          return (
+            <div className="bg-white rounded-2xl border shadow-sm p-6 text-center space-y-4">
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg">Transfer Virtual Account {bankName}</h3>
+                <p className="text-sm text-slate-500 mt-1">Silakan transfer ke nomor Virtual Account {bankName} di bawah ini:</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-100 space-y-1">
+                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Nomor VA {bankName}</p>
+                <p className="font-mono text-2xl font-bold text-slate-800 tracking-widest">{accountNumber}</p>
+              </div>
+              <p className="text-xs text-slate-400 font-medium">Otomatis diperbarui setelah dibayar</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-100">
-              <p className="font-mono text-xl font-bold text-slate-800 tracking-wider">{order.paymentQrString}</p>
-            </div>
-            <p className="text-xs text-slate-400 font-medium">Otomatis diperbarui setelah dibayar</p>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Instructions for E-Wallets */}
         {["GOPAY", "DANA", "SHOPEEPAY"].includes(order.paymentMethod) && currentPaymentStatus === "PENDING" && (

@@ -4,6 +4,8 @@ import {
   isXenditAvailable,
   type XenditPaymentRequest,
   type XenditPaymentResponse,
+  type XenditVABankCode,
+  XENDIT_VA_BANKS,
 } from "./providers/xendit";
 import {
   createStripeCustomerPayment,
@@ -13,6 +15,8 @@ import {
 } from "./providers/stripe-customer";
 
 export type { XenditPaymentResponse, StripeCustomerPaymentResponse };
+export type { XenditVABankCode };
+export { XENDIT_VA_BANKS };
 
 const XENDIT_METHODS: PaymentMethod[] = [
   "QRIS",
@@ -38,6 +42,7 @@ export interface PaymentInitRequest {
   customerPhone?: string;
   description: string;
   paymentMethod: PaymentMethod;
+  bankCode?: XenditVABankCode;
   successUrl: string;
   cancelUrl: string;
   callbackUrl: string;
@@ -81,6 +86,7 @@ export async function initiatePayment(
       customerPhone: req.customerPhone,
       description: req.description,
       paymentMethod: req.paymentMethod,
+      bankCode: req.bankCode,
       callbackUrl: req.callbackUrl,
       successRedirectUrl: req.successUrl,
       failureRedirectUrl: req.cancelUrl,

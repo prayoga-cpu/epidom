@@ -1,5 +1,14 @@
 import type { PaymentMethod } from "@prisma/client";
 
+export type XenditVABankCode = "BNI" | "BRI" | "MANDIRI" | "PERMATA";
+
+export const XENDIT_VA_BANKS: { code: XenditVABankCode; label: string }[] = [
+  { code: "BNI", label: "BNI" },
+  { code: "BRI", label: "BRI" },
+  { code: "MANDIRI", label: "Mandiri" },
+  { code: "PERMATA", label: "Permata" },
+];
+
 export interface XenditPaymentRequest {
   orderId: string;
   amount: number;
@@ -8,6 +17,7 @@ export interface XenditPaymentRequest {
   customerPhone?: string;
   description: string;
   paymentMethod: PaymentMethod;
+  bankCode?: XenditVABankCode;
   callbackUrl: string;
   successRedirectUrl: string;
   failureRedirectUrl: string;
@@ -132,23 +142,27 @@ export async function createXenditPayment(
   }
 
   if (req.paymentMethod === "BANK_TRANSFER") {
+    const bankCode = req.bankCode ?? "BNI";
     const payload = {
       external_id: req.orderId,
-      bank_code: "BNI",
+      bank_code: bankCode,
       name: req.customerName,
-      expected_amount: req.amount,
+      expected_amount: Math.round(req.amount),
+      is_closed: true,
       expiration_date: expiresAt.toISOString(),
     };
 
     const data = await xenditRequest<{
       id: string;
       account_number: string;
+      bank_code: string;
     }>("/callback_virtual_accounts", payload);
 
     return {
       providerRef: data.id,
       paymentUrl: req.successRedirectUrl,
-      qrString: data.account_number,
+      // Format: "BNI:8808999949742598" so UI can show bank name + number separately
+      qrString: `${data.bank_code}:${data.account_number}`,
       expiresAt,
     };
   }

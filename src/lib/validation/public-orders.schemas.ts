@@ -33,6 +33,7 @@ export const createPublicOrderSchema = z.object({
     "STRIPE_CARD",
   ]),
   notes: z.string().max(500).optional(),
+  bankCode: z.enum(["BNI", "BRI", "MANDIRI", "PERMATA"]).optional(),
   items: z.array(publicOrderItemSchema).min(1).max(50),
 });
 

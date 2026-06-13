@@ -139,6 +139,7 @@ export async function POST(request: Request) {
           customerPhone: input.customerPhone,
           description: `Pesanan ${orderNumber} - ${storefront.displayName}`,
           paymentMethod: input.paymentMethod as PaymentMethod,
+          bankCode: input.bankCode as import("@/lib/payments").XenditVABankCode | undefined,
           successUrl: `${appUrl}/@${slug}/order/${order.id}?status=success`,
           cancelUrl: `${appUrl}/@${slug}/order/${order.id}?status=cancelled`,
           callbackUrl: `${appUrl}/api/webhooks/xendit`,
