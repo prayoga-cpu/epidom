@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, ArrowLeft, Search, X, Plus, Minus, Check, ChevronRight, ShoppingCart, MessageSquare, Loader2, QrCode, CreditCard, Wallet, Banknote } from "lucide-react";
+import { Sparkles, ArrowLeft, Search, X, Plus, Minus, Check, ChevronRight, ShoppingCart, MessageSquare, Loader2, QrCode, CreditCard, Wallet, Banknote, Utensils, ShoppingBag, Bike } from "lucide-react";
 
 interface ModifierOption {
   name: string;
@@ -770,101 +770,129 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
 
               {/* Customer Name */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Anda *</label>
+                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Nama Anda *</label>
                 <input
                   type="text"
                   placeholder="Masukkan nama lengkap..."
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full h-11 border rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] border-slate-200"
+                  className="w-full h-12 bg-slate-50/50 border border-slate-200 rounded-xl px-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
                   required
                 />
               </div>
 
               {/* Customer Phone */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nomor WhatsApp</label>
+                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Nomor WhatsApp</label>
                 <input
                   type="tel"
                   placeholder="Contoh: 08123456789 (Opsional)"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full h-11 border rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] border-slate-200"
+                  className="w-full h-12 bg-slate-50/50 border border-slate-200 rounded-xl px-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
                 />
               </div>
 
               {/* Order Method */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Metode Makan *</label>
-                <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-2 pt-2">
+                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Metode Pesanan *</label>
+                <div className="grid grid-cols-3 gap-2.5">
                   {[
-                    { key: "DINE_IN", label: "Makan Sini" },
-                    { key: "TAKEAWAY", label: "Bawa Pulang" },
-                    { key: "DELIVERY", label: "Antar (Delivery)" }
+                    { key: "DINE_IN", label: "Makan Sini", icon: <Utensils className="size-4 mb-1.5" /> },
+                    { key: "TAKEAWAY", label: "Bungkus", icon: <ShoppingBag className="size-4 mb-1.5" /> },
+                    { key: "DELIVERY", label: "Delivery", icon: <Bike className="size-4 mb-1.5" /> }
                   ].map(method => (
                     <button
                       key={method.key}
                       onClick={() => setOrderMethod(method.key as any)}
-                      className={`py-2 px-1 text-xs font-bold border rounded-lg transition active:scale-[0.98] ${
+                      className={`relative flex flex-col items-center justify-center p-3 border rounded-xl transition-all duration-200 active:scale-[0.96] ${
                         orderMethod === method.key
-                          ? "border-[var(--store-theme)] text-[var(--store-theme)] bg-orange-50/50"
-                          : "border-slate-200 text-slate-600 bg-white"
+                          ? "border-[var(--store-theme)] text-[var(--store-theme)] bg-orange-50/50 shadow-[0_2px_10px_-3px_rgba(255,102,0,0.15)]"
+                          : "border-slate-200 text-slate-500 bg-white hover:border-slate-300 hover:bg-slate-50"
                       }`}
                     >
-                      {method.label}
+                      {method.icon}
+                      <span className="text-[11px] font-bold">{method.label}</span>
+                      
+                      {orderMethod === method.key && (
+                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--store-theme)] rounded-full flex items-center justify-center shadow-sm">
+                           <Check className="size-2.5 text-white" strokeWidth={3} />
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Conditional Fields */}
-              {orderMethod === "DINE_IN" && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nomor Meja *</label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: Meja 4, Meja A2..."
-                    value={tableNumber}
-                    onChange={(e) => setTableNumber(e.target.value)}
-                    className="w-full h-11 border rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] border-slate-200"
-                    required
-                  />
-                </div>
-              )}
+              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                {orderMethod === "DINE_IN" && (
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Nomor Meja *</label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Meja 4, Meja A2..."
+                      value={tableNumber}
+                      onChange={(e) => setTableNumber(e.target.value)}
+                      className="w-full h-12 bg-slate-50/50 border border-slate-200 rounded-xl px-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
+                      required
+                    />
+                  </div>
+                )}
 
-              {orderMethod === "DELIVERY" && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Alamat Lengkap *</label>
-                  <textarea
-                    placeholder="Tulis alamat pengantaran lengkap dengan patokan..."
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    rows={3}
-                    className="w-full border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] border-slate-200"
-                    required
-                  />
-                </div>
-              )}
+                {orderMethod === "DELIVERY" && (
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Alamat Lengkap *</label>
+                    <textarea
+                      placeholder="Tulis alamat pengantaran lengkap dengan patokan..."
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      rows={3}
+                      className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all resize-none"
+                      required
+                    />
+                  </div>
+                )}
+              </div>
 
               {/* Payment Method Selector */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Metode Pembayaran *</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PAYMENT_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setPaymentMethod(option.value)}
-                      className={`flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all ${
-                        paymentMethod === option.value
-                          ? "border-[var(--store-theme)] bg-orange-50/20 text-[var(--store-theme)]"
-                          : "border-slate-200 text-slate-700 hover:border-slate-300 bg-white"
-                      }`}
-                    >
-                      <div className={`p-1.5 rounded-md flex items-center justify-center min-w-[32px] ${option.isImage ? "bg-white border shadow-sm" : paymentMethod === option.value ? "bg-[var(--store-theme)] text-white" : "bg-slate-100 text-slate-500"}`}>
-                        {option.icon}
+              <div className="space-y-3 pt-2">
+                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Metode Pembayaran *</label>
+                
+                <div className="space-y-4">
+                  {[
+                    { title: "Bayar di Kasir", methods: ["CASH"] },
+                    { title: "Instant & E-Wallet", methods: ["QRIS", "GOPAY", "OVO", "DANA", "SHOPEEPAY"] },
+                    { title: "Virtual Account", methods: ["BANK_TRANSFER"] },
+                    { title: "Kartu Kredit / Debit", methods: ["STRIPE_CARD"] }
+                  ].map((group) => (
+                    <div key={group.title} className="space-y-2">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">{group.title}</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {group.methods.map((methodValue) => {
+                          const option = PAYMENT_OPTIONS.find(o => o.value === methodValue);
+                          if (!option) return null;
+                          const isSelected = paymentMethod === option.value;
+                          
+                          return (
+                            <button
+                              key={option.value}
+                              onClick={() => setPaymentMethod(option.value as PaymentMethod)}
+                              className={`flex items-center gap-2.5 px-3 py-2.5 border rounded-xl transition-all duration-200 active:scale-[0.97] ${
+                                isSelected
+                                  ? "border-[var(--store-theme)] bg-orange-50/40 text-[var(--store-theme)] shadow-sm"
+                                  : "border-slate-200 text-slate-700 bg-white hover:border-slate-300"
+                              }`}
+                            >
+                              <div className={`p-1 rounded-md flex items-center justify-center min-w-[32px] ${option.isImage ? "bg-white border shadow-[0_1px_3px_rgba(0,0,0,0.05)]" : isSelected ? "bg-[var(--store-theme)] text-white" : "bg-slate-100 text-slate-500"}`}>
+                                {option.icon}
+                              </div>
+                              <span className="text-xs font-bold whitespace-nowrap">{option.label}</span>
+                            </button>
+                          );
+                        })}
                       </div>
-                      <span className="text-xs font-bold whitespace-nowrap">{option.label}</span>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -906,14 +934,14 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
               )}
 
               {/* Order Notes */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Catatan Tambahan (Opsional)</label>
+              <div className="space-y-1.5 pt-2">
+                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Catatan Tambahan (Opsional)</label>
                 <input
                   type="text"
                   placeholder="Contoh: Es batu sedikit, pedas sedang..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full h-11 border rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] border-slate-200"
+                  className="w-full h-12 bg-slate-50/50 border border-slate-200 rounded-xl px-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
                 />
               </div>
             </div>
