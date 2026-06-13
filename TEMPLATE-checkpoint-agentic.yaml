@@ -1,22 +1,17 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "i18n profile account settings and notifications"
+task: "remove auto refresh text and push"
 gate: "ok"
-success: "Account settings and notification bell cards use translation strings for English and Indonesian. French translation is ignored since French is deprecated."
+success: "Removed 'Update otomatis tiap 2 detik' text and pushed to main and feature-billing"
 
 evidence:
   changed_files:
-    - "src/locales/en.ts"
-    - "src/locales/id.ts"
-    - "src/features/dashboard/profile/components/account-settings-card.tsx"
-    - "src/features/dashboard/shared/notification-bell.tsx"
-    - "src/__tests__/components/notification-bell.test.tsx"
+    - "src/features/storefront/components/order-status-client.tsx"
   checks:
     - "rtk pnpm type-check"
     - "rtk pnpm lint"
-    - "rtk pnpm test"
-  rollback: "git checkout -- src/locales/en.ts src/locales/id.ts src/features/dashboard/profile/components/account-settings-card.tsx src/features/dashboard/shared/notification-bell.tsx src/__tests__/components/notification-bell.test.tsx"
+  rollback: "git checkout -- src/features/storefront/components/order-status-client.tsx"
 
 risks:
   sensitive_without_escalation: false
