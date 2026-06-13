@@ -14,7 +14,6 @@
  */
 
 // Auth & User services
-export * from "./auth.service";
 export * from "./user.service";
 
 // Business & Store services
