@@ -1,1 +1,4 @@
-404: Not Found
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 30">
+  <rect x="5" y="2" width="110" height="26" rx="13" fill="#EE4D2D"/>
+  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="14" fill="#FFFFFF">ShopeePay</text>
+</svg>
