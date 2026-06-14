@@ -12,7 +12,7 @@ import type { ProfileData } from "../types";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 
 import { useSession } from "@/lib/auth-client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface ProfileClientProps {
   initialProfile: ProfileData;
@@ -26,10 +26,12 @@ export function ProfileClient({ initialProfile, isOwner }: ProfileClientProps) {
   // Use initial data from Server Component
   const { data: profileData = initialProfile, isLoading, isError } = useProfile(initialProfile);
 
+  const hasRefetched = useRef(false);
+
   // Sync session with profile data if subscription status mismatches
   // This ensures that if the user upgraded but session is stale, visiting profile fixes it
   useEffect(() => {
-    if (!profileData?.subscription || !session) return;
+    if (!profileData?.subscription || !session || hasRefetched.current) return;
 
     const profileStatus = profileData.subscription.status;
     const sessionStatus = (session.user as any).subscriptionStatus;
@@ -39,6 +41,7 @@ export function ProfileClient({ initialProfile, isOwner }: ProfileClientProps) {
     const isSessionActive = sessionStatus === "ACTIVE";
 
     if (isProfileActive && !isSessionActive) {
+      hasRefetched.current = true;
       refetch?.();
     }
   }, [profileData, session, refetch]);

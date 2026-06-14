@@ -1,20 +1,16 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "pricing error inline UI + billing portal free customer id fix"
+task: "fix session refetch loop"
 gate: "ok"
-success: "Moved trial/checkout error handling from toast to inline dialog error state, and fixed 500 error when upgrading free/non-Stripe customer accounts"
+success: "Prevent infinite refetch loop in ProfileClient by tracking refetch status with useRef"
 
 evidence:
   changed_files:
-    - "src/features/marketing/pricing/components/pricing-cards.tsx"
-    - "src/app/api/subscriptions/checkout/route.ts"
-    - "src/lib/services/subscription.service.ts"
-    - "src/app/api/billing/portal/route.ts"
+    - "src/features/dashboard/profile/components/profile-client.tsx"
   checks:
-    - "pnpm type-check"
-    - "pnpm lint"
-  rollback: "git checkout -- src/features/marketing/pricing/components/pricing-cards.tsx src/app/api/subscriptions/checkout/route.ts src/lib/services/subscription.service.ts src/app/api/billing/portal/route.ts"
+    - "verified diff shows useRef tracking added"
+  rollback: "git checkout HEAD -- src/features/dashboard/profile/components/profile-client.tsx"
 
 risks:
   sensitive_without_escalation: false
