@@ -3,7 +3,7 @@
 
 task: "conditional stripe connect payment split"
 gate: "ok"
-success: "Stripe checkout session includes payment_intent_data destination and 60% application fee when stripeConnectAccountId is available."
+success: "Stripe checkout session includes payment_intent_data destination and dynamic application fee from NEXT_PUBLIC_REVENUE_SPLIT_PLATFORM_PERCENT when stripeConnectAccountId is available."
 
 evidence:
   changed_files:

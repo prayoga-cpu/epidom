@@ -49,7 +49,9 @@ export async function createStripeCustomerPayment(
     customer_email: req.customerEmail,
     metadata: { orderId: req.orderId },
     payment_intent_data: req.stripeConnectAccountId ? {
-      application_fee_amount: Math.round(req.amount * 0.60),
+      application_fee_amount: Math.round(
+        req.amount * (parseInt(process.env.NEXT_PUBLIC_REVENUE_SPLIT_PLATFORM_PERCENT || "60", 10) / 100)
+      ),
       transfer_data: {
         destination: req.stripeConnectAccountId,
       },
