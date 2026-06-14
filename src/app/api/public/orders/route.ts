@@ -32,7 +32,13 @@ export async function POST(request: Request) {
       where: { slug: input.storefrontSlug },
       include: {
         store: {
-          include: { business: { select: { userId: true } } },
+          include: { 
+            business: { 
+              include: { 
+                user: { select: { stripeConnectAccountId: true, stripeConnectOnboarded: true } } 
+              } 
+            } 
+          },
         },
       },
     });
@@ -131,6 +137,9 @@ export async function POST(request: Request) {
 
     if (input.paymentMethod !== "CASH") {
       try {
+        const user = storefront.store.business.user;
+        const connectAccountId = user.stripeConnectOnboarded ? user.stripeConnectAccountId ?? undefined : undefined;
+
         const payment = await initiatePayment({
           orderId: order.id,
           amount: subtotal,
@@ -140,6 +149,7 @@ export async function POST(request: Request) {
           description: `Pesanan ${orderNumber} - ${storefront.displayName}`,
           paymentMethod: input.paymentMethod as PaymentMethod,
           bankCode: input.bankCode as import("@/lib/payments").XenditVABankCode | undefined,
+          stripeConnectAccountId: connectAccountId,
           successUrl: `${appUrl}/@${slug}/order/${order.id}?status=success`,
           cancelUrl: `${appUrl}/@${slug}/order/${order.id}?status=cancelled`,
           callbackUrl: `${appUrl}/api/webhooks/xendit`,
