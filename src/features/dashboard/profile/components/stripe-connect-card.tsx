@@ -42,10 +42,10 @@ export function StripeConnectCard() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch status");
+        throw new Error(data.error?.message || data.error || "Failed to fetch status");
       }
 
-      setStatus(data);
+      setStatus(data.data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -66,11 +66,11 @@ export function StripeConnectCard() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create onboarding link");
+        throw new Error(data.error?.message || data.error || "Failed to create onboarding link");
       }
 
       // Redirect to Stripe-hosted onboarding
-      window.location.href = data.url;
+      window.location.href = data.data.url;
     } catch (err: any) {
       setError(err.message);
       setActionLoading(false);
@@ -90,11 +90,11 @@ export function StripeConnectCard() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create dashboard link");
+        throw new Error(data.error?.message || data.error || "Failed to create dashboard link");
       }
 
       // Open Stripe Dashboard in new tab
-      window.open(data.url, "_blank");
+      window.open(data.data.url, "_blank");
       setActionLoading(false);
     } catch (err: any) {
       setError(err.message);
