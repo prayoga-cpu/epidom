@@ -14,11 +14,11 @@
 export const STRIPE_CONFIG = {
   /**
    * Platform revenue split
-   * - Developer (platform owner) receives 20%
-   * - Epidom owner receives 80% (via Stripe Transfer)
+   * - Prionation (platform owner) receives 40% (via application fee)
+   * - Epidom (connected account) receives 60% (via Stripe Transfer)
    */
-  PLATFORM_FEE_PERCENT: 20,
-  EPIDOM_OWNER_PERCENT: 80,
+  PLATFORM_FEE_PERCENT: parseInt(process.env.NEXT_PUBLIC_REVENUE_SPLIT_PRIONATION_PERCENT || "40", 10),
+  EPIDOM_OWNER_PERCENT: parseInt(process.env.NEXT_PUBLIC_REVENUE_SPLIT_EPIDOM_PERCENT || "60", 10),
 
   /**
    * Store limits per plan

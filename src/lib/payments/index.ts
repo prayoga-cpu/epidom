@@ -43,7 +43,6 @@ export interface PaymentInitRequest {
   description: string;
   paymentMethod: PaymentMethod;
   bankCode?: XenditVABankCode;
-  stripeConnectAccountId?: string;
   successUrl: string;
   cancelUrl: string;
   callbackUrl: string;
@@ -120,7 +119,6 @@ export async function initiatePayment(
       customerName: req.customerName,
       customerEmail: req.customerEmail,
       description: req.description,
-      stripeConnectAccountId: req.stripeConnectAccountId,
       successUrl: req.successUrl,
       cancelUrl: req.cancelUrl,
     };

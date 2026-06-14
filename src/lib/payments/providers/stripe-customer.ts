@@ -7,7 +7,6 @@ export interface StripeCustomerPaymentRequest {
   customerName: string;
   customerEmail?: string;
   description: string;
-  stripeConnectAccountId?: string;
   successUrl: string;
   cancelUrl: string;
 }
@@ -48,14 +47,6 @@ export async function createStripeCustomerPayment(
     ],
     customer_email: req.customerEmail,
     metadata: { orderId: req.orderId },
-    payment_intent_data: req.stripeConnectAccountId ? {
-      application_fee_amount: Math.round(
-        req.amount * (parseInt(process.env.NEXT_PUBLIC_REVENUE_SPLIT_PLATFORM_PERCENT!, 10) / 100)
-      ),
-      transfer_data: {
-        destination: req.stripeConnectAccountId,
-      },
-    } : undefined,
     success_url: req.successUrl,
     cancel_url: req.cancelUrl,
     expires_at: Math.floor(Date.now() / 1000) + 30 * 60,

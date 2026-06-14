@@ -1,19 +1,21 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "conditional stripe connect payment split"
+task: "correct subscription stripe connect payment split"
 gate: "ok"
-success: "Stripe checkout session includes payment_intent_data destination and dynamic application fee from NEXT_PUBLIC_REVENUE_SPLIT_PLATFORM_PERCENT when stripeConnectAccountId is available."
+success: "Public orders no longer trigger split. Subscriptions now use NEXT_PUBLIC_REVENUE_SPLIT_PRIONATION_PERCENT and NEXT_PUBLIC_REVENUE_SPLIT_EPIDOM_PERCENT."
 
 evidence:
   changed_files:
     - "src/app/api/public/orders/route.ts"
     - "src/lib/payments/index.ts"
     - "src/lib/payments/providers/stripe-customer.ts"
+    - "src/config/stripe.config.ts"
+    - ".env"
   checks:
     - "rtk pnpm type-check (pass)"
     - "rtk pnpm lint (pass)"
-  rollback: "git revert HEAD"
+  rollback: "git checkout / git revert"
 
 risks:
   sensitive_without_escalation: false
@@ -21,5 +23,5 @@ risks:
   claim_without_evidence: false
 
 not_verified:
-  - "E2E stripe test checkout (requires live testing with active stripe keys and connect account)"
+  - "E2E stripe subscription checkout with split logic (requires live testing with active stripe keys and connect account)"
 next: "none"
