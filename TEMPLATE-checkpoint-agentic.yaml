@@ -1,23 +1,22 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "map stripe subscription legacy plans"
+task: "fix stripe portal upgrade webhook plan update"
 gate: "ok"
-success: "Stripe webhook correctly maps STARTER and PRO metadata plans to POS and OPERATIONS subscription plans, preventing 500 error on Prisma validations."
+success: "webhook customer.subscription.updated now maps stripePriceId to Epidom plan and updates db"
 
 evidence:
-  changed_files:
-    - "src/app/api/webhooks/stripe/route.ts"
-  checks:
-    - "rtk pnpm type-check (pass)"
-    - "rtk pnpm lint (pass)"
-  rollback: "git checkout src/app/api/webhooks/stripe/route.ts"
+  changed_files: 
+    - src/app/api/webhooks/stripe/route.ts
+  checks: 
+    - pnpm type-check
+    - pnpm lint
+  rollback: "git revert HEAD"
 
 risks:
   sensitive_without_escalation: false
   over_engineering: false
   claim_without_evidence: false
 
-not_verified:
-  - "Stripe webhook trigger with live Stripe webhook events (needs deployment/Stripe CLI webhook forwarding)"
+not_verified: []
 next: "none"

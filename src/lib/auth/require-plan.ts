@@ -50,7 +50,11 @@ export async function requirePlan(
   }
 
   const subscription = store.business.user.subscription;
-  const currentPlan: SubscriptionPlan = subscription?.plan ?? "FREE";
+  let currentPlan: SubscriptionPlan = "FREE";
+
+  if (subscription && subscription.status === "ACTIVE") {
+    currentPlan = subscription.plan;
+  }
 
   if (planRank(currentPlan) < planRank(minPlan)) {
     redirect(`/pricing?upgrade=true&required=${minPlan}#plans`);
