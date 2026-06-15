@@ -44,6 +44,23 @@ function mapStripePlanToEnum(rawPlan: string | undefined): SubscriptionPlan | un
 }
 
 /**
+ * Maps Stripe price IDs to the current SubscriptionPlan enum.
+ */
+function mapPriceIdToEnum(priceId: string | undefined): SubscriptionPlan | undefined {
+  if (!priceId) return undefined;
+  
+  const posMonthly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY;
+  const posYearly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS_YEARLY;
+  const opsMonthly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY;
+  const opsYearly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_YEARLY;
+
+  if (priceId === posMonthly || priceId === posYearly) return SubscriptionPlan.POS;
+  if (priceId === opsMonthly || priceId === opsYearly) return SubscriptionPlan.OPERATIONS;
+
+  return undefined;
+}
+
+/**
  * POST /api/webhooks/stripe
  * Handles Stripe webhook events securely.
  */
@@ -274,11 +291,16 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const status = mapStripeStatus(subscription.status);
   const cancelAtPeriodEnd = isSubscriptionCanceling(subscription);
 
+  const priceId = subscription.items.data[0]?.price.id;
+  const newPlan = mapPriceIdToEnum(priceId) || mapStripePlanToEnum(subscription.metadata?.plan);
+
   await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
     status,
     currentPeriodStart,
     currentPeriodEnd,
     cancelAtPeriodEnd,
+    ...(newPlan ? { plan: newPlan } : {}),
+    ...(priceId ? { stripePriceId: priceId } : {}),
   });
 
   subscriptionService.invalidateUserCache(existingSubscription.userId);
