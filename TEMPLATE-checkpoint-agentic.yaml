@@ -1,13 +1,13 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "fix security bug in requirePlan ignoring subscription status"
+task: "standardize admin user joined date formatting"
 gate: "ok"
-success: "requirePlan strictly verifies subscription.status === ACTIVE before granting premium access"
+success: "Joined date column formatted as en-GB to match Period End formatting exactly"
 
 evidence:
   changed_files: 
-    - src/lib/auth/require-plan.ts
+    - src/features/admin/components/admin-dashboard.tsx
   checks: 
     - pnpm type-check
     - pnpm lint
@@ -20,3 +20,4 @@ risks:
 
 not_verified: []
 next: "none"
+
