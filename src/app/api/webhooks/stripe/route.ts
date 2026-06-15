@@ -23,6 +23,27 @@ import {
 import Stripe from "stripe";
 
 /**
+ * Maps raw Stripe metadata plan names (including legacy ones) to the current SubscriptionPlan enum.
+ */
+function mapStripePlanToEnum(rawPlan: string | undefined): SubscriptionPlan | undefined {
+  if (!rawPlan) return undefined;
+  switch (rawPlan) {
+    case "STARTER":
+    case "POS":
+      return SubscriptionPlan.POS;
+    case "PRO":
+    case "OPERATIONS":
+      return SubscriptionPlan.OPERATIONS;
+    case "ENTERPRISE":
+      return SubscriptionPlan.ENTERPRISE;
+    case "FREE":
+      return SubscriptionPlan.FREE;
+    default:
+      return undefined;
+  }
+}
+
+/**
  * POST /api/webhooks/stripe
  * Handles Stripe webhook events securely.
  */
@@ -92,7 +113,7 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId;
-  const plan = session.metadata?.plan as "FREE" | "FREE" | "POS" | "OPERATIONS" | undefined;
+  const plan = mapStripePlanToEnum(session.metadata?.plan);
   const promotion = session.metadata?.promotion;
 
   if (!userId) return;
@@ -189,7 +210,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.userId;
-  const plan = subscription.metadata?.plan as "FREE" | "FREE" | "POS" | "OPERATIONS";
+  const plan = mapStripePlanToEnum(subscription.metadata?.plan);
 
   if (!userId || !plan) return;
 
