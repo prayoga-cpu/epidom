@@ -358,7 +358,7 @@ export function AdminDashboard() {
                         {formatPeriodEnd(user.subscription?.currentPeriodEnd)}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {new Date(user.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
