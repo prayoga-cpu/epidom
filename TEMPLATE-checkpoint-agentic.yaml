@@ -1,13 +1,13 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "fix stripe portal upgrade webhook plan update"
+task: "fix security bug in requirePlan ignoring subscription status"
 gate: "ok"
-success: "webhook customer.subscription.updated now maps stripePriceId to Epidom plan and updates db"
+success: "requirePlan strictly verifies subscription.status === ACTIVE before granting premium access"
 
 evidence:
   changed_files: 
-    - src/app/api/webhooks/stripe/route.ts
+    - src/lib/auth/require-plan.ts
   checks: 
     - pnpm type-check
     - pnpm lint
