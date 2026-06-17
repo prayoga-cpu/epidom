@@ -4294,7 +4294,7 @@ export const id = {
       script: "dari kafe kecil hingga franchise — ada paket untuk setiap tahap.",
       toggleMonthly: "Bulanan",
       toggleYearly: "Tahunan · hemat 16%",
-      trialBar: "Coba paket berbayar apa pun gratis 14 hari",
+      trialBar: "Coba paket Operations gratis 14 hari",
       trialBarSub: "Tanpa kartu. Kami impor menu lama Anda gratis. Batalkan kapan saja, data Anda dibawa pergi.",
       trialBarCta: "Mulai sekarang",
       billedYearly: "Ditagih tahunan · belum termasuk pajak",

@@ -94,6 +94,7 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
           const result = await res.json();
           if (result?.success && result?.data?.url) {
             window.location.href = result.data.url;
+            setConfirming(null);
           } else {
             setErrorMsg(result?.error?.message || "Failed to initiate checkout. Please check Stripe configuration.");
             setIsActivating(false);

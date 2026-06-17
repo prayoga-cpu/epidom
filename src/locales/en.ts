@@ -4457,7 +4457,7 @@ export const en = {
       script: "from small cafés to franchise chains — there's a plan for every stage.",
       toggleMonthly: "Monthly",
       toggleYearly: "Yearly · save 16%",
-      trialBar: "Try any paid plan free for 14 days",
+      trialBar: "Try Operations free for 14 days",
       trialBarSub:
         "No card. We import your existing menu for free. Cancel any time, your data leaves with you.",
       trialBarCta: "Start now",

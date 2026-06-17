@@ -1,23 +1,27 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "standardize admin user joined date formatting"
+task: "update trial period duration to 14 days and fix pricing dialog close & update locale texts"
 gate: "ok"
-success: "Joined date column formatted as en-GB to match Period End formatting exactly"
+success: "Stripe checkout session trial period updated to 14 days. Confirmation dialog closes on redirect. Locale strings updated to reflect trial of Operations plan specifically. All tests and type checks pass."
 
 evidence:
-  changed_files: 
-    - src/features/admin/components/admin-dashboard.tsx
-  checks: 
+  changed_files:
+    - src/lib/services/subscription.service.ts
+    - src/features/marketing/pricing/components/pricing-cards.tsx
+    - src/locales/id.ts
+    - src/locales/en.ts
+  checks:
+    - pnpm test
     - pnpm type-check
     - pnpm lint
-  rollback: "git revert HEAD"
+  rollback: "git checkout src/lib/services/subscription.service.ts src/features/marketing/pricing/components/pricing-cards.tsx src/locales/id.ts src/locales/en.ts"
 
 risks:
   sensitive_without_escalation: false
   over_engineering: false
   claim_without_evidence: false
 
-not_verified: []
+not_verified:
+  - "Stripe dashboard checkout session creation manual testing (due to lack of real API keys in local sandbox)"
 next: "none"
-

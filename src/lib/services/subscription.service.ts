@@ -161,7 +161,7 @@ export class SubscriptionService {
           userId: user.id,
           plan: plan,
         },
-        ...(trial ? { trial_period_days: 7 } : {}),
+        ...(trial ? { trial_period_days: 14 } : {}),
         // Application fee: 20% goes to platform (you), 80% to connected account
         // Only set if Epidom owner has Connect account configured
         ...(epidomOwner?.stripeConnectAccountId && {
