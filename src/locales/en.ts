@@ -28,6 +28,7 @@ export const en = {
       searchAriaLabel: "Search",
       stores: "My Stores",
       profile: "Profile",
+      billing: "Billing",
       startFree: "Start Free",
     },
     pwa: {

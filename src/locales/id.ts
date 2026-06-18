@@ -28,6 +28,7 @@ export const id = {
       searchAriaLabel: "Cari",
       stores: "Toko Saya",
       profile: "Profil",
+      billing: "Tagihan",
       startFree: "Mulai Gratis",
     },
     pwa: {

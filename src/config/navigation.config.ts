@@ -48,11 +48,18 @@ export interface NavSection {
  */
 export const dashboardNavigation: NavSection[] = [
   {
+    title: "General",
     items: [
       {
         href: "/profile",
         labelKey: "nav.profile",
         icon: UserRound,
+        showBadge: false,
+      },
+      {
+        href: "/billing",
+        labelKey: "nav.billing",
+        icon: CreditCard,
         showBadge: false,
       },
       {
@@ -67,7 +74,11 @@ export const dashboardNavigation: NavSection[] = [
         icon: Store,
         showBadge: false,
       },
-      // POS tier
+    ],
+  },
+  {
+    title: "Point of Sale",
+    items: [
       {
         href: "/pos",
         labelKey: "nav.pos",
@@ -96,7 +107,11 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: false,
         requiredPlan: "POS",
       },
-      // Operations tier
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
       {
         href: "/management",
         labelKey: "nav.management",
@@ -140,7 +155,11 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: false,
         requiredPlan: "OPERATIONS",
       },
-      // Enterprise tier
+    ],
+  },
+  {
+    title: "Enterprise",
+    items: [
       {
         href: "/finance",
         labelKey: "nav.finance",

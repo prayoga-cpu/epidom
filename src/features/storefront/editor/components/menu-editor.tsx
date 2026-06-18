@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 
 interface Product {
@@ -43,9 +44,9 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
   // Add item dialog state
   const [addItemDialog, setAddItemDialog] = useState<{ open: boolean; categoryId: string } | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [addingItemId, setAddingItemId] = useState<string | null>(null);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState("");
+  const [isSubmittingItem, setIsSubmittingItem] = useState(false);
 
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return;
@@ -73,38 +74,29 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     }
   };
 
-  const openAddItemDialog = async (categoryId: string) => {
+  const openAddItemDialog = (categoryId: string) => {
+    setNewItemName("");
+    setNewItemPrice("");
     setAddItemDialog({ open: true, categoryId });
-    setLoadingProducts(true);
-    try {
-      const res = await apiClient.get<{ products: Product[] }>(`/stores/${storeId}/products`);
-      setProducts(res.products ?? []);
-    } catch {
-      toast.error("Failed to load products");
-      setProducts([]);
-    } finally {
-      setLoadingProducts(false);
-    }
   };
 
-  const handleAddItemFromProduct = async (product: Product) => {
-    if (!addItemDialog) return;
-    setAddingItemId(product.id);
+  const handleCreateManualItem = async () => {
+    if (!addItemDialog || !newItemName || !newItemPrice) return;
+    setIsSubmittingItem(true);
     try {
       await storefrontApi.createItem(storeId, {
-        name: product.name,
-        price: product.sellingPrice,
+        name: newItemName,
+        price: Number(newItemPrice),
         categoryId: addItemDialog.categoryId,
-        productId: product.id,
         isAvailable: true,
       } as any);
       onSuccess();
-      toast.success(`"${product.name}" added to menu`);
+      toast.success(`"${newItemName}" added to menu`);
       setAddItemDialog(null);
     } catch {
-      toast.error("Failed to add item to menu");
+      toast.error(t("storefront.menu.itemAddFailed") || "Failed to add item");
     } finally {
-      setAddingItemId(null);
+      setIsSubmittingItem(false);
     }
   };
 
@@ -210,66 +202,66 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
         </CardContent>
       </Card>
 
-      {/* Add Item Dialog — select from Products */}
+      {/* Add Item Dialog — Consistent Form Input */}
       <Dialog open={!!addItemDialog?.open} onOpenChange={(open) => !open && setAddItemDialog(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Add Menu Item</DialogTitle>
+            <DialogTitle>{t("storefront.menu.addItem") || "Add New Item"}</DialogTitle>
             <DialogDescription>
-              Select a product from your stock to add to this category.
+              {t("storefront.menu.addItemDesc") || "Fill in the details below to add a new item to your menu."}
             </DialogDescription>
           </DialogHeader>
 
-          {loadingProducts ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="grid gap-5 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {t("storefront.menu.itemName") || "Item Name"}
+              </label>
+              <Input
+                autoFocus
+                placeholder={t("storefront.menu.itemNamePlaceholder") || "e.g. Nasi Goreng Spesial"}
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                className="transition-all hover:border-foreground/30 focus-visible:ring-1 focus-visible:ring-foreground/20"
+              />
             </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-8 space-y-3">
-              <p className="text-sm text-muted-foreground">
-                No products found. Create your products in{" "}
-                <strong>Data &gt; Products</strong> first, then come back to add them to your menu.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAddItemDialog(null);
-                  router.push(`/store/${storeId}/data`);
-                }}
-              >
-                Go to Data
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {t("storefront.menu.itemPrice") || "Selling Price"}
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                  {currency === "IDR" ? "Rp" : currency}
+                </span>
+                <Input
+                  type="number"
+                  className="pl-9 transition-all hover:border-foreground/30 focus-visible:ring-1 focus-visible:ring-foreground/20 font-mono"
+                  placeholder="25000"
+                  value={newItemPrice}
+                  onChange={(e) => setNewItemPrice(e.target.value)}
+                />
+              </div>
             </div>
-          ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-              {products.map((product) => (
-                <button
-                  key={product.id}
-                  className="w-full flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition text-left disabled:opacity-50"
-                  disabled={addingItemId === product.id}
-                  onClick={() => handleAddItemFromProduct(product)}
-                >
-                  <div>
-                    <p className="text-sm font-semibold">{product.name}</p>
-                    {product.category && (
-                      <p className="text-xs text-muted-foreground">{product.category}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-primary">
-                      {formatCurrency(Number(product.sellingPrice), currency)}
-                    </span>
-                    {addingItemId === product.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setAddItemDialog(null)}
+              className="active:scale-[0.98] transition-transform"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!newItemName.trim() || !newItemPrice || isSubmittingItem}
+              onClick={handleCreateManualItem}
+              className="active:scale-[0.98] transition-transform"
+            >
+              {isSubmittingItem ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              {t("storefront.menu.saveItem") || "Add Item"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

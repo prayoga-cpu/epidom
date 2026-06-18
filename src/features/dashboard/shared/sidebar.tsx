@@ -100,19 +100,20 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                     : undefined;
 
                   if (locked) {
+                    const lockedHref = storeId ? `/store/${storeId}/billing` : "/billing";
                     return (
                       <li key={item.href}>
                         <Link
-                          href="/pricing#plans"
+                          href={lockedHref}
                           title={upgradeLabel}
-                          className="group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition text-muted-foreground/40 hover:bg-amber-500/8 hover:text-amber-500/70 cursor-pointer"
+                          className="group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition text-muted-foreground/40 hover:bg-amber-500/8 hover:text-amber-500/70 active:scale-[0.98] cursor-pointer"
                         >
-                          <span className="flex items-center gap-3">
-                            <Icon className="size-4" aria-hidden />
-                            <span>{label}</span>
+                          <span className="flex items-center gap-3 min-w-0">
+                            <Icon className="size-4 shrink-0" aria-hidden />
+                            <span className="truncate">{label}</span>
                           </span>
-                          <span className="flex items-center gap-1 text-[10px] font-medium text-amber-500/50 group-hover:text-amber-500 transition-colors whitespace-nowrap">
-                            <Lock className="size-3" />
+                          <span className="flex items-center gap-1 text-[10px] font-medium text-amber-500/50 group-hover:text-amber-500 transition-colors whitespace-nowrap shrink-0">
+                            <Lock className="size-3 shrink-0" />
                             {item.requiredPlan && PLAN_LABELS[item.requiredPlan]}
                           </span>
                         </Link>
@@ -126,20 +127,20 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                         href={fullHref}
                         prefetch={true}
                         className={cn(
-                          "group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition",
+                          "group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition active:scale-[0.98]",
                           active
                             ? "bg-muted/60 text-foreground shadow-inner"
                             : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                         )}
                         aria-current={active ? "page" : undefined}
                       >
-                        <span className="flex items-center gap-3">
-                          <Icon className="size-4" aria-hidden />
-                          {label}
+                        <span className="flex items-center gap-3 min-w-0">
+                          <Icon className="size-4 shrink-0" aria-hidden />
+                          <span className="truncate">{label}</span>
                         </span>
                         {badge !== null && badge > 0 && (
                           <span
-                            className="flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-semibold text-white shadow-sm animate-in fade-in"
+                            className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-semibold text-white shadow-sm animate-in fade-in"
                             aria-label={`${badge} ${item.badgeKey}`}
                           >
                             {badge > 99 ? "99+" : badge}
