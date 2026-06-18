@@ -6,7 +6,7 @@ export function PosOrdersPageHeader() {
   const { t } = useI18n();
   return (
     <div className="mb-6 flex flex-col gap-1">
-      <h1 className="text-2xl font-bold tracking-tight">{t("common.nav.posOrders")}</h1>
+      <h1 className="text-2xl font-bold tracking-tight">{t("nav.posOrders")}</h1>
       <p className="text-muted-foreground">{t("pages.posOrdersDesc")}</p>
     </div>
   );
