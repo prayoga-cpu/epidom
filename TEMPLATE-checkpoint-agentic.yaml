@@ -1,18 +1,17 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "fix missing translation keys for profile.memberSince and profile.subscription.plans.pos"
+task: "fix React 19 hydration error and context loss for next-themes and I18nProvider"
 gate: "ok"
-success: "Translations render correctly instead of raw keys"
+success: "ThemeProvider moved to root layout immediately inside body to satisfy next-themes script injection rules, preventing context tree breakage for I18nProvider."
 
 evidence:
   changed_files:
-    - src/features/dashboard/profile/components/profile-header.tsx
-    - src/locales/en.ts
-    - src/locales/id.ts
+    - src/app/layout.tsx
+    - src/app/(app)/layout.tsx
   checks:
     - next.js hot reload
-  rollback: "git checkout src/features/dashboard/profile/components/profile-header.tsx src/locales/en.ts src/locales/id.ts"
+  rollback: "git checkout src/app/layout.tsx src/app/(app)/layout.tsx"
 
 risks:
   sensitive_without_escalation: false
