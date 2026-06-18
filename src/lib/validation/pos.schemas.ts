@@ -34,6 +34,7 @@ export const createPosOrderSchema = z.object({
   tableNumber: z.string().optional(),
   customerName: z.string().optional(),
   customerPhone: z.string().optional(),
+  bankCode: z.enum(["BNI", "BRI", "MANDIRI", "PERMATA"]).optional(),
   notes: z.string().optional(),
   amountTendered: z.number().optional(),
   shiftId: z.string().cuid().optional(),

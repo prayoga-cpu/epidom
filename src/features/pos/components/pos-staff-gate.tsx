@@ -20,17 +20,35 @@ interface StaffMember {
 
 interface PosStaffGateProps {
   storeId: string;
+  bypassGate?: boolean;
   children: React.ReactNode;
 }
 
 const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"] as const;
 
-export function PosStaffGate({ storeId, children }: PosStaffGateProps) {
+export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const { isActive, storeId: sessionStoreId, login } = usePosSession();
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [pin, setPin] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [shake, setShake] = useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (bypassGate && !(isActive && sessionStoreId === storeId)) {
+      login({
+        storeId,
+        staffId: "owner",
+        staffName: "Owner",
+        staffRole: "OWNER",
+        shiftId: null,
+      });
+    }
+  }, [bypassGate, isActive, sessionStoreId, storeId, login]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["staff", storeId],
@@ -114,6 +132,14 @@ export function PosStaffGate({ storeId, children }: PosStaffGateProps) {
     },
     [pin, isVerifying, selectedStaff]
   );
+
+  // BEST PERFORMANCE: If bypassed, render immediately. Server and Client match exactly, so no hydration error!
+  if (bypassGate) {
+    return <>{children}</>;
+  }
+
+  // Prevent hydration mismatch: wait for Zustand to load from local storage
+  if (!isMounted) return null;
 
   // If already logged in for this store, render POS directly
   if (isActive && sessionStoreId === storeId) {

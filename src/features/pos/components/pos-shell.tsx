@@ -17,9 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface PosShellProps {
   store: Pick<Store, "id" | "name">;
+  bypassStaffGate?: boolean;
 }
 
-export function PosShell({ store }: PosShellProps) {
+export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   const { t } = useI18n();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,7 +29,7 @@ export function PosShell({ store }: PosShellProps) {
   const { data: menuData, isLoading } = usePosMenu(store.id);
 
   return (
-    <PosStaffGate storeId={store.id}>
+    <PosStaffGate storeId={store.id} bypassGate={bypassStaffGate}>
     <div className="flex flex-1 w-full flex-col overflow-hidden bg-muted/10 rounded-xl">
       <PosHeader store={store} />
       <PosOfflineBanner storeId={store.id} />

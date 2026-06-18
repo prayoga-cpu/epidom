@@ -44,25 +44,33 @@ export class StripeConnectService {
       process.env.NODE_ENV === "production"
         ? process.env.NEXT_PUBLIC_APP_URL || "https://epidom.app"
         : "https://epidom.app";
-    const account = await stripe.accounts.create({
+
+    const accountParams: Stripe.AccountCreateParams = {
       type: STRIPE_CONFIG.CONNECT.ACCOUNT_TYPE,
-      country: STRIPE_CONFIG.CONNECT.COUNTRY,
-      email: user.email,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-      business_type: "individual", // Use "individual" for simplicity in EU
-      // EU-required fields for Express accounts
-      business_profile: {
-        url: businessUrl,
-        mcc: "8911", // Software/SaaS
-      },
       metadata: {
         userId: user.id,
         role: "epidom_owner",
       },
-    });
+    };
+
+    if (STRIPE_CONFIG.CONNECT.COUNTRY) {
+      accountParams.country = STRIPE_CONFIG.CONNECT.COUNTRY;
+    }
+
+    if ((STRIPE_CONFIG.CONNECT.ACCOUNT_TYPE as string) === "express") {
+      accountParams.email = user.email;
+      accountParams.capabilities = {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      };
+      accountParams.business_type = "individual";
+      accountParams.business_profile = {
+        url: businessUrl,
+        mcc: "8911",
+      };
+    }
+
+    const account = await stripe.accounts.create(accountParams);
 
     // Save account ID to user record
     await this.userRepo.updateStripeConnectAccount(userId, account.id, false);
@@ -173,6 +181,11 @@ export class StripeConnectService {
     const user = await this.userRepo.findById(userId);
     if (!user?.stripeConnectAccountId) {
       throw new Error("No Stripe Connect account found");
+    }
+
+    if (STRIPE_CONFIG.CONNECT.ACCOUNT_TYPE === "standard") {
+      // Standard accounts use the regular Stripe dashboard
+      return "https://dashboard.stripe.com/";
     }
 
     const loginLink = await stripe.accounts.createLoginLink(user.stripeConnectAccountId);

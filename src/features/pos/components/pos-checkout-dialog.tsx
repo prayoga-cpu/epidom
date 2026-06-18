@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Form,
   FormControl,
@@ -40,7 +41,7 @@ import {
 } from "@/lib/pwa/thermal-printer";
 import type { Currency } from "@/components/providers/currency-provider";
 
-const CURRENCY_SYMBOL: Record<Currency, string> = { IDR: "Rp", USD: "$", EUR: "€" };
+const CURRENCY_SYMBOL: Record<Currency, string> = { IDR: "Rp", USD: "$", EUR: "€", MGA: "Ar" };
 
 interface PosCheckoutDialogProps {
   open: boolean;
@@ -66,6 +67,10 @@ export function PosCheckoutDialog({
   const [isPrinting, setIsPrinting] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
   const [showPrint, setShowPrint] = useState(false);
+  const [showPaymentQr, setShowPaymentQr] = useState(false);
+  const [currentQrString, setCurrentQrString] = useState<string | null>(null);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  const [isPollingPayment, setIsPollingPayment] = useState(false);
 
   const form = useForm<CreatePosOrderInput>({
     resolver: zodResolver(createPosOrderSchema),
@@ -82,6 +87,7 @@ export function PosCheckoutDialog({
       amountTendered: undefined,
       customerName: "",
       customerPhone: "",
+      bankCode: "BNI",
       notes: "",
     },
   });
@@ -104,6 +110,31 @@ export function PosCheckoutDialog({
       );
     }
   }, [open, cart.items]);
+
+  useEffect(() => {
+    if (!showPaymentQr || !currentOrderId) return;
+    setIsPollingPayment(true);
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiClient.get<{ status: string; paymentStatus: string }>(
+          `/stores/${storeId}/pos/orders/${currentOrderId}`
+        );
+        const data = (res as any)?.data ?? res;
+        if (data?.paymentStatus === "PAID") {
+          setIsPollingPayment(false);
+          setShowPaymentQr(false);
+          setShowPrint(true);
+          toast.success(t("pos.checkout.success"));
+        }
+      } catch (e) {
+        // ignore poll errors
+      }
+    }, 3000);
+    return () => {
+      clearInterval(interval);
+      setIsPollingPayment(false);
+    };
+  }, [showPaymentQr, currentOrderId, storeId, t]);
 
   const buildReceipt = (data: CreatePosOrderInput, orderNumber: string): ReceiptData => ({
     storeName: storeName ?? "Epidom POS",
@@ -174,13 +205,23 @@ export function PosCheckoutDialog({
       );
 
       const orderNumber = (result as any)?.orderNumber ?? "—";
+      const qrStr = (result as any)?.qrString ?? null;
+      const orderId = (result as any)?.orderId ?? null;
+      
       const receipt = buildReceipt(data, orderNumber);
       setLastReceipt(receipt);
-      setShowPrint(true);
 
-      toast.success(t("pos.checkout.success"));
       cart.clearCart();
       onOpenChange(false);
+
+      if (qrStr) {
+        setCurrentQrString(qrStr);
+        setCurrentOrderId(orderId);
+        setShowPaymentQr(true);
+      } else {
+        setShowPrint(true);
+        toast.success(t("pos.checkout.success"));
+      }
     } catch (error) {
       toast.error(t("pos.checkout.orderFailed"));
       console.error(error);
@@ -260,6 +301,36 @@ export function PosCheckoutDialog({
                             </FormControl>
                             <FormLabel className="font-normal">QRIS</FormLabel>
                           </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="GOPAY" />
+                            </FormControl>
+                            <FormLabel className="font-normal">GoPay</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="OVO" />
+                            </FormControl>
+                            <FormLabel className="font-normal">OVO</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="DANA" />
+                            </FormControl>
+                            <FormLabel className="font-normal">DANA</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="SHOPEEPAY" />
+                            </FormControl>
+                            <FormLabel className="font-normal">ShopeePay</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="BANK_TRANSFER" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Virtual Account</FormLabel>
+                          </FormItem>
                         </RadioGroup>
                       </FormControl>
                     </FormItem>
@@ -307,6 +378,34 @@ export function PosCheckoutDialog({
                 </div>
               )}
 
+              {paymentMethod === "BANK_TRANSFER" && (
+                <FormField
+                  control={form.control}
+                  name="bankCode"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Pilih Bank</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex gap-4"
+                        >
+                          {["BNI", "BRI", "MANDIRI", "PERMATA"].map((bank) => (
+                            <FormItem key={bank} className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value={bank} />
+                              </FormControl>
+                              <FormLabel className="font-normal">{bank}</FormLabel>
+                            </FormItem>
+                          ))}
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -317,6 +416,21 @@ export function PosCheckoutDialog({
                       <FormControl>
                         <Input placeholder="John Doe" {...field} />
                       </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customerPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>No. WhatsApp / HP</FormLabel>
+                      <FormControl>
+                        <Input placeholder="0812..." {...field} />
+                      </FormControl>
+                      {["GOPAY", "OVO", "DANA", "SHOPEEPAY"].includes(paymentMethod) && (
+                        <p className="text-[10px] text-muted-foreground mt-1">Wajib untuk e-wallet</p>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -373,6 +487,60 @@ export function PosCheckoutDialog({
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment QR prompt */}
+      <Dialog open={showPaymentQr} onOpenChange={setShowPaymentQr}>
+        <DialogContent className="sm:max-w-xs text-center">
+          <DialogHeader>
+            <DialogTitle>Instruksi Pembayaran</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {currentQrString && currentQrString.includes(":") ? (
+              <div className="p-4 bg-white rounded-xl border-2 border-slate-100 w-full text-center">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">
+                  Nomor Virtual Account
+                </p>
+                <p className="font-mono text-xl font-bold text-slate-800 tracking-widest break-all">
+                  {currentQrString.split(":")[1]}
+                </p>
+              </div>
+            ) : currentQrString ? (
+              <div className="p-4 bg-white rounded-xl border-2 border-slate-100">
+                <QRCodeSVG
+                  value={currentQrString}
+                  size={200}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+            ) : (
+              <div className="p-4 bg-white rounded-xl border-2 border-slate-100 w-full text-center">
+                <p className="text-sm font-medium text-slate-800 mb-2">
+                  Notifikasi e-Wallet sudah dikirim!
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Minta pembeli untuk cek aplikasi mereka.
+                </p>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground animate-pulse mt-2">
+              Menunggu pembayaran...
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPaymentQr(false);
+                setShowPrint(true); // skip waiting and let them print
+              }}
+              className="w-full"
+            >
+              Lewati / Selesai Manual
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

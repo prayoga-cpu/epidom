@@ -85,21 +85,7 @@ export class SubscriptionService {
       throw new Error(`You already have an active ${plan} plan`);
     } */
 
-    // Get Epidom owner's Stripe Connect account (for receiving 80% revenue split)
-    // If not configured, defaults to 100% payment to Epidom platform without splitting
-    let epidomOwner = null;
-    try {
-      epidomOwner = await this.getEpidomOwner();
-      if (!epidomOwner || !epidomOwner.stripeConnectAccountId) {
-        epidomOwner = null;
-      }
-    } catch (error: unknown) {
-      // Log the warning but do not fail checkout. Fall back to 100% platform payment.
-      logger.warn("Stripe Connect split skipped. SaaS subscription payment will go 100% to platform.", {
-        error: error instanceof Error ? error.message : String(error)
-      });
-      epidomOwner = null;
-    }
+
 
     let stripeCustomerId: string;
 
@@ -162,15 +148,6 @@ export class SubscriptionService {
           plan: plan,
         },
         ...(trial ? { trial_period_days: 14 } : {}),
-        // Application fee: 20% goes to platform (you), 80% to connected account
-        // Only set if Epidom owner has Connect account configured
-        ...(epidomOwner?.stripeConnectAccountId && {
-          application_fee_percent: STRIPE_CONFIG.PLATFORM_FEE_PERCENT,
-          // Transfer 80% to Epidom owner
-          transfer_data: {
-            destination: epidomOwner.stripeConnectAccountId,
-          },
-        }),
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -456,35 +433,7 @@ export class SubscriptionService {
     };
   }
 
-  /**
-   * Get Epidom owner user from environment variable
-   */
-  private async getEpidomOwner() {
-    const ownerEmail = process.env.EPIDOM_OWNER_EMAIL;
-    if (!ownerEmail) {
-      throw new Error(
-        "EPIDOM_OWNER_EMAIL environment variable not set. " +
-          "Please set this to the email of the Epidom business owner."
-      );
-    }
-    const owner = await this.userRepo.findByEmail(ownerEmail);
 
-    if (!owner) {
-      throw new Error(
-        `Epidom owner not found. User with email "${ownerEmail}" does not exist. ` +
-          "Please create the owner account first or update EPIDOM_OWNER_EMAIL in .env file."
-      );
-    }
-    if (!owner.stripeConnectAccountId) {
-      throw new Error(
-        `Epidom owner found but Stripe Connect account not configured. ` +
-          `User "${ownerEmail}" must complete Stripe Connect onboarding first. ` +
-          `Go to Profile page and complete the Payment Setup.`
-      );
-    }
-
-    return owner;
-  }
 }
 
 // Export singleton instance

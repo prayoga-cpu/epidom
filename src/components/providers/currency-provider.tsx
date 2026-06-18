@@ -32,12 +32,14 @@ const FRACTION_DIGITS: Record<Currency, number> = {
   EUR: 2,
   USD: 2,
   IDR: 0,
+  MGA: 0,
 };
 
 const CURRENCY_LOCALE: Record<Currency, string> = {
   EUR: "fr-FR",
   USD: "en-US",
   IDR: "id-ID",
+  MGA: "mg-MG",
 };
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
@@ -72,7 +74,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!currencyFromProfile) return;
-    if (currencyFromProfile === "EUR" || currencyFromProfile === "USD" || currencyFromProfile === "IDR") {
+    if (currencyFromProfile === "EUR" || currencyFromProfile === "USD" || currencyFromProfile === "IDR" || currencyFromProfile === "MGA") {
       setUserCurrency(currencyFromProfile);
     }
   }, [currencyFromProfile]);

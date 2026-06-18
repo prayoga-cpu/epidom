@@ -6,6 +6,7 @@ import { inngest } from "@/lib/inngest/client";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
+import { STRIPE_CONFIG } from "@/config/stripe.config";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -32,7 +33,15 @@ export async function POST(request: Request) {
       where: { slug: input.storefrontSlug },
       include: {
         store: {
-          include: { business: { select: { userId: true } } },
+          include: {
+            business: {
+              include: {
+                user: {
+                  select: { stripeConnectAccountId: true, stripeConnectOnboarded: true },
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -131,6 +140,16 @@ export async function POST(request: Request) {
 
     if (input.paymentMethod !== "CASH") {
       try {
+        const user = storefront.store.business.user;
+        const isStripe = input.paymentMethod === "STRIPE_CARD";
+        const isConnectReady = user.stripeConnectOnboarded && user.stripeConnectAccountId;
+        
+        let stripeAccountId: string | undefined = undefined;
+        
+        if (isStripe && isConnectReady) {
+          stripeAccountId = user.stripeConnectAccountId!;
+        }
+
         const payment = await initiatePayment({
           orderId: order.id,
           amount: subtotal,
@@ -143,6 +162,7 @@ export async function POST(request: Request) {
           successUrl: `${appUrl}/@${slug}/order/${order.id}?status=success`,
           cancelUrl: `${appUrl}/@${slug}/order/${order.id}?status=cancelled`,
           callbackUrl: `${appUrl}/api/webhooks/xendit`,
+          stripeAccountId,
         });
 
         if (payment.providerRef || payment.qrString) {

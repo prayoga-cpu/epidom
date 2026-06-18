@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield, Users, Store, Crown, Search, ChevronDown, Trash2, Calendar, ShieldCheck, ShieldOff, Infinity, KeyRound, Eye, EyeOff, LogIn, Copy, Check } from "lucide-react";
+import { Shield, Users, Store, Crown, Search, ChevronDown, Trash2, Calendar, ShieldCheck, ShieldOff, Infinity, KeyRound, Eye, EyeOff, LogIn, Copy, Check, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -198,7 +198,11 @@ export function AdminDashboard() {
               <h1 className="text-lg font-bold text-foreground">Master Admin Panel</h1>
               <p className="text-xs text-muted-foreground">Epidom internal — restricted access</p>
             </div>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => window.location.href = "/admin/revenue"}>
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Revenue Report
+              </Button>
               <Button variant="outline" size="sm" onClick={() => window.history.back()}>
                 ← Back
               </Button>

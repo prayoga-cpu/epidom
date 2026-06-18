@@ -12,13 +12,7 @@
  */
 
 export const STRIPE_CONFIG = {
-  /**
-   * Platform revenue split
-   * - Prionation (platform owner) receives 40% (via application fee)
-   * - Epidom (connected account) receives 60% (via Stripe Transfer)
-   */
-  PLATFORM_FEE_PERCENT: parseInt(process.env.NEXT_PUBLIC_REVENUE_SPLIT_PRIONATION_PERCENT || "40", 10),
-  EPIDOM_OWNER_PERCENT: parseInt(process.env.NEXT_PUBLIC_REVENUE_SPLIT_EPIDOM_PERCENT || "60", 10),
+
 
   /**
    * Store limits per plan
@@ -102,8 +96,8 @@ export const STRIPE_CONFIG = {
    * Stripe Connect configuration for Epidom owner
    */
   CONNECT: {
-    ACCOUNT_TYPE: "express" as const, // EU-compliant, Stripe-hosted onboarding
-    COUNTRY: "FR", // France
+    ACCOUNT_TYPE: "standard" as const, // Allows connecting existing Stripe accounts
+    COUNTRY: undefined, // Let the user choose or use their existing account's country
     REFRESH_URL: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/profile?connect=refresh`,
     RETURN_URL: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/profile?connect=success`,
   },

@@ -31,14 +31,20 @@ export interface XenditPaymentResponse {
 }
 
 export interface XenditWebhookPayload {
-  id: string;
-  external_id: string;
-  status: "ACTIVE" | "COMPLETED" | "EXPIRED" | "FAILED";
-  payment_method: string;
-  amount: number;
-  currency: string;
-  created: string;
-  updated: string;
+  // Generic / QRIS
+  external_id?: string;
+  status?: string;
+  
+  // E-Wallet (nested in data)
+  event?: string;
+  data?: {
+    reference_id?: string;
+    status?: string;
+  };
+  
+  // VA
+  bank_code?: string;
+  amount?: number;
 }
 
 const XENDIT_METHOD_MAP: Partial<Record<PaymentMethod, string>> = {
@@ -180,8 +186,35 @@ export function parseXenditWebhook(payload: XenditWebhookPayload): {
   failed: boolean;
   expired: boolean;
 } {
+  // 1. E-Wallet Webhook (uses data.reference_id and data.status = SUCCEEDED)
+  if (payload.data && payload.data.reference_id) {
+    const status = payload.data.status;
+    return {
+      orderId: payload.data.reference_id,
+      paid: status === "SUCCEEDED",
+      failed: status === "FAILED",
+      expired: status === "VOIDED",
+    };
+  }
+
+  const orderId = payload.external_id;
+  if (!orderId) {
+    throw new Error("Invalid Webhook: missing external_id or reference_id");
+  }
+
+  // 2. VA Webhook (no status field, its presence means paid)
+  if (payload.bank_code && payload.amount && !payload.status) {
+    return {
+      orderId,
+      paid: true,
+      failed: false,
+      expired: false,
+    };
+  }
+
+  // 3. QRIS Webhook (uses status = COMPLETED)
   return {
-    orderId: payload.external_id,
+    orderId,
     paid: payload.status === "COMPLETED",
     failed: payload.status === "FAILED",
     expired: payload.status === "EXPIRED",

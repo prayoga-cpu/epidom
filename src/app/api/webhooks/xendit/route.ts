@@ -36,9 +36,10 @@ export async function POST(request: Request) {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        paymentProviderRef: payload.id,
       },
     });
+
+    const providerRef = (payload as any).data?.id || (payload as any).id || "xendit";
 
     // Idempotency: if already in terminal state, ack and return
     if (!order || order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED") {
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
         data: {
           orderId,
           storeId: order.storeId,
-          providerRef: payload.id,
+          providerRef,
         },
       });
     } else if (failed) {
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
         data: {
           orderId,
           storeId: order.storeId,
-          providerRef: payload.id,
+          providerRef,
         },
       });
     } else if (expired) {

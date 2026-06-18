@@ -5,7 +5,6 @@ import { ProfileHeader } from "./profile-header";
 import { PersonalInfoCard } from "./personal-info-card";
 import { BusinessInfoCard } from "./business-info-card";
 import { SubscriptionInfoCard } from "./subscription-info-card";
-import { StripeConnectCard } from "./stripe-connect-card";
 import { AccountSettingsCard } from "./account-settings-card";
 import { useProfile } from "../hooks/use-profile";
 import type { ProfileData } from "../types";
@@ -82,12 +81,6 @@ export function ProfileClient({ initialProfile, isOwner }: ProfileClientProps) {
           <div className="animate-slide-up-delayed-3">
             <AccountSettingsCard userEmail={profileData.email} />
           </div>
-
-          {isOwner && (
-            <div className="animate-slide-up-delayed-3">
-              <StripeConnectCard />
-            </div>
-          )}
         </div>
       </div>
     </CurrencyProvider>

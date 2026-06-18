@@ -46,6 +46,8 @@ export interface PaymentInitRequest {
   successUrl: string;
   cancelUrl: string;
   callbackUrl: string;
+  stripeAccountId?: string;
+  applicationFeeAmount?: number;
 }
 
 export interface PaymentInitResponse {
@@ -121,6 +123,8 @@ export async function initiatePayment(
       description: req.description,
       successUrl: req.successUrl,
       cancelUrl: req.cancelUrl,
+      stripeAccountId: req.stripeAccountId,
+      applicationFeeAmount: req.applicationFeeAmount,
     };
 
     const result = await createStripeCustomerPayment(stripeReq);

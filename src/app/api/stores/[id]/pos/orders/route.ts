@@ -7,6 +7,7 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
 import { inngest } from "@/lib/inngest/client";
+import { initiatePayment } from "@/lib/payments";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -205,6 +206,43 @@ export async function POST(
       ? Math.max(0, input.amountTendered - subtotal)
       : null;
 
+    // Initiate payment for non-CASH methods
+    let qrString: string | null = null;
+    let paymentProviderRef: string | null = null;
+
+    if (input.paymentMethod !== "CASH") {
+      try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+        const payment = await initiatePayment({
+          orderId: order.id,
+          amount: subtotal,
+          currency: "IDR",
+          customerName: input.customerName ?? "Walk-in",
+          customerPhone: input.customerPhone,
+          description: `Pesanan ${orderNumber} - POS`,
+          paymentMethod: input.paymentMethod as PaymentMethod,
+          bankCode: input.bankCode as import("@/lib/payments").XenditVABankCode | undefined,
+          successUrl: `${appUrl}/pos`, // POS doesn't redirect
+          cancelUrl: `${appUrl}/pos`,
+          callbackUrl: `${appUrl}/api/webhooks/xendit`,
+        });
+
+        if (payment.providerRef || payment.qrString) {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              paymentProviderRef: payment.providerRef,
+              paymentQrString: payment.qrString || null,
+            },
+          });
+          qrString = payment.qrString ?? null;
+          paymentProviderRef = payment.providerRef ?? null;
+        }
+      } catch (err) {
+        console.error("[POS_ORDERS_POST] Payment initiation failed:", err);
+      }
+    }
+
     return NextResponse.json(
       createSuccessResponse({
         orderId: order.id,
@@ -212,6 +250,8 @@ export async function POST(
         status: order.status,
         paymentStatus: order.paymentStatus,
         change,
+        qrString,
+        paymentProviderRef,
       }),
       { status: 201 }
     );

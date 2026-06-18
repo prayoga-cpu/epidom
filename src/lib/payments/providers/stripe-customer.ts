@@ -9,6 +9,8 @@ export interface StripeCustomerPaymentRequest {
   description: string;
   successUrl: string;
   cancelUrl: string;
+  stripeAccountId?: string;
+  applicationFeeAmount?: number;
 }
 
 export interface StripeCustomerPaymentResponse {
@@ -31,7 +33,7 @@ export async function createStripeCustomerPayment(
     throw new Error("STRIPE_SECRET_KEY is not configured");
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const sessionData: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
     line_items: [
       {
@@ -50,7 +52,20 @@ export async function createStripeCustomerPayment(
     success_url: req.successUrl,
     cancel_url: req.cancelUrl,
     expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
-  });
+  };
+
+  if (req.stripeAccountId) {
+    sessionData.payment_intent_data = {
+      transfer_data: {
+        destination: req.stripeAccountId,
+      },
+    };
+    if (req.applicationFeeAmount !== undefined && req.applicationFeeAmount > 0) {
+      sessionData.payment_intent_data.application_fee_amount = Math.round(req.applicationFeeAmount);
+    }
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionData);
 
   return {
     providerRef: session.id,

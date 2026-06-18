@@ -173,7 +173,7 @@ export function formatCompactNumber(
 // CURRENCY FORMATTING
 // ============================================================================
 
-export type Currency = "EUR" | "USD" | "IDR";
+export type Currency = "EUR" | "USD" | "IDR" | "MGA";
 
 /**
  * Map currency to appropriate locale
@@ -186,6 +186,8 @@ export function getCurrencyLocale(currency: Currency): string {
       return "en-US";
     case "IDR":
       return "id-ID";
+    case "MGA":
+      return "mg-MG";
     default:
       return "en-US";
   }
