@@ -1,17 +1,17 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "fix React 19 hydration error and context loss for next-themes and I18nProvider"
+task: "fix translation key typo for posOrders in page header"
 gate: "ok"
-success: "ThemeProvider moved to root layout immediately inside body to satisfy next-themes script injection rules, preventing context tree breakage for I18nProvider."
+success: "changed common.nav.posOrders to nav.posOrders in pos-page-headers.tsx, showing correct label"
 
 evidence:
   changed_files:
-    - src/app/layout.tsx
-    - src/app/(app)/layout.tsx
+    - src/features/pos/components/pos-page-headers.tsx
   checks:
-    - next.js hot reload
-  rollback: "git checkout src/app/layout.tsx src/app/(app)/layout.tsx"
+    - pnpm type-check
+    - pnpm lint
+  rollback: "git checkout src/features/pos/components/pos-page-headers.tsx"
 
 risks:
   sensitive_without_escalation: false
