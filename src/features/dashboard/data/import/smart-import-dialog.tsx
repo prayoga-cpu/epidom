@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Upload, Loader2, Check, AlertTriangle, X, FileSpreadsheet } from "lucide-react";
+import { Wand2, Upload, Loader2, Check, AlertTriangle, X, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAnalyzeImport, useExecuteImport, type AnalyzeResponse } from "./hooks/use-ai-import";
 import type { EntityType } from "@/lib/ai/import/types";
@@ -52,7 +52,7 @@ export function SmartImportDialog({
   // Step configuration with i18n
   const STEPS = [
     { key: "upload", label: t("import.steps.upload"), icon: Upload },
-    { key: "analyzing", label: t("import.steps.analysis"), icon: Sparkles },
+    { key: "analyzing", label: t("import.steps.analysis"), icon: Wand2 },
     { key: "preview", label: t("import.steps.preview"), icon: FileSpreadsheet },
     { key: "results", label: t("import.steps.done"), icon: Check },
   ] as const;
@@ -173,7 +173,7 @@ export function SmartImportDialog({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <Sparkles className="h-5 w-5 text-primary" />
+                <Wand2 className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <DialogTitle className="text-xl">{t("import.title")}</DialogTitle>
@@ -313,7 +313,7 @@ export function SmartImportDialog({
                   disabled={editedData.length === 0}
                   className="gap-2"
                 >
-                  <Sparkles className="h-4 w-4" />
+                  <Wand2 className="h-4 w-4" />
                   {t("import.preview.importAll")}
                 </Button>
               </div>

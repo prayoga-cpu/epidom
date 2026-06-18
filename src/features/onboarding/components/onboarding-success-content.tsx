@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, ArrowRight, Sparkles, Calendar, Star } from "lucide-react";
+import { CheckCircle, ArrowRight, Calendar, Star } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 
 export function OnboardingSuccessContent() {
@@ -82,7 +82,7 @@ export function OnboardingSuccessContent() {
                 key={feature}
                 className="bg-brand-primary/5 text-brand-primary inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium"
               >
-                <Sparkles className="h-3 w-3" />
+                <CheckCircle className="h-3 w-3" />
                 {feature}
               </span>
             ))}

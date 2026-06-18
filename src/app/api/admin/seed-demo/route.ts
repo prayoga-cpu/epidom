@@ -69,6 +69,21 @@ export async function POST(req: Request) {
       data: { businessId: business.id, name: DEMO_STORE_NAME },
       select: { id: true },
     });
+    
+    // Also create a default staff member for demo
+    const { hash } = await import("bcryptjs");
+    const pinHash = await hash("1234", 10);
+    await prisma.staffMember.create({
+      data: {
+        storeId: store.id,
+        name: DEMO_NAME,
+        email: DEMO_EMAIL,
+        role: "OWNER",
+        pin: pinHash,
+        isActive: true,
+        inviteStatus: "accepted",
+      }
+    });
   }
 
   // 5. Provision free OPERATIONS subscription

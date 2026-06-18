@@ -1,5 +1,7 @@
 import type React from "react";
 import { Bebas_Neue } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { WebVitalsReporter } from "@/components/analytics/web-vitals-reporter";
@@ -17,6 +19,8 @@ const bebasNeue = Bebas_Neue({
   display: "swap",
 });
 
+
+
 export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
@@ -30,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body className={bebasNeue.variable} suppressHydrationWarning>
+      <body className={`font-sans ${bebasNeue.variable} ${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
         <ErrorBoundary>
           <QueryProvider>
             <PwaProvider />

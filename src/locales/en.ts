@@ -1303,6 +1303,7 @@ export const en = {
   },
   nav: {
     profile: "Profile",
+    billing: "Billing",
     dashboard: "Dashboard",
     storefront: "Storefront",
     management: "Management",

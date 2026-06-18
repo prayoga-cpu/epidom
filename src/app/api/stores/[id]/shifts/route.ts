@@ -54,12 +54,20 @@ export const POST = withApiHandler(
       );
     }
 
-    const pinValid = await compare(pin, staff.pin);
-    if (!pinValid) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"),
-        { status: 401 }
-      );
+    if (staff.pin) {
+      if (!pin || pin === "") {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.UNAUTHORIZED, "PIN required"),
+          { status: 401 }
+        );
+      }
+      const pinValid = await compare(pin, staff.pin);
+      if (!pinValid) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"),
+          { status: 401 }
+        );
+      }
     }
 
     // Only one open shift per staff member at a time

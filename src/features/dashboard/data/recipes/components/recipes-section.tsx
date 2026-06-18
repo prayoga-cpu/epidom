@@ -26,7 +26,8 @@ import {
   Plus,
   Loader2,
   X,
-  Sparkles,
+  Wand2,
+  UtensilsCrossed,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDuration } from "@/lib/utils/formatting";
@@ -314,7 +315,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                 onClick={() => setSmartImportOpen(true)}
                 className="w-full md:w-auto"
               >
-                <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
+                <Wand2 className="mr-1 hidden h-4 w-4 sm:inline" />
                 {t("import.title")}
               </Button>
 

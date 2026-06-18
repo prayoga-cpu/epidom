@@ -21,10 +21,17 @@ export const GET = withApiHandler(
         inviteStatus: true,
         createdAt: true,
         updatedAt: true,
+        pin: true,
       },
       orderBy: { name: "asc" },
     });
-    return NextResponse.json(createSuccessResponse({ staff }));
+    
+    const staffResponse = staff.map(({ pin, ...s }) => ({
+      ...s,
+      hasPin: pin !== null,
+    }));
+
+    return NextResponse.json(createSuccessResponse({ staff: staffResponse }));
   },
   { rateLimitEndpoint: "/api/stores/[id]/staff", requireStoreAuth: true }
 );
@@ -41,7 +48,7 @@ export const POST = withApiHandler(
     }
 
     const { name, email, role, pin, sendInvite } = parsed.data;
-    const pinHash = await hash(pin, 10);
+    const pinHash = pin && pin !== "" ? await hash(pin, 10) : null;
     const emailVal = email && email.trim() !== "" ? email.trim() : undefined;
 
     const store = await prisma.store.findUnique({ where: { id: storeId! }, select: { name: true } });
@@ -59,7 +66,7 @@ export const POST = withApiHandler(
     });
 
     // Fire-and-forget: don't block the response on email delivery
-    if (emailVal && sendInvite) {
+    if (emailVal && sendInvite && pin && pin !== "") {
       sendStaffPinEmail(emailVal, name, store?.name ?? "your store", pin)
         .then(() =>
           prisma.staffMember.update({

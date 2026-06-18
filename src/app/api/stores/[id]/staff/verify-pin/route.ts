@@ -3,11 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { compare } from "bcryptjs";
-import { z } from "zod";
-
-const verifyPinSchema = z.object({
-  pin: z.string().length(4).regex(/^\d{4}$/),
-});
+import { verifyStaffPinSchema } from "@/lib/validation/operations.schemas";
 
 /**
  * POST /api/stores/[id]/staff/verify-pin
@@ -17,46 +13,55 @@ const verifyPinSchema = z.object({
 export const POST = withApiHandler(
   async (request, { storeId }) => {
     const body = await request.json();
-    const parsed = verifyPinSchema.safeParse(body);
+    const parsed = verifyStaffPinSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "PIN must be exactly 4 digits"),
+        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Validation failed", parsed.error.flatten()),
         { status: 400 }
       );
     }
 
-    const { pin } = parsed.data;
+    const { staffId, pin } = parsed.data;
 
-    const activeStaff = await prisma.staffMember.findMany({
-      where: { storeId, isActive: true },
-      select: { id: true, name: true, role: true, pin: true },
+    const staff = await prisma.staffMember.findUnique({
+      where: { id: staffId },
+      select: { id: true, name: true, role: true, pin: true, storeId: true, isActive: true },
     });
 
-    // Try each active staff member's bcrypt hash
-    let matched: { id: string; name: string; role: string } | null = null;
-    for (const member of activeStaff) {
-      const valid = await compare(pin, member.pin);
-      if (valid) {
-        matched = { id: member.id, name: member.name, role: member.role };
-        break;
-      }
+    if (!staff || staff.storeId !== storeId || !staff.isActive) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Staff member not found"),
+        { status: 404 }
+      );
     }
 
-    if (!matched) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"),
-        { status: 401 }
-      );
+    if (staff.pin) {
+      if (!pin || pin === "") {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.UNAUTHORIZED, "PIN required"),
+          { status: 401 }
+        );
+      }
+      const valid = await compare(pin, staff.pin);
+      if (!valid) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"),
+          { status: 401 }
+        );
+      }
     }
 
     // Look up open shift for this staff member
     const openShift = await prisma.shift.findFirst({
-      where: { storeId, staffMemberId: matched.id, closedAt: null },
+      where: { storeId, staffMemberId: staff.id, closedAt: null },
       select: { id: true },
     });
 
     return NextResponse.json(
-      createSuccessResponse({ staff: matched, shift: openShift ?? null })
+      createSuccessResponse({ 
+        staff: { id: staff.id, name: staff.name, role: staff.role }, 
+        shift: openShift ?? null 
+      })
     );
   },
   { requireStoreAuth: true, rateLimitEndpoint: "/api/stores/[id]/staff/verify-pin" }

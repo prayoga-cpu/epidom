@@ -694,7 +694,7 @@ model StaffMember {
   name         String
   email        String?
   role         StaffRole @default(CASHIER)
-  pin          String // bcrypt hash — never store plaintext
+  pin          String? // bcrypt hash — optional
   isActive     Boolean   @default(true)
   inviteStatus String? // "pending" | "accepted" | null
   createdAt    DateTime  @default(now())

@@ -42,7 +42,7 @@ export default async function MenuPage({ params }: PageProps) {
       id: item.id,
       name: item.name,
       description: item.description,
-      price: item.price,
+      price: Number(item.price),
       currency: item.currency,
       imageUrl: item.imageUrl,
       isAvailable: item.isAvailable,

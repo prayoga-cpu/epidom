@@ -17,6 +17,7 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
+import { getPremiumTheme } from "@/lib/utils/color";
 
 interface CustomLink {
   label: string;
@@ -122,9 +123,12 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
   const formatDayName = (day: string) =>
     ({ monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday", saturday: "Saturday", sunday: "Sunday" }[day] ?? day);
 
+  const safeTheme = getPremiumTheme(storefront.themeColor || "#FF6B35");
   const themeStyle = {
     fontFamily: storefront.fontFamily === "Mono" ? "monospace" : "var(--font-sans)",
-    "--store-theme": storefront.themeColor,
+    "--store-theme": safeTheme,
+    "--store-theme-light": `color-mix(in srgb, ${safeTheme} 15%, transparent)`,
+    "--store-theme-gradient": `linear-gradient(135deg, ${safeTheme}, color-mix(in srgb, ${safeTheme} 40%, black))`,
   } as React.CSSProperties;
 
   return (
@@ -135,7 +139,7 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={storefront.heroImageUrl} alt={storefront.displayName} className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full opacity-80" style={{ background: `linear-gradient(135deg, var(--store-theme) 0%, #1e293b 100%)` }} />
+          <div className="h-full w-full opacity-80" style={{ background: "var(--store-theme-gradient)" }} />
         )}
       </div>
 

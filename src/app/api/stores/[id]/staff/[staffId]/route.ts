@@ -35,7 +35,13 @@ export const PATCH = withApiHandler(
     if (email !== undefined) {
       updateData.email = email && email.trim() !== "" ? email.trim() : null;
     }
-    if (pin) updateData.pin = await hash(pin, 10);
+    if (pin !== undefined) {
+      if (pin === "") {
+        updateData.pin = null;
+      } else {
+        updateData.pin = await hash(pin, 10);
+      }
+    }
 
     const store = await prisma.store.findUnique({ where: { id: storeId! }, select: { name: true } });
 

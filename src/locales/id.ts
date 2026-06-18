@@ -1232,6 +1232,7 @@ export const id = {
   },
   nav: {
     profile: "Profil",
+    billing: "Tagihan",
     dashboard: "Dasbor",
     storefront: "Toko Online",
     management: "Manajemen",

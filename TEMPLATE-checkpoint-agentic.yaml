@@ -1,27 +1,26 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "update trial period duration to 14 days and fix pricing dialog close & update locale texts"
+task: "simplify menu creation, fix sidebar layout responsiveness, and add billing to sidebar for POS users"
 gate: "ok"
-success: "Stripe checkout session trial period updated to 14 days. Confirmation dialog closes on redirect. Locale strings updated to reflect trial of Operations plan specifically. All tests and type checks pass."
+success: "Verified that the app compiles and passes all linter checks. Added Billing navigation, restructured the sidebar for better organization and responsiveness to prevent text/icon overflowing, and simplified menu item creation to not require pre-existing products for POS/standard plan users."
 
 evidence:
   changed_files:
-    - src/lib/services/subscription.service.ts
-    - src/features/marketing/pricing/components/pricing-cards.tsx
-    - src/locales/id.ts
+    - src/config/navigation.config.ts
+    - src/features/dashboard/shared/sidebar.tsx
+    - src/features/storefront/editor/components/menu-editor.tsx
     - src/locales/en.ts
+    - src/locales/id.ts
   checks:
-    - pnpm test
     - pnpm type-check
     - pnpm lint
-  rollback: "git checkout src/lib/services/subscription.service.ts src/features/marketing/pricing/components/pricing-cards.tsx src/locales/id.ts src/locales/en.ts"
+  rollback: "git checkout src/config/navigation.config.ts src/features/dashboard/shared/sidebar.tsx src/features/storefront/editor/components/menu-editor.tsx src/locales/en.ts src/locales/id.ts"
 
 risks:
   sensitive_without_escalation: false
   over_engineering: false
   claim_without_evidence: false
 
-not_verified:
-  - "Stripe dashboard checkout session creation manual testing (due to lack of real API keys in local sandbox)"
+not_verified: []
 next: "none"

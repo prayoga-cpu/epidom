@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Minus, Check, ShoppingCart, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Check, ShoppingCart, Utensils } from "lucide-react";
+import { getPremiumTheme } from "@/lib/utils/color";
 
 interface ModifierOption {
   name: string;
@@ -58,8 +59,10 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, ModifierOption[]>>({});
   
   // Theme styling
+  const safeTheme = getPremiumTheme(storefront.themeColor || "#FF6B35");
   const themeStyle = {
-    "--store-theme": storefront.themeColor,
+    "--store-theme": safeTheme,
+    "--store-theme-light-bg": `color-mix(in srgb, ${safeTheme} 8%, white)`,
     fontFamily: storefront.fontFamily === "Mono" ? "monospace" : "var(--font-sans)",
   } as React.CSSProperties;
 
@@ -199,7 +202,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center text-slate-300">
-            <Sparkles className="size-16 stroke-1" />
+            <Utensils className="size-16 stroke-1" />
           </div>
         )}
       </div>
@@ -248,7 +251,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
                     onClick={() => handleModifierChange(group.name, option, group)}
                     className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${
                       isSelected 
-                        ? "border-[var(--store-theme)] bg-orange-50/10" 
+                        ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)]" 
                         : "border-slate-200 bg-white hover:border-slate-300"
                     }`}
                   >

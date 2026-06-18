@@ -31,13 +31,27 @@ export async function GET(
 
   const stream = new ReadableStream({
     async start(controller) {
+      let isClosed = false;
+
+      const safeClose = () => {
+        if (isClosed) return;
+        isClosed = true;
+        try { controller.close(); } catch {}
+      };
+
       const send = (data: unknown) => {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-        );
+        if (isClosed) return;
+        try {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
+          );
+        } catch {
+          safeClose();
+        }
       };
 
       const poll = async () => {
+        if (isClosed) return;
         const orders = await prisma.order.findMany({
           where: {
             storeId,
@@ -62,30 +76,39 @@ export async function GET(
       await poll();
 
       const interval = setInterval(() => {
-        poll().catch(() => {
+          poll().catch(() => {
+            clearInterval(interval);
+            safeClose();
+          });
+        }, 5000);
+
+        // Clean up when client disconnects
+        const cleanup = () => {
           clearInterval(interval);
-          controller.close();
-        });
-      }, 5000);
-
-      // Clean up when client disconnects
-      const cleanup = () => {
-        clearInterval(interval);
-        controller.close();
-      };
-
-      // Send keep-alive every 25s to prevent proxy timeouts
-      const keepAlive = setInterval(() => {
-        try {
-          controller.enqueue(encoder.encode(": keep-alive\n\n"));
-        } catch {
           clearInterval(keepAlive);
-        }
-      }, 25000);
+          safeClose();
+        };
 
-      return cleanup;
-    },
-  });
+        // Send keep-alive every 25s to prevent proxy timeouts
+        const keepAlive = setInterval(() => {
+          if (isClosed) {
+            clearInterval(keepAlive);
+            return;
+          }
+          try {
+            controller.enqueue(encoder.encode(": keep-alive\n\n"));
+          } catch {
+            clearInterval(keepAlive);
+            safeClose();
+          }
+        }, 25000);
+
+        return cleanup;
+      },
+      cancel() {
+        // Stream canceled by client
+      }
+    });
 
   return new Response(stream, {
     headers: {

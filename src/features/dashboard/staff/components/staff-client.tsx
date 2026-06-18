@@ -75,6 +75,7 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
   const [editRole, setEditRole] = useState<StaffRole>("CASHIER");
   const [editPin, setEditPin] = useState("");
   const [editSendPin, setEditSendPin] = useState(false);
+  const [editRemovePin, setEditRemovePin] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -128,6 +129,7 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
     setEditRole(member.role);
     setEditPin("");
     setEditSendPin(false);
+    setEditRemovePin(false);
   };
 
   const handleEditSave = async () => {
@@ -139,7 +141,9 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
         email: editEmail,
         role: editRole,
       };
-      if (editPin.length === 4) {
+      if (editRemovePin) {
+        body.pin = "";
+      } else if (editPin.length === 4) {
         body.pin = editPin;
         body.sendPinEmail = editSendPin;
       }
@@ -157,14 +161,7 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
     }
   };
 
-  const handleSendPinEmail = async (member: StaffMember) => {
-    if (!member.email) {
-      toast.error("No email on file for this staff member");
-      return;
-    }
-    toast.info("Please set a new PIN in the edit dialog to send via email");
-    openEdit(member);
-  };
+
 
   return (
     <div className="min-h-[calc(100vh-150px)] space-y-4">
@@ -319,7 +316,7 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="pin">{t("pages.staffPin")}</Label>
+              <Label htmlFor="pin">{t("pages.staffPin")} <span className="text-muted-foreground text-xs">(optional)</span></Label>
               <Input
                 id="pin"
                 type="password"
@@ -397,8 +394,21 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                   placeholder="4-digit PIN"
                   value={editPin}
                   onChange={(e) => setEditPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  disabled={editRemovePin}
                 />
               </div>
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="rounded"
+                  checked={editRemovePin}
+                  onChange={(e) => {
+                    setEditRemovePin(e.target.checked);
+                    if (e.target.checked) setEditPin("");
+                  }}
+                />
+                Remove PIN (allow login without PIN)
+              </label>
               {editPin.length === 4 && editEmail && (
                 <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                   <input

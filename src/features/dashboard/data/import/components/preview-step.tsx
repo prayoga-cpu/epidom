@@ -10,7 +10,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Sparkles, Package, ShoppingCart, ChefHat, Truck, AlertCircle, Trash2 } from "lucide-react";
+import { Wand2, Package, ShoppingCart, ChefHat, Truck, AlertCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -353,7 +353,7 @@ export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewSt
       {/* Summary */}
       <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg text-sm">
         <div className="flex items-center gap-2 font-medium">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Wand2 className="h-4 w-4 text-primary" />
           Import Preview
         </div>
         <div className="text-muted-foreground">

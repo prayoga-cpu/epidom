@@ -3,7 +3,8 @@
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, ArrowLeft, Search, X, Plus, Minus, Check, ChevronRight, ShoppingCart, MessageSquare, Loader2, QrCode, CreditCard, Wallet, Banknote, Utensils, ShoppingBag, Bike } from "lucide-react";
+import { ArrowLeft, Search, X, Plus, Minus, Check, ChevronRight, ShoppingCart, MessageSquare, Loader2, QrCode, CreditCard, Wallet, Banknote, Utensils, ShoppingBag, Bike } from "lucide-react";
+import { getPremiumTheme } from "@/lib/utils/color";
 
 interface ModifierOption {
   name: string;
@@ -155,8 +156,12 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   const [itemQuantity, setItemQuantity] = useState(1);
   
   // Theme variable
+  const safeTheme = getPremiumTheme(storefront.themeColor || "#FF6B35");
   const themeStyle = {
-    "--store-theme": storefront.themeColor,
+    "--store-theme": safeTheme,
+    "--store-theme-light": `color-mix(in srgb, ${safeTheme} 15%, transparent)`,
+    "--store-theme-light-bg": `color-mix(in srgb, ${safeTheme} 8%, white)`,
+    "--store-theme-gradient": `linear-gradient(135deg, ${safeTheme}, color-mix(in srgb, ${safeTheme} 40%, black))`,
     fontFamily: storefront.fontFamily === "Mono" ? "monospace" : "var(--font-sans)",
   } as React.CSSProperties;
 
@@ -405,7 +410,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
         </h1>
         <button 
           onClick={() => cart.length > 0 && setIsCartOpen(true)}
-          className={`relative p-2 rounded-full transition ${cart.length > 0 ? "bg-orange-50 text-[var(--store-theme)]" : "text-slate-400"}`}
+          className={`relative p-2 rounded-full transition ${cart.length > 0 ? "bg-[var(--store-theme-light-bg)] text-[var(--store-theme)]" : "text-slate-400"}`}
         >
           <ShoppingCart className="size-5" />
           {cartTotals.totalCount > 0 && (
@@ -424,9 +429,9 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       <div className="flex flex-col flex-1 min-w-0 pb-24 md:pb-4 overflow-y-auto">
 
       {/* Hero Mini Banner */}
-      <div className="bg-gradient-to-r from-[var(--store-theme)] to-slate-800 px-6 py-8 text-white relative overflow-hidden">
+      <div className="px-6 py-8 text-white relative overflow-hidden" style={{ background: "var(--store-theme-gradient)" }}>
         <div className="absolute right-0 bottom-0 opacity-10">
-          <Sparkles className="size-32" />
+          <Utensils className="size-32 opacity-20" />
         </div>
         <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
           Menu & Order
@@ -490,7 +495,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       <div className="px-4 mt-4 space-y-8 flex-1">
         {filteredCategories.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-            <Sparkles className="size-10 mb-2 stroke-1" />
+            <Utensils className="size-10 mb-2 stroke-1" />
             <p className="text-sm font-medium">Menu tidak ditemukan</p>
           </div>
         ) : (
@@ -520,7 +525,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <Sparkles className="size-6 text-slate-300" />
+                          <Utensils className="size-6 text-slate-300" />
                         )}
                         {!item.isAvailable && (
                           <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -553,7 +558,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                             {formatPrice(Number(item.price))}
                           </span>
                           {item.isAvailable && (
-                            <div className="size-7 rounded-full bg-slate-50 border flex items-center justify-center hover:bg-orange-50 hover:border-orange-200 transition">
+                            <div className="size-7 rounded-full bg-slate-50 border flex items-center justify-center hover:bg-[var(--store-theme-light-bg)] hover:border-[var(--store-theme)] transition">
                               <Plus className="size-4 text-slate-600" />
                             </div>
                           )}
@@ -636,9 +641,9 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       {/* Sticky Floating Cart Bar — mobile only */}
       {cart.length > 0 && !isCartOpen && (
         <div className="md:hidden fixed bottom-4 left-4 right-4 max-w-md mx-auto z-40">
-          <button 
+          <div 
             onClick={() => setIsCartOpen(true)}
-            className="flex items-center justify-between w-full p-4 rounded-2xl shadow-xl text-white transition-transform active:scale-[0.98]"
+            className="flex items-center justify-between w-full p-4 rounded-2xl shadow-xl text-white transition-transform active:scale-[0.98] cursor-pointer"
             style={{ backgroundColor: "var(--store-theme)" }}
           >
             <div className="flex items-center gap-3">
@@ -657,7 +662,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
               <span>Checkout</span>
               <ChevronRight className="size-4" />
             </button>
-          </button>
+          </div>
         </div>
       )}
 
@@ -807,7 +812,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                       onClick={() => setOrderMethod(method.key as any)}
                       className={`relative flex flex-col items-center justify-center p-3 border rounded-xl transition-all duration-200 active:scale-[0.96] ${
                         orderMethod === method.key
-                          ? "border-[var(--store-theme)] text-[var(--store-theme)] bg-orange-50/50 shadow-[0_2px_10px_-3px_rgba(255,102,0,0.15)]"
+                          ? "border-[var(--store-theme)] text-[var(--store-theme)] bg-[var(--store-theme-light-bg)] shadow-sm"
                           : "border-slate-200 text-slate-500 bg-white hover:border-slate-300 hover:bg-slate-50"
                       }`}
                     >
@@ -880,7 +885,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                               onClick={() => setPaymentMethod(option.value as PaymentMethod)}
                               className={`flex items-center gap-2.5 px-3 py-2.5 border rounded-xl transition-all duration-200 active:scale-[0.97] ${
                                 isSelected
-                                  ? "border-[var(--store-theme)] bg-orange-50/40 text-[var(--store-theme)] shadow-sm"
+                                  ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)] text-[var(--store-theme)] shadow-sm"
                                   : "border-slate-200 text-slate-700 bg-white hover:border-slate-300"
                               }`}
                             >
@@ -908,7 +913,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                         onClick={() => setSelectedBankCode(bank.code)}
                         className={`flex items-center gap-2.5 px-3 py-3 border rounded-lg transition-all ${
                           selectedBankCode === bank.code
-                            ? "border-[var(--store-theme)] bg-orange-50/30 shadow-sm"
+                            ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)] shadow-sm"
                             : "border-slate-200 bg-white hover:border-slate-300"
                         }`}
                       >
@@ -987,7 +992,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 />
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-slate-300">
-                  <Sparkles className="size-12 stroke-1" />
+                  <Utensils className="size-12 stroke-1" />
                 </div>
               )}
               <button 
@@ -1031,7 +1036,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                           onClick={() => handleModifierChange(group.name, option, group)}
                           className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${
                             isSelected 
-                              ? "border-[var(--store-theme)] bg-orange-50/20" 
+                              ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)]" 
                               : "border-slate-200 hover:border-slate-300"
                           }`}
                         >

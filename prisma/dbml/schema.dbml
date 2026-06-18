@@ -474,7 +474,7 @@ Table staff_members {
   name String [not null]
   email String
   role StaffRole [not null, default: 'CASHIER']
-  pin String [not null]
+  pin String
   isActive Boolean [not null, default: true]
   inviteStatus String
   createdAt DateTime [default: `now()`, not null]

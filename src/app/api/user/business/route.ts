@@ -80,6 +80,24 @@ export const PATCH = withApiHandler(
           select: { id: true },
         });
         logger.info("Created default store", { storeId: store.id });
+
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (user) {
+          const { hash } = await import("bcryptjs");
+          const pinHash = await hash("1234", 10);
+          await prisma.staffMember.create({
+            data: {
+              storeId: store.id,
+              name: user.name || "Owner",
+              email: user.email,
+              role: "OWNER",
+              pin: pinHash,
+              isActive: true,
+              inviteStatus: "accepted",
+            }
+          });
+          logger.info("Created default staff PIN for owner", { storeId: store.id });
+        }
       } catch (err) {
         logger.error("Failed to create default store", err, { businessId: business.id, input });
         return NextResponse.json(createErrorResponse(ApiErrorCode.DATABASE_ERROR, "Failed to create store"), { status: 500 });

@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, ExternalLink, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { ImageUpload } from "@/components/shared/image-upload";
+import { getPremiumTheme } from "@/lib/utils/color";
 
 type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid_chars" | "too_short";
 
@@ -322,8 +323,8 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                   <FormLabel>{t("storefront.settings.themeColor")}</FormLabel>
                   <FormControl>
                     <div className="flex items-center gap-3">
-                      <input type="color" {...field} className="h-10 w-16 p-1 border rounded-md cursor-pointer" />
-                      <Input {...field} className="font-mono w-32" />
+                      <input type="color" {...field} onChange={(e) => field.onChange(getPremiumTheme(e.target.value))} className="h-10 w-16 p-1 border rounded-md cursor-pointer" />
+                      <Input {...field} onChange={(e) => field.onChange(getPremiumTheme(e.target.value))} className="font-mono w-32" />
                     </div>
                   </FormControl>
                   <FormMessage />

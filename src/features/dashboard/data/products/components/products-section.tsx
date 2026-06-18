@@ -36,7 +36,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Sparkles,
+  Wand2,
   UtensilsCrossed,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -324,7 +324,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                 onClick={() => setSmartImportOpen(true)}
                 className="w-full md:w-auto"
               >
-                <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
+                <Wand2 className="mr-1 hidden h-4 w-4 sm:inline" />
                 {t("import.title")}
               </Button>
 

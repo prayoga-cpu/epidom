@@ -7,7 +7,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Loader2, Check, Brain, Languages, Table, Database, Sparkles } from "lucide-react";
+import { Loader2, Check, Brain, Languages, Table, Database, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/lang/i18n-provider";
 
@@ -26,7 +26,7 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
     { id: "language", label: t("import.analysis.stages.language"), icon: Languages, duration: 2000 },
     { id: "structure", label: t("import.analysis.stages.structure"), icon: Table, duration: 3000 },
     { id: "mapping", label: t("import.analysis.stages.mapping"), icon: Database, duration: 4000 },
-    { id: "healing", label: t("import.analysis.stages.healing"), icon: Sparkles, duration: 2000 },
+    { id: "healing", label: t("import.analysis.stages.healing"), icon: Wand2, duration: 2000 },
     { id: "validation", label: t("import.analysis.stages.validation"), icon: Check, duration: 1500 },
   ], [t]);
 

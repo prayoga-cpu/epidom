@@ -36,7 +36,7 @@ import {
   ChevronRight,
   Package,
   Plus,
-  Sparkles,
+  Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -295,7 +295,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                 onClick={() => setSmartImportOpen(true)}
                 className="w-full md:w-auto"
               >
-                <Sparkles className="mr-1 hidden h-4 w-4 sm:inline" />
+                <Wand2 className="mr-1 hidden h-4 w-4 sm:inline" />
                 {t("import.title")}
               </Button>
 

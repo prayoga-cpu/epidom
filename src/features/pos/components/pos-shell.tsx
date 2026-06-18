@@ -29,7 +29,7 @@ export function PosShell({ store }: PosShellProps) {
 
   return (
     <PosStaffGate storeId={store.id}>
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-muted/10">
+    <div className="flex flex-1 w-full flex-col overflow-hidden bg-muted/10 rounded-xl">
       <PosHeader store={store} />
       <PosOfflineBanner storeId={store.id} />
 
