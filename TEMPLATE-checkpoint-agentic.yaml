@@ -1,17 +1,18 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "fix french translation crashes on profile page"
+task: "fix script tag error from next-themes ThemeProvider in React 19 / Next.js 16"
 gate: "ok"
-success: "Added fallback to English for missing translations and return key if English also missing, preventing undefined `.replace` crashes on pages like profile account settings."
+success: "Created a dedicated client component wrapper for next-themes ThemeProvider and used it in layout.tsx, resolving the hydration script tag error."
 
 evidence:
   changed_files:
-    - src/components/lang/i18n-provider.tsx
+    - src/app/(app)/layout.tsx
+    - src/components/providers/theme-provider.tsx
   checks:
     - pnpm type-check
     - pnpm lint
-  rollback: "git checkout src/components/lang/i18n-provider.tsx"
+  rollback: "git checkout src/app/(app)/layout.tsx && rm src/components/providers/theme-provider.tsx"
 
 risks:
   sensitive_without_escalation: false

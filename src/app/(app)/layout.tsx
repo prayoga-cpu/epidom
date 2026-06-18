@@ -1,6 +1,6 @@
 import type React from "react";
 import { I18nProvider } from "@/components/lang/i18n-provider";
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 
 export default function AppLayout({
