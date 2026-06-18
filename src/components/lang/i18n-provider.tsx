@@ -77,7 +77,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   const t = useCallback(
     (key: string) => {
-      const value = get(translations[locale], key);
+      let value = get(translations[locale], key);
+      
+      // Fallback to English if key is missing
+      if (value === undefined && locale !== "en") {
+        value = get(translations["en"], key);
+      }
+
       // Support function values like footer.rights(year)
       if (typeof value === "function") {
         return value(new Date().getFullYear());
@@ -86,14 +92,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       if (typeof value === "string" || typeof value === "number") {
         return String(value);
       }
-      // If value is an object or undefined, return undefined so fallback works
-      /**
-       * Type assertion needed because function must return string | undefined
-       * but TypeScript cannot infer that undefined is valid return type
-       * Actual type: undefined
-       * TODO: Improve type inference or use explicit return type
-       */
-      return undefined as any;
+      // If value is still undefined, return the key so it never crashes!
+      return key;
     },
     [locale]
   );

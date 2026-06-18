@@ -1,21 +1,17 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "simplify menu creation, fix sidebar layout responsiveness, and add billing to sidebar for POS users"
+task: "fix french translation crashes on profile page"
 gate: "ok"
-success: "Verified that the app compiles and passes all linter checks. Added Billing navigation, restructured the sidebar for better organization and responsiveness to prevent text/icon overflowing, and simplified menu item creation to not require pre-existing products for POS/standard plan users."
+success: "Added fallback to English for missing translations and return key if English also missing, preventing undefined `.replace` crashes on pages like profile account settings."
 
 evidence:
   changed_files:
-    - src/config/navigation.config.ts
-    - src/features/dashboard/shared/sidebar.tsx
-    - src/features/storefront/editor/components/menu-editor.tsx
-    - src/locales/en.ts
-    - src/locales/id.ts
+    - src/components/lang/i18n-provider.tsx
   checks:
     - pnpm type-check
     - pnpm lint
-  rollback: "git checkout src/config/navigation.config.ts src/features/dashboard/shared/sidebar.tsx src/features/storefront/editor/components/menu-editor.tsx src/locales/en.ts src/locales/id.ts"
+  rollback: "git checkout src/components/lang/i18n-provider.tsx"
 
 risks:
   sensitive_without_escalation: false
