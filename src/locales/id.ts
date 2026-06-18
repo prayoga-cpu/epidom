@@ -2358,7 +2358,9 @@ export const id = {
         free: "Starter Plan",
         free_price: "Gratis",
         starter: "POS",
+        pos: "POS",
         pro: "Operations",
+        operations: "Operations",
         enterprise: "Enterprise",
       },
       pricing: {

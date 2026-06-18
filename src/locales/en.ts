@@ -2422,7 +2422,9 @@ export const en = {
         free: "Starter Plan",
         free_price: "Free",
         starter: "POS",
+        pos: "POS",
         pro: "Operations",
+        operations: "Operations",
         enterprise: "Enterprise",
       },
       pricing: {

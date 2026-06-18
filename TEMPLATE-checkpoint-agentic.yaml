@@ -1,18 +1,18 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "fix invalid password hash for temp-password and account settings by using better-auth/crypto"
+task: "fix missing translation keys for profile.memberSince and profile.subscription.plans.pos"
 gate: "ok"
-success: "Replaced bcrypt.hash with hashPassword from better-auth/crypto in admin users route and user account settings route, ensuring compatibility with Better Auth."
+success: "Translations render correctly instead of raw keys"
 
 evidence:
   changed_files:
-    - src/app/api/admin/users/route.ts
-    - src/app/api/user/account-settings/route.ts
+    - src/features/dashboard/profile/components/profile-header.tsx
+    - src/locales/en.ts
+    - src/locales/id.ts
   checks:
-    - pnpm type-check
-    - pnpm lint
-  rollback: "git checkout src/app/api/admin/users/route.ts src/app/api/user/account-settings/route.ts"
+    - next.js hot reload
+  rollback: "git checkout src/features/dashboard/profile/components/profile-header.tsx src/locales/en.ts src/locales/id.ts"
 
 risks:
   sensitive_without_escalation: false

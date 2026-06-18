@@ -89,7 +89,7 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
               </div>
               <p className="text-muted-foreground text-sm break-words sm:text-base">{user.email}</p>
               <p className="text-muted-foreground text-xs sm:text-sm">
-                {t("profile.memberSince")} {formatDate(user.createdAt)}
+                {t("profile.personal.memberSince")} {formatDate(user.createdAt)}
               </p>
             </div>
           </div>
