@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
-import { compare, hash } from "bcryptjs";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +89,7 @@ export const POST = withApiHandler(
       }
 
       if (currentPassword) {
-        const valid = await compare(currentPassword, account.password);
+        const valid = await verifyPassword({ hash: account.password, password: currentPassword });
         if (!valid) {
           return NextResponse.json(
             createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Current password is incorrect"),
@@ -98,7 +98,7 @@ export const POST = withApiHandler(
         }
       }
 
-      const newHash = await hash(newPassword, 10);
+      const newHash = await hashPassword(newPassword);
       await prisma.account.updateMany({
         where: { userId, providerId: "credential" },
         data: { password: newHash },

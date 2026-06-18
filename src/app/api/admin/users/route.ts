@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdminUser } from "@/lib/admin";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "better-auth/crypto";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -184,7 +184,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (input.action === "reset-password") {
-    const hashed = await bcrypt.hash(input.newPassword, 12);
+    const hashed = await hashPassword(input.newPassword);
 
     const existing = await prisma.account.findFirst({
       where: { userId: input.userId, providerId: "credential" },
@@ -223,7 +223,7 @@ export async function PATCH(req: NextRequest) {
       chars[Math.floor(Math.random() * chars.length)]
     ).join("");
 
-    const hashed = await bcrypt.hash(temp, 12);
+    const hashed = await hashPassword(temp);
 
     const existing = await prisma.account.findFirst({
       where: { userId: input.userId, providerId: "credential" },
