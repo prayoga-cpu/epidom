@@ -49,7 +49,7 @@ export function BillingContainer() {
       }
 
       // Redirect to Stripe Customer Portal
-      window.location.href = result.url;
+      window.location.href = result.data.url;
     } catch (err: any) {
       setError(err.message);
       setActionLoading(false);

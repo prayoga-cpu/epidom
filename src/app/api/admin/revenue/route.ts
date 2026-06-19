@@ -20,23 +20,24 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Get all active subscriptions
-    const subscriptions = await prisma.subscription.findMany({
+    // Use groupBy to prevent OOM
+    const grouped = await prisma.subscription.groupBy({
+      by: ["plan"],
       where: { status: "ACTIVE" },
-      select: { plan: true },
+      _count: { plan: true },
     });
 
     let totalMonthlyRevenueEur = 0;
     let posCount = 0;
     let operationsCount = 0;
 
-    for (const sub of subscriptions) {
-      if (sub.plan === "POS") {
-        totalMonthlyRevenueEur += STRIPE_CONFIG.PLAN_LIMITS.POS.price;
-        posCount++;
-      } else if (sub.plan === "OPERATIONS") {
-        totalMonthlyRevenueEur += STRIPE_CONFIG.PLAN_LIMITS.OPERATIONS.price;
-        operationsCount++;
+    for (const group of grouped) {
+      if (group.plan === "POS") {
+        posCount = group._count.plan;
+        totalMonthlyRevenueEur += STRIPE_CONFIG.PLAN_LIMITS.POS.price * posCount;
+      } else if (group.plan === "OPERATIONS") {
+        operationsCount = group._count.plan;
+        totalMonthlyRevenueEur += STRIPE_CONFIG.PLAN_LIMITS.OPERATIONS.price * operationsCount;
       }
     }
 

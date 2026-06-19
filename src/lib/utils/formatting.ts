@@ -194,6 +194,24 @@ export function getCurrencyLocale(currency: Currency): string {
 }
 
 /**
+ * Get currency symbol for display in labels and inputs
+ */
+export function getCurrencySymbol(currency: Currency | string): string {
+  switch (currency) {
+    case "IDR":
+      return "Rp";
+    case "EUR":
+      return "\u20ac";
+    case "USD":
+      return "$";
+    case "MGA":
+      return "Ar";
+    default:
+      return currency;
+  }
+}
+
+/**
  * Convert price from EUR to target currency
  * @param priceInEur - Price in EUR (base currency)
  * @param targetCurrency - Target currency (EUR or USD)

@@ -14,7 +14,7 @@ export const GET = withApiHandler(async (request, { storeId }) => {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug")?.trim().toLowerCase();
 
-  if (!slug || slug.length < 2) {
+  if (!slug || slug.length < 3) {
     return NextResponse.json(createSuccessResponse({ available: false, reason: "too_short" }));
   }
 
@@ -31,4 +31,4 @@ export const GET = withApiHandler(async (request, { storeId }) => {
   const available = !existing || existing.storeId === storeId;
 
   return NextResponse.json(createSuccessResponse({ available, reason: available ? null : "taken" }));
-});
+}, { requireStoreAuth: true });

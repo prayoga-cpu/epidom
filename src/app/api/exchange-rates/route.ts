@@ -53,9 +53,7 @@ export async function GET() {
  */
 export const POST = withApiHandler(
   async (request, { userId }) => {
-    // TODO: Add Admin role check here if needed in future
-    // const user = await userService.getUser(userId);
-    // if (user.role !== 'ADMIN') throw new Error('Forbidden');
+
 
     const rateData = await refreshExchangeRate();
 

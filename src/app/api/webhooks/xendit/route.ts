@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const providerRef = (payload as any).data?.id || (payload as any).id || "xendit";
 
     // Idempotency: if already in terminal state, ack and return
-    if (!order || order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED") {
+    if (!order || order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED" || order.paymentStatus === "FAILED" || order.paymentStatus === "EXPIRED") {
       return NextResponse.json(createSuccessResponse({ acknowledged: true }));
     }
 

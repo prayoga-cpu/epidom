@@ -200,6 +200,7 @@ export function EditPersonalInfoDialog({
                         <SelectItem value="IDR">IDR (Rp) — Indonesia</SelectItem>
                         <SelectItem value="USD">USD ($) — US Dollar</SelectItem>
                         <SelectItem value="EUR">EUR (€) — Euro</SelectItem>
+                        <SelectItem value="MGA">MGA (Ar) — Ariary Madagascar</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

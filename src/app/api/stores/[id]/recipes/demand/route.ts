@@ -32,4 +32,4 @@ export const GET = withApiHandler(async (_request, { storeId }) => {
   }));
 
   return NextResponse.json(createSuccessResponse(demand));
-});
+}, { requireStoreAuth: true });

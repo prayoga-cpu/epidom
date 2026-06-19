@@ -65,21 +65,25 @@ const PLAN_PRICES: Record<string, Record<string, string>> = {
     IDR: "Rp 99.000/bln",
     USD: "$6/month",
     EUR: "€19/month",
+    MGA: "Ar 27.000/volana",
   },
   OPERATIONS: {
     IDR: "Rp 249.000/bln",
     USD: "$15/month",
     EUR: "€49/month",
+    MGA: "Ar 68.000/volana",
   },
   ENTERPRISE: {
     IDR: "Sesuai Permintaan",
     USD: "Custom",
     EUR: "Custom",
+    MGA: "Araka ny filana",
   },
   FREE: {
     IDR: "Gratis / selamanya",
     USD: "Free / forever",
     EUR: "Gratuit / à vie",
+    MGA: "Maimaim-poana / mandrakizay",
   },
 };
 
@@ -103,7 +107,7 @@ export function getPlanDetails(
   t: (key: string) => string,
   currency: string = "IDR"
 ): PlanDetails {
-  const curr = currency === "IDR" || currency === "USD" || currency === "EUR" ? currency : "IDR";
+  const curr = currency === "IDR" || currency === "USD" || currency === "EUR" || currency === "MGA" ? currency : "IDR";
 
   switch (plan) {
     case "OPERATIONS":

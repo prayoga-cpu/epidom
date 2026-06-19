@@ -95,7 +95,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
 
     // Same as the saved slug — no need to check
     if (slug === initialSlug.current) { setSlugStatus("idle"); return; }
-    if (slug.length < 2)              { setSlugStatus("too_short"); return; }
+    if (slug.length < 3)              { setSlugStatus("too_short"); return; }
     if (!/^[a-z0-9-]+$/.test(slug))  { setSlugStatus("invalid_chars"); return; }
 
     setSlugStatus("checking");
@@ -477,7 +477,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                     name={`customLinks.${index}.url`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormControl><Input placeholder="https://..." {...field} /></FormControl>
+                        <FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

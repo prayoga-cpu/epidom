@@ -39,6 +39,7 @@ import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
+import { getCurrencySymbol } from "@/lib/utils/formatting";
 
 // Helper function to create product schema with translated messages
 // Note: Number fields allow undefined in form state (for better UX - can clear field),
@@ -364,7 +365,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">
-                        {t("data.products.form.costPrice")} ({currency === "EUR" ? "€" : "$"}) *
+                        {t("data.products.form.costPrice")} ({getCurrencySymbol(currency)}) *
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -392,7 +393,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">
-                        {t("data.products.form.retailPrice")} ({currency === "EUR" ? "€" : "$"}) *
+                        {t("data.products.form.retailPrice")} ({getCurrencySymbol(currency)}) *
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -418,7 +419,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                 <div className="bg-muted mt-1 rounded-lg p-1.5 text-xs">
                   <p className="font-medium">{t("data.products.pricingSuggestions.title")}</p>
                   <p className="text-muted-foreground mt-0.5">
-                    {currency === "EUR" ? "€" : "$"}
+                    {getCurrencySymbol(currency)}
                     {suggestedRetailPrice} (2.5x markup)
                   </p>
                 </div>

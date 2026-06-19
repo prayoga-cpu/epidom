@@ -38,6 +38,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
+import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 
 // Use the form schema (without storeId)
@@ -364,7 +365,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">
-                        {t("data.materials.form.unitCost")} ({currency === "EUR" ? "€" : "$"}) *
+                        {t("data.materials.form.unitCost")} ({getCurrencySymbol(currency)}) *
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -586,7 +587,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                               <FormItem className="flex-1 space-y-1">
                                 <FormLabel className="text-xs font-medium">
                                   {t("data.materials.form.supplierPrice")} (
-                                  {currency === "EUR" ? "€" : "$"})
+                                  {getCurrencySymbol(currency)})
                                 </FormLabel>
                                 <FormControl>
                                   <Input

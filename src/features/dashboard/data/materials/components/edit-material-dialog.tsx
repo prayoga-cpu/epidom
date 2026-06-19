@@ -40,6 +40,7 @@ import {
 } from "@/lib/validation/inventory.schemas";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
+import { getCurrencySymbol } from "@/lib/utils/formatting";
 
 interface EditMaterialDialogProps {
   open: boolean;
@@ -353,7 +354,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">
-                        {t("data.materials.form.unitCost")} ({currency === "EUR" ? "€" : "$"}) *
+                        {t("data.materials.form.unitCost")} ({getCurrencySymbol(currency)}) *
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -579,7 +580,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                               <FormItem className="flex-1 space-y-1">
                                 <FormLabel className="text-xs font-medium">
                                   {t("data.materials.form.supplierPrice")} (
-                                  {currency === "EUR" ? "€" : "$"})
+                                  {getCurrencySymbol(currency)})
                                 </FormLabel>
                                 <FormControl>
                                   <Input

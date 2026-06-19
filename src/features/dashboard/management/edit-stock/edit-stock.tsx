@@ -83,8 +83,7 @@ export function EditStockCard() {
       type: "material" as ItemType,
     }));
 
-    // TODO: Add products when recipe/products API is available
-    // const products = ...
+
 
     return materials;
   }, [materialsData]);

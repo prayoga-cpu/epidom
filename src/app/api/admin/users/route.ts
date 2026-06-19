@@ -26,6 +26,7 @@ export async function GET() {
   }
 
   const users = await prisma.user.findMany({
+    take: 500,
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -34,7 +35,7 @@ export async function GET() {
       isAdmin: true,
       createdAt: true,
       accounts: {
-        select: { providerId: true },
+        select: { providerId: true, password: true },
       },
       subscription: {
         select: {
@@ -56,19 +57,13 @@ export async function GET() {
   });
 
   // Derive login methods without exposing password hashes
-  const sanitized = await Promise.all(
-    users.map(async (u) => {
-      const accounts = await prisma.account.findMany({
-        where: { userId: u.id },
-        select: { providerId: true, password: true },
-      });
-      const providers = accounts.map((a) => a.providerId);
-      const hasPassword = accounts.some(
-        (a) => a.providerId === "credential" && !!a.password
-      );
-      return { ...u, accounts: undefined, providers, hasPassword };
-    })
-  );
+  const sanitized = users.map((u) => {
+    const providers = u.accounts.map((a) => a.providerId);
+    const hasPassword = u.accounts.some(
+      (a) => a.providerId === "credential" && !!a.password
+    );
+    return { ...u, accounts: undefined, providers, hasPassword };
+  });
 
   return NextResponse.json({ users: sanitized });
 }

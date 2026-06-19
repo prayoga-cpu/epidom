@@ -74,11 +74,13 @@ export async function PATCH(
       return order;
     });
 
-    // Deduct ingredient stock when order is completed (best-effort, non-blocking)
+    // Deduct ingredient stock when order is completed (Synchronous to prevent race conditions)
     if (status === "DELIVERED") {
-      deductStockForOrder(updated.id, storeId).catch((err) =>
-        console.error("[STOCK_DEDUCTION]", err)
-      );
+      try {
+        await deductStockForOrder(updated.id, storeId);
+      } catch (err) {
+        console.error("[STOCK_DEDUCTION]", err);
+      }
     }
 
     return NextResponse.json(createSuccessResponse({ id: updated.id, status: updated.status }));

@@ -170,7 +170,7 @@ export const en = {
   },
   home: {
     hero: {
-      badge: "✨ Free forever for F&B SMBs",
+      badge: "Free forever for F&B SMBs",
       headlinePart1: "Menu page, online orders,",
       headlineHighlight: "and POS",
       headlinePart2: "in one link.",
@@ -358,7 +358,7 @@ export const en = {
       t3Role: "Home Restaurant, Surabaya",
       t3Quote:
         "Automatic daily reports tell me exactly how much I made each day. I used to calculate manually.",
-      ratingBadge: "4.9★ from Epidom users",
+      ratingBadge: "4.9/5 from Epidom users",
     },
     painGain: {
       headline: "The old way is frustrating. The new way is calm.",
@@ -1831,7 +1831,7 @@ export const en = {
         breakEvenWithOverhead: "With $200 overhead: {units} {unit}",
         linkedProducts: "Linked Products ({count})",
         linkedProductsHint:
-          "💡 These products can be produced using this recipe. A product can be linked to multiple recipes (e.g., 10 baguettes or 50 baguettes).",
+          "These products can be produced using this recipe. A product can be linked to multiple recipes (e.g., 10 baguettes or 50 baguettes).",
         pricingRecommendations: "Pricing Recommendations",
         wholesalePricing: "Wholesale (30% margin): {price}",
         retailPricing: "Retail (60% margin): {price}",
@@ -1964,8 +1964,8 @@ export const en = {
         potentialRevenue: "Potential Revenue (retail)",
         potentialProfit: "Potential Profit",
         profitPerUnit: "Profit per unit",
-        criticalStockAlert: "⚠️ Critical stock level! Immediate restocking required.",
-        lowStockAlert: "⚠️ Stock is running low. Consider restocking soon.",
+        criticalStockAlert: "Critical stock level! Immediate restocking required.",
+        lowStockAlert: "Stock is running low. Consider restocking soon.",
         overstockedAlert:
           "ℹ️ Stock level exceeds maximum. Consider promotions or adjusting production.",
       },
@@ -3644,7 +3644,7 @@ export const en = {
   },
   checkout: {
     success: {
-      title: "Payment Successful! 🎉",
+      title: "Payment Successful!",
       subtitle: "Your subscription is now active",
       plan: "Plan",
       orderId: "Order ID",
@@ -4012,14 +4012,14 @@ export const en = {
       allDone: "All orders done",
       newOrderAlert: "New order incoming!",
       noActiveOrders: "No active orders to process",
-      processingColumn: "🔥 In Progress",
-      readyColumn: "✅ Ready to Serve",
+      processingColumn: "In Progress",
+      readyColumn: "Ready to Serve",
       emptyDefault: "No orders",
       emptyProcessing: "No orders being processed",
       emptyReady: "No orders ready yet",
       updateFailed: "Failed to update order status",
       tapToComplete: "Tap → Complete",
-      checkReady: "✓ Ready",
+      checkReady: "Ready",
       markAllComplete: "Mark All Complete",
       orderReadyTitle: "Order Ready to Serve",
       readyToServe: "Ready to Serve",
@@ -4080,7 +4080,7 @@ export const en = {
     stat3label: "Countries",
     stat3value: "20+",
     stat4label: "Avg. user rating",
-    stat4value: "4.9 ★",
+    stat4value: "4.9/5",
     valuesEyebrow: "What we believe",
     v1title: "Calm by default",
     v1body:
@@ -4389,11 +4389,11 @@ export const en = {
       script: "free forever. five-minute setup. no card.",
       placeholder: "your@cafe.com",
       button: "Start free",
-      sent: "✓ Almost there. Check {email} for a magic link.",
-      check1: "✓ Free forever",
-      check2: "✓ 5-min setup",
-      check3: "✓ No app download",
-      check4: "✓ Encrypted data",
+      sent: "Almost there. Check {email} for a magic link.",
+      check1: "Free forever",
+      check2: "5-min setup",
+      check3: "No app download",
+      check4: "Encrypted data",
     },
     servicesPage: {
       eyebrow: "Features",

@@ -96,6 +96,17 @@ export async function deductStockForOrder(
     const defaultRecipeProduct = product.recipeProducts[0];
     if (!defaultRecipeProduct) {
       console.warn(`[stock-deduction] orderId=${orderId} itemId=${item.id} productId=${product.id}: no default recipe, skipping`);
+      await prisma.alert.create({
+        data: {
+          userId,
+          type: AlertType.SYSTEM,
+          severity: AlertSeverity.WARNING,
+          title: `Gagal Memotong Stok`,
+          message: `Produk "${product.name}" terjual tapi tidak memiliki resep aktif. Stok bahan baku tidak terpotong.`,
+          entityType: "product",
+          entityId: product.id,
+        },
+      });
       skipped++;
       continue;
     }

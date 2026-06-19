@@ -7,11 +7,7 @@ import { CardSkeleton } from "./card-skeleton";
 import { AlertsCard } from "../alerts/alerts-card";
 import { TrackingCard } from "../tracking/tracking-card";
 import { useI18n } from "@/components/lang/i18n-provider";
-// Removed unused useMaterials import since we pass pre-fetched stock levels
-// import {
-//   useMaterials,
-//   type MaterialsResponse,
-// } from "@/features/dashboard/data/materials/hooks/use-materials";
+
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";

@@ -34,8 +34,7 @@ export function PricingCards({ yearly, currentPlan }: { yearly: boolean; current
         setConfirming({
           key: "t3",
           plan: "OPERATIONS",
-          // @ts-ignore
-          name: t("redesign.pricingPage.t3name"),
+          name: t("redesign.pricingPage.t3name") as string,
           trial: true
         });
         window.history.replaceState({}, "", window.location.pathname);

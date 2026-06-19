@@ -70,21 +70,27 @@ export const GET = withApiHandler(
     const grossProfit = revenue - cogs;
     const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
 
-    // Daily breakdown for chart
-    const dailyOrders = await prisma.order.groupBy({
-      by: ["orderDate"],
+    // Daily breakdown for chart using memory grouping to avoid Prisma groupBy timezone/timestamp issues
+    const rawOrders = await prisma.order.findMany({
       where: {
         storeId,
         status: { notIn: [OrderStatus.CANCELLED] },
         orderDate: { gte: from, lte: to },
       },
-      _sum: { total: true },
+      select: { orderDate: true, total: true },
       orderBy: { orderDate: "asc" },
     });
 
-    const buckets = dailyOrders.map((d) => ({
-      date: d.orderDate.toISOString().split("T")[0],
-      revenue: Number(d._sum.total ?? 0),
+    const bucketMap = new Map<string, number>();
+    for (const d of rawOrders) {
+      const dateKey = d.orderDate.toISOString().split("T")[0];
+      const current = bucketMap.get(dateKey) ?? 0;
+      bucketMap.set(dateKey, current + Number(d.total ?? 0));
+    }
+
+    const buckets = Array.from(bucketMap.entries()).map(([date, revenue]) => ({
+      date,
+      revenue,
     }));
 
     return NextResponse.json(

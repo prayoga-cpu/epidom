@@ -83,20 +83,18 @@ export const PATCH = withApiHandler(
 
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (user) {
-          const { hash } = await import("bcryptjs");
-          const pinHash = await hash("1234", 10);
           await prisma.staffMember.create({
             data: {
               storeId: store.id,
               name: user.name || "Owner",
               email: user.email,
               role: "OWNER",
-              pin: pinHash,
+              pin: null,
               isActive: true,
               inviteStatus: "accepted",
             }
           });
-          logger.info("Created default staff PIN for owner", { storeId: store.id });
+          logger.info("Created default staff for owner", { storeId: store.id });
         }
       } catch (err) {
         logger.error("Failed to create default store", err, { businessId: business.id, input });

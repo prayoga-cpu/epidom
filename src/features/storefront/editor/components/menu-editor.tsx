@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Plus, GripVertical, Settings2, Trash2, ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { formatCurrency } from "@/lib/utils/formatting";
+import { formatCurrency, getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import {
   Dialog,
@@ -232,7 +232,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
-                  {currency === "IDR" ? "Rp" : currency}
+                  {getCurrencySymbol(currency)}
                 </span>
                 <Input
                   type="number"
