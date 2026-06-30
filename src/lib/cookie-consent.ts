@@ -163,6 +163,14 @@ export function getLanguagePreference(): Locale {
     }
   }
 
+  // No explicit preference stored — detect from the browser's language.
+  if (typeof navigator !== "undefined" && navigator.language) {
+    const lang = navigator.language.toLowerCase();
+    if (lang.startsWith("id")) return "id";
+    if (lang.startsWith("fr")) return "fr";
+    if (lang.startsWith("en")) return "en";
+  }
+
   return "en"; // Default to English
 }
 

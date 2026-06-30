@@ -354,6 +354,27 @@ export class SubscriptionService {
   }
 
   /**
+   * Freestyle plan switch for admin-granted (BETA) accounts. These have no Stripe
+   * payment method (stripeCustomerId starts with "admin_"), so they may move to any
+   * plan instantly without checkout. Rejects real Stripe-billed subscriptions.
+   */
+  async setPrivilegePlan(userId: string, plan: SubscriptionPlan): Promise<void> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+    if (!subscription) {
+      throw new Error("No subscription found");
+    }
+    if (!subscription.stripeCustomerId.startsWith("admin_")) {
+      throw new Error("Freestyle plan switching is only available for admin-granted (BETA) accounts.");
+    }
+    await this.subscriptionRepo.update(userId, {
+      plan,
+      status: SubscriptionStatus.ACTIVE,
+      cancelAtPeriodEnd: false,
+    });
+    this.invalidateUserCache(userId);
+  }
+
+  /**
    * Reactivate a canceled subscription
    */
   async reactivateSubscription(userId: string): Promise<void> {

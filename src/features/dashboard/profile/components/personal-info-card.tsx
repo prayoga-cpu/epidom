@@ -64,9 +64,9 @@ export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2">
             {infoItems.map((item, index) => (
-              <div key={index} className="space-y-1">
+              <div key={index} className="min-w-0 space-y-1">
                 <p className="text-muted-foreground text-sm font-medium">{item.label}</p>
-                <p className="text-base font-semibold">{item.value}</p>
+                <p className="text-base font-semibold break-words">{item.value}</p>
               </div>
             ))}
           </div>

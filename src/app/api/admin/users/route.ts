@@ -34,6 +34,8 @@ export async function GET() {
       email: true,
       isAdmin: true,
       createdAt: true,
+      timezone: true,
+      currency: true,
       accounts: {
         select: { providerId: true, password: true },
       },

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Minus, Check, ShoppingCart, Utensils } from "lucide-react";
 import { getPremiumTheme } from "@/lib/utils/color";
+import { useI18n } from "@/components/lang/i18n-provider";
+import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
 
 interface ModifierOption {
   name: string;
@@ -55,6 +57,7 @@ interface CartItem {
 
 export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [quantity, setQuantity] = useState(1);
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, ModifierOption[]>>({});
   
@@ -62,7 +65,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   const safeTheme = getPremiumTheme(storefront.themeColor || "#FF6B35");
   const themeStyle = {
     "--store-theme": safeTheme,
-    "--store-theme-light-bg": `color-mix(in srgb, ${safeTheme} 8%, white)`,
+    "--store-theme-light-bg": `color-mix(in srgb, ${safeTheme} 8%, var(--card))`,
     fontFamily: storefront.fontFamily === "Mono" ? "monospace" : "var(--font-sans)",
   } as React.CSSProperties;
 
@@ -120,7 +123,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
     const modGroups = (item.modifiers as ModifierGroup[]) || [];
     for (const group of modGroups) {
       if (group.isRequired && (!selectedModifiers[group.name] || selectedModifiers[group.name].length === 0)) {
-        alert(`Please select an option for "${group.name}"`);
+        alert(t("publicOrder.itemDetail.selectOptionAlert") + ' "' + group.name + '"');
         return;
       }
     }
@@ -181,39 +184,39 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   return (
     <div className="flex flex-col min-h-screen pb-24" style={themeStyle}>
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between shadow-sm">
-        <Link href={`/@${storefront.slug}/menu`} className="p-1 rounded-full hover:bg-slate-100 transition">
-          <ArrowLeft className="size-5 text-slate-700" />
+      <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between shadow-sm">
+        <Link href={`/@${storefront.slug}/menu`} className="p-1 rounded-full hover:bg-muted transition">
+          <ArrowLeft className="size-5 text-foreground" />
         </Link>
-        <span className="font-extrabold text-slate-800 text-sm">
-          Detail Menu
+        <span className="font-extrabold text-foreground text-sm">
+          {t("publicOrder.itemDetail.pageTitle")}
         </span>
-        <div className="size-8" /> {/* Spacer */}
+        <StorefrontControls />
       </header>
 
       {/* Main image */}
-      <div className="relative h-64 w-full bg-slate-100 flex items-center justify-center">
+      <div className="relative h-64 w-full bg-muted flex items-center justify-center">
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img 
-            src={item.imageUrl} 
-            alt={item.name} 
+          <img
+            src={item.imageUrl}
+            alt={item.name}
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="h-full w-full flex items-center justify-center text-slate-300">
+          <div className="h-full w-full flex items-center justify-center text-muted-foreground/50">
             <Utensils className="size-16 stroke-1" />
           </div>
         )}
       </div>
 
       {/* Item info */}
-      <div className="p-4 border-b bg-white">
+      <div className="p-4 border-b bg-card">
         <div className="flex justify-between items-start gap-2">
-          <h1 className="text-xl font-extrabold text-slate-800 leading-tight">{item.name}</h1>
+          <h1 className="text-xl font-extrabold text-foreground leading-tight">{item.name}</h1>
           {item.isFeatured && (
-            <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full uppercase tracking-wider">
-              Favorit
+            <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300 px-2 py-0.5 rounded-full uppercase tracking-wider">
+              {t("publicOrder.itemDetail.favorite")}
             </span>
           )}
         </div>
@@ -221,23 +224,23 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
           {formatPrice(Number(item.price))}
         </p>
         {item.description && (
-          <p className="text-xs text-slate-500 mt-3 leading-relaxed">
+          <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
             {item.description}
           </p>
         )}
       </div>
 
       {/* Modifiers Selection */}
-      <div className="p-4 space-y-6 flex-1 bg-slate-50/50">
+      <div className="p-4 space-y-6 flex-1 bg-muted/50">
         {((item.modifiers as ModifierGroup[]) || []).map((group, groupIdx) => (
           <div key={groupIdx} className="space-y-2">
             <div className="flex justify-between items-center">
-              <h4 className="font-bold text-sm text-slate-800">
+              <h4 className="font-bold text-sm text-foreground">
                 {group.name}
-                {group.isRequired && <span className="text-rose-500 ml-1 font-black">*</span>}
+                {group.isRequired && <span className="text-destructive ml-1 font-black">*</span>}
               </h4>
-              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-                {group.isRequired ? "Wajib" : "Opsional"}
+              <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                {group.isRequired ? t("publicOrder.itemDetail.required") : t("publicOrder.itemDetail.optional")}
               </span>
             </div>
             
@@ -250,23 +253,23 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
                     key={optIdx}
                     onClick={() => handleModifierChange(group.name, option, group)}
                     className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${
-                      isSelected 
-                        ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)]" 
-                        : "border-slate-200 bg-white hover:border-slate-300"
+                      isSelected
+                        ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)]"
+                        : "border-border bg-card hover:border-muted-foreground/30"
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`size-5 rounded-md border flex items-center justify-center transition-colors ${
-                        isSelected 
-                          ? "bg-[var(--store-theme)] border-transparent" 
-                          : "border-slate-300"
+                        isSelected
+                          ? "bg-[var(--store-theme)] border-transparent"
+                          : "border-muted-foreground/30"
                       }`}>
                         {isSelected && <Check className="size-3.5 text-white stroke-[3px]" />}
                       </div>
-                      <span className="text-xs font-semibold text-slate-700">{option.name}</span>
+                      <span className="text-xs font-semibold text-foreground">{option.name}</span>
                     </div>
-                    <span className="text-xs font-bold text-slate-500">
-                      {option.priceAdd > 0 ? `+${formatPrice(option.priceAdd)}` : "Gratis"}
+                    <span className="text-xs font-bold text-muted-foreground">
+                      {option.priceAdd > 0 ? `+${formatPrice(option.priceAdd)}` : t("publicOrder.itemDetail.free")}
                     </span>
                   </div>
                 );
@@ -277,22 +280,22 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
       </div>
 
       {/* Floating purchase action bar */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t p-4 z-40 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-card border-t p-4 z-40 shadow-lg">
         <div className="flex items-center justify-between gap-4">
           {/* Quantity Selector */}
-          <div className="flex items-center gap-3 border rounded-full px-3 py-1.5 bg-slate-50">
-            <button 
+          <div className="flex items-center gap-3 border rounded-full px-3 py-1.5 bg-muted">
+            <button
               onClick={() => quantity > 1 && setQuantity(quantity - 1)}
-              className="p-1 text-slate-400 hover:text-slate-600 transition"
+              className="p-1 text-muted-foreground hover:text-foreground transition"
             >
               <Minus className="size-4" />
             </button>
-            <span className="text-sm font-bold text-slate-800 min-w-[24px] text-center">
+            <span className="text-sm font-bold text-foreground min-w-[24px] text-center">
               {quantity}
             </span>
-            <button 
+            <button
               onClick={() => setQuantity(quantity + 1)}
-              className="p-1 text-slate-400 hover:text-slate-600 transition"
+              className="p-1 text-muted-foreground hover:text-foreground transition"
             >
               <Plus className="size-4" />
             </button>
@@ -305,7 +308,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
             style={{ backgroundColor: "var(--store-theme)" }}
           >
             <ShoppingCart className="size-5" />
-            <span>Masukkan Keranjang</span>
+            <span>{t("publicOrder.itemDetail.addToCartShort")}</span>
           </button>
         </div>
       </div>

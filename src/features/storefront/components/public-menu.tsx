@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Search, X, Plus, Minus, Check, ChevronRight, ShoppingCart, MessageSquare, Loader2, QrCode, CreditCard, Wallet, Banknote, Utensils, ShoppingBag, Bike } from "lucide-react";
 import { getPremiumTheme } from "@/lib/utils/color";
+import { useI18n } from "@/components/lang/i18n-provider";
+import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
 
 interface ModifierOption {
   name: string;
@@ -91,6 +93,7 @@ const VA_BANKS: { code: VABankCode; label: string; color: string }[] = [
 ];
 
 export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   
@@ -160,7 +163,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   const themeStyle = {
     "--store-theme": safeTheme,
     "--store-theme-light": `color-mix(in srgb, ${safeTheme} 15%, transparent)`,
-    "--store-theme-light-bg": `color-mix(in srgb, ${safeTheme} 8%, white)`,
+    "--store-theme-light-bg": `color-mix(in srgb, ${safeTheme} 8%, var(--card))`,
     "--store-theme-gradient": `linear-gradient(135deg, ${safeTheme}, color-mix(in srgb, ${safeTheme} 40%, black))`,
     fontFamily: storefront.fontFamily === "Mono" ? "monospace" : "var(--font-sans)",
   } as React.CSSProperties;
@@ -258,7 +261,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
     const modGroups = (activeItem.modifiers as ModifierGroup[]) || [];
     for (const group of modGroups) {
       if (group.isRequired && (!selectedModifiers[group.name] || selectedModifiers[group.name].length === 0)) {
-        alert(`Please select an option for "${group.name}"`);
+        alert(t("publicOrder.itemDetail.selectOptionAlert") + ' "' + group.name + '"');
         return;
       }
     }
@@ -306,17 +309,17 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
     setCheckoutError(null);
 
     if (!customerName.trim()) {
-      setCheckoutError("Nama pelanggan wajib diisi.");
+      setCheckoutError(t("publicOrder.nameRequired"));
       return;
     }
 
     if (orderMethod === "DELIVERY" && !deliveryAddress.trim()) {
-      setCheckoutError("Alamat pengantaran wajib diisi.");
+      setCheckoutError(t("publicOrder.checkoutForm.addressRequired"));
       return;
     }
 
     if (orderMethod === "DINE_IN" && !tableNumber.trim()) {
-      setCheckoutError("Nomor meja wajib diisi.");
+      setCheckoutError(t("publicOrder.checkoutForm.tableRequired"));
       return;
     }
 
@@ -364,7 +367,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       const data = await res.json();
 
       if (!res.ok) {
-        setCheckoutError(data?.error?.message ?? "Gagal membuat pesanan.");
+        setCheckoutError(data?.error?.message ?? t("publicOrder.checkoutForm.orderCreateFailed"));
         setIsSubmitting(false);
         return;
       }
@@ -383,7 +386,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
         router.push(`/@${storefront.slug}/order/${orderId}`);
       }
     } catch {
-      setCheckoutError("Terjadi kesalahan. Silakan coba lagi.");
+      setCheckoutError(t("publicOrder.checkoutForm.genericError"));
       setIsSubmitting(false);
     }
   };
@@ -401,27 +404,30 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   return (
     <div className="flex flex-col min-h-screen" style={themeStyle}>
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between shadow-sm">
-        <Link href={`/@${storefront.slug}`} className="p-1 rounded-full hover:bg-slate-100 transition">
-          <ArrowLeft className="size-5 text-slate-700" />
+      <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between shadow-sm">
+        <Link href={`/@${storefront.slug}`} className="p-1 rounded-full hover:bg-muted transition">
+          <ArrowLeft className="size-5 text-foreground" />
         </Link>
-        <h1 className="font-extrabold text-slate-800 text-base max-w-[200px] truncate">
+        <h1 className="font-extrabold text-foreground text-base max-w-[200px] truncate">
           {storefront.displayName}
         </h1>
-        <button 
-          onClick={() => cart.length > 0 && setIsCartOpen(true)}
-          className={`relative p-2 rounded-full transition ${cart.length > 0 ? "bg-[var(--store-theme-light-bg)] text-[var(--store-theme)]" : "text-slate-400"}`}
-        >
-          <ShoppingCart className="size-5" />
-          {cartTotals.totalCount > 0 && (
-            <span 
-              className="absolute -top-1 -right-1 size-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center shadow-md animate-bounce"
-              style={{ backgroundColor: "var(--store-theme)" }}
-            >
-              {cartTotals.totalCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <StorefrontControls />
+          <button
+            onClick={() => cart.length > 0 && setIsCartOpen(true)}
+            className={`relative p-2 rounded-full transition ${cart.length > 0 ? "bg-[var(--store-theme-light-bg)] text-[var(--store-theme)]" : "text-muted-foreground"}`}
+          >
+            <ShoppingCart className="size-5" />
+            {cartTotals.totalCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 size-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center shadow-md animate-bounce"
+                style={{ backgroundColor: "var(--store-theme)" }}
+              >
+                {cartTotals.totalCount}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Two-column wrapper: menu items left, cart sidebar right on desktop */}
@@ -434,27 +440,27 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
           <Utensils className="size-32 opacity-20" />
         </div>
         <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
-          Menu & Order
+          {t("publicOrder.menu.badge")}
         </span>
-        <h2 className="text-2xl font-black mt-2 tracking-tight">Daftar Menu Makanan</h2>
-        <p className="text-xs text-white/80 mt-1">Pilih menu favorit Anda dan selesaikan pesanan via WhatsApp.</p>
+        <h2 className="text-2xl font-black mt-2 tracking-tight">{t("publicOrder.menu.title")}</h2>
+        <p className="text-xs text-white/80 mt-1">{t("publicOrder.menu.subtitle")}</p>
       </div>
 
       {/* Search Bar */}
       <div className="px-4 mt-4">
         <div className="relative">
-          <Search className="text-slate-400 pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Cari makanan atau minuman..."
+            placeholder={t("publicOrder.menu.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 border rounded-full pl-9 pr-4 text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] border-slate-200 transition"
+            className="w-full h-10 border rounded-full pl-9 pr-4 text-sm bg-muted focus:bg-card focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] border-border transition"
           />
           {searchQuery && (
-            <button 
+            <button
               onClick={() => setSearchQuery("")}
-              className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="size-4" />
             </button>
@@ -464,16 +470,16 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
 
       {/* Categories Tabs */}
       {filteredCategories.length > 0 && (
-        <div className="scrollbar-none flex gap-2 overflow-x-auto px-4 py-3 sticky top-[53px] z-20 bg-white border-b">
+        <div className="scrollbar-none flex gap-2 overflow-x-auto px-4 py-3 sticky top-[53px] z-20 bg-card border-b">
           <button
             onClick={() => setSelectedCategory("all")}
             className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-colors shrink-0 ${
               selectedCategory === "all"
                 ? "bg-[var(--store-theme)] text-white border-transparent shadow-sm"
-                : "bg-slate-50 text-slate-600 border-slate-200"
+                : "bg-muted text-muted-foreground border-border"
             }`}
           >
-            Semua ({allItems.length})
+            {t("publicOrder.menu.allCategory")} ({allItems.length})
           </button>
           {filteredCategories.map(cat => (
             <button
@@ -482,7 +488,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
               className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-colors shrink-0 ${
                 selectedCategory === cat.id
                   ? "bg-[var(--store-theme)] text-white border-transparent shadow-sm"
-                  : "bg-slate-50 text-slate-600 border-slate-200"
+                  : "bg-muted text-muted-foreground border-border"
               }`}
             >
               {cat.name} ({cat.items.length})
@@ -494,16 +500,16 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       {/* Menu Items Grid */}
       <div className="px-4 mt-4 space-y-8 flex-1">
         {filteredCategories.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Utensils className="size-10 mb-2 stroke-1" />
-            <p className="text-sm font-medium">Menu tidak ditemukan</p>
+            <p className="text-sm font-medium">{t("publicOrder.menu.notFound")}</p>
           </div>
         ) : (
           filteredCategories
             .filter(cat => selectedCategory === "all" || cat.id === selectedCategory)
             .map(category => (
               <div key={category.id} className="space-y-3">
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest border-l-4 border-[var(--store-theme)] pl-2">
+                <h3 className="text-sm font-black text-foreground uppercase tracking-widest border-l-4 border-[var(--store-theme)] pl-2">
                   {category.name}
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -511,12 +517,12 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                     <div 
                       key={item.id}
                       onClick={() => handleItemClick(item)}
-                      className={`flex gap-3 p-3 border rounded-xl bg-white shadow-sm transition active:scale-[0.99] cursor-pointer ${
-                        item.isAvailable ? "hover:border-slate-300" : "opacity-60 hover:border-transparent select-none"
+                      className={`flex gap-3 p-3 border rounded-xl bg-card shadow-sm transition active:scale-[0.99] cursor-pointer ${
+                        item.isAvailable ? "hover:border-muted-foreground/30" : "opacity-60 hover:border-transparent select-none"
                       }`}
                     >
                       {/* Image */}
-                      <div className="size-20 bg-slate-100 rounded-lg overflow-hidden shrink-0 relative flex items-center justify-center">
+                      <div className="size-20 bg-muted rounded-lg overflow-hidden shrink-0 relative flex items-center justify-center">
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img 
@@ -525,12 +531,12 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <Utensils className="size-6 text-slate-300" />
+                          <Utensils className="size-6 text-muted-foreground/50" />
                         )}
                         {!item.isAvailable && (
                           <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                             <span className="text-[10px] font-bold text-white uppercase tracking-wider px-1 py-0.5 rounded">
-                              Habis
+                              {t("publicOrder.menu.soldOut")}
                             </span>
                           </div>
                         )}
@@ -540,26 +546,26 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                       <div className="flex-1 flex flex-col justify-between">
                         <div>
                           <div className="flex justify-between items-start gap-1">
-                            <h4 className="font-bold text-sm text-slate-800 line-clamp-1">{item.name}</h4>
+                            <h4 className="font-bold text-sm text-foreground line-clamp-1">{item.name}</h4>
                             {item.isFeatured && (
-                              <span className="text-[9px] font-extrabold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                Fav
+                              <span className="text-[9px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                {t("publicOrder.menu.featured")}
                               </span>
                             )}
                           </div>
                           {item.description && (
-                            <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5 leading-snug">
+                            <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5 leading-snug">
                               {item.description}
                             </p>
                           )}
                         </div>
                         <div className="flex justify-between items-center mt-2">
-                          <span className="font-extrabold text-sm text-slate-800">
+                          <span className="font-extrabold text-sm text-foreground">
                             {formatPrice(Number(item.price))}
                           </span>
                           {item.isAvailable && (
-                            <div className="size-7 rounded-full bg-slate-50 border flex items-center justify-center hover:bg-[var(--store-theme-light-bg)] hover:border-[var(--store-theme)] transition">
-                              <Plus className="size-4 text-slate-600" />
+                            <div className="size-7 rounded-full bg-muted border flex items-center justify-center hover:bg-[var(--store-theme-light-bg)] hover:border-[var(--store-theme)] transition">
+                              <Plus className="size-4 text-muted-foreground" />
                             </div>
                           )}
                         </div>
@@ -575,21 +581,21 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       </div>{/* end scrollable menu column */}
 
       {/* Desktop cart sidebar */}
-      <aside className="hidden md:flex md:flex-col md:w-80 md:border-l md:bg-slate-50/50 md:sticky md:top-[57px] md:h-[calc(100vh-57px)] md:overflow-y-auto md:shrink-0">
-        <div className="p-4 border-b bg-white flex items-center gap-2">
+      <aside className="hidden md:flex md:flex-col md:w-80 md:border-l md:bg-muted/50 md:sticky md:top-[57px] md:h-[calc(100vh-57px)] md:overflow-y-auto md:shrink-0">
+        <div className="p-4 border-b bg-card flex items-center gap-2">
           <ShoppingCart className="size-4 text-[var(--store-theme)]" />
-          <span className="font-black text-slate-800 text-sm">Pesanan Anda</span>
+          <span className="font-black text-foreground text-sm">{t("publicOrder.menu.yourOrder")}</span>
           {cartTotals.totalCount > 0 && (
             <span className="ml-auto text-xs font-bold text-[var(--store-theme)]">
-              {cartTotals.totalCount} item
+              {cartTotals.totalCount}{" "}{t("publicOrder.menu.itemUnit")}
             </span>
           )}
         </div>
         {cart.length === 0 ? (
-          <div className="flex flex-col items-center justify-center flex-1 gap-2 text-slate-400 py-12">
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 text-muted-foreground py-12">
             <ShoppingCart className="size-10 stroke-1" />
-            <p className="text-sm font-medium">Keranjang kosong</p>
-            <p className="text-xs text-center px-4">Pilih menu di sebelah kiri untuk menambahkan pesanan</p>
+            <p className="text-sm font-medium">{t("publicOrder.cartEmpty")}</p>
+            <p className="text-xs text-center px-4">{t("publicOrder.menu.cartEmptyHint")}</p>
           </div>
         ) : (
           <>
@@ -600,15 +606,15 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 return (
                   <div key={item.uniqueId} className="flex justify-between items-start gap-3 pb-3 border-b last:border-0">
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-xs text-slate-800 truncate">{item.name}</h4>
+                      <h4 className="font-bold text-xs text-foreground truncate">{item.name}</h4>
                       <p className="font-extrabold text-xs text-[var(--store-theme)] mt-0.5">{formatPrice(singleTotal)}</p>
                     </div>
-                    <div className="flex items-center gap-1.5 border rounded-full px-2 py-1 bg-white shadow-sm shrink-0">
-                      <button onClick={() => updateCartQuantity(item.uniqueId, -1)} className="p-0.5 text-slate-400 hover:text-rose-500">
+                    <div className="flex items-center gap-1.5 border rounded-full px-2 py-1 bg-card shadow-sm shrink-0">
+                      <button onClick={() => updateCartQuantity(item.uniqueId, -1)} className="p-0.5 text-muted-foreground hover:text-destructive">
                         <Minus className="size-3" />
                       </button>
-                      <span className="text-xs font-bold text-slate-800 min-w-[16px] text-center">{item.quantity}</span>
-                      <button onClick={() => updateCartQuantity(item.uniqueId, 1)} className="p-0.5 text-slate-400 hover:text-[var(--store-theme)]">
+                      <span className="text-xs font-bold text-foreground min-w-[16px] text-center">{item.quantity}</span>
+                      <button onClick={() => updateCartQuantity(item.uniqueId, 1)} className="p-0.5 text-muted-foreground hover:text-[var(--store-theme)]">
                         <Plus className="size-3" />
                       </button>
                     </div>
@@ -616,9 +622,9 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 );
               })}
             </div>
-            <div className="p-4 border-t bg-white space-y-3">
-              <div className="flex justify-between text-sm font-extrabold text-slate-800">
-                <span>Subtotal</span>
+            <div className="p-4 border-t bg-card space-y-3">
+              <div className="flex justify-between text-sm font-extrabold text-foreground">
+                <span>{t("publicOrder.menu.subtotal")}</span>
                 <span>{formatPrice(cartTotals.subtotal)}</span>
               </div>
               <button
@@ -629,7 +635,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 className="w-full py-3 rounded-xl font-bold text-white shadow-md text-sm transition-transform active:scale-[0.98]"
                 style={{ backgroundColor: "var(--store-theme)" }}
               >
-                Lanjutkan ke Checkout
+                {t("publicOrder.menu.continueToCheckout")}
               </button>
             </div>
           </>
@@ -654,12 +660,12 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 </span>
               </div>
               <div className="text-left">
-                <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Keranjang Belanja</p>
+                <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">{t("publicOrder.menu.shoppingCart")}</p>
                 <p className="text-sm font-black">{formatPrice(cartTotals.subtotal)}</p>
               </div>
             </div>
             <button onClick={(e) => { e.stopPropagation(); setIsCheckoutOpen(true); }} className="flex items-center gap-1 font-bold text-xs bg-white/20 px-3 py-1.5 rounded-lg z-10">
-              <span>Checkout</span>
+              <span>{t("publicOrder.menu.checkout")}</span>
               <ChevronRight className="size-4" />
             </button>
           </div>
@@ -669,16 +675,16 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       {/* Cart Drawer — mobile only (desktop uses sidebar) */}
       {isCartOpen && (
         <div className="md:hidden fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
-          <div className="bg-white rounded-t-3xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
+          <div className="bg-card rounded-t-3xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
             {/* Header */}
-            <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+            <div className="p-4 border-b flex justify-between items-center bg-muted">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="size-5 text-[var(--store-theme)]" />
-                <h3 className="font-black text-slate-800 text-sm">Pesanan Anda</h3>
+                <h3 className="font-black text-foreground text-sm">{t("publicOrder.menu.yourOrder")}</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setIsCartOpen(false)}
-                className="p-1 rounded-full hover:bg-slate-200 transition text-slate-400"
+                className="p-1 rounded-full hover:bg-muted transition text-muted-foreground"
               >
                 <X className="size-5" />
               </button>
@@ -693,30 +699,30 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 return (
                   <div key={item.uniqueId} className="flex justify-between items-start gap-4 pb-4 border-b last:border-0 last:pb-0">
                     <div className="flex-1">
-                      <h4 className="font-bold text-sm text-slate-800">{item.name}</h4>
+                      <h4 className="font-bold text-sm text-foreground">{item.name}</h4>
                       {item.selectedModifiers.map((group, gIdx) => (
-                        <p key={gIdx} className="text-[10px] text-slate-400 mt-0.5">
+                        <p key={gIdx} className="text-[10px] text-muted-foreground mt-0.5">
                           <span className="font-semibold">{group.groupName}:</span>{" "}
                           {group.options.map(o => `${o.name} (+${formatPrice(o.priceAdd)})`).join(", ")}
                         </p>
                       ))}
-                      <p className="font-extrabold text-xs text-slate-700 mt-1">
+                      <p className="font-extrabold text-xs text-foreground mt-1">
                         {formatPrice(singleTotal)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 border rounded-full px-2 py-1 bg-slate-50 shadow-inner">
-                      <button 
+                    <div className="flex items-center gap-2 border rounded-full px-2 py-1 bg-muted shadow-inner">
+                      <button
                         onClick={() => updateCartQuantity(item.uniqueId, -1)}
-                        className="p-1 text-slate-500 hover:text-rose-500 transition"
+                        className="p-1 text-muted-foreground hover:text-destructive transition"
                       >
                         <Minus className="size-3.5" />
                       </button>
-                      <span className="text-xs font-bold text-slate-800 min-w-[20px] text-center">
+                      <span className="text-xs font-bold text-foreground min-w-[20px] text-center">
                         {item.quantity}
                       </span>
-                      <button 
+                      <button
                         onClick={() => updateCartQuantity(item.uniqueId, 1)}
-                        className="p-1 text-slate-500 hover:text-[var(--store-theme)] transition"
+                        className="p-1 text-muted-foreground hover:text-[var(--store-theme)] transition"
                       >
                         <Plus className="size-3.5" />
                       </button>
@@ -727,9 +733,9 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
             </div>
 
             {/* Footer Summary */}
-            <div className="p-4 border-t bg-slate-50 space-y-4">
-              <div className="flex justify-between items-center text-sm font-extrabold text-slate-800">
-                <span>Subtotal</span>
+            <div className="p-4 border-t bg-muted space-y-4">
+              <div className="flex justify-between items-center text-sm font-extrabold text-foreground">
+                <span>{t("publicOrder.menu.subtotal")}</span>
                 <span>{formatPrice(cartTotals.subtotal)}</span>
               </div>
               <button
@@ -740,7 +746,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 className="w-full py-3.5 rounded-xl font-bold text-white shadow-md text-center transition-transform active:scale-[0.98]"
                 style={{ backgroundColor: "var(--store-theme)" }}
               >
-                Lanjutkan ke Informasi Pemesan
+                {t("publicOrder.menu.continueToOrderInfo")}
               </button>
             </div>
           </div>
@@ -750,16 +756,16 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       {/* Checkout Drawer */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
-          <div className="bg-white rounded-t-3xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
+          <div className="bg-card rounded-t-3xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
             {/* Header */}
-            <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+            <div className="p-4 border-b flex justify-between items-center bg-muted">
               <div className="flex items-center gap-2">
                 <MessageSquare className="size-5 text-[var(--store-theme)]" />
-                <h3 className="font-black text-slate-800 text-sm">Informasi Pemesan</h3>
+                <h3 className="font-black text-foreground text-sm">{t("publicOrder.checkoutForm.title")}</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setIsCheckoutOpen(false)}
-                className="p-1 rounded-full hover:bg-slate-200 transition text-slate-400"
+                className="p-1 rounded-full hover:bg-muted transition text-muted-foreground"
               >
                 <X className="size-5" />
               </button>
@@ -768,44 +774,44 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
             {/* Form */}
             <div className="flex-1 overflow-y-auto p-4 space-y-5">
               {checkoutError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-sm font-semibold">
+                <div className="p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded-lg text-sm font-semibold">
                   {checkoutError}
                 </div>
               )}
 
               {/* Customer Name */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Nama Anda *</label>
+                <label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest pl-1">{t("publicOrder.checkoutForm.nameLabel")} *</label>
                 <input
                   type="text"
-                  placeholder="Masukkan nama lengkap..."
+                  placeholder={t("publicOrder.checkoutForm.namePlaceholder")}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full h-12 bg-slate-50/50 border border-slate-200 rounded-xl px-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
+                  className="w-full h-12 bg-muted/50 border border-border rounded-xl px-4 text-sm font-medium focus:bg-card focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
                   required
                 />
               </div>
 
               {/* Customer Phone */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Nomor WhatsApp</label>
+                <label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest pl-1">{t("publicOrder.checkoutForm.whatsappLabel")}</label>
                 <input
                   type="tel"
-                  placeholder="Contoh: 08123456789 (Opsional)"
+                  placeholder={t("publicOrder.checkoutForm.whatsappPlaceholder")}
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full h-12 bg-slate-50/50 border border-slate-200 rounded-xl px-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
+                  className="w-full h-12 bg-muted/50 border border-border rounded-xl px-4 text-sm font-medium focus:bg-card focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
                 />
               </div>
 
               {/* Order Method */}
               <div className="space-y-2 pt-2">
-                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Metode Pesanan *</label>
+                <label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest pl-1">{t("publicOrder.checkoutForm.orderMethodLabel")} *</label>
                 <div className="grid grid-cols-3 gap-2.5">
                   {[
-                    { key: "DINE_IN", label: "Makan Sini", icon: <Utensils className="size-4 mb-1.5" /> },
-                    { key: "TAKEAWAY", label: "Bungkus", icon: <ShoppingBag className="size-4 mb-1.5" /> },
-                    { key: "DELIVERY", label: "Delivery", icon: <Bike className="size-4 mb-1.5" /> }
+                    { key: "DINE_IN", label: t("publicOrder.checkoutForm.dineIn"), icon: <Utensils className="size-4 mb-1.5" /> },
+                    { key: "TAKEAWAY", label: t("publicOrder.checkoutForm.takeaway"), icon: <ShoppingBag className="size-4 mb-1.5" /> },
+                    { key: "DELIVERY", label: t("publicOrder.checkoutForm.delivery"), icon: <Bike className="size-4 mb-1.5" /> }
                   ].map(method => (
                     <button
                       key={method.key}
@@ -813,7 +819,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                       className={`relative flex flex-col items-center justify-center p-3 border rounded-xl transition-all duration-200 active:scale-[0.96] ${
                         orderMethod === method.key
                           ? "border-[var(--store-theme)] text-[var(--store-theme)] bg-[var(--store-theme-light-bg)] shadow-sm"
-                          : "border-slate-200 text-slate-500 bg-white hover:border-slate-300 hover:bg-slate-50"
+                          : "border-border text-muted-foreground bg-card hover:border-muted-foreground/30 hover:bg-muted"
                       }`}
                     >
                       {method.icon}
@@ -833,13 +839,13 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
               <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                 {orderMethod === "DINE_IN" && (
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Nomor Meja *</label>
+                    <label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest pl-1">{t("publicOrder.checkoutForm.tableLabel")} *</label>
                     <input
                       type="text"
-                      placeholder="Contoh: Meja 4, Meja A2..."
+                      placeholder={t("publicOrder.checkoutForm.tablePlaceholder")}
                       value={tableNumber}
                       onChange={(e) => setTableNumber(e.target.value)}
-                      className="w-full h-12 bg-slate-50/50 border border-slate-200 rounded-xl px-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
+                      className="w-full h-12 bg-muted/50 border border-border rounded-xl px-4 text-sm font-medium focus:bg-card focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
                       required
                     />
                   </div>
@@ -847,13 +853,13 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
 
                 {orderMethod === "DELIVERY" && (
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Alamat Lengkap *</label>
+                    <label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest pl-1">{t("publicOrder.checkoutForm.addressLabel")} *</label>
                     <textarea
-                      placeholder="Tulis alamat pengantaran lengkap dengan patokan..."
+                      placeholder={t("publicOrder.checkoutForm.addressPlaceholder")}
                       value={deliveryAddress}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
                       rows={3}
-                      className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all resize-none"
+                      className="w-full bg-muted/50 border border-border rounded-xl p-4 text-sm font-medium focus:bg-card focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all resize-none"
                       required
                     />
                   </div>
@@ -862,17 +868,17 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
 
               {/* Payment Method Selector */}
               <div className="space-y-3 pt-2">
-                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Metode Pembayaran *</label>
-                
+                <label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest pl-1">{t("publicOrder.checkoutForm.paymentLabel")} *</label>
+
                 <div className="space-y-4">
                   {[
-                    { title: "Bayar di Kasir", methods: ["CASH"] },
-                    { title: "Instant & E-Wallet", methods: ["QRIS", "GOPAY", "OVO", "DANA", "SHOPEEPAY"] },
-                    { title: "Virtual Account", methods: ["BANK_TRANSFER"] },
-                    { title: "Kartu Kredit / Debit", methods: ["STRIPE_CARD"] }
+                    { title: t("publicOrder.checkoutForm.groupCashier"), methods: ["CASH"] },
+                    { title: t("publicOrder.checkoutForm.groupEwallet"), methods: ["QRIS", "GOPAY", "OVO", "DANA", "SHOPEEPAY"] },
+                    { title: t("publicOrder.checkoutForm.groupVa"), methods: ["BANK_TRANSFER"] },
+                    { title: t("publicOrder.checkoutForm.groupCard"), methods: ["STRIPE_CARD"] }
                   ].map((group) => (
                     <div key={group.title} className="space-y-2">
-                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">{group.title}</h4>
+                      <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">{group.title}</h4>
                       <div className="grid grid-cols-2 gap-2">
                         {group.methods.map((methodValue) => {
                           const option = PAYMENT_OPTIONS.find(o => o.value === methodValue);
@@ -886,13 +892,13 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                               className={`flex items-center gap-2.5 px-3 py-2.5 border rounded-xl transition-all duration-200 active:scale-[0.97] ${
                                 isSelected
                                   ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)] text-[var(--store-theme)] shadow-sm"
-                                  : "border-slate-200 text-slate-700 bg-white hover:border-slate-300"
+                                  : "border-border text-foreground bg-card hover:border-muted-foreground/30"
                               }`}
                             >
-                              <div className={`p-1 rounded-md flex items-center justify-center min-w-[32px] ${option.isImage ? "bg-white border shadow-[0_1px_3px_rgba(0,0,0,0.05)]" : isSelected ? "bg-[var(--store-theme)] text-white" : "bg-slate-100 text-slate-500"}`}>
+                              <div className={`p-1 rounded-md flex items-center justify-center min-w-[32px] ${option.isImage ? "bg-card border shadow-[0_1px_3px_rgba(0,0,0,0.05)]" : isSelected ? "bg-[var(--store-theme)] text-white" : "bg-muted text-muted-foreground"}`}>
                                 {option.icon}
                               </div>
-                              <span className="text-xs font-bold whitespace-nowrap">{option.label}</span>
+                              <span className="text-xs font-bold whitespace-nowrap">{t("publicOrder.paymentMethods." + option.value)}</span>
                             </button>
                           );
                         })}
@@ -905,7 +911,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
               {/* Bank Sub-selector (only when BANK_TRANSFER selected) */}
               {paymentMethod === "BANK_TRANSFER" && (
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pilih Bank *</label>
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("publicOrder.checkoutForm.selectBank")} *</label>
                   <div className="grid grid-cols-2 gap-2">
                     {VA_BANKS.map((bank) => (
                       <button
@@ -914,7 +920,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                         className={`flex items-center gap-2.5 px-3 py-3 border rounded-lg transition-all ${
                           selectedBankCode === bank.code
                             ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)] shadow-sm"
-                            : "border-slate-200 bg-white hover:border-slate-300"
+                            : "border-border bg-card hover:border-muted-foreground/30"
                         }`}
                       >
                         <div
@@ -923,7 +929,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                         >
                           {bank.label.slice(0, 3)}
                         </div>
-                        <span className={`text-sm font-bold ${selectedBankCode === bank.code ? "text-[var(--store-theme)]" : "text-slate-700"}`}>
+                        <span className={`text-sm font-bold ${selectedBankCode === bank.code ? "text-[var(--store-theme)]" : "text-foreground"}`}>
                           {bank.label}
                         </span>
                         {selectedBankCode === bank.code && (
@@ -934,27 +940,27 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                       </button>
                     ))}
                   </div>
-                  <p className="text-[10px] text-slate-400">Nomor Virtual Account akan ditampilkan setelah pesanan dibuat.</p>
+                  <p className="text-[10px] text-muted-foreground">{t("publicOrder.checkoutForm.vaHint")}</p>
                 </div>
               )}
 
               {/* Order Notes */}
               <div className="space-y-1.5 pt-2">
-                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Catatan Tambahan (Opsional)</label>
+                <label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest pl-1">{t("publicOrder.checkoutForm.notesLabel")}</label>
                 <input
                   type="text"
-                  placeholder="Contoh: Es batu sedikit, pedas sedang..."
+                  placeholder={t("publicOrder.checkoutForm.notesPlaceholder")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full h-12 bg-slate-50/50 border border-slate-200 rounded-xl px-4 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
+                  className="w-full h-12 bg-muted/50 border border-border rounded-xl px-4 text-sm font-medium focus:bg-card focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
                 />
               </div>
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t bg-slate-50 space-y-4">
-              <div className="flex justify-between items-center text-sm font-extrabold text-slate-800">
-                <span>Subtotal ({cartTotals.totalCount} Menu)</span>
+            <div className="p-4 border-t bg-muted space-y-4">
+              <div className="flex justify-between items-center text-sm font-extrabold text-foreground">
+                <span>{t("publicOrder.menu.subtotal")} ({cartTotals.totalCount} {t("publicOrder.checkoutForm.menuUnit")})</span>
                 <span>{formatPrice(cartTotals.subtotal)}</span>
               </div>
               <button
@@ -968,7 +974,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 ) : (
                   <>
                     <MessageSquare className="size-5" />
-                    <span>Bayar & Proses Pesanan</span>
+                    <span>{t("publicOrder.checkoutForm.payAndProcess")}</span>
                   </>
                 )}
               </button>
@@ -980,9 +986,9 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       {/* Item Detail / Modifier Selection Drawer */}
       {activeItem && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
-          <div className="bg-white rounded-t-3xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
+          <div className="bg-card rounded-t-3xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
             {/* Image (if exists) */}
-            <div className="relative h-44 w-full bg-slate-100 shrink-0">
+            <div className="relative h-44 w-full bg-muted shrink-0">
               {activeItem.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img 
@@ -991,7 +997,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="h-full w-full flex items-center justify-center text-slate-300">
+                <div className="h-full w-full flex items-center justify-center text-muted-foreground/50">
                   <Utensils className="size-12 stroke-1" />
                 </div>
               )}
@@ -1004,11 +1010,11 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
             </div>
 
             {/* Title / Description */}
-            <div className="p-4 border-b bg-slate-50">
-              <h3 className="font-extrabold text-slate-800 text-lg leading-tight">{activeItem.name}</h3>
+            <div className="p-4 border-b bg-muted">
+              <h3 className="font-extrabold text-foreground text-lg leading-tight">{activeItem.name}</h3>
               <p className="font-black text-[var(--store-theme)] text-sm mt-1">{formatPrice(Number(activeItem.price))}</p>
               {activeItem.description && (
-                <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">{activeItem.description}</p>
+                <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">{activeItem.description}</p>
               )}
             </div>
 
@@ -1017,12 +1023,12 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
               {((activeItem.modifiers as ModifierGroup[]) || []).map((group, groupIdx) => (
                 <div key={groupIdx} className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <h4 className="font-bold text-sm text-slate-800">
+                    <h4 className="font-bold text-sm text-foreground">
                       {group.name}
-                      {group.isRequired && <span className="text-rose-500 ml-1 font-black">*</span>}
+                      {group.isRequired && <span className="text-destructive ml-1 font-black">*</span>}
                     </h4>
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-                      {group.isRequired ? "Wajib" : "Opsional"}
+                    <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      {group.isRequired ? t("publicOrder.itemDetail.required") : t("publicOrder.itemDetail.optional")}
                     </span>
                   </div>
                   
@@ -1035,24 +1041,24 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                           key={optIdx}
                           onClick={() => handleModifierChange(group.name, option, group)}
                           className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${
-                            isSelected 
-                              ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)]" 
-                              : "border-slate-200 hover:border-slate-300"
+                            isSelected
+                              ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)]"
+                              : "border-border hover:border-muted-foreground/30"
                           }`}
                         >
                           <div className="flex items-center gap-3">
                             {/* Custom Checkbox/Radio styling */}
                             <div className={`size-5 rounded-md border flex items-center justify-center transition-colors ${
-                              isSelected 
-                                ? "bg-[var(--store-theme)] border-transparent" 
-                                : "border-slate-300"
+                              isSelected
+                                ? "bg-[var(--store-theme)] border-transparent"
+                                : "border-muted-foreground/30"
                             }`}>
                               {isSelected && <Check className="size-3.5 text-white stroke-[3px]" />}
                             </div>
-                            <span className="text-xs font-semibold text-slate-700">{option.name}</span>
+                            <span className="text-xs font-semibold text-foreground">{option.name}</span>
                           </div>
-                          <span className="text-xs font-bold text-slate-500">
-                            {option.priceAdd > 0 ? `+${formatPrice(option.priceAdd)}` : "Gratis"}
+                          <span className="text-xs font-bold text-muted-foreground">
+                            {option.priceAdd > 0 ? `+${formatPrice(option.priceAdd)}` : t("publicOrder.itemDetail.free")}
                           </span>
                         </div>
                       );
@@ -1063,22 +1069,22 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
             </div>
 
             {/* Quantity Selector & Add to Cart button */}
-            <div className="p-4 border-t bg-slate-50 space-y-4">
+            <div className="p-4 border-t bg-muted space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jumlah Pesanan</span>
-                <div className="flex items-center gap-3 border rounded-full px-3 py-1 bg-white shadow-sm">
-                  <button 
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("publicOrder.itemDetail.quantityLabel")}</span>
+                <div className="flex items-center gap-3 border rounded-full px-3 py-1 bg-card shadow-sm">
+                  <button
                     onClick={() => itemQuantity > 1 && setItemQuantity(itemQuantity - 1)}
-                    className="p-1 text-slate-400 hover:text-slate-600 transition"
+                    className="p-1 text-muted-foreground hover:text-foreground transition"
                   >
                     <Minus className="size-4" />
                   </button>
-                  <span className="text-sm font-bold text-slate-800 min-w-[24px] text-center">
+                  <span className="text-sm font-bold text-foreground min-w-[24px] text-center">
                     {itemQuantity}
                   </span>
-                  <button 
+                  <button
                     onClick={() => setItemQuantity(itemQuantity + 1)}
-                    className="p-1 text-slate-400 hover:text-slate-600 transition"
+                    className="p-1 text-muted-foreground hover:text-foreground transition"
                   >
                     <Plus className="size-4" />
                   </button>
@@ -1090,7 +1096,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 className="w-full py-3.5 rounded-xl font-bold text-white shadow-md text-center transition-transform active:scale-[0.98]"
                 style={{ backgroundColor: "var(--store-theme)" }}
               >
-                Tambahkan ke Keranjang
+                {t("publicOrder.itemDetail.addToCart")}
               </button>
             </div>
           </div>
