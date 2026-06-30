@@ -579,10 +579,30 @@ async function resolveMaterialId(
 function parseIngredientsBlob(
   blob: string
 ): Array<{ name: string; qty: number; unit: string }> {
-  return blob
-    // Split on ";" / newline, and on a comma followed by whitespace.
-    // The trailing-whitespace requirement preserves decimals like "1,5 kg".
-    .split(/[;\n]+|,\s+/)
+  // A chunk that is purely a quantity (+ optional unit), e.g. "500 g", "300ml".
+  const isPureQuantity = (s: string) => /\d/.test(s) && /^[\d.,]+\s*[a-zA-Zµ%]*$/.test(s.trim());
+
+  // Build ingredient parts. ";" and newlines are unambiguous separators. A comma
+  // is ambiguous: it separates ingredients in "Flour 500g, Water 300ml" but a
+  // name from its quantity in "Farine T65, 500 g". So we split on comma+space and
+  // re-attach a trailing pure-quantity fragment to the preceding name.
+  const parts: string[] = [];
+  for (const segment of blob.split(/[;\n]+/)) {
+    let buffer = "";
+    for (const chunk of segment.split(/,\s+/)) {
+      const t = chunk.trim();
+      if (!t) continue;
+      if (buffer && isPureQuantity(t)) {
+        buffer = `${buffer} ${t}`; // e.g. "Farine T65" + "500 g"
+      } else {
+        if (buffer) parts.push(buffer);
+        buffer = t;
+      }
+    }
+    if (buffer) parts.push(buffer);
+  }
+
+  return parts
     .map((s) => s.trim())
     .filter(Boolean)
     .map((part) => {
@@ -699,13 +719,18 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
       const ingredientsToCreate: Array<{ materialId: string; quantity: number; unit: string }> = [];
 
       const addIngredient = (materialId: string, quantity: number, unit: string) => {
-        if (!ingredientsToCreate.some((i) => i.materialId === materialId)) {
-          ingredientsToCreate.push({
-            materialId,
-            quantity: quantity || 1,
-            unit: unit || "unit",
-          });
+        const qty = quantity || 1;
+        const u = unit || "unit";
+        // RecipeIngredient is unique per (recipe, material), so the same material
+        // listed twice must collapse to ONE row. Sum the quantities when the units
+        // match (e.g. "Eau 300 ml; Eau 200 ml" -> 500 ml); otherwise keep the
+        // first occurrence (cannot represent two different units for one material).
+        const existing = ingredientsToCreate.find((i) => i.materialId === materialId);
+        if (existing) {
+          if (existing.unit === u) existing.quantity += qty;
+          return;
         }
+        ingredientsToCreate.push({ materialId, quantity: qty, unit: u });
       };
 
       // Format A: multi-row — one ingredient per row (ingredient_name columns)
