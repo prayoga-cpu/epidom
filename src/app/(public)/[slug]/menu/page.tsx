@@ -59,6 +59,7 @@ export default async function MenuPage({ params }: PageProps) {
     whatsappNumber: storefront.whatsappNumber,
     themeColor: storefront.themeColor,
     fontFamily: storefront.fontFamily,
+    acceptsReservations: storefront.acceptsReservations,
   };
 
   return <PublicMenu storefront={storefrontData} menuCategories={menuCategories} />;

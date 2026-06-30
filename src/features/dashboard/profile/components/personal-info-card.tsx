@@ -16,6 +16,7 @@ interface PersonalInfoCardProps {
     locale: "en" | "fr" | "id" | undefined;
     timezone: string;
     currency: string;
+    defaultLanding?: string;
   };
   onUpdate?: () => void;
 }
@@ -37,6 +38,19 @@ export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
     }
   };
 
+  const getLandingLabel = (v?: string) => {
+    switch (v) {
+      case "pos":
+        return t("profile.personal.landingOptions.pos");
+      case "storefront":
+        return t("profile.personal.landingOptions.storefront");
+      case "data":
+        return t("profile.personal.landingOptions.data");
+      default:
+        return t("profile.personal.landingOptions.dashboard");
+    }
+  };
+
   const infoItems = [
     { label: t("auth.name"), value: user.name || "—" },
     { label: t("auth.email"), value: user.email },
@@ -44,6 +58,7 @@ export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
     { label: t("profile.personal.language"), value: getLanguageLabel(user.locale) },
     { label: t("profile.personal.timezone"), value: user.timezone || "—" },
     { label: t("profile.personal.currency"), value: user.currency || "—" },
+    { label: t("profile.personal.defaultLanding"), value: getLandingLabel(user.defaultLanding) },
   ];
 
   return (

@@ -1680,6 +1680,14 @@ export const en = {
         review: "Review",
       },
 
+      warnings: {
+        noIngredients: {
+          title: "No Ingredients",
+          description:
+            "This recipe doesn't have any ingredients yet. Add ingredients to calculate costs and use this recipe for production.",
+          action: "Add Ingredients",
+        },
+      },
       // Ingredients
       ingredients: {
         title: "Ingredients",
@@ -1844,6 +1852,7 @@ export const en = {
     products: {
       pageTitle: "Products",
       inMenu: "In Menu",
+      confirmRemoveFromMenu: "Remove this product from the POS menu?",
       addTitle: "Add New Product",
       addButton: "Add Product",
       editTitle: "Edit Product",
@@ -1924,12 +1933,14 @@ export const en = {
         edit: "Edit Product",
         addToMenu: "Add to POS menu",
         alreadyInMenu: "Already in POS menu",
+        removeFromMenu: "In POS menu — click to remove",
         delete: "Delete Product",
       },
 
       // Toasts
       toasts: {
         addedToMenu: "added to POS menu",
+        removedFromMenu: "removed from POS menu",
         syncMenuPrompt: "Price/name changed. Sync to POS menu?",
         syncMenuAction: "Sync",
         syncMenuDone: "POS menu updated",
@@ -2191,6 +2202,11 @@ export const en = {
     selectOrder: "Select an order to view details",
     selectDelivery: "Select a delivery to view details",
     invalidCredentials: "Invalid email or password",
+    oauthStateMismatch: "Your sign-in session expired. Please try signing in again.",
+    oauthInternalError: "Sign-in failed due to a server error. Please try again.",
+    accountNotLinked: "This Google account isn't linked yet. Sign in with your email and password first, then link Google.",
+    oauthRestart: "Your sign-in session expired. Please try signing in again.",
+    oauthGenericError: "Sign-in failed. Please try again.",
     loginFailed: "Login failed. Please try again.",
     loggingIn: "Logging in...",
     registrationSuccessful: "Registration successful! Please login.",
@@ -2377,6 +2393,14 @@ export const en = {
       language: "Language",
       timezone: "Timezone",
       currency: "Currency",
+      defaultLanding: "Default landing page",
+      defaultLandingHint: "The page you open first when you enter a store.",
+      landingOptions: {
+        dashboard: "Dashboard",
+        pos: "POS Cashier",
+        storefront: "Storefront",
+        data: "Data & Inventory",
+      },
       memberSince: "Member since",
       avatar: "Profile Picture",
       changeAvatar: "Change Avatar",
@@ -3798,7 +3822,7 @@ export const en = {
     analysis: {
       title: "Analyzing your file",
       description:
-        "We are processing your data to understand the structure and format. This usually takes 5-15 seconds.",
+        "We are processing your data to understand the structure and format. This can take up to a minute or two for larger files.",
       stages: {
         language: "Detecting language & format",
         structure: "Analyzing structure",
@@ -3806,6 +3830,7 @@ export const en = {
         healing: "Healing data issues",
         validation: "Validating data",
       },
+      finalizing: "Finalizing analysis…",
       analyzing: "Analyzing file structure...",
       identifying: "Identifying columns...",
       mapping: "Mapping data fields...",
@@ -4686,6 +4711,7 @@ export const en = {
       cmp_thermal: "Thermal printers",
       cmp_staff: "Staff & shifts",
       cmp_recipes: "Recipes & COGS",
+      cmp_ai_import: "AI Smart Import (CSV / spreadsheet)",
       cmp_stock: "Auto stock & alerts",
       cmp_daily: "Daily reports email",
       cmp_multi: "Multi-outlet dashboard",

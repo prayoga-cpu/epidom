@@ -116,6 +116,10 @@ export const StructureAnalysisSchema = z.object({
   structureType: StructureType.default("STANDARD_CSV"),
   language: z.string().default("unknown"),
   hasMultipleEntities: z.boolean().default(false),
+  // The single best-guess entity type for the WHOLE file (works for any language,
+  // since the model reads the headers directly). Used by auto-detection so a
+  // single-entity file is not silently treated as "material".
+  primaryEntityType: EntityType.optional().nullable(),
   junkRowsAtTop: z.number().default(0),
   headerRowIndex: z.number().default(0),
   dataStartIndex: z.number().default(1),

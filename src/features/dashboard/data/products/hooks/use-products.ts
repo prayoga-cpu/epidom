@@ -542,6 +542,55 @@ export function useAddProductToMenu(storeId: string) {
 }
 
 /**
+ * Remove a product from the store's POS/storefront menu by deleting its linked
+ * MenuItem(s). Mirror of useAddProductToMenu so the product card can toggle.
+ */
+export function useRemoveProductFromMenu(storeId: string) {
+  const queryClient = useQueryClient();
+  const linkedKey = ["storefront-items-linked", storeId];
+
+  return useMutation({
+    mutationFn: async (product: Pick<Product, "id" | "name">) => {
+      // Find the linked menu item(s) for this product, then delete each.
+      const items: LinkedMenuItem[] = await fetch(
+        `/api/stores/${storeId}/storefront/items?productId=${product.id}`
+      )
+        .then((r) => r.json())
+        .then((d) => (d?.data ?? []) as LinkedMenuItem[]);
+
+      for (const item of items) {
+        const res = await fetch(`/api/stores/${storeId}/storefront/items/${item.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.error?.message || error.error || "Failed to remove from menu");
+        }
+      }
+      return { removed: items.length };
+    },
+    onMutate: async (product) => {
+      // Optimistic removal of the "In Menu" badge.
+      await queryClient.cancelQueries({ queryKey: linkedKey });
+      const previous = queryClient.getQueryData<LinkedMenuItem[]>(linkedKey);
+      queryClient.setQueryData<LinkedMenuItem[]>(linkedKey, (old) =>
+        (old ?? []).filter((i) => i.productId !== product.id)
+      );
+      return { previous };
+    },
+    onError: (_err, _product, context: any) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(linkedKey, context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: linkedKey });
+      queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId] });
+    },
+  });
+}
+
+/**
  * Returns a Set of productIds that already have a linked MenuItem in the storefront.
  * Used by the product cards to show an "In Menu" badge instead of the add button.
  */

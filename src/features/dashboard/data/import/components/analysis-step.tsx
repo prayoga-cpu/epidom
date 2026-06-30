@@ -20,6 +20,11 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
   const { t } = useI18n();
   const [currentStage, setCurrentStage] = useState(0);
   const [completedStages, setCompletedStages] = useState<number[]>([]);
+  // Once we pass the last simulated stage, the real backend is usually still
+  // working. Instead of parking the spinner on "Validation" (which looks frozen),
+  // switch to an honest "Finalizing…" row with a live elapsed-time counter.
+  const [finalizing, setFinalizing] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
 
   // Stages configuration with i18n
   const ANALYSIS_STAGES = useMemo(() => [
@@ -41,6 +46,12 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
           setCompletedStages((completed) => [...completed, prev]);
           return next;
         }
+        // Reached the last simulated stage: mark it done and enter the
+        // "finalizing" loop so the UI keeps signalling real progress.
+        setCompletedStages((completed) =>
+          completed.includes(prev) ? completed : [...completed, prev]
+        );
+        setFinalizing(true);
         return prev;
       });
     }, 2000);
@@ -48,11 +59,20 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
     return () => clearInterval(interval);
   }, [isLoading, ANALYSIS_STAGES.length]);
 
+  // Live elapsed-time counter while analysing
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(timer);
+  }, [isLoading]);
+
   // Reset on new analysis
   useEffect(() => {
     if (isLoading) {
       setCurrentStage(0);
       setCompletedStages([]);
+      setFinalizing(false);
+      setElapsed(0);
     }
   }, [isLoading]);
 
@@ -73,8 +93,9 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
       <div className="w-full max-w-md space-y-3">
         {ANALYSIS_STAGES.map((stage, index) => {
           const Icon = stage.icon;
-          const isCompleted = completedStages.includes(index);
-          const isCurrent = currentStage === index;
+          // When finalizing, every simulated stage is shown as complete.
+          const isCompleted = completedStages.includes(index) || finalizing;
+          const isCurrent = !finalizing && currentStage === index;
 
           return (
             <div
@@ -114,6 +135,16 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
             </div>
           );
         })}
+
+        {/* Finalizing row — shown once the simulated stages complete but the
+            backend is still working, with a live elapsed-time counter. */}
+        {finalizing && (
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 text-primary transition-all duration-300">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm font-medium">{t("import.analysis.finalizing")}</span>
+            <span className="ml-auto text-xs tabular-nums text-muted-foreground">{elapsed}s</span>
+          </div>
+        )}
       </div>
 
       {/* Info text */}

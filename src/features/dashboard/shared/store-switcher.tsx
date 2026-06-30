@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStores } from "@/features/stores/stores/hooks/use-stores";
 import { useCurrentStore } from "./hooks/use-current-store";
+import { useDefaultLanding } from "@/features/dashboard/profile/hooks/use-default-landing";
 import { useI18n } from "@/components/lang/i18n-provider";
 
 /**
@@ -41,10 +42,11 @@ export function StoreSwitcher() {
 
   const { store: currentStore, storeId } = useCurrentStore();
   const { data: stores, isLoading } = useStores();
+  const defaultLanding = useDefaultLanding();
 
   const handleSelectStore = (selectedStoreId: string) => {
     setOpen(false);
-    router.push(`/store/${selectedStoreId}/dashboard`);
+    router.push(`/store/${selectedStoreId}/${defaultLanding}`);
   };
 
   const handleCreateStore = () => {

@@ -6,6 +6,26 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/services/email.service";
 import { isAdminEmail } from "@/lib/admin";
 
+/**
+ * In production, share auth cookies (incl. the OAuth `state` cookie) across the
+ * apex + www of the real domain, so a www <-> apex hop during the Google OAuth
+ * round-trip doesn't drop the state cookie (the "state_mismatch" error).
+ * Skipped for localhost and *.vercel.app (where a custom cookie domain would
+ * break cookies entirely).
+ */
+function getCrossSubDomainCookies(): { enabled: boolean; domain: string } | undefined {
+  if (process.env.NODE_ENV !== "production") return undefined;
+  try {
+    const host = new URL(process.env.NEXT_PUBLIC_APP_URL || "").hostname;
+    if (!host || host === "localhost" || host.endsWith(".vercel.app")) return undefined;
+    const parts = host.split(".");
+    const root = parts.length >= 2 ? parts.slice(-2).join(".") : host;
+    return { enabled: true, domain: `.${root}` };
+  } catch {
+    return undefined;
+  }
+}
+
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
@@ -24,6 +44,7 @@ export const auth = betterAuth({
   }),
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
+    ...(getCrossSubDomainCookies() ? { crossSubDomainCookies: getCrossSubDomainCookies() } : {}),
   },
   onAPIError: {
     // Redirect OAuth errors to the login page instead of Better Auth's raw HTML error page

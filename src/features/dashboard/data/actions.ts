@@ -495,6 +495,125 @@ async function importSuppliers(data: any[], storeId: string): Promise<ImportResu
 }
 
 /**
+ * Find or create a Material for a recipe ingredient.
+ * Resolution order: SKU (unique per store) -> case-insensitive name -> create.
+ * When creating, cascades a supplier link if a supplier name is provided.
+ * Returns the material id, or null if the name is blank.
+ */
+async function resolveMaterialId(
+  storeId: string,
+  name: string,
+  opts: {
+    unit?: string;
+    sku?: string;
+    price?: number;
+    stock?: number;
+    supplier?: string;
+  } = {}
+): Promise<string | null> {
+  const cleanName = (name || "").trim();
+  if (!cleanName) return null;
+
+  // 1. Match by SKU first when provided (sku is @@unique([storeId, sku]))
+  const cleanSku = opts.sku?.trim();
+  if (cleanSku) {
+    const bySku = await prisma.material.findFirst({
+      where: { storeId, sku: { equals: cleanSku, mode: "insensitive" } },
+      select: { id: true },
+    });
+    if (bySku) return bySku.id;
+  }
+
+  // 2. Match by case-insensitive name
+  const byName = await prisma.material.findFirst({
+    where: { storeId, name: { equals: cleanName, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (byName) return byName.id;
+
+  // 3. Cascade-create the material (and its supplier, if any)
+  let supplierId: string | undefined;
+  const supplierName = opts.supplier?.trim();
+  if (supplierName) {
+    const existingSupplier = await prisma.supplier.findFirst({
+      where: { storeId, name: { equals: supplierName, mode: "insensitive" } },
+      select: { id: true },
+    });
+    if (existingSupplier) {
+      supplierId = existingSupplier.id;
+    } else {
+      const newSupplier = await prisma.supplier.create({
+        data: { storeId, name: supplierName, createdAt: new Date(), updatedAt: new Date() },
+        select: { id: true },
+      });
+      supplierId = newSupplier.id;
+    }
+  }
+
+  const created = await prisma.material.create({
+    data: {
+      storeId,
+      name: cleanName,
+      unit: opts.unit?.trim() || "kg",
+      sku:
+        cleanSku ||
+        `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+      unitCost: opts.price ?? 0,
+      currentStock: opts.stock ?? 0,
+      category: "Imported",
+      materialSuppliers: supplierId
+        ? { create: { supplierId, price: opts.price ?? 0, isPreferred: true } }
+        : undefined,
+    },
+    select: { id: true },
+  });
+  return created.id;
+}
+
+/**
+ * Parse a combined ingredients cell into structured ingredients.
+ * Splits on ";" / newline and understands several "name + qty + unit" shapes:
+ *   "Farine:500g; Eau:300 ml", "Sel 5 g", "2 kg Sucre", "Farine de blé - 500 g".
+ * Parts with no detectable quantity become a single ingredient (qty 1, unit "unit").
+ */
+function parseIngredientsBlob(
+  blob: string
+): Array<{ name: string; qty: number; unit: string }> {
+  return blob
+    // Split on ";" / newline, and on a comma followed by whitespace.
+    // The trailing-whitespace requirement preserves decimals like "1,5 kg".
+    .split(/[;\n]+|,\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((part) => {
+      // "Name: 500 g" / "Name - 500g" / "Salt 5g" (name first, qty at the end)
+      const trailing = part.match(/^(.*?)[\s:–\-]+([\d.,]+)\s*([a-zA-Zµ%]+)?$/);
+      if (trailing && trailing[2]) {
+        const name = trailing[1].replace(/[\s:–\-]+$/, "").trim();
+        if (name) {
+          return {
+            name,
+            qty: parseGlobalNumber(trailing[2]) || 1,
+            unit: (trailing[3] || "unit").trim(),
+          };
+        }
+      }
+      // "500g Flour" / "2 kg Sugar" (qty + unit first)
+      const leading = part.match(/^([\d.,]+)\s*([a-zA-Zµ%]+)?\s+(.+)$/);
+      if (leading && leading[1] && leading[3]) {
+        return {
+          name: leading[3].trim(),
+          qty: parseGlobalNumber(leading[1]) || 1,
+          unit: (leading[2] || "unit").trim(),
+        };
+      }
+      // No quantity detected — treat the whole part as a name
+      return { name: part, qty: 1, unit: "unit" };
+    })
+    .filter((i) => i.name);
+}
+
+/**
  * Import recipes - uses individual creates for better error handling
  * since recipes may have complex validation
  *
@@ -577,81 +696,50 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
       }
 
       // Prepare Ingredients
-      const ingredientsToCreate: any[] = [];
+      const ingredientsToCreate: Array<{ materialId: string; quantity: number; unit: string }> = [];
 
-      // ... (ingredient processing logic remains same) ...
+      const addIngredient = (materialId: string, quantity: number, unit: string) => {
+        if (!ingredientsToCreate.some((i) => i.materialId === materialId)) {
+          ingredientsToCreate.push({
+            materialId,
+            quantity: quantity || 1,
+            unit: unit || "unit",
+          });
+        }
+      };
+
+      // Format A: multi-row — one ingredient per row (ingredient_name columns)
       for (const row of rows) {
         const ingName = row.ingredient_name || row.ingredientName;
         if (ingName && typeof ingName === "string" && ingName.trim()) {
-          const cleanIngName = ingName.trim();
-
-          // Find or Create Material
-          let material = await prisma.material.findFirst({
-            where: { storeId, name: { equals: cleanIngName, mode: "insensitive" } },
-            select: { id: true },
+          const materialId = await resolveMaterialId(storeId, ingName, {
+            unit: row.ingredient_unit || row.ingredientUnit,
+            sku: row.ingredient_sku,
+            price: parseGlobalNumber(row.ingredient_price) || 0,
+            stock: parseGlobalNumber(row.ingredient_stock) || 0,
+            supplier: row.ingredient_supplier,
           });
-
-          if (!material) {
-            // Check for supplier info to cascade create/link
-            let supplierId = undefined;
-            const supplierName = row.ingredient_supplier;
-
-            if (supplierName && typeof supplierName === "string" && supplierName.trim()) {
-              const cleanSupName = supplierName.trim();
-              const existingSupplier = await prisma.supplier.findFirst({
-                where: { storeId, name: { equals: cleanSupName, mode: "insensitive" } },
-                select: { id: true },
-              });
-
-              if (existingSupplier) {
-                supplierId = existingSupplier.id;
-              } else {
-                const newSupplier = await prisma.supplier.create({
-                  data: {
-                    storeId,
-                    name: cleanSupName,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                  },
-                  select: { id: true },
-                });
-                supplierId = newSupplier.id;
-              }
-            }
-
-            // Auto-create material if missing with extended info from recipe row
-            material = await prisma.material.create({
-              data: {
-                storeId,
-                name: cleanIngName,
-                unit: row.ingredient_unit || row.ingredientUnit || "kg",
-                sku:
-                  row.ingredient_sku ||
-                  `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-                unitCost: parseGlobalNumber(row.ingredient_price) || 0,
-                currentStock: parseGlobalNumber(row.ingredient_stock) || 0,
-                category: "Imported",
-                materialSuppliers: supplierId
-                  ? {
-                      create: {
-                        supplierId,
-                        price: parseGlobalNumber(row.ingredient_price) || 0,
-                        isPreferred: true,
-                      },
-                    }
-                  : undefined,
-              },
-              select: { id: true },
-            });
+          if (materialId) {
+            addIngredient(
+              materialId,
+              parseGlobalNumber(row.ingredient_qty) ||
+                parseGlobalNumber(row.ingredientQuantity) ||
+                1,
+              row.ingredient_unit || row.ingredientUnit || "unit"
+            );
           }
+        }
+      }
 
-          if (!ingredientsToCreate.some((i) => i.materialId === material!.id)) {
-            ingredientsToCreate.push({
-              materialId: material.id,
-              quantity: parseGlobalNumber(row.ingredient_qty) || parseGlobalNumber(row.ingredientQuantity) || 1,
-              unit: row.ingredient_unit || row.ingredientUnit || "kg",
-            });
-          }
+      // Format B: combined cell — a single column listing all ingredients,
+      // e.g. "Farine:500g; Eau:300ml; Sel:5g". Parse it into real ingredients
+      // (it is also kept in the instructions below for human reference).
+      const blobSource =
+        mainRow.ingredients_text || mainRow.ingredients || mainRow.Ingredients || "";
+      if (typeof blobSource === "string" && blobSource.trim()) {
+        for (const ing of parseIngredientsBlob(blobSource)) {
+          const materialId = await resolveMaterialId(storeId, ing.name, { unit: ing.unit });
+          if (materialId) addIngredient(materialId, ing.qty, ing.unit);
         }
       }
 

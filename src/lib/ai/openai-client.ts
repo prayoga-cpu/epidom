@@ -28,6 +28,10 @@ export async function generateStructuredResponse<T extends z.ZodType>(
   schema: T,
   options?: {
     temperature?: number;
+    /** Built-in ai-sdk retry/backoff on transient/rate-limit errors. Default 2. */
+    maxRetries?: number;
+    /** Hard ceiling (ms) for the whole call incl. retries. Default 30s. */
+    timeoutMs?: number;
   }
 ): Promise<{
   data: z.infer<T>;
@@ -39,6 +43,8 @@ export async function generateStructuredResponse<T extends z.ZodType>(
     system: systemPrompt,
     prompt: userPrompt,
     temperature: options?.temperature ?? 0.1,
+    maxRetries: options?.maxRetries ?? 2,
+    abortSignal: AbortSignal.timeout(options?.timeoutMs ?? 30_000),
   });
 
   return {

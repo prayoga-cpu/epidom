@@ -23,6 +23,7 @@ import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscr
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
 import { formatDate } from "@/lib/utils/format-date";
 import { getApiErrorMessage } from "@/lib/utils/api-error";
+import { useConfirm } from "@/components/ui/use-confirm";
 import { BetaPlanSwitcher } from "./beta-plan-switcher";
 
 export function BillingContainer() {
@@ -30,6 +31,7 @@ export function BillingContainer() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data, isLoading: loading, error: subscriptionError } = useSubscriptionStatus();
+  const { confirm, confirmDialog } = useConfirm();
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,14 +61,14 @@ export function BillingContainer() {
   };
 
   const handleCancelSubscription = async () => {
-    if (
-      !confirm(
-        t("billing.confirmCancel") ||
-          "Are you sure you want to cancel your subscription? You'll retain access until the end of your billing period."
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: t("billing.cancelSubscription"),
+      description: t("billing.confirmCancel"),
+      variant: "destructive",
+      confirmText: t("billing.cancelSubscription"),
+      cancelText: t("actions.cancel"),
+    });
+    if (!ok) return;
 
     try {
       setActionLoading(true);
@@ -311,6 +313,7 @@ export function BillingContainer() {
           </CardContent>
         </Card>
       )}
+      {confirmDialog}
     </div>
   );
 }

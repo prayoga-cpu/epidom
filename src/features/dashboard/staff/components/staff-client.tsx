@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useConfirm } from "@/components/ui/use-confirm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -65,6 +66,7 @@ const ROLES_FOR_SELECT: StaffRole[] = ["MANAGER", "CASHIER", "KITCHEN"];
 
 export function StaffClient({ storeId, currentUserId, currentUserName, currentUserEmail }: StaffClientProps) {
   const { t } = useI18n();
+  const { confirm, confirmDialog } = useConfirm();
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
@@ -258,10 +260,15 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => {
-                              if (confirm(`Deactivate ${member.name}?`)) {
-                                deactivateMutation.mutate(member.id);
-                              }
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: "Deactivate staff member?",
+                                description: `${member.name} will lose access until reactivated.`,
+                                variant: "destructive",
+                                confirmText: "Deactivate",
+                                cancelText: t("actions.cancel"),
+                              });
+                              if (ok) deactivateMutation.mutate(member.id);
                             }}
                             aria-label="Deactivate"
                           >
@@ -432,6 +439,7 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
           </DialogContent>
         </Dialog>
       )}
+      {confirmDialog}
     </div>
   );
 }

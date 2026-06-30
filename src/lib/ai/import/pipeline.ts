@@ -13,9 +13,49 @@ import { runValidation } from "./stages/validation";
 import { aggregateUsage, calculateCost, generateStructuredResponse } from "../openai-client";
 import type { TokenUsage } from "../openai-client";
 import type { ImportAnalysisResult, EntityType } from "./types";
+import { ENTITY_UNIQUE_FIELDS } from "../import-schema";
 import { loadStoreContext, type StoreContextData } from "../context/store-context";
 import { getMemories, type AIMemory } from "../memory/ai-memory.service";
 import { z } from "zod";
+
+/**
+ * Cheap, deterministic entity-type guess from CSV headers (no LLM cost).
+ * Normalizes headers (lowercase, strip spaces/_/-) and checks them against the
+ * known unique-field names. Returns null when nothing matches, in which case the
+ * caller falls back to the model's primaryEntityType guess.
+ * Order matters: recipe > material > product > supplier (most specific first).
+ */
+function guessEntityTypeFromHeaders(headers: string[]): EntityType | null {
+  const normalize = (s: string) => s.toLowerCase().replace(/[\s_-]/g, "");
+  const norm = headers.map(normalize);
+  const hit = (fields: readonly string[]) => fields.some((f) => norm.includes(normalize(f)));
+  if (hit(ENTITY_UNIQUE_FIELDS.recipe)) return "recipe";
+  if (hit(ENTITY_UNIQUE_FIELDS.material)) return "material";
+  if (hit(ENTITY_UNIQUE_FIELDS.product)) return "product";
+  if (hit(ENTITY_UNIQUE_FIELDS.supplier)) return "supplier";
+  return null;
+}
+
+/**
+ * Recipe/ingredient target fields whose AI-mapped value must ALWAYS be written
+ * into the execute payload, even when a CSV column with the same key already
+ * holds data. These keys (e.g. ingredient_name) differ from the raw CSV headers,
+ * so without this the importer never sees them and recipes import with 0 ingredients.
+ */
+const ALWAYS_OVERLAY_FIELDS = new Set<string>([
+  "ingredient_name",
+  "ingredient_qty",
+  "ingredient_unit",
+  "ingredient_sku",
+  "ingredient_supplier",
+  "ingredient_price",
+  "ingredient_stock",
+  "ingredients_text",
+  "yieldQuantity",
+  "yieldUnit",
+  "productionTimeMinutes",
+  "costPerBatch",
+]);
 
 /**
  * Pipeline input parameters
@@ -257,13 +297,21 @@ export async function runImportPipeline(input: PipelineInput): Promise<PipelineO
     // We don't increment aiCallCount or usage as the call failed/wasn't useful
   }
 
+  // Cheap, deterministic entity-type guess from the parsed headers (no LLM cost).
+  // When we (or the caller) already know the type, skip the slow multi-row
+  // entity-breakdown LLM call entirely — the single biggest auto-mode cost.
+  const headerEntityGuess = guessEntityTypeFromHeaders(headers);
+  const skipEntityDetection = !!(specifiedEntityType || headerEntityGuess);
+
   // Adjust for header position
   const structureResult = await runStructureAnalysis({
     dataPreview: csvPreview,
-    sampleRows: extractSampleRows(dataRows, headers, 20),
+    sampleRows: extractSampleRows(dataRows, headers, 8),
+    skipEntityDetection,
   });
   usages.push(structureResult.totalUsage);
-  aiCallCount += structureResult.structure.hasMultipleEntities ? 3 : 2;
+  aiCallCount +=
+    !skipEntityDetection && structureResult.structure.hasMultipleEntities ? 3 : 2;
 
   // Get actual headers and data rows based on structure analysis
   const headerRowIndex = structureResult.structure.headerRowIndex;
@@ -290,11 +338,27 @@ export async function runImportPipeline(input: PipelineInput): Promise<PipelineO
   // =========================================================================
   // STAGE 3: SEMANTIC MAPPING
   // =========================================================================
-  // Determine entity type
-  let entityType: EntityType = specifiedEntityType || "material";
+  // Determine entity type.
+  // Priority: caller-specified > deterministic header guess > model's
+  // primaryEntityType (language-agnostic) > most-common from breakdown > material.
+  // Re-run the header guess on the (possibly header-adjusted) final headers.
+  const finalHeaderGuess = guessEntityTypeFromHeaders(headers);
+  let entityType: EntityType =
+    specifiedEntityType ??
+    headerEntityGuess ??
+    finalHeaderGuess ??
+    structureResult.structure.primaryEntityType ??
+    "material";
 
-  if (!specifiedEntityType && structureResult.entityBreakdown) {
-    // Use the most common detected entity type
+  // Last resort only: nothing confident was found, so fall back to the most
+  // common type from the (rarely populated) multi-entity breakdown.
+  if (
+    !specifiedEntityType &&
+    !headerEntityGuess &&
+    !finalHeaderGuess &&
+    !structureResult.structure.primaryEntityType &&
+    structureResult.entityBreakdown
+  ) {
     const breakdown = structureResult.entityBreakdown;
     let maxCount = 0;
     for (const [type, info] of Object.entries(breakdown)) {
@@ -347,14 +411,27 @@ export async function runImportPipeline(input: PipelineInput): Promise<PipelineO
           : storeContext.patterns.commonUnits,
     }));
 
-  const healingResult = await runDataHealing({
-    entityType,
-    rows: mappedRows,
-    categoricalFields,
-    storeContext,
-  });
-  usages.push(healingResult.totalUsage);
-  aiCallCount += 3;
+  // Healing is a "nice to have" cleanup stage — a single failed LLM call here
+  // must NOT abort the whole import. Degrade gracefully to no corrections.
+  let healingResult: Awaited<ReturnType<typeof runDataHealing>>;
+  try {
+    healingResult = await runDataHealing({
+      entityType,
+      rows: mappedRows,
+      categoricalFields,
+      storeContext,
+    });
+    usages.push(healingResult.totalUsage);
+    aiCallCount += 3;
+  } catch (err) {
+    console.warn("[AI Import] Data healing stage failed, continuing without it:", err);
+    healingResult = {
+      typoCorrections: [],
+      missingValueInferences: [],
+      duplicates: { exactDuplicates: [], nearDuplicates: [], databaseConflicts: [] },
+      totalUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    };
+  }
 
   // =========================================================================
   // STAGE 5: VALIDATION
@@ -371,22 +448,48 @@ export async function runImportPipeline(input: PipelineInput): Promise<PipelineO
     mappingResult.mapping.mappings.filter((m) => m.confidence === "HIGH").length /
     Math.max(mappingResult.mapping.mappings.length, 1);
 
-  const validationResult = await runValidation({
-    entityType,
-    rows: mappedRows,
-    conflicts,
-    analysisMetrics: {
-      structureConfidence: structureResult.structure.structureType === "STANDARD_CSV" ? 0.9 : 0.7,
-      mappingConfidence,
-      qualityScore: reconResult.quality.overallScore,
-      issuesFound: reconResult.quality.issues.length,
-      duplicatesFound:
-        healingResult.duplicates.exactDuplicates.length +
-        healingResult.duplicates.nearDuplicates.length,
-    },
-  });
-  usages.push(validationResult.totalUsage);
-  aiCallCount += conflicts.length > 0 ? 3 : 2;
+  // Validation is also non-critical for producing a usable preview. If it fails,
+  // fall back to a "needs human review" assessment rather than failing the import.
+  let validationResult: Awaited<ReturnType<typeof runValidation>>;
+  try {
+    validationResult = await runValidation({
+      entityType,
+      rows: mappedRows,
+      conflicts,
+      analysisMetrics: {
+        structureConfidence: structureResult.structure.structureType === "STANDARD_CSV" ? 0.9 : 0.7,
+        mappingConfidence,
+        qualityScore: reconResult.quality.overallScore,
+        issuesFound: reconResult.quality.issues.length,
+        duplicatesFound:
+          healingResult.duplicates.exactDuplicates.length +
+          healingResult.duplicates.nearDuplicates.length,
+      },
+    });
+    usages.push(validationResult.totalUsage);
+    aiCallCount += conflicts.length > 0 ? 3 : 2;
+  } catch (err) {
+    console.warn("[AI Import] Validation stage failed, using safe defaults:", err);
+    validationResult = {
+      consistencyIssues: [],
+      conflictResolutions: [],
+      finalAssessment: {
+        overallConfidence: 0.5,
+        readyToImport: false,
+        humanReviewRequired: true,
+        summary: {
+          totalRows: mappedRows.length,
+          readyRows: 0,
+          warningRows: mappedRows.length,
+          errorRows: 0,
+        },
+        recommendations: [
+          "Automated validation could not complete. Please review the data carefully before importing.",
+        ],
+      },
+      totalUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    };
+  }
 
   // =========================================================================
   // AGGREGATE RESULTS
@@ -439,14 +542,17 @@ export async function runImportPipeline(input: PipelineInput): Promise<PipelineO
       record[key] = value;
     }
 
-    // Then overlay AI-mapped fields ONLY if CSV value is empty
-    // This prevents AI mapping errors from corrupting valid parsed data
+    // Then overlay AI-mapped fields.
+    // - For most fields: only when the CSV value is empty (avoids corrupting
+    //   valid parsed data with an AI mapping mistake).
+    // - For recipe/ingredient target fields (keys that differ from the raw CSV
+    //   headers, e.g. ingredient_name): ALWAYS overlay, otherwise the importer
+    //   never receives them and recipes import with 0 ingredients.
     for (const [key, value] of Object.entries(mappedRow)) {
-      const csvValue = record[key] || "";
       const aiValue = String(value ?? "");
-
-      // Only use AI value if CSV value is empty and AI value is not empty
-      if (!csvValue.trim() && aiValue.trim()) {
+      if (!aiValue.trim()) continue;
+      const csvValue = (record[key] || "").trim();
+      if (ALWAYS_OVERLAY_FIELDS.has(key) || !csvValue) {
         record[key] = aiValue;
       }
     }

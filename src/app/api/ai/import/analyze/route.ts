@@ -13,6 +13,11 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { runImportPipeline } from "@/lib/ai/import/pipeline";
 
+// The pipeline makes many sequential LLM round-trips and can run well past the
+// platform default (10s). Give it a realistic budget so it isn't killed mid-run.
+export const maxDuration = 120;
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   try {
     // Authenticate

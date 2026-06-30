@@ -52,7 +52,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
       googleMapsUrl: initialData?.googleMapsUrl || "",
       customLinks: Array.isArray(initialData?.customLinks) ? initialData.customLinks : [],
       isPublished: initialData?.isPublished ?? false,
-      acceptsOrders: initialData?.acceptsOrders ?? false,
+      acceptsOrders: initialData?.acceptsOrders ?? true,
       acceptsReservations: initialData?.acceptsReservations ?? false,
     },
   });

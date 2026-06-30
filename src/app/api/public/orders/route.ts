@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createPublicOrderSchema } from "@/lib/validation/public-orders.schemas";
 import { initiatePayment } from "@/lib/payments";
+import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
 import { inngest } from "@/lib/inngest/client";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
@@ -189,6 +190,13 @@ export async function POST(request: Request) {
       });
       finalStatus = "CONFIRMED";
       finalPaymentStatus = "PAID";
+
+      // Cash orders are purchased on the spot — deduct stock immediately.
+      try {
+        await deductStockForOrder(order.id, storefront.storeId);
+      } catch (err) {
+        console.error("[public/orders] Stock deduction failed:", err);
+      }
     }
 
     // Fire background notification via Inngest

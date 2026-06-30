@@ -1698,6 +1698,14 @@ export const fr = {
         review: "Révision",
       },
 
+      warnings: {
+        noIngredients: {
+          title: "Aucun ingrédient",
+          description:
+            "Cette recette n'a pas encore d'ingrédients. Ajoutez des ingrédients pour calculer les coûts et utiliser cette recette en production.",
+          action: "Ajouter des ingrédients",
+        },
+      },
       // Ingredients
       ingredients: {
         title: "Ingrédients",
@@ -2214,6 +2222,11 @@ export const fr = {
     selectOrder: "Sélectionnez une commande pour voir les détails",
     selectDelivery: "Sélectionnez une livraison pour voir les détails",
     invalidCredentials: "Email ou mot de passe invalide",
+    oauthStateMismatch: "Votre session de connexion a expiré. Veuillez réessayer.",
+    oauthInternalError: "Échec de la connexion en raison d'une erreur serveur. Veuillez réessayer.",
+    accountNotLinked: "Ce compte Google n'est pas encore lié. Connectez-vous d'abord avec votre email et mot de passe, puis liez Google.",
+    oauthRestart: "Votre session de connexion a expiré. Veuillez réessayer.",
+    oauthGenericError: "Échec de la connexion. Veuillez réessayer.",
     loginFailed: "La connexion a échoué. Veuillez réessayer.",
     loggingIn: "Connexion en cours...",
     registrationSuccessful: "Inscription réussie ! Veuillez vous connecter.",
@@ -2403,6 +2416,14 @@ export const fr = {
       language: "Langue",
       timezone: "Fuseau Horaire",
       currency: "Devise",
+      defaultLanding: "Page d'accueil par défaut",
+      defaultLandingHint: "La page ouverte en premier lorsque vous entrez dans une boutique.",
+      landingOptions: {
+        dashboard: "Tableau de bord",
+        pos: "Caisse POS",
+        storefront: "Boutique",
+        data: "Données & Inventaire",
+      },
       memberSince: "Membre depuis",
       avatar: "Photo de Profil",
       changeAvatar: "Changer l'Avatar",
@@ -3810,7 +3831,7 @@ export const fr = {
     },
     analysis: {
       title: "Analyse du fichier en cours",
-      description: "Nous traitons vos données pour comprendre la structure et le format. Cela prend généralement 5 à 15 secondes.",
+      description: "Nous traitons vos données pour comprendre la structure et le format. Cela peut prendre une à deux minutes pour les fichiers volumineux.",
       stages: {
         language: "Détection de la langue et du format",
         structure: "Analyse de la structure",
@@ -3818,6 +3839,7 @@ export const fr = {
         healing: "Correction des problèmes de données",
         validation: "Validation des données",
       },
+      finalizing: "Finalisation de l'analyse…",
       analyzing: "Analyse de la structure du fichier...",
       identifying: "Identification des colonnes...",
       mapping: "Mappage des champs de données...",
@@ -4197,6 +4219,7 @@ export const fr = {
       cmp_phone_pos: "Caisse téléphone / tablette",  cmp_kds: "KDS",
       cmp_thermal: "Imprimantes thermiques",         cmp_staff: "Staff & services",
       cmp_recipes: "Recettes & Coûts matières",      cmp_stock: "Stock auto & alertes",
+      cmp_ai_import: "Import intelligent IA (CSV / tableur)",
       cmp_daily: "E-mail rapport journalier",        cmp_multi: "Dashboard multi-établissement",
       cmp_api: "Accès API",
     },

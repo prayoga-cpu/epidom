@@ -40,6 +40,7 @@ export const updateProfileSchema = z.object({
   locale: localeSchema.optional(),
   timezone: timezoneSchema.optional(),
   currency: currencySchema.optional(),
+  defaultLanding: z.enum(["dashboard", "pos", "storefront", "data"]).optional(),
   image: z
     .string()
     .refine((val) => val === "" || z.string().url().safeParse(val).success, {

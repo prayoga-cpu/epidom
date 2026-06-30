@@ -69,6 +69,7 @@ const mockUser = {
   locale: "en",
   timezone: "UTC",
   currency: "EUR",
+  defaultLanding: "dashboard",
   stripeConnectAccountId: null,
   stripeConnectOnboarded: false,
   createdAt: new Date(),

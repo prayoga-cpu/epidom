@@ -12,6 +12,7 @@ import { Plus, GripVertical, Settings2, Trash2, ArrowRight, Loader2 } from "luci
 import { Input } from "@/components/ui/input";
 import { formatCurrency, getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { useConfirm } from "@/components/ui/use-confirm";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ interface MenuEditorProps {
 
 export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: MenuEditorProps) {
   const { t } = useI18n();
+  const { confirm, confirmDialog } = useConfirm();
   const { currency } = useCurrency();
   const router = useRouter();
   const [newCatName, setNewCatName] = useState("");
@@ -64,7 +66,14 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm(t("storefront.menu.deleteConfirm"))) return;
+    const ok = await confirm({
+      title: t("storefront.menu.deleteConfirm"),
+      description: t("storefront.menu.title"),
+      variant: "destructive",
+      confirmText: t("actions.delete"),
+      cancelText: t("actions.cancel"),
+    });
+    if (!ok) return;
     try {
       await storefrontApi.deleteCategory(storeId, categoryId);
       onSuccess();
@@ -264,6 +273,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

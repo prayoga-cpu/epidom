@@ -1610,6 +1610,14 @@ export const id = {
         review: "Tinjau",
       },
 
+      warnings: {
+        noIngredients: {
+          title: "Belum Ada Bahan",
+          description:
+            "Resep ini belum memiliki bahan. Tambahkan bahan untuk menghitung biaya dan menggunakan resep ini untuk produksi.",
+          action: "Tambah Bahan",
+        },
+      },
       // Ingredients
       ingredients: {
         title: "Bahan",
@@ -1784,6 +1792,7 @@ export const id = {
     products: {
       pageTitle: "Produk",
       inMenu: "Di Menu",
+      confirmRemoveFromMenu: "Hapus produk ini dari menu POS?",
       limitBadge: "produk",
       limitTooltip:
         "Anda telah mencapai batas produk paket Anda ({current}/{limit}). Upgrade ke Operations untuk produk tak terbatas.",
@@ -1867,12 +1876,14 @@ export const id = {
         edit: "Edit Produk",
         addToMenu: "Tambahkan ke menu POS",
         alreadyInMenu: "Sudah ada di menu POS",
+        removeFromMenu: "Di menu POS — klik untuk hapus",
         delete: "Hapus Produk",
       },
 
       // Toasts
       toasts: {
         addedToMenu: "ditambahkan ke menu POS",
+        removedFromMenu: "dihapus dari menu POS",
         syncMenuPrompt: "Harga/nama berubah. Sinkronkan ke menu POS?",
         syncMenuAction: "Sinkronkan",
         syncMenuDone: "Menu POS diperbarui",
@@ -2128,6 +2139,11 @@ export const id = {
     selectOrder: "Pilih pesanan untuk melihat detail",
     selectDelivery: "Pilih pengiriman untuk melihat detail",
     invalidCredentials: "Email atau kata sandi tidak valid",
+    oauthStateMismatch: "Sesi masuk Anda kedaluwarsa. Silakan coba masuk lagi.",
+    oauthInternalError: "Gagal masuk karena kesalahan server. Silakan coba lagi.",
+    accountNotLinked: "Akun Google ini belum tertaut. Masuk dengan email dan kata sandi dulu, lalu tautkan Google.",
+    oauthRestart: "Sesi masuk Anda kedaluwarsa. Silakan coba masuk lagi.",
+    oauthGenericError: "Gagal masuk. Silakan coba lagi.",
     loginFailed: "Login gagal. Silakan coba lagi.",
     loggingIn: "Sedang login...",
     registrationSuccessful: "Registrasi berhasil! Silakan login.",
@@ -2314,6 +2330,14 @@ export const id = {
       language: "Bahasa",
       timezone: "Zona Waktu",
       currency: "Mata Uang",
+      defaultLanding: "Halaman awal default",
+      defaultLandingHint: "Halaman yang dibuka pertama saat Anda masuk ke toko.",
+      landingOptions: {
+        dashboard: "Dashboard",
+        pos: "Kasir POS",
+        storefront: "Toko Online",
+        data: "Data & Inventaris",
+      },
       memberSince: "Anggota sejak",
       avatar: "Foto Profil",
       changeAvatar: "Ubah Avatar",
@@ -3741,7 +3765,7 @@ export const id = {
     },
     analysis: {
       title: "Menganalisis file Anda",
-      description: "Kami sedang memproses data untuk memahami struktur dan formatnya. Ini biasanya memakan waktu 5-15 detik.",
+      description: "Kami sedang memproses data untuk memahami struktur dan formatnya. Untuk file yang lebih besar, ini bisa memakan waktu satu hingga dua menit.",
       stages: {
         language: "Mendeteksi bahasa & format",
         structure: "Menganalisis struktur",
@@ -3749,6 +3773,7 @@ export const id = {
         healing: "Memperbaiki masalah data",
         validation: "Memvalidasi data",
       },
+      finalizing: "Menyelesaikan analisis…",
       analyzing: "Menganalisis struktur file...",
       identifying: "Mengidentifikasi kolom...",
       mapping: "Memetakan bidang data...",
@@ -4473,6 +4498,7 @@ export const id = {
       cmp_phone_pos: "POS HP / tablet",             cmp_kds: "KDS",
       cmp_thermal: "Printer termal",                cmp_staff: "Staf & shift",
       cmp_recipes: "Resep & HPP",                   cmp_stock: "Stok otomatis & peringatan",
+      cmp_ai_import: "Impor Cerdas AI (CSV / spreadsheet)",
       cmp_daily: "Email laporan harian",            cmp_multi: "Dashboard multi-outlet",
       cmp_api: "Akses API",
     },

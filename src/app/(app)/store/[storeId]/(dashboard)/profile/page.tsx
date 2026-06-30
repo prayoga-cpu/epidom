@@ -25,6 +25,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ storeI
     locale: profileDto.locale as "en" | "fr" | "id" | undefined,
     timezone: profileDto.timezone,
     currency: profileDto.currency,
+    defaultLanding: profileDto.defaultLanding,
     createdAt: profileDto.createdAt,
     business: profileDto.business
       ? {

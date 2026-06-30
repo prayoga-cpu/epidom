@@ -7,6 +7,7 @@ export interface ProfileData {
   locale: "en" | "fr" | "id" | undefined;
   timezone: string;
   currency: string;
+  defaultLanding: string;
   createdAt: Date;
   business: {
     id: string;

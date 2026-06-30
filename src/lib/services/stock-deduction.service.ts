@@ -3,23 +3,39 @@ import { MovementType, AlertType, AlertSeverity } from "@prisma/client";
 import { toDecimal } from "@/lib/utils/types.server";
 
 /**
- * Deduct ingredient stock when an order is marked DELIVERED.
+ * Deduct stock when an order is purchased/confirmed.
  *
  * For each order item:
  *   1. Resolve a Product (via direct productId or via menuItem.productId).
- *   2. Find the default Recipe linked to that product.
- *   3. Scale recipe ingredients by (orderedQty / recipe.yieldQuantity).
- *   4. Subtract from material.currentStock in a single serializable transaction.
- *   5. Create a StockMovement record per material.
- *   6. Fire a LOW_STOCK / CRITICAL_STOCK Alert if stock falls below threshold.
+ *   2. Decrement the product's OWN finished-goods stock (Product.currentStock)
+ *      by the ordered quantity, and record a product StockMovement.
+ *   3. If the product has a default Recipe, additionally scale its ingredients by
+ *      (orderedQty / recipe.yieldQuantity) and subtract from each material's stock,
+ *      recording a material StockMovement per ingredient.
+ *   4. Fire LOW_STOCK / CRITICAL_STOCK alerts for anything that drops below its
+ *      minimum threshold.
  *
- * Items without a linked product or recipe are skipped with a warning log.
- * The entire deduction for all items runs in one transaction to prevent oversell.
+ * Idempotent: if a SALE StockMovement already exists for this order, the call is a
+ * no-op. This makes it safe to invoke from multiple lifecycle points (cash order
+ * creation, payment webhook, POS delivery) and on webhook retries without
+ * double-deducting.
+ *
+ * All stock writes for an order run in a single serializable transaction to
+ * prevent oversell from concurrent reads of stale stock.
  */
 export async function deductStockForOrder(
   orderId: string,
   storeId: string
-): Promise<{ deducted: number; skipped: number }> {
+): Promise<{ deducted: number; skipped: number; alreadyDeducted?: boolean }> {
+  // Idempotency guard — if we already deducted for this order, do nothing.
+  const existingMovement = await prisma.stockMovement.findFirst({
+    where: { orderId, type: MovementType.SALE },
+    select: { id: true },
+  });
+  if (existingMovement) {
+    return { deducted: 0, skipped: 0, alreadyDeducted: true };
+  }
+
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
@@ -71,8 +87,16 @@ export async function deductStockForOrder(
 
   const userId = order.store.business.userId;
 
-  // Pre-compute deductions outside the transaction so we can log skips first
-  type Deduction = {
+  // Pre-compute deductions outside the transaction so we can log skips first.
+  type ProductDeduction = {
+    productId: string;
+    productName: string;
+    unit: string;
+    minStock: number;
+    orderedQty: number;
+    newStock: number;
+  };
+  type MaterialDeduction = {
     materialId: string;
     materialName: string;
     materialUnit: string;
@@ -82,7 +106,26 @@ export async function deductStockForOrder(
     unit: string;
   };
 
-  const deductions: Deduction[] = [];
+  // Aggregate per product / per material BEFORE computing new stock. Duplicate
+  // line items (e.g. the same product on two lines with different modifiers) and
+  // materials shared across recipes must be SUMMED into a single deduction.
+  // Computing each from the same stale currentStock and writing absolute values
+  // would otherwise let the last write win and under-deduct (oversell).
+  const productAgg = new Map<
+    string,
+    { productName: string; unit: string; minStock: number; currentStock: number; totalQty: number }
+  >();
+  const materialAgg = new Map<
+    string,
+    {
+      materialName: string;
+      materialUnit: string;
+      minStock: number;
+      currentStock: number;
+      totalNeeded: number;
+      unit: string;
+    }
+  >();
   let skipped = 0;
 
   for (const item of order.items) {
@@ -93,59 +136,103 @@ export async function deductStockForOrder(
       continue;
     }
 
-    const defaultRecipeProduct = product.recipeProducts[0];
-    if (!defaultRecipeProduct) {
-      console.warn(`[stock-deduction] orderId=${orderId} itemId=${item.id} productId=${product.id}: no default recipe, skipping`);
-      await prisma.alert.create({
-        data: {
-          userId,
-          type: AlertType.SYSTEM,
-          severity: AlertSeverity.WARNING,
-          title: `Gagal Memotong Stok`,
-          message: `Produk "${product.name}" terjual tapi tidak memiliki resep aktif. Stok bahan baku tidak terpotong.`,
-          entityType: "product",
-          entityId: product.id,
-        },
+    const orderedQty = Number(item.quantity);
+
+    // 1. Always decrement the product's own finished-goods stock.
+    const existingProduct = productAgg.get(product.id);
+    if (existingProduct) {
+      existingProduct.totalQty += orderedQty;
+    } else {
+      productAgg.set(product.id, {
+        productName: product.name,
+        unit: product.unit,
+        minStock: Number(product.minStock),
+        currentStock: Number(product.currentStock),
+        totalQty: orderedQty,
       });
-      skipped++;
-      continue;
     }
 
-    const recipe = defaultRecipeProduct.recipe;
-    const orderedQty = Number(item.quantity);
-    const yieldQty = Number(recipe.yieldQuantity);
+    // 2. If the product is made from a recipe, also deduct the ingredients.
+    const defaultRecipeProduct = product.recipeProducts[0];
+    if (!defaultRecipeProduct) continue;
 
+    const recipe = defaultRecipeProduct.recipe;
+    const yieldQty = Number(recipe.yieldQuantity);
     if (yieldQty <= 0) {
-      console.warn(`[stock-deduction] orderId=${orderId} recipeId=${recipe.id}: yieldQuantity=${yieldQty} is zero or negative, skipping`);
-      skipped++;
+      console.warn(`[stock-deduction] orderId=${orderId} recipeId=${recipe.id}: yieldQuantity=${yieldQty} is zero or negative, skipping ingredient deduction`);
       continue;
     }
 
     const scaleFactor = orderedQty / yieldQty;
-
     for (const ing of recipe.ingredients) {
       const needed = Number(ing.quantity) * scaleFactor;
-      const current = Number(ing.material.currentStock);
-      const newStock = Math.max(0, current - needed);
-
-      deductions.push({
-        materialId: ing.materialId,
-        materialName: ing.material.name,
-        materialUnit: ing.material.unit,
-        minStock: Number(ing.material.minStock),
-        needed,
-        newStock,
-        unit: ing.unit,
-      });
+      const existingMaterial = materialAgg.get(ing.materialId);
+      if (existingMaterial) {
+        existingMaterial.totalNeeded += needed;
+      } else {
+        materialAgg.set(ing.materialId, {
+          materialName: ing.material.name,
+          materialUnit: ing.material.unit,
+          minStock: Number(ing.material.minStock),
+          currentStock: Number(ing.material.currentStock),
+          totalNeeded: needed,
+          unit: ing.unit,
+        });
+      }
     }
   }
 
-  if (deductions.length === 0) return { deducted: 0, skipped };
+  // Collapse each aggregate to a single deduction with one final newStock.
+  const productDeductions: ProductDeduction[] = Array.from(productAgg.entries()).map(
+    ([productId, p]) => ({
+      productId,
+      productName: p.productName,
+      unit: p.unit,
+      minStock: p.minStock,
+      orderedQty: p.totalQty,
+      newStock: Math.max(0, p.currentStock - p.totalQty),
+    })
+  );
 
-  // Single serializable transaction — prevents concurrent reads of stale currentStock
+  const materialDeductions: MaterialDeduction[] = Array.from(materialAgg.entries()).map(
+    ([materialId, m]) => ({
+      materialId,
+      materialName: m.materialName,
+      materialUnit: m.materialUnit,
+      minStock: m.minStock,
+      needed: m.totalNeeded,
+      newStock: Math.max(0, m.currentStock - m.totalNeeded),
+      unit: m.unit,
+    })
+  );
+
+  if (productDeductions.length === 0 && materialDeductions.length === 0) {
+    return { deducted: 0, skipped };
+  }
+
+  // Single serializable transaction — prevents concurrent reads of stale stock.
   await prisma.$transaction(
     async (tx) => {
-      for (const d of deductions) {
+      for (const p of productDeductions) {
+        await tx.product.update({
+          where: { id: p.productId },
+          data: { currentStock: toDecimal(p.newStock) },
+        });
+
+        await tx.stockMovement.create({
+          data: {
+            productId: p.productId,
+            orderId,
+            type: MovementType.SALE,
+            quantity: toDecimal(-p.orderedQty),
+            unit: p.unit,
+            balanceAfter: toDecimal(p.newStock),
+            notes: `Auto-deducted for order ${order.orderNumber}`,
+          },
+        });
+      }
+
+      for (const d of materialDeductions) {
         await tx.material.update({
           where: { id: d.materialId },
           data: { currentStock: toDecimal(d.newStock) },
@@ -167,37 +254,62 @@ export async function deductStockForOrder(
     { isolationLevel: "Serializable" }
   );
 
-  // Fire alerts outside transaction — non-critical, OK to be eventually consistent
-  for (const d of deductions) {
-    if (d.newStock <= d.minStock) {
-      const isCritical = d.newStock <= d.minStock * 0.25;
+  // Fire alerts outside the transaction — non-critical, OK to be eventually consistent.
+  const fireLowStockAlert = async (params: {
+    entityId: string;
+    entityType: "product" | "material";
+    name: string;
+    newStock: number;
+    minStock: number;
+    unit: string;
+  }) => {
+    if (params.minStock <= 0 || params.newStock > params.minStock) return;
 
-      const existing = await prisma.alert.findFirst({
-        where: {
-          userId,
-          entityId: d.materialId,
-          type: { in: [AlertType.LOW_STOCK, AlertType.CRITICAL_STOCK] },
-          isRead: false,
-        },
-      });
+    const isCritical = params.newStock <= params.minStock * 0.25;
+    const existing = await prisma.alert.findFirst({
+      where: {
+        userId,
+        entityId: params.entityId,
+        type: { in: [AlertType.LOW_STOCK, AlertType.CRITICAL_STOCK] },
+        isRead: false,
+      },
+    });
+    if (existing) return;
 
-      if (!existing) {
-        await prisma.alert.create({
-          data: {
-            userId,
-            type: isCritical ? AlertType.CRITICAL_STOCK : AlertType.LOW_STOCK,
-            severity: isCritical ? AlertSeverity.CRITICAL : AlertSeverity.WARNING,
-            title: isCritical
-              ? `Stok kritis: ${d.materialName}`
-              : `Stok rendah: ${d.materialName}`,
-            message: `Sisa stok ${d.materialName}: ${d.newStock.toFixed(2)} ${d.materialUnit} (min: ${d.minStock} ${d.materialUnit})`,
-            entityType: "material",
-            entityId: d.materialId,
-          },
-        });
-      }
-    }
+    await prisma.alert.create({
+      data: {
+        userId,
+        type: isCritical ? AlertType.CRITICAL_STOCK : AlertType.LOW_STOCK,
+        severity: isCritical ? AlertSeverity.CRITICAL : AlertSeverity.WARNING,
+        title: isCritical ? `Stok kritis: ${params.name}` : `Stok rendah: ${params.name}`,
+        message: `Sisa stok ${params.name}: ${params.newStock.toFixed(2)} ${params.unit} (min: ${params.minStock} ${params.unit})`,
+        entityType: params.entityType,
+        entityId: params.entityId,
+      },
+    });
+  };
+
+  for (const p of productDeductions) {
+    await fireLowStockAlert({
+      entityId: p.productId,
+      entityType: "product",
+      name: p.productName,
+      newStock: p.newStock,
+      minStock: p.minStock,
+      unit: p.unit,
+    });
   }
 
-  return { deducted: deductions.length, skipped };
+  for (const d of materialDeductions) {
+    await fireLowStockAlert({
+      entityId: d.materialId,
+      entityType: "material",
+      name: d.materialName,
+      newStock: d.newStock,
+      minStock: d.minStock,
+      unit: d.materialUnit,
+    });
+  }
+
+  return { deducted: productDeductions.length + materialDeductions.length, skipped };
 }

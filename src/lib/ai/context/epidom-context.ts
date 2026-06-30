@@ -277,10 +277,19 @@ Target Fields for RECIPE:
 - productionTimeMinutes: Time to make in minutes (required, integer >= 1)
 - instructions: Step-by-step instructions (string, max 5000 chars)
 
-For multi-row ingredient format:
+For multi-row ingredient format (one ingredient per row):
 - ingredient_name: Material name for ingredient
 - ingredient_qty: Quantity needed
 - ingredient_unit: Unit for the quantity
+- ingredient_sku: Optional SKU/code of the ingredient material
+- ingredient_supplier: Optional supplier name for the ingredient
+- ingredient_price: Optional unit cost/price of the ingredient
+- ingredient_stock: Optional current stock of the ingredient
+
+For combined ingredient format (all ingredients in one cell):
+- ingredients_text: A single column listing every ingredient together, e.g.
+  "Farine:500g; Eau:300ml; Sel:5g" or "Flour 500g, Water 300ml". Map any single
+  "Ingredients"/"Ingrédients" column to ingredients_text — it is parsed into real ingredients.
 `,
   };
 

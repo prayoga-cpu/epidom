@@ -49,9 +49,11 @@ import {
   useBulkDeleteProducts,
   useExportProducts,
   useAddProductToMenu,
+  useRemoveProductFromMenu,
   useProductMenuStatus,
   type Product,
 } from "../hooks/use-products";
+import { useConfirm } from "@/components/ui/use-confirm";
 import { useProductUsage } from "../hooks/use-product-usage";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import {
@@ -114,7 +116,9 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const bulkDeleteProducts = useBulkDeleteProducts(storeId);
   const exportProducts = useExportProducts();
   const addToMenu = useAddProductToMenu(storeId);
+  const removeFromMenu = useRemoveProductFromMenu(storeId);
   const { menuLinkedIds } = useProductMenuStatus(storeId);
+  const { confirm, confirmDialog } = useConfirm();
   const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
 
   const products = data?.products || [];
@@ -582,13 +586,38 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                       {menuLinkedIds.has(product.id) ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="flex h-8 w-full items-center justify-center rounded-md border border-green-200 bg-green-50 px-1 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-                              <UtensilsCrossed className="mr-1 h-3 w-3" />
-                              {t("data.products.inMenu") || "In Menu"}
-                            </div>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-8 w-full flex-1 border border-green-200 bg-green-50 text-xs text-green-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400 dark:hover:border-red-800 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                              disabled={removeFromMenu.isPending}
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: t("data.products.confirmRemoveFromMenu"),
+                                  description: product.name,
+                                  variant: "destructive",
+                                  confirmText: t("actions.delete"),
+                                  cancelText: t("actions.cancel"),
+                                });
+                                if (!ok) return;
+                                try {
+                                  await removeFromMenu.mutateAsync(product);
+                                  toast.success(
+                                    t("data.products.toasts.removedFromMenu") ||
+                                      `"${product.name}" removed from POS menu`
+                                  );
+                                } catch (err) {
+                                  toast.error(
+                                    err instanceof Error ? err.message : "Failed to remove from menu"
+                                  );
+                                }
+                              }}
+                            >
+                              <UtensilsCrossed className="h-3 w-3" />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{t("data.products.tooltips.alreadyInMenu") || "Already in POS menu"}</p>
+                            <p>{t("data.products.tooltips.removeFromMenu") || "In POS menu — click to remove"}</p>
                           </TooltipContent>
                         </Tooltip>
                       ) : (
@@ -773,6 +802,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
         onOpenChange={setSmartImportOpen}
         storeId={storeId}
       />
+      {confirmDialog}
     </>
   );
 }

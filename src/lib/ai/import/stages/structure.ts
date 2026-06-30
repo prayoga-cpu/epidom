@@ -26,10 +26,12 @@ export async function detectHeaders(dataPreview: string): Promise<{
 }> {
   const systemPrompt = `${EPIDOM_CONTEXT}
 
+${ENTITY_DETECTION_HINTS}
+
 You are analyzing a CSV file to find the ACTUAL header row.
 CSV files often have junk rows at the top (title, date, metadata) before the real headers.
 
-Your task: Identify where the real data starts.`;
+Your task: Identify where the real data starts, and which entity type the file holds.`;
 
   const userPrompt = `Analyze this CSV data (first 30 lines):
 
@@ -39,11 +41,12 @@ Determine:
 1. Structure type (STANDARD_CSV, TRANSPOSED, MIXED, HIERARCHICAL, PIVOTED)
 2. Primary language
 3. Does it contain multiple entity types? (suppliers, materials, products, recipes mixed together)
-4. How many junk rows at the top?
-5. Which line is the header row? (0-indexed)
-6. Which line does actual data start? (0-indexed)
-7. How many junk rows at the bottom? (summary/total rows)
-8. If hierarchical, identify sections
+4. primaryEntityType: the SINGLE best-fit entity type for the whole file — "supplier", "material", "product", or "recipe". Read the column headers in their own language (e.g. French "Rendement"/"Ingrédient" => recipe, "Prix de vente" => product). Always pick the closest match even if unsure.
+5. How many junk rows at the top?
+6. Which line is the header row? (0-indexed)
+7. Which line does actual data start? (0-indexed)
+8. How many junk rows at the bottom? (summary/total rows)
+9. If hierarchical, identify sections
 
 Provide clear reasoning for your decisions.`;
 
@@ -189,13 +192,16 @@ Return entity breakdown with row indices for each type.`;
 export async function runStructureAnalysis(params: {
   dataPreview: string;
   sampleRows: string[];
+  // When the entity type is already known (specified or confidently guessed),
+  // skip the expensive multi-row entity-breakdown LLM call entirely.
+  skipEntityDetection?: boolean;
 }): Promise<{
   structure: StructureAnalysis;
   layoutDetails: Record<string, unknown>;
   entityBreakdown: Record<string, { count: number; rowIndices: number[]; confidence: string }>;
   totalUsage: TokenUsage;
 }> {
-  const { dataPreview, sampleRows } = params;
+  const { dataPreview, sampleRows, skipEntityDetection } = params;
 
   // Step 1: Detect headers and structure type
   const headerResult = await detectHeaders(dataPreview);
@@ -209,8 +215,8 @@ export async function runStructureAnalysis(params: {
     usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
   };
 
-  if (headerResult.analysis.hasMultipleEntities && sampleRows.length > 0) {
-    entityResult = await detectEntityTypes(sampleRows.slice(0, 20)); // Analyze first 20 rows
+  if (!skipEntityDetection && headerResult.analysis.hasMultipleEntities && sampleRows.length > 0) {
+    entityResult = await detectEntityTypes(sampleRows.slice(0, 8)); // Analyze first 8 rows (kept small for latency)
   }
 
   // Aggregate usage

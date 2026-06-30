@@ -46,6 +46,7 @@ interface PublicMenuProps {
     whatsappNumber: string | null;
     themeColor: string;
     fontFamily: string;
+    acceptsReservations: boolean;
   };
   menuCategories: MenuCategory[];
 }
@@ -318,7 +319,8 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       return;
     }
 
-    if (orderMethod === "DINE_IN" && !tableNumber.trim()) {
+    // Table number is only required when the store uses table reservations.
+    if (orderMethod === "DINE_IN" && storefront.acceptsReservations && !tableNumber.trim()) {
       setCheckoutError(t("publicOrder.checkoutForm.tableRequired"));
       return;
     }
@@ -839,14 +841,17 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
               <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                 {orderMethod === "DINE_IN" && (
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest pl-1">{t("publicOrder.checkoutForm.tableLabel")} *</label>
+                    <label className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest pl-1">
+                      {t("publicOrder.checkoutForm.tableLabel")}
+                      {storefront.acceptsReservations ? " *" : ""}
+                    </label>
                     <input
                       type="text"
                       placeholder={t("publicOrder.checkoutForm.tablePlaceholder")}
                       value={tableNumber}
                       onChange={(e) => setTableNumber(e.target.value)}
                       className="w-full h-12 bg-muted/50 border border-border rounded-xl px-4 text-sm font-medium focus:bg-card focus:outline-none focus:ring-2 focus:ring-[var(--store-theme)] focus:border-transparent transition-all"
-                      required
+                      required={storefront.acceptsReservations}
                     />
                   </div>
                 )}

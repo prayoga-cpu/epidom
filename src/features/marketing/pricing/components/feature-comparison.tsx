@@ -34,6 +34,7 @@ const CATEGORIES = [
   {
     labelKey: "redesign.pricingPage.cmpCat4",
     rows: [
+      { labelKey: "redesign.pricingPage.cmp_ai_import", free: false, pos: true, ops: true, ent: true },
       { labelKey: "redesign.pricingPage.cmp_recipes", free: false, pos: false, ops: true, ent: true },
       { labelKey: "redesign.pricingPage.cmp_stock", free: false, pos: false, ops: true, ent: true },
       { labelKey: "redesign.pricingPage.cmp_daily", free: false, pos: false, ops: true, ent: true },

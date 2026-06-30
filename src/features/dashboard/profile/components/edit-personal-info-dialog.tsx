@@ -43,6 +43,7 @@ interface EditPersonalInfoDialogProps {
     locale: "en" | "fr" | "id" | undefined;
     timezone: string;
     currency: string;
+    defaultLanding?: string;
   };
   onUpdate?: () => void;
 }
@@ -66,6 +67,7 @@ export function EditPersonalInfoDialog({
       locale: user.locale,
       timezone: user.timezone,
       currency: user.currency,
+      defaultLanding: (user.defaultLanding ?? "dashboard") as "dashboard" | "pos" | "storefront" | "data",
     },
   });
 
@@ -78,6 +80,7 @@ export function EditPersonalInfoDialog({
         locale: user.locale,
         timezone: user.timezone,
         currency: user.currency,
+        defaultLanding: (user.defaultLanding ?? "dashboard") as "dashboard" | "pos" | "storefront" | "data",
       });
     }
   }, [open, user, form]);
@@ -229,6 +232,31 @@ export function EditPersonalInfoDialog({
                       <SelectItem value="Asia/Tokyo">Asia/Tokyo</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="defaultLanding"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("profile.personal.defaultLanding")}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="dashboard">{t("profile.personal.landingOptions.dashboard")}</SelectItem>
+                      <SelectItem value="pos">{t("profile.personal.landingOptions.pos")}</SelectItem>
+                      <SelectItem value="storefront">{t("profile.personal.landingOptions.storefront")}</SelectItem>
+                      <SelectItem value="data">{t("profile.personal.landingOptions.data")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>{t("profile.personal.defaultLandingHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

@@ -95,7 +95,8 @@ export class StorefrontService {
           themeColor: "#FF6B35",
           fontFamily: "Inter",
           isPublished: false,
-          acceptsOrders: false,
+          // Accept online orders by default; merchants can pause via settings.
+          acceptsOrders: true,
           customLinks: [],
           openingHours: {
             monday: { open: "09:00", close: "21:00", isClosed: false },

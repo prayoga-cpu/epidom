@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useDefaultLanding } from "@/features/dashboard/profile/hooks/use-default-landing";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,7 @@ interface StoreCardProps {
 export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
   const { t } = useI18n();
   const router = useRouter();
+  const defaultLanding = useDefaultLanding();
   const [imageError, setImageError] = useState(false);
   const hasImage = store.image && !imageError;
 
@@ -203,7 +205,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
         </div>
       ) : (
         <Link
-          href={`/store/${store.id}/dashboard`}
+          href={`/store/${store.id}/${defaultLanding}`}
           prefetch={true}
           className="flex h-full flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
         >

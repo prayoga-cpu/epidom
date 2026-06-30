@@ -24,6 +24,7 @@ model User {
   locale                 String   @default("id")
   timezone               String   @default("Asia/Jakarta")
   currency               String   @default("IDR")
+  defaultLanding         String   @default("dashboard")
   stripeConnectAccountId String?
   stripeConnectOnboarded Boolean  @default(false)
   isAdmin                Boolean  @default(false)
