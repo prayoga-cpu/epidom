@@ -18,6 +18,22 @@ const TAG_STYLES: Record<Release["tag"], { bg: string; text: string; label: stri
 
 const RELEASES: Release[] = [
   {
+    version: "2.7 — 2026-06-30",
+    date: "June 30, 2026",
+    tag: "ux",
+    items: [
+      "Public storefront is now fully light & dark theme-aware — fixed washed-out, unreadable text in dark mode across the menu, item detail, cart, checkout, and order-status pages by moving to semantic design tokens.",
+      "Storefront language switcher (Indonesian / English / French) plus a light/dark toggle added to every storefront page; the visitor's browser language is auto-detected on first visit.",
+      "Storefront fully internationalized across id / en / fr — menu, cart, checkout drawer, item detail, order status, and store profile.",
+      "Storefront profile footer redesigned — compact, with the Epidom logo + wordmark, and trimmed empty space.",
+      "Home page: smoother section transitions — removed the stray dark band that appeared between adjacent warm (cream) sections.",
+      "Fixed a React hydration error on the storefront (the open/closed badge and theme toggle now resolve on the client).",
+      "Fixed dialog action buttons touching with no gap (Add Menu Item and POS checkout).",
+      "Fixed missing translations in the storefront menu editor's Add Item dialog.",
+      "Admin: Revenue report now reads live Stripe data with multi-currency views (IDR / EUR / USD), a per-month cash-collected recap, a customer payment log, and one-click Export / Print to PDF.",
+    ],
+  },
+  {
     version: "2.6 — 2026-05-29",
     date: "May 29, 2026",
     tag: "ux",

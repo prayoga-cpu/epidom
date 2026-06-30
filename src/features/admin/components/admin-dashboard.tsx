@@ -50,6 +50,8 @@ interface UserRow {
   email: string;
   isAdmin: boolean;
   createdAt: string;
+  timezone?: string;
+  currency?: string;
   providers: string[];
   hasPassword: boolean;
   subscription: {
@@ -81,6 +83,12 @@ const statusColors: Record<SubStatus, string> = {
   PAST_DUE: "bg-orange-500/15 text-orange-400 border-orange-500/30",
   INCOMPLETE: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
 };
+
+/** Billing region from the user's timezone + currency (region drives plan pricing). */
+function regionLabel(u: UserRow): string {
+  const tz = u.timezone?.split("/").pop()?.replace(/_/g, " ");
+  return [tz, u.currency].filter(Boolean).join(" · ") || "—";
+}
 
 const PERIOD_OPTIONS = [
   { label: "1 month", months: 1 },
@@ -263,6 +271,7 @@ export function AdminDashboard() {
                   <TableHead className="text-muted-foreground">User</TableHead>
                   <TableHead className="text-muted-foreground">Login</TableHead>
                   <TableHead className="text-muted-foreground">Business</TableHead>
+                  <TableHead className="text-muted-foreground">Region</TableHead>
                   <TableHead className="text-muted-foreground">Plan</TableHead>
                   <TableHead className="text-muted-foreground">Status</TableHead>
                   <TableHead className="text-muted-foreground">Period End</TableHead>
@@ -273,14 +282,14 @@ export function AdminDashboard() {
               <TableBody>
                 {isLoading && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       Loading users...
                     </TableCell>
                   </TableRow>
                 )}
                 {!isLoading && filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -349,9 +358,21 @@ export function AdminDashboard() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${planColors[plan as Plan]}`}>
-                          {plan}
+                        <span className="whitespace-nowrap text-xs text-muted-foreground">
+                          {regionLabel(user)}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${planColors[plan as Plan]}`}>
+                            {plan}
+                          </span>
+                          {user.subscription?.stripeCustomerId?.startsWith("admin_") && (
+                            <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
+                              BETA
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}>

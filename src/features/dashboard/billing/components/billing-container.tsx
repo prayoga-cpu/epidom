@@ -22,6 +22,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
 import { formatDate } from "@/lib/utils/format-date";
+import { getApiErrorMessage } from "@/lib/utils/api-error";
+import { BetaPlanSwitcher } from "./beta-plan-switcher";
 
 export function BillingContainer() {
   const { t } = useI18n();
@@ -45,7 +47,7 @@ export function BillingContainer() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to open customer portal");
+        throw new Error(getApiErrorMessage(result, "Failed to open customer portal"));
       }
 
       // Redirect to Stripe Customer Portal
@@ -76,7 +78,7 @@ export function BillingContainer() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to cancel subscription");
+        throw new Error(getApiErrorMessage(result, "Failed to cancel subscription"));
       }
 
       // Refresh page to update subscription status
@@ -113,6 +115,12 @@ export function BillingContainer() {
   }
 
   const { subscription, storeUsage } = data;
+
+  // Only show Stripe billing actions when they can actually succeed.
+  const canManage = !!subscription?.canManagePayment;
+  const canCancel = !!subscription?.canCancel && !subscription?.cancelAtPeriodEnd;
+  // Admin-granted (BETA) accounts switch plans freestyle, with no Stripe billing.
+  const isBeta = !!subscription?.isBeta;
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 py-8">
@@ -174,6 +182,14 @@ export function BillingContainer() {
                 <Badge className={getStatusColor(subscription?.status)}>
                   {getStatusLabel(subscription?.status, t)}
                 </Badge>
+                {isBeta && (
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-500 text-emerald-600 dark:text-emerald-400"
+                  >
+                    BETA
+                  </Badge>
+                )}
               </div>
               <p className="text-muted-foreground text-sm">
                 {subscription?.plan === "FREE"
@@ -228,37 +244,56 @@ export function BillingContainer() {
           )}
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-3 border-t pt-6">
-            <Button
-              onClick={handleManagePayment}
-              disabled={actionLoading}
-              variant="outline"
-              className="gap-2"
-            >
-              {actionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ExternalLink className="h-4 w-4" />
+          {isBeta ? (
+            <div className="space-y-2 border-t pt-6">
+              <p className="text-muted-foreground text-sm">{t("billing.betaAccount")}</p>
+              <BetaPlanSwitcher currentPlan={subscription?.plan ?? "FREE"} />
+            </div>
+          ) : canManage || canCancel ? (
+            <div className="flex flex-wrap gap-3 border-t pt-6">
+              {canManage && (
+                <Button
+                  onClick={handleManagePayment}
+                  disabled={actionLoading}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  {actionLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ExternalLink className="h-4 w-4" />
+                  )}
+                  {t("billing.managePayment")}
+                </Button>
               )}
-              {t("billing.managePayment")}
-            </Button>
 
-            {!subscription?.cancelAtPeriodEnd && (
-              <Button
-                onClick={handleCancelSubscription}
-                disabled={actionLoading}
-                variant="destructive"
-                className="gap-2"
-              >
-                {actionLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <XCircle className="h-4 w-4" />
-                )}
-                {t("billing.cancelSubscription")}
-              </Button>
-            )}
-          </div>
+              {canCancel && (
+                <Button
+                  onClick={handleCancelSubscription}
+                  disabled={actionLoading}
+                  variant="destructive"
+                  className="gap-2"
+                >
+                  {actionLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {t("billing.cancelSubscription")}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3 border-t pt-6">
+              <p className="text-muted-foreground text-sm">{t("billing.notStripeManaged")}</p>
+              {(subscription?.plan === "FREE" || subscription?.plan === "POS") && (
+                <Button onClick={handleUpgrade} className="gap-2">
+                  <ArrowUpCircle className="h-4 w-4" />
+                  {t("billing.viewPlans")}
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -26,6 +26,18 @@ export const portalSchema = z.object({
 export type PortalInput = z.infer<typeof portalSchema>;
 
 /**
+ * BETA / privilege freestyle plan switch.
+ * Only admin-granted (non-payment) accounts may use this — any plan, no checkout.
+ */
+export const betaPlanSchema = z.object({
+  plan: z.enum(["FREE", "POS", "OPERATIONS", "ENTERPRISE"], {
+    required_error: "Plan is required",
+  }),
+});
+
+export type BetaPlanInput = z.infer<typeof betaPlanSchema>;
+
+/**
  * Setup Intent Schema (Card Validation)
  */
 export const setupSchema = z.object({

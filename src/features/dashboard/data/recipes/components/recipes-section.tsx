@@ -313,7 +313,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                 variant="outline"
                 size="sm"
                 onClick={() => setSmartImportOpen(true)}
-                className="w-full md:w-auto"
+                className="ai-glow w-full md:w-auto"
               >
                 <Wand2 className="mr-1 hidden h-4 w-4 sm:inline" />
                 {t("import.title")}

@@ -464,6 +464,15 @@ body.dialog-open {
 }
 .epi-warm-section > * { position: relative; z-index: 2; }
 
+/* ---- Adjacent warm (cream) sections ----
+   The navy top/bottom blend fades exist to ease a cream section into the
+   surrounding DARK sections. When two warm sections touch (e.g. Setup Steps →
+   Testimonials) those two fades stack into a muddy navy band. The sections
+   render as direct DOM siblings, so we can drop just the fades on the shared
+   edge and let the cream flow seamlessly into the next section. */
+.epi-warm-section:has(+ .epi-warm-section)::after { content: none; }
+.epi-warm-section + .epi-warm-section::before { content: none; }
+
 /* ---- Hero diamond pattern ---- */
 .epi-hero-pattern {
   position: absolute;
@@ -1020,5 +1029,56 @@ body.dialog-open {
   .page-content {
     will-change: auto;
     transform: none;
+  }
+}
+
+/* ========================================
+   AI SMART IMPORT — glowing button (Google/iOS-style)
+   ======================================== */
+
+.ai-glow {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  animation: ai-glow-pulse 3.5s ease-in-out infinite;
+}
+
+/* Animated multi-color gradient border (masked ring). */
+.ai-glow::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(120deg, #4285f4, #9b72cb, #d96570, #f9ab00, #4285f4);
+  background-size: 300% 100%;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ai-glow-sweep 4s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes ai-glow-sweep {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+@keyframes ai-glow-pulse {
+  0%, 100% { box-shadow: 0 0 12px -3px rgba(66, 133, 244, 0.55); }
+  33% { box-shadow: 0 0 13px -2px rgba(155, 114, 203, 0.55); }
+  66% { box-shadow: 0 0 13px -2px rgba(217, 101, 112, 0.55); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-glow,
+  .ai-glow::before {
+    animation: none;
   }
 }

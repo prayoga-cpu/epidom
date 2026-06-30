@@ -10,6 +10,9 @@ import { useState } from "react";
 import { getStatusColor, getStatusLabel, getPlanDetails } from "@/lib/utils/subscription-helpers";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDate } from "@/lib/utils/format-date";
+import { getApiErrorMessage } from "@/lib/utils/api-error";
+import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
+import { BetaPlanSwitcher } from "@/features/dashboard/billing/components/beta-plan-switcher";
 
 interface SubscriptionInfoCardProps {
   subscription?: {
@@ -24,6 +27,8 @@ interface SubscriptionInfoCardProps {
 export function SubscriptionInfoCard({ subscription: initialSubscription }: SubscriptionInfoCardProps) {
   const { t } = useI18n();
   const { currency } = useCurrency();
+  const { data: subStatus } = useSubscriptionStatus();
+  const isBeta = !!subStatus?.subscription?.isBeta;
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
 
@@ -46,7 +51,7 @@ export function SubscriptionInfoCard({ subscription: initialSubscription }: Subs
             "Billing portal is not yet configured. Please contact support or visit the Stripe dashboard to set it up."
           );
         } else {
-          throw new Error(data.error || "Failed to open billing portal");
+          throw new Error(getApiErrorMessage(data, "Failed to open billing portal"));
         }
         return;
       }
@@ -77,6 +82,14 @@ export function SubscriptionInfoCard({ subscription: initialSubscription }: Subs
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl font-bold">{t("profile.subscription.title")}</CardTitle>
         <div className="flex gap-2">
+          {isBeta && (
+            <Badge
+              variant="outline"
+              className="border-emerald-500 text-emerald-600 dark:text-emerald-400"
+            >
+              BETA
+            </Badge>
+          )}
           {subscription.cancelAtPeriodEnd && (
             <Badge
               variant="outline"
@@ -183,7 +196,9 @@ export function SubscriptionInfoCard({ subscription: initialSubscription }: Subs
 
         {/* Actions - Always at bottom */}
         <div className="mt-auto flex flex-col gap-2 pt-4 sm:flex-row">
-          {subscription.plan === "FREE" ? (
+          {isBeta ? (
+            <BetaPlanSwitcher currentPlan={subscription.plan} />
+          ) : subscription.plan === "FREE" ? (
             <Button
               variant="default"
               asChild

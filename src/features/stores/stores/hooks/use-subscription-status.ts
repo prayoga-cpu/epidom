@@ -24,6 +24,9 @@ export interface SubscriptionStatusResponse {
     currentPeriodStart: string;
     currentPeriodEnd: string;
     cancelAtPeriodEnd: boolean;
+    canManagePayment: boolean;
+    canCancel: boolean;
+    isBeta: boolean;
   } | null;
   storeUsage: {
     current: number;

@@ -79,6 +79,14 @@ export const GET = withApiHandler(
           currentPeriodStart: subscription.currentPeriodStart,
           currentPeriodEnd: subscription.currentPeriodEnd,
           cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+          // Whether Stripe-managed billing actions are available. The customer
+          // portal needs a real Stripe customer (free plans use a "free_" stub),
+          // and cancellation needs an actual Stripe subscription id.
+          canManagePayment: !subscription.stripeCustomerId.startsWith("free_"),
+          canCancel: !!subscription.stripeSubscriptionId,
+          // Admin-granted (privilege) account — no payment method attached. These
+          // "BETA" accounts may switch plans freestyle without Stripe checkout.
+          isBeta: subscription.stripeCustomerId.startsWith("admin_"),
         },
         storeUsage,
       })
