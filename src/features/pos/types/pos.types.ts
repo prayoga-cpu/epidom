@@ -1,4 +1,14 @@
-import type { Order, OrderItem, OrderStatus, OrderItemStatus, OrderSource, PaymentMethod, OrderType, TableStatus } from "@prisma/client";
+import type {
+  Order,
+  OrderItem,
+  OrderStatus,
+  OrderItemStatus,
+  OrderSource,
+  PaymentMethod,
+  PaymentStatus,
+  OrderType,
+  TableStatus,
+} from "@prisma/client";
 
 // ─── POS Cart ────────────────────────────────────────────────────────────────
 
@@ -101,4 +111,49 @@ export interface CheckoutFormValues {
 export interface OrdersSSEMessage {
   type: "orders";
   orders: PosOrderDisplay[];
+}
+
+// ─── Order History ───────────────────────────────────────────────────────────
+
+export interface OrderHistoryItem {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  source: OrderSource;
+  orderType: OrderType;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  customerName: string;
+  customerPhone?: string | null;
+  notes?: string | null;
+  subtotal: string | number;
+  tax: string | number;
+  delivery: string | number;
+  total: string | number;
+  orderDate: string;
+  createdAt: string;
+  deliveredDate?: string | null;
+  table?: { label: string } | null;
+  items: {
+    id: string;
+    name: string;
+    quantity: string | number;
+    unitPrice: string | number;
+    total: string | number;
+    menuItem?: { name: string } | null;
+  }[];
+}
+
+export interface OrderHistoryPage {
+  orders: OrderHistoryItem[];
+  nextCursor: string | null;
+  totalCount: number;
+}
+
+export interface OrderHistoryFilters {
+  q: string;
+  status: string;
+  source: string;
+  from: string;
+  to: string;
 }

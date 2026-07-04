@@ -10,6 +10,7 @@ import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import { NavUser } from "./nav-user";
 import { NotificationBell } from "./notification-bell";
+import { FeedbackButton } from "@/features/dashboard/feedback/components/feedback-button";
 import { useState, useEffect } from "react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
@@ -25,7 +26,8 @@ function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      className="h-9 w-9 shrink-0 hover:bg-white/10" style={{ color: "var(--epi-cream-50)" }}
+      className="h-9 w-9 shrink-0 hover:bg-white/10"
+      style={{ color: "var(--epi-cream-50)" }}
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       aria-label="Toggle theme"
     >
@@ -62,7 +64,8 @@ export function Topbar() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 shrink-0 hover:bg-white/10" style={{ color: "var(--epi-cream-50)" }}
+                  className="h-9 w-9 shrink-0 hover:bg-white/10"
+                  style={{ color: "var(--epi-cream-50)" }}
                 >
                   <Menu className="size-5" />
                   <span className="sr-only">{t("common.nav.openMenu")}</span>
@@ -83,7 +86,8 @@ export function Topbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 shrink-0 hover:bg-white/10" style={{ color: "var(--epi-cream-50)" }}
+              className="h-9 w-9 shrink-0 hover:bg-white/10"
+              style={{ color: "var(--epi-cream-50)" }}
               onClick={() => setSearchOpen(true)}
             >
               <Search className="size-5" />
@@ -106,6 +110,9 @@ export function Topbar() {
             {/* Theme toggle */}
             <ThemeToggle />
 
+            {/* Feedback */}
+            <FeedbackButton />
+
             {/* Notifications */}
             <NotificationBell />
 
@@ -116,7 +123,8 @@ export function Topbar() {
             <Button
               size="sm"
               variant="ghost"
-              className="h-9 shrink-0 rounded-xl hover:bg-red-500/20 sm:px-2" style={{ color: "var(--epi-cream-50)" }}
+              className="h-9 shrink-0 rounded-xl hover:bg-red-500/20 sm:px-2"
+              style={{ color: "var(--epi-cream-50)" }}
               onClick={() => {
                 signOut().then(() => (window.location.href = "/login"));
               }}
@@ -155,7 +163,7 @@ export function Topbar() {
           <div className="hidden w-full items-center justify-end md:flex">
             <Button
               variant="outline"
-              className="text-muted-foreground relative h-9 w-80 max-w-xl justify-start rounded-full bg-background text-sm font-normal sm:max-w-2xl"
+              className="text-muted-foreground bg-background relative h-9 w-80 max-w-xl justify-start rounded-full text-sm font-normal sm:max-w-2xl"
               onClick={() => setSearchOpen(true)}
             >
               <Search className="mr-1 hidden size-4 shrink-0 sm:inline" />
@@ -182,6 +190,9 @@ export function Topbar() {
             </div>
             <div className="flex items-center">
               <ThemeToggle />
+            </div>
+            <div className="flex items-center">
+              <FeedbackButton />
             </div>
             <div className="flex items-center">
               <NotificationBell />

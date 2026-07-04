@@ -21,4 +21,16 @@ export type OrderPaymentEventData = {
   providerRef: string;
 };
 
+export type FeedbackSubmittedEventData = {
+  feedbackId: string;
+  type: string;
+  page: string;
+  description: string;
+  screenshotUrl: string | null;
+  userName: string;
+  userEmail: string;
+  storeId: string | null;
+  storeName: string | null;
+};
+
 export const inngest = new Inngest({ id: "epidom" });

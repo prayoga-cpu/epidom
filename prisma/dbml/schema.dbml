@@ -14,6 +14,7 @@ Table user {
   locale String [not null, default: 'id']
   timezone String [not null, default: 'Asia/Jakarta']
   currency String [not null, default: 'IDR']
+  defaultLanding String [not null, default: 'dashboard']
   stripeConnectAccountId String
   stripeConnectOnboarded Boolean [not null, default: false]
   isAdmin Boolean [not null, default: false]
@@ -21,6 +22,7 @@ Table user {
   sessions session [not null]
   accounts account [not null]
   alerts alerts [not null]
+  feedback feedback [not null]
   business businesses
   subscription subscriptions
 }
@@ -416,6 +418,22 @@ Table alerts {
   user user [not null]
 }
 
+Table feedback {
+  id String [pk]
+  userId String
+  userName String [not null]
+  userEmail String [not null]
+  storeId String
+  type FeedbackType [not null]
+  page String [not null]
+  description String [not null]
+  screenshotUrl String
+  status FeedbackStatus [not null, default: 'OPEN']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  user user
+}
+
 Table exchange_rates {
   id String [pk]
   fromCurrency String [not null]
@@ -693,6 +711,19 @@ Enum AlertSeverity {
   CRITICAL
 }
 
+Enum FeedbackType {
+  BUG
+  FEATURE_SUGGESTION
+  GENERAL_FEEDBACK
+}
+
+Enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  ARCHIVED
+}
+
 Enum OrderType {
   DINE_IN
   TAKEAWAY
@@ -831,6 +862,8 @@ Ref: order_items.productId > products.id [delete: Set Null]
 Ref: order_items.menuItemId > menu_items.id [delete: Set Null]
 
 Ref: alerts.userId > user.id [delete: Cascade]
+
+Ref: feedback.userId > user.id [delete: Set Null]
 
 Ref: tables.storeId > stores.id [delete: Cascade]
 

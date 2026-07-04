@@ -38,3 +38,10 @@ export const createPublicOrderSchema = z.object({
 });
 
 export type CreatePublicOrderInput = z.infer<typeof createPublicOrderSchema>;
+
+export const lookupPublicOrdersSchema = z.object({
+  storefrontSlug: z.string().min(1).max(100),
+  orderIds: z.array(z.string().cuid()).min(1).max(20),
+});
+
+export type LookupPublicOrdersInput = z.infer<typeof lookupPublicOrdersSchema>;

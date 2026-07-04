@@ -51,3 +51,6 @@ seed-storefront-items.ts
 
 # Puppeteer cache
 .puppeteer_cache/
+
+# graphify generated knowledge graph (regenerate locally with `graphify update .`)
+graphify-out/

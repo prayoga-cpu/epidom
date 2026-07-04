@@ -32,3 +32,4 @@ export * from "./production-batch.service";
 // Utility services
 export * from "./email.service";
 export * from "./exchange-rate.service";
+export * from "./feedback.service";

@@ -1,14 +1,10 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
-import { PosOrderQueue } from "@/features/pos/components/pos-order-queue";
+import { PosOrdersTabs } from "@/features/pos/components/pos-orders-tabs";
 import { PosOrdersPageHeader } from "@/features/pos/components/pos-page-headers";
 
-export default async function PosOrdersPage({
-  params,
-}: {
-  params: Promise<{ storeId: string }>;
-}) {
+export default async function PosOrdersPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
   const session = await getSession();
 
@@ -19,9 +15,9 @@ export default async function PosOrdersPage({
   await verifyStoreOwnership(storeId, session.user.id);
 
   return (
-    <div className="flex flex-col flex-1 h-full">
+    <div className="flex h-full flex-1 flex-col">
       <PosOrdersPageHeader />
-      <PosOrderQueue storeId={storeId} />
+      <PosOrdersTabs storeId={storeId} />
     </div>
   );
 }

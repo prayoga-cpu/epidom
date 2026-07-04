@@ -26,5 +26,8 @@ export * from "./production.schemas";
 // Storefront schemas
 export * from "./storefront.schemas";
 
+// Feedback schemas
+export * from "./feedback.schemas";
+
 // Re-export Zod for convenience
 export { z } from "zod";

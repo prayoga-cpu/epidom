@@ -4,6 +4,22 @@ Guidance for AI coding agents (Claude Code, Cursor, Aider, Codex) working in thi
 
 ---
 
+## 0. Navigate with graphify first (save tokens)
+
+This repo has a prebuilt knowledge graph at `graphify-out/`. For **any** question about the codebase — "how does X work", "what calls Y", "where is Z", architecture, or data flow — query the graph **before** grepping or opening many files. It returns a small scoped subgraph, far cheaper than raw search, and it already knows the structure (3.6k nodes, 194 communities).
+
+```bash
+graphify query "<question>"      # broad context — BFS over the graph
+graphify explain "<symbol>"      # plain-language explanation of one node + its edges
+graphify path "<A>" "<B>"        # shortest relationship path between two concepts
+```
+
+- Read `graphify-out/GRAPH_REPORT.md` for the architecture overview (god nodes = core abstractions like `useI18n()`, `cn()`, `getSession()`; community map).
+- After changing code, run `graphify update .` to keep the graph current (AST-only, no API cost). A post-commit hook does this automatically.
+- Fall back to reading source directly only when the graph doesn't surface enough.
+
+---
+
 ## 1. What Epidom is, in one paragraph
 
 Epidom is a free, all-in-one operating system for small Indonesian food & beverage businesses (warung, café, restaurant, cookie bar, home kitchen). The wedge is a customizable public storefront page (replaces Linktree + Google Drive menu + WhatsApp ordering). The ladder upsells to POS, operations (shift, KDS, inventory), and finance reports. **We do not compete with full POS suites head-on. We coexist with existing tools and replace them gradually.**

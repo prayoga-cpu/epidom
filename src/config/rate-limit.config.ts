@@ -112,6 +112,10 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 100,
     window: 60,
   },
+  "/api/stores/[id]/orders": {
+    limit: 100,
+    window: 60,
+  },
 
   // Stock operations
   "/api/stores/[id]/stock/adjust": {
@@ -161,6 +165,22 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
   "/api/exchange-rates": {
     limit: 30,
     window: 60, // 30 requests per minute
+  },
+
+  // Feedback submission - generous limit, feedback is welcome; only blocks runaway bots
+  "/api/feedback": {
+    limit: 30,
+    window: 60, // 30 submissions per minute
+  },
+  "/api/feedback/[id]": {
+    limit: 60,
+    window: 60, // 60 edit/delete operations per minute
+  },
+
+  // Public storefront order lookup (unauthenticated, IP-based)
+  "/api/public/orders/lookup": {
+    limit: 30,
+    window: 60, // 30 lookups per minute
   },
 
   // Webhooks (no rate limit - handled by Stripe)

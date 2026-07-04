@@ -12,6 +12,20 @@ import { getRateLimitConfig } from "@/config/rate-limit.config";
  */
 class InMemoryRateLimiter {
   private requests: Map<string, number[]> = new Map();
+  private lastSweep = Date.now();
+  private static readonly SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+
+  // Drop keys whose timestamps have all expired so unauthenticated traffic
+  // with high-cardinality identifiers cannot grow the map unbounded
+  private sweep(now: number, windowMs: number): void {
+    if (now - this.lastSweep < InMemoryRateLimiter.SWEEP_INTERVAL_MS) return;
+    this.lastSweep = now;
+    for (const [key, timestamps] of this.requests) {
+      if (!timestamps.some((ts) => now - ts < windowMs)) {
+        this.requests.delete(key);
+      }
+    }
+  }
 
   async limit(
     identifier: string,
@@ -26,6 +40,8 @@ class InMemoryRateLimiter {
     const now = Date.now();
     const windowMs = window * 1000;
     const key = identifier;
+
+    this.sweep(now, windowMs);
 
     if (!this.requests.has(key)) {
       this.requests.set(key, []);
@@ -123,11 +139,14 @@ export async function rateLimitMiddleware(
   remaining: number;
   reset: number;
 } | null> {
-  // Get identifier (user ID from session or IP address)
-  const identifier =
-    request.headers.get("x-user-id") ||
+  // Key strictly on the connection IP from platform-set headers.
+  // Never trust client-suppliable identifiers (e.g. x-user-id) here —
+  // this middleware guards unauthenticated public routes.
+  const ip =
+    request.headers.get("x-real-ip") ||
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     "anonymous";
+  const identifier = `ip:${ip}`;
 
   const result = await checkRateLimit(identifier, path);
 
