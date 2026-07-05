@@ -180,15 +180,14 @@ docs/                  # READ THIS for context before non-trivial work
 
 ## 9. Where to find more
 
-| You need to understand...                       | Read                       |
-| ----------------------------------------------- | -------------------------- |
-| Why we pivoted, target market, competitors      | `/docs/STRATEGY.md`        |
-| Phase plan, dependencies between phases         | `/docs/roadmap.md`         |
-| What to do this week                            | `/docs/PHASE_0_CLEANUP.md` |
-| Architecture decisions, route groups, providers | `/docs/ARCHITECTURE.md`    |
-| Tier-by-tier feature list                       | `/docs/FEATURES.md`        |
-| Pricing tiers, Stripe products                  | `/docs/BILLING.md`         |
-| Env variables and required services             | `/docs/ENVIRONMENT.md`     |
-| Schema, models, migrations                      | `/docs/DATABASE.md`        |
+| You need to understand...                       | Read                    |
+| ----------------------------------------------- | ----------------------- |
+| Why we pivoted, target market, competitors      | `/docs/STRATEGY.md`     |
+| Phase plan, dependencies between phases         | `/docs/roadmap.md`      |
+| Architecture decisions, route groups, providers | `/docs/ARCHITECTURE.md` |
+| Tier-by-tier feature list                       | `/docs/FEATURES.md`     |
+| Pricing tiers, Stripe products                  | `/docs/BILLING.md`      |
+| Env variables and required services             | `/docs/ENVIRONMENT.md`  |
+| Schema, models, migrations                      | `/docs/DATABASE.md`     |
 
 If a doc and this file disagree, this file wins. Flag the inconsistency to the operator.
