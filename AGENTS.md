@@ -30,13 +30,13 @@ Full strategic context: see `/docs/STRATEGY.md`.
 
 ## 2. Project status
 
-| Dimension | Current state |
-|---|---|
-| Phase | **Phase 5, Aggregator + Finance** |
-| Primary market | Indonesia (primary), France/Worldwide (secondary) |
-| Primary language | `id`, then `en`. `fr` is deprecated, do not add new French strings. |
-| Active strategic doc | `/docs/roadmap.md` (Phase 5 section) |
-| Next phase | None — Phase 5 is the final planned phase. |
+| Dimension            | Current state                                                       |
+| -------------------- | ------------------------------------------------------------------- |
+| Phase                | **Phase 5, Aggregator + Finance**                                   |
+| Primary market       | Indonesia (primary), France/Worldwide (secondary)                   |
+| Primary language     | `id`, then `en`. `fr` is deprecated, do not add new French strings. |
+| Active strategic doc | `/docs/roadmap.md` (Phase 5 section)                                |
+| Next phase           | None — Phase 5 is the final planned phase.                          |
 
 If a task is not aligned with Phase 5, ask the operator before proceeding.
 
@@ -103,26 +103,31 @@ docs/                  # READ THIS for context before non-trivial work
 ## 6. Coding rules (non-negotiable)
 
 **Architecture**
+
 - Pages stay thin. `page.tsx` fetches data on the server and imports a feature root component.
 - Domain components live under `src/features/<feature>/`, not in `src/components/`.
 - `src/components/ui/` is for generic shadcn primitives only.
 
 **Database**
+
 - All data queries scope to `storeId`. Never write a query that crosses tenants.
 - Use Prisma `Decimal` for money and quantities, never `Float`.
 - New tables get `@@map("snake_case_table_name")`.
 - Every schema change goes through a migration. Never use `db push` against any branch other than your local.
 
 **Validation**
+
 - All API inputs validated with Zod schemas from `src/lib/validation/`.
 - Use `react-hook-form` + `zodResolver` for forms. Legacy `FormData` flows are being phased out, don't add new ones.
 
 **Auth**
+
 - Server: `await getSession()` from `src/lib/auth.ts`
 - Client: `useUser()` from `src/lib/auth-client.ts`
 - Plan-gated routes use `await requirePlan(storeId, "OPERATIONS")` in their layout (added in Phase 4).
 
 **Styling**
+
 - Tailwind utility classes only. No inline styles, no CSS modules.
 - Colors come from CSS variables, not raw hex.
 - **All UI must be fully responsive for both mobile and desktop.** Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`, `xl:`) starting from the smallest breakpoint and scaling up. Every component, page, table, dialog, and form must render correctly from 375 px (mobile) through 1920 px (desktop).
@@ -132,10 +137,18 @@ docs/                  # READ THIS for context before non-trivial work
 - Most Indonesian merchants open the dashboard on Android phones; the storefront is also primarily accessed on mobile. Desktop usability for managers on larger screens is equally important — test both before marking a task done.
 
 **i18n**
+
 - Every user-facing string goes through `useI18n()`.
 - Add the string to `src/locales/id.ts` and `src/locales/en.ts`. Do not add to `fr.ts`.
 
+**Changelog & versioning**
+
+- Every user-facing change MUST add an entry to `CHANGELOG.md` under a new or the most-recent version header, formatted `## [x.y.z] - YYYY-MM-DD · tag`, where `tag` ∈ `feat | fix | infra | ux`.
+- Bump the version in `package.json` AND `src/lib/version.ts` (`APP_VERSION`) so both match that header.
+- The build syncs `CHANGELOG.md` → the `Release` table automatically via `scripts/sync-changelog.ts`; never edit that table by hand.
+
 **Graceful Degradation (Dummy Data)**
+
 - If an environment/setup has not been implemented by the operator (e.g., missing API keys), keep the feature working gracefully by using state/static/dummy data.
 - Document any use of dummy features in `STATUS.md`.
 
@@ -167,15 +180,15 @@ docs/                  # READ THIS for context before non-trivial work
 
 ## 9. Where to find more
 
-| You need to understand... | Read |
-|---|---|
-| Why we pivoted, target market, competitors | `/docs/STRATEGY.md` |
-| Phase plan, dependencies between phases | `/docs/roadmap.md` |
-| What to do this week | `/docs/PHASE_0_CLEANUP.md` |
-| Architecture decisions, route groups, providers | `/docs/ARCHITECTURE.md` |
-| Tier-by-tier feature list | `/docs/FEATURES.md` |
-| Pricing tiers, Stripe products | `/docs/BILLING.md` |
-| Env variables and required services | `/docs/ENVIRONMENT.md` |
-| Schema, models, migrations | `/docs/DATABASE.md` |
+| You need to understand...                       | Read                       |
+| ----------------------------------------------- | -------------------------- |
+| Why we pivoted, target market, competitors      | `/docs/STRATEGY.md`        |
+| Phase plan, dependencies between phases         | `/docs/roadmap.md`         |
+| What to do this week                            | `/docs/PHASE_0_CLEANUP.md` |
+| Architecture decisions, route groups, providers | `/docs/ARCHITECTURE.md`    |
+| Tier-by-tier feature list                       | `/docs/FEATURES.md`        |
+| Pricing tiers, Stripe products                  | `/docs/BILLING.md`         |
+| Env variables and required services             | `/docs/ENVIRONMENT.md`     |
+| Schema, models, migrations                      | `/docs/DATABASE.md`        |
 
 If a doc and this file disagree, this file wins. Flag the inconsistency to the operator.

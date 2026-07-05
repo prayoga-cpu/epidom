@@ -9,6 +9,11 @@ const CACHE_NAME = "epidom-v2";
 // Minimal precache: only assets that are stable across builds
 const PRECACHE = ["/favicon.ico"];
 
+// On localhost (dev) the SW must exist (so Chrome treats the app as installable)
+// but must NOT cache — otherwise it serves stale dev chunks and breaks HMR.
+const IS_DEV =
+  self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1";
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE))
@@ -37,6 +42,11 @@ self.addEventListener("fetch", (event) => {
 
   // Only handle same-origin GET requests
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
+
+  // Dev: pass everything through to the network (no caching) so HMR/fresh chunks
+  // are never stale. The fetch handler still exists, which is all Chrome needs to
+  // consider the app installable.
+  if (IS_DEV) return;
 
   // Never cache API routes — always go network, let idb-keyval handle offline
   if (url.pathname.startsWith("/api/")) return;

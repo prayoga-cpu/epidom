@@ -116,6 +116,14 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 100,
     window: 60,
   },
+  "/api/stores/[id]/orders/analytics": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/customers/analytics": {
+    limit: 100,
+    window: 60,
+  },
 
   // Stock operations
   "/api/stores/[id]/stock/adjust": {

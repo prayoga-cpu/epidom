@@ -30,6 +30,9 @@ export const fr = {
       profile: "Profil",
       startFree: "Démarrer gratuitement",
     },
+    pwa: {
+      installApp: "Installer l'app",
+    },
     language: {
       label: "Langue",
       en: "Anglais",
@@ -1522,6 +1525,22 @@ export const fr = {
     title: "Tableau de Bord",
     description:
       "Bienvenue sur le tableau de bord. Ici, vous pouvez voir l'état actuel de vos commandes, recettes et stocks.",
+    analytics: {
+      title: "Analytique",
+      subtitle: "Aperçu des ventes, des commandes et des clients",
+      revenue: "Chiffre d'affaires",
+      orders: "Commandes",
+      aov: "Panier moyen",
+      uniqueCustomers: "Clients uniques",
+      newCustomers: "Nouveaux clients",
+      returningCustomers: "Clients fidèles",
+      anonymousOrders: "Commandes anonymes",
+      revenueTrend: "Évolution du chiffre d'affaires",
+      ordersByStatus: "Commandes par statut",
+      topProducts: "Meilleurs produits",
+      topCustomers: "Meilleurs clients",
+      noData: "Aucune donnée pour cette période",
+    },
     storeSelector: {
       label: "Sélectionner un magasin",
       select: "Sélectionner un magasin",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Inbox, Clock, CheckCircle2, Archive } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type FeedbackType = "BUG" | "FEATURE_SUGGESTION" | "GENERAL_FEEDBACK";
@@ -60,8 +62,10 @@ const statusLabels: Record<FeedbackStatus, string> = {
 const DESCRIPTION_PREVIEW_LENGTH = 80;
 
 export function AdminFeedbackTable() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery<{ feedback: FeedbackRow[] }>({
     queryKey: ["admin-feedback"],
@@ -127,8 +131,8 @@ export function AdminFeedbackTable() {
                 Bug reports and suggestions from users
               </p>
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => (window.location.href = "/admin")}>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => router.push("/admin")}>
                 ← Back
               </Button>
             </div>
@@ -160,124 +164,213 @@ export function AdminFeedbackTable() {
           ))}
         </div>
 
-        {/* Table */}
-        <div className="border-border bg-card overflow-hidden rounded-xl border">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">Date</TableHead>
-                  <TableHead className="text-muted-foreground">User</TableHead>
-                  <TableHead className="text-muted-foreground">Type</TableHead>
-                  <TableHead className="text-muted-foreground">Page</TableHead>
-                  <TableHead className="text-muted-foreground">Description</TableHead>
-                  <TableHead className="text-muted-foreground">Screenshot</TableHead>
-                  <TableHead className="text-muted-foreground">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-muted-foreground py-12 text-center">
-                      Loading feedback...
-                    </TableCell>
-                  </TableRow>
-                )}
-                {isError && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-destructive py-12 text-center">
-                      Failed to load feedback. Refresh the page or sign in again.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!isLoading && !isError && rows.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-muted-foreground py-12 text-center">
-                      No feedback yet
-                    </TableCell>
-                  </TableRow>
-                )}
-                {rows.map((row) => {
-                  const isExpanded = expanded.has(row.id);
-                  const isLong = row.description.length > DESCRIPTION_PREVIEW_LENGTH;
+        {/* Mobile/Tablet: card list */}
+        <div className="space-y-3 lg:hidden">
+          {isLoading && (
+            <p className="text-muted-foreground py-12 text-center text-sm">Loading feedback...</p>
+          )}
+          {isError && (
+            <p className="text-destructive py-12 text-center text-sm">
+              Failed to load feedback. Refresh the page or sign in again.
+            </p>
+          )}
+          {!isLoading && !isError && rows.length === 0 && (
+            <p className="text-muted-foreground py-12 text-center text-sm">No feedback yet</p>
+          )}
+          {rows.map((row) => {
+            const isExpanded = expanded.has(row.id);
+            const isLong = row.description.length > DESCRIPTION_PREVIEW_LENGTH;
 
-                  return (
-                    <TableRow key={row.id} className="border-border">
-                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                        {new Date(row.createdAt).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="text-foreground text-sm font-medium">
-                            {row.user?.name ?? row.userName}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            {row.user?.email ?? row.userEmail}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={typeBadges[row.type].variant}>
-                          {typeBadges[row.type].label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-[160px] truncate text-xs">
-                        {row.page}
-                      </TableCell>
-                      <TableCell className="max-w-[320px]">
-                        <button
-                          type="button"
-                          onClick={() => isLong && toggleExpanded(row.id)}
-                          className={`text-foreground text-left text-sm break-words whitespace-pre-wrap ${isLong ? "cursor-pointer" : "cursor-default"}`}
-                        >
-                          {isLong && !isExpanded
-                            ? `${row.description.slice(0, DESCRIPTION_PREVIEW_LENGTH)}…`
-                            : row.description}
-                        </button>
-                      </TableCell>
-                      <TableCell>
-                        {row.screenshotUrl ? (
-                          <a
-                            href={row.screenshotUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-400 hover:underline"
-                          >
-                            View
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={row.status}
-                          onValueChange={(v) =>
-                            mutation.mutate({ id: row.id, status: v as FeedbackStatus })
-                          }
-                          disabled={mutation.isPending}
-                        >
-                          <SelectTrigger size="sm" className="w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUS_OPTIONS.map((s) => (
-                              <SelectItem key={s} value={s}>
-                                {statusLabels[s]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+            return (
+              <div key={row.id} className="border-border bg-card space-y-3 rounded-xl border p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-foreground text-sm font-medium">
+                      {row.user?.name ?? row.userName}
+                    </p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {row.user?.email ?? row.userEmail}
+                    </p>
+                  </div>
+                  <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
+                    {new Date(row.createdAt).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={typeBadges[row.type].variant}>{typeBadges[row.type].label}</Badge>
+                  <span className="text-muted-foreground text-xs break-all">{row.page}</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => isLong && toggleExpanded(row.id)}
+                  className={`text-foreground w-full text-left text-sm break-words whitespace-pre-wrap ${isLong ? "cursor-pointer" : "cursor-default"}`}
+                >
+                  {isLong && !isExpanded
+                    ? `${row.description.slice(0, DESCRIPTION_PREVIEW_LENGTH)}…`
+                    : row.description}
+                </button>
+
+                <div className="flex items-center justify-between gap-2">
+                  {row.screenshotUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScreenshot(row.screenshotUrl)}
+                      className="text-xs text-blue-400 hover:underline"
+                    >
+                      View
+                    </button>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">—</span>
+                  )}
+                  <Select
+                    value={row.status}
+                    onValueChange={(v) =>
+                      mutation.mutate({ id: row.id, status: v as FeedbackStatus })
+                    }
+                    disabled={mutation.isPending}
+                  >
+                    <SelectTrigger size="sm" className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {statusLabels[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Table */}
+        <div className="border-border bg-card hidden overflow-hidden rounded-xl border lg:block">
+          <div className="overflow-x-auto">
+            <div className="min-w-[900px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Date</TableHead>
+                    <TableHead className="text-muted-foreground">User</TableHead>
+                    <TableHead className="text-muted-foreground">Type</TableHead>
+                    <TableHead className="text-muted-foreground">Page</TableHead>
+                    <TableHead className="text-muted-foreground">Description</TableHead>
+                    <TableHead className="text-muted-foreground">Screenshot</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-muted-foreground py-12 text-center">
+                        Loading feedback...
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                  )}
+                  {isError && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-destructive py-12 text-center">
+                        Failed to load feedback. Refresh the page or sign in again.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && !isError && rows.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-muted-foreground py-12 text-center">
+                        No feedback yet
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {rows.map((row) => {
+                    const isExpanded = expanded.has(row.id);
+                    const isLong = row.description.length > DESCRIPTION_PREVIEW_LENGTH;
+
+                    return (
+                      <TableRow key={row.id} className="border-border">
+                        <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                          {new Date(row.createdAt).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="text-foreground text-sm font-medium">
+                              {row.user?.name ?? row.userName}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {row.user?.email ?? row.userEmail}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={typeBadges[row.type].variant}>
+                            {typeBadges[row.type].label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-[160px] truncate text-xs">
+                          {row.page}
+                        </TableCell>
+                        <TableCell className="max-w-[320px]">
+                          <button
+                            type="button"
+                            onClick={() => isLong && toggleExpanded(row.id)}
+                            className={`text-foreground text-left text-sm break-words whitespace-pre-wrap ${isLong ? "cursor-pointer" : "cursor-default"}`}
+                          >
+                            {isLong && !isExpanded
+                              ? `${row.description.slice(0, DESCRIPTION_PREVIEW_LENGTH)}…`
+                              : row.description}
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          {row.screenshotUrl ? (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedScreenshot(row.screenshotUrl)}
+                              className="text-xs text-blue-400 hover:underline"
+                            >
+                              View
+                            </button>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={row.status}
+                            onValueChange={(v) =>
+                              mutation.mutate({ id: row.id, status: v as FeedbackStatus })
+                            }
+                            disabled={mutation.isPending}
+                          >
+                            <SelectTrigger size="sm" className="w-[140px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                  {statusLabels[s]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
 
@@ -285,6 +378,37 @@ export function AdminFeedbackTable() {
           {rows.length} feedback {rows.length === 1 ? "entry" : "entries"}
         </p>
       </div>
+
+      {/* Screenshot preview dialog */}
+      <Dialog
+        open={!!selectedScreenshot}
+        onOpenChange={(open) => {
+          if (!open) setSelectedScreenshot(null);
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Screenshot</DialogTitle>
+          </DialogHeader>
+          {selectedScreenshot && (
+            <>
+              <img
+                src={selectedScreenshot}
+                alt="Feedback screenshot"
+                className="max-h-[80vh] w-full rounded-md object-contain"
+              />
+              <a
+                href={selectedScreenshot}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-xs text-blue-400 hover:underline"
+              >
+                Open in new tab
+              </a>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

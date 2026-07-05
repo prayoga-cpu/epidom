@@ -21,9 +21,9 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
     <div className="flex flex-col gap-2 border-b p-4 last:border-0">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <h4 className="font-medium leading-none">{item.name}</h4>
+          <h4 className="leading-none font-medium">{item.name}</h4>
           {item.modifiers.length > 0 && (
-            <ul className="mt-1 text-sm text-muted-foreground">
+            <ul className="text-muted-foreground mt-1 text-sm">
               {item.modifiers.map((mod, i) => (
                 <li key={i}>
                   + {mod.name} ({formatCurrency(mod.priceAdd, currency)})
@@ -31,17 +31,18 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
               ))}
             </ul>
           )}
-          <div className="mt-1.5 text-sm font-medium text-primary">
-            {formatCurrency(item.unitPrice + item.modifiers.reduce((sum, m) => sum + m.priceAdd, 0), currency)}
+          <div className="text-primary mt-1.5 text-sm font-medium">
+            {formatCurrency(
+              item.unitPrice + item.modifiers.reduce((sum, m) => sum + m.priceAdd, 0),
+              currency
+            )}
           </div>
         </div>
-        <div className="text-right font-medium">
-          {formatCurrency(item.lineTotal, currency)}
-        </div>
+        <div className="text-right font-medium">{formatCurrency(item.lineTotal, currency)}</div>
       </div>
 
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-1 rounded-md border bg-muted/50 p-0.5">
+      <div className="mt-2 flex items-center justify-between">
+        <div className="bg-muted/50 flex items-center gap-1 rounded-md border p-0.5">
           <Button
             variant="ghost"
             size="icon"
@@ -49,15 +50,13 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
             onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
           >
             {item.quantity === 1 ? (
-              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              <Trash2 className="text-destructive h-3.5 w-3.5" />
             ) : (
               <Minus className="h-3.5 w-3.5" />
             )}
             <span className="sr-only">Decrease</span>
           </Button>
-          <span className="w-8 text-center text-sm font-medium">
-            {item.quantity}
-          </span>
+          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
           <Button
             variant="ghost"
             size="icon"
@@ -71,7 +70,7 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8"
           onClick={() => onRemove(item.id)}
         >
           {t("common.actions.remove")}

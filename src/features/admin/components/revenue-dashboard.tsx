@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   Coins,
@@ -91,9 +92,7 @@ function fmtDate(iso: string) {
 function flagEmoji(cc: string | null): string {
   if (!cc || cc.length !== 2) return "";
   const A = 0x1f1e6;
-  return String.fromCodePoint(
-    ...[...cc.toUpperCase()].map((c) => A + c.charCodeAt(0) - 65)
-  );
+  return String.fromCodePoint(...[...cc.toUpperCase()].map((c) => A + c.charCodeAt(0) - 65));
 }
 
 /** Display a payment's billing region (the country that drove its currency/price). */
@@ -104,11 +103,13 @@ function regionLabel(cc: string | null): string {
 }
 
 const escapeHtml = (s: string) =>
-  s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string
+  s.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string
   );
 
 export function RevenueDashboard() {
+  const router = useRouter();
   const { data, isLoading, error } = useQuery<{ data: RevenueData }>({
     queryKey: ["admin-revenue"],
     queryFn: async () => {
@@ -245,24 +246,24 @@ export function RevenueDashboard() {
   const hasMixedNative = (revenue?.nativeCurrencies.length ?? 0) > 1;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background min-h-screen">
       {/* Header */}
-      <div className="border-b border-border bg-card/50 sticky top-0 z-10 backdrop-blur-sm">
+      <div className="border-border bg-card/50 sticky top-0 z-10 border-b backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 border border-emerald-500/30">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/15">
               <TrendingUp className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">Revenue Split Report</h1>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <h1 className="text-foreground text-lg font-bold">Revenue Split Report</h1>
+              <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
                 <Radio className="h-3 w-3 text-emerald-400" />
                 Live Stripe data · Founder/Co-Founder split
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
               {/* Display-currency selector */}
-              <div className="flex items-center rounded-lg border border-border bg-muted/40 p-0.5">
+              <div className="border-border bg-muted/40 flex items-center rounded-lg border p-0.5">
                 {(revenue?.displayCurrencies ?? ["idr", "eur", "usd"]).map((c) => {
                   const active = c === selected;
                   return (
@@ -282,11 +283,16 @@ export function RevenueDashboard() {
                   );
                 })}
               </div>
-              <Button variant="outline" size="sm" onClick={handlePrint} disabled={isLoading || !revenue}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+                disabled={isLoading || !revenue}
+              >
                 <Printer className="mr-1.5 h-4 w-4" />
                 Export / Print PDF
               </Button>
-              <Button variant="outline" size="sm" onClick={() => window.history.back()}>
+              <Button variant="outline" size="sm" onClick={() => router.push("/admin")}>
                 ← Back
               </Button>
             </div>
@@ -294,19 +300,19 @@ export function RevenueDashboard() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">
+      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
         {/* Info Alert */}
-        <Alert className="bg-blue-500/10 border-blue-500/20 text-blue-400">
+        <Alert className="border-blue-500/20 bg-blue-500/10 text-blue-400">
           <ArrowRightLeft className="h-4 w-4 text-blue-400" />
           <AlertTitle>Automatic Payout & Manual Recap</AlertTitle>
-          <AlertDescription className="text-blue-400/80 mt-1">
-            All subscription payments are collected automatically by the Epidom Stripe account, linked
-            to <strong>Evan&apos;s</strong> bank account (France). Each month we reconcile and transfer{" "}
-            <strong>Darwin&apos;s</strong> 40% co-founder share to his bank account. Only real
-            production payments from live Stripe are counted. Totals are converted to{" "}
-            <strong>{selected.toUpperCase()}</strong> at {revenue?.ratesLive ? "live" : "approximate"}{" "}
-            FX rates — switch the display currency above; the payment log shows each charge in its
-            original currency.
+          <AlertDescription className="mt-1 text-blue-400/80">
+            All subscription payments are collected automatically by the Epidom Stripe account,
+            linked to <strong>Evan&apos;s</strong> bank account (France). Each month we reconcile
+            and transfer <strong>Darwin&apos;s</strong> 40% co-founder share to his bank account.
+            Only real production payments from live Stripe are counted. Totals are converted to{" "}
+            <strong>{selected.toUpperCase()}</strong> at{" "}
+            {revenue?.ratesLive ? "live" : "approximate"} FX rates — switch the display currency
+            above; the payment log shows each charge in its original currency.
           </AlertDescription>
         </Alert>
 
@@ -314,7 +320,7 @@ export function RevenueDashboard() {
         <div className="grid gap-6 md:grid-cols-3">
           <Card className="border-emerald-500/20 bg-emerald-500/5 shadow-sm">
             <CardHeader className="pb-2">
-              <CardDescription className="text-emerald-500/80 font-medium flex items-center gap-2">
+              <CardDescription className="flex items-center gap-2 font-medium text-emerald-500/80">
                 <Coins className="h-4 w-4" /> Total MRR · {selected.toUpperCase()}
               </CardDescription>
               <CardTitle className="text-4xl text-emerald-400">
@@ -322,7 +328,7 @@ export function RevenueDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Monthly recurring revenue from all active live subscriptions, in{" "}
                 {selected.toUpperCase()}.
               </p>
@@ -331,7 +337,7 @@ export function RevenueDashboard() {
 
           <Card className="border-blue-500/20 shadow-sm">
             <CardHeader className="pb-2">
-              <CardDescription className="font-medium flex items-center gap-2">
+              <CardDescription className="flex items-center gap-2 font-medium">
                 <Building className="h-4 w-4 text-blue-500" /> Evan · Founder (60%)
               </CardDescription>
               <CardTitle className="text-3xl">
@@ -339,7 +345,7 @@ export function RevenueDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Retained in the Epidom Stripe account (Evan&apos;s bank).
               </p>
             </CardContent>
@@ -347,7 +353,7 @@ export function RevenueDashboard() {
 
           <Card className="border-orange-500/20 shadow-sm">
             <CardHeader className="pb-2">
-              <CardDescription className="font-medium flex items-center gap-2">
+              <CardDescription className="flex items-center gap-2 font-medium">
                 <Wallet className="h-4 w-4 text-orange-500" /> Darwin · Co-Founder (40%)
               </CardDescription>
               <CardTitle className="text-3xl">
@@ -355,7 +361,7 @@ export function RevenueDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Transferred to Darwin&apos;s bank account at month-end.
               </p>
             </CardContent>
@@ -364,7 +370,7 @@ export function RevenueDashboard() {
 
         {/* Plan breakdown */}
         <div>
-          <h2 className="text-lg font-semibold tracking-tight mb-4">
+          <h2 className="mb-4 text-lg font-semibold tracking-tight">
             Subscription Breakdown · Live MRR ({selected.toUpperCase()})
           </h2>
           {isLoading ? (
@@ -377,7 +383,7 @@ export function RevenueDashboard() {
               {revenue.mrr.plans.map((p) => (
                 <Card key={p.plan}>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
                       <span
                         className={`h-2 w-2 rounded-full ${
                           p.plan === "POS"
@@ -394,7 +400,7 @@ export function RevenueDashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-2xl font-bold">
                         {p.count}
-                        <span className="text-sm font-normal text-muted-foreground">
+                        <span className="text-muted-foreground text-sm font-normal">
                           active {p.count === 1 ? "subscription" : "subscriptions"}
                         </span>
                       </div>
@@ -408,7 +414,7 @@ export function RevenueDashboard() {
             </div>
           ) : (
             <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              <CardContent className="text-muted-foreground py-8 text-center text-sm">
                 No active live subscriptions yet.
               </CardContent>
             </Card>
@@ -417,16 +423,21 @@ export function RevenueDashboard() {
 
         {/* Monthly recap */}
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold tracking-tight">
               Monthly Recap — Cash Collected{" "}
               {revenue ? (
-                <span className="text-muted-foreground font-normal text-sm">
+                <span className="text-muted-foreground text-sm font-normal">
                   (last {revenue.recap.historyMonths} months · {selected.toUpperCase()})
                 </span>
               ) : null}
             </h2>
-            <Button variant="ghost" size="sm" onClick={() => setSortDesc((v) => !v)} disabled={isLoading}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSortDesc((v) => !v)}
+              disabled={isLoading}
+            >
               <ArrowUpDown className="mr-1.5 h-4 w-4" />
               {sortDesc ? "Newest first" : "Oldest first"}
             </Button>
@@ -435,7 +446,7 @@ export function RevenueDashboard() {
           <Card>
             <CardContent className="p-0">
               {isLoading ? (
-                <div className="p-4 space-y-2">
+                <div className="space-y-2 p-4">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
                 </div>
@@ -443,11 +454,15 @@ export function RevenueDashboard() {
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[640px] text-sm">
                     <thead>
-                      <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr className="border-border text-muted-foreground border-b text-xs tracking-wide uppercase">
                         <th className="px-4 py-3 text-left font-medium">Month</th>
                         <th className="px-4 py-3 text-right font-medium">Collected</th>
-                        <th className="px-4 py-3 text-right font-medium text-blue-400">Evan (60%)</th>
-                        <th className="px-4 py-3 text-right font-medium text-orange-400">Darwin (40%)</th>
+                        <th className="px-4 py-3 text-right font-medium text-blue-400">
+                          Evan (60%)
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium text-orange-400">
+                          Darwin (40%)
+                        </th>
                         <th className="px-4 py-3 text-right font-medium">Invoices</th>
                       </tr>
                     </thead>
@@ -455,18 +470,18 @@ export function RevenueDashboard() {
                       {months.map((m) => {
                         const g = toDisplay(m.grossEur);
                         return (
-                          <tr key={m.key} className="border-b border-border/60 last:border-0">
-                            <td className="px-4 py-3 font-medium text-foreground">{m.label}</td>
+                          <tr key={m.key} className="border-border/60 border-b last:border-0">
+                            <td className="text-foreground px-4 py-3 font-medium">{m.label}</td>
                             <td className="px-4 py-3 text-right font-semibold text-emerald-400 tabular-nums">
                               {fmt(g)}
                             </td>
-                            <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                            <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
                               {fmt(g * evanPct)}
                             </td>
-                            <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                            <td className="text-foreground px-4 py-3 text-right tabular-nums">
                               {fmt(g * darwinPct)}
                             </td>
-                            <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                            <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
                               {m.invoices}
                             </td>
                           </tr>
@@ -475,13 +490,17 @@ export function RevenueDashboard() {
                     </tbody>
                     {revenue && (
                       <tfoot>
-                        <tr className="border-t border-border bg-muted/30 font-bold">
+                        <tr className="border-border bg-muted/30 border-t font-bold">
                           <td className="px-4 py-3">Total</td>
                           <td className="px-4 py-3 text-right text-emerald-400 tabular-nums">
                             {fmt(totalCollected)}
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums">{fmt(totalCollected * evanPct)}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{fmt(totalCollected * darwinPct)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {fmt(totalCollected * evanPct)}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {fmt(totalCollected * darwinPct)}
+                          </td>
                           <td className="px-4 py-3 text-right tabular-nums">
                             {months.reduce((s, m) => s + m.invoices, 0)}
                           </td>
@@ -491,7 +510,7 @@ export function RevenueDashboard() {
                   </table>
                 </div>
               ) : (
-                <div className="py-10 text-center text-sm text-muted-foreground">
+                <div className="text-muted-foreground py-10 text-center text-sm">
                   No payments collected yet. Real Stripe revenue will appear here month by month.
                 </div>
               )}
@@ -501,17 +520,17 @@ export function RevenueDashboard() {
 
         {/* Payment log */}
         <div>
-          <h2 className="text-lg font-semibold tracking-tight mb-4 flex items-center gap-2">
-            <ReceiptText className="h-5 w-5 text-muted-foreground" />
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <ReceiptText className="text-muted-foreground h-5 w-5" />
             Payment Log{" "}
-            <span className="text-muted-foreground font-normal text-sm">
+            <span className="text-muted-foreground text-sm font-normal">
               ({revenue?.payments.length ?? 0})
             </span>
           </h2>
           <Card>
             <CardContent className="p-0">
               {isLoading ? (
-                <div className="p-4 space-y-2">
+                <div className="space-y-2 p-4">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
                 </div>
@@ -519,42 +538,48 @@ export function RevenueDashboard() {
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px] text-sm">
                     <thead>
-                      <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr className="border-border text-muted-foreground border-b text-xs tracking-wide uppercase">
                         <th className="px-4 py-3 text-left font-medium">Date</th>
                         <th className="px-4 py-3 text-left font-medium">Customer</th>
                         <th className="px-4 py-3 text-left font-medium">Region</th>
                         <th className="px-4 py-3 text-left font-medium">Plan / Description</th>
                         <th className="px-4 py-3 text-left font-medium">Invoice</th>
                         <th className="px-4 py-3 text-right font-medium">Charged</th>
-                        <th className="px-4 py-3 text-right font-medium">≈ {selected.toUpperCase()}</th>
+                        <th className="px-4 py-3 text-right font-medium">
+                          ≈ {selected.toUpperCase()}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {revenue.payments.map((p) => (
-                        <tr key={p.id} className="border-b border-border/60 last:border-0">
-                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                        <tr key={p.id} className="border-border/60 border-b last:border-0">
+                          <td className="text-muted-foreground px-4 py-3 whitespace-nowrap">
                             {fmtDate(p.paidAt)}
                           </td>
-                          <td className="px-4 py-3 text-foreground">
-                            <div className="font-medium">{p.customerName || p.customerEmail || "—"}</div>
+                          <td className="text-foreground px-4 py-3">
+                            <div className="font-medium">
+                              {p.customerName || p.customerEmail || "—"}
+                            </div>
                             {p.customerName && p.customerEmail && (
-                              <div className="text-xs text-muted-foreground">{p.customerEmail}</div>
+                              <div className="text-muted-foreground text-xs">{p.customerEmail}</div>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                          <td className="text-muted-foreground px-4 py-3 whitespace-nowrap">
                             {regionLabel(p.country)}
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground">{p.description || "—"}</td>
-                          <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
+                          <td className="text-muted-foreground px-4 py-3">
+                            {p.description || "—"}
+                          </td>
+                          <td className="text-muted-foreground px-4 py-3 font-mono text-xs">
                             {p.number || "—"}
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums whitespace-nowrap">
+                          <td className="text-foreground px-4 py-3 text-right font-semibold whitespace-nowrap tabular-nums">
                             {makeFmt(p.currency)(p.amount)}
-                            <span className="ml-1 text-[10px] uppercase text-muted-foreground">
+                            <span className="text-muted-foreground ml-1 text-[10px] uppercase">
                               {p.currency}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-emerald-400">
+                          <td className="px-4 py-3 text-right text-emerald-400 tabular-nums">
                             {fmt(toDisplay(p.eurAmount))}
                           </td>
                         </tr>
@@ -562,8 +587,9 @@ export function RevenueDashboard() {
                     </tbody>
                   </table>
                   {(revenue.paymentLogCapped || hasMixedNative) && (
-                    <p className="px-4 py-2 text-xs text-muted-foreground border-t border-border">
-                      {revenue.paymentLogCapped && "Showing the most recent payments (log capped). "}
+                    <p className="text-muted-foreground border-border border-t px-4 py-2 text-xs">
+                      {revenue.paymentLogCapped &&
+                        "Showing the most recent payments (log capped). "}
                       {hasMixedNative &&
                         `Charges span multiple currencies (${revenue.nativeCurrencies
                           .join(", ")
@@ -572,7 +598,7 @@ export function RevenueDashboard() {
                   )}
                 </div>
               ) : (
-                <div className="py-10 text-center text-sm text-muted-foreground">
+                <div className="text-muted-foreground py-10 text-center text-sm">
                   No payments recorded yet.
                 </div>
               )}

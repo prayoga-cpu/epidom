@@ -28,19 +28,27 @@ export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
 
   const getSourceBadgeVariant = (source: string) => {
     switch (source) {
-      case "POS": return "default";
-      case "STOREFRONT": return "secondary";
-      default: return "outline";
+      case "POS":
+        return "default";
+      case "STOREFRONT":
+        return "secondary";
+      default:
+        return "outline";
     }
   };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case "PENDING": return "secondary";
-      case "CONFIRMED": return "default";
-      case "IN_PRODUCTION": return "outline";
-      case "READY": return "default";
-      default: return "outline";
+      case "PENDING":
+        return "secondary";
+      case "CONFIRMED":
+        return "default";
+      case "IN_PRODUCTION":
+        return "outline";
+      case "READY":
+        return "default";
+      default:
+        return "outline";
     }
   };
 
@@ -50,11 +58,11 @@ export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+    <div className="bg-card text-card-foreground flex flex-col gap-3 rounded-lg border p-4 shadow-sm">
       <div className="flex items-start justify-between border-b pb-3">
         <div className="flex flex-col gap-1">
           <span className="font-semibold">{order.orderNumber}</span>
-          <span className="text-xs text-muted-foreground">{timeAgo}</span>
+          <span className="text-muted-foreground text-xs">{timeAgo}</span>
         </div>
         <div className="flex flex-col items-end gap-1.5">
           <Badge variant={getStatusBadgeVariant(order.status)} className="px-2 py-1">
@@ -86,13 +94,15 @@ export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
       </div>
 
       <div className="mt-2 flex flex-col gap-1 border-t pt-3">
-        <span className="text-xs font-semibold uppercase text-muted-foreground">
+        <span className="text-muted-foreground text-xs font-semibold uppercase">
           {t("pos.orderCard.itemsLabel")} ({order.items.length})
         </span>
         <ul className="text-sm">
           {order.items.slice(0, 3).map((item, i) => (
             <li key={i} className="flex justify-between py-0.5">
-              <span>{item.quantity}x {item.menuItem?.name || item.name}</span>
+              <span>
+                {item.quantity}x {item.menuItem?.name || item.name}
+              </span>
             </li>
           ))}
           {order.items.length > 3 && (
@@ -101,7 +111,7 @@ export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
             </li>
           )}
         </ul>
-        <div className="mt-2 flex justify-between font-semibold border-t pt-2">
+        <div className="mt-2 flex justify-between border-t pt-2 font-semibold">
           <span>{t("pos.cart.total")}:</span>
           <span>{formatCurrency(Number(order.total), currency)}</span>
         </div>
@@ -109,17 +119,30 @@ export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
 
       <div className="mt-4 flex gap-2">
         {order.status === "PENDING" && (
-          <Button className="w-full" size="sm" onClick={() => onUpdateStatus(order.id, "CONFIRMED")}>
+          <Button
+            className="w-full"
+            size="sm"
+            onClick={() => onUpdateStatus(order.id, "CONFIRMED")}
+          >
             {t("pos.orderCard.confirm")}
           </Button>
         )}
         {order.status === "CONFIRMED" && (
-          <Button className="w-full" size="sm" variant="outline" onClick={() => onUpdateStatus(order.id, "IN_PRODUCTION")}>
+          <Button
+            className="w-full"
+            size="sm"
+            variant="outline"
+            onClick={() => onUpdateStatus(order.id, "IN_PRODUCTION")}
+          >
             {t("pos.orderCard.startProcess")}
           </Button>
         )}
         {order.status === "READY" && (
-          <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" size="sm" onClick={() => onUpdateStatus(order.id, "DELIVERED")}>
+          <Button
+            className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+            size="sm"
+            onClick={() => onUpdateStatus(order.id, "DELIVERED")}
+          >
             {t("pos.orderCard.complete")}
           </Button>
         )}

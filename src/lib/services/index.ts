@@ -33,3 +33,4 @@ export * from "./production-batch.service";
 export * from "./email.service";
 export * from "./exchange-rate.service";
 export * from "./feedback.service";
+export * from "./changelog.service";

@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
 import { LoginForm } from "@/features/auth/login/components/login-form";
 import { AuthVisual } from "@/features/auth/components/auth-visual";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -27,9 +29,16 @@ function LoginFormSkeleton() {
   );
 }
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // Already signed in? Any CTA that lands here bounces the user to their stores.
+  const session = await getSession();
+  if (session?.user) redirect("/stores");
+
   return (
-    <div className="grid h-screen w-full grid-cols-1 overflow-hidden md:grid-cols-2" style={{ background: "var(--epi-navy-900)" }}>
+    <div
+      className="grid h-screen w-full grid-cols-1 overflow-hidden md:grid-cols-2"
+      style={{ background: "var(--epi-navy-900)" }}
+    >
       {/* Left: Form Area */}
       {/* Removed justify-center to allow scrolling */}
       <div className="scrollbar-hide animate-in fade-in slide-in-from-left-4 relative flex h-full flex-col items-center overflow-y-auto p-8 duration-700">
@@ -47,7 +56,9 @@ export default function LoginPage() {
 
         {/* Footer - In flow, pushed to bottom by my-auto if space permits */}
         <div className="mt-8 w-full shrink-0 text-center">
-          <p className="text-xs" style={{ color: "rgba(251,249,228,0.4)" }}>© 2025 Epidom. All rights reserved.</p>
+          <p className="text-xs" style={{ color: "rgba(251,249,228,0.4)" }}>
+            © 2025 Epidom. All rights reserved.
+          </p>
         </div>
       </div>
 

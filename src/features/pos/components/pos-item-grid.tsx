@@ -22,18 +22,20 @@ export function PosItemGrid({
   const { t } = useI18n();
   const { currency } = useCurrency();
 
-  const filteredCategories = categories.map((cat) => ({
-    ...cat,
-    items: cat.items.filter(
-      (item) =>
-        (selectedCategory === null || cat.name === selectedCategory) &&
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
-  })).filter((cat) => cat.items.length > 0);
+  const filteredCategories = categories
+    .map((cat) => ({
+      ...cat,
+      items: cat.items.filter(
+        (item) =>
+          (selectedCategory === null || cat.name === selectedCategory) &&
+          item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    }))
+    .filter((cat) => cat.items.length > 0);
 
   if (filteredCategories.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center p-8 text-center text-muted-foreground">
+      <div className="text-muted-foreground flex flex-1 items-center justify-center p-8 text-center">
         <p>{t("pos.menu.noItems")}</p>
       </div>
     );
@@ -43,21 +45,19 @@ export function PosItemGrid({
     <div className="flex-1 overflow-auto p-4 pb-24 lg:pb-4">
       {filteredCategories.map((category) => (
         <div key={category.name} className="mb-8 last:mb-0">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">
-            {category.name}
-          </h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight">{category.name}</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {category.items.map((item) => (
               <button
                 key={item.id}
                 disabled={!item.isAvailable}
                 onClick={() => onItemClick(item)}
-                className={`group relative flex h-full min-h-[120px] flex-col overflow-hidden rounded-xl border bg-card text-left transition-all hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`group bg-card hover:border-primary/50 focus-visible:ring-primary relative flex h-full min-h-[120px] flex-col overflow-hidden rounded-xl border text-left transition-all hover:shadow-md focus-visible:ring-2 focus-visible:outline-none ${
                   !item.isAvailable ? "opacity-50 grayscale" : ""
                 }`}
               >
                 {item.imageUrl && (
-                  <div className="relative h-32 w-full overflow-hidden bg-muted">
+                  <div className="bg-muted relative h-32 w-full overflow-hidden">
                     <Image
                       src={item.imageUrl}
                       alt={item.name}
@@ -69,17 +69,15 @@ export function PosItemGrid({
                 )}
                 <div className="flex flex-1 flex-col justify-between p-3">
                   <div>
-                    <h3 className="line-clamp-2 font-medium leading-tight">
-                      {item.name}
-                    </h3>
+                    <h3 className="line-clamp-2 leading-tight font-medium">{item.name}</h3>
                   </div>
-                  <div className="mt-2 text-sm font-semibold text-primary">
+                  <div className="text-primary mt-2 text-sm font-semibold">
                     {formatCurrency(item.price, currency)}
                   </div>
                 </div>
                 {!item.isAvailable && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[2px]">
-                    <span className="rounded-md bg-destructive px-2 py-1 text-xs font-bold text-destructive-foreground">
+                  <div className="bg-background/50 absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
+                    <span className="bg-destructive text-destructive-foreground rounded-md px-2 py-1 text-xs font-bold">
                       {t("pos.menu.unavailable")}
                     </span>
                   </div>

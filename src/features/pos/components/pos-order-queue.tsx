@@ -39,7 +39,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 p-6">
+      <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-64 w-full rounded-xl" />
         ))}
@@ -49,26 +49,20 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
 
   if (!orders || orders.length === 0) {
     return (
-      <div className="flex h-[60vh] flex-col items-center justify-center text-center text-muted-foreground">
-        <div className="mb-4 rounded-full bg-muted p-6">
+      <div className="text-muted-foreground flex h-[60vh] flex-col items-center justify-center text-center">
+        <div className="bg-muted mb-4 rounded-full p-6">
           <UtensilsCrossed className="h-10 w-10 opacity-50" />
         </div>
-        <h3 className="mb-2 text-xl font-semibold text-foreground">
-          {t("pos.queue.empty")}
-        </h3>
+        <h3 className="text-foreground mb-2 text-xl font-semibold">{t("pos.queue.empty")}</h3>
         <p>{t("pos.queue.emptyDesc")}</p>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start content-start">
+    <div className="grid content-start items-start gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {orders.map((order: any) => (
-        <PosOrderCard 
-          key={order.id} 
-          order={order} 
-          onUpdateStatus={handleUpdateStatus} 
-        />
+        <PosOrderCard key={order.id} order={order} onUpdateStatus={handleUpdateStatus} />
       ))}
     </div>
   );

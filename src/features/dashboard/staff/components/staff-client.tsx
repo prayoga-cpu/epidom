@@ -64,7 +64,12 @@ const ROLE_LABELS: Record<StaffRole, string> = {
 
 const ROLES_FOR_SELECT: StaffRole[] = ["MANAGER", "CASHIER", "KITCHEN"];
 
-export function StaffClient({ storeId, currentUserId, currentUserName, currentUserEmail }: StaffClientProps) {
+export function StaffClient({
+  storeId,
+  currentUserId,
+  currentUserName,
+  currentUserEmail,
+}: StaffClientProps) {
   const { t } = useI18n();
   const { confirm, confirmDialog } = useConfirm();
   const queryClient = useQueryClient();
@@ -115,8 +120,7 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
   });
 
   const deactivateMutation = useMutation({
-    mutationFn: (staffId: string) =>
-      apiClient.delete(`/stores/${storeId}/staff/${staffId}`),
+    mutationFn: (staffId: string) => apiClient.delete(`/stores/${storeId}/staff/${staffId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
       toast.success("Staff member deactivated");
@@ -163,8 +167,6 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
     }
   };
 
-
-
   return (
     <div className="min-h-[calc(100vh-150px)] space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -179,16 +181,98 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
       </div>
 
       {/* Owner account row */}
-      <div className="rounded-lg border bg-muted/30 px-4 py-3 flex items-center gap-3">
-        <Crown className="h-4 w-4 text-amber-500 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm">{currentUserName}</p>
-          {currentUserEmail && <p className="text-xs text-muted-foreground">{currentUserEmail}</p>}
+      <div className="bg-muted/30 flex items-center gap-3 rounded-lg border px-4 py-3">
+        <Crown className="h-4 w-4 shrink-0 text-amber-500" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{currentUserName}</p>
+          {currentUserEmail && <p className="text-muted-foreground text-xs">{currentUserEmail}</p>}
         </div>
-        <Badge variant="outline" className="text-amber-600 border-amber-400">Owner</Badge>
+        <Badge variant="outline" className="border-amber-400 text-amber-600">
+          Owner
+        </Badge>
       </div>
 
-      <div className="-mx-4 overflow-x-auto sm:mx-0">
+      {/* Mobile/Tablet: Card Layout */}
+      <div className="space-y-3 lg:hidden">
+        {isLoading ? (
+          <p className="text-muted-foreground py-8 text-center text-sm">Loading...</p>
+        ) : staff.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <UserRound className="text-muted-foreground h-8 w-8" />
+            <p className="text-muted-foreground text-sm">
+              No staff yet. Add your first staff member.
+            </p>
+          </div>
+        ) : (
+          staff.map((member) => (
+            <div key={member.id} className="bg-muted/50 space-y-3 rounded-lg border p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{member.name}</p>
+                  {member.email ? (
+                    <span className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
+                      <Mail className="h-3 w-3" />
+                      {member.email}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground/50 text-xs">—</span>
+                  )}
+                </div>
+                <Badge variant="secondary">{ROLE_LABELS[member.role]}</Badge>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={member.isActive ? "default" : "outline"}>
+                  {member.isActive ? t("pages.staffActive") : t("pages.staffInactive")}
+                </Badge>
+                {member.inviteStatus === "pending" && (
+                  <Badge variant="outline" className="border-amber-400 text-amber-600">
+                    Invite Pending
+                  </Badge>
+                )}
+                {member.inviteStatus === "accepted" && (
+                  <Badge variant="outline" className="border-emerald-400 text-emerald-600">
+                    Invited
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => openEdit(member)}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+                {member.isActive && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: "Deactivate staff member?",
+                        description: `${member.name} will lose access until reactivated.`,
+                        variant: "destructive",
+                        confirmText: "Deactivate",
+                        cancelText: t("actions.cancel"),
+                      });
+                      if (ok) deactivateMutation.mutate(member.id);
+                    }}
+                  >
+                    <UserX className="mr-2 h-4 w-4" />
+                    Deactivate
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop: Table Layout */}
+      <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
         <div className="min-w-[560px]">
           <Table>
             <TableHeader>
@@ -212,7 +296,9 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                   <TableCell colSpan={5} className="py-8 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <UserRound className="text-muted-foreground h-8 w-8" />
-                      <p className="text-muted-foreground text-sm">No staff yet. Add your first staff member.</p>
+                      <p className="text-muted-foreground text-sm">
+                        No staff yet. Add your first staff member.
+                      </p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -220,7 +306,7 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                 staff.map((member) => (
                   <TableRow key={member.id}>
                     <TableCell className="font-medium">{member.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-muted-foreground text-sm">
                       {member.email ? (
                         <span className="flex items-center gap-1">
                           <Mail className="h-3 w-3" />
@@ -239,10 +325,14 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                           {member.isActive ? t("pages.staffActive") : t("pages.staffInactive")}
                         </Badge>
                         {member.inviteStatus === "pending" && (
-                          <Badge variant="outline" className="text-amber-600 border-amber-400">Invite Pending</Badge>
+                          <Badge variant="outline" className="border-amber-400 text-amber-600">
+                            Invite Pending
+                          </Badge>
                         )}
                         {member.inviteStatus === "accepted" && (
-                          <Badge variant="outline" className="text-emerald-600 border-emerald-400">Invited</Badge>
+                          <Badge variant="outline" className="border-emerald-400 text-emerald-600">
+                            Invited
+                          </Badge>
                         )}
                       </div>
                     </TableCell>
@@ -286,7 +376,13 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
       </div>
 
       {/* Add Staff Dialog */}
-      <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) reset(); }}>
+      <Dialog
+        open={addOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open);
+          if (!open) reset();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("pages.addStaff")}</DialogTitle>
@@ -301,8 +397,15 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
               {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="add-email">Email <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input id="add-email" type="email" {...register("email" as never)} placeholder="staff@example.com" />
+              <Label htmlFor="add-email">
+                Email <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
+              <Input
+                id="add-email"
+                type="email"
+                {...register("email" as never)}
+                placeholder="staff@example.com"
+              />
             </div>
             <div className="space-y-1">
               <Label>{t("pages.staffRole")}</Label>
@@ -323,7 +426,10 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="pin">{t("pages.staffPin")} <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Label htmlFor="pin">
+                {t("pages.staffPin")}{" "}
+                <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
               <Input
                 id="pin"
                 type="password"
@@ -335,21 +441,28 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
               {errors.pin && <p className="text-destructive text-xs">{errors.pin.message}</p>}
             </div>
             {watchEmail && (
-              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  className="rounded"
-                  {...register("sendInvite" as never)}
-                />
+              <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
+                <input type="checkbox" className="rounded" {...register("sendInvite" as never)} />
                 Send PIN to staff email
               </label>
             )}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => { setAddOpen(false); reset(); }}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setAddOpen(false);
+                  reset();
+                }}
+              >
                 {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting || addMutation.isPending}>
-                {addMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("common.actions.save")}
+                {addMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t("common.actions.save")
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -369,7 +482,9 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                 <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
               </div>
               <div className="space-y-1">
-                <Label>Email <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Label>
+                  Email <span className="text-muted-foreground text-xs">(optional)</span>
+                </Label>
                 <Input
                   type="email"
                   value={editEmail}
@@ -393,7 +508,12 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>New PIN <span className="text-muted-foreground text-xs">(leave blank to keep current)</span></Label>
+                <Label>
+                  New PIN{" "}
+                  <span className="text-muted-foreground text-xs">
+                    (leave blank to keep current)
+                  </span>
+                </Label>
                 <Input
                   type="password"
                   maxLength={4}
@@ -404,7 +524,7 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                   disabled={editRemovePin}
                 />
               </div>
-              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
                 <input
                   type="checkbox"
                   className="rounded"
@@ -417,7 +537,7 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                 Remove PIN (allow login without PIN)
               </label>
               {editPin.length === 4 && editEmail && (
-                <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
                   <input
                     type="checkbox"
                     className="rounded"
@@ -433,7 +553,11 @@ export function StaffClient({ storeId, currentUserId, currentUserName, currentUs
                 {t("common.actions.cancel")}
               </Button>
               <Button onClick={handleEditSave} disabled={editLoading || !editName.trim()}>
-                {editLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("common.actions.save")}
+                {editLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t("common.actions.save")
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

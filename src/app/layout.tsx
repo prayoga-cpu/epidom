@@ -11,7 +11,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -20,12 +20,20 @@ const bebasNeue = Bebas_Neue({
   display: "swap",
 });
 
-
-
 export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
+};
+
+// Lock the viewport: no pinch-zoom / user scaling anywhere (app feel on mobile).
+// viewportFit: "cover" enables env(safe-area-inset-*) used by the mobile nav.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -35,7 +43,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body className={`font-sans ${bebasNeue.variable} ${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+      <body
+        className={`font-sans ${bebasNeue.variable} ${GeistSans.variable} ${GeistMono.variable}`}
+        suppressHydrationWarning
+      >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <ErrorBoundary>
             <QueryProvider>

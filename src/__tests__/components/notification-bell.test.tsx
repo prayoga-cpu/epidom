@@ -52,6 +52,7 @@ vi.mock("@/components/ui/popover", () => ({
 }));
 
 import { NotificationBell } from "@/features/dashboard/shared/notification-bell";
+import { APP_VERSION } from "@/lib/version";
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,25 @@ const reservationNotif = {
 describe("NotificationBell", () => {
   beforeEach(() => {
     mockPush.mockClear();
+    // Default to "already seen the current version" so the pinned "What's new"
+    // prompt doesn't interfere with the operational-notification assertions.
+    localStorage.setItem("epidom:lastSeenVersion", APP_VERSION);
+  });
+
+  it("shows the 'What's new' prompt when the current version is unseen", () => {
+    localStorage.removeItem("epidom:lastSeenVersion");
+    mockNotifications.mockReturnValue({ notifications: [] });
+    render(<NotificationBell />);
+    expect(screen.getByText("changelog.whatsNew")).toBeTruthy();
+  });
+
+  it("clicking the 'What's new' prompt marks it seen and navigates to the changelog", () => {
+    localStorage.removeItem("epidom:lastSeenVersion");
+    mockNotifications.mockReturnValue({ notifications: [] });
+    render(<NotificationBell />);
+    fireEvent.click(screen.getByText("changelog.whatsNew"));
+    expect(mockPush).toHaveBeenCalledWith("/store/store-1/changelog");
+    expect(localStorage.getItem("epidom:lastSeenVersion")).toBe(APP_VERSION);
   });
 
   it("renders bell with no badge when 0 notifications", () => {
@@ -96,8 +116,9 @@ describe("NotificationBell", () => {
   it("dismiss single removes item from list", () => {
     mockNotifications.mockReturnValue({ notifications: [orderNotif, reservationNotif] });
     render(<NotificationBell />);
-    const dismissButtons = screen.getAllByLabelText("Dismiss");
-    fireEvent.click(dismissButtons[0]);
+    // The changelog history item is always present, so target the New Order row's own X
+    const orderRow = screen.getByText("New Order").closest("li")!;
+    fireEvent.click(within(orderRow).getByLabelText("Dismiss"));
     expect(screen.queryByText("New Order")).toBeNull();
     expect(screen.getByText("New Reservation")).toBeTruthy();
   });
@@ -148,7 +169,8 @@ describe("NotificationBell", () => {
   it("shows empty state when all notifications dismissed", () => {
     mockNotifications.mockReturnValue({ notifications: [orderNotif] });
     render(<NotificationBell />);
-    fireEvent.click(screen.getAllByLabelText("Dismiss")[0]);
+    // "Clear all" dismisses every visible item, including the changelog history item
+    fireEvent.click(screen.getByText("Clear all"));
     expect(screen.getByText("All caught up!")).toBeTruthy();
   });
 });

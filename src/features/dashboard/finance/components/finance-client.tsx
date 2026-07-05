@@ -98,23 +98,55 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
         [t("pages.financeGrossProfit"), s.grossProfit],
         [t("pages.financeMargin"), s.grossMarginPct],
       ];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), t("pages.financeSummarySheet"));
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.aoa_to_sheet(rows),
+        t("pages.financeSummarySheet")
+      );
     }
 
     if (channels.data?.channels?.length) {
-      const header = [t("pages.financeChannel"), t("pages.financeOrders"), t("pages.financeRevenue"), t("pages.financeCommission") + " (%)", t("pages.financeCommission"), t("pages.financeNetRevenue")];
+      const header = [
+        t("pages.financeChannel"),
+        t("pages.financeOrders"),
+        t("pages.financeRevenue"),
+        t("pages.financeCommission") + " (%)",
+        t("pages.financeCommission"),
+        t("pages.financeNetRevenue"),
+      ];
       const rows = channels.data.channels.map((c) => [
-        c.label, c.orderCount, c.revenue, c.commissionPct, c.commissionAmount, c.netRevenue,
+        c.label,
+        c.orderCount,
+        c.revenue,
+        c.commissionPct,
+        c.commissionAmount,
+        c.netRevenue,
       ]);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), t("pages.financeChannels"));
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.aoa_to_sheet([header, ...rows]),
+        t("pages.financeChannels")
+      );
     }
 
     if (topItems.data?.items?.length) {
-      const header = [t("common.item"), t("pages.financeOrders"), t("pages.financeQtySold"), t("pages.financeRevenue")];
+      const header = [
+        t("common.item"),
+        t("pages.financeOrders"),
+        t("pages.financeQtySold"),
+        t("pages.financeRevenue"),
+      ];
       const rows = topItems.data.items.map((i) => [
-        i.name, i.orderCount, i.totalQuantity, i.totalRevenue,
+        i.name,
+        i.orderCount,
+        i.totalQuantity,
+        i.totalRevenue,
       ]);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), t("pages.financeTopItems"));
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.aoa_to_sheet([header, ...rows]),
+        t("pages.financeTopItems")
+      );
     }
 
     XLSX.writeFile(wb, `finance-report-${from}-${to}.xlsx`);
@@ -127,7 +159,9 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="grid gap-1">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("pages.financeTitle")}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            {t("pages.financeTitle")}
+          </h1>
           <p className="text-muted-foreground text-sm">{t("pages.financeDesc")}</p>
         </div>
         <Button size="sm" variant="outline" onClick={exportXlsx} className="shrink-0">
@@ -140,11 +174,23 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
       <div className="flex flex-wrap gap-4">
         <div className="space-y-1">
           <Label htmlFor="from">{t("common.from") ?? "Dari"}</Label>
-          <Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+          <Input
+            id="from"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="w-40"
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="to">{t("common.to") ?? "Sampai"}</Label>
-          <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
+          <Input
+            id="to"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="w-40"
+          />
         </div>
       </div>
 
@@ -153,16 +199,22 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.financeRevenue")}</CardTitle>
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                {t("pages.financeRevenue")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatPrice(s.revenue)}</p>
-              <p className="text-muted-foreground text-xs">{s.orderCount} {t("pages.financeOrders")}</p>
+              <p className="text-muted-foreground text-xs">
+                {s.orderCount} {t("pages.financeOrders")}
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.financeCogs")}</CardTitle>
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                {t("pages.financeCogs")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatPrice(s.cogs)}</p>
@@ -170,7 +222,9 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
           </Card>
           <Card>
             <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.financeGrossProfit")}</CardTitle>
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                {t("pages.financeGrossProfit")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatPrice(s.grossProfit)}</p>
@@ -178,7 +232,9 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
           </Card>
           <Card>
             <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.financeMargin")}</CardTitle>
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                {t("pages.financeMargin")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{s.grossMarginPct.toFixed(1)}%</p>
@@ -196,7 +252,39 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
 
         {/* Channels tab */}
         <TabsContent value="channels">
-          <div className="-mx-4 overflow-x-auto sm:mx-0">
+          <div className="space-y-3 lg:hidden">
+            {channels.isLoading ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">Loading...</p>
+            ) : (
+              (channels.data?.channels ?? []).map((c) => (
+                <div key={c.source} className="bg-muted/50 space-y-2 rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{c.label}</span>
+                    <span className="text-muted-foreground text-sm">
+                      {c.orderCount} {t("pages.financeOrders")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{t("pages.financeRevenue")}</span>
+                    <span>{formatPrice(c.revenue)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{t("pages.financeCommission")}</span>
+                    <span className="text-orange-600">
+                      {c.commissionPct > 0
+                        ? `-${c.commissionPct}% (${formatPrice(c.commissionAmount)})`
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span className="text-muted-foreground">{t("pages.financeNetRevenue")}</span>
+                    <span>{formatPrice(c.netRevenue)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
             <div className="min-w-[520px]">
               <Table>
                 <TableHeader>
@@ -210,18 +298,28 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
                 </TableHeader>
                 <TableBody>
                   {channels.isLoading ? (
-                    <TableRow><TableCell colSpan={5} className="text-muted-foreground py-8 text-center">Loading...</TableCell></TableRow>
-                  ) : (channels.data?.channels ?? []).map((c) => (
-                    <TableRow key={c.source}>
-                      <TableCell className="font-medium">{c.label}</TableCell>
-                      <TableCell className="text-right">{c.orderCount}</TableCell>
-                      <TableCell className="text-right">{formatPrice(c.revenue)}</TableCell>
-                      <TableCell className="text-right text-orange-600">
-                        {c.commissionPct > 0 ? `-${c.commissionPct}% (${formatPrice(c.commissionAmount)})` : "—"}
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
+                        Loading...
                       </TableCell>
-                      <TableCell className="text-right font-semibold">{formatPrice(c.netRevenue)}</TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    (channels.data?.channels ?? []).map((c) => (
+                      <TableRow key={c.source}>
+                        <TableCell className="font-medium">{c.label}</TableCell>
+                        <TableCell className="text-right">{c.orderCount}</TableCell>
+                        <TableCell className="text-right">{formatPrice(c.revenue)}</TableCell>
+                        <TableCell className="text-right text-orange-600">
+                          {c.commissionPct > 0
+                            ? `-${c.commissionPct}% (${formatPrice(c.commissionAmount)})`
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatPrice(c.netRevenue)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -230,7 +328,29 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
 
         {/* Top items tab */}
         <TabsContent value="items">
-          <div className="-mx-4 overflow-x-auto sm:mx-0">
+          <div className="space-y-3 lg:hidden">
+            {topItems.isLoading ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">Loading...</p>
+            ) : (
+              (topItems.data?.items ?? []).map((item, i) => (
+                <div key={item.name} className="bg-muted/50 space-y-2 rounded-lg border p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-sm">{i + 1}</span>
+                    <span className="font-medium">{item.name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{t("pages.financeQtySold")}</span>
+                    <span>{item.totalQuantity}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span className="text-muted-foreground">{t("pages.financeRevenue")}</span>
+                    <span>{formatPrice(item.totalRevenue)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
             <div className="min-w-[400px]">
               <Table>
                 <TableHeader>
@@ -243,15 +363,23 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
                 </TableHeader>
                 <TableBody>
                   {topItems.isLoading ? (
-                    <TableRow><TableCell colSpan={4} className="text-muted-foreground py-8 text-center">Loading...</TableCell></TableRow>
-                  ) : (topItems.data?.items ?? []).map((item, i) => (
-                    <TableRow key={item.name}>
-                      <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell className="text-right">{item.totalQuantity}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatPrice(item.totalRevenue)}</TableCell>
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-muted-foreground py-8 text-center">
+                        Loading...
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    (topItems.data?.items ?? []).map((item, i) => (
+                      <TableRow key={item.name}>
+                        <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-right">{item.totalQuantity}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatPrice(item.totalRevenue)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -260,7 +388,22 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
 
         {/* Daily breakdown tab */}
         <TabsContent value="daily">
-          <div className="-mx-4 overflow-x-auto sm:mx-0">
+          <div className="space-y-3 lg:hidden">
+            {summary.isLoading ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">Loading...</p>
+            ) : (
+              (s?.buckets ?? []).map((b) => (
+                <div
+                  key={b.date}
+                  className="bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+                >
+                  <span className="font-medium">{b.date}</span>
+                  <span>{formatPrice(b.revenue)}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
             <div className="min-w-[320px]">
               <Table>
                 <TableHeader>
@@ -271,13 +414,19 @@ export function FinanceClient({ storeId }: FinanceClientProps) {
                 </TableHeader>
                 <TableBody>
                   {summary.isLoading ? (
-                    <TableRow><TableCell colSpan={2} className="text-muted-foreground py-8 text-center">Loading...</TableCell></TableRow>
-                  ) : (s?.buckets ?? []).map((b) => (
-                    <TableRow key={b.date}>
-                      <TableCell>{b.date}</TableCell>
-                      <TableCell className="text-right">{formatPrice(b.revenue)}</TableCell>
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-muted-foreground py-8 text-center">
+                        Loading...
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    (s?.buckets ?? []).map((b) => (
+                      <TableRow key={b.date}>
+                        <TableCell>{b.date}</TableCell>
+                        <TableCell className="text-right">{formatPrice(b.revenue)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>

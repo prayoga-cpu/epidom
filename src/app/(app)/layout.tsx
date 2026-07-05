@@ -1,6 +1,7 @@
 import type React from "react";
 import { I18nProvider } from "@/components/lang/i18n-provider";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
+import { TimezoneSync } from "@/components/providers/timezone-sync";
 
 export default function AppLayout({
   children,
@@ -9,7 +10,10 @@ export default function AppLayout({
 }>) {
   return (
     <I18nProvider>
-      <CurrencyProvider>{children}</CurrencyProvider>
+      <CurrencyProvider>
+        <TimezoneSync />
+        {children}
+      </CurrencyProvider>
     </I18nProvider>
   );
 }

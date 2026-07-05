@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { PageHeader } from "./page-header";
+import { AnalyticsSection } from "../analytics/analytics-section";
 import { ChartSkeleton } from "./chart-skeleton";
 import { CardSkeleton } from "./card-skeleton";
 import { AlertsCard } from "../alerts/alerts-card";
@@ -87,8 +88,10 @@ export function DashboardClient({
   }, [initialStockLevels]);
 
   return (
-    <div className="grid min-h-[calc(100vh-120px)] w-full gap-6">
+    <div className="grid min-h-[calc(100vh-120px)] w-full gap-6 pb-6">
       <PageHeader pageTitle={t("dashboard.title")} pageDescription={t("dashboard.description")} />
+
+      <AnalyticsSection storeId={storeId} />
 
       {/* Top Stats */}
       <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7 lg:items-stretch">
@@ -107,7 +110,7 @@ export function DashboardClient({
       </div>
 
       {/* Recent Stock Movements — POS sales, production, manual adjustments */}
-      <div className="w-full">
+      <div className="mb-6 w-full">
         <RecentMovementsCard />
       </div>
     </div>

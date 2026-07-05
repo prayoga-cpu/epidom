@@ -207,7 +207,7 @@ export function PosCheckoutDialog({
       const orderNumber = (result as any)?.orderNumber ?? "—";
       const qrStr = (result as any)?.qrString ?? null;
       const orderId = (result as any)?.orderId ?? null;
-      
+
       const receipt = buildReceipt(data, orderNumber);
       setLastReceipt(receipt);
 
@@ -253,7 +253,7 @@ export function PosCheckoutDialog({
                           defaultValue={field.value}
                           className="flex flex-col space-y-1"
                         >
-                          <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormItem className="flex items-center space-y-0 space-x-3">
                             <FormControl>
                               <RadioGroupItem value="DINE_IN" />
                             </FormControl>
@@ -261,7 +261,7 @@ export function PosCheckoutDialog({
                               {t("pos.checkout.dineIn")}
                             </FormLabel>
                           </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormItem className="flex items-center space-y-0 space-x-3">
                             <FormControl>
                               <RadioGroupItem value="TAKEAWAY" />
                             </FormControl>
@@ -287,45 +287,43 @@ export function PosCheckoutDialog({
                           defaultValue={field.value}
                           className="flex flex-col space-y-1"
                         >
-                          <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormItem className="flex items-center space-y-0 space-x-3">
                             <FormControl>
                               <RadioGroupItem value="CASH" />
                             </FormControl>
-                            <FormLabel className="font-normal">
-                              {t("pos.checkout.cash")}
-                            </FormLabel>
+                            <FormLabel className="font-normal">{t("pos.checkout.cash")}</FormLabel>
                           </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormItem className="flex items-center space-y-0 space-x-3">
                             <FormControl>
                               <RadioGroupItem value="QRIS" />
                             </FormControl>
                             <FormLabel className="font-normal">QRIS</FormLabel>
                           </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormItem className="flex items-center space-y-0 space-x-3">
                             <FormControl>
                               <RadioGroupItem value="GOPAY" />
                             </FormControl>
                             <FormLabel className="font-normal">GoPay</FormLabel>
                           </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormItem className="flex items-center space-y-0 space-x-3">
                             <FormControl>
                               <RadioGroupItem value="OVO" />
                             </FormControl>
                             <FormLabel className="font-normal">OVO</FormLabel>
                           </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormItem className="flex items-center space-y-0 space-x-3">
                             <FormControl>
                               <RadioGroupItem value="DANA" />
                             </FormControl>
                             <FormLabel className="font-normal">DANA</FormLabel>
                           </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormItem className="flex items-center space-y-0 space-x-3">
                             <FormControl>
                               <RadioGroupItem value="SHOPEEPAY" />
                             </FormControl>
                             <FormLabel className="font-normal">ShopeePay</FormLabel>
                           </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormItem className="flex items-center space-y-0 space-x-3">
                             <FormControl>
                               <RadioGroupItem value="BANK_TRANSFER" />
                             </FormControl>
@@ -339,7 +337,7 @@ export function PosCheckoutDialog({
               </div>
 
               {paymentMethod === "CASH" && (
-                <div className="rounded-md border bg-muted/20 p-4 space-y-4">
+                <div className="bg-muted/20 space-y-4 rounded-md border p-4">
                   <FormField
                     control={form.control}
                     name="amountTendered"
@@ -348,7 +346,7 @@ export function PosCheckoutDialog({
                         <FormLabel>{t("pos.checkout.amountTendered")}</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-sm text-muted-foreground">
+                            <span className="text-muted-foreground absolute top-2.5 left-3 text-sm">
                               {CURRENCY_SYMBOL[currency]}
                             </span>
                             <Input
@@ -357,9 +355,7 @@ export function PosCheckoutDialog({
                               className="pl-8 text-lg font-medium"
                               {...field}
                               onChange={(e) =>
-                                field.onChange(
-                                  e.target.value ? Number(e.target.value) : undefined
-                                )
+                                field.onChange(e.target.value ? Number(e.target.value) : undefined)
                               }
                             />
                           </div>
@@ -368,9 +364,7 @@ export function PosCheckoutDialog({
                     )}
                   />
                   <div className="flex justify-between text-sm font-medium">
-                    <span className="text-muted-foreground">
-                      {t("pos.checkout.change")}:
-                    </span>
+                    <span className="text-muted-foreground">{t("pos.checkout.change")}:</span>
                     <span className={change > 0 ? "text-emerald-600 dark:text-emerald-400" : ""}>
                       {formatCurrency(change, currency)}
                     </span>
@@ -392,7 +386,7 @@ export function PosCheckoutDialog({
                           className="flex gap-4"
                         >
                           {["BNI", "BRI", "MANDIRI", "PERMATA"].map((bank) => (
-                            <FormItem key={bank} className="flex items-center space-x-2 space-y-0">
+                            <FormItem key={bank} className="flex items-center space-y-0 space-x-2">
                               <FormControl>
                                 <RadioGroupItem value={bank} />
                               </FormControl>
@@ -429,7 +423,9 @@ export function PosCheckoutDialog({
                         <Input placeholder="0812..." {...field} />
                       </FormControl>
                       {["GOPAY", "OVO", "DANA", "SHOPEEPAY"].includes(paymentMethod) && (
-                        <p className="text-[10px] text-muted-foreground mt-1">Wajib untuk e-wallet</p>
+                        <p className="text-muted-foreground mt-1 text-[10px]">
+                          Wajib untuk e-wallet
+                        </p>
                       )}
                     </FormItem>
                   )}
@@ -492,40 +488,35 @@ export function PosCheckoutDialog({
 
       {/* Payment QR prompt */}
       <Dialog open={showPaymentQr} onOpenChange={setShowPaymentQr}>
-        <DialogContent className="sm:max-w-xs text-center">
+        <DialogContent className="text-center sm:max-w-xs">
           <DialogHeader>
             <DialogTitle>Instruksi Pembayaran</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-4">
             {currentQrString && currentQrString.includes(":") ? (
-              <div className="p-4 bg-white rounded-xl border-2 border-slate-100 w-full text-center">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">
+              <div className="w-full rounded-xl border-2 border-slate-100 bg-white p-4 text-center">
+                <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
                   Nomor Virtual Account
                 </p>
-                <p className="font-mono text-xl font-bold text-slate-800 tracking-widest break-all">
+                <p className="font-mono text-xl font-bold tracking-widest break-all text-slate-800">
                   {currentQrString.split(":")[1]}
                 </p>
               </div>
             ) : currentQrString ? (
-              <div className="p-4 bg-white rounded-xl border-2 border-slate-100">
-                <QRCodeSVG
-                  value={currentQrString}
-                  size={200}
-                  level="M"
-                  includeMargin={false}
-                />
+              <div className="rounded-xl border-2 border-slate-100 bg-white p-4">
+                <QRCodeSVG value={currentQrString} size={200} level="M" includeMargin={false} />
               </div>
             ) : (
-              <div className="p-4 bg-white rounded-xl border-2 border-slate-100 w-full text-center">
-                <p className="text-sm font-medium text-slate-800 mb-2">
+              <div className="w-full rounded-xl border-2 border-slate-100 bg-white p-4 text-center">
+                <p className="mb-2 text-sm font-medium text-slate-800">
                   Notifikasi e-Wallet sudah dikirim!
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Minta pembeli untuk cek aplikasi mereka.
                 </p>
               </div>
             )}
-            <p className="text-sm text-muted-foreground animate-pulse mt-2">
+            <p className="text-muted-foreground mt-2 animate-pulse text-sm">
               Menunggu pembayaran...
             </p>
           </div>
@@ -550,7 +541,7 @@ export function PosCheckoutDialog({
           <DialogHeader>
             <DialogTitle>{t("pos.print.title")}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {t("pos.print.prompt")}{" "}
             <span className="font-semibold">{lastReceipt?.orderNumber}</span>
           </p>

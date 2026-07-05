@@ -15,10 +15,10 @@ export function PosOrdersPageHeader() {
 export function KdsPageHeader() {
   const { t } = useI18n();
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b">
+    <div className="flex items-center justify-between border-b px-6 py-4">
       <div>
         <h1 className="text-xl font-bold tracking-tight">{t("pages.kdsTitle")}</h1>
-        <p className="text-sm text-muted-foreground">{t("pages.kdsDesc")}</p>
+        <p className="text-muted-foreground text-sm">{t("pages.kdsDesc")}</p>
       </div>
     </div>
   );
@@ -27,9 +27,9 @@ export function KdsPageHeader() {
 export function TablesPageHeader() {
   const { t } = useI18n();
   return (
-    <div className="px-6 py-4 border-b">
+    <div className="border-b px-6 py-4">
       <h1 className="text-xl font-bold tracking-tight">{t("pos.tables.title")}</h1>
-      <p className="text-sm text-muted-foreground">{t("pages.tablesDesc")}</p>
+      <p className="text-muted-foreground text-sm">{t("pages.tablesDesc")}</p>
     </div>
   );
 }

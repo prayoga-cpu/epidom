@@ -15,10 +15,12 @@ export const metadata: Metadata = {
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider>
-      <div className="flex min-h-screen flex-col bg-background">
+      <div className="bg-background flex min-h-screen flex-col">
         <SiteHeader variant="authenticated" showNav={true} showLogout={true} />
         <div className="flex flex-1 flex-col pt-20 sm:pt-24">
-          <main className="flex flex-1 flex-col overflow-y-auto">{children}</main>
+          <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col overflow-y-auto p-4 md:p-6">
+            {children}
+          </main>
         </div>
       </div>
     </I18nProvider>

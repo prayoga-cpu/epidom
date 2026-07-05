@@ -18,7 +18,7 @@ export function PosCategoryBar({
   const { t } = useI18n();
 
   return (
-    <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="bg-background/95 supports-[backdrop-filter]:bg-background/60 border-b backdrop-blur">
       <ScrollArea className="w-full whitespace-nowrap">
         <div className="flex w-max space-x-2 p-4">
           <Button

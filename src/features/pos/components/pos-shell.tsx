@@ -6,6 +6,7 @@ import { PosHeader } from "./pos-header";
 import { PosCategoryBar } from "./pos-category-bar";
 import { PosItemGrid } from "./pos-item-grid";
 import { PosCart } from "./pos-cart";
+import { PosMobileCart } from "./pos-mobile-cart";
 import { PosOfflineBanner } from "./pos-offline-banner";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosCart } from "../hooks/use-pos-cart";
@@ -30,54 +31,58 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
 
   return (
     <PosStaffGate storeId={store.id} bypassGate={bypassStaffGate}>
-    <div className="flex flex-1 w-full flex-col overflow-hidden bg-muted/10 rounded-xl">
-      <PosHeader store={store} />
-      <PosOfflineBanner storeId={store.id} />
+      <div className="bg-muted/10 flex w-full flex-1 flex-col overflow-hidden rounded-xl">
+        <PosHeader store={store} />
+        <PosOfflineBanner storeId={store.id} />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left pane: Menu Grid */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex items-center gap-4 border-b bg-background p-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={t("pos.menu.search")}
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left pane: Menu Grid */}
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="bg-background flex items-center gap-4 border-b p-4">
+              <div className="relative max-w-md flex-1">
+                <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
+                <Input
+                  type="search"
+                  placeholder={t("pos.menu.search")}
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
+
+            <PosCategoryBar
+              categories={menuData?.categories.map((c: any) => c.name) ?? []}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
+
+            {isLoading ? (
+              <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3 xl:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : (
+              <PosItemGrid
+                categories={menuData?.categories ?? []}
+                selectedCategory={selectedCategory}
+                searchQuery={searchQuery}
+                onItemClick={(item) =>
+                  cart.addItem(item.id, item.name, item.price, 1, [], item.imageUrl)
+                }
+              />
+            )}
           </div>
 
-          <PosCategoryBar
-            categories={menuData?.categories.map((c: any) => c.name) ?? []}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-          />
-
-          {isLoading ? (
-            <div className="p-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full rounded-xl" />
-              ))}
-            </div>
-          ) : (
-            <PosItemGrid
-              categories={menuData?.categories ?? []}
-              selectedCategory={selectedCategory}
-              searchQuery={searchQuery}
-              onItemClick={(item) => cart.addItem(item.id, item.name, item.price, 1, [], item.imageUrl)}
-            />
-          )}
+          {/* Right pane: Cart */}
+          <div className="z-10 hidden w-80 flex-col border-l shadow-xl md:flex lg:w-96">
+            <PosCart storeId={store.id} storeName={store.name} />
+          </div>
         </div>
 
-        {/* Right pane: Cart */}
-        <div className="hidden w-80 flex-col md:flex lg:w-96 border-l shadow-xl z-10">
-          <PosCart storeId={store.id} storeName={store.name} />
-        </div>
+        <PosMobileCart store={store} />
       </div>
-    </div>
     </PosStaffGate>
   );
 }

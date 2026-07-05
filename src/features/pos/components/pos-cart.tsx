@@ -15,9 +15,10 @@ import { usePosSession } from "../hooks/use-pos-session";
 interface PosCartProps {
   storeId: string;
   storeName?: string;
+  onRequestCheckout?: () => void;
 }
 
-export function PosCart({ storeId, storeName }: PosCartProps) {
+export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps) {
   const { t } = useI18n();
   const { currency } = useCurrency();
   const cart = usePosCart();
@@ -28,24 +29,22 @@ export function PosCart({ storeId, storeName }: PosCartProps) {
 
   if (cart.items.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center border-l bg-muted/20 p-6 text-center text-muted-foreground">
-        <div className="mb-4 rounded-full bg-muted p-4">
+      <div className="bg-muted/20 text-muted-foreground flex h-full flex-col items-center justify-center border-l p-6 text-center">
+        <div className="bg-muted mb-4 rounded-full p-4">
           <ShoppingBag className="h-8 w-8 opacity-50" />
         </div>
-        <h3 className="mb-1 font-semibold text-foreground">
-          {t("pos.cart.empty")}
-        </h3>
+        <h3 className="text-foreground mb-1 font-semibold">{t("pos.cart.empty")}</h3>
         <p className="text-sm">{t("pos.cart.emptyDesc")}</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col border-l bg-background">
+    <div className="bg-background flex h-full flex-col border-l">
       {/* Cart Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="font-semibold">
-          {t("pos.title")} <span className="ml-1 text-muted-foreground">({totalItems})</span>
+          {t("pos.title")} <span className="text-muted-foreground ml-1">({totalItems})</span>
         </div>
         <Button
           variant="ghost"
@@ -73,7 +72,7 @@ export function PosCart({ storeId, storeName }: PosCartProps) {
       </ScrollArea>
 
       {/* Cart Footer / Totals */}
-      <div className="border-t bg-muted/20 p-4">
+      <div className="bg-muted/20 border-t p-4">
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("pos.cart.subtotal")}</span>
@@ -88,24 +87,26 @@ export function PosCart({ storeId, storeName }: PosCartProps) {
             <span className="text-primary">{formatCurrency(cart.total, currency)}</span>
           </div>
         </div>
-        
-        <Button 
-          className="mt-4 w-full" 
+
+        <Button
+          className="mt-4 w-full"
           size="lg"
-          onClick={() => setIsCheckoutOpen(true)}
+          onClick={() => (onRequestCheckout ? onRequestCheckout() : setIsCheckoutOpen(true))}
         >
           {t("pos.cart.pay")} {formatCurrency(cart.total, currency)}
         </Button>
       </div>
 
-      <PosCheckoutDialog
-        open={isCheckoutOpen}
-        onOpenChange={setIsCheckoutOpen}
-        storeId={storeId}
-        storeName={storeName}
-        cashierName={staffName ?? undefined}
-        shiftId={shiftId ?? undefined}
-      />
+      {!onRequestCheckout && (
+        <PosCheckoutDialog
+          open={isCheckoutOpen}
+          onOpenChange={setIsCheckoutOpen}
+          storeId={storeId}
+          storeName={storeName}
+          cashierName={staffName ?? undefined}
+          shiftId={shiftId ?? undefined}
+        />
+      )}
     </div>
   );
 }

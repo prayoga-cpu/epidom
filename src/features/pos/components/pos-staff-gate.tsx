@@ -60,7 +60,13 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
   const autoLoginAttempted = React.useRef(false);
 
   React.useEffect(() => {
-    if (activeStaff.length === 1 && !activeStaff[0].hasPin && !isActive && !isVerifying && !autoLoginAttempted.current) {
+    if (
+      activeStaff.length === 1 &&
+      !activeStaff[0].hasPin &&
+      !isActive &&
+      !isVerifying &&
+      !autoLoginAttempted.current
+    ) {
       autoLoginAttempted.current = true;
       setSelectedStaff(activeStaff[0]);
       verifyPin(activeStaff[0].id, "");
@@ -98,7 +104,9 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
       });
 
       if (!shift) {
-        toast.info(`Welcome, ${staff.name}! No open shift — orders won't be linked to a shift until you open one.`);
+        toast.info(
+          `Welcome, ${staff.name}! No open shift — orders won't be linked to a shift until you open one.`
+        );
       } else {
         toast.success(`Welcome, ${staff.name}!`);
       }
@@ -147,55 +155,60 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
   }
 
   return (
-    <div className="w-full flex min-h-[calc(100vh-200px)] flex-col items-center justify-center p-4">
-      <div 
+    <div className="flex min-h-[calc(100vh-200px)] w-full flex-col items-center justify-center p-4">
+      <div
         className={cn(
-          "w-full rounded-2xl border bg-background relative shadow-2xl",
-          !selectedStaff ? "max-w-2xl space-y-8 p-6 md:p-8" : "max-w-xs p-6 flex flex-col items-center justify-center"
+          "bg-background relative w-full rounded-2xl border shadow-2xl",
+          !selectedStaff
+            ? "max-w-2xl space-y-8 p-6 md:p-8"
+            : "flex max-w-xs flex-col items-center justify-center p-6"
         )}
       >
-        
         {!selectedStaff ? (
           <>
             <div className="text-center">
               <h2 className="text-2xl font-bold tracking-tight">Select Staff</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Choose your account to login</p>
+              <p className="text-muted-foreground mt-1 text-sm">Choose your account to login</p>
             </div>
 
             {isLoading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
               </div>
             ) : activeStaff.length === 0 ? (
-              <div className="text-center py-12 space-y-2">
-                <UserRound className="h-12 w-12 mx-auto text-muted-foreground/50" />
+              <div className="space-y-2 py-12 text-center">
+                <UserRound className="text-muted-foreground/50 mx-auto h-12 w-12" />
                 <p className="text-muted-foreground">No active staff members found.</p>
-                <p className="text-sm text-muted-foreground">Go to Dashboard &gt; Operations &gt; Staff to create one.</p>
+                <p className="text-muted-foreground text-sm">
+                  Go to Dashboard &gt; Operations &gt; Staff to create one.
+                </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {activeStaff.map((member) => (
                   <Button
                     key={member.id}
                     variant="outline"
-                    className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-muted/50 hover:border-primary/50 transition-colors"
+                    className="hover:bg-muted/50 hover:border-primary/50 flex h-24 flex-col items-center justify-center gap-2 transition-colors"
                     onClick={() => handleStaffClick(member)}
                   >
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                    <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full font-semibold">
                       {member.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="font-medium truncate w-full text-center px-2">{member.name}</span>
+                    <span className="w-full truncate px-2 text-center font-medium">
+                      {member.name}
+                    </span>
                   </Button>
                 ))}
               </div>
             )}
           </>
         ) : (
-          <div className="w-full mx-auto flex flex-col items-center">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="absolute top-2 left-2 sm:top-4 sm:left-4" 
+          <div className="mx-auto flex w-full flex-col items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-2 left-2 sm:top-4 sm:left-4"
               onClick={() => {
                 setSelectedStaff(null);
                 setPin("");
@@ -205,21 +218,28 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
               Back
             </Button>
 
-            <div className="text-center mt-2 sm:mt-4">
-              <div className="h-14 w-14 sm:h-16 sm:w-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl mb-3 sm:mb-4">
+            <div className="mt-2 text-center sm:mt-4">
+              <div className="bg-primary/10 text-primary mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold sm:mb-4 sm:h-16 sm:w-16">
                 {selectedStaff.name.charAt(0).toUpperCase()}
               </div>
-              <h2 className="text-lg sm:text-xl font-bold tracking-tight">{selectedStaff.name}</h2>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">Enter your 4-digit PIN</p>
+              <h2 className="text-lg font-bold tracking-tight sm:text-xl">{selectedStaff.name}</h2>
+              <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
+                Enter your 4-digit PIN
+              </p>
             </div>
 
             {/* PIN dots */}
-            <div className={cn("flex justify-center gap-4 mt-6 sm:mt-8", shake && "animate-[shake_0.4s_ease]")}>
+            <div
+              className={cn(
+                "mt-6 flex justify-center gap-4 sm:mt-8",
+                shake && "animate-[shake_0.4s_ease]"
+              )}
+            >
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
                   className={cn(
-                    "h-3 w-3 sm:h-4 sm:w-4 rounded-full border-2 transition-all",
+                    "h-3 w-3 rounded-full border-2 transition-all sm:h-4 sm:w-4",
                     i < pin.length
                       ? "border-primary bg-primary"
                       : "border-muted-foreground/30 bg-transparent"
@@ -229,14 +249,14 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
             </div>
 
             {/* Numpad */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6 sm:mt-8 w-full max-w-[240px]">
+            <div className="mt-6 grid w-full max-w-[240px] grid-cols-3 gap-2 sm:mt-8 sm:gap-3">
               {PAD_KEYS.map((key, idx) => {
                 if (key === "") return <div key={idx} />;
                 return (
                   <Button
                     key={idx}
                     variant={key === "del" ? "outline" : "secondary"}
-                    className="h-12 sm:h-14 text-base sm:text-lg font-semibold"
+                    className="h-12 text-base font-semibold sm:h-14 sm:text-lg"
                     onClick={() => handleKey(key)}
                     disabled={isVerifying}
                   >

@@ -42,7 +42,7 @@ export function PosHeader({ store }: PosHeaderProps) {
   };
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-background px-4 md:px-6">
+    <header className="bg-background flex h-14 items-center justify-between border-b px-4 md:px-6">
       <div className="flex items-center gap-4">
         <h1 className="text-lg font-semibold">{store.name}</h1>
         <div
@@ -67,23 +67,21 @@ export function PosHeader({ store }: PosHeaderProps) {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="text-sm font-medium text-muted-foreground">
+        <div className="text-muted-foreground text-sm font-medium">
           {format(time, "dd MMM yyyy • HH:mm")}
         </div>
 
         {staffName && (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <div className="bg-primary/10 text-primary flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
               <UserCircle2 className="h-3.5 w-3.5" />
               <span>{staffName}</span>
-              {staffRole && (
-                <span className="text-primary/60">· {staffRole}</span>
-              )}
+              {staffRole && <span className="text-primary/60">· {staffRole}</span>}
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              className="text-muted-foreground hover:text-destructive h-7 w-7"
               onClick={handleLogout}
               title="Switch staff"
             >

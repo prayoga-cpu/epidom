@@ -33,6 +33,12 @@ export const id = {
     },
     pwa: {
       installApp: "Pasang aplikasi",
+      installTitle: "Pasang Epidom",
+      installIntro:
+        "Pasang Epidom di perangkat Anda untuk pengalaman yang lebih cepat, layar penuh, dan seperti aplikasi.",
+      installNow: "Pasang",
+      installDesktopStep: 'Buka menu browser Anda dan pilih "Pasang aplikasi".',
+      installIosStep: 'Ketuk ikon Bagikan, lalu "Tambahkan ke Layar Utama".',
     },
     language: {
       label: "Bahasa",
@@ -1496,6 +1502,22 @@ export const id = {
     title: "Dasbor",
     description:
       "Selamat datang di dasbor. Di sini Anda dapat melihat status terkini pesanan, resep, dan stok Anda.",
+    analytics: {
+      title: "Analitik",
+      subtitle: "Wawasan penjualan, pesanan, dan pelanggan",
+      revenue: "Pendapatan",
+      orders: "Pesanan",
+      aov: "Rata-rata Nilai Pesanan",
+      uniqueCustomers: "Pelanggan Unik",
+      newCustomers: "Pelanggan Baru",
+      returningCustomers: "Pelanggan Kembali",
+      anonymousOrders: "Pesanan Anonim",
+      revenueTrend: "Tren Pendapatan",
+      ordersByStatus: "Pesanan per Status",
+      topProducts: "Produk Terlaris",
+      topCustomers: "Pelanggan Teratas",
+      noData: "Tidak ada data untuk periode ini",
+    },
     recentMovements: {
       title: "Pergerakan Stok Terkini",
       empty: "Belum ada pergerakan stok",
@@ -2788,6 +2810,12 @@ export const id = {
     allCaughtUp: "Semua sudah terbaca!",
     dismiss: "Tutup",
     viewAllOrders: "Lihat semua pesanan →",
+  },
+  changelog: {
+    whatsNew: "Yang baru di v{v}",
+    whatsNewBody: "Lihat pembaruan dan peningkatan terbaru.",
+    viewChangelog: "Lihat pembaruan",
+    title: "Yang baru",
   },
   tabs: {
     delivery: "Pengiriman",

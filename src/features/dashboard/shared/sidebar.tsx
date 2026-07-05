@@ -7,6 +7,7 @@
 
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,11 @@ import { useCurrentStore } from "./hooks/use-current-store";
 import { dashboardNavigation, type NavSection, type PlanTier } from "@/config/navigation.config";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { StoreSwitcher } from "./store-switcher";
+import { PwaInstallTrigger } from "./pwa-install-dialog";
+import { ThemeToggle } from "./theme-toggle";
+import { FeedbackButton } from "@/features/dashboard/feedback/components/feedback-button";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
+import { APP_VERSION } from "@/lib/version";
 
 const PLAN_ORDER: PlanTier[] = ["FREE", "POS", "OPERATIONS", "ENTERPRISE"];
 
@@ -63,10 +68,16 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
       className={cn(
         mode === "desktop"
           ? "hidden h-full w-[230px] shrink-0 md:block"
-          : "mt-12 flex h-full md:hidden"
+          : "mt-12 flex h-[calc(100%-3rem)] md:hidden"
       )}
     >
-      <div className="scrollbar-thin bg-card flex h-full w-full flex-col overflow-y-auto rounded-xl border shadow-sm">
+      <div
+        className={cn(
+          "scrollbar-thin bg-card flex h-full w-full flex-col overflow-y-auto border shadow-sm",
+          // Desktop keeps full rounding; the mobile drawer squares the bottom (flush to edge)
+          mode === "desktop" ? "rounded-xl" : "rounded-t-xl"
+        )}
+      >
         {mode === "mobile" && (
           <div className="border-b p-3">
             <div className="relative">
@@ -106,13 +117,13 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                         <Link
                           href={lockedHref}
                           title={upgradeLabel}
-                          className="group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition text-muted-foreground/40 hover:bg-amber-500/8 hover:text-amber-500/70 active:scale-[0.98] cursor-pointer"
+                          className="group text-muted-foreground/40 flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition hover:bg-amber-500/8 hover:text-amber-500/70 active:scale-[0.98]"
                         >
-                          <span className="flex items-center gap-3 min-w-0">
+                          <span className="flex min-w-0 items-center gap-3">
                             <Icon className="size-4 shrink-0" aria-hidden />
                             <span className="truncate">{label}</span>
                           </span>
-                          <span className="flex items-center gap-1 text-[10px] font-medium text-amber-500/50 group-hover:text-amber-500 transition-colors whitespace-nowrap shrink-0">
+                          <span className="flex shrink-0 items-center gap-1 text-[10px] font-medium whitespace-nowrap text-amber-500/50 transition-colors group-hover:text-amber-500">
                             <Lock className="size-3 shrink-0" />
                             {item.requiredPlan && PLAN_LABELS[item.requiredPlan]}
                           </span>
@@ -134,13 +145,13 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                         )}
                         aria-current={active ? "page" : undefined}
                       >
-                        <span className="flex items-center gap-3 min-w-0">
+                        <span className="flex min-w-0 items-center gap-3">
                           <Icon className="size-4 shrink-0" aria-hidden />
                           <span className="truncate">{label}</span>
                         </span>
                         {badge !== null && badge > 0 && (
                           <span
-                            className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-semibold text-white shadow-sm animate-in fade-in"
+                            className="animate-in fade-in flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-semibold text-white shadow-sm"
                             aria-label={`${badge} ${item.badgeKey}`}
                           >
                             {badge > 99 ? "99+" : badge}
@@ -155,21 +166,37 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
           ))}
         </nav>
         {mode === "mobile" && (
-          <div className="border-t space-y-3 p-3">
+          <div className="space-y-3 border-t p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-xs font-medium">
                 {t("dashboard.storeSelector.label")}
               </span>
-              <div className="[&_button]:w-full [&_button]:min-w-0 [&_button]:max-w-none">
+              <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:min-w-0">
                 <StoreSwitcher />
               </div>
             </div>
             <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-xs font-medium">
-                {t("language.label")}
+                {t("common.language.label")}
               </span>
               <LangSwitcher className="w-full" />
             </div>
+            {/* Quick actions: theme + feedback. Styled for the light card surface
+                (override the topbar-only cream color to the themed foreground). */}
+            <div className="text-foreground flex items-center gap-1">
+              <ThemeToggle tone="surface" />
+              <div style={{ "--epi-cream-50": "var(--foreground)" } as CSSProperties}>
+                <FeedbackButton />
+              </div>
+            </div>
+            <PwaInstallTrigger variant="full" />
+            <Link
+              href={storeId ? `/store/${storeId}/changelog` : "/changelog"}
+              className="text-muted-foreground hover:text-foreground flex items-center justify-between gap-2 text-xs transition-colors"
+            >
+              <span>{t("footer.linkChangelog")}</span>
+              <span className="font-medium">{`v${APP_VERSION}`}</span>
+            </Link>
           </div>
         )}
       </div>

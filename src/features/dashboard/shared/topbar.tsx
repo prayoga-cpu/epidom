@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Search, Menu, Sun, Moon } from "lucide-react";
+import { Search, Menu } from "lucide-react";
+import { useCurrentStore } from "./hooks/use-current-store";
+import { APP_VERSION } from "@/lib/version";
 import { Sidebar } from "./sidebar";
 import { StoreSwitcher } from "./store-switcher";
-import { PwaInstallButton } from "./pwa-install-button";
+import { PwaInstallTrigger } from "./pwa-install-dialog";
 import { useI18n } from "../../../components/lang/i18n-provider";
 import LangSwitcher from "../../../components/lang/lang-switcher";
 import { LogOut } from "lucide-react";
@@ -11,35 +14,17 @@ import { signOut } from "@/lib/auth-client";
 import { NavUser } from "./nav-user";
 import { NotificationBell } from "./notification-bell";
 import { FeedbackButton } from "@/features/dashboard/feedback/components/feedback-button";
-import { useState, useEffect } from "react";
+import { ThemeToggle } from "./theme-toggle";
+import { useState } from "react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
-import { useTheme } from "next-themes";
 import { EpidomLogo } from "@/features/marketing/shared/components/epidom-logo";
-
-function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className="h-9 w-9" />;
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-9 w-9 shrink-0 hover:bg-white/10"
-      style={{ color: "var(--epi-cream-50)" }}
-      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-      aria-label="Toggle theme"
-    >
-      {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-    </Button>
-  );
-}
 
 export function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { t } = useI18n();
+  const { storeId } = useCurrentStore();
 
   return (
     <header
@@ -103,15 +88,6 @@ export function Topbar() {
             <div className="hidden sm:block">
               <LangSwitcher />
             </div>
-
-            {/* PWA install */}
-            <PwaInstallButton />
-
-            {/* Theme toggle */}
-            <ThemeToggle />
-
-            {/* Feedback */}
-            <FeedbackButton />
 
             {/* Notifications */}
             <NotificationBell />
@@ -186,13 +162,22 @@ export function Topbar() {
               <LangSwitcher />
             </div>
             <div className="flex items-center">
-              <PwaInstallButton />
+              <PwaInstallTrigger variant="icon" />
             </div>
             <div className="flex items-center">
               <ThemeToggle />
             </div>
             <div className="flex items-center">
               <FeedbackButton />
+            </div>
+            <div className="hidden items-center lg:flex">
+              <Link
+                href={storeId ? `/store/${storeId}/changelog` : "/changelog"}
+                className="rounded-lg px-2 py-1 text-xs font-medium text-white/50 transition-colors hover:bg-white/10 hover:text-white/80"
+                aria-label={t("changelog.viewChangelog")}
+              >
+                {`v${APP_VERSION}`}
+              </Link>
             </div>
             <div className="flex items-center">
               <NotificationBell />

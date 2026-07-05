@@ -522,6 +522,18 @@ model Feedback {
   @@map("feedback")
 }
 
+model Release {
+  id         String   @id @default(cuid())
+  version    String   @unique
+  releasedAt DateTime
+  tag        String
+  entries    Json
+  createdAt  DateTime @default(now())
+
+  @@index([releasedAt])
+  @@map("releases")
+}
+
 model ExchangeRate {
   id           String   @id @default(cuid())
   fromCurrency String

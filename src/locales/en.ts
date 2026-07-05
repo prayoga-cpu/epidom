@@ -33,6 +33,11 @@ export const en = {
     },
     pwa: {
       installApp: "Install app",
+      installTitle: "Install Epidom",
+      installIntro: "Install Epidom on your device for a faster, full-screen, app-like experience.",
+      installNow: "Install",
+      installDesktopStep: 'Open your browser menu and choose "Install app".',
+      installIosStep: 'Tap the Share icon, then "Add to Home Screen".',
     },
     language: {
       label: "Language",
@@ -1472,6 +1477,22 @@ export const en = {
     title: "Dashboard",
     description:
       "Welcome to the dashboard. Here you can see the current status of your orders, recipes, and stock.",
+    analytics: {
+      title: "Analytics",
+      subtitle: "Sales, orders, and customer insights",
+      revenue: "Revenue",
+      orders: "Orders",
+      aov: "Avg. Order Value",
+      uniqueCustomers: "Unique Customers",
+      newCustomers: "New Customers",
+      returningCustomers: "Returning Customers",
+      anonymousOrders: "Anonymous Orders",
+      revenueTrend: "Revenue Trend",
+      ordersByStatus: "Orders by Status",
+      topProducts: "Top Products",
+      topCustomers: "Top Customers",
+      noData: "No data for this period",
+    },
     recentMovements: {
       title: "Recent Stock Movements",
       empty: "No stock movements yet",
@@ -2758,6 +2779,12 @@ export const en = {
     allCaughtUp: "All caught up!",
     dismiss: "Dismiss",
     viewAllOrders: "View all orders →",
+  },
+  changelog: {
+    whatsNew: "What's new in v{v}",
+    whatsNewBody: "See the latest updates and improvements.",
+    viewChangelog: "View changelog",
+    title: "What's new",
   },
   tabs: {
     delivery: "Delivery",

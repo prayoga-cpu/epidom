@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { APP_VERSION } from "@/lib/version";
 import { Container } from "./container";
 import { EpidomLogo } from "./epidom-logo";
 import { PrionationMark } from "./prionation-mark";
@@ -309,7 +310,16 @@ export const SiteFooter = memo(function SiteFooter() {
             color: "rgba(255,255,255,0.28)",
           }}
         >
-          <span>{`© ${year} Epidom. All rights reserved.`}</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
+            {`© ${year} Epidom. All rights reserved.`}
+            <Link
+              href="/changelog"
+              style={{ ...linkStyle, fontSize: 12 }}
+              className="hover:text-[rgba(251,249,228,0.9)]"
+            >
+              {`v${APP_VERSION}`}
+            </Link>
+          </span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>
             {[
               { label: t("footer.linkTerms"), href: "/terms" },

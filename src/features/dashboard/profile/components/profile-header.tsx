@@ -50,8 +50,8 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
 
   return (
     <>
-      <Card className="border-2">
-        <CardContent className="p-4 sm:p-5 md:p-6">
+      <Card className="border-2 py-0">
+        <CardContent className="p-4 md:p-6">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
             <div className="relative shrink-0">
               <Avatar className="ring-primary/10 h-20 w-20 ring-2 sm:h-24 sm:w-24 sm:ring-4">
@@ -73,7 +73,7 @@ export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderPro
             <div className="w-full flex-1 space-y-2 text-center sm:text-left">
               <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <h1 className="text-xl font-bold sm:text-2xl">{user.name || t("profile.user")}</h1>
-                <Badge className="bg-violet-500/15 text-violet-600 border-violet-400/40 border font-semibold tracking-wide text-[10px] px-2 py-0.5 uppercase">
+                <Badge className="border border-violet-400/40 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-violet-600 uppercase">
                   Beta
                 </Badge>
                 {subscription && (

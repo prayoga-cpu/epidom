@@ -434,6 +434,15 @@ Table feedback {
   user user
 }
 
+Table releases {
+  id String [pk]
+  version String [unique, not null]
+  releasedAt DateTime [not null]
+  tag String [not null]
+  entries Json [not null]
+  createdAt DateTime [default: `now()`, not null]
+}
+
 Table exchange_rates {
   id String [pk]
   fromCurrency String [not null]

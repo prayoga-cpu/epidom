@@ -262,7 +262,7 @@ export function StartProductionDialog({
                     </p>
                     <p className="text-lg font-semibold">{recipe.name}</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
                     <div>
                       <p className="text-muted-foreground">
                         {t("management.recipeProduction.yieldPerBatch")}

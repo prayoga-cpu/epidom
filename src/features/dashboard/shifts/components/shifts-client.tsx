@@ -71,9 +71,11 @@ interface ShiftsClientProps {
 
 function SortIcon({ field, active, dir }: { field: string; active: boolean; dir: SortDir }) {
   if (!active) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 opacity-40" />;
-  return dir === "asc"
-    ? <ArrowUp className="ml-1 inline h-3.5 w-3.5" />
-    : <ArrowDown className="ml-1 inline h-3.5 w-3.5" />;
+  return dir === "asc" ? (
+    <ArrowUp className="ml-1 inline h-3.5 w-3.5" />
+  ) : (
+    <ArrowDown className="ml-1 inline h-3.5 w-3.5" />
+  );
 }
 
 export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
@@ -128,8 +130,7 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
   });
 
   const openMutation = useMutation({
-    mutationFn: (body: OpenShiftInput) =>
-      apiClient.post(`/stores/${storeId}/shifts`, body),
+    mutationFn: (body: OpenShiftInput) => apiClient.post(`/stores/${storeId}/shifts`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
       setOpenOpen(false);
@@ -147,14 +148,15 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
     },
   });
 
-  const fmtCash = (val: string | number | null) =>
-    val != null ? formatPrice(Number(val)) : "—";
+  const fmtCash = (val: string | number | null) => (val != null ? formatPrice(Number(val)) : "—");
 
   return (
     <div className="min-h-[calc(100vh-150px)] space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="grid gap-1">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("pages.shiftsTitle")}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            {t("pages.shiftsTitle")}
+          </h1>
           <p className="text-muted-foreground text-sm">{t("pages.shiftsDesc")}</p>
         </div>
         {!openShift && (
@@ -176,14 +178,64 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
         )}
       </div>
 
-      <div className="-mx-4 overflow-x-auto sm:mx-0">
+      {/* Mobile/Tablet: Card Layout */}
+      <div className="space-y-3 lg:hidden">
+        {isLoading ? (
+          <p className="text-muted-foreground py-8 text-center text-sm">Loading...</p>
+        ) : shifts.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <Clock className="text-muted-foreground h-8 w-8" />
+            <p className="text-muted-foreground text-sm">{t("pages.openShift")}</p>
+          </div>
+        ) : (
+          shifts.map((shift) => (
+            <div key={shift.id} className="bg-muted/50 space-y-3 rounded-lg border p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{shift.staffMember.name}</p>
+                  <p className="text-muted-foreground text-xs">{formatDateTime(shift.openedAt)}</p>
+                </div>
+                <Badge variant={shift.closedAt ? "outline" : "default"}>
+                  {shift.closedAt ? t("pages.shiftClosed") : t("pages.shiftOpen")}
+                </Badge>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("pages.openingCash")}</span>
+                <span>{fmtCash(shift.openingCash)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("pages.closingCash")}</span>
+                <span>{fmtCash(shift.closingCash)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("pages.cashDifference")}</span>
+                {shift.cashDifference != null ? (
+                  <span
+                    className={
+                      Number(shift.cashDifference) < 0 ? "text-destructive" : "text-green-600"
+                    }
+                  >
+                    {Number(shift.cashDifference) >= 0 ? "+" : ""}
+                    {fmtCash(shift.cashDifference)}
+                  </span>
+                ) : (
+                  <span>—</span>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop: Table Layout */}
+      <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
         <div className="min-w-[560px]">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>
                   <button
-                    className="flex items-center font-semibold hover:text-foreground"
+                    className="hover:text-foreground flex items-center font-semibold"
                     onClick={() => toggleSort("name")}
                   >
                     {t("common.name")}
@@ -192,11 +244,15 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
                 </TableHead>
                 <TableHead>
                   <button
-                    className="flex items-center font-semibold hover:text-foreground"
+                    className="hover:text-foreground flex items-center font-semibold"
                     onClick={() => toggleSort("openingCash")}
                   >
                     {t("pages.openingCash")}
-                    <SortIcon field="openingCash" active={sortField === "openingCash"} dir={sortDir} />
+                    <SortIcon
+                      field="openingCash"
+                      active={sortField === "openingCash"}
+                      dir={sortDir}
+                    />
                   </button>
                 </TableHead>
                 <TableHead>{t("pages.closingCash")}</TableHead>
@@ -204,7 +260,7 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
                 <TableHead>Status</TableHead>
                 <TableHead>
                   <button
-                    className="flex items-center font-semibold hover:text-foreground"
+                    className="hover:text-foreground flex items-center font-semibold"
                     onClick={() => toggleSort("date")}
                   >
                     Date

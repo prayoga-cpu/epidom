@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Shield,
@@ -130,6 +131,7 @@ function formatPeriodEnd(dateStr: string | null | undefined): string {
 }
 
 export function AdminDashboard() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { user: me } = useUser();
   const [search, setSearch] = useState("");
@@ -214,6 +216,214 @@ export function AdminDashboard() {
     ).length,
   };
 
+  // Per-row action menu — shared by the desktop table cell and the mobile card list.
+  function UserActionsMenu({ user }: { user: UserRow }) {
+    const isHardcodedAdmin = (HARDCODED_ADMIN_EMAILS as readonly string[]).includes(user.email);
+    const plan = user.subscription?.plan ?? "FREE";
+    const status = user.subscription?.status ?? "INCOMPLETE";
+    const isSelf = me?.id === user.id;
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs">
+            Manage <ChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          {/* Plan */}
+          <DropdownMenuLabel className="text-muted-foreground text-xs">Set Plan</DropdownMenuLabel>
+          {PLAN_ORDER.map((p) => (
+            <DropdownMenuItem
+              key={p}
+              disabled={plan === p || mutation.isPending}
+              onClick={() =>
+                mutation.mutate({
+                  action: "set-plan",
+                  userId: user.id,
+                  plan: p,
+                  status: "ACTIVE",
+                })
+              }
+            >
+              <span
+                className={`mr-2 inline-block h-2 w-2 rounded-full ${plan === p ? "bg-emerald-400" : "bg-muted"}`}
+              />
+              {p}
+              {plan === p && (
+                <span className="text-muted-foreground ml-auto text-[10px]">current</span>
+              )}
+            </DropdownMenuItem>
+          ))}
+
+          <DropdownMenuSeparator />
+
+          {/* Period */}
+          <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <Calendar className="h-3 w-3" /> Set Duration
+          </DropdownMenuLabel>
+          {PERIOD_OPTIONS.map(({ label, months }) => (
+            <DropdownMenuItem
+              key={label}
+              disabled={mutation.isPending}
+              onClick={() =>
+                mutation.mutate({
+                  action: "set-period",
+                  userId: user.id,
+                  ...(months === null ? { lifetime: true } : { months }),
+                })
+              }
+            >
+              {months === null ? (
+                <Infinity className="mr-2 h-3.5 w-3.5 text-violet-400" />
+              ) : (
+                <Calendar className="text-muted-foreground mr-2 h-3.5 w-3.5" />
+              )}
+              {label}
+            </DropdownMenuItem>
+          ))}
+
+          <DropdownMenuSeparator />
+
+          {/* Status */}
+          <DropdownMenuLabel className="text-muted-foreground text-xs">
+            Set Status
+          </DropdownMenuLabel>
+          {(["ACTIVE", "CANCELED", "INCOMPLETE"] as SubStatus[]).map((s) => (
+            <DropdownMenuItem
+              key={s}
+              disabled={status === s || mutation.isPending}
+              onClick={() =>
+                mutation.mutate({
+                  action: "set-plan",
+                  userId: user.id,
+                  plan: plan as Plan,
+                  status: s,
+                })
+              }
+            >
+              <span
+                className={`mr-2 inline-block h-2 w-2 rounded-full ${s === "ACTIVE" ? "bg-emerald-400" : s === "CANCELED" ? "bg-red-400" : "bg-zinc-400"}`}
+              />
+              {s}
+              {status === s && (
+                <span className="text-muted-foreground ml-auto text-[10px]">current</span>
+              )}
+            </DropdownMenuItem>
+          ))}
+
+          {!isSelf && (
+            <>
+              <DropdownMenuSeparator />
+
+              {/* Password reset */}
+              <DropdownMenuItem
+                className="text-blue-400 focus:bg-blue-500/10 focus:text-blue-400"
+                onClick={() => {
+                  setPwTarget(user);
+                  setNewPw("");
+                  setShowPw(false);
+                }}
+              >
+                <KeyRound className="mr-2 h-3.5 w-3.5" />
+                {user.hasPassword ? "Reset Password" : "Set Password"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-emerald-400 focus:bg-emerald-500/10 focus:text-emerald-400"
+                disabled={tempLoading}
+                onClick={async () => {
+                  setTempPwUser(user);
+                  setTempPw(null);
+                  setCopied(false);
+                  setTempLoading(true);
+                  try {
+                    const res = await fetch("/api/admin/users", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        action: "temp-password",
+                        userId: user.id,
+                      }),
+                    });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json.error ?? "Failed");
+                    setTempPw(json.tempPassword);
+                  } catch (e: any) {
+                    toast.error(e.message || "Failed to generate temp password");
+                    setTempPwUser(null);
+                  } finally {
+                    setTempLoading(false);
+                  }
+                }}
+              >
+                <LogIn className="mr-2 h-3.5 w-3.5" />
+                Get Temp Access
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* Admin access */}
+              <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                <Shield className="h-3 w-3" /> Admin Access
+              </DropdownMenuLabel>
+              {!isHardcodedAdmin &&
+                (user.isAdmin ? (
+                  <DropdownMenuItem
+                    className="text-orange-400 focus:text-orange-400"
+                    disabled={mutation.isPending}
+                    onClick={() =>
+                      mutation.mutate({
+                        action: "set-admin",
+                        userId: user.id,
+                        isAdmin: false,
+                      })
+                    }
+                  >
+                    <ShieldOff className="mr-2 h-3.5 w-3.5" />
+                    Revoke Admin
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    className="text-red-400 focus:text-red-400"
+                    disabled={mutation.isPending}
+                    onClick={() =>
+                      mutation.mutate({
+                        action: "set-admin",
+                        userId: user.id,
+                        isAdmin: true,
+                      })
+                    }
+                  >
+                    <ShieldCheck className="mr-2 h-3.5 w-3.5" />
+                    Grant Admin
+                  </DropdownMenuItem>
+                ))}
+              {isHardcodedAdmin && (
+                <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                  <Shield className="mr-2 h-3.5 w-3.5" /> Hardcoded master
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuSeparator />
+
+              {/* Delete */}
+              <DropdownMenuItem
+                className="text-red-500 focus:bg-red-500/10 focus:text-red-500"
+                onClick={() => {
+                  setDeleteTarget(user);
+                  setDeleteConfirm("");
+                }}
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Delete Account
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
   return (
     <div className="bg-background min-h-screen">
       {/* Header */}
@@ -227,25 +437,17 @@ export function AdminDashboard() {
               <h1 className="text-foreground text-lg font-bold">Master Admin Panel</h1>
               <p className="text-muted-foreground text-xs">Epidom internal — restricted access</p>
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => (window.location.href = "/admin/revenue")}
-              >
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => router.push("/admin/revenue")}>
                 <TrendingUp className="mr-2 h-4 w-4" />
-                Revenue Report
+                <span className="hidden sm:inline">Revenue Report</span>
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => (window.location.href = "/admin/feedback")}
-              >
+              <Button variant="outline" size="sm" onClick={() => router.push("/admin/feedback")}>
                 <MessageSquare className="mr-2 h-4 w-4" />
-                Feedback
+                <span className="hidden sm:inline">Feedback</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => window.history.back()}>
-                ← Back
+              <Button variant="outline" size="sm" onClick={() => router.push("/stores")}>
+                ←<span className="hidden sm:inline"> Back</span>
               </Button>
             </div>
           </div>
@@ -297,358 +499,251 @@ export function AdminDashboard() {
           </Select>
         </div>
 
-        {/* Table */}
-        <div className="border-border bg-card overflow-hidden rounded-xl border">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">User</TableHead>
-                  <TableHead className="text-muted-foreground">Login</TableHead>
-                  <TableHead className="text-muted-foreground">Business</TableHead>
-                  <TableHead className="text-muted-foreground">Region</TableHead>
-                  <TableHead className="text-muted-foreground">Plan</TableHead>
-                  <TableHead className="text-muted-foreground">Status</TableHead>
-                  <TableHead className="text-muted-foreground">Period End</TableHead>
-                  <TableHead className="text-muted-foreground">Joined</TableHead>
-                  <TableHead className="text-muted-foreground text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-muted-foreground py-12 text-center">
-                      Loading users...
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!isLoading && filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-muted-foreground py-12 text-center">
-                      No users found
-                    </TableCell>
-                  </TableRow>
-                )}
-                {filtered.map((user) => {
-                  const isHardcodedAdmin = (HARDCODED_ADMIN_EMAILS as readonly string[]).includes(
-                    user.email
-                  );
-                  const isAdminUser = user.isAdmin || isHardcodedAdmin;
-                  const plan = user.subscription?.plan ?? "FREE";
-                  const status = user.subscription?.status ?? "INCOMPLETE";
-                  const isSelf = me?.id === user.id;
+        {/* Mobile/Tablet: card list */}
+        <div className="space-y-3 lg:hidden">
+          {isLoading && (
+            <p className="text-muted-foreground py-12 text-center text-sm">Loading users...</p>
+          )}
+          {!isLoading && filtered.length === 0 && (
+            <p className="text-muted-foreground py-12 text-center text-sm">No users found</p>
+          )}
+          {filtered.map((user) => {
+            const isHardcodedAdmin = (HARDCODED_ADMIN_EMAILS as readonly string[]).includes(
+              user.email
+            );
+            const isAdminUser = user.isAdmin || isHardcodedAdmin;
+            const plan = user.subscription?.plan ?? "FREE";
+            const status = user.subscription?.status ?? "INCOMPLETE";
+            const isSelf = me?.id === user.id;
 
-                  return (
-                    <TableRow key={user.id} className="border-border">
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase ${isAdminUser ? "border border-red-500/30 bg-red-500/15 text-red-400" : "bg-muted text-foreground"}`}
-                          >
-                            {(user.name?.[0] ?? user.email[0]).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-foreground flex flex-wrap items-center gap-1.5 text-sm font-medium">
-                              {user.name ?? "—"}
-                              {isAdminUser && (
-                                <span className="inline-flex items-center gap-0.5 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-red-400 uppercase">
-                                  <Shield className="h-2.5 w-2.5" />
-                                  {isHardcodedAdmin ? "Master" : "Admin"}
-                                </span>
-                              )}
-                              {isSelf && (
-                                <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-blue-400 uppercase">
-                                  You
-                                </span>
-                              )}
-                            </p>
-                            <p className="text-muted-foreground text-xs">{user.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {(user.providers ?? []).map((p) => (
-                            <span
-                              key={p}
-                              className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                                p === "credential"
-                                  ? "border-blue-500/30 bg-blue-500/15 text-blue-400"
-                                  : p === "google"
-                                    ? "border-red-500/30 bg-red-500/15 text-red-400"
-                                    : "border-zinc-500/30 bg-zinc-500/15 text-zinc-400"
-                              }`}
-                            >
-                              {p === "credential" ? "🔑 Password" : p === "google" ? "G Google" : p}
-                            </span>
-                          ))}
-                          {(user.providers ?? []).length === 0 && (
-                            <span className="text-muted-foreground text-[10px]">—</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {user.business ? (
-                          <div>
-                            <p className="text-foreground text-sm">{user.business.name}</p>
-                            <p className="text-muted-foreground text-xs">
-                              {user.business._count.stores} store
-                              {user.business._count.stores !== 1 ? "s" : ""}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">No business</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-muted-foreground text-xs whitespace-nowrap">
-                          {regionLabel(user)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${planColors[plan as Plan]}`}
-                          >
-                            {plan}
+            return (
+              <div key={user.id} className="border-border bg-card space-y-3 rounded-xl border p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase ${isAdminUser ? "border border-red-500/30 bg-red-500/15 text-red-400" : "bg-muted text-foreground"}`}
+                    >
+                      {(user.name?.[0] ?? user.email[0]).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-foreground flex flex-wrap items-center gap-1.5 text-sm font-medium">
+                        {user.name ?? "—"}
+                        {isAdminUser && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-red-400 uppercase">
+                            <Shield className="h-2.5 w-2.5" />
+                            {isHardcodedAdmin ? "Master" : "Admin"}
                           </span>
-                          {user.subscription?.stripeCustomerId?.startsWith("admin_") && (
-                            <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-400 uppercase">
-                              BETA
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}
-                        >
-                          {status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                        {formatPeriodEnd(user.subscription?.currentPeriodEnd)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                        {new Date(user.createdAt).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs">
-                              Manage <ChevronDown className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56">
-                            {/* Plan */}
-                            <DropdownMenuLabel className="text-muted-foreground text-xs">
-                              Set Plan
-                            </DropdownMenuLabel>
-                            {PLAN_ORDER.map((p) => (
-                              <DropdownMenuItem
-                                key={p}
-                                disabled={plan === p || mutation.isPending}
-                                onClick={() =>
-                                  mutation.mutate({
-                                    action: "set-plan",
-                                    userId: user.id,
-                                    plan: p,
-                                    status: "ACTIVE",
-                                  })
-                                }
-                              >
-                                <span
-                                  className={`mr-2 inline-block h-2 w-2 rounded-full ${plan === p ? "bg-emerald-400" : "bg-muted"}`}
-                                />
-                                {p}
-                                {plan === p && (
-                                  <span className="text-muted-foreground ml-auto text-[10px]">
-                                    current
-                                  </span>
-                                )}
-                              </DropdownMenuItem>
-                            ))}
+                        )}
+                        {isSelf && (
+                          <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-blue-400 uppercase">
+                            You
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-muted-foreground truncate text-xs">{user.email}</p>
+                    </div>
+                  </div>
+                  <UserActionsMenu user={user} />
+                </div>
 
-                            <DropdownMenuSeparator />
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${planColors[plan as Plan]}`}
+                  >
+                    {plan}
+                  </span>
+                  {user.subscription?.stripeCustomerId?.startsWith("admin_") && (
+                    <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-400 uppercase">
+                      BETA
+                    </span>
+                  )}
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}
+                  >
+                    {status}
+                  </span>
+                </div>
 
-                            {/* Period */}
-                            <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                              <Calendar className="h-3 w-3" /> Set Duration
-                            </DropdownMenuLabel>
-                            {PERIOD_OPTIONS.map(({ label, months }) => (
-                              <DropdownMenuItem
-                                key={label}
-                                disabled={mutation.isPending}
-                                onClick={() =>
-                                  mutation.mutate({
-                                    action: "set-period",
-                                    userId: user.id,
-                                    ...(months === null ? { lifetime: true } : { months }),
-                                  })
-                                }
-                              >
-                                {months === null ? (
-                                  <Infinity className="mr-2 h-3.5 w-3.5 text-violet-400" />
-                                ) : (
-                                  <Calendar className="text-muted-foreground mr-2 h-3.5 w-3.5" />
-                                )}
-                                {label}
-                              </DropdownMenuItem>
-                            ))}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <p className="text-muted-foreground/70">Region</p>
+                    <p className="text-foreground">{regionLabel(user)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground/70">Period End</p>
+                    <p className="text-foreground">
+                      {formatPeriodEnd(user.subscription?.currentPeriodEnd)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground/70">Joined</p>
+                    <p className="text-foreground">
+                      {new Date(user.createdAt).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
-                            <DropdownMenuSeparator />
-
-                            {/* Status */}
-                            <DropdownMenuLabel className="text-muted-foreground text-xs">
-                              Set Status
-                            </DropdownMenuLabel>
-                            {(["ACTIVE", "CANCELED", "INCOMPLETE"] as SubStatus[]).map((s) => (
-                              <DropdownMenuItem
-                                key={s}
-                                disabled={status === s || mutation.isPending}
-                                onClick={() =>
-                                  mutation.mutate({
-                                    action: "set-plan",
-                                    userId: user.id,
-                                    plan: plan as Plan,
-                                    status: s,
-                                  })
-                                }
-                              >
-                                <span
-                                  className={`mr-2 inline-block h-2 w-2 rounded-full ${s === "ACTIVE" ? "bg-emerald-400" : s === "CANCELED" ? "bg-red-400" : "bg-zinc-400"}`}
-                                />
-                                {s}
-                                {status === s && (
-                                  <span className="text-muted-foreground ml-auto text-[10px]">
-                                    current
-                                  </span>
-                                )}
-                              </DropdownMenuItem>
-                            ))}
-
-                            {!isSelf && (
-                              <>
-                                <DropdownMenuSeparator />
-
-                                {/* Password reset */}
-                                <DropdownMenuItem
-                                  className="text-blue-400 focus:bg-blue-500/10 focus:text-blue-400"
-                                  onClick={() => {
-                                    setPwTarget(user);
-                                    setNewPw("");
-                                    setShowPw(false);
-                                  }}
-                                >
-                                  <KeyRound className="mr-2 h-3.5 w-3.5" />
-                                  {user.hasPassword ? "Reset Password" : "Set Password"}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-emerald-400 focus:bg-emerald-500/10 focus:text-emerald-400"
-                                  disabled={tempLoading}
-                                  onClick={async () => {
-                                    setTempPwUser(user);
-                                    setTempPw(null);
-                                    setCopied(false);
-                                    setTempLoading(true);
-                                    try {
-                                      const res = await fetch("/api/admin/users", {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({
-                                          action: "temp-password",
-                                          userId: user.id,
-                                        }),
-                                      });
-                                      const json = await res.json();
-                                      if (!res.ok) throw new Error(json.error ?? "Failed");
-                                      setTempPw(json.tempPassword);
-                                    } catch (e: any) {
-                                      toast.error(e.message || "Failed to generate temp password");
-                                      setTempPwUser(null);
-                                    } finally {
-                                      setTempLoading(false);
-                                    }
-                                  }}
-                                >
-                                  <LogIn className="mr-2 h-3.5 w-3.5" />
-                                  Get Temp Access
-                                </DropdownMenuItem>
-
-                                <DropdownMenuSeparator />
-
-                                {/* Admin access */}
-                                <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                                  <Shield className="h-3 w-3" /> Admin Access
-                                </DropdownMenuLabel>
-                                {!isHardcodedAdmin &&
-                                  (user.isAdmin ? (
-                                    <DropdownMenuItem
-                                      className="text-orange-400 focus:text-orange-400"
-                                      disabled={mutation.isPending}
-                                      onClick={() =>
-                                        mutation.mutate({
-                                          action: "set-admin",
-                                          userId: user.id,
-                                          isAdmin: false,
-                                        })
-                                      }
-                                    >
-                                      <ShieldOff className="mr-2 h-3.5 w-3.5" />
-                                      Revoke Admin
-                                    </DropdownMenuItem>
-                                  ) : (
-                                    <DropdownMenuItem
-                                      className="text-red-400 focus:text-red-400"
-                                      disabled={mutation.isPending}
-                                      onClick={() =>
-                                        mutation.mutate({
-                                          action: "set-admin",
-                                          userId: user.id,
-                                          isAdmin: true,
-                                        })
-                                      }
-                                    >
-                                      <ShieldCheck className="mr-2 h-3.5 w-3.5" />
-                                      Grant Admin
-                                    </DropdownMenuItem>
-                                  ))}
-                                {isHardcodedAdmin && (
-                                  <DropdownMenuItem
-                                    disabled
-                                    className="text-muted-foreground text-xs"
-                                  >
-                                    <Shield className="mr-2 h-3.5 w-3.5" /> Hardcoded master
-                                  </DropdownMenuItem>
-                                )}
-
-                                <DropdownMenuSeparator />
-
-                                {/* Delete */}
-                                <DropdownMenuItem
-                                  className="text-red-500 focus:bg-red-500/10 focus:text-red-500"
-                                  onClick={() => {
-                                    setDeleteTarget(user);
-                                    setDeleteConfirm("");
-                                  }}
-                                >
-                                  <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                  Delete Account
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+        {/* Table */}
+        <div className="border-border bg-card hidden overflow-hidden rounded-xl border lg:block">
+          <div className="overflow-x-auto">
+            <div className="min-w-[1024px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">User</TableHead>
+                    <TableHead className="text-muted-foreground">Login</TableHead>
+                    <TableHead className="text-muted-foreground">Business</TableHead>
+                    <TableHead className="text-muted-foreground">Region</TableHead>
+                    <TableHead className="text-muted-foreground">Plan</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground">Period End</TableHead>
+                    <TableHead className="text-muted-foreground">Joined</TableHead>
+                    <TableHead className="text-muted-foreground text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-muted-foreground py-12 text-center">
+                        Loading users...
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                  )}
+                  {!isLoading && filtered.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-muted-foreground py-12 text-center">
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filtered.map((user) => {
+                    const isHardcodedAdmin = (HARDCODED_ADMIN_EMAILS as readonly string[]).includes(
+                      user.email
+                    );
+                    const isAdminUser = user.isAdmin || isHardcodedAdmin;
+                    const plan = user.subscription?.plan ?? "FREE";
+                    const status = user.subscription?.status ?? "INCOMPLETE";
+                    const isSelf = me?.id === user.id;
+
+                    return (
+                      <TableRow key={user.id} className="border-border">
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase ${isAdminUser ? "border border-red-500/30 bg-red-500/15 text-red-400" : "bg-muted text-foreground"}`}
+                            >
+                              {(user.name?.[0] ?? user.email[0]).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-foreground flex flex-wrap items-center gap-1.5 text-sm font-medium">
+                                {user.name ?? "—"}
+                                {isAdminUser && (
+                                  <span className="inline-flex items-center gap-0.5 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-red-400 uppercase">
+                                    <Shield className="h-2.5 w-2.5" />
+                                    {isHardcodedAdmin ? "Master" : "Admin"}
+                                  </span>
+                                )}
+                                {isSelf && (
+                                  <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-blue-400 uppercase">
+                                    You
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-muted-foreground text-xs">{user.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {(user.providers ?? []).map((p) => (
+                              <span
+                                key={p}
+                                className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                  p === "credential"
+                                    ? "border-blue-500/30 bg-blue-500/15 text-blue-400"
+                                    : p === "google"
+                                      ? "border-red-500/30 bg-red-500/15 text-red-400"
+                                      : "border-zinc-500/30 bg-zinc-500/15 text-zinc-400"
+                                }`}
+                              >
+                                {p === "credential"
+                                  ? "🔑 Password"
+                                  : p === "google"
+                                    ? "G Google"
+                                    : p}
+                              </span>
+                            ))}
+                            {(user.providers ?? []).length === 0 && (
+                              <span className="text-muted-foreground text-[10px]">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {user.business ? (
+                            <div>
+                              <p className="text-foreground text-sm">{user.business.name}</p>
+                              <p className="text-muted-foreground text-xs">
+                                {user.business._count.stores} store
+                                {user.business._count.stores !== 1 ? "s" : ""}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">No business</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-muted-foreground text-xs whitespace-nowrap">
+                            {regionLabel(user)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${planColors[plan as Plan]}`}
+                            >
+                              {plan}
+                            </span>
+                            {user.subscription?.stripeCustomerId?.startsWith("admin_") && (
+                              <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-400 uppercase">
+                                BETA
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}
+                          >
+                            {status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                          {formatPeriodEnd(user.subscription?.currentPeriodEnd)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                          {new Date(user.createdAt).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <UserActionsMenu user={user} />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
 
