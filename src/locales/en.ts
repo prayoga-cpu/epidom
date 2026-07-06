@@ -68,6 +68,10 @@ export const en = {
     name: "Name",
     material: "Material",
     product: "Product",
+    address: "Address",
+    deleted: "Deleted",
+    from: "From",
+    to: "To",
     actions: {
       cancel: "Cancel",
       save: "Save",
@@ -97,6 +101,11 @@ export const en = {
       apply: "Apply",
       complete: "Complete",
       remove: "Remove",
+      cancelBatch: "Cancel Batch",
+      exportError: "Failed to export data",
+      exportSuccess: "Data exported successfully",
+      updateError: "Failed to update production batch",
+      updateSuccess: "Production batch updated successfully",
     },
     pagination: {
       rowsPerPage: "Rows per page",
@@ -1192,6 +1201,8 @@ export const en = {
       resendSuccess: "Verification email sent!",
       resendError: "Failed to resend. Please try again.",
       backToLogin: "Back to Login",
+      checkYourEmail: "Please verify your email before signing in.",
+      notice: "Email not verified",
     },
   },
   paymentsComponents: {
@@ -1531,6 +1542,10 @@ export const en = {
       manage: "Manage",
       noSuppliersAvailable: "No suppliers available",
     },
+    productionHistory: {
+      title: "Production History",
+      description: "Last 7 days of production",
+    },
   },
   chart: {
     stockUtilization: "Stock utilization",
@@ -1704,11 +1719,18 @@ export const en = {
         title: "Delete Raw Material",
         description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
       },
+      deletedMaterial: "Deleted Material",
+      bulkDeleteConfirm: {
+        title: "Delete Multiple Materials",
+        description:
+          "Are you sure you want to delete {count} material(s)? This action cannot be undone.",
+      },
     },
 
     // Recipes section
     recipes: {
       pageTitle: "Recipes",
+      noDescription: "No description provided",
       demandBadge: "last 30d",
       addTitle: "Create New Recipe",
       addButton: "Add Recipe",
@@ -1765,6 +1787,7 @@ export const en = {
             "This recipe doesn't have any ingredients yet. Add ingredients to calculate costs and use this recipe for production.",
           action: "Add Ingredients",
         },
+        materialDeleted: "⚠️ This material has been deleted. Please update the recipe.",
       },
       // Ingredients
       ingredients: {
@@ -1822,6 +1845,10 @@ export const en = {
         totalBatchCost: "Total Batch Cost",
         note: "Note: All ingredients, instructions, yield, and production time will be copied from the original recipe.",
         duplicateButton: "Duplicate Recipe",
+        steps: {
+          basicInfo: "Basic Info",
+          review: "Review",
+        },
       },
 
       // Categories
@@ -1866,6 +1893,7 @@ export const en = {
       // Toasts
       toasts: {
         adding: "Adding recipe...",
+        updating: "Updating recipe...",
         created: {
           title: "Recipe Created Successfully",
           description: "{name} has been added to your recipes.",
@@ -1897,6 +1925,11 @@ export const en = {
       deleteConfirm: {
         title: "Delete Recipe",
         description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
+      },
+      bulkDeleteConfirm: {
+        title: "Delete Multiple Recipes",
+        description:
+          "Are you sure you want to delete {count} recipe(s)? This action cannot be undone.",
       },
 
       // Details section
@@ -2039,6 +2072,9 @@ export const en = {
           title: "Products Deleted",
           description: "{count} products have been deleted successfully.",
         },
+        updateError: {
+          description: "An error occurred while updating the product.",
+        },
       },
 
       // Details section
@@ -2064,6 +2100,29 @@ export const en = {
       deleteConfirm: {
         title: "Delete Product",
         description: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
+      },
+      update: "Update Product",
+      limitBadge: "products",
+      limitTooltip:
+        "You've reached your plan's product limit ({current}/{limit}). Upgrade to Pro for unlimited products.",
+      limitReached: {
+        title: "Product Limit Reached",
+        description:
+          "You've reached your plan's product limit ({current}/{limit}). Upgrade to Pro for unlimited products.",
+        upgrade: "Upgrade to Pro",
+      },
+      bulkDeleteConfirm: {
+        title: "Delete Multiple Products",
+        description:
+          "Are you sure you want to delete {count} product(s)? This action cannot be undone.",
+      },
+      warnings: {
+        noRecipes: {
+          title: "No Linked Recipes",
+          description:
+            "This product doesn't have any linked recipes yet. Link a recipe to enable production planning and cost tracking.",
+          action: "Link Recipe",
+        },
       },
     },
 
@@ -2164,12 +2223,19 @@ export const en = {
 
       // Locked message
       locked: "Upgrade to Operations to access Supplier Management.",
+      update: "Update Supplier",
+      bulkDeleteConfirm: {
+        title: "Delete Multiple Suppliers",
+        description:
+          "Are you sure you want to delete {count} supplier(s)? This action cannot be undone.",
+      },
     },
   },
   filters: {
     allSuppliers: "All Suppliers",
     allStock: "All Stock",
     allStockLevels: "All Stock Levels",
+    allTypes: "All types",
     inStock: "In Stock",
     lowStock: "Low Stock",
     outOfStock: "Out of Stock",
@@ -2272,6 +2338,7 @@ export const en = {
     thisWeek: "This Week",
     today: "Today",
     logout: "Logout",
+    saving: "Saving...",
   },
   messages: {
     passwordsDoNotMatch: "Passwords do not match",
@@ -2319,6 +2386,8 @@ export const en = {
     failedToUpdateOrder: "Failed to update order",
     orderPlaced: "Order marked as placed",
     orderPlacedError: "Failed to mark order as placed",
+    errorLoadingAlerts: "Failed to load alerts",
+    loginSuccess: "Logged in successfully!",
   },
   alerts: {
     // Page titles
@@ -2772,6 +2841,8 @@ export const en = {
     renewSubscription: "Renew your subscription to access this store",
     clickToSubscribe: "Click to Subscribe",
     errorLoading: "Failed to load stores",
+    deleteError: "Failed to delete store",
+    deleteSuccess: "Store deleted successfully",
   },
   notifications: {
     title: "Notifications",
@@ -2974,6 +3045,20 @@ export const en = {
           },
         },
       },
+      updateStatus: {
+        title: "Update Delivery Status",
+        description: "Update delivery status for {reference}",
+        currentStatus: "Current Status",
+        newStatus: "New Status",
+        receivedDate: "Received Date",
+        notesPlaceholder: "Add notes about this status change...",
+        selectNewStatus: "Please select a new status",
+        selectNewStatusPlaceholder: "Select new status",
+        selectReceivedDate: "Please select a received date",
+        selectReceivedDatePlaceholder: "Select received date",
+        updateStatus: "Update Status",
+        updating: "Updating...",
+      },
     },
     // Edit Stock Tab
     editStock: {
@@ -3095,6 +3180,7 @@ export const en = {
       decrease: "Decrease",
       runningBalance: "Running Balance",
       clearFilters: "Clear Filters",
+      reasonRequired: "Please select a reason for the adjustment.",
 
       // Toast Messages
       toasts: {
@@ -3111,6 +3197,9 @@ export const en = {
         },
         bulkAdjustmentFailed: {
           description: "Failed to record bulk adjustments. Please try again.",
+        },
+        adjustmentError: {
+          title: "Error",
         },
       },
     },
@@ -3178,6 +3267,14 @@ export const en = {
           title: "Start Production Batch",
           description: "Create a new production batch for this recipe",
         },
+        cancel: {
+          title: "Cancel Production",
+          description: "Are you sure you want to cancel this production batch?",
+        },
+        complete: {
+          title: "Complete Production",
+          description: "Enter the actual quantity produced for this batch",
+        },
       },
 
       recipe: "Recipe",
@@ -3194,6 +3291,17 @@ export const en = {
       notes: "Production Notes",
       notesPlaceholder: "Add any special instructions or notes...",
       notesHint: "Optional notes about this production batch",
+      actualQuantity: "Actual Quantity",
+      estimatedCost: "Estimated Cost",
+      estimatedTime: "Estimated Time",
+      plannedWas: "Planned was",
+      product: "Product",
+      productHint: "Select the product to produce",
+      restoreMaterials: "Restore materials to inventory",
+      restoreMaterialsHint: "Materials used for this batch will be added back to your inventory",
+      scheduled: "Scheduled",
+      scheduledDate: "Scheduled Date",
+      selectProduct: "Select product",
 
       // Toast Messages
       toasts: {
@@ -3205,6 +3313,15 @@ export const en = {
           title: "Failed to Start Production",
           description: "There was an error starting the production batch. Please try again.",
         },
+      },
+      messages: {
+        cancelError: "Failed to cancel production",
+        cancelSuccess: "Production Cancelled",
+        cancelSuccessDescription: "Batch {batchNumber} has been cancelled{materialsRestored}",
+        completeError: "Failed to complete production batch",
+        completeSuccess: "Production batch completed successfully",
+        completeSuccessDescription: "Batch {batchNumber} has been completed successfully",
+        materialsRestored: " and materials restored",
       },
     },
 
@@ -3293,6 +3410,21 @@ export const en = {
       estimatedCost: "Estimated Cost",
       actualCost: "Actual Cost",
       variance: "Variance",
+      batchTotalCost: "Batch Total Cost",
+      forQuantity: "For",
+      notes: "Notes",
+      notesPlaceholder: "Add notes about this production batch...",
+      perUnit: "Per",
+      plannedQuantity: "Planned Quantity",
+      scheduledDate: "Scheduled",
+      unit: "Unit",
+      unitCost: "Cost per Unit",
+      updateBatch: "Update Production Batch",
+      updateBatchDescription: "Update production batch details",
+    },
+    supplierOrders: {
+      title: "Supplier Orders",
+      description: "Create and manage orders to your suppliers.",
     },
   },
   tracking: {
@@ -3303,6 +3435,7 @@ export const en = {
 
     // Page titles
     stockLevels: "Stock Levels",
+    stockLevelsDesc: "View your current stock levels",
     movementHistory: "Movement History",
     analytics: "Analytics",
 
@@ -3516,6 +3649,16 @@ export const en = {
         description: "Add raw materials or products to start tracking inventory.",
       },
     },
+    title: "Stock Tracking",
+    stockMovements: {
+      title: "Stock Movements",
+      description: "Track stock ins and outs",
+    },
+  },
+  pagination: {
+    page: "Page",
+    of: "of",
+    rowsPerPage: "Rows per page",
   },
   footer: {
     tagline: "F&B Platform — Free, Complete, Fast",
@@ -3591,6 +3734,7 @@ export const en = {
     switchPlan: "Switch Plan",
     upgradeNow: "Upgrade Now",
     upgradeToOperations: "Upgrade to Operations",
+    upgradeToPro: "Upgrade to Pro",
     viewPlans: "View Plans & Pricing",
     noSubscription: "No Active Subscription",
     noSubscriptionDesc: "Subscribe to a plan to start managing your business with Epidom.",

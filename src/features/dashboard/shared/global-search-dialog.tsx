@@ -137,8 +137,8 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
       // Tracking Section
       {
         id: "stock-levels",
-        title: t("tracking.stockLevels.title"),
-        description: t("tracking.stockLevels.description"),
+        title: t("tracking.stockLevels"),
+        description: t("tracking.stockLevelsDesc"),
         href: `/store/${storeId}/tracking/stock-levels`,
         icon: <TrendingUp className="size-4" />,
         category: t("search.categories.tracking"),

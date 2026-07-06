@@ -32,6 +32,13 @@ export const fr = {
     },
     pwa: {
       installApp: "Installer l'app",
+      installTitle: "Installer Epidom",
+      installIntro:
+        "Installez Epidom sur votre appareil pour une expérience plus rapide, en plein écran, comme une application.",
+      installNow: "Installer",
+      installIosStep: "Appuyez sur l'icône Partager, puis « Ajouter à l'écran d'accueil ».",
+      installDesktopStep:
+        "Ouvrez le menu de votre navigateur et choisissez « Installer l'application ».",
     },
     language: {
       label: "Langue",
@@ -117,6 +124,10 @@ export const fr = {
     notes: "Notes",
     page: "Page",
     other: "Autre",
+    address: "Adresse",
+    deleted: "Supprimé",
+    from: "Du",
+    to: "Au",
     actions: {
       cancel: "Annuler",
       save: "Enregistrer",
@@ -146,6 +157,11 @@ export const fr = {
       apply: "Appliquer",
       complete: "Terminer",
       remove: "Supprimer",
+      cancelBatch: "Annuler le Lot",
+      exportError: "Échec de l'exportation des données",
+      exportSuccess: "Données exportées avec succès",
+      updateError: "Échec de la mise à jour du lot de production",
+      updateSuccess: "Lot de production mis à jour avec succès",
     },
     pagination: {
       rowsPerPage: "Lignes par page",
@@ -1237,6 +1253,8 @@ export const fr = {
       resendSuccess: "Email de vérification envoyé !",
       resendError: "Échec du renvoi. Veuillez réessayer.",
       backToLogin: "Retour à la Connexion",
+      checkYourEmail: "Veuillez vérifier votre e-mail avant de vous connecter.",
+      notice: "E-mail non vérifié",
     },
   },
   paymentsComponents: {
@@ -1574,6 +1592,14 @@ export const fr = {
       description: "Liste de contacts rapide",
       manage: "Gérer",
       noSuppliersAvailable: "Aucun fournisseur disponible",
+    },
+    productionHistory: {
+      title: "Historique de Production",
+      description: "Production des 7 derniers jours",
+    },
+    recentMovements: {
+      title: "Mouvements de Stock Récents",
+      empty: "Aucun mouvement de stock pour le moment",
     },
   },
   chart: {
@@ -1942,6 +1968,12 @@ export const fr = {
         description:
           'Êtes-vous sûr de vouloir supprimer "{name}" ? Cette action ne peut pas être annulée.',
       },
+      bulkDeleteConfirm: {
+        title: "Supprimer Plusieurs Matières Premières",
+        description:
+          "Êtes-vous sûr de vouloir supprimer {count} matière(s) première(s) ? Cette action ne peut pas être annulée.",
+      },
+      deletedMaterial: "Matière Première Supprimée",
     },
 
     // Recipes section
@@ -2002,6 +2034,8 @@ export const fr = {
             "Cette recette n'a pas encore d'ingrédients. Ajoutez des ingrédients pour calculer les coûts et utiliser cette recette en production.",
           action: "Ajouter des ingrédients",
         },
+        materialDeleted:
+          "⚠️ Cette matière première a été supprimée. Veuillez mettre à jour la recette.",
       },
       // Ingredients
       ingredients: {
@@ -2047,6 +2081,10 @@ export const fr = {
         title: "Dupliquer la Recette",
         description:
           "Créer une copie de cette recette avec un nouveau nom. Tous les ingrédients et instructions seront copiés.",
+        steps: {
+          basicInfo: "Infos de base",
+          review: "Révision",
+        },
         nameLabel: "Nouveau Nom de Recette",
         nameDescription: "Entrez un nom unique pour la recette dupliquée",
         originalRecipe: "Recette Originale",
@@ -2103,6 +2141,7 @@ export const fr = {
 
       // Toasts
       toasts: {
+        updating: "Mise à jour de la recette...",
         adding: "Ajout de la recette...",
         created: {
           title: "Recette Créée avec Succès",
@@ -2137,6 +2176,13 @@ export const fr = {
         description:
           'Êtes-vous sûr de vouloir supprimer "{name}"? Cette action ne peut pas être annulée.',
       },
+      bulkDeleteConfirm: {
+        title: "Supprimer Plusieurs Recettes",
+        description:
+          "Êtes-vous sûr de vouloir supprimer {count} recette(s) ? Cette action ne peut pas être annulée.",
+      },
+      demandBadge: "30 derniers jours",
+      noDescription: "Aucune description fournie",
 
       // Details section
       details: {
@@ -2177,6 +2223,30 @@ export const fr = {
     // Products section
     products: {
       pageTitle: "Produits",
+      confirmRemoveFromMenu: "Retirer ce produit du menu de la caisse ?",
+      limitBadge: "produits",
+      update: "Mettre à jour le produit",
+      limitReached: {
+        title: "Limite de Produits Atteinte",
+        description:
+          "Vous avez atteint la limite de produits de votre forfait ({current}/{limit}). Passez à Pro pour un nombre illimité de produits.",
+        upgrade: "Passer à Pro",
+      },
+      limitTooltip:
+        "Vous avez atteint la limite de produits de votre forfait ({current}/{limit}). Passez à Pro pour un nombre illimité de produits.",
+      bulkDeleteConfirm: {
+        title: "Supprimer Plusieurs Produits",
+        description:
+          "Êtes-vous sûr de vouloir supprimer {count} produit(s) ? Cette action ne peut pas être annulée.",
+      },
+      warnings: {
+        noRecipes: {
+          title: "Aucune Recette Liée",
+          description:
+            "Ce produit n'a pas encore de recette liée. Liez une recette pour activer la planification de production et le suivi des coûts.",
+          action: "Lier une Recette",
+        },
+      },
       addTitle: "Ajouter un Nouveau Produit",
       addButton: "Ajouter un Produit",
       editTitle: "Modifier le Produit",
@@ -2255,11 +2325,21 @@ export const fr = {
       tooltips: {
         view: "Voir le Produit",
         edit: "Modifier le Produit",
+        addToMenu: "Ajouter au menu de la caisse",
+        removeFromMenu: "Dans le menu de la caisse — cliquez pour retirer",
         delete: "Supprimer le Produit",
       },
 
       // Toasts
       toasts: {
+        addedToMenu: "ajouté au menu de la caisse",
+        removedFromMenu: "retiré du menu de la caisse",
+        syncMenuPrompt: "Prix/nom modifié. Synchroniser avec le menu de la caisse ?",
+        syncMenuAction: "Synchroniser",
+        syncMenuDone: "Menu de la caisse mis à jour",
+        updateError: {
+          description: "Une erreur s'est produite lors de la mise à jour du produit.",
+        },
         adding: "Ajout du produit...",
         added: {
           title: "Produit Ajouté avec Succès",
@@ -2403,9 +2483,16 @@ export const fr = {
 
       // Locked message
       locked: "Passez au Pro pour accéder à la gestion des fournisseurs.",
+      bulkDeleteConfirm: {
+        title: "Supprimer Plusieurs Fournisseurs",
+        description:
+          "Êtes-vous sûr de vouloir supprimer {count} fournisseur(s) ? Cette action ne peut pas être annulée.",
+      },
+      update: "Mettre à jour le fournisseur",
     },
   },
   filters: {
+    allTypes: "Tous les types",
     allSuppliers: "Tous les Fournisseurs",
     allStock: "Tout le Stock",
     allStockLevels: "Tous les Niveaux de Stock",
@@ -2487,6 +2574,7 @@ export const fr = {
     supplier: "Fournisseur",
   },
   actions: {
+    saving: "Enregistrement...",
     view: "Voir",
     edit: "Modifier",
     delete: "Supprimer",
@@ -2559,6 +2647,8 @@ export const fr = {
     failedToUpdateOrder: "Échec de la mise à jour de la commande",
     orderPlaced: "Commande marquée comme passée",
     orderPlacedError: "Échec du marquage de la commande comme passée",
+    errorLoadingAlerts: "Échec du chargement des alertes",
+    loginSuccess: "Connexion réussie !",
   },
   alerts: {
     // Page titles
@@ -2769,6 +2859,9 @@ export const fr = {
         starter: "Starter",
         pro: "Pro",
         enterprise: "Enterprise",
+        free: "Forfait Starter",
+        free_price: "Gratuit",
+        pos: "POS",
       },
       pricing: {
         starter: "29€/mois",
@@ -2783,6 +2876,7 @@ export const fr = {
         canceling: "Annulation",
       },
       renew: "Renouveler",
+      renewSubscription: "Renouveler l'abonnement",
       warnings: {
         ending: {
           title: "Abonnement se Termine",
@@ -2949,6 +3043,38 @@ export const fr = {
       processing: "Traitement...",
     },
 
+    // Paramètres du compte
+    accountSettings: {
+      title: "Paramètres du compte",
+      security: "Sécurité",
+      changePassword: "Changer le mot de passe",
+      changePasswordDescription: "Entrez votre mot de passe actuel et choisissez-en un nouveau.",
+      currentPassword: "Mot de passe actuel",
+      newPassword: "Nouveau mot de passe",
+      confirmNewPassword: "Confirmer le nouveau mot de passe",
+      savePassword: "Enregistrer le mot de passe",
+      passwordChanged: "Mot de passe modifié avec succès",
+      passwordMinLength: "Le mot de passe doit contenir au moins 8 caractères",
+      passwordsDoNotMatch: "Les mots de passe ne correspondent pas",
+      placeholderMinLength: "Min. 8 caractères",
+      placeholderRepeatPassword: "Répétez le nouveau mot de passe",
+      linkedAccounts: "Comptes liés",
+      noLinkedAccounts: "Aucun compte lié",
+      connected: "Connecté",
+      dataUsage: "Utilisation des données",
+      stores: "Boutiques",
+      products: "Produits",
+      orders: "Commandes",
+      staff: "Personnel",
+      deleteAccount: "Supprimer le compte",
+      deleteDescription:
+        "Cette action est définitive. Toutes vos boutiques, produits, commandes et données seront supprimés et ne pourront pas être récupérés.",
+      confirmEmailLabel: "Saisissez votre e-mail {email} pour confirmer",
+      deleteConfirmButton: "Supprimer mon compte",
+      accountCreated: "Compte créé",
+      accountDeleted: "Compte supprimé. Déconnexion...",
+    },
+
     // Clés héritées (maintenir la compatibilité ascendante)
     address: "Adresse",
     businessName: "Nom de l'Entreprise",
@@ -2984,6 +3110,8 @@ export const fr = {
     renewSubscription: "Renouvelez votre abonnement pour accéder à cette boutique",
     clickToSubscribe: "Cliquez pour S'abonner",
     errorLoading: "Échec du chargement des boutiques",
+    deleteError: "Échec de la suppression de la boutique",
+    deleteSuccess: "Boutique supprimée avec succès",
   },
   management: {
     deliveries: "Livraisons",
@@ -3164,11 +3292,30 @@ export const fr = {
           },
         },
       },
+      item: "article",
+      items: "articles",
+      updateStatus: {
+        title: "Mettre à Jour le Statut de la Livraison",
+        description: "Mettre à jour le statut de livraison pour {reference}",
+        currentStatus: "Statut Actuel",
+        newStatus: "Nouveau Statut",
+        receivedDate: "Date de Réception",
+        selectNewStatus: "Veuillez sélectionner un nouveau statut",
+        selectNewStatusPlaceholder: "Sélectionner un nouveau statut",
+        selectReceivedDate: "Veuillez sélectionner une date de réception",
+        selectReceivedDatePlaceholder: "Sélectionner la date de réception",
+        notesPlaceholder: "Ajoutez des notes sur ce changement de statut...",
+        updateStatus: "Mettre à Jour le Statut",
+        updating: "Mise à jour...",
+      },
     },
     // Edit Stock Tab
     editStock: {
       title: "Gestion des Stocks",
       description: "Gérer les niveaux d'inventaire et enregistrer les ajustements de stock",
+      status: "Statut",
+      unit: "Unité",
+      reasonRequired: "Veuillez sélectionner une raison.",
       searchItems: "Rechercher par nom ou SKU...",
       items: "articles",
       itemsSelected: "articles sélectionnés",
@@ -3287,6 +3434,9 @@ export const fr = {
 
       // Toast Messages
       toasts: {
+        adjustmentError: {
+          title: "Erreur",
+        },
         adjustmentRecorded: {
           title: "Ajustement Enregistré",
           description: "L'ajustement de stock a été enregistré avec succès",
@@ -3307,6 +3457,12 @@ export const fr = {
     recipeProduction: {
       title: "Production de Recettes",
       description: "Démarrer de nouveaux lots de production et surveiller la production active",
+      product: "Produit",
+      productHint: "Sélectionnez le produit à produire",
+      selectProduct: "Sélectionner un produit",
+      estimatedCost: "Coût Estimé",
+      estimatedTime: "Temps Estimé",
+      scheduledDate: "Date Programmée",
       availableRecipes: "Recettes Disponibles",
       selectRecipeToStart: "Sélectionnez une recette pour commencer la production",
       searchRecipes: "Rechercher des recettes...",
@@ -3433,6 +3589,17 @@ export const fr = {
     productionHistory: {
       title: "Historique de Production",
       description: "Voir et analyser les lots de production terminés",
+      batchTotalCost: "Coût Total du Lot",
+      unitCost: "Coût par Unité",
+      forQuantity: "Pour",
+      perUnit: "Par",
+      plannedQuantity: "Quantité Planifiée",
+      scheduledDate: "Programmé",
+      unit: "Unité",
+      notes: "Notes",
+      notesPlaceholder: "Ajoutez des notes sur ce lot de production...",
+      updateBatch: "Mettre à Jour le Lot de Production",
+      updateBatchDescription: "Mettre à jour les détails du lot de production",
       filters: "Filtres",
       filtersDescription: "Filtrer les lots par statut, recette ou plage de dates",
       searchBatches: "Rechercher par numéro de lot...",
@@ -3515,10 +3682,24 @@ export const fr = {
       actualCost: "Coût Réel",
       variance: "Variance",
     },
+    supplierOrders: {
+      title: "Commandes Fournisseurs",
+      description: "Gérer les commandes et livraisons fournisseurs",
+    },
   },
   tracking: {
+    title: "Suivi des Stocks",
+    tabs: {
+      levels: "Niveaux de Stock",
+      movements: "Mouvements Récents",
+    },
+    stockMovements: {
+      title: "Mouvements de Stock",
+      description: "Consulter l'historique des mouvements de stock",
+    },
     // Page titles
     stockLevels: "Niveaux de Stock",
+    stockLevelsDesc: "Consulter les niveaux de stock actuels",
     movementHistory: "Historique des Mouvements",
     analytics: "Analytique",
 
@@ -3530,6 +3711,8 @@ export const fr = {
       production: "Production",
       waste: "Perte",
       return: "Retour",
+      searchPlaceholder: "Rechercher un article…",
+      empty: "Aucun mouvement trouvé",
     },
 
     // Table headers
@@ -4931,6 +5114,13 @@ export const fr = {
       cancelButton: "Annuler",
       saveButton: "Enregistrer",
       savingButton: "Enregistrement...",
+      logoGuide: "Carré · 400×400 px min, ratio 1:1 · max 2 Mo · PNG ou WebP recommandé",
+      heroGuide: "Bannière · 1920×1080 px idéal (16:9) · min 1200×675 px · max 5 Mo · JPEG ou WebP",
+      slugChecking: "Vérification de la disponibilité…",
+      slugAvailable: "Disponible",
+      slugTaken: "Cette URL est déjà utilisée par une autre boutique",
+      slugTooShort: "Minimum 2 caractères",
+      slugInvalidChars: "Uniquement des lettres minuscules, des chiffres et des traits d'union (-)",
     },
     menu: {
       title: "Menu & Catégories",
@@ -4973,5 +5163,22 @@ export const fr = {
       dataCollecting: "Collecte de données en cours",
       dataCollectingDesc: "Le graphique apparaîtra après au moins 10 visiteurs.",
     },
+  },
+  changelog: {
+    whatsNew: "Nouveautés de la v{v}",
+    whatsNewBody: "Découvrez les dernières mises à jour et améliorations.",
+    viewChangelog: "Voir les nouveautés",
+  },
+  notifications: {
+    title: "Notifications",
+    clearAll: "Tout effacer",
+    allCaughtUp: "Vous êtes à jour !",
+    dismiss: "Ignorer",
+    viewAllOrders: "Voir toutes les commandes →",
+  },
+  pagination: {
+    page: "Page",
+    of: "sur",
+    rowsPerPage: "Lignes par page",
   },
 };

@@ -124,6 +124,10 @@ export const id = {
     notes: "Catatan",
     page: "Halaman",
     other: "Lainnya",
+    address: "Alamat",
+    deleted: "Dihapus",
+    from: "Dari",
+    to: "Sampai",
     actions: {
       cancel: "Batalkan",
       save: "Simpan",
@@ -153,6 +157,11 @@ export const id = {
       apply: "Terapkan",
       complete: "Selesaikan",
       remove: "Hapus",
+      cancelBatch: "Batalkan Batch",
+      exportError: "Gagal mengekspor data",
+      exportSuccess: "Data berhasil diekspor",
+      updateError: "Gagal memperbarui batch produksi",
+      updateSuccess: "Batch produksi berhasil diperbarui",
     },
     pagination: {
       rowsPerPage: "Baris per halaman",
@@ -162,6 +171,11 @@ export const id = {
     goHome: "Kembali ke Beranda",
     needHelp: "Butuh bantuan?",
     contactSupport: "Hubungi Dukungan",
+  },
+  pagination: {
+    of: "dari",
+    page: "Halaman",
+    rowsPerPage: "Baris per halaman",
   },
   search: {
     title: "Pencarian Global",
@@ -1214,6 +1228,8 @@ export const id = {
       resendSuccess: "Email verifikasi terkirim!",
       resendError: "Gagal mengirim ulang. Silakan coba lagi.",
       backToLogin: "Kembali ke Login",
+      checkYourEmail: "Silakan verifikasi email Anda sebelum masuk.",
+      notice: "Email belum diverifikasi",
     },
   },
   paymentsComponents: {
@@ -1556,6 +1572,10 @@ export const id = {
       manage: "Kelola",
       noSuppliersAvailable: "Tidak ada supplier tersedia",
     },
+    productionHistory: {
+      title: "Riwayat Produksi",
+      description: "Batch produksi 7 hari terakhir",
+    },
   },
   chart: {
     stockUtilization: "Penggunaan stok",
@@ -1731,6 +1751,12 @@ export const id = {
         description:
           'Apakah Anda yakin ingin menghapus "{name}"? Tindakan ini tidak dapat dibatalkan.',
       },
+      bulkDeleteConfirm: {
+        title: "Hapus Beberapa Bahan Mentah",
+        description:
+          "Apakah Anda yakin ingin menghapus {count} bahan mentah? Tindakan ini tidak dapat dibatalkan.",
+      },
+      deletedMaterial: "Bahan Mentah Dihapus",
     },
 
     // Recipes section
@@ -1791,6 +1817,7 @@ export const id = {
             "Resep ini belum memiliki bahan. Tambahkan bahan untuk menghitung biaya dan menggunakan resep ini untuk produksi.",
           action: "Tambah Bahan",
         },
+        materialDeleted: "⚠️ Bahan ini telah dihapus. Silakan perbarui resep.",
       },
       // Ingredients
       ingredients: {
@@ -1848,6 +1875,10 @@ export const id = {
         totalBatchCost: "Total Biaya Batch",
         note: "Catatan: Semua bahan, instruksi, hasil, dan waktu produksi akan disalin dari resep asli.",
         duplicateButton: "Duplikasi Resep",
+        steps: {
+          basicInfo: "Info Dasar",
+          review: "Tinjau",
+        },
       },
 
       // Categories
@@ -1892,6 +1923,7 @@ export const id = {
       // Toasts
       toasts: {
         adding: "Menambahkan resep...",
+        updating: "Memperbarui resep...",
         created: {
           title: "Resep Berhasil Dibuat",
           description: "{name} telah ditambahkan ke resep Anda.",
@@ -1925,6 +1957,12 @@ export const id = {
         description:
           'Apakah Anda yakin ingin menghapus "{name}"? Tindakan ini tidak dapat dibatalkan.',
       },
+      bulkDeleteConfirm: {
+        title: "Hapus Beberapa Resep",
+        description:
+          "Apakah Anda yakin ingin menghapus {count} resep? Tindakan ini tidak dapat dibatalkan.",
+      },
+      noDescription: "Tidak ada deskripsi yang disediakan",
 
       // Details section
       details: {
@@ -2078,6 +2116,9 @@ export const id = {
           title: "Produk Berhasil Dihapus",
           description: "{count} produk telah berhasil dihapus.",
         },
+        updateError: {
+          description: "Terjadi kesalahan saat memperbarui produk.",
+        },
       },
 
       // Details section
@@ -2097,6 +2138,31 @@ export const id = {
         lowStockAlert: "Stok mulai menipis. Pertimbangkan untuk mengisi ulang segera.",
         overstockedAlert:
           "ℹ️ Tingkat stok melebihi maksimum. Pertimbangkan promosi atau menyesuaikan produksi.",
+      },
+      update: "Perbarui Produk",
+      deleteConfirm: {
+        title: "Hapus Produk",
+        description:
+          'Apakah Anda yakin ingin menghapus "{name}"? Tindakan ini tidak dapat dibatalkan.',
+      },
+      bulkDeleteConfirm: {
+        title: "Hapus Beberapa Produk",
+        description:
+          "Apakah Anda yakin ingin menghapus {count} produk? Tindakan ini tidak dapat dibatalkan.",
+      },
+      limitReached: {
+        title: "Batas Produk Tercapai",
+        description:
+          "Anda telah mencapai batas produk paket Anda ({current}/{limit}). Tingkatkan ke Pro untuk produk tak terbatas.",
+        upgrade: "Tingkatkan ke Pro",
+      },
+      warnings: {
+        noRecipes: {
+          title: "Tidak Ada Resep Terkait",
+          description:
+            "Produk ini belum ditautkan ke resep apa pun. Tautkan resep untuk mengaktifkan perhitungan biaya dan produksi.",
+          action: "Tautkan Resep",
+        },
       },
     },
 
@@ -2197,6 +2263,12 @@ export const id = {
 
       // Locked message
       locked: "Tingkatkan ke Operations untuk mengakses Manajemen Pemasok.",
+      update: "Perbarui Pemasok",
+      bulkDeleteConfirm: {
+        title: "Hapus Beberapa Pemasok",
+        description:
+          "Apakah Anda yakin ingin menghapus {count} pemasok? Tindakan ini tidak dapat dibatalkan.",
+      },
     },
   },
   filters: {
@@ -2211,6 +2283,7 @@ export const id = {
     allCategories: "Semua Kategori",
     allTerms: "Semua Syarat",
     allRatings: "Semua Penilaian",
+    allTypes: "Semua Tipe",
     placeholderCategory: "Kategori",
     placeholderSupplier: "Pemasok",
     placeholderStockStatus: "Status Stok",
@@ -2286,6 +2359,7 @@ export const id = {
     delete: "Hapus",
     cancel: "Batal",
     save: "Simpan",
+    saving: "Menyimpan...",
     backToAlerts: "Kembali ke Peringatan",
     ordersToPlace: "Pesanan untuk Dibuat",
     addMaterial: "Tambah Bahan Mentah",
@@ -2352,6 +2426,8 @@ export const id = {
     failedToUpdateOrder: "Gagal memperbarui pesanan",
     orderPlaced: "Pesanan ditandai sebagai ditempatkan",
     orderPlacedError: "Gagal menandai pesanan sebagai ditempatkan",
+    errorLoadingAlerts: "Gagal memuat peringatan",
+    loginSuccess: "Berhasil masuk!",
   },
   alerts: {
     // Page titles
@@ -2576,6 +2652,7 @@ export const id = {
         canceling: "Membatalkan",
       },
       renew: "Perpanjang",
+      renewSubscription: "Perpanjang Langganan",
       warnings: {
         ending: {
           title: "Langganan Berakhir",
@@ -2803,6 +2880,8 @@ export const id = {
     renewSubscription: "Perpanjang langganan Anda untuk mengakses toko ini",
     clickToSubscribe: "Klik untuk Berlangganan",
     errorLoading: "Gagal memuat toko",
+    deleteError: "Gagal menghapus toko",
+    deleteSuccess: "Toko berhasil dihapus",
   },
   notifications: {
     title: "Notifikasi",
@@ -2869,6 +2948,8 @@ export const id = {
       noMatches: "Tidak ada pengiriman yang sesuai dengan filter Anda",
       noDeliveries: "Belum ada pengiriman",
       noDeliveriesDescription: "Tidak ada pengiriman supplier ditemukan",
+      item: "item",
+      items: "item",
       actions: {
         edit: "Edit",
         updateStatus: "Perbarui Status",
@@ -2912,6 +2993,20 @@ export const id = {
           regularWeeklyDelivery:
             "Pengiriman mingguan rutin - semua item diperiksa dan disimpan dengan baik",
         },
+      },
+      updateStatus: {
+        title: "Perbarui Status Pengiriman",
+        description: "Perbarui status pengiriman untuk {reference}",
+        currentStatus: "Status Saat Ini",
+        newStatus: "Status Baru",
+        receivedDate: "Tanggal Diterima",
+        notesPlaceholder: "Tambahkan catatan tentang perubahan status ini...",
+        selectNewStatus: "Harap pilih status baru",
+        selectNewStatusPlaceholder: "Pilih status baru",
+        selectReceivedDate: "Harap pilih tanggal diterima",
+        selectReceivedDatePlaceholder: "Pilih tanggal diterima",
+        updateStatus: "Perbarui Status",
+        updating: "Memperbarui...",
       },
       dialogs: {
         updateStatus: {
@@ -3040,6 +3135,9 @@ export const id = {
       maxStock: "Stok Maksimum",
       stockValue: "Nilai Stok",
       current: "Saat Ini",
+      status: "Status",
+      unit: "Satuan",
+      reasonRequired: "Harap pilih alasan",
 
       // Actions
       quickActions: "Aksi Cepat",
@@ -3141,6 +3239,9 @@ export const id = {
         bulkAdjustmentFailed: {
           description: "Gagal mencatat penyesuaian massal. Silakan coba lagi.",
         },
+        adjustmentError: {
+          title: "Kesalahan",
+        },
       },
     },
     // Recipe Production Tab
@@ -3206,6 +3307,14 @@ export const id = {
           title: "Mulai Batch Produksi",
           description: "Buat batch produksi baru untuk resep ini",
         },
+        cancel: {
+          title: "Batalkan Produksi",
+          description: "Apakah Anda yakin ingin membatalkan batch produksi ini?",
+        },
+        complete: {
+          title: "Selesaikan Produksi",
+          description: "Masukkan jumlah aktual yang diproduksi untuk batch ini",
+        },
       },
 
       recipe: "Resep",
@@ -3222,6 +3331,18 @@ export const id = {
       notes: "Catatan Produksi",
       notesPlaceholder: "Tambahkan instruksi atau catatan khusus...",
       notesHint: "Catatan opsional tentang batch produksi ini",
+      product: "Produk",
+      productHint: "Pilih produk yang akan diproduksi",
+      selectProduct: "Pilih produk",
+      actualQuantity: "Jumlah Aktual",
+      estimatedCost: "Biaya Estimasi",
+      estimatedTime: "Waktu Estimasi",
+      scheduled: "Dijadwalkan",
+      scheduledDate: "Tanggal Dijadwalkan",
+      plannedWas: "Rencana awal",
+      restoreMaterials: "Kembalikan bahan mentah ke inventaris",
+      restoreMaterialsHint:
+        "Bahan mentah yang digunakan untuk batch ini akan dikembalikan ke inventaris Anda",
 
       // Toast Messages
       toasts: {
@@ -3233,6 +3354,15 @@ export const id = {
           title: "Gagal Memulai Produksi",
           description: "Terjadi kesalahan saat memulai batch produksi. Silakan coba lagi.",
         },
+      },
+      messages: {
+        cancelError: "Gagal membatalkan produksi",
+        cancelSuccess: "Produksi Dibatalkan",
+        cancelSuccessDescription: "Batch produksi telah dibatalkan.",
+        completeError: "Gagal menyelesaikan batch produksi",
+        completeSuccess: "Batch produksi berhasil diselesaikan",
+        completeSuccessDescription: "Produk yang dihasilkan telah ditambahkan ke inventaris Anda.",
+        materialsRestored: " dan bahan mentah dikembalikan",
       },
     },
 
@@ -3321,6 +3451,21 @@ export const id = {
       estimatedCost: "Biaya Estimasi",
       actualCost: "Biaya Aktual",
       variance: "Varian",
+      batchTotalCost: "Total Biaya Batch",
+      unitCost: "Biaya per Unit",
+      plannedQuantity: "Jumlah yang Direncanakan",
+      scheduledDate: "Dijadwalkan",
+      forQuantity: "Untuk",
+      perUnit: "Per",
+      unit: "Satuan",
+      notes: "Catatan",
+      notesPlaceholder: "Tambahkan catatan tentang batch produksi ini...",
+      updateBatch: "Perbarui Batch Produksi",
+      updateBatchDescription: "Perbarui detail batch produksi",
+    },
+    supplierOrders: {
+      title: "Pesanan Pemasok",
+      description: "Kelola pesanan pembelian dari pemasok",
     },
   },
   tracking: {
@@ -3331,7 +3476,13 @@ export const id = {
     },
 
     // Page titles
+    title: "Pelacakan Stok",
     stockLevels: "Level Stok",
+    stockLevelsDesc: "Lihat level stok Anda saat ini",
+    stockMovements: {
+      title: "Pergerakan Stok",
+      description: "Lihat riwayat pergerakan stok Anda",
+    },
     movementHistory: "Riwayat Pergerakan",
     analytics: "Analitik",
 
@@ -3619,6 +3770,7 @@ export const id = {
     switchPlan: "Ganti Paket",
     upgradeNow: "Tingkatkan Sekarang",
     upgradeToOperations: "Tingkatkan ke Operations",
+    upgradeToPro: "Tingkatkan ke Pro",
     viewPlans: "Lihat Paket & Harga",
     noSubscription: "Tidak Ada Langganan Aktif",
     noSubscriptionDesc: "Berlangganan paket untuk mulai mengelola bisnis Anda dengan Epidom.",
