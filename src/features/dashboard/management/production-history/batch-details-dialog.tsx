@@ -37,9 +37,11 @@ import {
   useCompleteProduction,
 } from "@/features/dashboard/management/recipe-production/hooks/use-production-batches";
 import { exportToCSV } from "@/lib/utils/export";
+import { convertUnit } from "@/lib/utils/unit-conversion";
 import { toast } from "sonner";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
@@ -200,7 +202,12 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
         const ingredientQty = Number(ingredient.quantity) || 0;
         const materialCost = Number(material.unitCost) || 0;
         const quantityUsed = ingredientQty * batchMultiplier;
-        const cost = quantityUsed * materialCost;
+        const quantityUsedInMaterialUnit = convertUnit(
+          quantityUsed,
+          ingredient.unit,
+          material.unit
+        );
+        const cost = quantityUsedInMaterialUnit * materialCost;
 
         return {
           materialName: material.name,
@@ -423,7 +430,9 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                       <p className="text-muted-foreground text-sm">
                         {t("management.productionHistory.category")}
                       </p>
-                      <p className="text-base font-medium">{getTranslatedCategory(recipe.category, t)}</p>
+                      <p className="text-base font-medium">
+                        {getTranslatedCategory(recipe.category, t)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-sm">
@@ -681,12 +690,21 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                 {t("management.productionHistory.plannedQuantity") || "Planned Quantity"} (
                 {batch.unit})
               </Label>
-              <Input
-                id="plannedQuantity"
-                type="number"
-                step="0.01"
-                min="0.01"
-                {...updateForm.register("plannedQuantity", { valueAsNumber: true })}
+              <Controller
+                control={updateForm.control}
+                name="plannedQuantity"
+                render={({ field }) => (
+                  <DecimalInput
+                    id="plannedQuantity"
+                    decimals={3}
+                    min={0}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
+                )}
               />
               {updateForm.formState.errors.plannedQuantity && (
                 <p className="text-destructive text-sm">
@@ -760,13 +778,12 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                 {t("management.recipeProduction.actualQuantity") || "Actual Quantity"} ({batch.unit}
                 )
               </Label>
-              <Input
+              <DecimalInput
                 id="actualQuantity"
-                type="number"
-                step="0.01"
-                min="0.01"
+                decimals={3}
+                min={0}
                 value={actualQuantity}
-                onChange={(e) => setActualQuantity(Number(e.target.value))}
+                onChange={(value) => setActualQuantity(value ?? 0)}
                 placeholder={String(batch.plannedQuantity)}
               />
               <p className="text-muted-foreground text-sm">

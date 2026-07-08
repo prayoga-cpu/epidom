@@ -326,11 +326,13 @@ export function StartProductionDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {linkedProducts.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name}
-                          </SelectItem>
-                        ))}
+                        {[...linkedProducts]
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormDescription>

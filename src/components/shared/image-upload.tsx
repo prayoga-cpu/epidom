@@ -45,6 +45,12 @@ export interface ImageUploadProps {
   aspectRatio?: string;
   /** Callback when upload state changes */
   onUploadStateChange?: (isUploading: boolean) => void;
+  /**
+   * Denser layout for small/narrow containers (e.g. a square thumbnail in a
+   * dialog): smaller icon, one-line copy, and no repeated help text below —
+   * pair with a caller-supplied guide instead.
+   */
+  compact?: boolean;
 }
 
 export function ImageUpload({
@@ -55,6 +61,7 @@ export function ImageUpload({
   className,
   aspectRatio,
   onUploadStateChange,
+  compact = false,
 }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -292,10 +299,8 @@ export function ImageUpload({
         <div className="group relative">
           {/* Image Preview */}
           <div
-            className={cn(
-              "border-border bg-muted relative overflow-hidden rounded-lg border",
-              aspectRatio && `aspect-[${aspectRatio}]`
-            )}
+            className="border-border bg-muted relative overflow-hidden rounded-lg border"
+            style={aspectRatio ? { aspectRatio } : undefined}
           >
             <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
 
@@ -319,11 +324,13 @@ export function ImageUpload({
       ) : (
         <div
           className={cn(
-            "border-border bg-muted/50 relative rounded-lg border-2 border-dashed p-8 transition-colors",
+            "border-border bg-muted/50 relative flex rounded-lg border-2 border-dashed transition-colors",
+            compact ? "p-3" : "p-8",
             isDragging && "border-primary bg-primary/10",
             disabled && "cursor-not-allowed opacity-60",
             !disabled && "hover:border-primary hover:bg-muted cursor-pointer"
           )}
+          style={aspectRatio ? { aspectRatio } : undefined}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
@@ -340,30 +347,47 @@ export function ImageUpload({
           }}
         >
           {/* Upload Icon and Text */}
-          <div className="flex flex-col items-center justify-center text-center">
+          <div className="m-auto flex flex-col items-center justify-center text-center">
             {isUploading ? (
               <>
-                <Loader2 className="text-muted-foreground mb-4 h-10 w-10 animate-spin" />
+                <Loader2
+                  className={cn(
+                    "text-muted-foreground animate-spin",
+                    compact ? "mb-2 h-6 w-6" : "mb-4 h-10 w-10"
+                  )}
+                />
                 <p className="text-muted-foreground text-sm font-medium">Uploading...</p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Please wait while we process your image
-                </p>
+                {!compact && (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Please wait while we process your image
+                  </p>
+                )}
               </>
             ) : (
               <>
-                <div className="bg-primary/10 mb-4 rounded-full p-4">
+                <div
+                  className={cn("bg-primary/10 rounded-full", compact ? "mb-2 p-2" : "mb-4 p-4")}
+                >
                   {isDragging ? (
-                    <ImageIcon className="text-primary h-8 w-8" />
+                    <ImageIcon className={cn("text-primary", compact ? "h-5 w-5" : "h-8 w-8")} />
                   ) : (
-                    <Upload className="text-primary h-8 w-8" />
+                    <Upload className={cn("text-primary", compact ? "h-5 w-5" : "h-8 w-8")} />
                   )}
                 </div>
-                <p className="text-foreground mb-1 text-sm font-medium">
-                  {isDragging ? "Drop image here" : "Drag & drop an image, or click to browse"}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  JPEG, PNG, WebP, or GIF (max {maxSize}MB)
-                </p>
+                {compact ? (
+                  <p className="text-foreground text-xs font-medium">
+                    {isDragging ? "Drop here" : "Click or drag to upload"}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-foreground mb-1 text-sm font-medium">
+                      {isDragging ? "Drop image here" : "Drag & drop an image, or click to browse"}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      JPEG, PNG, WebP, or GIF (max {maxSize}MB)
+                    </p>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -382,9 +406,11 @@ export function ImageUpload({
       )}
 
       {/* Help Text */}
-      <p className="text-muted-foreground text-xs">
-        Images will be automatically compressed and optimized for best performance.
-      </p>
+      {!compact && (
+        <p className="text-muted-foreground text-xs">
+          Images will be automatically compressed and optimized for best performance.
+        </p>
+      )}
     </div>
   );
 }

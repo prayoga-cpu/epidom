@@ -39,6 +39,9 @@ vi.mock("@/components/lang/i18n-provider", () => ({
         "redesign.pricingPage.trialBar": "Try free",
         "redesign.pricingPage.trialBarSub": "No credit card",
         "redesign.pricingPage.trialBarCta": "Start free",
+        "redesign.pricingPage.trialBadge": "14-day free trial",
+        "redesign.pricingPage.promoTrialNote": "14 days free, then billed monthly",
+        "redesign.pricingPage.startTrialCta": "Start free trial",
       };
       return map[key] ?? key;
     },
@@ -82,8 +85,8 @@ describe("PricingCards", () => {
 
   it("clicking POS CTA opens dialog with POS plan name", () => {
     render(<PricingCards yearly={false} />);
-    fireEvent.click(screen.getByText("Get POS"));
-    expect(screen.getByText("Switch to POS")).toBeTruthy();
+    fireEvent.click(screen.getByText("Start free trial"));
+    expect(screen.getByText("Start POS free trial")).toBeTruthy();
   });
 
   it("clicking Operations CTA opens dialog with Operations plan name", () => {
@@ -95,19 +98,16 @@ describe("PricingCards", () => {
   it("clicking Enterprise CTA opens Calendly, no dialog", () => {
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Contact Sales"));
-    expect(mockWindowOpen).toHaveBeenCalledWith(
-      expect.stringContaining("calendly.com"),
-      "_blank"
-    );
+    expect(mockWindowOpen).toHaveBeenCalledWith(expect.stringContaining("calendly.com"), "_blank");
     expect(screen.queryByText(/Switch to/)).toBeNull();
   });
 
   it("Cancel button closes dialog without calling API", () => {
     render(<PricingCards yearly={false} />);
-    fireEvent.click(screen.getByText("Get POS"));
-    expect(screen.getByText("Switch to POS")).toBeTruthy();
+    fireEvent.click(screen.getByText("Start free trial"));
+    expect(screen.getByText("Start POS free trial")).toBeTruthy();
     fireEvent.click(screen.getByText("Cancel"));
-    expect(screen.queryByText("Switch to POS")).toBeNull();
+    expect(screen.queryByText("Start POS free trial")).toBeNull();
     expect(mockFetch).not.toHaveBeenCalledWith(
       expect.stringContaining("/api/subscriptions/"),
       expect.any(Object)
@@ -129,32 +129,36 @@ describe("PricingCards", () => {
       );
     });
   });
- 
+
   it("Confirm calls checkout API with correct plan (POS)", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: () => Promise.resolve({ success: true, data: { url: "https://checkout.stripe.com/test" } }),
+      json: () =>
+        Promise.resolve({ success: true, data: { url: "https://checkout.stripe.com/test" } }),
     });
     render(<PricingCards yearly={false} />);
-    fireEvent.click(screen.getByText("Get POS"));
+    fireEvent.click(screen.getByText("Start free trial"));
     fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/subscriptions/checkout",
-        expect.objectContaining({ body: JSON.stringify({ plan: "POS", trial: undefined, yearly: false }) })
+        expect.objectContaining({
+          body: JSON.stringify({ plan: "POS", trial: true, yearly: false }),
+        })
       );
     });
   });
- 
+
   it("on success redirects to Stripe Checkout URL for paid plans", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: () => Promise.resolve({ success: true, data: { url: "https://checkout.stripe.com/test" } }),
+      json: () =>
+        Promise.resolve({ success: true, data: { url: "https://checkout.stripe.com/test" } }),
     });
     render(<PricingCards yearly={false} />);
-    fireEvent.click(screen.getByText("Get POS"));
+    fireEvent.click(screen.getByText("Start free trial"));
     fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() => {
       expect(window.location.href).toBe("https://checkout.stripe.com/test");
@@ -170,28 +174,29 @@ describe("PricingCards", () => {
       expect(window.location.href).toBe("/stores");
     });
   });
- 
+
   it("on 401 redirects to /register", async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 401 });
     render(<PricingCards yearly={false} />);
-    fireEvent.click(screen.getByText("Get POS"));
+    fireEvent.click(screen.getByText("Start free trial"));
     fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() => {
       expect(window.location.href).toBe("/register");
     });
   });
- 
+
   it("dialog closes after successful activation", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: () => Promise.resolve({ success: true, data: { url: "https://checkout.stripe.com/test" } }),
+      json: () =>
+        Promise.resolve({ success: true, data: { url: "https://checkout.stripe.com/test" } }),
     });
     render(<PricingCards yearly={false} />);
-    fireEvent.click(screen.getByText("Get POS"));
+    fireEvent.click(screen.getByText("Start free trial"));
     fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() => {
-      expect(screen.queryByText("Switch to POS")).toBeNull();
+      expect(screen.queryByText("Start POS free trial")).toBeNull();
     });
   });
 });

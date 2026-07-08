@@ -10,6 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Plus, GripVertical, Settings2, Trash2, ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
+import { ImageUpload } from "@/components/shared/image-upload";
 import { formatCurrency, getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useConfirm } from "@/components/ui/use-confirm";
@@ -45,10 +47,20 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   const [isAddingCat, setIsAddingCat] = useState(false);
 
   // Add item dialog state
-  const [addItemDialog, setAddItemDialog] = useState<{ open: boolean; categoryId: string } | null>(null);
+  const [addItemDialog, setAddItemDialog] = useState<{ open: boolean; categoryId: string } | null>(
+    null
+  );
   const [newItemName, setNewItemName] = useState("");
-  const [newItemPrice, setNewItemPrice] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState<number | undefined>(undefined);
+  const [newItemImageUrl, setNewItemImageUrl] = useState<string | undefined>(undefined);
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
+
+  // Edit item dialog state
+  const [editItemDialog, setEditItemDialog] = useState<{ open: boolean; item: any } | null>(null);
+  const [editItemName, setEditItemName] = useState("");
+  const [editItemPrice, setEditItemPrice] = useState<number | undefined>(undefined);
+  const [editItemImageUrl, setEditItemImageUrl] = useState<string | undefined>(undefined);
+  const [isSubmittingEditItem, setIsSubmittingEditItem] = useState(false);
 
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return;
@@ -85,18 +97,20 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
   const openAddItemDialog = (categoryId: string) => {
     setNewItemName("");
-    setNewItemPrice("");
+    setNewItemPrice(undefined);
+    setNewItemImageUrl(undefined);
     setAddItemDialog({ open: true, categoryId });
   };
 
   const handleCreateManualItem = async () => {
-    if (!addItemDialog || !newItemName || !newItemPrice) return;
+    if (!addItemDialog || !newItemName || newItemPrice === undefined) return;
     setIsSubmittingItem(true);
     try {
       await storefrontApi.createItem(storeId, {
         name: newItemName,
-        price: Number(newItemPrice),
+        price: newItemPrice,
         categoryId: addItemDialog.categoryId,
+        imageUrl: newItemImageUrl || "",
         isAvailable: true,
       } as any);
       onSuccess();
@@ -106,6 +120,50 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
       toast.error(t("storefront.menu.itemAddFailed") || "Failed to add item");
     } finally {
       setIsSubmittingItem(false);
+    }
+  };
+
+  const openEditItemDialog = (item: any) => {
+    setEditItemName(item.name);
+    setEditItemPrice(Number(item.price));
+    setEditItemImageUrl(item.imageUrl || undefined);
+    setEditItemDialog({ open: true, item });
+  };
+
+  const handleUpdateItem = async () => {
+    if (!editItemDialog || !editItemName || editItemPrice === undefined) return;
+    setIsSubmittingEditItem(true);
+    try {
+      await storefrontApi.updateItem(storeId, editItemDialog.item.id, {
+        name: editItemName,
+        price: editItemPrice,
+        imageUrl: editItemImageUrl || "",
+      });
+      onSuccess();
+      toast.success(t("storefront.menu.itemUpdated"));
+      setEditItemDialog(null);
+    } catch {
+      toast.error(t("storefront.menu.itemUpdateFailed"));
+    } finally {
+      setIsSubmittingEditItem(false);
+    }
+  };
+
+  const handleDeleteItem = async (item: any) => {
+    const ok = await confirm({
+      title: t("storefront.menu.itemDeleteConfirm"),
+      description: item.name,
+      variant: "destructive",
+      confirmText: t("actions.delete"),
+      cancelText: t("actions.cancel"),
+    });
+    if (!ok) return;
+    try {
+      await storefrontApi.deleteItem(storeId, item.id);
+      onSuccess();
+      toast.success(t("storefront.menu.itemDeleted"));
+    } catch {
+      toast.error(t("storefront.menu.itemDeleteFailed"));
     }
   };
 
@@ -119,77 +177,119 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
           </div>
         </CardHeader>
         <CardContent className="pt-4">
-          <div className="flex items-center gap-3 mb-6">
+          <div className="mb-6 flex items-center gap-3">
             <Input
               placeholder={t("storefront.menu.addCategoryPlaceholder")}
               value={newCatName}
-              onChange={e => setNewCatName(e.target.value)}
+              onChange={(e) => setNewCatName(e.target.value)}
               className="max-w-xs"
             />
             <Button onClick={handleAddCategory} disabled={isAddingCat || !newCatName.trim()}>
-              <Plus className="size-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               {t("storefront.menu.addCategory")}
             </Button>
           </div>
 
           {categories.length === 0 ? (
-            <div className="text-center py-12 bg-muted/40 rounded-lg border border-dashed text-muted-foreground">
+            <div className="bg-muted/40 text-muted-foreground rounded-lg border border-dashed py-12 text-center">
               <p>{t("storefront.menu.noCategories")}</p>
               <p className="text-sm">{t("storefront.menu.noCategoriesDesc")}</p>
             </div>
           ) : (
             <div className="space-y-6">
               {categories.map((category) => (
-                <div key={category.id} className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-                  <div className="bg-muted/60 px-4 py-3 flex items-center justify-between border-b border-border">
+                <div
+                  key={category.id}
+                  className="border-border bg-card overflow-hidden rounded-xl border shadow-sm"
+                >
+                  <div className="bg-muted/60 border-border flex items-center justify-between border-b px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <GripVertical className="size-4 text-muted-foreground cursor-grab" />
-                      <h4 className="font-bold text-foreground">{category.name}</h4>
-                      <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                      <GripVertical className="text-muted-foreground size-4 cursor-grab" />
+                      <h4 className="text-foreground font-bold">{category.name}</h4>
+                      <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
                         {category.items?.length || 0} {t("storefront.menu.itemsCount")}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={() => handleDeleteCategory(category.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground h-8 w-8 hover:text-red-500"
+                        onClick={() => handleDeleteCategory(category.id)}
+                      >
                         <Trash2 className="size-4" />
                       </Button>
                     </div>
                   </div>
 
-                  <div className="p-4 space-y-3">
+                  <div className="space-y-3 p-4">
                     {category.items?.length === 0 ? (
-                      <div className="text-center py-6 text-sm text-muted-foreground">
+                      <div className="text-muted-foreground py-6 text-center text-sm">
                         {t("storefront.menu.noItemsInCategory")}
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {category.items?.map((item: any) => (
-                          <div key={item.id} className="flex items-center justify-between p-3 border border-border rounded-lg hover:border-border/80 transition group bg-background">
+                          <div
+                            key={item.id}
+                            className="border-border hover:border-border/80 group bg-background flex items-center justify-between rounded-lg border p-3 transition"
+                          >
                             <div className="flex items-center gap-4">
-                              <GripVertical className="size-4 text-muted-foreground/50 cursor-grab group-hover:text-muted-foreground" />
-                              <div className="size-12 bg-muted rounded flex items-center justify-center shrink-0 overflow-hidden">
+                              <GripVertical className="text-muted-foreground/50 group-hover:text-muted-foreground size-4 cursor-grab" />
+                              <div className="bg-muted flex size-12 shrink-0 items-center justify-center overflow-hidden rounded">
                                 {item.imageUrl ? (
                                   // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                                  <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="h-full w-full object-cover"
+                                  />
                                 ) : (
-                                  <span className="text-[10px] text-muted-foreground font-medium">{t("storefront.menu.imageAlt")}</span>
+                                  <span className="text-muted-foreground text-[10px] font-medium">
+                                    {t("storefront.menu.imageAlt")}
+                                  </span>
                                 )}
                               </div>
                               <div>
-                                <h5 className="font-semibold text-sm text-foreground">{item.name}</h5>
-                                <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-                                  <span className="font-medium text-foreground">{formatCurrency(Number(item.price), currency)}</span>
+                                <h5 className="text-foreground text-sm font-semibold">
+                                  {item.name}
+                                </h5>
+                                <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+                                  <span className="text-foreground font-medium">
+                                    {formatCurrency(Number(item.price), currency)}
+                                  </span>
                                   {item.isAvailable ? (
-                                    <span className="text-emerald-600">{t("storefront.menu.available")}</span>
+                                    <span className="text-emerald-600">
+                                      {t("storefront.menu.available")}
+                                    </span>
                                   ) : (
-                                    <span className="text-rose-500">{t("storefront.menu.unavailable")}</span>
+                                    <span className="text-rose-500">
+                                      {t("storefront.menu.unavailable")}
+                                    </span>
                                   )}
                                 </div>
                               </div>
                             </div>
-                            <Button variant="outline" size="sm" className="h-8 text-xs">
-                              <Settings2 className="size-3 mr-1" /> {t("storefront.menu.editItem")}
-                            </Button>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() => openEditItemDialog(item)}
+                              >
+                                <Settings2 className="mr-1 size-3" />{" "}
+                                {t("storefront.menu.editItem")}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground h-8 w-8 hover:text-red-500"
+                                title={t("storefront.menu.deleteItem")}
+                                onClick={() => handleDeleteItem(item)}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -197,10 +297,10 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
                     <Button
                       variant="outline"
-                      className="w-full mt-2 border-dashed text-muted-foreground"
+                      className="text-muted-foreground mt-2 w-full border-dashed"
                       onClick={() => openAddItemDialog(category.id)}
                     >
-                      <Plus className="size-4 mr-2" />
+                      <Plus className="mr-2 size-4" />
                       {t("storefront.menu.addItem")}
                     </Button>
                   </div>
@@ -217,13 +317,30 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
           <DialogHeader>
             <DialogTitle>{t("storefront.menu.addItem") || "Add New Item"}</DialogTitle>
             <DialogDescription>
-              {t("storefront.menu.addItemDesc") || "Fill in the details below to add a new item to your menu."}
+              {t("storefront.menu.addItemDesc") ||
+                "Fill in the details below to add a new item to your menu."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-5 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {t("storefront.menu.itemImage")}
+              </label>
+              <ImageUpload
+                value={newItemImageUrl}
+                onChange={setNewItemImageUrl}
+                disabled={isSubmittingItem}
+                aspectRatio="1/1"
+                maxSize={2}
+                compact
+                className="mx-auto w-[160px]"
+              />
+              <p className="text-muted-foreground text-xs">{t("storefront.menu.imageGuide")}</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 {t("storefront.menu.itemName") || "Item Name"}
               </label>
               <Input
@@ -231,44 +348,132 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                 placeholder={t("storefront.menu.itemNamePlaceholder") || "e.g. Nasi Goreng Spesial"}
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
-                className="transition-all hover:border-foreground/30 focus-visible:ring-1 focus-visible:ring-foreground/20"
+                className="hover:border-foreground/30 focus-visible:ring-foreground/20 transition-all focus-visible:ring-1"
               />
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 {t("storefront.menu.itemPrice") || "Selling Price"}
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm font-medium">
                   {getCurrencySymbol(currency)}
                 </span>
-                <Input
-                  type="number"
-                  className="pl-9 transition-all hover:border-foreground/30 focus-visible:ring-1 focus-visible:ring-foreground/20 font-mono"
+                <DecimalInput
+                  decimals={2}
+                  min={0}
+                  className="hover:border-foreground/30 focus-visible:ring-foreground/20 pl-9 font-mono transition-all focus-visible:ring-1"
                   placeholder="25000"
                   value={newItemPrice}
-                  onChange={(e) => setNewItemPrice(e.target.value)}
+                  onChange={setNewItemPrice}
                 />
               </div>
             </div>
           </div>
 
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setAddItemDialog(null)}
-              className="active:scale-[0.98] transition-transform"
+              className="transition-transform active:scale-[0.98]"
             >
               Cancel
             </Button>
             <Button
-              disabled={!newItemName.trim() || !newItemPrice || isSubmittingItem}
+              disabled={!newItemName.trim() || newItemPrice === undefined || isSubmittingItem}
               onClick={handleCreateManualItem}
-              className="active:scale-[0.98] transition-transform"
+              className="transition-transform active:scale-[0.98]"
             >
-              {isSubmittingItem ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              {isSubmittingItem ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
               {t("storefront.menu.saveItem") || "Add Item"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog
+        open={!!editItemDialog?.open}
+        onOpenChange={(open) => !open && setEditItemDialog(null)}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t("storefront.menu.editItem")}</DialogTitle>
+            <DialogDescription>{t("storefront.menu.editItemDesc")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-5 py-4">
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {t("storefront.menu.itemImage")}
+              </label>
+              <ImageUpload
+                value={editItemImageUrl}
+                onChange={setEditItemImageUrl}
+                disabled={isSubmittingEditItem}
+                aspectRatio="1/1"
+                maxSize={2}
+                compact
+                className="mx-auto w-[160px]"
+              />
+              <p className="text-muted-foreground text-xs">{t("storefront.menu.imageGuide")}</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {t("storefront.menu.itemName")}
+              </label>
+              <Input
+                autoFocus
+                value={editItemName}
+                onChange={(e) => setEditItemName(e.target.value)}
+                className="hover:border-foreground/30 focus-visible:ring-foreground/20 transition-all focus-visible:ring-1"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {t("storefront.menu.itemPrice")}
+              </label>
+              <div className="relative">
+                <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm font-medium">
+                  {getCurrencySymbol(currency)}
+                </span>
+                <DecimalInput
+                  decimals={2}
+                  min={0}
+                  className="hover:border-foreground/30 focus-visible:ring-foreground/20 pl-9 font-mono transition-all focus-visible:ring-1"
+                  value={editItemPrice}
+                  onChange={setEditItemPrice}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setEditItemDialog(null)}
+              className="transition-transform active:scale-[0.98]"
+            >
+              {t("actions.cancel")}
+            </Button>
+            <Button
+              disabled={!editItemName.trim() || editItemPrice === undefined || isSubmittingEditItem}
+              onClick={handleUpdateItem}
+              className="transition-transform active:scale-[0.98]"
+            >
+              {isSubmittingEditItem ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Settings2 className="mr-2 h-4 w-4" />
+              )}
+              {t("storefront.menu.updateItem")}
             </Button>
           </DialogFooter>
         </DialogContent>

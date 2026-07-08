@@ -27,6 +27,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
@@ -349,14 +350,16 @@ export function PosCheckoutDialog({
                             <span className="text-muted-foreground absolute top-2.5 left-3 text-sm">
                               {CURRENCY_SYMBOL[currency]}
                             </span>
-                            <Input
-                              type="number"
+                            <DecimalInput
+                              decimals={2}
+                              min={0}
                               placeholder="0"
                               className="pl-8 text-lg font-medium"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(e.target.value ? Number(e.target.value) : undefined)
-                              }
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
                             />
                           </div>
                         </FormControl>

@@ -9,13 +9,11 @@ import { useSubscriptionStatus } from "../hooks/use-subscription-status";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Store, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function StoresContainer() {
   const { t } = useI18n();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { data: stores, isLoading, error, refetch } = useStores();
   const { data: subscriptionStatus, isLoading: isLoadingSubscription } = useSubscriptionStatus();
@@ -40,7 +38,7 @@ export function StoresContainer() {
    * they correspond to a 'New User' flow and must be sent to onboarding.
    */
   useEffect(() => {
-     // Run only when authentication/subscription is adequately loaded
+    // Run only when authentication/subscription is adequately loaded
     if (isLoadingSubscription) return;
 
     const checkCompliance = async () => {
@@ -55,7 +53,11 @@ export function StoresContainer() {
           // (subscription is always active now via free plan provisioning)
           const hasStore = business?.stores?.length > 0;
           if (!business || !hasStore) {
-            router.replace("/onboarding");
+            // Hard navigation, not router.replace(): a soft/client navigation here
+            // can replay a stale cached "redirect to /login" from an earlier
+            // unauthenticated visit to /onboarding (Next.js client router cache),
+            // looping the freshly-authenticated user back to the login page.
+            window.location.href = "/onboarding";
           }
         }
       } catch (error) {
@@ -64,7 +66,7 @@ export function StoresContainer() {
     };
 
     checkCompliance();
-  }, [isLoadingSubscription, router]);
+  }, [isLoadingSubscription]);
 
   /**
    * Render create store button based on subscription status
@@ -94,11 +96,12 @@ export function StoresContainer() {
     // If we have store limit info, calculate directly from current stores
     // This ensures button updates immediately after creating a store
     // For OPERATIONS/ENTERPRISE (limit = Infinity), always allow creating
-    const canCreateMore = storeLimit === Infinity || storeLimit === null
-      ? true // OPERATIONS/ENTERPRISE: unlimited stores
-      : storeLimit !== undefined
-        ? currentStoreCount < storeLimit // Calculate from current count
-        : canCreateMoreFromSubscription; // Fallback to subscription status
+    const canCreateMore =
+      storeLimit === Infinity || storeLimit === null
+        ? true // OPERATIONS/ENTERPRISE: unlimited stores
+        : storeLimit !== undefined
+          ? currentStoreCount < storeLimit // Calculate from current count
+          : canCreateMoreFromSubscription; // Fallback to subscription status
 
     // No subscription - activate free plan directly
     if (!hasSubscription || subscription?.status !== "ACTIVE") {
@@ -149,18 +152,16 @@ export function StoresContainer() {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-background">
+    <div className="bg-background flex h-full flex-col overflow-hidden">
       {/* Header Section - Enhanced with subtle gradient */}
-      <div className="shrink-0 border-b border-border bg-card">
+      <div className="border-border bg-card shrink-0 border-b">
         <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6">
           {/* Title and Create Button */}
           <div className="animate-slide-up flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl lg:text-5xl">
+            <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl lg:text-5xl">
               {t("stores.title")}
             </h1>
-            <div className="shrink-0 w-full sm:w-auto">
-              {renderCreateStoreButton()}
-            </div>
+            <div className="w-full shrink-0 sm:w-auto">{renderCreateStoreButton()}</div>
           </div>
         </div>
       </div>
@@ -185,11 +186,11 @@ export function StoresContainer() {
           {error && !isLoading && (
             <div className="animate-slide-up-delayed flex min-h-[calc(100vh-250px)] items-center justify-center px-4 py-8 text-center sm:min-h-[calc(100vh-300px)] sm:py-12 md:py-16">
               <div className="w-full max-w-md">
-                <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive sm:h-12 sm:w-12" />
-                <p className="mb-2 text-base font-semibold text-foreground sm:text-lg">
+                <AlertCircle className="text-destructive mx-auto mb-4 h-10 w-10 sm:h-12 sm:w-12" />
+                <p className="text-foreground mb-2 text-base font-semibold sm:text-lg">
                   {t("stores.errorLoading") || "Failed to load stores"}
                 </p>
-                <p className="mb-6 text-sm text-muted-foreground sm:text-base">
+                <p className="text-muted-foreground mb-6 text-sm sm:text-base">
                   {error.message || "An unexpected error occurred"}
                 </p>
                 <Button onClick={() => refetch()} variant="outline" className="w-full sm:w-auto">
@@ -204,22 +205,20 @@ export function StoresContainer() {
             <div className="animate-slide-up-delayed flex min-h-[calc(100vh-250px)] items-center justify-center px-4 py-8 text-center sm:min-h-[calc(100vh-300px)] sm:py-12 md:py-16">
               <div className="mx-auto w-full max-w-md">
                 {/* Visual Icon */}
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted sm:mb-6 sm:h-20 sm:w-20 md:h-24 md:w-24">
-                  <Store className="h-8 w-8 text-muted-foreground sm:h-10 sm:w-10 md:h-12 md:w-12" />
+                <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full sm:mb-6 sm:h-20 sm:w-20 md:h-24 md:w-24">
+                  <Store className="text-muted-foreground h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12" />
                 </div>
 
                 {/* Text Content */}
-                <h3 className="mb-2 text-lg font-semibold text-foreground sm:mb-3 sm:text-xl md:text-2xl">
+                <h3 className="text-foreground mb-2 text-lg font-semibold sm:mb-3 sm:text-xl md:text-2xl">
                   {t("stores.noStores")}
                 </h3>
-                <p className="mb-4 text-sm leading-relaxed text-muted-foreground sm:mb-6 sm:text-base md:text-lg">
+                <p className="text-muted-foreground mb-4 text-sm leading-relaxed sm:mb-6 sm:text-base md:text-lg">
                   {t("stores.createFirst")}
                 </p>
 
                 {/* CTA Button */}
-                <div className="flex justify-center">
-                  {renderCreateStoreButton()}
-                </div>
+                <div className="flex justify-center">{renderCreateStoreButton()}</div>
               </div>
             </div>
           )}
@@ -228,33 +227,26 @@ export function StoresContainer() {
           {!isLoading && !error && stores && stores.length > 0 && (
             <div className="animate-slide-up-delayed grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:gap-6 xl:gap-8">
               {/* Show loading skeleton for store cards while subscription status is loading */}
-              {isLoadingSubscription ? (
-                [...Array(stores.length)].map((_, i) => (
-                  <div key={`skeleton-${i}`} className="space-y-2 sm:space-y-3">
-                    <Skeleton className="aspect-[4/3] w-full rounded-xl" />
-                    <Skeleton className="h-5 w-3/4 sm:h-6" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                ))
-              ) : (
-                stores.map((store) => {
-                  // Only block stores if subscription status is loaded and not active
-                  // Don't block during loading to prevent false "upgrade" messages
-                  const hasActiveSubscription = subscriptionStatus?.hasSubscription &&
-                    subscriptionStatus?.subscription?.status === "ACTIVE";
-                  // Only set blocked if subscription status is loaded (not undefined)
-                  // This prevents showing blocked state during loading
-                  const isBlocked = subscriptionStatus !== undefined && !hasActiveSubscription;
+              {isLoadingSubscription
+                ? [...Array(stores.length)].map((_, i) => (
+                    <div key={`skeleton-${i}`} className="space-y-2 sm:space-y-3">
+                      <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+                      <Skeleton className="h-5 w-3/4 sm:h-6" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                  ))
+                : stores.map((store) => {
+                    // Only block stores if subscription status is loaded and not active
+                    // Don't block during loading to prevent false "upgrade" messages
+                    const hasActiveSubscription =
+                      subscriptionStatus?.hasSubscription &&
+                      subscriptionStatus?.subscription?.status === "ACTIVE";
+                    // Only set blocked if subscription status is loaded (not undefined)
+                    // This prevents showing blocked state during loading
+                    const isBlocked = subscriptionStatus !== undefined && !hasActiveSubscription;
 
-                  return (
-                    <StoreCard
-                      key={store.id}
-                      store={store}
-                      isBlocked={isBlocked}
-                    />
-                  );
-                })
-              )}
+                    return <StoreCard key={store.id} store={store} isBlocked={isBlocked} />;
+                  })}
             </div>
           )}
         </div>

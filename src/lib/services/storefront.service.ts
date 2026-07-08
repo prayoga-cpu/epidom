@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import type { 
-  UpdateStorefrontInput, 
-  CreateMenuCategoryInput, 
+import type {
+  UpdateStorefrontInput,
+  CreateMenuCategoryInput,
   UpdateMenuCategoryInput,
   CreateMenuItemInput,
-  UpdateMenuItemInput 
+  UpdateMenuItemInput,
 } from "@/lib/validation/storefront.schemas";
 import { Prisma } from "@prisma/client";
 
@@ -45,7 +45,7 @@ export class StorefrontService {
   }
 
   /**
-   * Get storefront by storeId. 
+   * Get storefront by storeId.
    * Automatically creates a draft storefront if one doesn't exist yet.
    */
   async getStorefrontByStoreId(storeId: string) {
@@ -67,7 +67,7 @@ export class StorefrontService {
       const store = await prisma.store.findUnique({
         where: { id: storeId },
       });
-      
+
       if (!store) {
         throw new Error("Store not found");
       }
@@ -75,7 +75,7 @@ export class StorefrontService {
       // Generate unique slug
       let baseSlug = this.slugify(store.name);
       if (baseSlug.length < 3) baseSlug = `store-${storeId.substring(0, 5)}`;
-      
+
       let slug = baseSlug;
       let count = 1;
       while (true) {
@@ -134,7 +134,7 @@ export class StorefrontService {
 
     if (!existingStorefront) {
       // Auto-create draft storefront (same as getStorefrontByStoreId)
-      existingStorefront = await this.getStorefrontByStoreId(storeId) as any;
+      existingStorefront = (await this.getStorefrontByStoreId(storeId)) as any;
     }
 
     // Verify slug uniqueness if slug is being changed
@@ -165,11 +165,17 @@ export class StorefrontService {
         grabfoodUrl: input.grabfoodUrl,
         shopeefoodUrl: input.shopeefoodUrl,
         googleMapsUrl: input.googleMapsUrl,
-        customLinks: input.customLinks === undefined ? undefined : (input.customLinks as Prisma.InputJsonValue),
+        customLinks:
+          input.customLinks === undefined
+            ? undefined
+            : (input.customLinks as Prisma.InputJsonValue),
         isPublished: input.isPublished,
         acceptsOrders: input.acceptsOrders,
         acceptsReservations: input.acceptsReservations,
-        openingHours: input.openingHours === undefined ? undefined : (input.openingHours as Prisma.InputJsonValue),
+        openingHours:
+          input.openingHours === undefined
+            ? undefined
+            : (input.openingHours as Prisma.InputJsonValue),
       },
     });
   }
@@ -209,7 +215,11 @@ export class StorefrontService {
     });
   }
 
-  async updateMenuCategory(categoryId: string, storefrontId: string, input: UpdateMenuCategoryInput) {
+  async updateMenuCategory(
+    categoryId: string,
+    storefrontId: string,
+    input: UpdateMenuCategoryInput
+  ) {
     // Verify ownership
     const category = await prisma.menuCategory.findUnique({
       where: { id: categoryId },
@@ -248,9 +258,9 @@ export class StorefrontService {
   async createMenuItem(storefrontId: string, input: CreateMenuItemInput) {
     // Get max order in category (or general if category is null)
     const maxOrder = await prisma.menuItem.aggregate({
-      where: { 
-        storefrontId, 
-        categoryId: input.categoryId ?? null 
+      where: {
+        storefrontId,
+        categoryId: input.categoryId ?? null,
       },
       _max: { displayOrder: true },
     });
@@ -269,7 +279,8 @@ export class StorefrontService {
         isAvailable: input.isAvailable,
         isFeatured: input.isFeatured,
         displayOrder: input.displayOrder ?? nextOrder,
-        modifiers: input.modifiers === undefined ? undefined : (input.modifiers as Prisma.InputJsonValue),
+        modifiers:
+          input.modifiers === undefined ? undefined : (input.modifiers as Prisma.InputJsonValue),
       },
     });
   }
@@ -295,7 +306,10 @@ export class StorefrontService {
         isAvailable: input.isAvailable !== undefined ? input.isAvailable : item.isAvailable,
         isFeatured: input.isFeatured !== undefined ? input.isFeatured : item.isFeatured,
         displayOrder: input.displayOrder !== undefined ? input.displayOrder : item.displayOrder,
-        modifiers: input.modifiers !== undefined ? (input.modifiers as Prisma.InputJsonValue) : (item.modifiers as Prisma.InputJsonValue),
+        modifiers:
+          input.modifiers !== undefined
+            ? (input.modifiers as Prisma.InputJsonValue)
+            : (item.modifiers as Prisma.InputJsonValue),
       },
     });
   }
@@ -311,6 +325,73 @@ export class StorefrontService {
     return prisma.menuItem.delete({
       where: { id: itemId },
     });
+  }
+
+  /**
+   * Auto-link a product to the store's POS/storefront menu as a new MenuItem,
+   * unless one is already linked. Mirrors the manual "Add to POS menu" action
+   * (see useAddProductToMenu) so a product added via any path — the add-product
+   * dialog, CSV import, or a one-off backfill — shows up in the cashier/menu by
+   * default. Users can still remove it manually afterward (deletes the MenuItem
+   * row, same as today). Non-fatal: menu-linking failures never block product
+   * creation/import.
+   */
+  async autoLinkProductToMenu(
+    storeId: string,
+    product: { id: string; name: string; sellingPrice: number | string; category?: string | null }
+  ): Promise<void> {
+    try {
+      const alreadyLinked = await prisma.menuItem.findFirst({
+        where: { productId: product.id },
+        select: { id: true },
+      });
+      if (alreadyLinked) return;
+
+      const storefront = await this.getStorefrontByStoreId(storeId);
+
+      let categoryId: string | null = null;
+      if (product.category) {
+        const categoryName = product.category;
+        const match = storefront.menuCategories.find(
+          (c) => c.name.toLowerCase() === categoryName.toLowerCase()
+        );
+        if (match) {
+          categoryId = match.id;
+        } else {
+          const maxCatOrder = await prisma.menuCategory.aggregate({
+            where: { storefrontId: storefront.id },
+            _max: { displayOrder: true },
+          });
+          const created = await this.createMenuCategory(storefront.id, {
+            name: categoryName,
+            displayOrder: (maxCatOrder._max.displayOrder ?? -1) + 1,
+          });
+          categoryId = created.id;
+        }
+      }
+
+      const maxItemOrder = await prisma.menuItem.aggregate({
+        where: { storefrontId: storefront.id, categoryId },
+        _max: { displayOrder: true },
+      });
+
+      await prisma.menuItem.create({
+        data: {
+          storefrontId: storefront.id,
+          categoryId,
+          productId: product.id,
+          name: product.name,
+          price: new Prisma.Decimal(Number(product.sellingPrice)),
+          isAvailable: true,
+          displayOrder: (maxItemOrder._max.displayOrder ?? -1) + 1,
+        },
+      });
+    } catch (error) {
+      console.error(
+        `[auto-link-product-to-menu] storeId=${storeId} productId=${product.id}:`,
+        error
+      );
+    }
   }
 }
 

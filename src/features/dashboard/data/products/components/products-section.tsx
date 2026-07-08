@@ -462,7 +462,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center border-b pb-2 mt-4">
+          <div className="mt-4 flex items-center border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {products.length} {t("common.of")} {totalProducts}{" "}
               {t("data.products.pageTitle")}
@@ -608,7 +608,9 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                                   );
                                 } catch (err) {
                                   toast.error(
-                                    err instanceof Error ? err.message : "Failed to remove from menu"
+                                    err instanceof Error
+                                      ? err.message
+                                      : "Failed to remove from menu"
                                   );
                                 }
                               }}
@@ -617,7 +619,10 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{t("data.products.tooltips.removeFromMenu") || "In POS menu — click to remove"}</p>
+                            <p>
+                              {t("data.products.tooltips.removeFromMenu") ||
+                                "In POS menu — click to remove"}
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       ) : (
@@ -788,7 +793,10 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
         onOpenChange={setBulkDeleteDialogOpen}
         title={t("data.products.bulkDeleteConfirm.title") || "Delete Multiple Products"}
         description={
-          t("data.products.bulkDeleteConfirm.description")?.replace("{count}", selectedCount.toString()) ||
+          t("data.products.bulkDeleteConfirm.description")?.replace(
+            "{count}",
+            selectedCount.toString()
+          ) ||
           `Are you sure you want to delete ${selectedCount} product(s)? This action cannot be undone.`
         }
         confirmText={t("common.actions.delete")}

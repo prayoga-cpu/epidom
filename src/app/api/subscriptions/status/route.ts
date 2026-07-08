@@ -78,6 +78,10 @@ export const GET = withApiHandler(
           status: subscription.status,
           currentPeriodStart: subscription.currentPeriodStart,
           currentPeriodEnd: subscription.currentPeriodEnd,
+          trialEndsAt: subscription.trialEndsAt,
+          // On a trial while the window is still open (used for the "trial ends in
+          // N days" badge). Trialing subscriptions report status ACTIVE.
+          isTrialing: !!subscription.trialEndsAt && subscription.trialEndsAt > new Date(),
           cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
           // Whether Stripe-managed billing actions are available. The customer
           // portal needs a real Stripe customer (free plans use a "free_" stub),

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Label } from "@/components/ui/label";
@@ -250,13 +251,12 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
                 {t("management.recipeProduction.actualQuantity") || "Actual Quantity"} ({batch.unit}
                 )
               </Label>
-              <Input
+              <DecimalInput
                 id="actualQuantity"
-                type="number"
-                step="0.01"
-                min="0.01"
+                decimals={3}
+                min={0}
                 value={actualQuantity}
-                onChange={(e) => setActualQuantity(Number(e.target.value))}
+                onChange={(value) => setActualQuantity(value ?? 0)}
                 placeholder={String(batch.plannedQuantity)}
               />
               <p className="text-muted-foreground text-sm">

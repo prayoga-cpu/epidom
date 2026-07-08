@@ -5,6 +5,8 @@ import {
   ProductFilters,
 } from "../repositories/product.repository";
 import { arrayToCSV } from "../utils/csv-export";
+import { prisma } from "@/lib/prisma";
+import { storefrontService } from "./storefront.service";
 
 /**
  * Product Service
@@ -93,6 +95,15 @@ export class ProductService {
       },
     });
 
+    // Auto-add the new product to the store's POS/storefront menu by default —
+    // users can still remove it manually from the product card afterward.
+    await storefrontService.autoLinkProductToMenu(data.storeId, {
+      id: product.id,
+      name: product.name,
+      sellingPrice: Number(product.sellingPrice),
+      category: product.category,
+    });
+
     // Then link recipes if provided
     if (data.recipeIds && data.recipeIds.length > 0) {
       await productRepository.updateRecipes(product.id, data.recipeIds);
@@ -175,6 +186,19 @@ export class ProductService {
       ...(data.shelfLife !== undefined && { shelfLife: data.shelfLife }),
     });
 
+    // Keep any storefront menu item(s) linked to this product (MenuItem.productId)
+    // in sync automatically — a linked MenuItem is what customers/POS actually see,
+    // so its name/price should never drift from the Product it's backed by.
+    if (data.name !== undefined || data.sellingPrice !== undefined) {
+      await prisma.menuItem.updateMany({
+        where: { productId },
+        data: {
+          ...(data.name !== undefined && { name: updatedProduct.name }),
+          ...(data.sellingPrice !== undefined && { price: updatedProduct.sellingPrice }),
+        },
+      });
+    }
+
     // Update recipes if provided
     if (data.recipeIds !== undefined) {
       await productRepository.updateRecipes(productId, data.recipeIds);
@@ -203,10 +227,7 @@ export class ProductService {
    * Bulk delete products (hard delete)
    * Note: Related records will be cascade deleted
    */
-  async bulkDeleteProducts(
-    productIds: string[],
-    storeId: string
-  ): Promise<{ count: number }> {
+  async bulkDeleteProducts(productIds: string[], storeId: string): Promise<{ count: number }> {
     // Verify all products belong to the store
     const products = await productRepository.findByIds(productIds);
     const invalidProducts = products.filter((p) => p.storeId !== storeId);

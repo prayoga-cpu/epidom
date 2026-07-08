@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,23 +42,22 @@ const bulkOrderItemSchema = z.object({
   quantity: z.coerce
     .number()
     .positive("Quantity must be positive")
-    .min(0.01, "Quantity must be at least 0.01"),
+    .min(0.001, "Quantity must be at least 0.001"),
 });
 
 // Schema for the entire bulk order form
-const bulkOrderSchema = z.object({
-  supplierId: z.string().min(1, "Supplier ID is required"),
-  supplierName: z.string().min(1, "Supplier name is required"),
-  items: z.array(bulkOrderItemSchema),
-  expectedDeliveryDate: z.string().min(1, "Please select an expected delivery date"),
-  notes: z.string().optional(),
-}).refine(
-  (data) => data.items.some((item) => item.selected),
-  {
+const bulkOrderSchema = z
+  .object({
+    supplierId: z.string().min(1, "Supplier ID is required"),
+    supplierName: z.string().min(1, "Supplier name is required"),
+    items: z.array(bulkOrderItemSchema),
+    expectedDeliveryDate: z.string().min(1, "Please select an expected delivery date"),
+    notes: z.string().optional(),
+  })
+  .refine((data) => data.items.some((item) => item.selected), {
     message: "Please select at least one item to order",
     path: ["items"],
-  }
-);
+  });
 
 type BulkOrderFormData = z.infer<typeof bulkOrderSchema>;
 
@@ -92,7 +92,8 @@ export function BulkOrderDialog({
       supplierId,
       supplierName,
       items: alerts.map((alert) => {
-        const supplier = alert.suppliers?.find((s) => s.name === supplierName) || alert.suppliers?.[0];
+        const supplier =
+          alert.suppliers?.find((s) => s.name === supplierName) || alert.suppliers?.[0];
         const suggestedQuantity = Math.max(0, Number(alert.minStock) - Number(alert.currentStock));
 
         return {
@@ -116,7 +117,8 @@ export function BulkOrderDialog({
   useEffect(() => {
     if (open && alerts.length > 0) {
       const items = alerts.map((alert) => {
-        const supplier = alert.suppliers?.find((s) => s.name === supplierName) || alert.suppliers?.[0];
+        const supplier =
+          alert.suppliers?.find((s) => s.name === supplierName) || alert.suppliers?.[0];
         const suggestedQuantity = Math.max(0, Number(alert.minStock) - Number(alert.currentStock));
 
         return {
@@ -207,8 +209,10 @@ export function BulkOrderDialog({
               Cancel
             </Button>
             <Button type="submit" form="bulk-order-form" disabled={createOrder.isPending}>
-              {createOrder.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
-              <ShoppingCart className="mr-1 h-4 w-4 hidden sm:inline" />
+              {createOrder.isPending && (
+                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+              )}
+              <ShoppingCart className="mr-1 hidden h-4 w-4 sm:inline" />
               Create Bulk Order ({selectedItems.length})
             </Button>
           </>
@@ -222,8 +226,10 @@ export function BulkOrderDialog({
                 {t("alerts.createOrderDialog.supplier")}: {supplierName}
               </p>
               <p className="text-muted-foreground text-xs">
-                {t("alerts.bulkOrder.lowStockItemsAvailable")?.replace("{count}", alerts.length.toString()) ||
-                  `${alerts.length} low stock item(s) available`}
+                {t("alerts.bulkOrder.lowStockItemsAvailable")?.replace(
+                  "{count}",
+                  alerts.length.toString()
+                ) || `${alerts.length} low stock item(s) available`}
               </p>
             </div>
 
@@ -232,7 +238,7 @@ export function BulkOrderDialog({
               <FormLabel>
                 {t("alerts.bulkOrder.selectItemsToOrder") || "Select Items to Order"} *
               </FormLabel>
-              <div className="border rounded-lg">
+              <div className="rounded-lg border">
                 <div className="max-h-[300px] overflow-y-auto">
                   {form.watch("items")?.map((item, index) => (
                     <div
@@ -247,10 +253,7 @@ export function BulkOrderDialog({
                           render={({ field }) => (
                             <FormItem className="mt-1">
                               <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
+                                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                               </FormControl>
                             </FormItem>
                           )}
@@ -300,18 +303,25 @@ export function BulkOrderDialog({
                               render={({ field }) => (
                                 <FormItem>
                                   <div className="flex items-center gap-2">
-                                    <FormLabel className="text-xs">{t("alerts.createOrderDialog.quantity")}:</FormLabel>
+                                    <FormLabel className="text-xs">
+                                      {t("alerts.createOrderDialog.quantity")}:
+                                    </FormLabel>
                                     <FormControl>
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                        {...field}
-                                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                      <DecimalInput
+                                        decimals={3}
+                                        min={0}
+                                        placeholder="0.000"
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        onBlur={field.onBlur}
+                                        name={field.name}
+                                        ref={field.ref}
                                         className="h-8 w-32 text-sm"
                                       />
                                     </FormControl>
-                                    <span className="text-muted-foreground text-xs">{item.unit}</span>
+                                    <span className="text-muted-foreground text-xs">
+                                      {item.unit}
+                                    </span>
                                     <span className="text-muted-foreground ml-auto text-xs">
                                       {t("alerts.total")}:{" "}
                                       <span className="font-semibold">
@@ -363,9 +373,7 @@ export function BulkOrderDialog({
               name="expectedDeliveryDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    {t("alerts.createOrderDialog.expectedDelivery")} *
-                  </FormLabel>
+                  <FormLabel>{t("alerts.createOrderDialog.expectedDelivery")} *</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -383,9 +391,7 @@ export function BulkOrderDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    {t("alerts.bulkOrder.orderNotes") || "Order Notes"}
-                  </FormLabel>
+                  <FormLabel>{t("alerts.bulkOrder.orderNotes") || "Order Notes"}</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder={
@@ -397,8 +403,7 @@ export function BulkOrderDialog({
                     />
                   </FormControl>
                   <FormDescription>
-                    {t("alerts.bulkOrder.orderNotesHint") ||
-                      "Optional notes for this bulk order"}
+                    {t("alerts.bulkOrder.orderNotesHint") || "Optional notes for this bulk order"}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

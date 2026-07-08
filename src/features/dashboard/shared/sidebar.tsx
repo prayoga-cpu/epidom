@@ -24,19 +24,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { FeedbackButton } from "@/features/dashboard/feedback/components/feedback-button";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { APP_VERSION } from "@/lib/version";
-
-const PLAN_ORDER: PlanTier[] = ["FREE", "POS", "OPERATIONS", "ENTERPRISE"];
-
-function planRank(plan: PlanTier): number {
-  return PLAN_ORDER.indexOf(plan);
-}
-
-const PLAN_LABELS: Record<PlanTier, string> = {
-  FREE: "Free",
-  POS: "POS",
-  OPERATIONS: "Operations",
-  ENTERPRISE: "Enterprise",
-};
+import { planRank, PLAN_LABELS, upgradeHrefFor } from "@/lib/plans/entitlements";
 
 interface SidebarProps {
   mode?: "desktop" | "mobile";
@@ -111,7 +99,11 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                     : undefined;
 
                   if (locked) {
-                    const lockedHref = storeId ? `/store/${storeId}/billing` : "/billing";
+                    // Locked items route to the pricing/upgrade flow (POS → trial promo),
+                    // consistent with the requirePlan redirect and the upgrade modal.
+                    const lockedHref = item.requiredPlan
+                      ? upgradeHrefFor(item.requiredPlan)
+                      : "/pricing#plans";
                     return (
                       <li key={item.href}>
                         <Link

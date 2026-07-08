@@ -9,6 +9,28 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.10.0] - 2026-07-08 · feat
+
+- POS plan now comes with a **14-day free trial** — connect a card, pay nothing for 14 days, then it renews automatically. The POS plan is highlighted as a special promo on the pricing page.
+- Clearer plan boundaries — Online Orders and Table Reservations now require the POS plan; Data (Materials/Recipes/Products/Suppliers) stays an Operations feature. Hitting a feature your plan doesn't include shows an "Upgrade to POS" prompt (or sends you to pricing) instead of failing silently.
+- Every plan now has a proper home for its menu: FREE manages a display-only **Store Menu** from Storefront settings; POS and up get a dedicated **Menu** page (same data, editable items with full edit/delete support); Operations' Data page keeps the deeper Product/recipe/stock layer, auto-synced to the menu so a Product's name/price never drifts from what customers and the POS Cashier see.
+- Onboarding can now import your existing menu from a CSV / old data file (POS plan).
+- Admin "Reset Account Data" now also signs the user out on all devices so they cleanly restart from onboarding.
+- Log in and sign up are now one page with a toggle instead of two separate screens — same `/login` and `/register` links still work.
+- Menu items can now have a photo — add or edit an item to upload one, with a size/resolution guide (square, 500×500 px ideal, max 2 MB).
+- Fixed a redirect loop that could bounce a freshly-logged-in new user between `/login` and `/stores` instead of landing them on onboarding.
+- Fixed rate limiting: every endpoint a user/IP hit shared one counter, so routine background checks (e.g. subscription status) could silently exhaust the much tighter budget for payment-sensitive endpoints like checkout, wrongly blocking the very first attempt. Each endpoint now has its own independent counter.
+- Fixed stock/quantity fields (stock adjustment, materials, products, recipes, supplier orders, production batches) rejecting small decimals like 0,02 or 0,002 — inputs now accept both comma and period as the decimal separator, and precision was widened to 3 decimal places end-to-end (matching what the stock-adjustment ledger already supported) so gram/millilitre-level measurements track correctly. Also fixed the same comma-decimal typing bug on every price/cash field (cost price, selling price, supplier price, menu item price, POS cash tendered, shift opening/closing cash), and a follow-up bug where a mid-typing value could get rewritten (e.g. "0,0" collapsing back to "0").
+- Material/product/recipe/supplier picker dropdowns (stock adjustment, recipe ingredients, supplier reordering, delivery receiving, production) are now sorted alphabetically instead of by creation date, so they're easier to scan.
+- Fixed recipe cost calculations being off by up to 1000x whenever an ingredient's unit (e.g. grams) differed from its material's stock unit (e.g. kilograms) — cost per batch, ingredient cost breakdowns, production batch cost analysis, and stock deduction on sale now correctly convert between units before multiplying. The recipe editor's ingredient unit field is now locked to the material's unit to prevent the mismatch from being reintroduced.
+- Fixed a crash opening any supplier with a phone number saved in a spaced-out format (e.g. "+33 3 88 45 12 67") instead of strict E.164 — the phone input now normalizes on read, and new/edited supplier phone numbers are validated up front.
+- Products are now automatically added to the store's POS/storefront menu as soon as they're created (via the Data page or CSV import), grouped under a menu category matching the product's own category — no more manually clicking "Add to POS menu" for every item. You can still remove any item from the menu manually at any time. Existing products that weren't yet in the menu have been added.
+- Increased the max zoom on the Instagram onboarding profile-picture cropper from 300% to 700%, so a small or low-res profile photo can still be framed to fill the crop area.
+
+## [2.9.0] - 2026-07-07 · feat
+
+- Instagram quick-start onboarding — upload a screenshot of your Instagram profile and AI pre-fills your storefront: business name, tagline from your bio, storefront URL from your username, Instagram link, a brand color, and smarter menu suggestions. Crop your profile picture straight from the screenshot to use as your logo — or skip and set up manually as before.
+
 ## [2.8.0] - 2026-07-05 · feat
 
 - Customer feedback widget — report a bug or suggest a feature from the dashboard, with an optional screenshot; tickets are emailed to the team and users get a "My tickets" tab to track, edit, or delete their own submissions.

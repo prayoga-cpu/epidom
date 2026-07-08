@@ -48,6 +48,7 @@ export class SubscriptionRepository extends BaseRepository {
     status: SubscriptionStatus;
     currentPeriodStart?: Date;
     currentPeriodEnd?: Date;
+    trialEndsAt?: Date | null;
   }): Promise<Subscription> {
     return this.db.subscription.create({
       data,

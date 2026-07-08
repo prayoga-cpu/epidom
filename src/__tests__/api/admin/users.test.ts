@@ -18,6 +18,10 @@ vi.mock("@/lib/prisma", () => {
     user: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), delete: vi.fn() },
     account: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
     subscription: { upsert: vi.fn() },
+    business: { deleteMany: vi.fn() },
+    alert: { deleteMany: vi.fn() },
+    session: { deleteMany: vi.fn() },
+    $transaction: vi.fn((ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
   };
   return { prisma: mockPrisma };
 });
@@ -55,8 +59,14 @@ describe("PATCH /api/admin/users", () => {
     });
 
     it("returns 403 for non-admin user", async () => {
-      vi.mocked(getSession).mockResolvedValue({ user: { id: "u1", email: "random@user.com" } } as any);
-      mockPrisma.user.findUnique.mockResolvedValue({ id: "u1", email: "random@user.com", isAdmin: false });
+      vi.mocked(getSession).mockResolvedValue({
+        user: { id: "u1", email: "random@user.com" },
+      } as any);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "u1",
+        email: "random@user.com",
+        isAdmin: false,
+      });
       const res = await PATCH(makeReq({ action: "set-admin", userId: "u2", isAdmin: true }));
       expect(res.status).toBe(403);
     });
@@ -81,7 +91,9 @@ describe("PATCH /api/admin/users", () => {
     });
 
     it("returns 400 for set-plan with invalid plan value", async () => {
-      const res = await PATCH(makeReq({ action: "set-plan", userId: "u1", plan: "INVALID", status: "ACTIVE" }));
+      const res = await PATCH(
+        makeReq({ action: "set-plan", userId: "u1", plan: "INVALID", status: "ACTIVE" })
+      );
       expect(res.status).toBe(400);
     });
   });
@@ -89,7 +101,9 @@ describe("PATCH /api/admin/users", () => {
   describe("set-plan", () => {
     it("upserts subscription with correct plan", async () => {
       mockPrisma.subscription.upsert.mockResolvedValue({ plan: "POS", status: "ACTIVE" });
-      const res = await PATCH(makeReq({ action: "set-plan", userId: "u1", plan: "POS", status: "ACTIVE" }));
+      const res = await PATCH(
+        makeReq({ action: "set-plan", userId: "u1", plan: "POS", status: "ACTIVE" })
+      );
       expect(res.status).toBe(200);
       expect(mockPrisma.subscription.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -146,10 +160,14 @@ describe("PATCH /api/admin/users", () => {
       mockPrisma.account.findFirst.mockResolvedValue(null);
       mockPrisma.account.create.mockResolvedValue({});
       mockPrisma.user.update.mockResolvedValue({});
-      const res = await PATCH(makeReq({ action: "reset-password", userId: "u1", newPassword: "NewPass123!" }));
+      const res = await PATCH(
+        makeReq({ action: "reset-password", userId: "u1", newPassword: "NewPass123!" })
+      );
       expect(res.status).toBe(200);
       expect(mockPrisma.account.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ providerId: "credential", userId: "u1" }) })
+        expect.objectContaining({
+          data: expect.objectContaining({ providerId: "credential", userId: "u1" }),
+        })
       );
       expect(mockPrisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: { emailVerified: true } })
@@ -160,7 +178,9 @@ describe("PATCH /api/admin/users", () => {
       mockPrisma.account.findFirst.mockResolvedValue({ id: "acc-1" });
       mockPrisma.account.update.mockResolvedValue({});
       mockPrisma.user.update.mockResolvedValue({});
-      const res = await PATCH(makeReq({ action: "reset-password", userId: "u1", newPassword: "NewPass123!" }));
+      const res = await PATCH(
+        makeReq({ action: "reset-password", userId: "u1", newPassword: "NewPass123!" })
+      );
       expect(res.status).toBe(200);
       expect(mockPrisma.account.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: "acc-1" }, data: { password: "hashed-pw" } })
@@ -168,7 +188,9 @@ describe("PATCH /api/admin/users", () => {
     });
 
     it("returns 400 when password is shorter than 8 chars", async () => {
-      const res = await PATCH(makeReq({ action: "reset-password", userId: "u1", newPassword: "short" }));
+      const res = await PATCH(
+        makeReq({ action: "reset-password", userId: "u1", newPassword: "short" })
+      );
       expect(res.status).toBe(400);
     });
   });
@@ -206,6 +228,33 @@ describe("PATCH /api/admin/users", () => {
     it("blocks self-deletion", async () => {
       const res = await PATCH(makeReq({ action: "delete-user", userId: "admin-id" }));
       expect(res.status).toBe(400);
+    });
+  });
+
+  describe("reset-account", () => {
+    beforeEach(() => {
+      mockPrisma.business.deleteMany.mockResolvedValue({ count: 1 });
+      mockPrisma.alert.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.session.deleteMany.mockResolvedValue({ count: 2 });
+      mockPrisma.user.update.mockResolvedValue({});
+    });
+
+    it("wipes business + alerts, revokes sessions and clears hasOnboarded in one transaction", async () => {
+      const res = await PATCH(makeReq({ action: "reset-account", userId: "u1" }));
+      expect(res.status).toBe(200);
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(mockPrisma.business.deleteMany).toHaveBeenCalledWith({ where: { userId: "u1" } });
+      expect(mockPrisma.alert.deleteMany).toHaveBeenCalledWith({ where: { userId: "u1" } });
+      expect(mockPrisma.session.deleteMany).toHaveBeenCalledWith({ where: { userId: "u1" } });
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: "u1" }, data: { hasOnboarded: false } })
+      );
+    });
+
+    it("blocks self-reset", async () => {
+      const res = await PATCH(makeReq({ action: "reset-account", userId: "admin-id" }));
+      expect(res.status).toBe(400);
+      expect(mockPrisma.business.deleteMany).not.toHaveBeenCalled();
     });
   });
 });

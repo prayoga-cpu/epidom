@@ -5,10 +5,7 @@ import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -53,7 +51,7 @@ const stockAdjustmentSchema = z.object({
   quantity: z.coerce
     .number()
     .positive("Quantity must be positive")
-    .min(0.01, "Quantity must be at least 0.01"),
+    .min(0.001, "Quantity must be at least 0.001"),
   reason: z.string().min(1, "Please provide a reason"),
   notes: z.string().optional(),
   referenceId: z.string().optional(),
@@ -180,7 +178,7 @@ export function StockAdjustmentDialog({
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm">
-            <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
+            <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
             {t("management.editStock.adjustStock")}
           </Button>
         )}
@@ -205,7 +203,7 @@ export function StockAdjustmentDialog({
               disabled={isSubmitting || adjustStockMutation.isPending}
             >
               {(isSubmitting || adjustStockMutation.isPending) && (
-                <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
               )}
               {t("management.editStock.recordAdjustment")}
             </Button>
@@ -274,17 +272,19 @@ export function StockAdjustmentDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {availableItems.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name}{" "}
-                          {selectedItem && (
-                            <span className="text-muted-foreground text-xs">
-                              ({t("management.editStock.current")}: {String(item.currentStock)}{" "}
-                              {item.unit})
-                            </span>
-                          )}
-                        </SelectItem>
-                      ))}
+                      {[...availableItems]
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name}{" "}
+                            {selectedItem && (
+                              <span className="text-muted-foreground text-xs">
+                                ({t("management.editStock.current")}: {String(item.currentStock)}{" "}
+                                {item.unit})
+                              </span>
+                            )}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <FormDescription>
@@ -306,9 +306,7 @@ export function StockAdjustmentDialog({
               name="adjustmentType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    {t("management.editStock.adjustmentType")} *
-                  </FormLabel>
+                  <FormLabel>{t("management.editStock.adjustmentType")} *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -341,10 +339,20 @@ export function StockAdjustmentDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {t("management.editStock.quantity")} {selectedItem && `(${selectedItem.unit})`} *
+                    {t("management.editStock.quantity")} {selectedItem && `(${selectedItem.unit})`}{" "}
+                    *
                   </FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" min="0.01" placeholder="0.00" {...field} />
+                    <DecimalInput
+                      decimals={3}
+                      min={0}
+                      placeholder="0.000"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -357,9 +365,7 @@ export function StockAdjustmentDialog({
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    {t("management.editStock.reason")} *
-                  </FormLabel>
+                  <FormLabel>{t("management.editStock.reason")} *</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>

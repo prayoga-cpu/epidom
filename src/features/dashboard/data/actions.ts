@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ENTITY_UNIQUE_FIELDS } from "@/lib/ai/import-schema";
+import { storefrontService } from "@/lib/services/storefront.service";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -65,22 +66,22 @@ function parseGlobalNumber(value: any): number {
     // Safer approach: Standardize to US float for storage
     // If >1 commas, it's definitely update separators (1,000,000) -> remove all
     if ((str.match(/,/g) || []).length > 1) {
-       str = str.replace(/,/g, "");
+      str = str.replace(/,/g, "");
     } else {
-       // Single comma. 10,000 or 0,5?
-       // Check if followed by 3 digits exactly at end -> likely thousand sep
-       if (/,\d{3}$/.test(str)) {
-          str = str.replace(/,/g, "");
-       } else {
-          // Likely decimal
-          str = str.replace(",", ".");
-       }
+      // Single comma. 10,000 or 0,5?
+      // Check if followed by 3 digits exactly at end -> likely thousand sep
+      if (/,\d{3}$/.test(str)) {
+        str = str.replace(/,/g, "");
+      } else {
+        // Likely decimal
+        str = str.replace(",", ".");
+      }
     }
   }
   // Remove remaining thousand separators (dots if used as such not handled above?)
   // If we have multiple dots: 1.000.000 -> remove all
   if ((str.match(/\./g) || []).length > 1) {
-      str = str.replace(/\./g, "");
+    str = str.replace(/\./g, "");
   }
 
   const result = parseFloat(str);
@@ -243,20 +244,20 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
         // Let's use loop for safety to get IDs and map them immediately
         // (Performance trade-off acceptable for <50 new suppliers)
         for (const newName of Array.from(suppliersToCreate)) {
-           // Double check to avoid race condition if duplicates in list had diff casing
-           const norm = normalizeSupplierName(newName);
-           if(supplierMap.has(norm)) continue;
+          // Double check to avoid race condition if duplicates in list had diff casing
+          const norm = normalizeSupplierName(newName);
+          if (supplierMap.has(norm)) continue;
 
-           const created = await prisma.supplier.create({
-             data: {
-               name: newName.trim(),
-               storeId,
-               createdAt: new Date(),
-               updatedAt: new Date(),
-             },
-             select: { id: true }
-           });
-           supplierMap.set(norm, created.id);
+          const created = await prisma.supplier.create({
+            data: {
+              name: newName.trim(),
+              storeId,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+            select: { id: true },
+          });
+          supplierMap.set(norm, created.id);
         }
       }
     }
@@ -279,7 +280,8 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
           ? {
               create: {
                 supplierId,
-                price: parseGlobalNumber(item.supplierPrice) || parseGlobalNumber(item.unitCost) || 0,
+                price:
+                  parseGlobalNumber(item.supplierPrice) || parseGlobalNumber(item.unitCost) || 0,
                 isPreferred: true,
               },
             }
@@ -356,66 +358,78 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
 
     // Process one by one to handle Updates (Upsert logic) and precise error reporting
     for (let i = 0; i < validData.length; i++) {
-        const item = validData[i];
-        try {
-            const name = String(item.name).trim();
-            const sku = item.sku || undefined;
+      const item = validData[i];
+      try {
+        const name = String(item.name).trim();
+        const sku = item.sku || undefined;
 
-            // Check for existing product by Name (primary match) or SKU (secondary)
-            // We verify storeId and Insensitive Name match
-            let existingProduct = await prisma.product.findFirst({
-                where: {
-                    storeId,
-                    name: { equals: name, mode: "insensitive" }
-                },
-                select: { id: true }
-            });
+        // Check for existing product by Name (primary match) or SKU (secondary)
+        // We verify storeId and Insensitive Name match
+        let existingProduct = await prisma.product.findFirst({
+          where: {
+            storeId,
+            name: { equals: name, mode: "insensitive" },
+          },
+          select: { id: true },
+        });
 
-            // If not found by name, try finding by SKU if provided
-            if (!existingProduct && sku) {
-                existingProduct = await prisma.product.findFirst({
-                    where: { storeId, sku },
-                    select: { id: true }
-                });
-            }
-
-            const productData = {
-                name,
-                sku,
-                description: item.description || undefined,
-                category: item.category || undefined,
-                unit: item.unit || "pcs",
-                costPrice: parseGlobalNumber(item.costPrice) || 0,
-                sellingPrice: parseGlobalNumber(item.sellingPrice) || 0,
-                currentStock: parseGlobalNumber(item.currentStock) || 0,
-                minStock: parseGlobalNumber(item.minStock) || 0,
-                maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
-                updatedAt: new Date(), // Always update timestamp
-            };
-
-            if (existingProduct) {
-                // UPDATE existing product
-                await prisma.product.update({
-                    where: { id: existingProduct.id },
-                    data: productData
-                });
-            } else {
-                // CREATE new product
-                await prisma.product.create({
-                    data: {
-                        ...productData,
-                        storeId,
-                        createdAt: item.createdAt || new Date(),
-                    }
-                });
-            }
-
-            successCount++;
-        } catch (error) {
-            const msg = error instanceof Error ? error.message : "Unknown error";
-            errors.push({ index: i + 1, message: msg.slice(0, 100) });
-            console.error(`Product import error at row ${i+1}:`, error);
+        // If not found by name, try finding by SKU if provided
+        if (!existingProduct && sku) {
+          existingProduct = await prisma.product.findFirst({
+            where: { storeId, sku },
+            select: { id: true },
+          });
         }
+
+        const productData = {
+          name,
+          sku,
+          description: item.description || undefined,
+          category: item.category || undefined,
+          unit: item.unit || "pcs",
+          costPrice: parseGlobalNumber(item.costPrice) || 0,
+          sellingPrice: parseGlobalNumber(item.sellingPrice) || 0,
+          currentStock: parseGlobalNumber(item.currentStock) || 0,
+          minStock: parseGlobalNumber(item.minStock) || 0,
+          maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
+          updatedAt: new Date(), // Always update timestamp
+        };
+
+        let productId: string;
+        if (existingProduct) {
+          // UPDATE existing product
+          await prisma.product.update({
+            where: { id: existingProduct.id },
+            data: productData,
+          });
+          productId = existingProduct.id;
+        } else {
+          // CREATE new product
+          const created = await prisma.product.create({
+            data: {
+              ...productData,
+              storeId,
+              createdAt: item.createdAt || new Date(),
+            },
+          });
+          productId = created.id;
+        }
+
+        // Auto-add the product to the store's POS/storefront menu by default
+        // (no-ops if it's already linked) — users can still remove it manually.
+        await storefrontService.autoLinkProductToMenu(storeId, {
+          id: productId,
+          name: productData.name,
+          sellingPrice: productData.sellingPrice,
+          category: productData.category ?? null,
+        });
+
+        successCount++;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        errors.push({ index: i + 1, message: msg.slice(0, 100) });
+        console.error(`Product import error at row ${i + 1}:`, error);
+      }
     }
 
     return {
@@ -555,9 +569,7 @@ async function resolveMaterialId(
       storeId,
       name: cleanName,
       unit: opts.unit?.trim() || "kg",
-      sku:
-        cleanSku ||
-        `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+      sku: cleanSku || `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
       unitCost: opts.price ?? 0,
       currentStock: opts.stock ?? 0,
       category: "Imported",
@@ -576,9 +588,7 @@ async function resolveMaterialId(
  *   "Farine:500g; Eau:300 ml", "Sel 5 g", "2 kg Sucre", "Farine de blé - 500 g".
  * Parts with no detectable quantity become a single ingredient (qty 1, unit "unit").
  */
-function parseIngredientsBlob(
-  blob: string
-): Array<{ name: string; qty: number; unit: string }> {
+function parseIngredientsBlob(blob: string): Array<{ name: string; qty: number; unit: string }> {
   // A chunk that is purely a quantity (+ optional unit), e.g. "500 g", "300ml".
   const isPureQuantity = (s: string) => /\d/.test(s) && /^[\d.,]+\s*[a-zA-Zµ%]*$/.test(s.trim());
 
@@ -670,7 +680,7 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
 
       // Count this unique variant if not already counted
       if (!groups[groupKey]) {
-         nameCounts[name] = (nameCounts[name] || 0) + 1;
+        nameCounts[name] = (nameCounts[name] || 0) + 1;
       }
     } else if (lastGroupKey) {
       // Continuation row
@@ -680,11 +690,11 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
       groupKey = `${name}|0`;
       lastGroupKey = groupKey;
       if (!groups[groupKey]) {
-         nameCounts[name] = (nameCounts[name] || 0) + 1;
+        nameCounts[name] = (nameCounts[name] || 0) + 1;
       }
     } else {
-       errors.push({ index: index + 1, message: "Skipping invalid row (no name/yield)" });
-       return;
+      errors.push({ index: index + 1, message: "Skipping invalid row (no name/yield)" });
+      return;
     }
 
     if (!groups[groupKey]) groups[groupKey] = [];
@@ -708,11 +718,12 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
       // If this name appears in multiple variants (count > 1), we append suffix.
       // Else we use the clean base name.
       let finalName = baseName;
-      const yieldQuantity = parseGlobalNumber(mainRow.yieldQuantity) || parseGlobalNumber(yieldQtyFromKey) || 1;
+      const yieldQuantity =
+        parseGlobalNumber(mainRow.yieldQuantity) || parseGlobalNumber(yieldQtyFromKey) || 1;
       const yieldUnit = mainRow.yieldUnit || "unit";
 
       if (nameCounts[baseName] > 1) {
-         finalName = `${baseName} (${yieldQuantity} ${yieldUnit})`;
+        finalName = `${baseName} (${yieldQuantity} ${yieldUnit})`;
       }
 
       // Prepare Ingredients
@@ -785,44 +796,45 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
       if (existingRecipe) {
         // UPDATE existing recipe
         await prisma.recipe.update({
-            where: { id: existingRecipe.id },
-            data: {
-                description: mainRow.description || undefined,
-                category: mainRow.category || undefined,
-                yieldQuantity,
-                yieldUnit,
-                productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
-                instructions: instructions || undefined,
-                costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
-                updatedAt: new Date(),
-                // For ingredients, simpler to delete all and recreate for accuracy in sync
-                ingredients: {
-                    deleteMany: {},
-                    create: ingredientsToCreate
-                }
-            }
+          where: { id: existingRecipe.id },
+          data: {
+            description: mainRow.description || undefined,
+            category: mainRow.category || undefined,
+            yieldQuantity,
+            yieldUnit,
+            productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
+            instructions: instructions || undefined,
+            costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+            updatedAt: new Date(),
+            // For ingredients, simpler to delete all and recreate for accuracy in sync
+            ingredients: {
+              deleteMany: {},
+              create: ingredientsToCreate,
+            },
+          },
         });
       } else {
         // CREATE new recipe
         await prisma.recipe.create({
-            data: {
-                storeId,
-                name: finalName,
-                description: mainRow.description || null,
-                category: mainRow.category || null,
-                yieldQuantity,
-                yieldUnit,
-                productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
-                instructions: instructions || null,
-                costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
-                createdAt: mainRow.createdAt || new Date(),
-                updatedAt: mainRow.updatedAt || new Date(),
-                ingredients: ingredientsToCreate.length > 0
+          data: {
+            storeId,
+            name: finalName,
+            description: mainRow.description || null,
+            category: mainRow.category || null,
+            yieldQuantity,
+            yieldUnit,
+            productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
+            instructions: instructions || null,
+            costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+            createdAt: mainRow.createdAt || new Date(),
+            updatedAt: mainRow.updatedAt || new Date(),
+            ingredients:
+              ingredientsToCreate.length > 0
                 ? {
                     create: ingredientsToCreate,
-                    }
+                  }
                 : undefined,
-            },
+          },
         });
       }
 
@@ -883,7 +895,9 @@ function detectEntityType(
     row[field] !== undefined && row[field] !== "" && row[field] !== null;
 
   // 1. First check 'category' column for explicit entity type hints
-  const category = String(row.category || "").toLowerCase().trim();
+  const category = String(row.category || "")
+    .toLowerCase()
+    .trim();
   if (category.includes("supplier") || category === "suppliers") return "supplier";
   if (category.includes("material") || category === "materials") return "material";
   if (category.includes("recipe") || category === "recipes") return "recipe";

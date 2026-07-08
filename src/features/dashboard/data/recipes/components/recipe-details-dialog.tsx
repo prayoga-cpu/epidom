@@ -37,6 +37,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { useMaterials } from "../../materials/hooks/use-materials";
 import type { RecipeWithIngredients } from "../hooks/use-recipes";
 import { getTranslatedCategory } from "../utils/category-helpers";
+import { convertUnit } from "@/lib/utils/unit-conversion";
 
 interface RecipeDetailsDialogProps {
   open: boolean;
@@ -69,7 +70,12 @@ export function RecipeDetailsDialog({
     recipe.ingredients.forEach((ingredient) => {
       const material = materials.find((m) => m.id === ingredient.materialId);
       if (material) {
-        total += Number(material.unitCost) * ingredient.quantity;
+        const quantityInMaterialUnit = convertUnit(
+          ingredient.quantity,
+          ingredient.unit,
+          material.unit
+        );
+        total += Number(material.unitCost) * quantityInMaterialUnit;
       }
     });
     return total;
@@ -217,7 +223,8 @@ export function RecipeDetailsDialog({
                       {recipe.ingredients.map((ingredient, index) => {
                         const material = materials.find((m) => m.id === ingredient.materialId);
                         const ingredientCost = material
-                          ? Number(material.unitCost) * ingredient.quantity
+                          ? Number(material.unitCost) *
+                            convertUnit(ingredient.quantity, ingredient.unit, material.unit)
                           : 0;
 
                         // Check if material was deleted

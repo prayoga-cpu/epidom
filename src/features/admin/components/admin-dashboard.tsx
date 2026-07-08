@@ -23,6 +23,7 @@ import {
   Check,
   TrendingUp,
   MessageSquare,
+  RotateCcw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -140,6 +141,8 @@ export function AdminDashboard() {
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
+  const [resetConfirm, setResetConfirm] = useState("");
 
   // Password reset dialog state
   const [pwTarget, setPwTarget] = useState<UserRow | null>(null);
@@ -177,6 +180,10 @@ export function AdminDashboard() {
         setDeleteTarget(null);
         setDeleteConfirm("");
         toast.success("Account deleted");
+      } else if (action === "reset-account") {
+        setResetTarget(null);
+        setResetConfirm("");
+        toast.success("Account data reset — the user will restart onboarding on next login");
       } else if (action === "reset-password") {
         setPwTarget(null);
         setNewPw("");
@@ -405,6 +412,18 @@ export function AdminDashboard() {
               )}
 
               <DropdownMenuSeparator />
+
+              {/* Reset account data (keeps login + plan, wipes business data) */}
+              <DropdownMenuItem
+                className="text-amber-500 focus:bg-amber-500/10 focus:text-amber-500"
+                onClick={() => {
+                  setResetTarget(user);
+                  setResetConfirm("");
+                }}
+              >
+                <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                Reset Account Data
+              </DropdownMenuItem>
 
               {/* Delete */}
               <DropdownMenuItem
@@ -961,6 +980,60 @@ export function AdminDashboard() {
               }}
             >
               Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset account data confirmation dialog */}
+      <Dialog
+        open={!!resetTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetTarget(null);
+            setResetConfirm("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-amber-500">Reset Account Data</DialogTitle>
+            <DialogDescription>
+              This wipes all business data for <strong>{resetTarget?.email}</strong> — stores,
+              storefront, menu, orders, inventory, staff, and shifts — signs them out on all
+              devices, and sends them back to onboarding on their next login. Their login account
+              and subscription/billing are kept untouched. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <p className="text-muted-foreground text-xs">Type the email address to confirm:</p>
+            <Input
+              value={resetConfirm}
+              onChange={(e) => setResetConfirm(e.target.value)}
+              placeholder={resetTarget?.email}
+              className="font-mono text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setResetTarget(null);
+                setResetConfirm("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={resetConfirm !== resetTarget?.email || mutation.isPending}
+              onClick={() => {
+                if (resetTarget) {
+                  mutation.mutate({ action: "reset-account", userId: resetTarget.id });
+                }
+              }}
+            >
+              Reset Account Data
             </Button>
           </DialogFooter>
         </DialogContent>

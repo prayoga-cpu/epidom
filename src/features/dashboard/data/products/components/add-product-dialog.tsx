@@ -38,7 +38,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
-import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 
 // Helper function to create product schema with translated messages
@@ -368,12 +368,12 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                         {t("data.products.form.costPrice")} ({getCurrencySymbol(currency)}) *
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <DecimalInput
+                          decimals={2}
+                          min={0}
                           placeholder="0.00"
-                          value={formatNumberForInput(field.value)}
-                          onChange={createNumberInputHandler(field.onChange)}
+                          value={field.value}
+                          onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -396,12 +396,12 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                         {t("data.products.form.retailPrice")} ({getCurrencySymbol(currency)}) *
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <DecimalInput
+                          decimals={2}
+                          min={0}
                           placeholder={suggestedRetailPrice}
-                          value={formatNumberForInput(field.value)}
-                          onChange={createNumberInputHandler(field.onChange)}
+                          value={field.value}
+                          onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -468,11 +468,12 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                         {t("data.products.form.currentStock")} *
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <DecimalInput
+                          decimals={3}
+                          min={0}
                           placeholder="0"
-                          value={formatNumberForInput(field.value)}
-                          onChange={createNumberInputHandler(field.onChange)}
+                          value={field.value}
+                          onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -492,11 +493,12 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                         {t("data.products.form.minStock")} *
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <DecimalInput
+                          decimals={3}
+                          min={0}
                           placeholder="0"
-                          value={formatNumberForInput(field.value)}
-                          onChange={createNumberInputHandler(field.onChange)}
+                          value={field.value}
+                          onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -519,11 +521,12 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                         {t("data.products.form.maxStock")} *
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <DecimalInput
+                          decimals={3}
+                          min={0}
                           placeholder="1000"
-                          value={formatNumberForInput(field.value)}
-                          onChange={createNumberInputHandler(field.onChange)}
+                          value={field.value}
+                          onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}

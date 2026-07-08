@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cuidSchema, priceSchema, decimalSchema } from "./common.schemas";
+import { cuidSchema, priceSchema, decimalSchema, phoneSchema } from "./common.schemas";
 
 /**
  * Inventory management validation schemas (Products & Ingredients)
@@ -326,7 +326,7 @@ export const createSupplierSchema = z.object({
     .optional()
     .or(z.literal("")),
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
-  phone: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
+  phone: phoneSchema,
   address: z.string().max(200, "Address is too long").optional().or(z.literal("")),
   city: z.string().max(100, "City name is too long").optional().or(z.literal("")),
   country: z.string().max(100, "Country name is too long").optional().or(z.literal("")),

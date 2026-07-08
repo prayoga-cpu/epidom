@@ -20,6 +20,7 @@ import Stripe from "stripe";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { ApiErrorCode } from "@/types/api/responses";
+import { planHasFeature } from "@/lib/plans/entitlements";
 
 /**
  * Subscription Service
@@ -84,8 +85,6 @@ export class SubscriptionService {
     ) {
       throw new Error(`You already have an active ${plan} plan`);
     } */
-
-
 
     let stripeCustomerId: string;
 
@@ -287,11 +286,41 @@ export class SubscriptionService {
   }
 
   /**
+   * Check if user has access to POS features (POS plan or higher).
+   */
+  async hasPosAccess(userId: string): Promise<boolean> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+
+    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+      return false;
+    }
+
+    return planHasFeature(subscription.plan, "posAccess");
+  }
+
+  /**
+   * Check if user has access to OPERATIONS features (materials, recipes,
+   * suppliers, multi-store — OPERATIONS plan or higher).
+   */
+  async hasOperationsAccess(userId: string): Promise<boolean> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+
+    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+      return false;
+    }
+
+    return planHasFeature(subscription.plan, "supplierManagement");
+  }
+
+  /**
    * Provision a free subscription for a user, bypassing Stripe.
    * Used for default plan on registration and offline/free tiers.
    * Uses "free_<userId>" as a placeholder stripeCustomerId (guaranteed unique).
    */
-  async activateFree(userId: string, plan: SubscriptionPlan = SubscriptionPlan.FREE): Promise<void> {
+  async activateFree(
+    userId: string,
+    plan: SubscriptionPlan = SubscriptionPlan.FREE
+  ): Promise<void> {
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
     // Atomic upsert — safe against concurrent calls (status check + onboarding PATCH firing simultaneously)
@@ -364,7 +393,9 @@ export class SubscriptionService {
       throw new Error("No subscription found");
     }
     if (!subscription.stripeCustomerId.startsWith("admin_")) {
-      throw new Error("Freestyle plan switching is only available for admin-granted (BETA) accounts.");
+      throw new Error(
+        "Freestyle plan switching is only available for admin-granted (BETA) accounts."
+      );
     }
     await this.subscriptionRepo.update(userId, {
       plan,
@@ -453,8 +484,6 @@ export class SubscriptionService {
       canceledSubscriptionIds: canceledIds,
     };
   }
-
-
 }
 
 // Export singleton instance

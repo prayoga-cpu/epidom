@@ -8,6 +8,7 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
 import { STRIPE_CONFIG } from "@/config/stripe.config";
+import { planHasFeature } from "@/lib/plans/entitlements";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -38,7 +39,11 @@ export async function POST(request: Request) {
             business: {
               include: {
                 user: {
-                  select: { stripeConnectAccountId: true, stripeConnectOnboarded: true },
+                  select: {
+                    stripeConnectAccountId: true,
+                    stripeConnectOnboarded: true,
+                    subscription: { select: { plan: true, status: true } },
+                  },
                 },
               },
             },
@@ -48,6 +53,17 @@ export async function POST(request: Request) {
     });
 
     if (!storefront || !storefront.isPublished || !storefront.acceptsOrders) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Storefront not found or not accepting orders"),
+        { status: 404 }
+      );
+    }
+
+    // Online ordering is a POS feature — block orders when the owner is below POS,
+    // even if a stale acceptsOrders flag is still set.
+    const ownerSub = storefront.store.business.user.subscription;
+    const ownerPlan = ownerSub?.status === "ACTIVE" ? ownerSub.plan : "FREE";
+    if (!planHasFeature(ownerPlan, "onlineOrders")) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.NOT_FOUND, "Storefront not found or not accepting orders"),
         { status: 404 }

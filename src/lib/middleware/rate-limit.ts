@@ -93,8 +93,10 @@ export async function checkRateLimit(
 }> {
   const config = getRateLimitConfig(path);
 
-  // Use in-memory rate limiter
-  return inMemoryLimiter.limit(identifier, config.limit, config.window);
+  // Scope the counter by path too — otherwise every rate-limited endpoint a
+  // user/IP hits shares one bucket (e.g. routine /api/subscriptions/status
+  // polling could eat into the much tighter /api/subscriptions/checkout budget).
+  return inMemoryLimiter.limit(`${identifier}:${path}`, config.limit, config.window);
 }
 
 /**

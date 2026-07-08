@@ -19,6 +19,10 @@ interface AvatarCropperProps {
   aspect?: number;
   /** Initial zoom level (default: 1) */
   initialZoom?: number;
+  /** Maximum zoom level (default: 3, i.e. 300%) */
+  maxZoom?: number;
+  /** Crop area shape (default: "round") */
+  cropShape?: "round" | "rect";
 }
 
 /**
@@ -38,10 +42,7 @@ function createImage(url: string): Promise<HTMLImageElement> {
  * Create a cropped image from the crop area
  * Based on react-easy-crop's getCroppedImg utility approach
  */
-async function createCroppedImage(
-  imageSrc: string,
-  pixelCrop: Area
-): Promise<string> {
+async function createCroppedImage(imageSrc: string, pixelCrop: Area): Promise<string> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -100,6 +101,8 @@ export function AvatarCropper({
   onCancel,
   aspect = 1,
   initialZoom = 1,
+  maxZoom = 3,
+  cropShape = "round",
 }: AvatarCropperProps) {
   const { t } = useI18n();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -115,12 +118,9 @@ export function AvatarCropper({
     setZoom(zoom);
   }, []);
 
-  const onCropCompleteCallback = useCallback(
-    (croppedArea: Area, croppedAreaPixels: Area) => {
-      setCroppedAreaPixels(croppedAreaPixels);
-    },
-    []
-  );
+  const onCropCompleteCallback = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!croppedAreaPixels) {
@@ -142,16 +142,18 @@ export function AvatarCropper({
   return (
     <div className="space-y-4">
       {/* Cropper Container */}
-      <div className="relative bg-gray-900 h-[300px] w-full rounded-lg overflow-hidden">
+      <div className="relative h-[300px] w-full overflow-hidden rounded-lg bg-gray-900">
         <Cropper
           image={imageSrc}
           crop={crop}
           zoom={zoom}
           aspect={aspect}
+          minZoom={1}
+          maxZoom={maxZoom}
           onCropChange={onCropChange}
           onZoomChange={onZoomChange}
           onCropComplete={onCropCompleteCallback}
-          cropShape="round"
+          cropShape={cropShape}
           showGrid={false}
         />
       </div>
@@ -161,31 +163,23 @@ export function AvatarCropper({
         {/* Zoom Slider */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-              {t("profile.cropper.zoom")}
-            </span>
+            <span className="text-muted-foreground">{t("profile.cropper.zoom")}</span>
             <span className="font-medium">{Math.round(zoom * 100)}%</span>
           </div>
           <Slider
             value={[zoom]}
             min={1}
-            max={3}
+            max={maxZoom}
             step={0.1}
             onValueChange={(value) => onZoomChange(value[0])}
             className="w-full"
           />
         </div>
-
       </div>
 
       {/* Action Buttons */}
       <div className="flex gap-2 pt-2">
-        <Button
-          variant="outline"
-          onClick={onCancel}
-          disabled={isProcessing}
-          className="flex-1"
-        >
+        <Button variant="outline" onClick={onCancel} disabled={isProcessing} className="flex-1">
           <X className="mr-2 h-4 w-4" />
           {t("common.actions.cancel")}
         </Button>
@@ -210,4 +204,3 @@ export function AvatarCropper({
     </div>
   );
 }
-

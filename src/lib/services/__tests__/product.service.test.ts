@@ -29,9 +29,18 @@ vi.mock("@/lib/utils/csv-export", () => ({
   arrayToCSV: vi.fn().mockReturnValue("SKU,Name\nPROD-001,Test Product"),
 }));
 
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    menuItem: {
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
+  },
+}));
+
 // Import after mocking
 import { ProductService } from "../product.service";
 import { productRepository } from "@/lib/repositories/product.repository";
+import { prisma } from "@/lib/prisma";
 
 // Mock product data
 const mockProduct = {
@@ -198,6 +207,39 @@ describe("ProductService", () => {
       const result = await service.updateProduct("prod-1", "store-1", { name: "Updated Product" });
 
       expect(result.name).toBe("Updated Product");
+    });
+
+    it("should sync name/price to any linked storefront MenuItem", async () => {
+      mockedProductRepo.findById.mockResolvedValue(mockProduct);
+      mockedProductRepo.existsByName.mockResolvedValue(false);
+      const updated = {
+        ...mockProduct,
+        name: "Updated Product",
+        sellingPrice: new Prisma.Decimal(30),
+      };
+      mockedProductRepo.update.mockResolvedValue(updated);
+
+      await service.updateProduct("prod-1", "store-1", {
+        name: "Updated Product",
+        sellingPrice: 30,
+      });
+
+      expect(prisma.menuItem.updateMany).toHaveBeenCalledWith({
+        where: { productId: "prod-1" },
+        data: { name: "Updated Product", price: updated.sellingPrice },
+      });
+    });
+
+    it("should not touch MenuItem sync when name/price are unchanged", async () => {
+      mockedProductRepo.findById.mockResolvedValue(mockProduct);
+      mockedProductRepo.update.mockResolvedValue({
+        ...mockProduct,
+        currentStock: new Prisma.Decimal(5),
+      });
+
+      await service.updateProduct("prod-1", "store-1", { currentStock: 5 });
+
+      expect(prisma.menuItem.updateMany).not.toHaveBeenCalled();
     });
   });
 

@@ -1,7 +1,7 @@
 import type React from "react";
-import { getSession } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requirePlan } from "@/lib/auth/require-plan";
 
+// Finance requires the ENTERPRISE plan (redirects below tier).
 export default async function FinanceLayout({
   children,
   params,
@@ -9,7 +9,7 @@ export default async function FinanceLayout({
   children: React.ReactNode;
   params: Promise<{ storeId: string }>;
 }) {
-  const session = await getSession();
-  if (!session?.user?.id) redirect("/login");
+  const { storeId } = await params;
+  await requirePlan(storeId, "ENTERPRISE");
   return <>{children}</>;
 }

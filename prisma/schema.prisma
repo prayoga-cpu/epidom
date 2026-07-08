@@ -151,6 +151,7 @@ model Subscription {
   status               SubscriptionStatus @default(INCOMPLETE)
   currentPeriodStart   DateTime?
   currentPeriodEnd     DateTime?
+  trialEndsAt          DateTime?
   cancelAtPeriodEnd    Boolean            @default(false)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
@@ -167,15 +168,15 @@ model Product {
   category          String?
   costPrice         Decimal           @db.Decimal(10, 2)
   sellingPrice      Decimal           @db.Decimal(10, 2)
-  currentStock      Decimal           @default(0) @db.Decimal(10, 2)
+  currentStock      Decimal           @default(0) @db.Decimal(10, 3)
   unit              String            @default("piece")
   productionTime    Int?
   shelfLife         Int?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   storeId           String
-  maxStock          Decimal           @default(1000) @db.Decimal(10, 2)
-  minStock          Decimal           @default(0) @db.Decimal(10, 2)
+  maxStock          Decimal           @default(1000) @db.Decimal(10, 3)
+  minStock          Decimal           @default(0) @db.Decimal(10, 3)
   orderItems        OrderItem[]
   productionBatches ProductionBatch[]
   store             Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -197,11 +198,11 @@ model Material {
   category           String?
   unit               String              @default("kg")
   unitCost           Decimal             @db.Decimal(10, 2)
-  currentStock       Decimal             @default(0) @db.Decimal(10, 2)
+  currentStock       Decimal             @default(0) @db.Decimal(10, 3)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
-  maxStock           Decimal             @default(1000) @db.Decimal(10, 2)
-  minStock           Decimal             @default(0) @db.Decimal(10, 2)
+  maxStock           Decimal             @default(1000) @db.Decimal(10, 3)
+  minStock           Decimal             @default(0) @db.Decimal(10, 3)
   storeId            String
   materialSuppliers  MaterialSupplier[]  @relation("MaterialToSuppliers")
   store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -243,7 +244,7 @@ model Recipe {
   description           String?
   name                  String
   productionTimeMinutes Int
-  yieldQuantity         Decimal            @db.Decimal(10, 2)
+  yieldQuantity         Decimal            @db.Decimal(10, 3)
   yieldUnit             String
   productionBatches     ProductionBatch[]
   ingredients           RecipeIngredient[]
@@ -292,8 +293,8 @@ model ProductionBatch {
   batchNumber     String           @unique
   productId       String
   recipeId        String?
-  plannedQuantity Decimal          @db.Decimal(10, 2)
-  actualQuantity  Decimal?         @db.Decimal(10, 2)
+  plannedQuantity Decimal          @db.Decimal(10, 3)
+  actualQuantity  Decimal?         @db.Decimal(10, 3)
   unit            String
   status          ProductionStatus @default(PLANNED)
   scheduledDate   DateTime
@@ -392,7 +393,7 @@ model SupplierOrderItem {
   id         String        @id @default(cuid())
   orderId    String
   materialId String
-  quantity   Decimal       @db.Decimal(10, 2)
+  quantity   Decimal       @db.Decimal(10, 3)
   unit       String
   unitPrice  Decimal       @db.Decimal(10, 2)
   total      Decimal       @db.Decimal(10, 2)

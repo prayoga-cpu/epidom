@@ -1,5 +1,6 @@
 import { Recipe, Prisma, RecipeProduct, Product } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
+import { convertUnit } from "@/lib/utils/unit-conversion";
 
 /**
  * Recipe Repository
@@ -199,14 +200,22 @@ export class RecipeRepository extends BaseRepository {
       const materialIds = ingredients.map((i) => i.materialId);
       const materials = await this.db.material.findMany({
         where: { id: { in: materialIds } },
-        select: { id: true, unitCost: true },
+        select: { id: true, unitCost: true, unit: true },
       });
 
-      const materialCostMap = new Map(materials.map((m) => [m.id, Number(m.unitCost)]));
+      const materialMap = new Map(
+        materials.map((m) => [m.id, { unitCost: Number(m.unitCost), unit: m.unit }])
+      );
 
+      // Ingredient quantity is recorded in the recipe's own unit (e.g. "g"),
+      // which may differ from the material's stock unit that unitCost is
+      // priced per (e.g. "kg") — convert before multiplying, or the cost is
+      // off by whatever factor separates the two units (e.g. 1000x for g/kg).
       costPerBatch = ingredients.reduce((sum, ing) => {
-        const unitCost = materialCostMap.get(ing.materialId) || 0;
-        return sum + unitCost * ing.quantity;
+        const material = materialMap.get(ing.materialId);
+        if (!material) return sum;
+        const quantityInMaterialUnit = convertUnit(ing.quantity, ing.unit, material.unit);
+        return sum + material.unitCost * quantityInMaterialUnit;
       }, 0);
     }
 
@@ -316,14 +325,15 @@ export class RecipeRepository extends BaseRepository {
           const materialIds = ingredients.map((ing) => ing.materialId);
           const materials = await tx.material.findMany({
             where: { id: { in: materialIds } },
-            select: { id: true, unitCost: true },
+            select: { id: true, unitCost: true, unit: true },
           });
 
           let totalCost = 0;
           ingredients.forEach((ing) => {
             const material = materials.find((m) => m.id === ing.materialId);
             if (material) {
-              totalCost += Number(material.unitCost) * ing.quantity;
+              const quantityInMaterialUnit = convertUnit(ing.quantity, ing.unit, material.unit);
+              totalCost += Number(material.unitCost) * quantityInMaterialUnit;
             }
           });
 
@@ -487,7 +497,7 @@ export class RecipeRepository extends BaseRepository {
         ingredients: {
           include: {
             material: {
-              select: { unitCost: true },
+              select: { unitCost: true, unit: true },
             },
           },
         },
@@ -499,7 +509,8 @@ export class RecipeRepository extends BaseRepository {
     const costPerBatch = recipe.ingredients.reduce((sum, ing) => {
       const quantity = Number(ing.quantity);
       const unitCost = Number(ing.material.unitCost);
-      return sum + quantity * unitCost;
+      const quantityInMaterialUnit = convertUnit(quantity, ing.unit, ing.material.unit);
+      return sum + quantityInMaterialUnit * unitCost;
     }, 0);
 
     await this.db.recipe.update({

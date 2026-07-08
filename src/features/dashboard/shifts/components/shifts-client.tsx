@@ -14,6 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -30,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   openShiftSchema,
@@ -358,12 +359,21 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
             </div>
             <div className="space-y-1">
               <Label htmlFor="openingCash">{t("pages.openingCash")}</Label>
-              <Input
-                id="openingCash"
-                type="number"
-                min={0}
-                step={1000}
-                {...openForm.register("openingCash", { valueAsNumber: true })}
+              <Controller
+                control={openForm.control}
+                name="openingCash"
+                render={({ field }) => (
+                  <DecimalInput
+                    id="openingCash"
+                    decimals={2}
+                    min={0}
+                    value={field.value}
+                    onChange={(v) => field.onChange(v ?? 0)}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
+                )}
               />
             </div>
             <DialogFooter>
@@ -393,12 +403,21 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
             >
               <div className="space-y-1">
                 <Label htmlFor="closingCash">{t("pages.closingCash")}</Label>
-                <Input
-                  id="closingCash"
-                  type="number"
-                  min={0}
-                  step={1000}
-                  {...closeForm.register("closingCash", { valueAsNumber: true })}
+                <Controller
+                  control={closeForm.control}
+                  name="closingCash"
+                  render={({ field }) => (
+                    <DecimalInput
+                      id="closingCash"
+                      decimals={2}
+                      min={0}
+                      value={field.value}
+                      onChange={(v) => field.onChange(v ?? 0)}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
+                  )}
                 />
               </div>
               <div className="space-y-1">

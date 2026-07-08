@@ -39,7 +39,7 @@ import {
   type UpdateIngredientFormInput,
 } from "@/lib/validation/inventory.schemas";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 
 interface EditMaterialDialogProps {
@@ -357,13 +357,12 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                         {t("data.materials.form.unitCost")} ({getCurrencySymbol(currency)}) *
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        <DecimalInput
+                          decimals={2}
+                          min={0}
                           placeholder={t("data.materials.form.costPlaceholder")}
-                          value={formatNumberForInput(field.value)}
-                          onChange={createNumberInputHandler(field.onChange)}
+                          value={field.value}
+                          onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -383,13 +382,12 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                         {t("data.materials.form.currentStock")}
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        <DecimalInput
+                          decimals={3}
+                          min={0}
                           placeholder="100"
-                          value={formatNumberForInput(field.value)}
-                          onChange={createNumberInputHandler(field.onChange)}
+                          value={field.value}
+                          onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -411,13 +409,12 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                         {t("data.materials.form.minStockLevel")}
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        <DecimalInput
+                          decimals={3}
+                          min={0}
                           placeholder="20"
-                          value={formatNumberForInput(field.value)}
-                          onChange={createNumberInputHandler(field.onChange)}
+                          value={field.value}
+                          onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -440,13 +437,12 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                         {t("data.materials.form.maxStockLevel")}
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        <DecimalInput
+                          decimals={3}
+                          min={0}
                           placeholder="500"
-                          value={formatNumberForInput(field.value)}
-                          onChange={createNumberInputHandler(field.onChange)}
+                          value={field.value}
+                          onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -560,11 +556,13 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                                   <SelectItem value="none" disabled>
                                     {t("data.materials.form.selectSupplierPlaceholder")}
                                   </SelectItem>
-                                  {suppliers.map((supplier) => (
-                                    <SelectItem key={supplier.id} value={supplier.id}>
-                                      {supplier.name}
-                                    </SelectItem>
-                                  ))}
+                                  {[...suppliers]
+                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .map((supplier) => (
+                                      <SelectItem key={supplier.id} value={supplier.id}>
+                                        {supplier.name}
+                                      </SelectItem>
+                                    ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -583,13 +581,13 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                                   {getCurrencySymbol(currency)})
                                 </FormLabel>
                                 <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
+                                  <DecimalInput
+                                    decimals={2}
+                                    min={0}
                                     placeholder="25.00"
                                     className="h-9"
-                                    value={formatNumberForInput(field.value as number | undefined)}
-                                    onChange={createNumberInputHandler(field.onChange)}
+                                    value={field.value as number | undefined}
+                                    onChange={field.onChange}
                                     onBlur={field.onBlur}
                                     name={field.name}
                                     ref={field.ref}

@@ -2,6 +2,7 @@
 import type React from "react";
 import { Sidebar } from "@/features/dashboard/shared/sidebar";
 import { Topbar } from "@/features/dashboard/shared/topbar";
+import { UpgradeGateProvider } from "@/features/billing/upgrade/upgrade-modal";
 
 /**
  * PageShell Component
@@ -27,7 +28,7 @@ export function PageShell({ children }: { children: React.ReactNode }) {
           <main className="bg-card/80 page-content flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border shadow-lg backdrop-blur-md">
             {/* Scrollable content area */}
             <div className="scrollbar-thin flex flex-1 flex-col overflow-y-auto p-4 md:p-6">
-            {children}
+              <UpgradeGateProvider>{children}</UpgradeGateProvider>
             </div>
           </main>
         </div>

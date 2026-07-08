@@ -18,6 +18,36 @@ export function parseNumberInput(value: string): number | undefined {
 }
 
 /**
+ * Locale-aware decimal parsing — accepts either "," or "." as the decimal
+ * separator (this app's only non-"." locale is French), unlike `parseFloat`
+ * which stops at the first non-numeric character (`parseFloat("0,02") === 0`).
+ * Strips anything else (thousand separators, stray characters), keeps the
+ * LAST "," or "." typed as the decimal point.
+ */
+export function parseLocaleDecimal(value: string): number | undefined {
+  if (value === "" || value === null || value === undefined) {
+    return undefined;
+  }
+
+  const isNegative = value.trim().startsWith("-");
+  // Keep only digits and separators to find the intended decimal point.
+  const cleaned = value.replace(/[^0-9,.-]/g, "");
+  const lastSeparatorIndex = Math.max(cleaned.lastIndexOf(","), cleaned.lastIndexOf("."));
+
+  let normalized: string;
+  if (lastSeparatorIndex === -1) {
+    normalized = cleaned.replace(/[-,.]/g, "");
+  } else {
+    const integerPart = cleaned.slice(0, lastSeparatorIndex).replace(/[-,.]/g, "");
+    const fractionalPart = cleaned.slice(lastSeparatorIndex + 1).replace(/[-,.]/g, "");
+    normalized = `${integerPart}.${fractionalPart}`;
+  }
+
+  const parsed = parseFloat((isNegative ? "-" : "") + normalized);
+  return isNaN(parsed) ? undefined : parsed;
+}
+
+/**
  * Format number for input display
  * undefined/null becomes empty string (allows user to clear field)
  */
@@ -43,9 +73,7 @@ export function getNumberValue(value: number | undefined | null, defaultValue: n
  * Create onChange handler for number inputs
  * Handles empty string correctly and prevents "012" issue
  */
-export function createNumberInputHandler(
-  onChange: (value: number | undefined) => void
-) {
+export function createNumberInputHandler(onChange: (value: number | undefined) => void) {
   return (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     // Allow empty string (user is clearing the field)
@@ -58,9 +86,3 @@ export function createNumberInputHandler(
     onChange(parsed);
   };
 }
-
-
-
-
-
-

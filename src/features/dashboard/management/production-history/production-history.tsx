@@ -264,11 +264,13 @@ export function ProductionHistoryCard() {
                   <SelectItem value="ALL">
                     {t("management.productionHistory.allRecipes")}
                   </SelectItem>
-                  {recipes.map((recipe) => (
-                    <SelectItem key={recipe.id} value={recipe.id}>
-                      {recipe.name}
-                    </SelectItem>
-                  ))}
+                  {[...recipes]
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((recipe) => (
+                      <SelectItem key={recipe.id} value={recipe.id}>
+                        {recipe.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
 

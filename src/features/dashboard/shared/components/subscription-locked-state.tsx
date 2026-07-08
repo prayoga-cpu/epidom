@@ -5,12 +5,19 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { PLAN_LABELS, upgradeHrefFor, type PlanTier } from "@/lib/plans/entitlements";
 
 interface SubscriptionLockedStateProps {
   title?: string;
   message?: string;
   className?: string;
   showIcon?: boolean;
+  /**
+   * Tier that unlocks the feature. When set, the CTA routes to the right pricing
+   * URL (POS → trial promo) and reads "Upgrade to {plan}". Defaults to the legacy
+   * "Upgrade to Pro" → /pricing#plans behaviour when omitted.
+   */
+  requiredPlan?: PlanTier;
 }
 
 /**
@@ -25,12 +32,17 @@ export function SubscriptionLockedState({
   message,
   className,
   showIcon = true,
+  requiredPlan,
 }: SubscriptionLockedStateProps) {
   const { t } = useI18n();
   const router = useRouter();
 
   const displayTitle = title || t("data.suppliers.locked");
   const displayMessage = message || t("data.suppliers.locked");
+  const ctaLabel = requiredPlan
+    ? `${t("billing.upgradeGate.upgradeTo")} ${PLAN_LABELS[requiredPlan]}`
+    : t("billing.upgradeToPro");
+  const ctaHref = requiredPlan ? upgradeHrefFor(requiredPlan) : "/pricing#plans";
 
   return (
     <Card className={className}>
@@ -41,17 +53,16 @@ export function SubscriptionLockedState({
           </div>
         )}
         <h3 className="mb-2 text-lg font-semibold">{displayTitle}</h3>
-        {message && <p className="text-muted-foreground text-sm mb-4">{displayMessage}</p>}
+        {message && <p className="text-muted-foreground mb-4 text-sm">{displayMessage}</p>}
         <Button
-          onClick={() => router.push("/pricing#plans")}
+          onClick={() => router.push(ctaHref)}
           className="mt-4 bg-[var(--color-brand-primary)] hover:opacity-90"
           size="sm"
         >
-          {t("billing.upgradeToPro")}
+          {ctaLabel}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </CardContent>
     </Card>
   );
 }
-

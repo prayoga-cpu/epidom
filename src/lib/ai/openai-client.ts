@@ -58,6 +58,53 @@ export async function generateStructuredResponse<T extends z.ZodType>(
 }
 
 /**
+ * Generate structured JSON object from AI using vision (image + text input)
+ */
+export async function generateVisionStructuredResponse<T extends z.ZodType>(
+  systemPrompt: string,
+  userText: string,
+  imageUrl: string,
+  schema: T,
+  options?: {
+    temperature?: number;
+    /** Built-in ai-sdk retry/backoff on transient/rate-limit errors. Default 2. */
+    maxRetries?: number;
+    /** Hard ceiling (ms) for the whole call incl. retries. Default 45s. */
+    timeoutMs?: number;
+  }
+): Promise<{
+  data: z.infer<T>;
+  usage: TokenUsage;
+}> {
+  const result = await generateObject({
+    model: openai(AI_IMPORT_MODEL),
+    schema,
+    system: systemPrompt,
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: userText },
+          { type: "image", image: new URL(imageUrl) },
+        ],
+      },
+    ],
+    temperature: options?.temperature ?? 0.1,
+    maxRetries: options?.maxRetries ?? 2,
+    abortSignal: AbortSignal.timeout(options?.timeoutMs ?? 45_000),
+  });
+
+  return {
+    data: result.object,
+    usage: {
+      promptTokens: result.usage?.inputTokens ?? 0,
+      completionTokens: result.usage?.outputTokens ?? 0,
+      totalTokens: (result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0),
+    },
+  };
+}
+
+/**
  * Generate text response from AI (for reasoning/explanations)
  */
 export async function generateTextResponse(

@@ -2,12 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SubscriptionPlan } from "@prisma/client";
-
-const PLAN_ORDER: SubscriptionPlan[] = ["FREE", "POS", "OPERATIONS", "ENTERPRISE"];
-
-function planRank(plan: SubscriptionPlan): number {
-  return PLAN_ORDER.indexOf(plan);
-}
+import { planRank, upgradeHrefFor } from "@/lib/plans/entitlements";
 
 /**
  * Server-side plan gate. Call at the top of any route layout or page that
@@ -57,7 +52,7 @@ export async function requirePlan(
   }
 
   if (planRank(currentPlan) < planRank(minPlan)) {
-    redirect(`/pricing?upgrade=true&required=${minPlan}#plans`);
+    redirect(upgradeHrefFor(minPlan));
   }
 
   return { userId };

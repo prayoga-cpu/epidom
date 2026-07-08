@@ -50,8 +50,10 @@ import {
   type CreateRecipeFormInput,
 } from "@/lib/validation/inventory.schemas";
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
+import { convertUnit } from "@/lib/utils/unit-conversion";
 
 type RecipeFormValues = CreateRecipeFormInput;
 
@@ -105,7 +107,12 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
     ingredients?.forEach((ingredient) => {
       const material = materials.find((m) => m.id === ingredient.materialId);
       if (material && ingredient.quantity) {
-        totalCost += Number(material.unitCost) * ingredient.quantity;
+        const quantityInMaterialUnit = convertUnit(
+          ingredient.quantity,
+          ingredient.unit,
+          material.unit
+        );
+        totalCost += Number(material.unitCost) * quantityInMaterialUnit;
       }
     });
 
@@ -456,13 +463,12 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                           {t("data.recipes.form.yieldQuantity")} *
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
+                          <DecimalInput
+                            decimals={3}
+                            min={0}
                             placeholder="2"
-                            value={formatNumberForInput(field.value)}
-                            onChange={createNumberInputHandler(field.onChange)}
+                            value={field.value}
+                            onChange={field.onChange}
                             onBlur={field.onBlur}
                             name={field.name}
                             ref={field.ref}
@@ -616,14 +622,16 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {materials.map((material) => (
-                                      <SelectItem key={material.id} value={material.id}>
-                                        {material.name} (
-                                        {material.category?.replace("_", " ") ||
-                                          t("common.uncategorized")}
-                                        )
-                                      </SelectItem>
-                                    ))}
+                                    {[...materials]
+                                      .sort((a, b) => a.name.localeCompare(b.name))
+                                      .map((material) => (
+                                        <SelectItem key={material.id} value={material.id}>
+                                          {material.name} (
+                                          {material.category?.replace("_", " ") ||
+                                            t("common.uncategorized")}
+                                          )
+                                        </SelectItem>
+                                      ))}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -641,13 +649,12 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                     {t("data.recipes.ingredients.quantity")} *
                                   </FormLabel>
                                   <FormControl>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      min="0.01"
+                                    <DecimalInput
+                                      decimals={3}
+                                      min={0}
                                       placeholder="500"
-                                      value={formatNumberForInput(field.value)}
-                                      onChange={createNumberInputHandler(field.onChange)}
+                                      value={field.value}
+                                      onChange={field.onChange}
                                       onBlur={field.onBlur}
                                       name={field.name}
                                       ref={field.ref}
@@ -710,7 +717,12 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                 <span className="text-foreground font-semibold">
                                   {formatPrice(
                                     Number(selectedMaterial.unitCost) *
-                                      (form.watch(`ingredients.${index}.quantity`) || 0)
+                                      convertUnit(
+                                        form.watch(`ingredients.${index}.quantity`) || 0,
+                                        form.watch(`ingredients.${index}.unit`) ||
+                                          selectedMaterial.unit,
+                                        selectedMaterial.unit
+                                      )
                                   )}
                                 </span>
                               </div>
@@ -860,7 +872,10 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                             </span>
                             <span className="text-muted-foreground">
                               {material
-                                ? formatPrice(Number(material.unitCost) * quantity)
+                                ? formatPrice(
+                                    Number(material.unitCost) *
+                                      convertUnit(quantity, ingredient.unit, material.unit)
+                                  )
                                 : formatPrice(0)}
                             </span>
                           </div>

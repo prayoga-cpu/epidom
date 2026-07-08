@@ -6,21 +6,21 @@
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16 (App Router, Turbopack), React 19 |
-| Language | TypeScript 5 |
-| Database | PostgreSQL 16 + Prisma ORM 7 (pg driver adapter) |
-| Auth | Better Auth (email/password + Google OAuth) |
-| Payments | Stripe (SaaS billing) · Xendit (QRIS/GoPay/OVO/DANA) |
-| State | TanStack Query v5 |
-| UI | shadcn/ui (New York) · Tailwind CSS 4 · Radix · Lucide |
-| Theme | next-themes · epi-navy dark tokens · epi-cream light |
-| i18n | Custom provider — `id` primary, `en` secondary |
-| Email | Resend |
-| Storage | Vercel Blob |
-| Background jobs | Inngest |
-| Hosting | Vercel |
+| Layer           | Technology                                             |
+| --------------- | ------------------------------------------------------ |
+| Framework       | Next.js 16 (App Router, Turbopack), React 19           |
+| Language        | TypeScript 5                                           |
+| Database        | PostgreSQL 16 + Prisma ORM 7 (pg driver adapter)       |
+| Auth            | Better Auth (email/password + Google OAuth)            |
+| Payments        | Stripe (SaaS billing) · Xendit (QRIS/GoPay/OVO/DANA)   |
+| State           | TanStack Query v5                                      |
+| UI              | shadcn/ui (New York) · Tailwind CSS 4 · Radix · Lucide |
+| Theme           | next-themes · epi-navy dark tokens · epi-cream light   |
+| i18n            | Custom provider — `id` primary, `en` secondary         |
+| Email           | Resend                                                 |
+| Storage         | Vercel Blob                                            |
+| Background jobs | Inngest                                                |
+| Hosting         | Vercel                                                 |
 
 ---
 
@@ -71,7 +71,7 @@ pnpm start      # serve production build
 ```bash
 pnpm type-check            # tsc --noEmit
 pnpm lint                  # ESLint
-pnpm test                  # Vitest (~311 tests)
+pnpm test                  # Vitest (~340 tests)
 pnpm prisma studio         # DB GUI
 pnpm prisma migrate reset  # ⚠️ wipes local DB — dev only
 ```
@@ -119,6 +119,7 @@ src/
 ## Feature Map
 
 ### Auth & Onboarding
+
 - Email/password + Google OAuth via Better Auth
 - Email verification with resend flow
 - Guided 5-step onboarding (business → logo → menu → theme → publish)
@@ -127,6 +128,7 @@ src/
 - PWA install button in topbar (hides when already installed/standalone)
 
 ### Storefront (`/@slug`)
+
 - Customizable public menu page
 - Photo upload: logo (1:1 · 400×400 min · 2 MB) and cover (16:9 · 1920×1080 ideal · 5 MB)
 - Theme color, tagline, description, social links, custom links
@@ -135,6 +137,7 @@ src/
 - GoFood / GrabFood / ShopeeFood / Tokopedia aggregator links
 
 ### POS & Operations (POS+ plan)
+
 - POS cashier — menu grid, cart, checkout (CASH / CARD / TRANSFER / QRIS)
 - Order types: DINE_IN, TAKEOUT, DELIVERY
 - Kitchen Display System (KDS)
@@ -144,8 +147,9 @@ src/
 - Shift management with cash reconciliation
 
 ### Inventory (OPERATIONS+ plan)
+
 - **Data** — Products, Materials, Recipes, Suppliers (CRUD, bulk delete, CSV export, AI Smart Import)
-- "Add to POS menu" on product cards — finds/creates matching category, shows "In Menu" badge instantly (optimistic update)
+- New products are auto-added to the POS/storefront menu on creation (finds/creates a matching category); "In Menu" badge on product cards lets you remove one manually if needed
 - Sync-to-menu prompt when product price/name changes and a linked MenuItem exists
 - POS demand badge on recipe cards (30-day order count)
 - **Management** — Deliveries, Production batches, Production history, Stock adjustment
@@ -154,16 +158,19 @@ src/
 - LOW_STOCK / CRITICAL_STOCK alerts with notification bell
 
 ### Finance & Reporting (OPERATIONS+ plan)
+
 - Daily / weekly / monthly P&L: revenue, COGS, gross margin %
 - Per-channel breakdown (DIRECT, GOFOOD, GRABFOOD, SHOPEEFOOD, TOKOPEDIA)
 - Top-selling items, shift reconciliation, CSV/Excel export
 
 ### Multi-outlet & Admin
+
 - Owner dashboard — rolls up all stores (ENTERPRISE)
 - Admin panel — subscriptions, passwords, account management (master accounts)
 - Aggregator email ingestion via Inngest + OpenAI
 
 ### Billing
+
 - Plans: FREE · POS (Rp 99,000/mo) · OPERATIONS (Rp 249,000/mo) · ENTERPRISE
 - Stripe Checkout + Customer Portal
 - Subscription price on profile updates live per user currency (IDR / USD / EUR)

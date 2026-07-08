@@ -4,6 +4,7 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { serializeRecipe, serializeRecipes } from "@/lib/server/serialize";
 import { z } from "zod";
 import { withApiHandler } from "@/lib/api-handler";
+import { operationsGuard } from "@/lib/auth/require-feature";
 
 // Validation schema for creating recipe
 const createRecipeSchema = z.object({
@@ -80,7 +81,10 @@ export const GET = withApiHandler(
  * Create a new recipe
  */
 export const POST = withApiHandler(
-  async (request, { storeId }) => {
+  async (request, { storeId, userId }) => {
+    const gate = await operationsGuard(userId, "Recipes management");
+    if (gate) return gate;
+
     const body = await request.json();
 
     // Validate request body

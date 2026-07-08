@@ -17,6 +17,7 @@ import {
   Users,
   Clock,
   BarChart3,
+  MenuSquare,
   type LucideIcon,
 } from "lucide-react";
 
@@ -104,6 +105,13 @@ export const dashboardNavigation: NavSection[] = [
         href: "/tables",
         labelKey: "nav.posTables",
         icon: Grid2X2,
+        showBadge: false,
+        requiredPlan: "POS",
+      },
+      {
+        href: "/menu",
+        labelKey: "nav.menu",
+        icon: MenuSquare,
         showBadge: false,
         requiredPlan: "POS",
       },

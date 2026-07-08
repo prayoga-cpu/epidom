@@ -4,9 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
@@ -27,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -45,7 +44,7 @@ const placeOrderSchema = z.object({
   quantity: z.coerce
     .number()
     .positive("Quantity must be positive")
-    .min(0.01, "Quantity must be at least 0.01"),
+    .min(0.001, "Quantity must be at least 0.001"),
   expectedDeliveryDate: z.string().min(1, "Please select an expected delivery date"),
   notes: z.string().optional(),
 });
@@ -163,11 +162,7 @@ export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialog
         }
       >
         <Form {...form}>
-          <form
-            id="place-order-form"
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4"
-          >
+          <form id="place-order-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Alert Info (if from alert) */}
             {alert && (
               <div className="bg-muted/50 space-y-2 rounded-lg p-3">
@@ -286,16 +281,18 @@ export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialog
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {materials.map((mat) => (
-                          <SelectItem key={mat.id} value={mat.id}>
-                            <div className="flex items-center justify-between gap-2">
-                              <span>{mat.name}</span>
-                              <span className="text-muted-foreground text-xs">
-                                ({Number(mat.currentStock)}/{Number(mat.minStock)} {mat.unit})
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                        {[...materials]
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((mat) => (
+                            <SelectItem key={mat.id} value={mat.id}>
+                              <div className="flex items-center justify-between gap-2">
+                                <span>{mat.name}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  ({Number(mat.currentStock)}/{Number(mat.minStock)} {mat.unit})
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -313,12 +310,15 @@ export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialog
                   <FormLabel>{t("alerts.createOrderDialog.quantity")} *</FormLabel>
                   <div className="flex items-start gap-2">
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                      <DecimalInput
+                        decimals={3}
+                        min={0}
+                        placeholder="0.000"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
                         className="flex-1"
                       />
                     </FormControl>

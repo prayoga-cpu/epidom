@@ -23,6 +23,8 @@ export interface SubscriptionStatusResponse {
     status: SubscriptionStatus;
     currentPeriodStart: string;
     currentPeriodEnd: string;
+    trialEndsAt: string | null;
+    isTrialing: boolean;
     cancelAtPeriodEnd: boolean;
     canManagePayment: boolean;
     canCancel: boolean;

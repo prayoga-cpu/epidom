@@ -48,7 +48,7 @@ function mapStripePlanToEnum(rawPlan: string | undefined): SubscriptionPlan | un
  */
 function mapPriceIdToEnum(priceId: string | undefined): SubscriptionPlan | undefined {
   if (!priceId) return undefined;
-  
+
   const posMonthly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY;
   const posYearly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS_YEARLY;
   const opsMonthly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY;
@@ -204,9 +204,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       stripeSubscriptionId: subscriptionId,
       stripePriceId: stripeSubscription.items.data[0].price.id,
       plan: plan as SubscriptionPlan,
-      status: SubscriptionStatus.ACTIVE,
+      status: mapStripeStatus(stripeSubscription.status),
       currentPeriodStart,
       currentPeriodEnd,
+      trialEndsAt: extractTrialEnd(stripeSubscription),
       cancelAtPeriodEnd: false,
     });
   } else {
@@ -216,9 +217,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       stripeSubscriptionId: subscriptionId,
       stripePriceId: stripeSubscription.items.data[0].price.id,
       plan: plan as SubscriptionPlan,
-      status: SubscriptionStatus.ACTIVE,
+      status: mapStripeStatus(stripeSubscription.status),
       currentPeriodStart,
       currentPeriodEnd,
+      trialEndsAt: extractTrialEnd(stripeSubscription),
     });
   }
 
@@ -257,9 +259,10 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       stripeSubscriptionId: subscription.id,
       stripePriceId: subscription.items.data[0].price.id,
       plan: plan as SubscriptionPlan,
-      status: SubscriptionStatus.ACTIVE,
+      status: mapStripeStatus(subscription.status),
       currentPeriodStart,
       currentPeriodEnd,
+      trialEndsAt: extractTrialEnd(subscription),
       cancelAtPeriodEnd: false,
     });
   } else {
@@ -269,9 +272,10 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       stripeSubscriptionId: subscription.id,
       stripePriceId: subscription.items.data[0].price.id,
       plan: plan as SubscriptionPlan,
-      status: SubscriptionStatus.ACTIVE,
+      status: mapStripeStatus(subscription.status),
       currentPeriodStart,
       currentPeriodEnd,
+      trialEndsAt: extractTrialEnd(subscription),
     });
   }
 
@@ -298,6 +302,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     status,
     currentPeriodStart,
     currentPeriodEnd,
+    trialEndsAt: extractTrialEnd(subscription),
     cancelAtPeriodEnd,
     ...(newPlan ? { plan: newPlan } : {}),
     ...(priceId ? { stripePriceId: priceId } : {}),
@@ -352,6 +357,9 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 function mapStripeStatus(stripeStatus: Stripe.Subscription.Status): SubscriptionStatus {
   switch (stripeStatus) {
     case "active":
+    // A trialing subscription grants full access — all gates key on ACTIVE, so we
+    // map "trialing" → ACTIVE (the trial window is tracked separately via trialEndsAt).
+    case "trialing":
       return SubscriptionStatus.ACTIVE;
     case "canceled":
       return SubscriptionStatus.CANCELED;
@@ -361,4 +369,9 @@ function mapStripeStatus(stripeStatus: Stripe.Subscription.Status): Subscription
     default:
       return SubscriptionStatus.INCOMPLETE;
   }
+}
+
+/** Stripe trial_end (Unix seconds) → Date, or null when there is no trial. */
+function extractTrialEnd(subscription: Stripe.Subscription): Date | null {
+  return subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
 }

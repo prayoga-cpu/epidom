@@ -61,9 +61,7 @@ export async function GET() {
   // Derive login methods without exposing password hashes
   const sanitized = users.map((u) => {
     const providers = u.accounts.map((a) => a.providerId);
-    const hasPassword = u.accounts.some(
-      (a) => a.providerId === "credential" && !!a.password
-    );
+    const hasPassword = u.accounts.some((a) => a.providerId === "credential" && !!a.password);
     return { ...u, accounts: undefined, providers, hasPassword };
   });
 
@@ -101,6 +99,10 @@ const updateSchema = z.discriminatedUnion("action", [
     action: z.literal("delete-user"),
     userId: z.string(),
   }),
+  z.object({
+    action: z.literal("reset-account"),
+    userId: z.string(),
+  }),
 ]);
 
 export async function PATCH(req: NextRequest) {
@@ -126,7 +128,9 @@ export async function PATCH(req: NextRequest) {
   const input = parsed.data;
 
   if (
-    (input.action === "set-admin" || input.action === "delete-user") &&
+    (input.action === "set-admin" ||
+      input.action === "delete-user" ||
+      input.action === "reset-account") &&
     input.userId === admin.id
   ) {
     return NextResponse.json({ error: "Cannot modify your own account" }, { status: 400 });
@@ -216,8 +220,9 @@ export async function PATCH(req: NextRequest) {
 
   if (input.action === "temp-password") {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
-    const temp = Array.from({ length: 12 }, () =>
-      chars[Math.floor(Math.random() * chars.length)]
+    const temp = Array.from(
+      { length: 12 },
+      () => chars[Math.floor(Math.random() * chars.length)]
     ).join("");
 
     const hashed = await hashPassword(temp);
@@ -257,6 +262,21 @@ export async function PATCH(req: NextRequest) {
   if (input.action === "delete-user") {
     await prisma.user.delete({ where: { id: input.userId } });
     return NextResponse.json({ deleted: true });
+  }
+
+  if (input.action === "reset-account") {
+    // Wipe business data (cascades stores → storefronts, menus, orders, inventory,
+    // staff, shifts) and stale alerts, revoke every session so the user is signed
+    // out on all devices, then clear the onboarding flag so they restart from the
+    // onboarding wizard on next login. Login account, subscription/billing, and
+    // feedback history are preserved.
+    await prisma.$transaction([
+      prisma.business.deleteMany({ where: { userId: input.userId } }),
+      prisma.alert.deleteMany({ where: { userId: input.userId } }),
+      prisma.session.deleteMany({ where: { userId: input.userId } }),
+      prisma.user.update({ where: { id: input.userId }, data: { hasOnboarded: false } }),
+    ]);
+    return NextResponse.json({ reset: true });
   }
 
   return NextResponse.json({ error: "Unhandled action" }, { status: 400 });

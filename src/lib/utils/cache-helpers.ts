@@ -223,6 +223,14 @@ export async function invalidateProductRelatedQueries(
       queryClient.invalidateQueries({
         queryKey: ["recipes", storeId],
         exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["storefront-items-linked", storeId],
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["pos", "menu", storeId],
+        exact: false,
       })
     );
 
@@ -256,6 +264,16 @@ export async function invalidateProductRelatedQueries(
       }),
       queryClient.invalidateQueries({
         queryKey: ["recipes", storeId],
+        exact: false,
+        refetchType: "none",
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["storefront-items-linked", storeId],
+        exact: false,
+        refetchType: "none",
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["pos", "menu", storeId],
         exact: false,
         refetchType: "none",
       }),

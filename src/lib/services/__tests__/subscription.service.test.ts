@@ -54,6 +54,7 @@ const mockSubscription = {
   status: SubscriptionStatus.ACTIVE,
   currentPeriodStart: new Date(),
   currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  trialEndsAt: null,
   cancelAtPeriodEnd: false,
   createdAt: new Date(),
   updatedAt: new Date(),

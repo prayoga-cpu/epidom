@@ -95,9 +95,10 @@ async function createProduct(storeId: string, data: CreateProductInput): Promise
   if (!response.ok) {
     const error = await response.json();
     const details = error.error?.details;
-    const detail = Array.isArray(details) && details.length > 0
-      ? `${details[0].field}: ${details[0].message}`
-      : null;
+    const detail =
+      Array.isArray(details) && details.length > 0
+        ? `${details[0].field}: ${details[0].message}`
+        : null;
     throw new Error(detail || error.error?.message || error.error || "Failed to create product");
   }
 
@@ -523,7 +524,13 @@ export function useAddProductToMenu(storeId: string) {
       const previous = queryClient.getQueryData<LinkedMenuItem[]>(linkedKey);
       queryClient.setQueryData<LinkedMenuItem[]>(linkedKey, (old) => [
         ...(old ?? []),
-        { id: "__optimistic__", name: product.name, price: Number(product.sellingPrice), productId: product.id, isAvailable: true },
+        {
+          id: "__optimistic__",
+          name: product.name,
+          price: Number(product.sellingPrice),
+          productId: product.id,
+          isAvailable: true,
+        },
       ]);
       return { previous };
     },
@@ -594,7 +601,10 @@ export function useRemoveProductFromMenu(storeId: string) {
  * Returns a Set of productIds that already have a linked MenuItem in the storefront.
  * Used by the product cards to show an "In Menu" badge instead of the add button.
  */
-export function useProductMenuStatus(storeId: string): { menuLinkedIds: Set<string>; isLoading: boolean } {
+export function useProductMenuStatus(storeId: string): {
+  menuLinkedIds: Set<string>;
+  isLoading: boolean;
+} {
   const { data, isLoading } = useQuery<LinkedMenuItem[]>({
     queryKey: ["storefront-items-linked", storeId],
     queryFn: () =>
@@ -602,7 +612,7 @@ export function useProductMenuStatus(storeId: string): { menuLinkedIds: Set<stri
         .then((r) => r.json())
         .then((d) => (d?.data ?? []) as LinkedMenuItem[]),
     enabled: !!storeId,
-    staleTime: 0,              // always considered stale → refetches on focus/invalidation
+    staleTime: 0, // always considered stale → refetches on focus/invalidation
     refetchOnWindowFocus: true,
     select: (items) => items.filter((i) => !!i.productId),
   });
@@ -611,21 +621,4 @@ export function useProductMenuStatus(storeId: string): { menuLinkedIds: Set<stri
     (data ?? []).map((i) => i.productId).filter(Boolean) as string[]
   );
   return { menuLinkedIds, isLoading };
-}
-
-/**
- * Returns the MenuItem linked to a specific productId (if any).
- * Used in the edit dialog to detect drift and offer sync.
- */
-export function useLinkedMenuItem(storeId: string, productId: string | null) {
-  return useQuery<LinkedMenuItem | null>({
-    queryKey: ["storefront-items-linked", storeId, productId],
-    queryFn: () =>
-      fetch(`/api/stores/${storeId}/storefront/items?productId=${productId}`)
-        .then((r) => r.json())
-        .then((d) => (d?.data?.[0] ?? null) as LinkedMenuItem | null),
-    enabled: !!storeId && !!productId,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  });
 }

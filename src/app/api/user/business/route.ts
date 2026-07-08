@@ -74,7 +74,10 @@ export const PATCH = withApiHandler(
     });
     if (!store) {
       try {
-        logger.info("Creating default store for business", { businessId: business.id, name: input.name });
+        logger.info("Creating default store for business", {
+          businessId: business.id,
+          name: input.name,
+        });
         store = await prisma.store.create({
           data: { businessId: business.id, name: input.name || "My Store" },
           select: { id: true },
@@ -92,22 +95,34 @@ export const PATCH = withApiHandler(
               pin: null,
               isActive: true,
               inviteStatus: "accepted",
-            }
+            },
           });
           logger.info("Created default staff for owner", { storeId: store.id });
         }
       } catch (err) {
         logger.error("Failed to create default store", err, { businessId: business.id, input });
-        return NextResponse.json(createErrorResponse(ApiErrorCode.DATABASE_ERROR, "Failed to create store"), { status: 500 });
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.DATABASE_ERROR, "Failed to create store"),
+          { status: 500 }
+        );
       }
     }
 
-    // Provision free default subscription for the user.
+    // Provision a free default subscription ONLY for users who don't have one yet.
+    // Never overwrite an existing subscription here — billing is kept separate, so a
+    // user re-entering onboarding (e.g. after an admin "reset account data") retains
+    // their current plan instead of being silently downgraded to FREE.
     try {
-      await subscriptionService.activateFree(userId, "FREE");
+      const existingSubscription = await prisma.subscription.findUnique({ where: { userId } });
+      if (!existingSubscription) {
+        await subscriptionService.activateFree(userId, "FREE");
+      }
     } catch (err) {
       logger.error("Failed to activate free subscription", err, { userId });
-      return NextResponse.json(createErrorResponse(ApiErrorCode.SUBSCRIPTION_INACTIVE, "Failed to activate subscription"), { status: 500 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.SUBSCRIPTION_INACTIVE, "Failed to activate subscription"),
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(createSuccessResponse({ ...business, storeId: store.id }));

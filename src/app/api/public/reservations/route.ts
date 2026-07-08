@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { planHasFeature } from "@/lib/plans/entitlements";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,18 @@ export async function POST(request: Request) {
 
     const storefront = await prisma.storefront.findUnique({
       where: { slug: storefrontSlug },
-      select: { storeId: true, acceptsReservations: true, isPublished: true },
+      select: {
+        storeId: true,
+        acceptsReservations: true,
+        isPublished: true,
+        store: {
+          select: {
+            business: {
+              select: { user: { select: { subscription: { select: { plan: true, status: true } } } } },
+            },
+          },
+        },
+      },
     });
 
     if (!storefront || !storefront.isPublished) {
@@ -42,7 +54,11 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!storefront.acceptsReservations) {
+    // Table reservations are a POS feature — block below POS even if a stale
+    // acceptsReservations flag is still set.
+    const ownerSub = storefront.store.business.user.subscription;
+    const ownerPlan = ownerSub?.status === "ACTIVE" ? ownerSub.plan : "FREE";
+    if (!storefront.acceptsReservations || !planHasFeature(ownerPlan, "tableReservations")) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.FORBIDDEN, "This store does not accept reservations"),
         { status: 403 }

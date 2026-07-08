@@ -3,6 +3,7 @@ import { materialService } from "@/lib/services/material.service";
 import { createIngredientSchema, materialFilterSchema } from "@/lib/validation/inventory.schemas";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { operationsGuard } from "@/lib/auth/require-feature";
 
 /**
  * GET /api/stores/[id]/materials
@@ -43,7 +44,10 @@ export const GET = withApiHandler(
  * Create a new material for a store.
  */
 export const POST = withApiHandler(
-  async (request, { storeId }) => {
+  async (request, { storeId, userId }) => {
+    const gate = await operationsGuard(userId, "Materials management");
+    if (gate) return gate;
+
     // Parse and validate request body
     const body = await request.json();
     const input = createIngredientSchema.parse({ ...body, storeId });
@@ -60,4 +64,3 @@ export const POST = withApiHandler(
     requireStoreAuth: true,
   }
 );
-

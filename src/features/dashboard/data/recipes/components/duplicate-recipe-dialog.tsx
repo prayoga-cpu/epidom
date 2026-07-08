@@ -51,6 +51,7 @@ import { useMaterials } from "../../materials/hooks/use-materials";
 import { duplicateRecipeSchema } from "@/lib/validation/inventory.schemas";
 import type { DuplicateRecipeInput } from "@/lib/validation/inventory.schemas";
 import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
+import { convertUnit } from "@/lib/utils/unit-conversion";
 
 type DuplicateRecipeFormValues = DuplicateRecipeInput;
 
@@ -131,7 +132,12 @@ export default function DuplicateRecipeDialog({
     recipe.ingredients.forEach((ingredient) => {
       const material = materials.find((m) => m.id === ingredient.materialId);
       if (material) {
-        total += Number(material.unitCost) * ingredient.quantity;
+        const quantityInMaterialUnit = convertUnit(
+          ingredient.quantity,
+          ingredient.unit,
+          material.unit
+        );
+        total += Number(material.unitCost) * quantityInMaterialUnit;
       }
     });
     return total;

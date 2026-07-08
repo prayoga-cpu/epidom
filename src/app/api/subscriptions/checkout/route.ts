@@ -23,7 +23,7 @@ export const POST = withApiHandler(
   async (request, { userId }) => {
     // Parse and validate request body
     const body = await request.json();
-    const { plan, successUrl, cancelUrl, trial, yearly } = checkoutSchema.parse(body);
+    const { plan, successUrl, cancelUrl, yearly } = checkoutSchema.parse(body);
 
     // Get origin for building absolute URLs
     const origin =
@@ -51,7 +51,10 @@ export const POST = withApiHandler(
       !subscription.stripeCustomerId.startsWith("free_")
     ) {
       // User is already paid. Redirect to Customer Portal to handle upgrade/downgrade prorations.
-      const portalSession = await subscriptionService.createPortalSession(userId, `${origin}/stores`);
+      const portalSession = await subscriptionService.createPortalSession(
+        userId,
+        `${origin}/stores`
+      );
       return NextResponse.json(
         createSuccessResponse({
           sessionId: portalSession.id,
@@ -62,13 +65,18 @@ export const POST = withApiHandler(
       );
     }
 
+    // The 14-day free trial is POS-only and first-time-only. We derive it server-side
+    // (ignoring any client-sent flag) so the trial can't be applied to other plans or
+    // claimed twice — a returning subscriber already has a stripeSubscriptionId.
+    const applyTrial = plan === "POS" && !subscription?.stripeSubscriptionId;
+
     // Create checkout session
     const checkoutSession = await subscriptionService.createCheckoutSession(
       userId,
       plan,
       finalSuccessUrl,
       finalCancelUrl,
-      trial,
+      applyTrial,
       yearly
     );
 

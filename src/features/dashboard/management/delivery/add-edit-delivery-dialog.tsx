@@ -8,6 +8,7 @@ import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import {
   Select,
   SelectContent,
@@ -298,11 +299,13 @@ export function AddEditDeliveryDialog({
                 />
               </SelectTrigger>
               <SelectContent>
-                {suppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </SelectItem>
-                ))}
+                {[...suppliers]
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -444,25 +447,24 @@ export function AddEditDeliveryDialog({
                                   />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {materials.map((material) => (
-                                    <SelectItem key={material.id} value={material.id}>
-                                      {material.name}
-                                    </SelectItem>
-                                  ))}
+                                  {[...materials]
+                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .map((material) => (
+                                      <SelectItem key={material.id} value={material.id}>
+                                        {material.name}
+                                      </SelectItem>
+                                    ))}
                                 </SelectContent>
                               </Select>
                             )}
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={item.quantity || ""}
-                              onChange={(e) =>
-                                handleItemChange(index, "quantity", parseFloat(e.target.value) || 0)
-                              }
+                            <DecimalInput
+                              decimals={3}
+                              min={0}
+                              value={item.quantity}
+                              onChange={(value) => handleItemChange(index, "quantity", value ?? 0)}
                               className="h-9"
-                              min="0"
-                              step="0.01"
                               disabled={mode === "edit"}
                             />
                           </TableCell>

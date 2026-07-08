@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { MovementType, AlertType, AlertSeverity } from "@prisma/client";
 import { toDecimal } from "@/lib/utils/types.server";
+import { convertUnit } from "@/lib/utils/unit-conversion";
 
 /**
  * Deduct stock when an order is purchased/confirmed.
@@ -131,7 +132,9 @@ export async function deductStockForOrder(
   for (const item of order.items) {
     const product = item.product ?? item.menuItem?.product;
     if (!product) {
-      console.warn(`[stock-deduction] orderId=${orderId} itemId=${item.id}: no product found, skipping`);
+      console.warn(
+        `[stock-deduction] orderId=${orderId} itemId=${item.id}: no product found, skipping`
+      );
       skipped++;
       continue;
     }
@@ -159,13 +162,19 @@ export async function deductStockForOrder(
     const recipe = defaultRecipeProduct.recipe;
     const yieldQty = Number(recipe.yieldQuantity);
     if (yieldQty <= 0) {
-      console.warn(`[stock-deduction] orderId=${orderId} recipeId=${recipe.id}: yieldQuantity=${yieldQty} is zero or negative, skipping ingredient deduction`);
+      console.warn(
+        `[stock-deduction] orderId=${orderId} recipeId=${recipe.id}: yieldQuantity=${yieldQty} is zero or negative, skipping ingredient deduction`
+      );
       continue;
     }
 
     const scaleFactor = orderedQty / yieldQty;
     for (const ing of recipe.ingredients) {
-      const needed = Number(ing.quantity) * scaleFactor;
+      // Ingredient quantity is scaled in the recipe's own unit, but stock is
+      // tracked (and must be deducted/recorded) in the material's stock unit —
+      // convert or a "500 g" ingredient silently deducts 500 units of "kg" stock.
+      const neededInIngredientUnit = Number(ing.quantity) * scaleFactor;
+      const needed = convertUnit(neededInIngredientUnit, ing.unit, ing.material.unit);
       const existingMaterial = materialAgg.get(ing.materialId);
       if (existingMaterial) {
         existingMaterial.totalNeeded += needed;
@@ -176,7 +185,7 @@ export async function deductStockForOrder(
           minStock: Number(ing.material.minStock),
           currentStock: Number(ing.material.currentStock),
           totalNeeded: needed,
-          unit: ing.unit,
+          unit: ing.material.unit,
         });
       }
     }

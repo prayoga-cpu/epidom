@@ -5,10 +5,7 @@ import { useParams } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +63,7 @@ const bulkAdjustmentSchema = z.object({
         quantity: z.coerce
           .number()
           .positive("Quantity must be positive")
-          .min(0.01, "Quantity must be at least 0.01"),
+          .min(0.001, "Quantity must be at least 0.001"),
         adjustmentType: z.nativeEnum(AdjustmentType),
         reason: z.string().min(1, "Reason is required when not using global reason").optional(),
         currentStock: z.number(),
@@ -104,8 +102,7 @@ export function BulkAdjustmentDialog({
 
   // Use controlled or internal state
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
-  const setOpen =
-    controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
 
   const form = useForm<BulkAdjustmentFormData>({
     resolver: zodResolver(bulkAdjustmentSchema),
@@ -283,7 +280,7 @@ export function BulkAdjustmentDialog({
               disabled={adjustStockMutation.isPending || fields.length === 0}
             >
               {adjustStockMutation.isPending && (
-                <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />
+                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
               )}
               {t("management.editStock.recordAdjustments")} ({fields.length})
             </Button>
@@ -341,17 +338,12 @@ export function BulkAdjustmentDialog({
                   control={form.control}
                   name="useSameReason"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormItem className="flex flex-row items-start space-y-0 space-x-3">
                       <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          {t("management.editStock.useSameReason")}
-                        </FormLabel>
+                        <FormLabel>{t("management.editStock.useSameReason")}</FormLabel>
                         <FormDescription>
                           {t("management.editStock.useSameReasonDescription")}
                         </FormDescription>
@@ -371,9 +363,7 @@ export function BulkAdjustmentDialog({
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue
-                                placeholder={t("management.editStock.selectReason")}
-                              />
+                              <SelectValue placeholder={t("management.editStock.selectReason")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -451,7 +441,7 @@ export function BulkAdjustmentDialog({
                             size="sm"
                             onClick={() => remove(index)}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="text-destructive h-4 w-4" />
                           </Button>
                         )}
                       </div>
@@ -467,12 +457,15 @@ export function BulkAdjustmentDialog({
                                 {t("management.editStock.quantity")} ({item.unit})
                               </FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0.01"
-                                  placeholder="0.00"
-                                  {...field}
+                                <DecimalInput
+                                  decimals={3}
+                                  min={0}
+                                  placeholder="0.000"
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
+                                  name={field.name}
+                                  ref={field.ref}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -504,9 +497,7 @@ export function BulkAdjustmentDialog({
                                         </SelectItem>
                                       )
                                     )}
-                                    <SelectItem value="other">
-                                      {t("common.other")}
-                                    </SelectItem>
+                                    <SelectItem value="other">{t("common.other")}</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -546,7 +537,6 @@ export function BulkAdjustmentDialog({
                 </FormItem>
               )}
             />
-
           </form>
         </Form>
       </FormDialogLayout>

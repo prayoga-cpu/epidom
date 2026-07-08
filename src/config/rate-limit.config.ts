@@ -175,6 +175,12 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 30 requests per minute
   },
 
+  // Onboarding profile analysis - gpt-4o vision call per request, keep tight
+  "/api/onboarding/analyze-profile": {
+    limit: 10,
+    window: 60, // 10 analyses per minute
+  },
+
   // Feedback submission - generous limit, feedback is welcome; only blocks runaway bots
   "/api/feedback": {
     limit: 30,
