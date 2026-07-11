@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { LoginInput, RegisterInput } from "../validation/auth.schemas";
 import { authClient } from "@/lib/auth-client";
+import { trackMetaPixelEvent } from "@/lib/analytics";
 
 /**
  * Login mutation hook
@@ -47,6 +48,10 @@ export function useRegister() {
       return { session, email: data.email };
     },
     onSuccess: (data) => {
+      // Standard Meta event — lets Meta optimize ad campaigns against actual
+      // signups natively, instead of a custom conversion.
+      trackMetaPixelEvent("CompleteRegistration");
+
       // Redirect to verify-email-sent page with email parameter
       router.push(`/verify-email-sent?email=${encodeURIComponent(data.email)}`);
     },

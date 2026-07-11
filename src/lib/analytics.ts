@@ -14,6 +14,7 @@ declare global {
       targetId: string,
       config?: Record<string, any>
     ) => void;
+    fbq?: (...args: unknown[]) => void;
   }
 }
 
@@ -68,6 +69,23 @@ export function trackConversion(
 }
 
 /**
+ * Track a Meta (Facebook) Pixel event — marketing category, so it only fires
+ * once the visitor has granted marketing-cookie consent (same gate the base
+ * pixel code in meta-pixel-script.tsx uses). Use Meta's standard event names
+ * (e.g. "CompleteRegistration", "Purchase", "Lead") when one fits, so Meta
+ * can optimize campaigns against it natively instead of a custom event.
+ */
+export function trackMetaPixelEvent(eventName: string, params?: Record<string, any>): void {
+  if (!hasMarketingConsent()) {
+    return;
+  }
+
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq("track", eventName, params);
+  }
+}
+
+/**
  * Track page view (analytics category)
  */
 export function trackPageView(url: string, title?: string): void {
@@ -82,4 +100,3 @@ export function trackPageView(url: string, title?: string): void {
     });
   }
 }
-
