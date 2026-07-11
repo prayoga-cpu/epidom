@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
+import { ConditionalMetaPixel } from "@/components/analytics/conditional-meta-pixel";
 import { WebVitalsReporter } from "@/components/analytics/web-vitals-reporter";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { PwaProvider } from "@/components/providers/pwa-provider";
@@ -54,6 +55,7 @@ export default function RootLayout({
               <section>
                 {children}
                 <ConditionalAnalytics />
+                <ConditionalMetaPixel />
                 <WebVitalsReporter />
               </section>
             </QueryProvider>
