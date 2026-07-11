@@ -12,7 +12,11 @@ import { useEffect, useState } from "react";
 import Script from "next/script";
 import { hasMarketingConsent } from "@/lib/cookie-consent";
 
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+// Meta Pixel IDs aren't secret — they're visible in every page's source/network
+// requests. Hardcoded as a fallback so this works even if the env var isn't
+// configured in the hosting provider's dashboard (.env is gitignored and never
+// deployed; NEXT_PUBLIC_META_PIXEL_ID must be set there separately to override).
+const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1821676715464709";
 
 export function ConditionalMetaPixel() {
   const [shouldLoad, setShouldLoad] = useState(false);
