@@ -8,6 +8,7 @@ import {
 } from "@/lib/validation/production.schemas";
 import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
+import { trackEvent } from "@/lib/analytics";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import {
   invalidateMaterialRelatedQueries,
@@ -344,6 +345,8 @@ export function useStartProduction(storeId: string) {
       }
     },
     onSuccess: (data) => {
+      trackEvent("create_production_batch", { event_category: "dashboard_activity" });
+
       // Invalidate queries to get real data (including relations)
       // Use non-blocking invalidation helper which handles materials, recipes, and batches
       invalidateMaterialRelatedQueries(queryClient, storeId, false);

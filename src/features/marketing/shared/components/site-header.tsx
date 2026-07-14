@@ -13,6 +13,7 @@ import { EpidomLogo } from "./epidom-logo";
 import { useSession, signOut } from "@/lib/auth-client";
 import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
 import { isAdminEmail } from "@/lib/admin";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * BUTTON MODE SELECTION
@@ -46,7 +47,10 @@ export const SiteHeader = memo(function SiteHeader({
   const navigationItems = useMemo(() => getNavigationByVariant(variant), [variant]);
 
   const handleLogin = () => router.push("/login");
-  const handleStartFree = () => router.push("/register");
+  const handleStartFree = () => {
+    trackEvent("cta_click", { event_category: "engagement", event_label: "header_try_epidom" });
+    router.push("/register");
+  };
   const handleGoToStores = () => router.push("/stores");
   const handleLogout = async () => {
     await signOut();

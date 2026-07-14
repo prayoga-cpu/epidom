@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { LoginInput, RegisterInput } from "../validation/auth.schemas";
 import { authClient } from "@/lib/auth-client";
-import { trackMetaPixelEvent } from "@/lib/analytics";
+import { trackMetaPixelEvent, trackEvent, trackConversion } from "@/lib/analytics";
 
 /**
  * Login mutation hook
@@ -22,6 +22,11 @@ export function useLogin() {
       }
 
       return session;
+    },
+    onSuccess: () => {
+      // Standard GA4 event name — recurring usage, not an ad conversion, so
+      // it's analytics-gated (trackEvent) rather than marketing-gated.
+      trackEvent("login", { method: "email" });
     },
   });
 }
@@ -51,6 +56,9 @@ export function useRegister() {
       // Standard Meta event — lets Meta optimize ad campaigns against actual
       // signups natively, instead of a custom conversion.
       trackMetaPixelEvent("CompleteRegistration");
+      // Standard GA4 event — real signup funnel conversion, marketing-gated
+      // so it also feeds Google Ads conversion tracking if/when linked.
+      trackConversion("sign_up", { event_label: "email", method: "email" });
 
       // Redirect to verify-email-sent page with email parameter
       router.push(`/verify-email-sent?email=${encodeURIComponent(data.email)}`);

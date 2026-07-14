@@ -11,6 +11,7 @@ import { ApiSuccessResponse } from "@/types/api/responses";
 import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
+import { trackEvent } from "@/lib/analytics";
 
 export interface MaterialsResponse {
   materials: MaterialWithSuppliers[];
@@ -166,6 +167,8 @@ export function useCreateMaterial(storeId: string) {
       return { previousMaterials };
     },
     onSuccess: async (newMaterial) => {
+      trackEvent("create_material", { event_category: "dashboard_activity" });
+
       // Update with real data from server (replace optimistic update)
       // Performance optimization: Update all cached material lists directly instead of invalidating
       // This avoids blocking refetch operations that slow down the UI

@@ -6,6 +6,7 @@ import {
 } from "@/lib/validation/inventory.schemas";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateRecipeRelatedQueries } from "@/lib/utils/cache-helpers";
+import { trackEvent } from "@/lib/analytics";
 
 // Types
 export interface RecipeWithIngredients {
@@ -309,6 +310,8 @@ export function useCreateRecipe(storeId: string) {
   return useMutation({
     mutationFn: (data: CreateRecipeFormInput) => createRecipe(storeId, data),
     onSuccess: (newRecipe) => {
+      trackEvent("create_recipe", { event_category: "dashboard_activity" });
+
       // Optimistic update: Add new recipe to all recipe list caches immediately
       // This ensures UI updates instantly without waiting for refetch
       queryClient.setQueriesData<RecipesResponse>(

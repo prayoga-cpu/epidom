@@ -21,6 +21,7 @@ import { useLogin } from "../../hooks/use-auth";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { trackEvent } from "@/lib/analytics";
 
 export function LoginForm() {
   const { t } = useI18n();
@@ -43,15 +44,27 @@ export function LoginForm() {
     if (oauthError && !toastShownRef.current) {
       toastShownRef.current = true;
       const messages: Record<string, string> = {
-        internal_server_error: t("messages.oauthInternalError") || "Sign-in failed due to a server error. Please try again.",
-        account_not_linked: t("messages.accountNotLinked") || "This Google account is not linked. Sign in with email first.",
-        state_mismatch: t("messages.oauthStateMismatch") || "Login session expired. Please try again.",
-        please_restart_the_process: t("messages.oauthRestart") || "Login session expired. Please try again.",
+        internal_server_error:
+          t("messages.oauthInternalError") ||
+          "Sign-in failed due to a server error. Please try again.",
+        account_not_linked:
+          t("messages.accountNotLinked") ||
+          "This Google account is not linked. Sign in with email first.",
+        state_mismatch:
+          t("messages.oauthStateMismatch") || "Login session expired. Please try again.",
+        please_restart_the_process:
+          t("messages.oauthRestart") || "Login session expired. Please try again.",
       };
-      toast.error(messages[oauthError] || t("messages.oauthGenericError") || "Sign-in failed. Please try again.");
+      toast.error(
+        messages[oauthError] ||
+          t("messages.oauthGenericError") ||
+          "Sign-in failed. Please try again."
+      );
       const cleaned = new URLSearchParams(searchParams.toString());
       cleaned.delete("error");
-      router.replace(cleaned.toString() ? `/login?${cleaned.toString()}` : "/login", { scroll: false });
+      router.replace(cleaned.toString() ? `/login?${cleaned.toString()}` : "/login", {
+        scroll: false,
+      });
     }
   }, [oauthError, searchParams, router, t]);
 
@@ -126,9 +139,15 @@ export function LoginForm() {
         variant="outline"
         type="button"
         disabled={isPending}
-        className="h-12 w-full rounded-xl font-medium bg-transparent hover:bg-white/5"
+        className="h-12 w-full rounded-xl bg-transparent font-medium hover:bg-white/5"
         style={{ borderColor: "rgba(255,255,255,0.18)", color: "var(--epi-cream-50)" }}
         onClick={async () => {
+          // Click-intent only — this redirects to Google's OAuth flow, so
+          // there's no client-side success callback to confirm completion.
+          trackEvent("cta_click", {
+            event_category: "engagement",
+            event_label: "google_login_start",
+          });
           await authClient.signIn.social({
             provider: "google",
             callbackURL: "/stores",
@@ -144,7 +163,12 @@ export function LoginForm() {
           <span className="w-full border-t border-white/15" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="px-2" style={{ background: "var(--epi-navy-900)", color: "rgba(251,249,228,0.4)" }}>Or continue with email</span>
+          <span
+            className="px-2"
+            style={{ background: "var(--epi-navy-900)", color: "rgba(251,249,228,0.4)" }}
+          >
+            Or continue with email
+          </span>
         </div>
       </div>
 
@@ -163,7 +187,7 @@ export function LoginForm() {
                       placeholder={t("auth.emailPlaceholder") || "name@company.com"}
                       disabled={isPending}
                       autoComplete="email"
-                      className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
+                      className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] transition-all placeholder:text-[rgba(251,249,228,0.35)] focus:border-[var(--epi-gold-500)] focus:bg-white/8"
                       {...field}
                     />
                   </FormControl>
@@ -178,10 +202,13 @@ export function LoginForm() {
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center justify-between">
-                    <FormLabel style={{ color: "var(--epi-cream-50)" }}>{t("auth.password")}</FormLabel>
+                    <FormLabel style={{ color: "var(--epi-cream-50)" }}>
+                      {t("auth.password")}
+                    </FormLabel>
                     <Link
                       href="/forgot-password"
-                      className="text-sm font-medium transition-colors hover:underline" style={{ color: "var(--epi-gold-400)" }}
+                      className="text-sm font-medium transition-colors hover:underline"
+                      style={{ color: "var(--epi-gold-400)" }}
                     >
                       {t("auth.forgotPassword")}
                     </Link>
@@ -191,7 +218,7 @@ export function LoginForm() {
                       type="password"
                       disabled={isPending}
                       autoComplete="current-password"
-                      className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
+                      className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] transition-all placeholder:text-[rgba(251,249,228,0.35)] focus:border-[var(--epi-gold-500)] focus:bg-white/8"
                       {...field}
                     />
                   </FormControl>
@@ -213,50 +240,58 @@ export function LoginForm() {
       </Form>
 
       {unverifiedEmail && (
-           <div className="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-             <div className="flex items-center justify-between">
-               <div>
-                 <p className="font-medium">{t("auth.verifyEmail.notice") || "Email not verified"}</p>
-                 <p className="mt-1 text-xs">{t("auth.verifyEmail.checkYourEmail") || "Please verify your email before signing in."}</p>
-               </div>
-               <div className="ml-4">
-                 <button
-                   type="button"
-                   className="inline-flex items-center rounded-md border border-transparent bg-yellow-600 px-3 py-2 text-xs font-medium text-white hover:bg-yellow-700"
-                   onClick={async () => {
-                     setIsResending(true);
-                     try {
-                       const { error } = await authClient.sendVerificationEmail({
-                         email: unverifiedEmail,
-                         callbackURL: "/onboarding",
-                       });
+        <div className="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">{t("auth.verifyEmail.notice") || "Email not verified"}</p>
+              <p className="mt-1 text-xs">
+                {t("auth.verifyEmail.checkYourEmail") ||
+                  "Please verify your email before signing in."}
+              </p>
+            </div>
+            <div className="ml-4">
+              <button
+                type="button"
+                className="inline-flex items-center rounded-md border border-transparent bg-yellow-600 px-3 py-2 text-xs font-medium text-white hover:bg-yellow-700"
+                onClick={async () => {
+                  setIsResending(true);
+                  try {
+                    const { error } = await authClient.sendVerificationEmail({
+                      email: unverifiedEmail,
+                      callbackURL: "/onboarding",
+                    });
 
-                       if (error) {
-                         toast.error(error.message || t("auth.verifyEmail.resendError"));
-                       } else {
-                         setResendSuccess(true);
-                         toast.success(t("auth.verifyEmail.resendSuccess"));
-                       }
-                     } catch {
-                       toast.error(t("auth.verifyEmail.resendError"));
-                     } finally {
-                       setIsResending(false);
-                     }
-                   }}
-                   disabled={isResending || resendSuccess}
-                 >
-                   {isResending ? t("auth.verifyEmail.resending") || "Sending..." : resendSuccess ? t("auth.verifyEmail.resendSuccess") || "Sent" : t("auth.verifyEmail.resendButton")}
-                 </button>
-               </div>
-             </div>
-           </div>
+                    if (error) {
+                      toast.error(error.message || t("auth.verifyEmail.resendError"));
+                    } else {
+                      setResendSuccess(true);
+                      toast.success(t("auth.verifyEmail.resendSuccess"));
+                    }
+                  } catch {
+                    toast.error(t("auth.verifyEmail.resendError"));
+                  } finally {
+                    setIsResending(false);
+                  }
+                }}
+                disabled={isResending || resendSuccess}
+              >
+                {isResending
+                  ? t("auth.verifyEmail.resending") || "Sending..."
+                  : resendSuccess
+                    ? t("auth.verifyEmail.resendSuccess") || "Sent"
+                    : t("auth.verifyEmail.resendButton")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <p className="text-center text-sm" style={{ color: "rgba(251,249,228,0.55)" }}>
-        {t("auth.dontHaveAccount")} {" "}
+        {t("auth.dontHaveAccount")}{" "}
         <Link
           href="/register"
-          className="font-semibold transition-colors hover:underline" style={{ color: "var(--epi-gold-400)" }}
+          className="font-semibold transition-colors hover:underline"
+          style={{ color: "var(--epi-gold-400)" }}
         >
           {t("auth.registerButton")}
         </Link>

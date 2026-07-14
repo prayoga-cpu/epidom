@@ -19,6 +19,7 @@ import { registerSchema, RegisterInput } from "../../validation/auth.schemas";
 import { useRegister } from "../../hooks/use-auth";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { trackEvent } from "@/lib/analytics";
 
 export function RegisterForm() {
   const { t } = useI18n();
@@ -55,9 +56,15 @@ export function RegisterForm() {
         variant="outline"
         type="button"
         disabled={isPending}
-        className="h-12 w-full rounded-xl font-medium bg-transparent hover:bg-white/5"
+        className="h-12 w-full rounded-xl bg-transparent font-medium hover:bg-white/5"
         style={{ borderColor: "rgba(255,255,255,0.18)", color: "var(--epi-cream-50)" }}
         onClick={async () => {
+          // Click-intent only — this redirects to Google's OAuth flow, so
+          // there's no client-side success callback to confirm completion.
+          trackEvent("cta_click", {
+            event_category: "engagement",
+            event_label: "google_signup_start",
+          });
           await authClient.signIn.social({
             provider: "google",
             callbackURL: "/onboarding",
@@ -73,14 +80,22 @@ export function RegisterForm() {
           <span className="w-full border-t border-white/15" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="px-2" style={{ background: "var(--epi-navy-900)", color: "rgba(251,249,228,0.4)" }}>Or continue with email</span>
+          <span
+            className="px-2"
+            style={{ background: "var(--epi-navy-900)", color: "rgba(251,249,228,0.4)" }}
+          >
+            Or continue with email
+          </span>
         </div>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <section className="space-y-4">
-            <h3 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "rgba(251,249,228,0.4)" }}>
+            <h3
+              className="text-sm font-semibold tracking-wide uppercase"
+              style={{ color: "rgba(251,249,228,0.4)" }}
+            >
               {t("auth.accountInfo")}
             </h3>
             <div className="space-y-4">
@@ -95,7 +110,7 @@ export function RegisterForm() {
                         placeholder={t("auth.namePlaceholder") || "Jane Baker"}
                         disabled={isPending}
                         autoComplete="name"
-                        className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
+                        className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] transition-all placeholder:text-[rgba(251,249,228,0.35)] focus:border-[var(--epi-gold-500)] focus:bg-white/8"
                         {...field}
                       />
                     </FormControl>
@@ -109,14 +124,16 @@ export function RegisterForm() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel style={{ color: "var(--epi-cream-50)" }}>{t("auth.email")}</FormLabel>
+                    <FormLabel style={{ color: "var(--epi-cream-50)" }}>
+                      {t("auth.email")}
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         placeholder={t("auth.emailPlaceholder") || "you@bakery.com"}
                         disabled={isPending}
                         autoComplete="email"
-                        className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
+                        className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] transition-all placeholder:text-[rgba(251,249,228,0.35)] focus:border-[var(--epi-gold-500)] focus:bg-white/8"
                         {...field}
                       />
                     </FormControl>
@@ -131,13 +148,15 @@ export function RegisterForm() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel style={{ color: "var(--epi-cream-50)" }}>{t("auth.password")}</FormLabel>
+                      <FormLabel style={{ color: "var(--epi-cream-50)" }}>
+                        {t("auth.password")}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="password"
                           disabled={isPending}
                           autoComplete="new-password"
-                          className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
+                          className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] transition-all placeholder:text-[rgba(251,249,228,0.35)] focus:border-[var(--epi-gold-500)] focus:bg-white/8"
                           {...field}
                         />
                       </FormControl>
@@ -151,13 +170,15 @@ export function RegisterForm() {
                   name="confirmPassword"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel style={{ color: "var(--epi-cream-50)" }}>{t("auth.confirmPassword")}</FormLabel>
+                      <FormLabel style={{ color: "var(--epi-cream-50)" }}>
+                        {t("auth.confirmPassword")}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="password"
                           disabled={isPending}
                           autoComplete="new-password"
-                          className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] placeholder:text-[rgba(251,249,228,0.35)] transition-all focus:border-[var(--epi-gold-500)] focus:bg-white/8"
+                          className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] transition-all placeholder:text-[rgba(251,249,228,0.35)] focus:border-[var(--epi-gold-500)] focus:bg-white/8"
                           {...field}
                         />
                       </FormControl>
@@ -184,7 +205,8 @@ export function RegisterForm() {
         {t("auth.alreadyHaveAccount")}{" "}
         <Link
           href="/login"
-          className="font-semibold transition-colors hover:underline" style={{ color: "var(--epi-gold-400)" }}
+          className="font-semibold transition-colors hover:underline"
+          style={{ color: "var(--epi-gold-400)" }}
         >
           {t("auth.loginButton")}
         </Link>

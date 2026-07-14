@@ -24,6 +24,16 @@ import { storefrontApi, ApiClientError } from "@/lib/api";
 import { InstagramImportStep, type InstagramPrefill } from "./instagram-import-step";
 import { UpgradeGateProvider, useUpgradeGate } from "@/features/billing/upgrade/upgrade-modal";
 import { SmartImportDialog } from "@/features/dashboard/data/import";
+import { trackEvent, trackConversion } from "@/lib/analytics";
+
+/** Fires once per onboarding step completed, so drop-off is visible in GA4. */
+function trackOnboardingStep(stepNumber: number, stepName: string) {
+  trackEvent("onboarding_step_completed", {
+    event_category: "onboarding",
+    step_number: stepNumber,
+    step_name: stepName,
+  });
+}
 
 /**
  * "Import from CSV / your old data" entry for the onboarding menu step. Gated to
@@ -130,6 +140,7 @@ export function OnboardingContent() {
     setWhatsappNumber(prefill.whatsappNumber);
     setIgBio(prefill.bio);
     setIgCategory(prefill.category);
+    trackOnboardingStep(0, "instagram_import");
     setStep(1);
   };
 
@@ -183,6 +194,7 @@ export function OnboardingContent() {
       }
       if (lastError) throw lastError;
 
+      trackOnboardingStep(1, "business_info");
       setStep(2);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("onboarding.storeSetup.step1.saveFailed"));
@@ -225,6 +237,7 @@ export function OnboardingContent() {
     } catch (_) {
       toast.error(t("onboarding.storeSetup.step2.generateFailed"));
     } finally {
+      trackOnboardingStep(2, "logo_generation");
       setStep(3);
       setIsSubmitting(false);
     }
@@ -250,6 +263,7 @@ export function OnboardingContent() {
           isAvailable: true,
         } as any);
       }
+      trackOnboardingStep(3, "menu_editing");
       setStep(4);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("onboarding.storeSetup.step3.saveFailed"));
@@ -269,6 +283,9 @@ export function OnboardingContent() {
       } as any);
       // Mark onboarding as permanently completed so future visits redirect server-side
       await fetch("/api/onboarding/complete", { method: "POST" });
+      trackOnboardingStep(5, "publish");
+      // Full onboarding funnel completed — the key activation milestone.
+      trackConversion("onboarding_completed");
       toast.success(t("onboarding.storeSetup.step5.publishSuccess"));
       router.push("/stores");
     } catch (_) {
@@ -337,7 +354,13 @@ export function OnboardingContent() {
             <CardContent className={CARD_CONTENT_STYLES}>
               {/* STEP 0 — Instagram import (no progress indicator) */}
               {step === 0 && (
-                <InstagramImportStep onComplete={applyPrefill} onSkip={() => setStep(1)} />
+                <InstagramImportStep
+                  onComplete={applyPrefill}
+                  onSkip={() => {
+                    trackOnboardingStep(0, "instagram_import");
+                    setStep(1);
+                  }}
+                />
               )}
 
               {/* STEP 1 */}
@@ -565,7 +588,13 @@ export function OnboardingContent() {
                       />
                     ))}
                   </div>
-                  <Button onClick={() => setStep(5)} className={BUTTON_PRIMARY}>
+                  <Button
+                    onClick={() => {
+                      trackOnboardingStep(4, "theme_color");
+                      setStep(5);
+                    }}
+                    className={BUTTON_PRIMARY}
+                  >
                     {t(`${ss}.step4.continue`)}
                   </Button>
                 </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePosCart } from "../hooks/use-pos-cart";
@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 import {
   Dialog,
   DialogContent,
@@ -72,6 +73,12 @@ export function PosCheckoutDialog({
   const [currentQrString, setCurrentQrString] = useState<string | null>(null);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [isPollingPayment, setIsPollingPayment] = useState(false);
+  const pendingPurchaseRef = useRef<{
+    transaction_id: string;
+    value: number;
+    currency: string;
+    items: Array<{ item_id: string; item_name: string; price: number; quantity: number }>;
+  } | null>(null);
 
   const form = useForm<CreatePosOrderInput>({
     resolver: zodResolver(createPosOrderSchema),
@@ -126,6 +133,13 @@ export function PosCheckoutDialog({
           setShowPaymentQr(false);
           setShowPrint(true);
           toast.success(t("pos.checkout.success"));
+          if (pendingPurchaseRef.current) {
+            trackEvent("purchase", {
+              event_category: "pos_order",
+              ...pendingPurchaseRef.current,
+            });
+            pendingPurchaseRef.current = null;
+          }
         }
       } catch (e) {
         // ignore poll errors
@@ -212,6 +226,21 @@ export function PosCheckoutDialog({
       const receipt = buildReceipt(data, orderNumber);
       setLastReceipt(receipt);
 
+      // Snapshot the cart for the purchase event before clearCart() wipes it —
+      // needed either immediately below (CASH) or later once async payment
+      // methods (QRIS/e-wallet) confirm via polling.
+      pendingPurchaseRef.current = {
+        transaction_id: orderNumber,
+        value: cart.total,
+        currency,
+        items: cart.items.map((i: any) => ({
+          item_id: i.menuItemId,
+          item_name: i.name,
+          price: i.unitPrice,
+          quantity: i.quantity,
+        })),
+      };
+
       cart.clearCart();
       onOpenChange(false);
 
@@ -222,6 +251,10 @@ export function PosCheckoutDialog({
       } else {
         setShowPrint(true);
         toast.success(t("pos.checkout.success"));
+        if (pendingPurchaseRef.current) {
+          trackEvent("purchase", { event_category: "pos_order", ...pendingPurchaseRef.current });
+          pendingPurchaseRef.current = null;
+        }
       }
     } catch (error) {
       toast.error(t("pos.checkout.orderFailed"));

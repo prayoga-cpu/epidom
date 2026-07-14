@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUser } from "@/lib/auth-client";
 import { useToast } from "@/hooks/use-toast";
+import { trackEvent, trackConversion } from "@/lib/analytics";
 
 const TIERS = [
   { idx: 0, key: "t1", highlight: false, promo: false, plan: "FREE" },
@@ -78,7 +79,9 @@ export function PricingCards({
 
   function handleCta(tierKey: string, plan: string, trial?: boolean) {
     if (plan === currentPlan) return;
+    trackEvent("cta_click", { event_category: "engagement", event_label: `pricing_${tierKey}` });
     if (tierKey === "t4") {
+      trackConversion("book_demo", { event_label: "pricing_enterprise" });
       window.open("https://calendly.com/prayogadevelopment/30min", "_blank");
       return;
     }
@@ -110,6 +113,12 @@ export function PricingCards({
         if (isPaid) {
           const result = await res.json();
           if (result?.success && result?.data?.url) {
+            trackConversion("begin_checkout", {
+              event_label: confirming.plan,
+              plan: confirming.plan,
+              trial: confirming.trial ?? false,
+              billing_interval: yearly ? "yearly" : "monthly",
+            });
             window.location.href = result.data.url;
             setConfirming(null);
           } else {
@@ -120,6 +129,7 @@ export function PricingCards({
             setIsActivating(false);
           }
         } else {
+          trackConversion("free_plan_activated", { event_label: confirming.plan });
           // Full navigation to flush React Query cache so new plan reflects immediately
           window.location.href = "/stores";
         }
@@ -423,6 +433,10 @@ export function PricingCards({
                 if (user) {
                   handleCta("t2", "POS", true);
                 } else {
+                  trackEvent("cta_click", {
+                    event_category: "engagement",
+                    event_label: "pricing_trial_bar",
+                  });
                   window.location.href = "/register?callbackURL=/pricing?trial=true";
                 }
               }}

@@ -3,6 +3,7 @@ import { CreateProductInput, UpdateProductInput } from "@/lib/validation/invento
 import type { Product } from "@prisma/client";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
+import { trackEvent } from "@/lib/analytics";
 
 export interface LinkedMenuItem {
   id: string;
@@ -247,6 +248,8 @@ export function useCreateProduct(storeId: string) {
   return useMutation({
     mutationFn: (data: CreateProductInput) => createProduct(storeId, data),
     onSuccess: (newProduct) => {
+      trackEvent("create_product", { event_category: "dashboard_activity" });
+
       // Optimistic update: Add new product to all product list caches immediately
       // This ensures UI updates instantly without waiting for refetch
       queryClient.setQueriesData<ProductsResponse>(

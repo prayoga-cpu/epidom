@@ -9,6 +9,12 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.11.0] - 2026-07-14 · feat
+
+- Installed Google Analytics 4 and the Meta (Facebook) Pixel, both gated behind the cookie-consent bar (GA needs analytics consent, Meta needs marketing consent) and both wired to fire nothing until the visitor actually grants it.
+- Instrumented the full funnel with GA4 events: marketing CTA clicks (hero, header, pricing plans, "book a demo", email capture, contact form), signup/login, every onboarding step plus final completion, dashboard activity (creating a product/material/recipe/supplier/production batch), POS checkout (as a standard e-commerce `purchase` event with line items), and billing (checkout started, subscription confirmed).
+- Meta Pixel now also fires a `CompleteRegistration` event on signup, and got two reliability fixes: the pixel ID is hardcoded as a fallback so it still works if the hosting provider's env config is missing it, and the base code renders as a literal `<script>` tag physically inside `<head>` (a Next.js quirk meant it wasn't showing up as real markup, which is what Meta's own install check looks for).
+
 ## [2.10.0] - 2026-07-08 · feat
 
 - POS plan now comes with a **14-day free trial** — connect a card, pay nothing for 14 days, then it renews automatically. The POS plan is highlighted as a special promo on the pricing page.

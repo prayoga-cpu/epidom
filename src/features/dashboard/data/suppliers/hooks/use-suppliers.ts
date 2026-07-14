@@ -4,6 +4,7 @@ import { CreateSupplierInput, UpdateSupplierInput } from "@/lib/validation/inven
 import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { invalidateSupplierRelatedQueries } from "@/lib/utils/cache-helpers";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
+import { trackEvent } from "@/lib/analytics";
 
 // Response interfaces
 export interface SuppliersResponse {
@@ -420,6 +421,8 @@ export function useCreateSupplier(storeId: string) {
   return useMutation({
     mutationFn: (data: CreateSupplierInput) => createSupplier(storeId, data),
     onSuccess: (newSupplier) => {
+      trackEvent("create_supplier", { event_category: "dashboard_activity" });
+
       // Optimistic update: Add new supplier to all supplier list caches immediately
       queryClient.setQueriesData<SuppliersResponse>(
         { queryKey: supplierKeys.lists(storeId), exact: false },

@@ -28,6 +28,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { PAYMENT_SECURITY_FEATURES } from "../constants/security-features";
 import { toStripePlan, isStripePlan } from "../utils/plan-validation";
+import { trackConversion } from "@/lib/analytics";
 
 /**
  * Props for PaymentForm component
@@ -108,6 +109,7 @@ export function PaymentForm({ plan }: PaymentFormProps) {
         // Stripe checkout URLs should start with https://checkout.stripe.com or https://checkout.stripe.com/c/pay/
         const isValidStripeUrl = data.data.url.startsWith("https://checkout.stripe.com/");
         if (isValidStripeUrl) {
+          trackConversion("begin_checkout", { event_label: plan, plan });
           window.location.href = data.data.url;
         } else {
           throw new Error(t("payments.form.checkoutUrlError"));

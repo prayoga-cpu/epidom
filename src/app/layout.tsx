@@ -6,6 +6,8 @@ import { GeistMono } from "geist/font/mono";
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { MetaPixelScript } from "@/components/analytics/meta-pixel-script";
 import { MetaPixelConsentBridge } from "@/components/analytics/meta-pixel-consent-bridge";
+import { GoogleAnalyticsScript } from "@/components/analytics/google-analytics-script";
+import { GoogleAnalyticsConsentBridge } from "@/components/analytics/google-analytics-consent-bridge";
 import { WebVitalsReporter } from "@/components/analytics/web-vitals-reporter";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { PwaProvider } from "@/components/providers/pwa-provider";
@@ -60,6 +62,8 @@ export default function RootLayout({
               <section>
                 {children}
                 <ConditionalAnalytics />
+                <GoogleAnalyticsScript />
+                <GoogleAnalyticsConsentBridge />
                 <WebVitalsReporter />
               </section>
             </QueryProvider>
