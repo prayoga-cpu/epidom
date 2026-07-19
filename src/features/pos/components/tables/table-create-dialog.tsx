@@ -9,10 +9,19 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,7 +33,12 @@ interface TableCreateDialogProps {
   editTable?: { id: string; label: string; capacity: number } | null;
 }
 
-export function TableCreateDialog({ storeId, open, onOpenChange, editTable }: TableCreateDialogProps) {
+export function TableCreateDialog({
+  storeId,
+  open,
+  onOpenChange,
+  editTable,
+}: TableCreateDialogProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,11 +114,20 @@ export function TableCreateDialog({ storeId, open, onOpenChange, editTable }: Ta
               )}
             />
             <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
                 {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? t("common.actions.saving") : isEdit ? t("common.actions.save") : t("common.actions.add")}
+                {isSubmitting
+                  ? t("common.actions.saving")
+                  : isEdit
+                    ? t("common.actions.save")
+                    : t("common.actions.add")}
               </Button>
             </DialogFooter>
           </form>

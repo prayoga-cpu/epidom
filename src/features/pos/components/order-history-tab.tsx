@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatCurrency, formatDateTime } from "@/lib/utils/formatting";
+import { formatDateTime } from "@/lib/utils/formatting";
 import { apiClient } from "@/lib/api/client";
 import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
 import {
@@ -43,6 +43,7 @@ const ORDER_STATUSES = [
   "READY",
   "DELIVERED",
   "CANCELLED",
+  "HELD",
 ] as const;
 
 const EXPORT_ROW_CAP = 5000;
@@ -72,6 +73,8 @@ function getStatusBadgeVariant(status: string) {
       return "default";
     case "CANCELLED":
       return "destructive";
+    case "HELD":
+      return "secondary";
     default:
       return "outline";
   }
@@ -102,7 +105,7 @@ interface OrderHistoryTabProps {
 
 export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   const { t } = useI18n();
-  const { currency } = useCurrency();
+  const { formatPrice } = useCurrency();
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
@@ -378,7 +381,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        {formatCurrency(Number(order.total), currency)}
+                        {formatPrice(Number(order.total))}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getPaymentBadgeVariant(order.paymentStatus)}>
@@ -418,6 +421,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
 
       <OrderHistoryDetailDialog
         order={selected}
+        storeId={storeId}
         onOpenChange={(open) => {
           if (!open) setSelected(null);
         }}

@@ -12,23 +12,28 @@ datasource db {
 }
 
 model User {
-  id                     String   @id @default(cuid())
+  id                     String    @id @default(cuid())
   name                   String
-  email                  String   @unique
+  email                  String    @unique
   emailVerified          Boolean
   image                  String?
   createdAt              DateTime
   updatedAt              DateTime
   // Custom fields
   phone                  String?
-  locale                 String   @default("id")
-  timezone               String   @default("Asia/Jakarta")
-  currency               String   @default("IDR")
-  defaultLanding         String   @default("dashboard")
+  locale                 String    @default("id")
+  timezone               String    @default("Asia/Jakarta")
+  // Set only when TimezoneSync actually persists a browser-detected zone —
+  // lets the admin panel tell a real "Asia/Jakarta" user apart from an
+  // account that never loaded an authenticated page (still on the raw
+  // schema default) instead of guessing from the value alone.
+  timezoneUpdatedAt      DateTime?
+  currency               String    @default("IDR")
+  defaultLanding         String    @default("dashboard")
   stripeConnectAccountId String?
-  stripeConnectOnboarded Boolean  @default(false)
-  isAdmin                Boolean  @default(false)
-  hasOnboarded           Boolean  @default(false)
+  stripeConnectOnboarded Boolean   @default(false)
+  isAdmin                Boolean   @default(false)
+  hasOnboarded           Boolean   @default(false)
 
   sessions     Session[]
   accounts     Account[]
@@ -578,6 +583,7 @@ enum MovementType {
   SALE
   ADJUSTMENT
   WASTE
+  RETURN
 }
 
 enum SupplierOrderStatus {
@@ -594,6 +600,7 @@ enum OrderStatus {
   READY
   DELIVERED
   CANCELLED
+  HELD
 }
 
 enum AlertType {

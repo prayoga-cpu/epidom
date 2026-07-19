@@ -34,7 +34,11 @@ export const PATCH = withApiHandler(
     const parsed = updateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Validation failed", parsed.error.flatten()),
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Validation failed",
+          parsed.error.flatten()
+        ),
         { status: 400 }
       );
     }
@@ -44,9 +48,7 @@ export const PATCH = withApiHandler(
       where: { id: reservationId },
       data: {
         ...rest,
-        ...(guestEmail !== undefined
-          ? { guestEmail: guestEmail === "" ? null : guestEmail }
-          : {}),
+        ...(guestEmail !== undefined ? { guestEmail: guestEmail === "" ? null : guestEmail } : {}),
       },
       include: {
         table: { select: { id: true, label: true, capacity: true } },

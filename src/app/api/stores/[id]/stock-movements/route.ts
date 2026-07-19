@@ -23,18 +23,22 @@ export const GET = withApiHandler(
 
     if (itemType === "material" && materialId) {
       const material = await prisma.material.findFirst({ where: { id: materialId, storeId } });
-      if (!material) return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Material not found"), { status: 404 });
+      if (!material)
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, "Material not found"),
+          { status: 404 }
+        );
       where.materialId = materialId;
     } else if (itemType === "product" && productId) {
       const product = await prisma.product.findFirst({ where: { id: productId, storeId } });
-      if (!product) return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Product not found"), { status: 404 });
+      if (!product)
+        return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Product not found"), {
+          status: 404,
+        });
       where.productId = productId;
     } else if (!materialId && !productId) {
       // Store-wide query: scope through material.storeId OR product.storeId
-      where.OR = [
-        { material: { storeId } },
-        { product: { storeId } },
-      ];
+      where.OR = [{ material: { storeId } }, { product: { storeId } }];
     }
 
     if (type) where.type = type;
@@ -42,14 +46,14 @@ export const GET = withApiHandler(
     if (dateFrom || dateTo) {
       where.createdAt = {} as Record<string, Date>;
       if (dateFrom) (where.createdAt as Record<string, Date>).gte = new Date(dateFrom);
-      if (dateTo)   (where.createdAt as Record<string, Date>).lte = new Date(dateTo);
+      if (dateTo) (where.createdAt as Record<string, Date>).lte = new Date(dateTo);
     }
 
     const movements = await prisma.stockMovement.findMany({
       where,
       include: {
         material: { select: { id: true, name: true, sku: true, unit: true } },
-        product:  { select: { id: true, name: true, sku: true, unit: true } },
+        product: { select: { id: true, name: true, sku: true, unit: true } },
         productionBatch: { select: { id: true, batchNumber: true } },
         order: { select: { id: true, orderNumber: true } },
       },

@@ -5,10 +5,7 @@ interface PageHeaderProps {
   pageDescription: string;
 }
 
-export function PageHeader({
-  pageTitle,
-  pageDescription,
-}: PageHeaderProps) {
+export function PageHeader({ pageTitle, pageDescription }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">

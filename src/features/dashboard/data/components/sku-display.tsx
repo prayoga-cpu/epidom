@@ -14,9 +14,9 @@ export function SKUDisplay({ sku, className }: SKUDisplayProps) {
   return (
     <p
       className={cn(
-        "text-muted-foreground text-xs cursor-pointer transition-colors hover:text-foreground",
-        !isExpanded && "truncate max-w-[120px] sm:max-w-[150px]",
-        isExpanded && "whitespace-normal break-all",
+        "text-muted-foreground hover:text-foreground cursor-pointer text-xs transition-colors",
+        !isExpanded && "max-w-[120px] truncate sm:max-w-[150px]",
+        isExpanded && "break-all whitespace-normal",
         className
       )}
       onClick={(e) => {

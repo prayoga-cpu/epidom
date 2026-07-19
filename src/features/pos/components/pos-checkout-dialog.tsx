@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { createPosOrderSchema, type CreatePosOrderInput } from "@/lib/validation/pos.schemas";
-import { formatCurrency } from "@/lib/utils/formatting";
+import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
@@ -41,10 +41,6 @@ import {
   printReceipt,
   type ReceiptData,
 } from "@/lib/pwa/thermal-printer";
-import type { Currency } from "@/components/providers/currency-provider";
-
-const CURRENCY_SYMBOL: Record<Currency, string> = { IDR: "Rp", USD: "$", EUR: "€", MGA: "Ar" };
-
 interface PosCheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,7 +59,7 @@ export function PosCheckoutDialog({
   shiftId,
 }: PosCheckoutDialogProps) {
   const { t, locale } = useI18n();
-  const { currency } = useCurrency();
+  const { currency, formatPrice } = useCurrency();
   const cart = usePosCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -201,6 +197,15 @@ export function PosCheckoutDialog({
     setIsSubmitting(true);
     try {
       if (!navigator.onLine) {
+        if (cart.resumingOrderId) {
+          // The offline queue always creates a brand-new order on reconnect —
+          // it has no concept of finalizing an existing HELD row, so queuing
+          // here would leave the original held order dangling and create a
+          // duplicate. Block it instead, same as Hold does when offline.
+          toast.error(t("pos.cart.holdOffline"));
+          return;
+        }
+
         const localId = await enqueueOrder(storeId, data);
         const receipt = buildReceipt(data, `OFFLINE-${localId.slice(0, 8).toUpperCase()}`);
         setLastReceipt(receipt);
@@ -214,10 +219,14 @@ export function PosCheckoutDialog({
         return;
       }
 
-      const result = await apiClient.post<{ orderNumber: string }>(
-        `/stores/${storeId}/pos/orders`,
-        { ...data, shiftId }
-      );
+      const endpoint = cart.resumingOrderId
+        ? `/stores/${storeId}/pos/orders/${cart.resumingOrderId}/finalize`
+        : `/stores/${storeId}/pos/orders`;
+
+      const result = await apiClient.post<{ orderNumber: string }>(endpoint, {
+        ...data,
+        shiftId,
+      });
 
       const orderNumber = (result as any)?.orderNumber ?? "—";
       const qrStr = (result as any)?.qrString ?? null;
@@ -381,7 +390,7 @@ export function PosCheckoutDialog({
                         <FormControl>
                           <div className="relative">
                             <span className="text-muted-foreground absolute top-2.5 left-3 text-sm">
-                              {CURRENCY_SYMBOL[currency]}
+                              {getCurrencySymbol(currency)}
                             </span>
                             <DecimalInput
                               decimals={2}
@@ -402,7 +411,7 @@ export function PosCheckoutDialog({
                   <div className="flex justify-between text-sm font-medium">
                     <span className="text-muted-foreground">{t("pos.checkout.change")}:</span>
                     <span className={change > 0 ? "text-emerald-600 dark:text-emerald-400" : ""}>
-                      {formatCurrency(change, currency)}
+                      {formatPrice(change)}
                     </span>
                   </div>
                 </div>
@@ -513,7 +522,7 @@ export function PosCheckoutDialog({
                       {t("pos.checkout.processing")}
                     </>
                   ) : (
-                    `${t("pos.checkout.confirm")} • ${formatCurrency(cart.total, currency)}`
+                    `${t("pos.checkout.confirm")} • ${formatPrice(cart.total)}`
                   )}
                 </Button>
               </DialogFooter>

@@ -102,9 +102,7 @@ function extractSkuPattern(skus: string[]): string | null {
 /**
  * Calculate price range statistics
  */
-function calculatePriceRange(
-  prices: number[]
-): { min: number; max: number; avg: number } | null {
+function calculatePriceRange(prices: number[]): { min: number; max: number; avg: number } | null {
   if (prices.length === 0) return null;
 
   const validPrices = prices.filter((p) => p > 0);

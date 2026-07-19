@@ -3,14 +3,16 @@
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Trash2 } from "lucide-react";
+import { ShoppingBag, Trash2, Pause, Info } from "lucide-react";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { PosCartItem } from "./pos-cart-item";
-import { formatCurrency } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useState } from "react";
 import { PosCheckoutDialog } from "./pos-checkout-dialog";
+import { PosHoldDialog, type HoldFormValues } from "./pos-hold-dialog";
 import { usePosSession } from "../hooks/use-pos-session";
+import { useHoldOrder } from "../hooks/use-hold-order";
+import { toast } from "sonner";
 
 interface PosCartProps {
   storeId: string;
@@ -20,12 +22,41 @@ interface PosCartProps {
 
 export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps) {
   const { t } = useI18n();
-  const { currency } = useCurrency();
+  const { formatPrice } = useCurrency();
   const cart = usePosCart();
   const { staffName, shiftId } = usePosSession();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isHoldOpen, setIsHoldOpen] = useState(false);
+  const holdOrder = useHoldOrder(storeId);
 
   const totalItems = cart.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+
+  const handleHoldClick = () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      toast.error(t("pos.cart.holdOffline"));
+      return;
+    }
+    setIsHoldOpen(true);
+  };
+
+  const handleHoldSubmit = async (data: HoldFormValues) => {
+    try {
+      await holdOrder.mutateAsync({
+        items: cart.items,
+        orderType: data.orderType,
+        tableNumber: data.tableNumber || undefined,
+        customerName: data.customerName || undefined,
+        notes: data.notes || undefined,
+        shiftId: shiftId ?? undefined,
+        orderId: cart.resumingOrderId ?? undefined,
+      });
+      cart.clearCart();
+      setIsHoldOpen(false);
+      toast.success(t("pos.orderCard.holdSuccess"));
+    } catch (error) {
+      toast.error(t("pos.orderCard.holdFailed"));
+    }
+  };
 
   if (cart.items.length === 0) {
     return (
@@ -57,6 +88,13 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
         </Button>
       </div>
 
+      {cart.resumingOrderId && (
+        <div className="flex items-start gap-2 border-b bg-amber-50 px-4 py-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{t("pos.orderCard.resumedBanner")}</span>
+        </div>
+      )}
+
       {/* Cart Items */}
       <ScrollArea className="flex-1">
         <div className="flex flex-col pb-4">
@@ -76,25 +114,37 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("pos.cart.subtotal")}</span>
-            <span>{formatCurrency(cart.subtotal, currency)}</span>
+            <span>{formatPrice(cart.subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("pos.cart.tax")}</span>
-            <span>{formatCurrency(cart.tax, currency)}</span>
+            <span>{formatPrice(cart.tax)}</span>
           </div>
           <div className="mt-2 flex justify-between border-t pt-2 text-lg font-bold">
             <span>{t("pos.cart.total")}</span>
-            <span className="text-primary">{formatCurrency(cart.total, currency)}</span>
+            <span className="text-primary">{formatPrice(cart.total)}</span>
           </div>
         </div>
 
-        <Button
-          className="mt-4 w-full"
-          size="lg"
-          onClick={() => (onRequestCheckout ? onRequestCheckout() : setIsCheckoutOpen(true))}
-        >
-          {t("pos.cart.pay")} {formatCurrency(cart.total, currency)}
-        </Button>
+        <div className="mt-4 flex gap-2">
+          <Button
+            variant="outline"
+            size="lg"
+            className="shrink-0"
+            onClick={handleHoldClick}
+            disabled={holdOrder.isPending}
+            title={t("pos.cart.hold")}
+          >
+            <Pause className="h-4 w-4" />
+          </Button>
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => (onRequestCheckout ? onRequestCheckout() : setIsCheckoutOpen(true))}
+          >
+            {t("pos.cart.pay")} {formatPrice(cart.total)}
+          </Button>
+        </div>
       </div>
 
       {!onRequestCheckout && (
@@ -107,6 +157,13 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
           shiftId={shiftId ?? undefined}
         />
       )}
+
+      <PosHoldDialog
+        open={isHoldOpen}
+        onOpenChange={setIsHoldOpen}
+        onSubmit={handleHoldSubmit}
+        isSubmitting={holdOrder.isPending}
+      />
     </div>
   );
 }

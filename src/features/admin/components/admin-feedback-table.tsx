@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Inbox, Clock, CheckCircle2, Archive } from "lucide-react";
@@ -59,6 +59,33 @@ const statusLabels: Record<FeedbackStatus, string> = {
   ARCHIVED: "Archived",
 };
 
+// Grouping priority: active items surface first, archived sink to the bottom.
+const STATUS_ORDER: Record<FeedbackStatus, number> = {
+  OPEN: 0,
+  IN_PROGRESS: 1,
+  RESOLVED: 2,
+  ARCHIVED: 3,
+};
+
+const statusColors: Record<FeedbackStatus, { row: string; select: string }> = {
+  OPEN: {
+    row: "border-l-2 border-l-blue-500 bg-blue-500/[0.03]",
+    select: "border-blue-500/40 text-blue-400",
+  },
+  IN_PROGRESS: {
+    row: "border-l-2 border-l-amber-500 bg-amber-500/[0.03]",
+    select: "border-amber-500/40 text-amber-400",
+  },
+  RESOLVED: {
+    row: "border-l-2 border-l-emerald-500 bg-emerald-500/[0.03]",
+    select: "border-emerald-500/40 text-emerald-400",
+  },
+  ARCHIVED: {
+    row: "border-l-2 border-l-slate-500 bg-slate-500/[0.03]",
+    select: "border-slate-500/40 text-slate-400",
+  },
+};
+
 const DESCRIPTION_PREVIEW_LENGTH = 80;
 
 export function AdminFeedbackTable() {
@@ -98,7 +125,20 @@ export function AdminFeedbackTable() {
     onError: (e: Error) => toast.error(e.message || "Failed"),
   });
 
-  const rows = data?.feedback ?? [];
+  const rawRows = data?.feedback ?? [];
+
+  // Group by status (Open → In Progress → Resolved → Archived); the API
+  // already returns createdAt desc, and Array#sort is stable, so newest-first
+  // ordering is preserved within each status group.
+  const rows = useMemo(
+    () => [...rawRows].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
+    [rawRows]
+  );
+
+  const copyId = (id: string) => {
+    navigator.clipboard?.writeText(id);
+    toast.success("ID copied");
+  };
 
   const stats = {
     open: rows.filter((f) => f.status === "OPEN").length,
@@ -182,7 +222,10 @@ export function AdminFeedbackTable() {
             const isLong = row.description.length > DESCRIPTION_PREVIEW_LENGTH;
 
             return (
-              <div key={row.id} className="border-border bg-card space-y-3 rounded-xl border p-4">
+              <div
+                key={row.id}
+                className={`border-border bg-card space-y-3 rounded-xl border p-4 ${statusColors[row.status].row}`}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-foreground text-sm font-medium">
@@ -204,6 +247,14 @@ export function AdminFeedbackTable() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={typeBadges[row.type].variant}>{typeBadges[row.type].label}</Badge>
                   <span className="text-muted-foreground text-xs break-all">{row.page}</span>
+                  <button
+                    type="button"
+                    onClick={() => copyId(row.id)}
+                    className="text-muted-foreground font-mono text-[11px] hover:underline"
+                    title={row.id}
+                  >
+                    #{row.id.slice(0, 8)}
+                  </button>
                 </div>
 
                 <button
@@ -235,7 +286,10 @@ export function AdminFeedbackTable() {
                     }
                     disabled={mutation.isPending}
                   >
-                    <SelectTrigger size="sm" className="w-[140px]">
+                    <SelectTrigger
+                      size="sm"
+                      className={`w-[140px] font-medium ${statusColors[row.status].select}`}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -259,6 +313,7 @@ export function AdminFeedbackTable() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">ID</TableHead>
                     <TableHead className="text-muted-foreground">Date</TableHead>
                     <TableHead className="text-muted-foreground">User</TableHead>
                     <TableHead className="text-muted-foreground">Type</TableHead>
@@ -271,21 +326,21 @@ export function AdminFeedbackTable() {
                 <TableBody>
                   {isLoading && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-muted-foreground py-12 text-center">
+                      <TableCell colSpan={8} className="text-muted-foreground py-12 text-center">
                         Loading feedback...
                       </TableCell>
                     </TableRow>
                   )}
                   {isError && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-destructive py-12 text-center">
+                      <TableCell colSpan={8} className="text-destructive py-12 text-center">
                         Failed to load feedback. Refresh the page or sign in again.
                       </TableCell>
                     </TableRow>
                   )}
                   {!isLoading && !isError && rows.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-muted-foreground py-12 text-center">
+                      <TableCell colSpan={8} className="text-muted-foreground py-12 text-center">
                         No feedback yet
                       </TableCell>
                     </TableRow>
@@ -295,7 +350,20 @@ export function AdminFeedbackTable() {
                     const isLong = row.description.length > DESCRIPTION_PREVIEW_LENGTH;
 
                     return (
-                      <TableRow key={row.id} className="border-border">
+                      <TableRow
+                        key={row.id}
+                        className={`border-border ${statusColors[row.status].row}`}
+                      >
+                        <TableCell>
+                          <button
+                            type="button"
+                            onClick={() => copyId(row.id)}
+                            className="text-muted-foreground font-mono text-xs hover:underline"
+                            title={row.id}
+                          >
+                            #{row.id.slice(0, 8)}
+                          </button>
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                           {new Date(row.createdAt).toLocaleDateString("en-GB", {
                             day: "2-digit",
@@ -353,7 +421,10 @@ export function AdminFeedbackTable() {
                             }
                             disabled={mutation.isPending}
                           >
-                            <SelectTrigger size="sm" className="w-[140px]">
+                            <SelectTrigger
+                              size="sm"
+                              className={`w-[140px] font-medium ${statusColors[row.status].select}`}
+                            >
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>

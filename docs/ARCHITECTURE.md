@@ -51,11 +51,11 @@ How the codebase is organized and why. This doc evolves as the product evolves. 
 
 Next.js App Router groups in `src/app/`:
 
-| Group | Auth | Purpose | Caching |
-|---|---|---|---|
-| `(marketing)` | None | Public landing, pricing, terms | Static, ISR |
-| `(public)` | None | Per-merchant storefronts at `/@slug` | Static with revalidation tags |
-| `(app)` | Required | Authenticated merchant dashboard | Server-rendered |
+| Group         | Auth     | Purpose                              | Caching                       |
+| ------------- | -------- | ------------------------------------ | ----------------------------- |
+| `(marketing)` | None     | Public landing, pricing, terms       | Static, ISR                   |
+| `(public)`    | None     | Per-merchant storefronts at `/@slug` | Static with revalidation tags |
+| `(app)`       | Required | Authenticated merchant dashboard     | Server-rendered               |
 
 The `(public)` group is the heart of the new positioning. Every storefront is statically cached and only revalidates when the merchant edits their menu. This keeps load times under 2 seconds even on poor Indonesian mobile connections.
 
@@ -98,6 +98,7 @@ src/
 ```
 
 **Rules:**
+
 - A feature folder owns its own components, hooks, and types.
 - Feature folders never import from other feature folders. Cross-feature logic goes in `lib/services/`.
 - `components/` is for primitives only. Anything domain-specific goes in `features/`.
@@ -205,14 +206,14 @@ src/lib/notifications/
 
 Events that trigger notifications:
 
-| Event | WhatsApp | Email | SSE |
-|---|---|---|---|
-| Order placed | Yes | No | Yes |
-| Order paid | Yes | No | Yes |
-| Order cancelled by customer | Yes | No | Yes |
-| Low stock alert | Yes (Phase 4) | Yes | Yes |
-| Shift discrepancy | No | Yes | No |
-| Account / billing | No | Yes | No |
+| Event                       | WhatsApp      | Email | SSE |
+| --------------------------- | ------------- | ----- | --- |
+| Order placed                | Yes           | No    | Yes |
+| Order paid                  | Yes           | No    | Yes |
+| Order cancelled by customer | Yes           | No    | Yes |
+| Low stock alert             | Yes (Phase 4) | Yes   | Yes |
+| Shift discrepancy           | No            | Yes   | No  |
+| Account / billing           | No            | Yes   | No  |
 
 ---
 
@@ -255,12 +256,12 @@ Inngest: parse-aggregator-email (retries: 2)
 
 Commission rates (hardcoded, update as official rates change):
 
-| Platform | Commission |
-|----------|-----------|
-| GoFood | 20% |
-| GrabFood | 20% |
-| ShopeeFood | 20% |
-| Tokopedia | 15% |
+| Platform   | Commission |
+| ---------- | ---------- |
+| GoFood     | 20%        |
+| GrabFood   | 20%        |
+| ShopeeFood | 20%        |
+| Tokopedia  | 15%        |
 
 These feed directly into `/api/stores/[id]/finance/channels` net-revenue calculations.
 
@@ -268,13 +269,13 @@ These feed directly into `/api/stores/[id]/finance/channels` net-revenue calcula
 
 ## 8. Caching strategy
 
-| Surface | Strategy |
-|---|---|
-| `(marketing)` | Static, regenerated on deploy |
-| `(public)/@[slug]` | Static with `revalidate` tag `storefront:[slug]` |
-| `(public)/@[slug]/menu` | Same tag as parent storefront |
-| `(app)/store/[storeId]/*` | Server-rendered, no cache |
-| API routes returning storefront data | Cached at edge with the same tag |
+| Surface                              | Strategy                                         |
+| ------------------------------------ | ------------------------------------------------ |
+| `(marketing)`                        | Static, regenerated on deploy                    |
+| `(public)/@[slug]`                   | Static with `revalidate` tag `storefront:[slug]` |
+| `(public)/@[slug]/menu`              | Same tag as parent storefront                    |
+| `(app)/store/[storeId]/*`            | Server-rendered, no cache                        |
+| API routes returning storefront data | Cached at edge with the same tag                 |
 
 When a merchant edits their storefront:
 
@@ -291,12 +292,12 @@ This invalidates both the page and the API response. Customers see the change wi
 
 Better Auth, with two distinct session contexts:
 
-| Context | Session source | Used in |
-|---|---|---|
-| **Server components** | `getSession()` from `src/lib/auth.ts` | `page.tsx`, layouts, server actions |
-| **Client components** | `useUser()` from `src/lib/auth-client.ts` | Interactive components |
-| **API routes** | `auth.api.getSession({ headers })` | All `/api/*` routes |
-| **Public routes** | None | `(public)` pages and `/api/public/*` |
+| Context               | Session source                            | Used in                              |
+| --------------------- | ----------------------------------------- | ------------------------------------ |
+| **Server components** | `getSession()` from `src/lib/auth.ts`     | `page.tsx`, layouts, server actions  |
+| **Client components** | `useUser()` from `src/lib/auth-client.ts` | Interactive components               |
+| **API routes**        | `auth.api.getSession({ headers })`        | All `/api/*` routes                  |
+| **Public routes**     | None                                      | `(public)` pages and `/api/public/*` |
 
 The custom `useSession` hook in `auth-client.ts` fetches from `/api/session` rather than using Better Auth's built-in hook directly. This is intentional: it gives us a single chokepoint for session changes and is friendlier to TanStack Query.
 
@@ -308,17 +309,14 @@ From Phase 4 onwards, routes will be gated by subscription plan.
 
 ```typescript
 // src/lib/auth/require-plan.ts
-export async function requirePlan(
-  storeId: string,
-  minPlan: SubscriptionPlan
-): Promise<void> {
+export async function requirePlan(storeId: string, minPlan: SubscriptionPlan): Promise<void> {
   const session = await getSession();
   if (!session) redirect("/login");
-  
+
   const sub = await prisma.subscription.findFirst({
     where: { userId: session.user.id, status: "ACTIVE" },
   });
-  
+
   if (!sub || !planMeetsMinimum(sub.plan, minPlan)) {
     redirect(`/store/${storeId}/billing?upgrade=${minPlan}`);
   }
@@ -369,6 +367,7 @@ The POS surface must work without internet. Indonesian power and internet are un
 ```
 
 Key principles:
+
 - Every mutation is queued and persisted before being sent
 - The UI never blocks on network
 - Conflict resolution is last-write-wins for most fields, with manual review for cash reconciliation discrepancies
@@ -377,26 +376,26 @@ Key principles:
 
 ## 12. Cross-cutting concerns
 
-| Concern | Solution |
-|---|---|
-| **Logging** | Server-side: `console.log` to Vercel logs in dev; Sentry in prod |
-| **Error tracking** | Sentry (to be added in Phase 1) |
-| **Rate limiting** | Upstash Redis + `@upstash/ratelimit`, applied to public POST endpoints |
-| **CSRF** | Better Auth handles for `(app)` surface; public endpoints rely on origin checks + rate limits |
-| **Validation** | Zod everywhere, never trust unvalidated input |
-| **Analytics** | Vercel Analytics for web vitals; PostHog (to be added Phase 2) for product analytics |
-| **Feature flags** | `src/lib/feature-flags.ts`, environment-variable-driven |
+| Concern            | Solution                                                                                      |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| **Logging**        | Server-side: `console.log` to Vercel logs in dev; Sentry in prod                              |
+| **Error tracking** | Sentry (to be added in Phase 1)                                                               |
+| **Rate limiting**  | Upstash Redis + `@upstash/ratelimit`, applied to public POST endpoints                        |
+| **CSRF**           | Better Auth handles for `(app)` surface; public endpoints rely on origin checks + rate limits |
+| **Validation**     | Zod everywhere, never trust unvalidated input                                                 |
+| **Analytics**      | Vercel Analytics for web vitals; PostHog (to be added Phase 2) for product analytics          |
+| **Feature flags**  | `src/lib/feature-flags.ts`, environment-variable-driven                                       |
 
 ---
 
 ## 13. Deployment
 
-| Environment | Branch | URL | Database |
-|---|---|---|---|
-| Development | (local) | `localhost:3000` | Local Postgres or Docker |
-| Preview | All PRs | `epidom-pr-N.vercel.app` | Neon preview branch |
-| Staging | `staging` | `staging.epidom.id` | Neon staging |
-| Production | `main` | `epidom.id` | Neon prod (Singapore region from Phase 3) |
+| Environment | Branch    | URL                      | Database                                  |
+| ----------- | --------- | ------------------------ | ----------------------------------------- |
+| Development | (local)   | `localhost:3000`         | Local Postgres or Docker                  |
+| Preview     | All PRs   | `epidom-pr-N.vercel.app` | Neon preview branch                       |
+| Staging     | `staging` | `staging.epidom.id`      | Neon staging                              |
+| Production  | `main`    | `epidom.id`              | Neon prod (Singapore region from Phase 3) |
 
 Every PR gets a preview deployment with its own database branch. Merging to `staging` deploys to staging. Merging to `main` deploys to prod after a manual approval gate.
 

@@ -24,9 +24,7 @@ export function SectionHeader({ title, actions, description, className }: Sectio
         <div>
           <CardTitle className={responsiveText.title}>{title}</CardTitle>
           {description && (
-            <p className={cn("text-muted-foreground", responsiveText.description)}>
-              {description}
-            </p>
+            <p className={cn("text-muted-foreground", responsiveText.description)}>{description}</p>
           )}
         </div>
         {actions && <div className={responsive.buttonGroup}>{actions}</div>}
@@ -40,4 +38,3 @@ export { ActionButtons, ActionButton } from "./action-buttons";
 
 // Re-export SectionCard from section-card
 export { SectionCard } from "./section-card";
-

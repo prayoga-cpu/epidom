@@ -121,8 +121,16 @@ describe("ReservationList", () => {
   it("filters by table label search", () => {
     mockQueryData.mockReturnValue({
       reservations: [
-        makeReservation({ id: "r1", guestName: "Alice", table: { id: "t1", label: "Table A", capacity: 4 } }),
-        makeReservation({ id: "r2", guestName: "Bob", table: { id: "t2", label: "Table B", capacity: 2 } }),
+        makeReservation({
+          id: "r1",
+          guestName: "Alice",
+          table: { id: "t1", label: "Table A", capacity: 4 },
+        }),
+        makeReservation({
+          id: "r2",
+          guestName: "Bob",
+          table: { id: "t2", label: "Table B", capacity: 2 },
+        }),
       ],
     });
     render(<ReservationList storeId="store-1" />);

@@ -450,10 +450,7 @@ export class ProductionBatchRepository extends BaseRepository {
    * Format: {PREFIX}-{YYYYMMDD}-{SEQUENCE}-{RANDOM}
    * Example: BATCH-20250114-0001-432
    */
-  async generateBatchNumber(
-    storeId: string,
-    prefix: string = "BATCH"
-  ): Promise<string> {
+  async generateBatchNumber(storeId: string, prefix: string = "BATCH"): Promise<string> {
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, "0");

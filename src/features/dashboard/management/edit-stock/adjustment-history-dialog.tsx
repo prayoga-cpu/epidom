@@ -138,7 +138,7 @@ export function AdjustmentHistoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-full sm:max-w-4xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-full overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{t("management.editStock.adjustmentHistoryDialog.title")}</DialogTitle>
           <DialogDescription>

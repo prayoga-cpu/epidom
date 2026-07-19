@@ -13,7 +13,11 @@ import { PaymentForm } from "@/features/marketing/payments/components/payment-fo
 import { PaymentSummary } from "@/features/marketing/payments/components/payment-summary";
 import { ContactSalesForm } from "@/features/marketing/payments/components/contact-sales-form";
 import { PaymentFooter } from "@/features/marketing/payments/components/payment-footer";
-import { getValidPlan, type PlanType, isStripePlan } from "@/features/marketing/payments/utils/plan-validation";
+import {
+  getValidPlan,
+  type PlanType,
+  isStripePlan,
+} from "@/features/marketing/payments/utils/plan-validation";
 
 /**
  * Props for PaymentsPage component
@@ -50,12 +54,12 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
                 {/* Main Grid: Terms & Summary */}
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_1fr] lg:items-stretch lg:gap-10">
                   {/* Left Column - Payment Form */}
-                  <div className="order-2 lg:order-1 flex flex-col animate-slide-up-delayed">
+                  <div className="animate-slide-up-delayed order-2 flex flex-col lg:order-1">
                     <PaymentForm plan={selectedPlan as "starter" | "pro"} />
                   </div>
                   {/* Right Column - Summary */}
-                  <div className="order-1 lg:order-2 flex flex-col animate-slide-up-delayed">
-                    <div className="lg:sticky lg:top-24 flex h-full flex-col">
+                  <div className="animate-slide-up-delayed order-1 flex flex-col lg:order-2">
+                    <div className="flex h-full flex-col lg:sticky lg:top-24">
                       <PaymentSummary plan={selectedPlan} />
                     </div>
                   </div>

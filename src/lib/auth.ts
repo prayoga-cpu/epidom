@@ -76,12 +76,12 @@ export const auth = betterAuth({
       create: {
         async after(user) {
           if (isAdminEmail(user.email)) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { isAdmin: true },
-            }).catch((err) =>
-              console.error("[auth] failed to set isAdmin on master email:", err)
-            );
+            await prisma.user
+              .update({
+                where: { id: user.id },
+                data: { isAdmin: true },
+              })
+              .catch((err) => console.error("[auth] failed to set isAdmin on master email:", err));
           }
         },
       },

@@ -81,8 +81,8 @@ export function PricingCards({
     if (plan === currentPlan) return;
     trackEvent("cta_click", { event_category: "engagement", event_label: `pricing_${tierKey}` });
     if (tierKey === "t4") {
-      trackConversion("book_demo", { event_label: "pricing_enterprise" });
-      window.open("https://calendly.com/prayogadevelopment/30min", "_blank");
+      trackConversion("contact_whatsapp", { event_label: "pricing_enterprise" });
+      window.open("https://wa.me/33781732386", "_blank");
       return;
     }
     const name = t(`redesign.pricingPage.${tierKey}name` as const);

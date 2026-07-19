@@ -58,7 +58,11 @@ export const POST = withApiHandler(
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Validation failed", parsed.error.flatten()),
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Validation failed",
+          parsed.error.flatten()
+        ),
         { status: 400 }
       );
     }

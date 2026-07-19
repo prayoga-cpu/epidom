@@ -173,59 +173,42 @@ export function formatCompactNumber(
 // CURRENCY FORMATTING
 // ============================================================================
 
-export type Currency = "EUR" | "USD" | "IDR" | "MGA";
+export type Currency = string;
 
 /**
- * Map currency to appropriate locale
+ * Regional display conventions that deliberately diverge from the ISO 4217
+ * minor-unit default (e.g. Indonesian retail drops Rupiah's 2 decimal
+ * places). Any currency not listed here uses Intl's own default.
  */
-export function getCurrencyLocale(currency: Currency): string {
-  switch (currency) {
-    case "EUR":
-      return "fr-FR";
-    case "USD":
-      return "en-US";
-    case "IDR":
-      return "id-ID";
-    case "MGA":
-      return "mg-MG";
-    default:
-      return "en-US";
-  }
-}
+const FRACTION_DIGITS_OVERRIDE: Partial<Record<string, number>> = {
+  IDR: 0,
+};
 
 /**
- * Get currency symbol for display in labels and inputs
+ * Under the "en-US" locale, Intl correctly falls back to the bare ISO code
+ * for currencies with no widely-recognized English symbol (e.g. IDR renders
+ * as "IDR", not "Rp" — "Rp" is specifically an id-ID locale convention).
+ * Override just the ones this app displays constantly.
  */
-export function getCurrencySymbol(currency: Currency | string): string {
-  switch (currency) {
-    case "IDR":
-      return "Rp";
-    case "EUR":
-      return "\u20ac";
-    case "USD":
-      return "$";
-    case "MGA":
-      return "Ar";
-    default:
-      return currency;
-  }
-}
+const SYMBOL_OVERRIDE: Partial<Record<string, string>> = {
+  IDR: "Rp",
+};
 
 /**
- * Convert price from EUR to target currency
- * @param priceInEur - Price in EUR (base currency)
- * @param targetCurrency - Target currency (EUR or USD)
- * @param exchangeRate - EUR to USD exchange rate (ignored if targetCurrency is EUR)
+ * Get currency symbol for display in labels and inputs. Works for any valid
+ * ISO 4217 code via Intl — no hardcoded per-currency map to maintain.
  */
-export function convertCurrency(
-  priceInEur: number,
-  targetCurrency: Currency,
-  exchangeRate: number = 1.1
-): number {
-  if (targetCurrency === "EUR") {
-    return priceInEur;
+export function getCurrencySymbol(currency: Currency): string {
+  if (SYMBOL_OVERRIDE[currency]) return SYMBOL_OVERRIDE[currency];
+  try {
+    const parts = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).formatToParts(0);
+    return parts.find((p) => p.type === "currency")?.value ?? currency;
+  } catch {
+    return currency;
   }
-  return priceInEur * exchangeRate;
 }
 
 /**
@@ -238,40 +221,14 @@ export function formatCurrency(
   locale: string = "id-ID"
 ): string {
   if (value === null || value === undefined) return "";
-  const fractionDigits = currency === "IDR" ? 0 : 2;
+  const fractionDigits = FRACTION_DIGITS_OVERRIDE[currency];
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
+    ...(fractionDigits !== undefined
+      ? { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }
+      : {}),
   }).format(value);
-}
-
-/**
- * Format price with automatic conversion and currency formatting
- * @param priceInEur - Price in EUR (base currency in database)
- * @param targetCurrency - Target currency for display
- * @param exchangeRate - Exchange rate for conversion (only used if targetCurrency is USD)
- */
-export function formatPriceWithConversion(
-  priceInEur: number | null | undefined,
-  targetCurrency: Currency = "EUR",
-  exchangeRate: number = 1.1
-): string {
-  if (priceInEur === null || priceInEur === undefined) {
-    return targetCurrency === "EUR" ? "€0.00" : "$0.00";
-  }
-
-  const convertedPrice = convertCurrency(priceInEur, targetCurrency, exchangeRate);
-  const locale = getCurrencyLocale(targetCurrency);
-  const fractionDigits = targetCurrency === "IDR" ? 0 : 2;
-
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: targetCurrency,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(convertedPrice);
 }
 
 /**

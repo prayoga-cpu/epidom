@@ -31,8 +31,8 @@ function ResetPasswordForm() {
     }
 
     if (!token) {
-        toast.error("Invalid or missing token");
-        return;
+      toast.error("Invalid or missing token");
+      return;
     }
 
     setIsPending(true);
@@ -55,11 +55,7 @@ function ResetPasswordForm() {
   };
 
   if (!token) {
-      return (
-          <div className="text-center text-red-500">
-              Invalid or missing reset token.
-          </div>
-      )
+    return <div className="text-center text-red-500">Invalid or missing reset token.</div>;
   }
 
   return (
@@ -98,12 +94,16 @@ export default function ResetPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold tracking-tight">Reset Password</CardTitle>
-          <CardDescription>
-            Enter your new password below.
-          </CardDescription>
+          <CardDescription>Enter your new password below.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<div className="flex justify-center"><Loader2 className="animate-spin" /></div>}>
+          <Suspense
+            fallback={
+              <div className="flex justify-center">
+                <Loader2 className="animate-spin" />
+              </div>
+            }
+          >
             <ResetPasswordForm />
           </Suspense>
         </CardContent>

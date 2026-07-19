@@ -100,15 +100,17 @@ export const QualityAnalysisSchema = z.object({
   validityScore: z.number().min(0).max(1).default(0.5),
   overallScore: z.number().min(0).max(1).default(0.5),
   importable: z.boolean().default(true),
-  issues: z.array(
-    z.object({
-      type: z.string(),
-      severity: z.enum(["HIGH", "MEDIUM", "LOW"]).default("LOW"),
-      description: z.string().optional().nullable(),
-      affectedColumns: z.array(z.number()).optional().default([]),
-      examples: z.array(z.string()).optional().default([]),
-    })
-  ).default([]),
+  issues: z
+    .array(
+      z.object({
+        type: z.string(),
+        severity: z.enum(["HIGH", "MEDIUM", "LOW"]).default("LOW"),
+        description: z.string().optional().nullable(),
+        affectedColumns: z.array(z.number()).optional().default([]),
+        examples: z.array(z.string()).optional().default([]),
+      })
+    )
+    .default([]),
 });
 export type QualityAnalysis = z.infer<typeof QualityAnalysisSchema>;
 
@@ -124,14 +126,17 @@ export const StructureAnalysisSchema = z.object({
   headerRowIndex: z.number().default(0),
   dataStartIndex: z.number().default(1),
   junkRowsAtBottom: z.number().default(0),
-  sections: z.array(
-    z.object({
-      name: z.string(),
-      entityType: EntityType.optional().nullable(),
-      startLine: z.number(),
-      endLine: z.number(),
-    })
-  ).optional().default([]),
+  sections: z
+    .array(
+      z.object({
+        name: z.string(),
+        entityType: EntityType.optional().nullable(),
+        startLine: z.number(),
+        endLine: z.number(),
+      })
+    )
+    .optional()
+    .default([]),
   reasoning: z.string().default(""),
 });
 export type StructureAnalysis = z.infer<typeof StructureAnalysisSchema>;
@@ -158,31 +163,37 @@ export type FieldMapping = z.infer<typeof FieldMappingSchema>;
 
 export const MappingAnalysisSchema = z.object({
   mappings: z.array(FieldMappingSchema).default([]),
-  unmappedColumns: z.array(
-    z.object({
-      index: z.number(),
-      header: z.string(),
-      reason: z.string().default(""),
-    })
-  ).default([]),
-  ambiguousColumns: z.array(
-    z.object({
-      index: z.number(),
-      header: z.string(),
-      possibleMappings: z.array(z.string()).default([]),
-      bestGuess: z.string().default(""),
-      confidence: ConfidenceLevel.default("LOW"),
-      needsUserConfirmation: z.boolean().default(true),
-    })
-  ).default([]),
-  detectedRelationships: z.array(
-    z.object({
-      type: z.string(),
-      sourceColumn: z.string(),
-      targetEntity: EntityType,
-      linkMethod: z.string().default(""),
-    })
-  ).default([]),
+  unmappedColumns: z
+    .array(
+      z.object({
+        index: z.number(),
+        header: z.string(),
+        reason: z.string().default(""),
+      })
+    )
+    .default([]),
+  ambiguousColumns: z
+    .array(
+      z.object({
+        index: z.number(),
+        header: z.string(),
+        possibleMappings: z.array(z.string()).default([]),
+        bestGuess: z.string().default(""),
+        confidence: ConfidenceLevel.default("LOW"),
+        needsUserConfirmation: z.boolean().default(true),
+      })
+    )
+    .default([]),
+  detectedRelationships: z
+    .array(
+      z.object({
+        type: z.string(),
+        sourceColumn: z.string(),
+        targetEntity: EntityType,
+        linkMethod: z.string().default(""),
+      })
+    )
+    .default([]),
 });
 export type MappingAnalysis = z.infer<typeof MappingAnalysisSchema>;
 
@@ -209,32 +220,38 @@ export const MissingValueInferenceSchema = z.object({
 export type MissingValueInference = z.infer<typeof MissingValueInferenceSchema>;
 
 export const DuplicateDetectionSchema = z.object({
-  exactDuplicates: z.array(
-    z.object({
-      rows: z.array(z.number()),
-      identifier: z.string(),
-      action: z.enum(["KEEP_FIRST", "KEEP_LAST", "MERGE", "ASK_USER"]).default("ASK_USER"),
-    })
-  ).default([]),
-  nearDuplicates: z.array(
-    z.object({
-      rows: z.array(z.number()),
-      values: z.array(z.string()).default([]),
-      similarity: z.number().default(0),
-      suggestAction: z.enum(["MERGE", "KEEP_BOTH", "ASK_USER"]).default("ASK_USER"),
-      needsConfirmation: z.boolean().default(true),
-    })
-  ).default([]),
-  databaseConflicts: z.array(
-    z.object({
-      importRow: z.number(),
-      importSku: z.string().default(""),
-      existingId: z.string(),
-      existingName: z.string(),
-      conflictFields: z.array(z.string()).default([]),
-      suggestAction: z.enum(["UPDATE", "SKIP", "CREATE_NEW", "ASK_USER"]).default("ASK_USER"),
-    })
-  ).default([]),
+  exactDuplicates: z
+    .array(
+      z.object({
+        rows: z.array(z.number()),
+        identifier: z.string(),
+        action: z.enum(["KEEP_FIRST", "KEEP_LAST", "MERGE", "ASK_USER"]).default("ASK_USER"),
+      })
+    )
+    .default([]),
+  nearDuplicates: z
+    .array(
+      z.object({
+        rows: z.array(z.number()),
+        values: z.array(z.string()).default([]),
+        similarity: z.number().default(0),
+        suggestAction: z.enum(["MERGE", "KEEP_BOTH", "ASK_USER"]).default("ASK_USER"),
+        needsConfirmation: z.boolean().default(true),
+      })
+    )
+    .default([]),
+  databaseConflicts: z
+    .array(
+      z.object({
+        importRow: z.number(),
+        importSku: z.string().default(""),
+        existingId: z.string(),
+        existingName: z.string(),
+        conflictFields: z.array(z.string()).default([]),
+        suggestAction: z.enum(["UPDATE", "SKIP", "CREATE_NEW", "ASK_USER"]).default("ASK_USER"),
+      })
+    )
+    .default([]),
 });
 export type DuplicateDetection = z.infer<typeof DuplicateDetectionSchema>;
 
@@ -300,18 +317,22 @@ export const ImportExecutionResultSchema = z.object({
     suppliers: z.object({ attempted: z.number(), succeeded: z.number() }),
     recipes: z.object({ attempted: z.number(), succeeded: z.number() }),
     totalSucceeded: z.number(),
-    autoCreated: z.object({
-      suppliers: z.number().default(0),
-      materials: z.number().default(0),
-    }).default({ suppliers: 0, materials: 0 }),
+    autoCreated: z
+      .object({
+        suppliers: z.number().default(0),
+        materials: z.number().default(0),
+      })
+      .default({ suppliers: 0, materials: 0 }),
   }),
-  errors: z.array(
-    z.object({
-      rowIndex: z.number(),
-      entityType: EntityType,
-      error: z.string(),
-      data: z.record(z.string(), z.unknown()).optional(),
-    })
-  ).default([]),
+  errors: z
+    .array(
+      z.object({
+        rowIndex: z.number(),
+        entityType: EntityType,
+        error: z.string(),
+        data: z.record(z.string(), z.unknown()).optional(),
+      })
+    )
+    .default([]),
 });
 export type ImportExecutionResult = z.infer<typeof ImportExecutionResultSchema>;

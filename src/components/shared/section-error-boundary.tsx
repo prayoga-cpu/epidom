@@ -48,7 +48,7 @@ export class SectionErrorBoundary extends Component<Props, State> {
       return (
         <section className="flex items-center justify-center py-20">
           <div className="text-center">
-            <p className="text-gray-400 text-sm">
+            <p className="text-sm text-gray-400">
               Unable to load {this.props.sectionName || "this section"}
             </p>
           </div>

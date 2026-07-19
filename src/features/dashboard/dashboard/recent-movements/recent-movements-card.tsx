@@ -44,9 +44,7 @@ export function RecentMovementsCard() {
 
   const { data, isLoading } = useQuery<{ movements: Movement[] }>({
     queryKey: ["stock-movements", storeId, "dashboard", 8],
-    queryFn: () =>
-      fetch(`/api/stores/${storeId}/stock-movements?take=8`)
-        .then((r) => r.json()),
+    queryFn: () => fetch(`/api/stores/${storeId}/stock-movements?take=8`).then((r) => r.json()),
     enabled: !!storeId,
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
@@ -78,23 +76,35 @@ export function RecentMovementsCard() {
             const qty = Number(m.quantity);
             const isOut = qty < 0;
             return (
-              <div key={m.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/50">
-                <div className={`rounded-full p-1 ${isOut ? "bg-red-50 text-red-500" : "bg-green-50 text-green-600"}`}>
-                  {isOut
-                    ? <ArrowDownCircle className="h-3.5 w-3.5" />
-                    : <ArrowUpCircle className="h-3.5 w-3.5" />}
+              <div
+                key={m.id}
+                className="hover:bg-muted/50 flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
+              >
+                <div
+                  className={`rounded-full p-1 ${isOut ? "bg-red-50 text-red-500" : "bg-green-50 text-green-600"}`}
+                >
+                  {isOut ? (
+                    <ArrowDownCircle className="h-3.5 w-3.5" />
+                  ) : (
+                    <ArrowUpCircle className="h-3.5 w-3.5" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium leading-tight">
+                  <p className="truncate text-sm leading-tight font-medium">
                     {m.material?.name ?? m.product?.name ?? "—"}
                   </p>
                   <p className="text-muted-foreground truncate text-xs">{sourceLabel(m)}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-0.5">
-                  <span className={`text-xs font-semibold ${isOut ? "text-red-600" : "text-green-600"}`}>
-                    {qty > 0 ? "+" : ""}{qty} {m.unit}
+                  <span
+                    className={`text-xs font-semibold ${isOut ? "text-red-600" : "text-green-600"}`}
+                  >
+                    {qty > 0 ? "+" : ""}
+                    {qty} {m.unit}
                   </span>
-                  <Badge className={`text-[10px] px-1 py-0 ${TYPE_COLORS[m.type] ?? ""}`}>{m.type}</Badge>
+                  <Badge className={`px-1 py-0 text-[10px] ${TYPE_COLORS[m.type] ?? ""}`}>
+                    {m.type}
+                  </Badge>
                 </div>
                 <p className="text-muted-foreground hidden w-24 shrink-0 text-right text-xs sm:block">
                   {formatDateTime(m.createdAt)}

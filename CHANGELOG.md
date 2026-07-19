@@ -9,6 +9,19 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.12.0] - 2026-07-19 · feat
+
+- Admin Feedback console: entries now group by status (Open → In Progress → Resolved → Archived) with newest first within each group, each row/card and its status dropdown are color-coded by status, and every entry shows its ID (click to copy) for referencing a specific ticket.
+- POS orders can now be cancelled — from the Active Queue (a Cancel button on each order card) or from Order History (a Cancel button in the order detail view). Cancelling an order that was already marked Delivered automatically restores the stock that had been deducted for it, so inventory numbers stay accurate.
+- POS Cashier: a new "Hold" button next to Pay lets a cashier park the current cart aside (labeled by customer/table) to serve someone else, without completing payment. Held orders show up immediately in the Active Queue (with a Resume button) and Order History, but stay out of the Kitchen Display until they're resumed and actually paid — and out of every revenue/analytics report until then too. Resuming reloads the cart for editing; paying finalizes the same order rather than creating a duplicate.
+- Fixed the Active Queue order cards' action buttons (Start Processing, Resume, Complete) wrapping into and overlapping the neighboring card, which also cut off the Cancel button.
+- The Enterprise plan's pricing CTA now opens a WhatsApp chat instead of the old Calendly booking link. Every public-facing contact point across the site (Privacy, Press, Careers, GDPR, Partners, Contact, Refund Policy, Terms, footer, checkout-failed screen, and FAQ) now points to the same three real addresses — cro@, ceo@, and consult@prionation.io — and the same real WhatsApp number, replacing several stale placeholder emails and a wrong WhatsApp number.
+- Storefront Settings now has a "Show QR" button next to your storefront link, generating a downloadable QR code for it. Tables Manager can now generate a QR code per table (scanning it opens the menu with that table's number already filled in for ordering) — download one at a time, or all at once as a single labeled sheet for printing table tents.
+- Storefront Settings now has an Opening Hours editor — set open/close times or mark each day closed, shown on your public storefront page. This was previously only possible to display, not edit.
+- Fixed the Tables Manager's per-table QR/Edit/Delete icons being invalid HTML (buttons nested inside another button), which was triggering a React hydration warning.
+- Profile settings now offer a searchable picker for currency (~150 world currencies, up from 4) and timezone (the full worldwide IANA list, up from 5), instead of a short fixed dropdown. Currency conversion now works for any of them — previously only USD actually converted prices (EUR/MGA just relabeled the number); the POS Cashier screens (cart, checkout, order history) previously didn't convert at all and now do, matching what Dashboard finance/materials pages already did.
+- The Admin panel's Region column now shows "Unknown" instead of a specific-looking but potentially fake city/currency for any account whose timezone has never actually been confirmed by a real device sync — previously every account showed "Jakarta · IDR" from the moment it was created, whether or not that was real. Also fixed the existing browser-timezone auto-sync silently never re-confirming itself for a device that had already synced once before this tracking existed.
+
 ## [2.11.0] - 2026-07-14 · feat
 
 - Installed Google Analytics 4 and the Meta (Facebook) Pixel, both gated behind the cookie-consent bar (GA needs analytics consent, Meta needs marketing consent) and both wired to fire nothing until the visitor actually grants it.

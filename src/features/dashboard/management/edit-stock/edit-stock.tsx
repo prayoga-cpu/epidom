@@ -83,8 +83,6 @@ export function EditStockCard() {
       type: "material" as ItemType,
     }));
 
-
-
     return materials;
   }, [materialsData]);
 
@@ -210,7 +208,7 @@ export function EditStockCard() {
                   disabled={!advancedReportsAccess}
                   className="w-full md:w-auto"
                 >
-                  <Upload className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <Upload className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("management.editStock.importCSV")}
                 </Button>
               </TooltipTrigger>
@@ -366,9 +364,7 @@ export function EditStockCard() {
                     <div>
                       <h3 className="text-xl font-semibold">{selectedItem.name}</h3>
                       <div className="mt-1 flex items-center gap-2">
-                        <p className="text-muted-foreground text-sm">
-                          SKU: {selectedItem.sku}
-                        </p>
+                        <p className="text-muted-foreground text-sm">SKU: {selectedItem.sku}</p>
                         <Badge variant="outline">
                           {selectedItem.type === "material"
                             ? t("management.editStock.material")
@@ -439,7 +435,7 @@ export function EditStockCard() {
                       itemType={selectedItem.type}
                       trigger={
                         <Button variant="outline" className="w-full">
-                          <Edit3 className="mr-1 h-4 w-4 hidden sm:inline" />
+                          <Edit3 className="mr-1 hidden h-4 w-4 sm:inline" />
                           {t("management.editStock.adjustStock")}
                         </Button>
                       }
@@ -449,7 +445,7 @@ export function EditStockCard() {
                       variant="outline"
                       onClick={() => viewAdjustmentHistory(selectedItem.id, selectedItem.type)}
                     >
-                      <History className="mr-1 h-4 w-4 hidden sm:inline" />
+                      <History className="mr-1 hidden h-4 w-4 sm:inline" />
                       {t("management.editStock.viewHistory")}
                     </Button>
                   </div>
@@ -481,10 +477,7 @@ export function EditStockCard() {
       />
 
       {/* CSV Import Dialog */}
-      <CSVImportDialog
-        open={csvImportDialogOpen}
-        onOpenChange={setCsvImportDialogOpen}
-      />
+      <CSVImportDialog open={csvImportDialogOpen} onOpenChange={setCsvImportDialogOpen} />
     </>
   );
 }

@@ -35,4 +35,3 @@ export const PAYMENT_SECURITY_FEATURES: SecurityFeature[] = [
     translationKey: "payments.security.feature3",
   },
 ];
-

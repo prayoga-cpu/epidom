@@ -1,10 +1,16 @@
 import { QueryClient } from "@tanstack/react-query";
 import { materialKeys } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { MaterialFilterInput } from "@/lib/validation/inventory.schemas";
-import { productKeys, ProductFilterInput } from "@/features/dashboard/data/products/hooks/use-products";
+import {
+  productKeys,
+  ProductFilterInput,
+} from "@/features/dashboard/data/products/hooks/use-products";
 import { recipeKeys } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import { RecipeFilterInput } from "@/lib/validation/inventory.schemas";
-import { supplierKeys, SupplierFilterInput } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
+import {
+  supplierKeys,
+  SupplierFilterInput,
+} from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
 
 /**
  * Prefetch utilities for data sections
@@ -127,7 +133,9 @@ export async function prefetchSuppliers(
       if (filters?.skip !== undefined) params.append("skip", filters.skip.toString());
       if (filters?.take !== undefined) params.append("take", filters.take.toString());
 
-      const response = await fetch(`/api/stores/${storeId}/suppliers${params.toString() ? `?${params.toString()}` : ""}`);
+      const response = await fetch(
+        `/api/stores/${storeId}/suppliers${params.toString() ? `?${params.toString()}` : ""}`
+      );
 
       if (!response.ok) {
         throw new Error("Failed to prefetch suppliers");
@@ -138,4 +146,3 @@ export async function prefetchSuppliers(
     staleTime: 5 * 60 * 1000, // 5 minutes (suppliers don't change often)
   });
 }
-

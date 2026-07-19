@@ -1,28 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { storefrontApi } from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { TableStatusBadge } from "./table-status-badge";
 import { TableCreateDialog } from "./table-create-dialog";
+import { QrCodeDialog } from "@/components/shared/qr-code-dialog";
+import { downloadDataUrl } from "@/lib/utils/export";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { QRCodeCanvas } from "qrcode.react";
 import {
-  Plus, Pencil, Trash2, Users, CalendarClock, ChevronRight,
-  Clock, CheckCircle2, XCircle, Phone, Mail, StickyNote, Loader2,
+  Plus,
+  Pencil,
+  Trash2,
+  Users,
+  CalendarClock,
+  ChevronRight,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Phone,
+  Mail,
+  StickyNote,
+  Loader2,
+  QrCode,
+  Download,
 } from "lucide-react";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import type { TableStatus, ReservationStatus } from "@prisma/client";
 
@@ -74,6 +105,9 @@ export function TablesManager({ storeId }: TablesManagerProps) {
   const [deleteTable, setDeleteTable] = useState<TableData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [reservationsTable, setReservationsTable] = useState<TableData | null>(null);
+  const [qrTable, setQrTable] = useState<TableData | null>(null);
+  const [isBulkGenerating, setIsBulkGenerating] = useState(false);
+  const bulkCanvasRefs = useRef<Map<string, HTMLCanvasElement>>(new Map());
 
   const { data, isLoading } = useQuery({
     queryKey: ["tables", storeId],
@@ -81,6 +115,57 @@ export function TablesManager({ storeId }: TablesManagerProps) {
   });
 
   const tables: TableData[] = data ?? [];
+
+  const { data: storefront } = useQuery({
+    queryKey: ["storefront", storeId],
+    queryFn: () => storefrontApi.getStorefront(storeId),
+  });
+
+  const tableOrderUrl = (label: string) => {
+    const domain = typeof window !== "undefined" ? window.location.origin : "";
+    return `${domain}/@${storefront?.slug ?? ""}/menu?table=${encodeURIComponent(label)}`;
+  };
+
+  const handleBulkDownload = () => {
+    if (tables.length === 0) return;
+    setIsBulkGenerating(true);
+    try {
+      const qrSize = 200;
+      const padding = 24;
+      const labelHeight = 32;
+      const cellW = qrSize + padding * 2;
+      const cellH = qrSize + padding * 2 + labelHeight;
+      const cols = Math.min(4, tables.length);
+      const rows = Math.ceil(tables.length / cols);
+
+      const sheet = document.createElement("canvas");
+      sheet.width = cols * cellW;
+      sheet.height = rows * cellH;
+      const ctx = sheet.getContext("2d");
+      if (!ctx) return;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, sheet.width, sheet.height);
+      ctx.fillStyle = "#000000";
+      ctx.textAlign = "center";
+      ctx.font = "600 18px sans-serif";
+
+      tables.forEach((table, i) => {
+        const canvas = bulkCanvasRefs.current.get(table.id);
+        if (!canvas) return;
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = col * cellW + padding;
+        const y = row * cellH + padding;
+        ctx.drawImage(canvas, x, y, qrSize, qrSize);
+        ctx.fillText(table.label, x + qrSize / 2, y + qrSize + labelHeight / 2 + 6);
+      });
+
+      downloadDataUrl(sheet.toDataURL("image/png"), "table-qr-codes.png");
+    } finally {
+      setIsBulkGenerating(false);
+    }
+  };
 
   // Reservations for the selected table
   const { data: resData, isLoading: resLoading } = useQuery({
@@ -126,9 +211,13 @@ export function TablesManager({ storeId }: TablesManagerProps) {
 
   const handleReservationToggle = async (table: TableData, enabled: boolean) => {
     try {
-      await apiClient.patch(`/stores/${storeId}/tables/${table.id}`, { reservationEnabled: enabled });
+      await apiClient.patch(`/stores/${storeId}/tables/${table.id}`, {
+        reservationEnabled: enabled,
+      });
       queryClient.invalidateQueries({ queryKey: ["tables", storeId] });
-      toast.success(enabled ? `${table.label} accepts reservations` : `${table.label} reservations disabled`);
+      toast.success(
+        enabled ? `${table.label} accepts reservations` : `${table.label} reservations disabled`
+      );
     } catch {
       toast.error("Failed to update reservation setting");
     }
@@ -158,7 +247,7 @@ export function TablesManager({ storeId }: TablesManagerProps) {
     return (
       <div className="grid gap-4 p-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />
+          <div key={i} className="bg-muted h-40 animate-pulse rounded-xl" />
         ))}
       </div>
     );
@@ -167,21 +256,50 @@ export function TablesManager({ storeId }: TablesManagerProps) {
   return (
     <>
       <div className="flex items-center justify-between gap-4 px-6 pt-2 pb-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {tables.length} {t("pos.tables.countHint")}
         </p>
-        <Button onClick={() => setCreateOpen(true)} size="sm">
-          <Plus className="mr-2 h-4 w-4" />
-          {t("pos.tables.add")}
-        </Button>
+        <div className="flex items-center gap-2">
+          {tables.length > 0 && (
+            <Button
+              onClick={handleBulkDownload}
+              size="sm"
+              variant="outline"
+              disabled={isBulkGenerating}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {t("pos.tables.downloadAllQr")}
+            </Button>
+          )}
+          <Button onClick={() => setCreateOpen(true)} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            {t("pos.tables.add")}
+          </Button>
+        </div>
+      </div>
+
+      {/* Off-screen QR canvases used to composite the bulk download sheet */}
+      <div aria-hidden className="pointer-events-none absolute -top-[9999px] -left-[9999px]">
+        {tables.map((table) => (
+          <QRCodeCanvas
+            key={table.id}
+            ref={(el) => {
+              if (el) bulkCanvasRefs.current.set(table.id, el);
+              else bulkCanvasRefs.current.delete(table.id);
+            }}
+            value={tableOrderUrl(table.label)}
+            size={200}
+            level="M"
+          />
+        ))}
       </div>
 
       {tables.length === 0 ? (
-        <div className="flex h-[50vh] flex-col items-center justify-center gap-4 text-muted-foreground">
-          <div className="rounded-full bg-muted p-6">
+        <div className="text-muted-foreground flex h-[50vh] flex-col items-center justify-center gap-4">
+          <div className="bg-muted rounded-full p-6">
             <Users className="h-10 w-10 opacity-40" />
           </div>
-          <p className="text-lg font-medium text-foreground">{t("pos.tables.empty")}</p>
+          <p className="text-foreground text-lg font-medium">{t("pos.tables.empty")}</p>
           <p className="text-sm">{t("pos.tables.emptyDesc")}</p>
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -189,72 +307,85 @@ export function TablesManager({ storeId }: TablesManagerProps) {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-4 px-6 pb-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 px-6 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {tables.map((table) => {
             const activeOrder = table.orders?.[0];
             const pendingReservations = table._count?.reservations ?? 0;
             return (
               <div
                 key={table.id}
-                className={`group relative flex flex-col rounded-xl border-2 shadow-sm transition-all hover:shadow-md
-                  ${table.status === "AVAILABLE" ? "border-emerald-500/40 bg-emerald-500/5"
-                  : table.status === "OCCUPIED" ? "border-red-500/40 bg-red-500/5"
-                  : table.status === "RESERVED" ? "border-amber-500/40 bg-amber-500/5"
-                  : "border-blue-500/40 bg-blue-500/5"}`}
+                className={`group relative flex flex-col rounded-xl border-2 shadow-sm transition-all hover:shadow-md ${
+                  table.status === "AVAILABLE"
+                    ? "border-emerald-500/40 bg-emerald-500/5"
+                    : table.status === "OCCUPIED"
+                      ? "border-red-500/40 bg-red-500/5"
+                      : table.status === "RESERVED"
+                        ? "border-amber-500/40 bg-amber-500/5"
+                        : "border-blue-500/40 bg-blue-500/5"
+                }`}
               >
+                {/* Action icons — sibling of the status button, not nested inside it (buttons can't contain buttons) */}
+                <div className="absolute top-1 right-1 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    onClick={() => setQrTable(table)}
+                    className="hover:bg-background/60 rounded p-1"
+                    title={t("pos.tables.showQr")}
+                  >
+                    <QrCode className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => setEditTable(table)}
+                    className="hover:bg-background/60 rounded p-1"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTable(table)}
+                    className="text-destructive hover:bg-background/60 rounded p-1"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+
                 {/* Clickable status area */}
                 <button
                   onClick={() => handleStatusChange(table, nextStatus(table.status))}
                   className="flex flex-col items-center justify-center gap-2 p-4 text-center focus:outline-none"
                 >
-                  <div className="absolute right-1 top-1 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 z-10">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setEditTable(table); }}
-                      className="rounded p-1 hover:bg-background/60"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteTable(table); }}
-                      className="rounded p-1 text-destructive hover:bg-background/60"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
                   <span className="text-2xl font-bold tracking-tight">{table.label}</span>
                   <TableStatusBadge status={table.status} />
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="text-muted-foreground flex items-center gap-1 text-xs">
                     <Users className="h-3 w-3" />
                     {table.capacity}
                   </span>
                   {activeOrder && (
-                    <span className="mt-1 truncate rounded bg-background/70 px-2 py-0.5 text-xs font-medium">
+                    <span className="bg-background/70 mt-1 truncate rounded px-2 py-0.5 text-xs font-medium">
                       {activeOrder.orderNumber}
                     </span>
                   )}
                 </button>
 
                 {/* Reservation section */}
-                <div className="border-t border-border/60 bg-background/30 px-3 py-2 flex items-center justify-between gap-2 rounded-b-xl">
-                  <div className="flex items-center gap-1.5 min-w-0">
+                <div className="border-border/60 bg-background/30 flex items-center justify-between gap-2 rounded-b-xl border-t px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-1.5">
                     <Switch
                       checked={table.reservationEnabled}
                       onCheckedChange={(v) => handleReservationToggle(table, v)}
                       className="scale-75"
                       aria-label="Enable reservations"
                     />
-                    <span className="text-[10px] text-muted-foreground truncate">
+                    <span className="text-muted-foreground truncate text-[10px]">
                       {table.reservationEnabled ? "Reservable" : "No reserv."}
                     </span>
                   </div>
                   {table.reservationEnabled && (
                     <button
                       onClick={() => setReservationsTable(table)}
-                      className="flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10 transition shrink-0"
+                      className="text-primary hover:bg-primary/10 flex shrink-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-medium transition"
                     >
                       <CalendarClock className="h-3 w-3" />
                       {pendingReservations > 0 && (
-                        <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] text-primary-foreground font-bold">
+                        <span className="bg-primary text-primary-foreground ml-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold">
                           {pendingReservations}
                         </span>
                       )}
@@ -272,21 +403,39 @@ export function TablesManager({ storeId }: TablesManagerProps) {
       <TableCreateDialog
         storeId={storeId}
         open={createOpen || !!editTable}
-        onOpenChange={(o) => { setCreateOpen(o); if (!o) setEditTable(null); }}
+        onOpenChange={(o) => {
+          setCreateOpen(o);
+          if (!o) setEditTable(null);
+        }}
         editTable={editTable}
+      />
+
+      {/* Per-table order QR */}
+      <QrCodeDialog
+        open={!!qrTable}
+        onOpenChange={(o) => !o && setQrTable(null)}
+        value={qrTable ? tableOrderUrl(qrTable.label) : ""}
+        title={`${t("pos.tables.qrDialogTitle")} — ${qrTable?.label ?? ""}`}
+        description={t("pos.tables.qrDialogDesc")}
+        filename={`table-${qrTable?.label ?? "qr"}.png`}
       />
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTable} onOpenChange={(o) => !o && setDeleteTable(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("pos.tables.confirmDelete")} {deleteTable?.label}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("pos.tables.confirmDelete")} {deleteTable?.label}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the table. Active orders or reservations will be unlinked.
+              This will permanently remove the table. Active orders or reservations will be
+              unlinked.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{t("common.actions.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>
+              {t("common.actions.cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
@@ -300,7 +449,7 @@ export function TablesManager({ storeId }: TablesManagerProps) {
 
       {/* Reservations panel */}
       <Sheet open={!!reservationsTable} onOpenChange={(o) => !o && setReservationsTable(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           <SheetHeader className="mb-4">
             <SheetTitle className="flex items-center gap-2">
               <CalendarClock className="h-5 w-5" />
@@ -313,13 +462,15 @@ export function TablesManager({ storeId }: TablesManagerProps) {
 
           {resLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
             </div>
           ) : reservations.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+            <div className="text-muted-foreground flex flex-col items-center gap-2 py-12">
               <CalendarClock className="h-10 w-10 opacity-30" />
               <p className="text-sm">No reservations for this table yet.</p>
-              <p className="text-xs">Guests can book via the storefront when reservations are enabled.</p>
+              <p className="text-xs">
+                Guests can book via the storefront when reservations are enabled.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -352,28 +503,32 @@ function ReservationCard({
   isPending: boolean;
 }) {
   const dt = new Date(reservation.scheduledAt);
-  const dateStr = dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const dateStr = dt.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
   const timeStr = dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="rounded-lg border bg-card p-3 space-y-2">
+    <div className="bg-card space-y-2 rounded-lg border p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold text-sm truncate">{reservation.guestName}</p>
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+          <p className="truncate text-sm font-semibold">{reservation.guestName}</p>
+          <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
             <Clock className="h-3 w-3 shrink-0" />
             {dateStr} · {timeStr}
           </p>
         </div>
         <Badge
           variant="outline"
-          className={`text-[10px] shrink-0 ${RESERVATION_STATUS_COLORS[reservation.status]}`}
+          className={`shrink-0 text-[10px] ${RESERVATION_STATUS_COLORS[reservation.status]}`}
         >
           {RESERVATION_STATUS_LABELS[reservation.status]}
         </Badge>
       </div>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
         <span className="flex items-center gap-1">
           <Users className="h-3 w-3" /> {reservation.partySize} pax
         </span>
@@ -383,12 +538,12 @@ function ReservationCard({
           </span>
         )}
         {reservation.guestEmail && (
-          <span className="flex items-center gap-1 truncate max-w-[180px]">
+          <span className="flex max-w-[180px] items-center gap-1 truncate">
             <Mail className="h-3 w-3 shrink-0" /> {reservation.guestEmail}
           </span>
         )}
         {reservation.notes && (
-          <span className="flex items-center gap-1 w-full text-muted-foreground/70 italic">
+          <span className="text-muted-foreground/70 flex w-full items-center gap-1 italic">
             <StickyNote className="h-3 w-3 shrink-0" /> {reservation.notes}
           </span>
         )}
@@ -400,7 +555,7 @@ function ReservationCard({
           onValueChange={(v) => onStatusChange(v as ReservationStatus)}
           disabled={isPending}
         >
-          <SelectTrigger className="h-7 text-xs flex-1">
+          <SelectTrigger className="h-7 flex-1 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -413,7 +568,7 @@ function ReservationCard({
         <button
           onClick={onDelete}
           disabled={isPending}
-          className="rounded p-1.5 text-destructive hover:bg-destructive/10 transition"
+          className="text-destructive hover:bg-destructive/10 rounded p-1.5 transition"
           aria-label="Remove reservation"
         >
           <XCircle className="h-4 w-4" />

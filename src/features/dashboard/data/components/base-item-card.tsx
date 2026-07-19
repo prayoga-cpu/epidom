@@ -53,7 +53,7 @@ export function BaseItemCard({
           contentClassName || "!px-4",
           // When in bulk select mode, override left padding for checkbox space
           // Always use pr-4 for right padding to match the default/contentClassName
-          bulkSelectMode && "!pl-8 !pr-4"
+          bulkSelectMode && "!pr-4 !pl-8"
         )}
       >
         {children}
@@ -101,4 +101,3 @@ export function ItemCardGrid({
 
   return <div className={gridClasses}>{children}</div>;
 }
-

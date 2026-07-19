@@ -189,10 +189,9 @@ describe("deductStockForOrder", () => {
   it("uses Serializable isolation level", async () => {
     prismaMock.order.findUnique.mockResolvedValue(makeOrder());
     await deductStockForOrder("order-1", "store-1");
-    expect(prismaMock.$transaction).toHaveBeenCalledWith(
-      expect.any(Function),
-      { isolationLevel: "Serializable" }
-    );
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: "Serializable",
+    });
   });
 
   it("skips item with no product and logs warning", async () => {

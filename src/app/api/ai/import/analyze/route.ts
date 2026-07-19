@@ -34,7 +34,12 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File | null;
     const storeId = formData.get("storeId") as string | null;
     const fileName = formData.get("fileName") as string | null;
-    const entityType = formData.get("entityType") as "material" | "product" | "supplier" | "recipe" | null;
+    const entityType = formData.get("entityType") as
+      | "material"
+      | "product"
+      | "supplier"
+      | "recipe"
+      | null;
 
     // Validate required fields
     if (!file) {
@@ -122,8 +127,7 @@ export async function POST(request: NextRequest) {
         where: { id: importSession.id },
         data: {
           status: "failed",
-          errorMessage:
-            pipelineError instanceof Error ? pipelineError.message : "Pipeline failed",
+          errorMessage: pipelineError instanceof Error ? pipelineError.message : "Pipeline failed",
         },
       });
 

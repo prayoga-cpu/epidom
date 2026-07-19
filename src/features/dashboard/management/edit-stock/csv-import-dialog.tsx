@@ -70,21 +70,16 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
           <Button variant="outline" onClick={handleClose} disabled={importStock.isPending}>
             {t("common.actions.cancel")}
           </Button>
-          <Button
-            onClick={handleImport}
-            disabled={!selectedFile || importStock.isPending}
-          >
-            {importStock.isPending && <Loader2 className="mr-1 h-4 w-4 hidden sm:inline animate-spin" />}
+          <Button onClick={handleImport} disabled={!selectedFile || importStock.isPending}>
+            {importStock.isPending && (
+              <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+            )}
             {t("management.editStock.importCSVDialog.importButton") || "Import Stock"}
           </Button>
         </>
       );
     }
-    return (
-      <Button onClick={handleClose}>
-        {t("common.actions.close") || "Close"}
-      </Button>
-    );
+    return <Button onClick={handleClose}>{t("common.actions.close") || "Close"}</Button>;
   };
 
   return (
@@ -104,14 +99,16 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
             <div className="space-y-4">
               <Alert>
                 <FileText className="h-4 w-4" />
-                <AlertTitle>{t("management.editStock.importCSVDialog.formatTitle") || "CSV Format"}</AlertTitle>
+                <AlertTitle>
+                  {t("management.editStock.importCSVDialog.formatTitle") || "CSV Format"}
+                </AlertTitle>
                 <AlertDescription>
                   {t("management.editStock.importCSVDialog.formatDescription") ||
                     "Your CSV file should have the following columns: SKU, Type (material or product), Current Stock"}
                 </AlertDescription>
               </Alert>
 
-              <div className="border-2 border-dashed rounded-lg p-6 text-center">
+              <div className="rounded-lg border-2 border-dashed p-6 text-center">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -121,11 +118,14 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
                   id="csv-file-input"
                 />
                 <label htmlFor="csv-file-input" className="cursor-pointer">
-                  <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <Upload className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
                   <p className="text-sm font-medium">
-                    {selectedFile ? selectedFile.name : t("management.editStock.importCSVDialog.selectFile") || "Click to select CSV file"}
+                    {selectedFile
+                      ? selectedFile.name
+                      : t("management.editStock.importCSVDialog.selectFile") ||
+                        "Click to select CSV file"}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="text-muted-foreground mt-2 text-xs">
                     {t("management.editStock.importCSVDialog.fileHint") || "CSV files only"}
                   </p>
                 </label>
@@ -140,7 +140,8 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
                 <AlertTitle>
                   {failureCount === 0
                     ? t("management.editStock.importCSVDialog.successTitle") || "Import Successful"
-                    : t("management.editStock.importCSVDialog.partialSuccessTitle") || "Import Completed with Errors"}
+                    : t("management.editStock.importCSVDialog.partialSuccessTitle") ||
+                      "Import Completed with Errors"}
                 </AlertTitle>
                 <AlertDescription>
                   {t("management.editStock.importCSVDialog.resultsSummary")
@@ -158,11 +159,11 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  <div className="max-h-[300px] space-y-2 overflow-y-auto">
                     {importResults.map((result, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-2 rounded border"
+                        className="flex items-center justify-between rounded border p-2"
                       >
                         <div className="flex items-center gap-2">
                           {result.success ? (
@@ -172,7 +173,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
                           )}
                           <div>
                             <p className="text-sm font-medium">{result.sku}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               {result.type} {result.message && `- ${result.message}`}
                             </p>
                           </div>
@@ -192,4 +193,3 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
     </Dialog>
   );
 }
-

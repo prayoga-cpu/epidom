@@ -37,7 +37,7 @@ export const GET = withApiHandler(
 export const POST = withApiHandler(
   async (request, { storeId }) => {
     const storefront = await storefrontService.getStorefrontByStoreId(storeId!);
-    
+
     const body = await request.json();
     const input = createMenuItemSchema.parse(body);
 

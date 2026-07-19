@@ -55,4 +55,3 @@ export function useBulkSelection<T extends { id: string }>(items: T[]) {
     setSelectedIds,
   };
 }
-

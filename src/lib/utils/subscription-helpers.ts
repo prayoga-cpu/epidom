@@ -107,7 +107,10 @@ export function getPlanDetails(
   t: (key: string) => string,
   currency: string = "IDR"
 ): PlanDetails {
-  const curr = currency === "IDR" || currency === "USD" || currency === "EUR" || currency === "MGA" ? currency : "IDR";
+  const curr =
+    currency === "IDR" || currency === "USD" || currency === "EUR" || currency === "MGA"
+      ? currency
+      : "IDR";
 
   switch (plan) {
     case "OPERATIONS":
@@ -183,4 +186,3 @@ export function getPlanLabel(plan: string | undefined, t: (key: string) => strin
       return plan || "";
   }
 }
-

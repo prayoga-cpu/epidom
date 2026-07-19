@@ -62,13 +62,13 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
         <>
           {/* Success animation */}
           <div className="relative mb-6">
-            <div className="absolute inset-0 animate-ping bg-green-500/20 rounded-full" />
-            <div className="relative bg-green-500 text-white rounded-full p-6">
+            <div className="absolute inset-0 animate-ping rounded-full bg-green-500/20" />
+            <div className="relative rounded-full bg-green-500 p-6 text-white">
               <Check className="h-12 w-12" />
             </div>
           </div>
 
-          <h3 className="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
+          <h3 className="mb-2 text-2xl font-bold text-green-600 dark:text-green-400">
             Import Successful!
           </h3>
           <p className="text-muted-foreground mb-8">
@@ -87,12 +87,12 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
                 <div
                   key={entity.key}
                   className={cn(
-                    "flex items-center justify-between p-4 rounded-lg",
+                    "flex items-center justify-between rounded-lg p-4",
                     allSucceeded ? "bg-green-500/10" : "bg-yellow-500/10"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className="h-5 w-5 text-muted-foreground" />
+                    <Icon className="text-muted-foreground h-5 w-5" />
                     <span className="font-medium">{entity.label}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -130,19 +130,17 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
         <>
           {/* Error display */}
           <div className="relative mb-6">
-            <div className="absolute inset-0 animate-ping bg-red-500/20 rounded-full" />
-            <div className="relative bg-red-500 text-white rounded-full p-6">
+            <div className="absolute inset-0 animate-ping rounded-full bg-red-500/20" />
+            <div className="relative rounded-full bg-red-500 p-6 text-white">
               <X className="h-12 w-12" />
             </div>
           </div>
 
-          <h3 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">
-            Import Failed
-          </h3>
+          <h3 className="mb-2 text-2xl font-bold text-red-600 dark:text-red-400">Import Failed</h3>
           <p className="text-muted-foreground mb-4">Something went wrong during import.</p>
 
           {error && (
-            <div className="w-full max-w-md bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-8">
+            <div className="mb-8 w-full max-w-md rounded-lg border border-red-500/20 bg-red-500/10 p-4">
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}

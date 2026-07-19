@@ -17,7 +17,7 @@ export function PaymentFooter() {
   const { t } = useI18n();
 
   return (
-    <footer className="border-t border-gray-200 bg-white py-6 animate-slide-up-delayed-2">
+    <footer className="animate-slide-up-delayed-2 border-t border-gray-200 bg-white py-6">
       <Container maxWidth="7xl">
         <div className="flex flex-col items-center justify-between gap-4 text-sm text-gray-600 md:flex-row">
           <div className="text-center md:text-left">
@@ -25,9 +25,9 @@ export function PaymentFooter() {
           </div>
           <div className="flex items-center gap-4 text-center">
             <span className="text-xs text-gray-500">{t("payments.footer.securelyPowered")}</span>
-            <span className="font-semibold text-brand-primary">{t("payments.footer.stripe")}</span>
+            <span className="text-brand-primary font-semibold">{t("payments.footer.stripe")}</span>
             <span className="text-gray-300">|</span>
-            <Link href="/contact" className="hover:underline text-brand-primary">
+            <Link href="/contact" className="text-brand-primary hover:underline">
               {t("payments.footer.contactSupport")}
             </Link>
           </div>
@@ -36,4 +36,3 @@ export function PaymentFooter() {
     </footer>
   );
 }
-

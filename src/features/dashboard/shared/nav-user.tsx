@@ -30,11 +30,15 @@ export function NavUser() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="flex h-9 items-center gap-2 overflow-hidden rounded-2xl px-2 hover:bg-white/10 sm:max-w-[160px] sm:px-2.5 lg:max-w-[180px]" style={{ color: "var(--epi-cream-50)" }}
+          className="flex h-9 items-center gap-2 overflow-hidden rounded-2xl px-2 hover:bg-white/10 sm:max-w-[160px] sm:px-2.5 lg:max-w-[180px]"
+          style={{ color: "var(--epi-cream-50)" }}
         >
           <Avatar className="size-7 shrink-0">
             {profile?.image && <AvatarImage src={profile.image} alt={user?.name ?? "User"} />}
-            <AvatarFallback className="text-foreground bg-[var(--epi-navy-700)] text-xs" style={{ color: "var(--epi-cream-50)" }}>
+            <AvatarFallback
+              className="text-foreground bg-[var(--epi-navy-700)] text-xs"
+              style={{ color: "var(--epi-cream-50)" }}
+            >
               {user?.name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
             </AvatarFallback>
           </Avatar>
@@ -45,8 +49,8 @@ export function NavUser() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[200px]">
         <DropdownMenuLabel className="flex items-center gap-2">
-          <span className="truncate flex-1">{user?.name ?? user?.email}</span>
-          <span className="shrink-0 rounded-full border border-violet-400/40 bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-600">
+          <span className="flex-1 truncate">{user?.name ?? user?.email}</span>
+          <span className="shrink-0 rounded-full border border-violet-400/40 bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-violet-600 uppercase">
             Beta
           </span>
         </DropdownMenuLabel>
@@ -62,14 +66,14 @@ export function NavUser() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => router.push("/admin")}
-              className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
+              className="text-red-400 focus:bg-red-500/10 focus:text-red-400"
             >
               <Shield className="mr-2 h-3.5 w-3.5" />
               Admin Panel
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => router.push("/admin/revenue")}
-              className="text-emerald-400 focus:text-emerald-400 focus:bg-emerald-500/10"
+              className="text-emerald-400 focus:bg-emerald-500/10 focus:text-emerald-400"
             >
               <TrendingUp className="mr-2 h-3.5 w-3.5" />
               Revenue Report

@@ -58,7 +58,10 @@ export async function POST(request: Request) {
   // Extract store slug from subject: "[@slug] rest of subject"
   const slugMatch = subject.match(/^\[@([a-z0-9-]+)\]/i);
   if (!slugMatch) {
-    return NextResponse.json({ error: "No store slug in subject. Format: [@your-slug] Subject" }, { status: 422 });
+    return NextResponse.json(
+      { error: "No store slug in subject. Format: [@your-slug] Subject" },
+      { status: 422 }
+    );
   }
 
   const slug = slugMatch[1].toLowerCase();
@@ -72,7 +75,12 @@ export async function POST(request: Request) {
   }
 
   const { storeId } = storefront;
-  const platform = detectPlatform(from, subject) as "GOFOOD" | "GRABFOOD" | "SHOPEEFOOD" | "TOKOPEDIA" | null;
+  const platform = detectPlatform(from, subject) as
+    | "GOFOOD"
+    | "GRABFOOD"
+    | "SHOPEEFOOD"
+    | "TOKOPEDIA"
+    | null;
 
   const emailRecord = await prisma.aggregatorEmail.create({
     data: {
@@ -87,12 +95,14 @@ export async function POST(request: Request) {
   });
 
   // Trigger Inngest to parse asynchronously
-  await inngest.send({
-    name: "aggregator/email.received",
-    data: { aggregatorEmailId: emailRecord.id, storeId },
-  }).catch(() => {
-    // Inngest not configured — email stored for manual review
-  });
+  await inngest
+    .send({
+      name: "aggregator/email.received",
+      data: { aggregatorEmailId: emailRecord.id, storeId },
+    })
+    .catch(() => {
+      // Inngest not configured — email stored for manual review
+    });
 
   return NextResponse.json({ received: true, emailId: emailRecord.id });
 }

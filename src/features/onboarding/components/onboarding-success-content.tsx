@@ -56,15 +56,15 @@ export function OnboardingSuccessContent() {
         <h1 className="text-brand-primary mb-3 text-3xl font-bold sm:text-4xl">
           🎉 {t("onboarding.success.title")}
         </h1>
-        <p className="text-brand-primary/60 mb-8 text-lg">
-          {t("onboarding.success.subtitle")}
-        </p>
+        <p className="text-brand-primary/60 mb-8 text-lg">{t("onboarding.success.subtitle")}</p>
 
         {/* Plan Info Card */}
         <div className="mb-8 rounded-2xl border-2 border-green-200 bg-white p-6 shadow-lg">
           <div className="mb-4 flex items-center justify-center gap-2">
             <Star className="text-brand-primary h-5 w-5" />
-            <span className="text-brand-primary text-lg font-bold">{t("onboarding.success.planActive")}</span>
+            <span className="text-brand-primary text-lg font-bold">
+              {t("onboarding.success.planActive")}
+            </span>
           </div>
 
           <div className="text-brand-primary/70 flex items-center justify-center gap-3">
@@ -107,4 +107,3 @@ export function OnboardingSuccessContent() {
     </div>
   );
 }
-

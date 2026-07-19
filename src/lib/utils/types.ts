@@ -13,9 +13,7 @@ import type { AppError, SubscriptionError } from "@/types/errors";
  * Convert Prisma Decimal to number (client-safe)
  * Works with Decimal objects, strings, numbers, or null/undefined
  */
-export function decimalToNumber(
-  decimal: unknown
-): number {
+export function decimalToNumber(decimal: unknown): number {
   if (decimal === null || decimal === undefined) {
     return 0;
   }
@@ -26,7 +24,12 @@ export function decimalToNumber(
     return parseFloat(decimal) || 0;
   }
   // If it's a Decimal object, try to convert it
-  if (typeof decimal === "object" && decimal !== null && "toNumber" in decimal && typeof (decimal as { toNumber: () => number }).toNumber === "function") {
+  if (
+    typeof decimal === "object" &&
+    decimal !== null &&
+    "toNumber" in decimal &&
+    typeof (decimal as { toNumber: () => number }).toNumber === "function"
+  ) {
     return (decimal as { toNumber: () => number }).toNumber();
   }
   return 0;
@@ -51,9 +54,7 @@ export function isAppError(error: unknown): error is AppError {
  */
 export function isSubscriptionError(error: unknown): error is SubscriptionError {
   return (
-    isAppError(error) &&
-    error.code === "SUBSCRIPTION_FEATURE_LOCKED" &&
-    "upgradeRequired" in error
+    isAppError(error) && error.code === "SUBSCRIPTION_FEATURE_LOCKED" && "upgradeRequired" in error
   );
 }
 
@@ -62,16 +63,19 @@ export function isSubscriptionError(error: unknown): error is SubscriptionError 
  * Use this instead of instanceof Date for better type narrowing
  */
 export function isDate(value: unknown): value is Date {
-  return value instanceof Date || (typeof value === "object" && value !== null && "getTime" in value && typeof (value as Date).getTime === "function");
+  return (
+    value instanceof Date ||
+    (typeof value === "object" &&
+      value !== null &&
+      "getTime" in value &&
+      typeof (value as Date).getTime === "function")
+  );
 }
 
 /**
  * Type guard for objects with a specific property
  */
-export function hasProperty<T extends string>(
-  obj: unknown,
-  prop: T
-): obj is Record<T, unknown> {
+export function hasProperty<T extends string>(obj: unknown, prop: T): obj is Record<T, unknown> {
   return typeof obj === "object" && obj !== null && prop in obj;
 }
 
@@ -149,9 +153,6 @@ export type DeepPartial<T> = {
 /**
  * Type helper for extracting the return type of a function
  */
-export type ReturnType<T extends (...args: any[]) => any> = T extends (
-  ...args: any[]
-) => infer R
+export type ReturnType<T extends (...args: any[]) => any> = T extends (...args: any[]) => infer R
   ? R
   : never;
-

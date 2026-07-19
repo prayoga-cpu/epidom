@@ -40,23 +40,17 @@ export function RecipeSelector({
   const allRecipes = recipesData?.recipes || [];
 
   // Filter out already selected recipes
-  const availableRecipes = allRecipes.filter(
-    (recipe) => !selectedRecipeIds.includes(recipe.id)
-  );
+  const availableRecipes = allRecipes.filter((recipe) => !selectedRecipeIds.includes(recipe.id));
 
   // Get selected recipe objects
-  const selectedRecipes = allRecipes.filter((recipe) =>
-    selectedRecipeIds.includes(recipe.id)
-  );
+  const selectedRecipes = allRecipes.filter((recipe) => selectedRecipeIds.includes(recipe.id));
 
   // Watch for new recipes created and auto-add to selection
   useEffect(() => {
     const currentCount = allRecipes.length;
     if (currentCount > previousRecipeCount && previousRecipeCount > 0) {
       // New recipe was created, find it and add to selection
-      const newRecipes = allRecipes.filter(
-        (recipe) => !selectedRecipeIds.includes(recipe.id)
-      );
+      const newRecipes = allRecipes.filter((recipe) => !selectedRecipeIds.includes(recipe.id));
       if (newRecipes.length > 0) {
         // Get the most recently created recipe
         const newestRecipe = newRecipes.sort(
@@ -85,28 +79,24 @@ export function RecipeSelector({
       <div className="space-y-3">
         {/* Section: Linked Recipes */}
         <div>
-          <label className="text-sm font-medium mb-2 block">
+          <label className="mb-2 block text-sm font-medium">
             {t("data.products.form.linkedRecipes") || "Linked Recipes"}
           </label>
 
           {/* Dropdown to select recipe */}
-          <Select
-            onValueChange={handleSelectRecipe}
-            value=""
-            disabled={isLoading}
-          >
+          <Select onValueChange={handleSelectRecipe} value="" disabled={isLoading}>
             <SelectTrigger>
               <SelectValue
                 placeholder={
                   isLoading
-                    ? (t("common.loading") || "Loading...")
-                    : (t("data.products.form.selectRecipes") || "Select recipe...")
+                    ? t("common.loading") || "Loading..."
+                    : t("data.products.form.selectRecipes") || "Select recipe..."
                 }
               />
             </SelectTrigger>
             <SelectContent>
               {isLoading ? (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                <div className="text-muted-foreground px-2 py-1.5 text-sm">
                   {t("common.loading") || "Loading..."}
                 </div>
               ) : availableRecipes.length > 0 ? (
@@ -116,14 +106,14 @@ export function RecipeSelector({
                   </SelectItem>
                 ))
               ) : (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                <div className="text-muted-foreground px-2 py-1.5 text-sm">
                   {t("data.products.form.noRecipesAvailable") || "No recipes available"}
                 </div>
               )}
             </SelectContent>
           </Select>
 
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-xs">
             {t("data.products.form.recipeHintMultiple") ||
               "A product can be produced by multiple recipes (e.g., 10 baguettes or 50 baguettes)"}
           </p>
@@ -132,8 +122,9 @@ export function RecipeSelector({
         {/* List of selected recipes */}
         {selectedRecipes.length > 0 && (
           <div>
-            <label className="text-sm font-medium mb-2 block">
-              {t("data.products.form.selectedRecipes") || "Selected Recipes"} ({selectedRecipes.length})
+            <label className="mb-2 block text-sm font-medium">
+              {t("data.products.form.selectedRecipes") || "Selected Recipes"} (
+              {selectedRecipes.length})
             </label>
             <div className="flex flex-wrap gap-2">
               {selectedRecipes.map((recipe) => (
@@ -154,7 +145,7 @@ export function RecipeSelector({
                   <button
                     type="button"
                     onClick={() => handleRemoveRecipe(recipe.id)}
-                    className="ml-1 rounded-full hover:bg-muted p-0.5 transition-colors"
+                    className="hover:bg-muted ml-1 rounded-full p-0.5 transition-colors"
                     aria-label={t("data.products.form.removeRecipe") || "Remove recipe"}
                   >
                     <X className="h-3 w-3" />
@@ -168,4 +159,3 @@ export function RecipeSelector({
     </div>
   );
 }
-

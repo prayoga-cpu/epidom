@@ -95,10 +95,10 @@ describe("PricingCards", () => {
     expect(screen.getByText("Switch to Operations")).toBeTruthy();
   });
 
-  it("clicking Enterprise CTA opens Calendly, no dialog", () => {
+  it("clicking Enterprise CTA opens WhatsApp, no dialog", () => {
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Contact Sales"));
-    expect(mockWindowOpen).toHaveBeenCalledWith(expect.stringContaining("calendly.com"), "_blank");
+    expect(mockWindowOpen).toHaveBeenCalledWith(expect.stringContaining("wa.me"), "_blank");
     expect(screen.queryByText(/Switch to/)).toBeNull();
   });
 

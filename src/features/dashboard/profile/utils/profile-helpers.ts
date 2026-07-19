@@ -31,9 +31,7 @@ export function getProfileUpdateType(
     "timezone",
     "currency",
   ];
-  const hasOtherFields = otherFields.some(
-    (field) => variables[field] !== undefined
-  );
+  const hasOtherFields = otherFields.some((field) => variables[field] !== undefined);
 
   // If image is being removed (empty string or null)
   if (variables.image === "" || variables.image === null) {
@@ -51,17 +49,9 @@ export function getProfileUpdateType(
  * @param data - Updated profile data
  * @returns Session update object with only changed fields
  */
-export function buildSessionUpdate(
-  data: ProfileData
-): Record<string, any> {
+export function buildSessionUpdate(data: ProfileData): Record<string, any> {
   const update: Record<string, any> = {};
-  const fields: (keyof ProfileData)[] = [
-    "currency",
-    "locale",
-    "timezone",
-    "name",
-    "phone",
-  ];
+  const fields: (keyof ProfileData)[] = ["currency", "locale", "timezone", "name", "phone"];
 
   fields.forEach((field) => {
     if (data[field] !== undefined && data[field] !== null) {
@@ -76,4 +66,3 @@ export function buildSessionUpdate(
 
   return update;
 }
-

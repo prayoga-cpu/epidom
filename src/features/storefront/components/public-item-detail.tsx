@@ -60,7 +60,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   const { t } = useI18n();
   const [quantity, setQuantity] = useState(1);
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, ModifierOption[]>>({});
-  
+
   // Theme styling
   const safeTheme = getPremiumTheme(storefront.themeColor || "#FF6B35");
   const themeStyle = {
@@ -75,7 +75,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(price);
   };
 
@@ -83,24 +83,28 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   useEffect(() => {
     const initialModifiers: Record<string, ModifierOption[]> = {};
     const modGroups = (item.modifiers as ModifierGroup[]) || [];
-    modGroups.forEach(group => {
+    modGroups.forEach((group) => {
       initialModifiers[group.name] = [];
     });
     setSelectedModifiers(initialModifiers);
   }, [item]);
 
   // Handle modifier selection
-  const handleModifierChange = (groupName: string, option: ModifierOption, group: ModifierGroup) => {
+  const handleModifierChange = (
+    groupName: string,
+    option: ModifierOption,
+    group: ModifierGroup
+  ) => {
     const currentSelected = selectedModifiers[groupName] || [];
-    const isSelected = currentSelected.some(o => o.name === option.name);
-    
+    const isSelected = currentSelected.some((o) => o.name === option.name);
+
     let newSelected: ModifierOption[];
-    
+
     if (group.maxSelections === 1) {
       newSelected = isSelected ? [] : [option];
     } else {
       if (isSelected) {
-        newSelected = currentSelected.filter(o => o.name !== option.name);
+        newSelected = currentSelected.filter((o) => o.name !== option.name);
       } else {
         const max = group.maxSelections || 999;
         if (currentSelected.length < max) {
@@ -110,7 +114,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
         }
       }
     }
-    
+
     setSelectedModifiers({
       ...selectedModifiers,
       [groupName]: newSelected,
@@ -122,7 +126,10 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
     // Check if required modifiers are selected
     const modGroups = (item.modifiers as ModifierGroup[]) || [];
     for (const group of modGroups) {
-      if (group.isRequired && (!selectedModifiers[group.name] || selectedModifiers[group.name].length === 0)) {
+      if (
+        group.isRequired &&
+        (!selectedModifiers[group.name] || selectedModifiers[group.name].length === 0)
+      ) {
         alert(t("publicOrder.itemDetail.selectOptionAlert") + ' "' + group.name + '"');
         return;
       }
@@ -138,7 +145,13 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
 
     // Create unique key
     const modifierKey = formattedModifiers
-      .map(g => `${g.groupName}:${g.options.map(o => o.name).sort().join(",")}`)
+      .map(
+        (g) =>
+          `${g.groupName}:${g.options
+            .map((o) => o.name)
+            .sort()
+            .join(",")}`
+      )
       .sort()
       .join("|");
     const uniqueId = `${item.id}-${modifierKey}`;
@@ -154,8 +167,8 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
       console.error(e);
     }
 
-    const existingIndex = localCart.findIndex(cartItem => cartItem.uniqueId === uniqueId);
-    
+    const existingIndex = localCart.findIndex((cartItem) => cartItem.uniqueId === uniqueId);
+
     if (existingIndex > -1) {
       localCart[existingIndex].quantity += quantity;
     } else {
@@ -182,94 +195,99 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-24" style={themeStyle}>
+    <div className="flex min-h-screen flex-col pb-24" style={themeStyle}>
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between shadow-sm">
-        <Link href={`/@${storefront.slug}/menu`} className="p-1 rounded-full hover:bg-muted transition">
-          <ArrowLeft className="size-5 text-foreground" />
+      <header className="bg-card/90 sticky top-0 z-30 flex items-center justify-between border-b px-4 py-3 shadow-sm backdrop-blur-md">
+        <Link
+          href={`/@${storefront.slug}/menu`}
+          className="hover:bg-muted rounded-full p-1 transition"
+        >
+          <ArrowLeft className="text-foreground size-5" />
         </Link>
-        <span className="font-extrabold text-foreground text-sm">
+        <span className="text-foreground text-sm font-extrabold">
           {t("publicOrder.itemDetail.pageTitle")}
         </span>
         <StorefrontControls />
       </header>
 
       {/* Main image */}
-      <div className="relative h-64 w-full bg-muted flex items-center justify-center">
+      <div className="bg-muted relative flex h-64 w-full items-center justify-center">
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            className="h-full w-full object-cover"
-          />
+          <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full flex items-center justify-center text-muted-foreground/50">
+          <div className="text-muted-foreground/50 flex h-full w-full items-center justify-center">
             <Utensils className="size-16 stroke-1" />
           </div>
         )}
       </div>
 
       {/* Item info */}
-      <div className="p-4 border-b bg-card">
-        <div className="flex justify-between items-start gap-2">
-          <h1 className="text-xl font-extrabold text-foreground leading-tight">{item.name}</h1>
+      <div className="bg-card border-b p-4">
+        <div className="flex items-start justify-between gap-2">
+          <h1 className="text-foreground text-xl leading-tight font-extrabold">{item.name}</h1>
           {item.isFeatured && (
-            <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300 px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-amber-800 uppercase dark:bg-amber-400/15 dark:text-amber-300">
               {t("publicOrder.itemDetail.favorite")}
             </span>
           )}
         </div>
-        <p className="font-black text-[var(--store-theme)] text-base mt-1">
+        <p className="mt-1 text-base font-black text-[var(--store-theme)]">
           {formatPrice(Number(item.price))}
         </p>
         {item.description && (
-          <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-            {item.description}
-          </p>
+          <p className="text-muted-foreground mt-3 text-xs leading-relaxed">{item.description}</p>
         )}
       </div>
 
       {/* Modifiers Selection */}
-      <div className="p-4 space-y-6 flex-1 bg-muted/50">
+      <div className="bg-muted/50 flex-1 space-y-6 p-4">
         {((item.modifiers as ModifierGroup[]) || []).map((group, groupIdx) => (
           <div key={groupIdx} className="space-y-2">
-            <div className="flex justify-between items-center">
-              <h4 className="font-bold text-sm text-foreground">
+            <div className="flex items-center justify-between">
+              <h4 className="text-foreground text-sm font-bold">
                 {group.name}
                 {group.isRequired && <span className="text-destructive ml-1 font-black">*</span>}
               </h4>
-              <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                {group.isRequired ? t("publicOrder.itemDetail.required") : t("publicOrder.itemDetail.optional")}
+              <span className="text-muted-foreground bg-muted rounded px-2 py-0.5 text-[10px] font-bold">
+                {group.isRequired
+                  ? t("publicOrder.itemDetail.required")
+                  : t("publicOrder.itemDetail.optional")}
               </span>
             </div>
-            
+
             <div className="grid gap-2">
               {group.options.map((option, optIdx) => {
-                const isSelected = (selectedModifiers[group.name] || []).some(o => o.name === option.name);
-                
+                const isSelected = (selectedModifiers[group.name] || []).some(
+                  (o) => o.name === option.name
+                );
+
                 return (
-                  <div 
+                  <div
                     key={optIdx}
                     onClick={() => handleModifierChange(group.name, option, group)}
-                    className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${
+                    className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition ${
                       isSelected
                         ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)]"
                         : "border-border bg-card hover:border-muted-foreground/30"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`size-5 rounded-md border flex items-center justify-center transition-colors ${
-                        isSelected
-                          ? "bg-[var(--store-theme)] border-transparent"
-                          : "border-muted-foreground/30"
-                      }`}>
-                        {isSelected && <Check className="size-3.5 text-white stroke-[3px]" />}
+                      <div
+                        className={`flex size-5 items-center justify-center rounded-md border transition-colors ${
+                          isSelected
+                            ? "border-transparent bg-[var(--store-theme)]"
+                            : "border-muted-foreground/30"
+                        }`}
+                      >
+                        {isSelected && <Check className="size-3.5 stroke-[3px] text-white" />}
                       </div>
-                      <span className="text-xs font-semibold text-foreground">{option.name}</span>
+                      <span className="text-foreground text-xs font-semibold">{option.name}</span>
                     </div>
-                    <span className="text-xs font-bold text-muted-foreground">
-                      {option.priceAdd > 0 ? `+${formatPrice(option.priceAdd)}` : t("publicOrder.itemDetail.free")}
+                    <span className="text-muted-foreground text-xs font-bold">
+                      {option.priceAdd > 0
+                        ? `+${formatPrice(option.priceAdd)}`
+                        : t("publicOrder.itemDetail.free")}
                     </span>
                   </div>
                 );
@@ -280,22 +298,22 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
       </div>
 
       {/* Floating purchase action bar */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-card border-t p-4 z-40 shadow-lg">
+      <div className="bg-card fixed right-0 bottom-0 left-0 z-40 mx-auto max-w-md border-t p-4 shadow-lg">
         <div className="flex items-center justify-between gap-4">
           {/* Quantity Selector */}
-          <div className="flex items-center gap-3 border rounded-full px-3 py-1.5 bg-muted">
+          <div className="bg-muted flex items-center gap-3 rounded-full border px-3 py-1.5">
             <button
               onClick={() => quantity > 1 && setQuantity(quantity - 1)}
-              className="p-1 text-muted-foreground hover:text-foreground transition"
+              className="text-muted-foreground hover:text-foreground p-1 transition"
             >
               <Minus className="size-4" />
             </button>
-            <span className="text-sm font-bold text-foreground min-w-[24px] text-center">
+            <span className="text-foreground min-w-[24px] text-center text-sm font-bold">
               {quantity}
             </span>
             <button
               onClick={() => setQuantity(quantity + 1)}
-              className="p-1 text-muted-foreground hover:text-foreground transition"
+              className="text-muted-foreground hover:text-foreground p-1 transition"
             >
               <Plus className="size-4" />
             </button>
@@ -304,7 +322,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
           {/* Add Button */}
           <button
             onClick={handleAddToCart}
-            className="flex-1 py-3.5 rounded-full font-bold text-white shadow-md flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+            className="flex flex-1 items-center justify-center gap-2 rounded-full py-3.5 font-bold text-white shadow-md transition-transform active:scale-[0.98]"
             style={{ backgroundColor: "var(--store-theme)" }}
           >
             <ShoppingCart className="size-5" />

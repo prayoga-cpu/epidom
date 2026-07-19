@@ -3,7 +3,8 @@ import { RefundPolicyContent } from "@/features/marketing/refund-policy/componen
 
 export const metadata: Metadata = {
   title: "Refund Policy — EPIDOM",
-  description: "Read EPIDOM's Refund Policy. Understand our refund and cancellation terms, eligibility criteria, and how to request a refund.",
+  description:
+    "Read EPIDOM's Refund Policy. Understand our refund and cancellation terms, eligibility criteria, and how to request a refund.",
 };
 
 export default function RefundPolicyPage() {

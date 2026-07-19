@@ -63,9 +63,7 @@ export default async function OnboardingPage() {
 
   // Redirect away if onboarding was already completed, or if the store is
   // already published (backward-compat for users who registered before this flag existed).
-  const hasPublishedStore = user?.business?.stores?.some(
-    (s) => s.storefront?.isPublished
-  );
+  const hasPublishedStore = user?.business?.stores?.some((s) => s.storefront?.isPublished);
 
   if (user?.hasOnboarded || hasPublishedStore) {
     redirect("/stores");

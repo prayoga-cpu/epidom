@@ -13,6 +13,7 @@ Table user {
   phone String
   locale String [not null, default: 'id']
   timezone String [not null, default: 'Asia/Jakarta']
+  timezoneUpdatedAt DateTime
   currency String [not null, default: 'IDR']
   defaultLanding String [not null, default: 'dashboard']
   stripeConnectAccountId String
@@ -689,6 +690,7 @@ Enum MovementType {
   SALE
   ADJUSTMENT
   WASTE
+  RETURN
 }
 
 Enum SupplierOrderStatus {
@@ -705,6 +707,7 @@ Enum OrderStatus {
   READY
   DELIVERED
   CANCELLED
+  HELD
 }
 
 Enum AlertType {

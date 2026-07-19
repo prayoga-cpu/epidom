@@ -15,10 +15,7 @@ function key(id: string) {
   return `${PREFIX}${id}`;
 }
 
-export async function enqueueOrder(
-  storeId: string,
-  order: CreatePosOrderInput
-): Promise<string> {
+export async function enqueueOrder(storeId: string, order: CreatePosOrderInput): Promise<string> {
   const id = crypto.randomUUID();
   const entry: OfflineOrder = {
     id,

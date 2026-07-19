@@ -2,7 +2,13 @@ import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { generateStructuredResponse } from "@/lib/ai/openai-client";
 import { z } from "zod";
-import { AggregatorPlatform, OrderSource, PaymentMethod, PaymentStatus, OrderStatus } from "@prisma/client";
+import {
+  AggregatorPlatform,
+  OrderSource,
+  PaymentMethod,
+  PaymentStatus,
+  OrderStatus,
+} from "@prisma/client";
 import { PLATFORM_TO_SOURCE } from "@/config/aggregator.config";
 import { toDecimal } from "@/lib/utils/types.server";
 
@@ -82,7 +88,8 @@ export const parseAggregatorEmail = inngest.createFunction(
       ? PLATFORM_TO_SOURCE[parsed.platform as AggregatorPlatform]
       : "MANUAL";
 
-    const subtotal = parsed.subtotal || parsed.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const subtotal =
+      parsed.subtotal || parsed.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
     const total = parsed.total || subtotal;
 
     const order = await prisma.order.create({
@@ -115,7 +122,11 @@ export const parseAggregatorEmail = inngest.createFunction(
 
     await prisma.aggregatorEmail.update({
       where: { id: aggregatorEmailId },
-      data: { parseStatus: "success", parsedOrderId: order.id, platform: parsed.platform as AggregatorPlatform ?? undefined },
+      data: {
+        parseStatus: "success",
+        parsedOrderId: order.id,
+        platform: (parsed.platform as AggregatorPlatform) ?? undefined,
+      },
     });
 
     return { orderId: order.id, source };

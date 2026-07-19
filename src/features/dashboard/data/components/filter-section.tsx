@@ -72,13 +72,9 @@ export function FilterSection({
       {(filters.length > 0 || onClearFilters) && (
         <div className={responsive.filtersRow}>
           {filters.map((filter) => (
-            <Select
-              key={filter.key}
-              value={filter.value || "all"}
-              onValueChange={filter.onChange}
-            >
+            <Select key={filter.key} value={filter.value || "all"} onValueChange={filter.onChange}>
               <SelectTrigger className={responsive.select}>
-                <Filter className="mr-1 h-4 w-4 hidden sm:inline" />
+                <Filter className="mr-1 hidden h-4 w-4 sm:inline" />
                 <SelectValue placeholder={filter.placeholder || filter.label} />
               </SelectTrigger>
               <SelectContent>
@@ -99,7 +95,7 @@ export function FilterSection({
               onClick={onClearFilters}
               className={responsive.button}
             >
-              <X className="mr-1 h-4 w-4 hidden sm:inline" />
+              <X className="mr-1 hidden h-4 w-4 sm:inline" />
               {clearFiltersLabel}
             </Button>
           )}
@@ -108,4 +104,3 @@ export function FilterSection({
     </div>
   );
 }
-

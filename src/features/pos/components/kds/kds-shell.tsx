@@ -39,11 +39,11 @@ export function KdsShell({ storeId }: KdsShellProps) {
 
   if (activeOrders.length === 0) {
     return (
-      <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-muted-foreground">
-        <div className="rounded-full bg-muted p-6">
+      <div className="text-muted-foreground flex h-[60vh] flex-col items-center justify-center gap-4">
+        <div className="bg-muted rounded-full p-6">
           <ChefHat className="h-10 w-10 opacity-40" />
         </div>
-        <p className="text-lg font-medium text-foreground">{t("pos.kds.allDone")}</p>
+        <p className="text-foreground text-lg font-medium">{t("pos.kds.allDone")}</p>
         <p className="text-sm">{t("pos.kds.noActiveOrders")}</p>
       </div>
     );

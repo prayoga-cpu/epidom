@@ -41,7 +41,10 @@ Check for logical errors, outliers, and constraint violations.`;
   const userPrompt = `Entity Type: ${entityType}
 
 Data Rows (${rows.length} total):
-${rows.slice(0, 20).map((r, i) => `${i}: ${JSON.stringify(r)}`).join("\n")}
+${rows
+  .slice(0, 20)
+  .map((r, i) => `${i}: ${JSON.stringify(r)}`)
+  .join("\n")}
 ${rows.length > 20 ? `... and ${rows.length - 20} more rows` : ""}
 
 Validate:

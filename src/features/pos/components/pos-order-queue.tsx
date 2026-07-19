@@ -2,8 +2,8 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { usePosOrders } from "../hooks/use-pos-orders";
+import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { PosOrderCard } from "./pos-order-card";
-import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UtensilsCrossed } from "lucide-react";
@@ -17,6 +17,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   const { t } = useI18n();
   const { data: orders, isLoading } = usePosOrders(storeId);
   const queryClient = useQueryClient();
+  const updateStatus = useUpdateOrderStatus(storeId);
 
   const handleUpdateStatus = async (orderId: string, status: string) => {
     // Optimistic update
@@ -30,7 +31,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     });
 
     try {
-      await apiClient.patch(`/stores/${storeId}/pos/orders/${orderId}`, { status });
+      await updateStatus.mutateAsync({ orderId, status });
     } catch (error) {
       toast.error(t("pos.queue.updateFailed"));
       // Revert will happen automatically on next SSE poll
@@ -62,7 +63,12 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   return (
     <div className="grid content-start items-start gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {orders.map((order: any) => (
-        <PosOrderCard key={order.id} order={order} onUpdateStatus={handleUpdateStatus} />
+        <PosOrderCard
+          key={order.id}
+          order={order}
+          storeId={storeId}
+          onUpdateStatus={handleUpdateStatus}
+        />
       ))}
     </div>
   );

@@ -8,6 +8,8 @@ interface PosCartState {
   subtotal: number;
   tax: number;
   total: number;
+  /** Set while the cart holds a resumed HELD order — cleared by clearCart(). */
+  resumingOrderId: string | null;
   addItem: (
     menuItemId: string,
     name: string,
@@ -19,6 +21,15 @@ interface PosCartState {
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
+  setResumingOrderId: (id: string | null) => void;
+  /**
+   * Loads items reconstructed from a HELD order directly, bypassing
+   * addItem()'s same-menuItem+modifiers merge — resumed items always carry
+   * modifiers: [] (never persisted on OrderItem), so feeding them through
+   * addItem() could silently merge two originally-distinct lines and drop
+   * one line's price.
+   */
+  hydrateFromOrder: (items: CartItem[], resumingOrderId: string) => void;
 }
 
 const calculateTotals = (items: CartItem[]) => {
@@ -35,22 +46,15 @@ export const usePosCart = create<PosCartState>()(
       subtotal: 0,
       tax: 0,
       total: 0,
+      resumingOrderId: null as string | null,
 
-      addItem: (
-        menuItemId,
-        name,
-        unitPrice,
-        quantity = 1,
-        modifiers = [],
-        imageUrl
-      ) => {
+      addItem: (menuItemId, name, unitPrice, quantity = 1, modifiers = [], imageUrl) => {
         const { items } = get();
 
         // Check if identical item (same ID and modifiers) already exists
         const existingItemIndex = items.findIndex(
           (i: any) =>
-            i.menuItemId === menuItemId &&
-            JSON.stringify(i.modifiers) === JSON.stringify(modifiers)
+            i.menuItemId === menuItemId && JSON.stringify(i.modifiers) === JSON.stringify(modifiers)
         );
 
         let newItems;
@@ -59,10 +63,7 @@ export const usePosCart = create<PosCartState>()(
           newItems = [...items];
           const item = newItems[existingItemIndex];
           const newQuantity = item.quantity + quantity;
-          const modifierTotal = item.modifiers.reduce(
-            (sum: number, m: any) => sum + m.priceAdd,
-            0
-          );
+          const modifierTotal = item.modifiers.reduce((sum: number, m: any) => sum + m.priceAdd, 0);
           newItems[existingItemIndex] = {
             ...item,
             quantity: newQuantity,
@@ -70,10 +71,7 @@ export const usePosCart = create<PosCartState>()(
           };
         } else {
           // Add new item
-          const modifierTotal = modifiers.reduce(
-            (sum: number, m: any) => sum + m.priceAdd,
-            0
-          );
+          const modifierTotal = modifiers.reduce((sum: number, m: any) => sum + m.priceAdd, 0);
           const lineTotal = (unitPrice + modifierTotal) * quantity;
           newItems = [
             ...items,
@@ -128,7 +126,16 @@ export const usePosCart = create<PosCartState>()(
       },
 
       clearCart: () => {
-        set({ items: [], subtotal: 0, tax: 0, total: 0 });
+        set({ items: [], subtotal: 0, tax: 0, total: 0, resumingOrderId: null });
+      },
+
+      setResumingOrderId: (id: string | null) => {
+        set({ resumingOrderId: id });
+      },
+
+      hydrateFromOrder: (items: CartItem[], resumingOrderId: string) => {
+        const totals = calculateTotals(items);
+        set({ items, resumingOrderId, ...totals });
       },
     }),
     {

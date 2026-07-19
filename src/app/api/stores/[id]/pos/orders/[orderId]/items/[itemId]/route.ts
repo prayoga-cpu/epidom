@@ -17,7 +17,9 @@ export async function PATCH(
 
   const session = await getSession();
   if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), { status: 401 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+      status: 401,
+    });
   }
 
   const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
@@ -39,7 +41,9 @@ export async function PATCH(
   });
 
   if (!item || item.order.storeId !== storeId) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Item not found"), { status: 404 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Item not found"), {
+      status: 404,
+    });
   }
 
   const updateData: Record<string, unknown> = { status: parsed.data.status };
@@ -57,7 +61,9 @@ export async function PATCH(
       where: { orderId },
       select: { status: true },
     });
-    const allReady = allItems.every((i) => i.status === "READY" || i.status === "SERVED" || i.status === "CANCELLED");
+    const allReady = allItems.every(
+      (i) => i.status === "READY" || i.status === "SERVED" || i.status === "CANCELLED"
+    );
     if (allReady) {
       await prisma.order.update({ where: { id: orderId }, data: { status: "READY" } });
     }

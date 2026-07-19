@@ -11,6 +11,7 @@ import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CURRENCIES } from "@/lib/constants/currencies";
 import {
   Form,
   FormControl,
@@ -50,6 +52,16 @@ interface EditPersonalInfoDialogProps {
 
 type FormData = z.infer<typeof updateProfileSchema>;
 
+const CURRENCY_OPTIONS: ComboboxOption[] = CURRENCIES.map((c) => ({
+  value: c.code,
+  label: `${c.code} — ${c.name}`,
+}));
+
+const TIMEZONE_OPTIONS: ComboboxOption[] = Intl.supportedValuesOf("timeZone").map((tz) => ({
+  value: tz,
+  label: tz.replace(/_/g, " "),
+}));
+
 export function EditPersonalInfoDialog({
   open,
   onOpenChange,
@@ -67,7 +79,11 @@ export function EditPersonalInfoDialog({
       locale: user.locale,
       timezone: user.timezone,
       currency: user.currency,
-      defaultLanding: (user.defaultLanding ?? "dashboard") as "dashboard" | "pos" | "storefront" | "data",
+      defaultLanding: (user.defaultLanding ?? "dashboard") as
+        | "dashboard"
+        | "pos"
+        | "storefront"
+        | "data",
     },
   });
 
@@ -80,7 +96,11 @@ export function EditPersonalInfoDialog({
         locale: user.locale,
         timezone: user.timezone,
         currency: user.currency,
-        defaultLanding: (user.defaultLanding ?? "dashboard") as "dashboard" | "pos" | "storefront" | "data",
+        defaultLanding: (user.defaultLanding ?? "dashboard") as
+          | "dashboard"
+          | "pos"
+          | "storefront"
+          | "data",
       });
     }
   }, [open, user, form]);
@@ -117,7 +137,11 @@ export function EditPersonalInfoDialog({
         }
       >
         <Form {...form}>
-          <form id="edit-personal-info-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            id="edit-personal-info-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="name"
@@ -163,7 +187,7 @@ export function EditPersonalInfoDialog({
               )}
             />
 
-            <div className="grid items-start grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 items-start gap-4">
               <FormField
                 control={form.control}
                 name="locale"
@@ -193,19 +217,12 @@ export function EditPersonalInfoDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t("profile.personal.currency")}</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="IDR">IDR (Rp) — Indonesia</SelectItem>
-                        <SelectItem value="USD">USD ($) — US Dollar</SelectItem>
-                        <SelectItem value="EUR">EUR (€) — Euro</SelectItem>
-                        <SelectItem value="MGA">MGA (Ar) — Ariary Madagascar</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Combobox
+                      options={CURRENCY_OPTIONS}
+                      value={field.value}
+                      onChange={field.onChange}
+                      searchPlaceholder={t("profile.personal.currencySearchPlaceholder")}
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -218,20 +235,12 @@ export function EditPersonalInfoDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("profile.personal.timezone")}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="UTC">UTC</SelectItem>
-                      <SelectItem value="Europe/Paris">Europe/Paris</SelectItem>
-                      <SelectItem value="America/New_York">America/New York</SelectItem>
-                      <SelectItem value="Asia/Jakarta">Asia/Jakarta</SelectItem>
-                      <SelectItem value="Asia/Tokyo">Asia/Tokyo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    options={TIMEZONE_OPTIONS}
+                    value={field.value}
+                    onChange={field.onChange}
+                    searchPlaceholder={t("profile.personal.timezoneSearchPlaceholder")}
+                  />
                   <FormMessage />
                 </FormItem>
               )}
@@ -243,17 +252,29 @@ export function EditPersonalInfoDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("profile.personal.defaultLanding")}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="dashboard">{t("profile.personal.landingOptions.dashboard")}</SelectItem>
-                      <SelectItem value="pos">{t("profile.personal.landingOptions.pos")}</SelectItem>
-                      <SelectItem value="storefront">{t("profile.personal.landingOptions.storefront")}</SelectItem>
-                      <SelectItem value="data">{t("profile.personal.landingOptions.data")}</SelectItem>
+                      <SelectItem value="dashboard">
+                        {t("profile.personal.landingOptions.dashboard")}
+                      </SelectItem>
+                      <SelectItem value="pos">
+                        {t("profile.personal.landingOptions.pos")}
+                      </SelectItem>
+                      <SelectItem value="storefront">
+                        {t("profile.personal.landingOptions.storefront")}
+                      </SelectItem>
+                      <SelectItem value="data">
+                        {t("profile.personal.landingOptions.data")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>{t("profile.personal.defaultLandingHint")}</FormDescription>

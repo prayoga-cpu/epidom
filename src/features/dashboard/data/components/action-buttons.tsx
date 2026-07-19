@@ -18,11 +18,7 @@ interface ActionButtonsProps {
  * Tablet+: horizontal layout, auto-width buttons
  */
 export function ActionButtons({ children, className }: ActionButtonsProps) {
-  return (
-    <div className={cn(responsive.buttonGroup, className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn(responsive.buttonGroup, className)}>{children}</div>;
 }
 
 /**
@@ -32,11 +28,5 @@ export function ActionButtons({ children, className }: ActionButtonsProps) {
  * Mobile: full-width, Tablet+: auto-width
  */
 export function ActionButton({ className, ...props }: ComponentProps<typeof Button>) {
-  return (
-    <Button
-      className={cn(responsive.button, className)}
-      {...props}
-    />
-  );
+  return <Button className={cn(responsive.button, className)} {...props} />;
 }
-

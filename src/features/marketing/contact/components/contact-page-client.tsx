@@ -262,15 +262,15 @@ export function ContactPageClient() {
               icon={<MailIconLg />}
               title={t("contact.page.channel1title")}
               body={t("contact.page.channel1body")}
-              cta="support@epidom.fr"
-              href="mailto:support@epidom.fr"
+              cta="cro@prionation.io, ceo@prionation.io, consult@prionation.io"
+              href="mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io"
             />
             <ChannelCard
               icon={<WaIconLg />}
               title={t("contact.page.channel2title")}
               body={t("contact.page.channel2body")}
               cta={t("contact.page.whatsappCta")}
-              href="https://wa.me/6281234567890"
+              href="https://wa.me/33781732386"
               external
               gold
             />

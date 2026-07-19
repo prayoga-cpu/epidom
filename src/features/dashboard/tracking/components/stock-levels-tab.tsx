@@ -244,7 +244,7 @@ export function StockLevelsTab({ initialMaterials }: StockLevelsTabProps = {}) {
             </SelectContent>
           </Select>
 
-          <span className="text-muted-foreground w-full text-center text-sm lg:w-auto lg:ml-auto lg:text-left">
+          <span className="text-muted-foreground w-full text-center text-sm lg:ml-auto lg:w-auto lg:text-left">
             {finalFilteredItems.length}{" "}
             {finalFilteredItems.length === 1 ? t("tracking.item") : t("tracking.items")}
           </span>
@@ -262,8 +262,8 @@ export function StockLevelsTab({ initialMaterials }: StockLevelsTabProps = {}) {
             </div>
           ) : (
             <>
-    {/* Mobile/Tablet: Card Layout */}
-    <div className="space-y-3 lg:hidden">
+              {/* Mobile/Tablet: Card Layout */}
+              <div className="space-y-3 lg:hidden">
                 {finalFilteredItems.map((item) => {
                   const stockStatus = getStockStatus(
                     item.currentStock,
@@ -279,11 +279,11 @@ export function StockLevelsTab({ initialMaterials }: StockLevelsTabProps = {}) {
                   return (
                     <div
                       key={`${item.type}-${item.id}`}
-                      className="bg-muted/50 rounded-lg border p-4 space-y-3"
+                      className="bg-muted/50 space-y-3 rounded-lg border p-4"
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-sm font-semibold">{item.name}</h3>
                           <span className="bg-muted text-muted-foreground mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
                             {item.type === "material"
                               ? t("tracking.materialType")
@@ -333,82 +333,85 @@ export function StockLevelsTab({ initialMaterials }: StockLevelsTabProps = {}) {
               </div>
 
               {/* Desktop: Table Layout */}
-              <div className="hidden lg:block overflow-x-auto">
+              <div className="hidden overflow-x-auto lg:block">
                 <div className="min-w-[640px]">
-            <Table className="w-full text-sm">
-              <TableHeader>
-                <TableRow className="text-foreground/80">
+                  <Table className="w-full text-sm">
+                    <TableHeader>
+                      <TableRow className="text-foreground/80">
                         <TableHead className="min-w-[150px] py-2 pr-3 text-left font-medium">
-                    {t("tables.products")}
-                  </TableHead>
+                          {t("tables.products")}
+                        </TableHead>
                         <TableHead className="min-w-[100px] py-2 pr-3 text-left font-medium">
-                    {t("tracking.type")}
-                  </TableHead>
-                        <TableHead className="min-w-[200px] w-1/2 py-2 pr-3 text-left font-medium">
-                    {t("tracking.stockLevel")}
-                  </TableHead>
+                          {t("tracking.type")}
+                        </TableHead>
+                        <TableHead className="w-1/2 min-w-[200px] py-2 pr-3 text-left font-medium">
+                          {t("tracking.stockLevel")}
+                        </TableHead>
                         <TableHead className="min-w-[120px] py-2 pr-3 text-right font-medium whitespace-nowrap">
-                    {t("tables.currentUnits")}
-                  </TableHead>
+                          {t("tables.currentUnits")}
+                        </TableHead>
                         <TableHead className="min-w-[80px] py-2 pl-3 text-right font-medium">
-                    {t("tables.status")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                          {t("tables.status")}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {finalFilteredItems.map((item) => {
-                    const stockStatus = getStockStatus(
-                      item.currentStock,
-                      item.minStock,
-                      item.maxStock
-                    );
-                    return (
-                      <TableRow key={`${item.type}-${item.id}`} className="border-t">
+                        const stockStatus = getStockStatus(
+                          item.currentStock,
+                          item.minStock,
+                          item.maxStock
+                        );
+                        return (
+                          <TableRow key={`${item.type}-${item.id}`} className="border-t">
                             <TableCell className="min-w-[150px] py-3 pr-3">{item.name}</TableCell>
                             <TableCell className="min-w-[100px] py-3 pr-3">
-                          <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2 py-1 text-xs font-medium">
-                            {item.type === "material"
-                              ? t("tracking.materialType")
-                              : t("tracking.productType")}
-                          </span>
-                        </TableCell>
+                              <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2 py-1 text-xs font-medium">
+                                {item.type === "material"
+                                  ? t("tracking.materialType")
+                                  : t("tracking.productType")}
+                              </span>
+                            </TableCell>
                             <TableCell className="min-w-[200px] py-3 pr-3">
-                          <Progress
-                            value={stockStatus.percentage}
-                            className={
-                              stockStatus.color === "dark"
-                                ? "bg-muted [&>div]:bg-foreground/80"
-                                : stockStatus.color === "muted"
-                                  ? "bg-muted [&>div]:bg-foreground/40"
-                                  : "bg-muted [&>div]:bg-destructive"
-                            }
-                          />
-                        </TableCell>
+                              <Progress
+                                value={stockStatus.percentage}
+                                className={
+                                  stockStatus.color === "dark"
+                                    ? "bg-muted [&>div]:bg-foreground/80"
+                                    : stockStatus.color === "muted"
+                                      ? "bg-muted [&>div]:bg-foreground/40"
+                                      : "bg-muted [&>div]:bg-destructive"
+                                }
+                              />
+                            </TableCell>
                             <TableCell className="min-w-[120px] py-3 pr-3 text-right whitespace-nowrap">
-                          {item.currentStock.toFixed(2)} {item.unit}
-                        </TableCell>
+                              {item.currentStock.toFixed(2)} {item.unit}
+                            </TableCell>
                             <TableCell className="min-w-[80px] py-3 pl-3 text-right">
-                          {stockStatus.status === "ok" && (
-                            <CheckCircle2 className="text-primary inline size-5" aria-label="OK" />
-                          )}
-                          {stockStatus.status === "warning" && (
-                            <AlertCircle
-                              className="text-foreground/70 inline size-5"
-                              aria-label="Warning"
-                            />
-                          )}
-                          {stockStatus.status === "critical" && (
-                            <XCircle
-                              className="text-destructive inline size-5"
-                              aria-label="Critical"
-                            />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
+                              {stockStatus.status === "ok" && (
+                                <CheckCircle2
+                                  className="text-primary inline size-5"
+                                  aria-label="OK"
+                                />
+                              )}
+                              {stockStatus.status === "warning" && (
+                                <AlertCircle
+                                  className="text-foreground/70 inline size-5"
+                                  aria-label="Warning"
+                                />
+                              )}
+                              {stockStatus.status === "critical" && (
+                                <XCircle
+                                  className="text-destructive inline size-5"
+                                  aria-label="Critical"
+                                />
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
                       })}
-              </TableBody>
-            </Table>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             </>

@@ -21,13 +21,8 @@ export function Sparkline({
   const min = Math.min(...points);
   const range = max - min || 1;
   const step = w / (points.length - 1);
-  const coords = points.map((p, i) => [
-    i * step,
-    h - 6 - ((p - min) / range) * (h - 14),
-  ]);
-  const path = coords
-    .map(([x, y], i) => (i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`))
-    .join(" ");
+  const coords = points.map((p, i) => [i * step, h - 6 - ((p - min) / range) * (h - 14)]);
+  const path = coords.map(([x, y], i) => (i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`)).join(" ");
   const area = `${path} L ${w} ${h} L 0 ${h} Z`;
   const gradId = `grad-${color.replace("#", "")}`;
 

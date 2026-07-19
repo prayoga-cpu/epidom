@@ -9,15 +9,14 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
  * Returns menu items grouped by category for the POS cashier screen.
  * Only returns items from the store's active storefront.
  */
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
 
   const session = await getSession();
   if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), { status: 401 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+      status: 401,
+    });
   }
 
   const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
@@ -31,7 +30,10 @@ export async function GET(
 
     if (!storefront) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "No storefront found for this store. Create a storefront first."),
+        createErrorResponse(
+          ApiErrorCode.NOT_FOUND,
+          "No storefront found for this store. Create a storefront first."
+        ),
         { status: 404 }
       );
     }
@@ -66,7 +68,9 @@ export async function GET(
       })),
     }));
 
-    return NextResponse.json(createSuccessResponse({ categories: grouped, total: menuItems.length }));
+    return NextResponse.json(
+      createSuccessResponse({ categories: grouped, total: menuItems.length })
+    );
   } catch (error) {
     console.error("[POS_MENU_GET]", error);
     return NextResponse.json(

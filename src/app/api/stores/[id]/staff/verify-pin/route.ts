@@ -16,7 +16,11 @@ export const POST = withApiHandler(
     const parsed = verifyStaffPinSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Validation failed", parsed.error.flatten()),
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Validation failed",
+          parsed.error.flatten()
+        ),
         { status: 400 }
       );
     }
@@ -37,17 +41,15 @@ export const POST = withApiHandler(
 
     if (staff.pin) {
       if (!pin || pin === "") {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.UNAUTHORIZED, "PIN required"),
-          { status: 401 }
-        );
+        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "PIN required"), {
+          status: 401,
+        });
       }
       const valid = await compare(pin, staff.pin);
       if (!valid) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"),
-          { status: 401 }
-        );
+        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"), {
+          status: 401,
+        });
       }
     }
 
@@ -58,9 +60,9 @@ export const POST = withApiHandler(
     });
 
     return NextResponse.json(
-      createSuccessResponse({ 
-        staff: { id: staff.id, name: staff.name, role: staff.role }, 
-        shift: openShift ?? null 
+      createSuccessResponse({
+        staff: { id: staff.id, name: staff.name, role: staff.role },
+        shift: openShift ?? null,
       })
     );
   },

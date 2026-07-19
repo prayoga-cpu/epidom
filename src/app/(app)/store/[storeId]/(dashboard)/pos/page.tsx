@@ -4,11 +4,7 @@ import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { PosShell } from "@/features/pos/components/pos-shell";
 import { subscriptionRepository } from "@/lib/repositories/subscription.repository";
 
-export default async function PosPage({
-  params,
-}: {
-  params: Promise<{ storeId: string }>;
-}) {
+export default async function PosPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
   const session = await getSession();
 

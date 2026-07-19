@@ -1,22 +1,66 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { formatCurrency } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import type { PosOrderDisplay } from "../types/pos.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { id, enUS, fr } from "date-fns/locale";
+import { useConfirm } from "@/components/ui/use-confirm";
+import { usePosCart } from "../hooks/use-pos-cart";
+import { toast } from "sonner";
 
 interface PosOrderCardProps {
   order: PosOrderDisplay;
+  storeId: string;
   onUpdateStatus: (orderId: string, status: string) => void;
 }
 
-export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
+export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardProps) {
   const { t, locale } = useI18n();
-  const { currency } = useCurrency();
+  const { formatPrice } = useCurrency();
+  const { confirm, confirmDialog } = useConfirm();
+  const router = useRouter();
+  const cart = usePosCart();
+
+  const handleCancel = async () => {
+    const ok = await confirm({
+      title: t("pos.orderCard.cancelConfirmTitle"),
+      description: t("pos.orderCard.cancelConfirmDesc"),
+      confirmText: t("pos.orderCard.cancel"),
+      variant: "destructive",
+    });
+    if (ok) onUpdateStatus(order.id, "CANCELLED");
+  };
+
+  const handleResume = async () => {
+    if (cart.items.length > 0) {
+      const ok = await confirm({
+        title: t("pos.orderCard.resumeConfirmTitle"),
+        description: t("pos.orderCard.resumeConfirmDesc"),
+        confirmText: t("pos.orderCard.resume"),
+      });
+      if (!ok) return;
+    }
+
+    const mapped = order.items.map((item) => ({
+      id: item.id,
+      menuItemId: item.menuItemId ?? "",
+      name: item.menuItem?.name ?? item.name,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      // Not persisted on OrderItem — see pos.orderCard.resumedBanner.
+      modifiers: [],
+      lineTotal: item.total,
+    }));
+
+    cart.hydrateFromOrder(mapped, order.id);
+    toast.success(t("pos.orderCard.resumeSuccess"));
+    router.push(`/store/${storeId}/pos`);
+  };
 
   const dateLocaleMap = { en: enUS, id, fr };
   const dateLocale = dateLocaleMap[locale] ?? id;
@@ -47,6 +91,8 @@ export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
         return "outline";
       case "READY":
         return "default";
+      case "HELD":
+        return "secondary";
       default:
         return "outline";
     }
@@ -113,14 +159,14 @@ export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
         </ul>
         <div className="mt-2 flex justify-between border-t pt-2 font-semibold">
           <span>{t("pos.cart.total")}:</span>
-          <span>{formatCurrency(Number(order.total), currency)}</span>
+          <span>{formatPrice(Number(order.total))}</span>
         </div>
       </div>
 
       <div className="mt-4 flex gap-2">
         {order.status === "PENDING" && (
           <Button
-            className="w-full"
+            className="min-w-0 flex-1"
             size="sm"
             onClick={() => onUpdateStatus(order.id, "CONFIRMED")}
           >
@@ -129,7 +175,7 @@ export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
         )}
         {order.status === "CONFIRMED" && (
           <Button
-            className="w-full"
+            className="min-w-0 flex-1"
             size="sm"
             variant="outline"
             onClick={() => onUpdateStatus(order.id, "IN_PRODUCTION")}
@@ -139,14 +185,30 @@ export function PosOrderCard({ order, onUpdateStatus }: PosOrderCardProps) {
         )}
         {order.status === "READY" && (
           <Button
-            className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+            className="min-w-0 flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
             size="sm"
             onClick={() => onUpdateStatus(order.id, "DELIVERED")}
           >
             {t("pos.orderCard.complete")}
           </Button>
         )}
+        {order.status === "HELD" && (
+          <Button className="min-w-0 flex-1" size="sm" onClick={handleResume}>
+            {t("pos.orderCard.resume")}
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 px-2.5"
+          onClick={handleCancel}
+          title={t("pos.orderCard.cancel")}
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
+
+      {confirmDialog}
     </div>
   );
 }

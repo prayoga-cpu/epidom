@@ -21,10 +21,7 @@ export interface Recipe {
  * @param newRecipe - Updated recipe state
  * @returns true if stock has changed, false otherwise
  */
-export function hasMaterialStockChanged(
-  oldRecipe: Recipe | null,
-  newRecipe: Recipe
-): boolean {
+export function hasMaterialStockChanged(oldRecipe: Recipe | null, newRecipe: Recipe): boolean {
   if (!oldRecipe?.ingredients || !newRecipe.ingredients) {
     return true; // If ingredients are missing, consider it changed
   }
@@ -41,4 +38,3 @@ export function hasMaterialStockChanged(
     return oldStock !== newStock;
   });
 }
-

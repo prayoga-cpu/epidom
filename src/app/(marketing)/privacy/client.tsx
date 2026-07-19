@@ -1,5 +1,8 @@
 "use client";
-import { PlaceholderPage, PlaceholderSection } from "@/features/marketing/shared/components/placeholder-page";
+import {
+  PlaceholderPage,
+  PlaceholderSection,
+} from "@/features/marketing/shared/components/placeholder-page";
 export function PrivacyClient() {
   return (
     <PlaceholderPage
@@ -29,7 +32,7 @@ export function PrivacyClient() {
         title="Contact"
         items={[
           "Data controller: Epidom / PRIONATION",
-          "Email: privacy@epidom.app",
+          "Email: cro@prionation.io, ceo@prionation.io, consult@prionation.io",
           "Response time: within 30 days as required by GDPR",
         ]}
       />

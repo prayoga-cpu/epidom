@@ -12,9 +12,7 @@ export interface OrderNotificationData {
 }
 
 function formatOrderNotification(data: OrderNotificationData): string {
-  const itemLines = data.items
-    .map((i) => `  • ${i.name} x${i.quantity}`)
-    .join("\n");
+  const itemLines = data.items.map((i) => `  • ${i.name} x${i.quantity}`).join("\n");
 
   const amount = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -33,9 +31,7 @@ function formatOrderNotification(data: OrderNotificationData): string {
   );
 }
 
-export async function notifyMerchantNewOrder(
-  data: OrderNotificationData
-): Promise<void> {
+export async function notifyMerchantNewOrder(data: OrderNotificationData): Promise<void> {
   if (!isFonnteAvailable()) {
     console.warn("[notifications] Fonnte not configured — skipping WhatsApp notification");
     return;

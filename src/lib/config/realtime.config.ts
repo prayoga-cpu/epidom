@@ -21,10 +21,5 @@
 export function shouldPoll(): boolean {
   if (typeof window === "undefined") return false;
 
-  return (
-    document.visibilityState === "visible" &&
-    !document.hidden &&
-    navigator.onLine
-  );
+  return document.visibilityState === "visible" && !document.hidden && navigator.onLine;
 }
-

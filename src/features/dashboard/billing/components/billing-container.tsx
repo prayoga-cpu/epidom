@@ -204,7 +204,11 @@ export function BillingContainer() {
               </p>
             </div>
             {subscription?.plan === "POS" && (
-              <Button onClick={handleUpgrade} variant="outline" className="w-full shrink-0 sm:w-auto">
+              <Button
+                onClick={handleUpgrade}
+                variant="outline"
+                className="w-full shrink-0 sm:w-auto"
+              >
                 {t("billing.upgradeToPro")}
               </Button>
             )}

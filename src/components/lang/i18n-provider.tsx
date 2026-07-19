@@ -78,7 +78,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const t = useCallback(
     (key: string) => {
       let value = get(translations[locale], key);
-      
+
       // Fallback to English if key is missing
       if (value === undefined && locale !== "en") {
         value = get(translations["en"], key);

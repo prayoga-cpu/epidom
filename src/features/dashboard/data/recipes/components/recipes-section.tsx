@@ -454,8 +454,9 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                           </Badge>
                         )}
                         {(recipeDemand.get(recipe.id) ?? 0) > 0 && (
-                          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs">
-                            {recipeDemand.get(recipe.id)}× {t("data.recipes.demandBadge") || "last 30d"}
+                          <Badge className="bg-blue-100 text-xs text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                            {recipeDemand.get(recipe.id)}×{" "}
+                            {t("data.recipes.demandBadge") || "last 30d"}
                           </Badge>
                         )}
                       </div>
@@ -665,7 +666,10 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
         onOpenChange={setBulkDeleteDialogOpen}
         title={t("data.recipes.bulkDeleteConfirm.title") || "Delete Multiple Recipes"}
         description={
-          t("data.recipes.bulkDeleteConfirm.description")?.replace("{count}", selectedCount.toString()) ||
+          t("data.recipes.bulkDeleteConfirm.description")?.replace(
+            "{count}",
+            selectedCount.toString()
+          ) ||
           `Are you sure you want to delete ${selectedCount} recipe(s)? This action cannot be undone.`
         }
         confirmText={t("common.actions.delete")}

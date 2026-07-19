@@ -58,7 +58,8 @@ export function ExportButton<T extends Record<string, any>>({
     } catch (error) {
       toast({
         title: t("messages.exportFailed") || "Export failed",
-        description: t("messages.exportFailedDesc") || "An error occurred while exporting the data.",
+        description:
+          t("messages.exportFailedDesc") || "An error occurred while exporting the data.",
         variant: "destructive",
       });
     } finally {
@@ -72,12 +73,12 @@ export function ExportButton<T extends Record<string, any>>({
         <Button variant={variant} size={size} disabled={disabled || loading} className={className}>
           {loading ? (
             <>
-              <Loader2 className="mr-1 h-4 w-4 hidden animate-spin sm:inline" />
+              <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
               {t("common.actions.exporting") || "Exporting..."}
             </>
           ) : (
             <>
-              <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+              <Download className="mr-1 hidden h-4 w-4 sm:inline" />
               {t("common.actions.export") || "Export"}
             </>
           )}
@@ -100,9 +101,3 @@ export function ExportButton<T extends Record<string, any>>({
     </DropdownMenu>
   );
 }
-
-
-
-
-
-

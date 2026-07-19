@@ -61,4 +61,3 @@ export function useAlerts(storeId: string, initialData?: AlertsResponse) {
     gcTime: 5 * 60 * 1000, // Keep data in cache for 5 minutes
   });
 }
-

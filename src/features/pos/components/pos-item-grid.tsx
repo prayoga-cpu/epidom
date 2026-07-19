@@ -2,7 +2,6 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import type { PosMenuItem, PosMenuCategory } from "../types/pos.types";
-import { formatCurrency } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import Image from "next/image";
 
@@ -20,7 +19,7 @@ export function PosItemGrid({
   searchQuery,
 }: PosItemGridProps) {
   const { t } = useI18n();
-  const { currency } = useCurrency();
+  const { formatPrice } = useCurrency();
 
   const filteredCategories = categories
     .map((cat) => ({
@@ -72,7 +71,7 @@ export function PosItemGrid({
                     <h3 className="line-clamp-2 leading-tight font-medium">{item.name}</h3>
                   </div>
                   <div className="text-primary mt-2 text-sm font-semibold">
-                    {formatCurrency(item.price, currency)}
+                    {formatPrice(item.price)}
                   </div>
                 </div>
                 {!item.isAvailable && (

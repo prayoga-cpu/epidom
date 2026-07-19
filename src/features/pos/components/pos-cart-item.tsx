@@ -2,7 +2,6 @@
 
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useI18n } from "@/components/lang/i18n-provider";
 import type { CartItem } from "../types/pos.types";
@@ -15,7 +14,7 @@ interface PosCartItemProps {
 
 export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemProps) {
   const { t } = useI18n();
-  const { currency } = useCurrency();
+  const { formatPrice } = useCurrency();
 
   return (
     <div className="flex flex-col gap-2 border-b p-4 last:border-0">
@@ -26,19 +25,16 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
             <ul className="text-muted-foreground mt-1 text-sm">
               {item.modifiers.map((mod, i) => (
                 <li key={i}>
-                  + {mod.name} ({formatCurrency(mod.priceAdd, currency)})
+                  + {mod.name} ({formatPrice(mod.priceAdd)})
                 </li>
               ))}
             </ul>
           )}
           <div className="text-primary mt-1.5 text-sm font-medium">
-            {formatCurrency(
-              item.unitPrice + item.modifiers.reduce((sum, m) => sum + m.priceAdd, 0),
-              currency
-            )}
+            {formatPrice(item.unitPrice + item.modifiers.reduce((sum, m) => sum + m.priceAdd, 0))}
           </div>
         </div>
-        <div className="text-right font-medium">{formatCurrency(item.lineTotal, currency)}</div>
+        <div className="text-right font-medium">{formatPrice(item.lineTotal)}</div>
       </div>
 
       <div className="mt-2 flex items-center justify-between">

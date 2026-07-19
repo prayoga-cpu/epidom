@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, Clock, XCircle, ChefHat, PackageCheck } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, ChefHat, PackageCheck, PauseCircle } from "lucide-react";
 
 export type OrderStatus =
   | "PENDING"
@@ -7,7 +7,11 @@ export type OrderStatus =
   | "IN_PRODUCTION"
   | "READY"
   | "DELIVERED"
-  | "CANCELLED";
+  | "CANCELLED"
+  // POS-only: a cashier parked this order before payment. Never reachable via
+  // the public storefront order flow, included only so this type stays a
+  // superset of Prisma's OrderStatus and assignments type-check safely.
+  | "HELD";
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "REFUNDED";
 
 export const STATUS_CONFIG: Record<OrderStatus, { icon: React.ReactNode; color: string }> = {
@@ -34,6 +38,10 @@ export const STATUS_CONFIG: Record<OrderStatus, { icon: React.ReactNode; color: 
   CANCELLED: {
     icon: <XCircle className="size-8" />,
     color: "text-red-500",
+  },
+  HELD: {
+    icon: <PauseCircle className="size-8" />,
+    color: "text-slate-500",
   },
 };
 

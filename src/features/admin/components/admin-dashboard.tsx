@@ -73,6 +73,7 @@ interface UserRow {
   isAdmin: boolean;
   createdAt: string;
   timezone?: string;
+  timezoneUpdatedAt?: string | null;
   currency?: string;
   providers: string[];
   hasPassword: boolean;
@@ -106,8 +107,14 @@ const statusColors: Record<SubStatus, string> = {
   INCOMPLETE: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
 };
 
-/** Billing region from the user's timezone + currency (region drives plan pricing). */
+/**
+ * Billing region from the user's timezone + currency (region drives plan pricing).
+ * `timezoneUpdatedAt` is only set once a real browser-detected sync has
+ * happened (see TimezoneSync) — without it, `timezone` is still just the raw
+ * schema default from account creation, not a real signal about the user.
+ */
 function regionLabel(u: UserRow): string {
+  if (!u.timezoneUpdatedAt) return "Unknown";
   const tz = u.timezone?.split("/").pop()?.replace(/_/g, " ");
   return [tz, u.currency].filter(Boolean).join(" · ") || "—";
 }

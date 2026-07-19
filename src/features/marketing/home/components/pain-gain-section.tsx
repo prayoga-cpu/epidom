@@ -26,32 +26,66 @@ export function PainGainSection() {
       <div className="epi-container">
         {/* Heading */}
         <div style={{ textAlign: "center", maxWidth: 720, margin: "0 auto" }}>
-          <div className="epi-eyebrow" style={{ marginBottom: 16 }}>{t("redesign.oldVsNew.eyebrow")}</div>
+          <div className="epi-eyebrow" style={{ marginBottom: 16 }}>
+            {t("redesign.oldVsNew.eyebrow")}
+          </div>
           <h2
             className="epi-display"
-            style={{ fontSize: "clamp(40px, 5vw, 72px)", margin: 0, lineHeight: 0.95, color: "var(--epi-cream-50)" }}
+            style={{
+              fontSize: "clamp(40px, 5vw, 72px)",
+              margin: 0,
+              lineHeight: 0.95,
+              color: "var(--epi-cream-50)",
+            }}
           >
-            {t("redesign.oldVsNew.title1")}<br />
+            {t("redesign.oldVsNew.title1")}
+            <br />
             {t("redesign.oldVsNew.title2")}{" "}
-            <span style={{ color: "var(--epi-gold-400)" }}>{t("redesign.oldVsNew.titleAccent")}</span>.
+            <span style={{ color: "var(--epi-gold-400)" }}>
+              {t("redesign.oldVsNew.titleAccent")}
+            </span>
+            .
           </h2>
-          <p style={{ color: "var(--epi-cream-50)", opacity: 0.72, marginTop: 20, fontSize: 17, lineHeight: 1.55, maxWidth: 640, marginInline: "auto" }}>
+          <p
+            style={{
+              color: "var(--epi-cream-50)",
+              opacity: 0.72,
+              marginTop: 20,
+              fontSize: 17,
+              lineHeight: 1.55,
+              maxWidth: 640,
+              marginInline: "auto",
+            }}
+          >
             {t("redesign.oldVsNew.sub")}
           </p>
         </div>
 
         {/* Cards */}
-        <div
-          className="mt-16 grid grid-cols-1 gap-5 md:grid-cols-2"
-        >
+        <div className="mt-16 grid grid-cols-1 gap-5 md:grid-cols-2">
           {/* Old way */}
-          <div style={{ padding: "24px 20px", borderRadius: 24, background: "rgba(254,43,43,0.04)", border: "1px solid rgba(254,43,43,0.18)" }}>
-            <div style={{
-              display: "inline-flex", padding: "4px 12px", borderRadius: 999,
-              background: "rgba(254,43,43,0.10)", border: "1px solid rgba(254,43,43,0.30)",
-              fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#FE6B6B",
-              marginBottom: 20,
-            }}>
+          <div
+            style={{
+              padding: "24px 20px",
+              borderRadius: 24,
+              background: "rgba(254,43,43,0.04)",
+              border: "1px solid rgba(254,43,43,0.18)",
+            }}
+          >
+            <div
+              style={{
+                display: "inline-flex",
+                padding: "4px 12px",
+                borderRadius: 999,
+                background: "rgba(254,43,43,0.10)",
+                border: "1px solid rgba(254,43,43,0.30)",
+                fontSize: 10,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "#FE6B6B",
+                marginBottom: 20,
+              }}
+            >
               {t("redesign.oldVsNew.oldTag")}
             </div>
             <h3
@@ -62,12 +96,20 @@ export function PainGainSection() {
             </h3>
             <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 14 }}>
               {oldItems.map((item, i) => (
-                <div key={i} style={{
-                  display: "flex", alignItems: "flex-start", gap: 12,
-                  color: "var(--epi-cream-50)", opacity: 0.6, fontSize: 15, lineHeight: 1.5,
-                  textDecoration: "line-through",
-                  textDecorationColor: "rgba(254,43,43,0.5)",
-                }}>
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    color: "var(--epi-cream-50)",
+                    opacity: 0.6,
+                    fontSize: 15,
+                    lineHeight: 1.5,
+                    textDecoration: "line-through",
+                    textDecorationColor: "rgba(254,43,43,0.5)",
+                  }}
+                >
                   <span style={{ color: "#FE6B6B", flexShrink: 0 }}>✕</span>
                   {item}
                 </div>
@@ -76,17 +118,28 @@ export function PainGainSection() {
           </div>
 
           {/* With Epidom */}
-          <div style={{
-            padding: 36, borderRadius: 24,
-            background: "linear-gradient(160deg, rgba(217,174,59,0.18), rgba(217,174,59,0.04))",
-            border: "1px solid rgba(217,174,59,0.40)",
-          }}>
-            <div style={{
-              display: "inline-flex", padding: "4px 12px", borderRadius: 999,
-              background: "rgba(217,174,59,0.14)", border: "1px solid rgba(217,174,59,0.40)",
-              fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--epi-gold-300)",
-              marginBottom: 20,
-            }}>
+          <div
+            style={{
+              padding: 36,
+              borderRadius: 24,
+              background: "linear-gradient(160deg, rgba(217,174,59,0.18), rgba(217,174,59,0.04))",
+              border: "1px solid rgba(217,174,59,0.40)",
+            }}
+          >
+            <div
+              style={{
+                display: "inline-flex",
+                padding: "4px 12px",
+                borderRadius: 999,
+                background: "rgba(217,174,59,0.14)",
+                border: "1px solid rgba(217,174,59,0.40)",
+                fontSize: 10,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "var(--epi-gold-300)",
+                marginBottom: 20,
+              }}
+            >
               {t("redesign.oldVsNew.newTag")}
             </div>
             <h3
@@ -97,7 +150,17 @@ export function PainGainSection() {
             </h3>
             <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 14 }}>
               {newItems.map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, color: "var(--epi-cream-50)", fontSize: 15, lineHeight: 1.5 }}>
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    color: "var(--epi-cream-50)",
+                    fontSize: 15,
+                    lineHeight: 1.5,
+                  }}
+                >
                   <span style={{ color: "var(--epi-gold-400)", flexShrink: 0 }}>✓</span>
                   {item}
                 </div>

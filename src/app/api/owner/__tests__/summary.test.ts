@@ -94,7 +94,7 @@ describe("owner dashboard rollup", () => {
 
 describe("ENTERPRISE plan gating logic", () => {
   const PLAN_ORDER = ["FREE", "POS", "OPERATIONS", "ENTERPRISE"] as const;
-  type Plan = typeof PLAN_ORDER[number];
+  type Plan = (typeof PLAN_ORDER)[number];
 
   function hasEnterpriseAccess(plan: Plan): boolean {
     return PLAN_ORDER.indexOf(plan) >= PLAN_ORDER.indexOf("ENTERPRISE");

@@ -51,14 +51,18 @@ describe("POST /api/webhooks/email", () => {
     });
 
     it("returns 422 when subject has no [@slug] prefix", async () => {
-      const res = await POST(makeRequest({ ...basePayload, subject: "GoFood — Pesanan Baru #12345" }));
+      const res = await POST(
+        makeRequest({ ...basePayload, subject: "GoFood — Pesanan Baru #12345" })
+      );
       expect(res.status).toBe(422);
       const body = await res.json();
       expect(body.error).toMatch(/slug/i);
     });
 
     it("lowercases the slug", async () => {
-      const res = await POST(makeRequest({ ...basePayload, subject: "[@Warung-SARI] GoFood order" }));
+      const res = await POST(
+        makeRequest({ ...basePayload, subject: "[@Warung-SARI] GoFood order" })
+      );
       expect(res.status).toBe(200);
       expect(prisma.storefront.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({ where: { slug: "warung-sari" } })
@@ -80,11 +84,13 @@ describe("POST /api/webhooks/email", () => {
       ["noreply@tokopedia.com", "Tokopedia order", "TOKOPEDIA"],
       ["unknown@mail.com", "Random subject", null],
     ])("detects %s → %s", async (from, subjectSuffix, expectedPlatform) => {
-      const res = await POST(makeRequest({
-        ...basePayload,
-        from,
-        subject: `[@warung-sari] ${subjectSuffix}`,
-      }));
+      const res = await POST(
+        makeRequest({
+          ...basePayload,
+          from,
+          subject: `[@warung-sari] ${subjectSuffix}`,
+        })
+      );
       expect(res.status).toBe(200);
       const createCall = vi.mocked(prisma.aggregatorEmail.create).mock.calls[0][0];
       expect(createCall.data.platform).toBe(expectedPlatform ?? undefined);

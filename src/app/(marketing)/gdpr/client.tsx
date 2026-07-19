@@ -1,5 +1,8 @@
 "use client";
-import { PlaceholderPage, PlaceholderSection } from "@/features/marketing/shared/components/placeholder-page";
+import {
+  PlaceholderPage,
+  PlaceholderSection,
+} from "@/features/marketing/shared/components/placeholder-page";
 export function GdprClient() {
   return (
     <PlaceholderPage
@@ -36,7 +39,7 @@ export function GdprClient() {
       <PlaceholderSection
         title="DPO contact"
         items={[
-          "Data Protection Officer: privacy@epidom.app",
+          "Data Protection Officer: cro@prionation.io, ceo@prionation.io, consult@prionation.io",
           "You may also lodge a complaint with your national supervisory authority",
         ]}
       />

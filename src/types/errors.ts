@@ -93,10 +93,7 @@ export class NotFoundError extends AppError {
  * Unauthorized errors
  */
 export class UnauthorizedError extends AppError {
-  constructor(
-    message: string = "Unauthorized",
-    context?: Record<string, unknown>
-  ) {
+  constructor(message: string = "Unauthorized", context?: Record<string, unknown>) {
     super(message, "UNAUTHORIZED", 401, context);
     this.name = "UnauthorizedError";
   }
@@ -106,10 +103,7 @@ export class UnauthorizedError extends AppError {
  * Forbidden errors
  */
 export class ForbiddenError extends AppError {
-  constructor(
-    message: string = "Forbidden",
-    context?: Record<string, unknown>
-  ) {
+  constructor(message: string = "Forbidden", context?: Record<string, unknown>) {
     super(message, "FORBIDDEN", 403, context);
     this.name = "ForbiddenError";
   }
@@ -171,4 +165,3 @@ export function getErrorStatusCode(error: unknown): number {
   }
   return 500;
 }
-

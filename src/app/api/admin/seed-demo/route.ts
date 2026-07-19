@@ -27,7 +27,13 @@ export async function POST(req: Request) {
   const user = await prisma.user.upsert({
     where: { email: DEMO_EMAIL },
     update: { name: DEMO_NAME, emailVerified: true, updatedAt: now },
-    create: { email: DEMO_EMAIL, name: DEMO_NAME, emailVerified: true, createdAt: now, updatedAt: now },
+    create: {
+      email: DEMO_EMAIL,
+      name: DEMO_NAME,
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    },
   });
 
   // 2. Upsert credential account with correct scrypt hash
@@ -69,7 +75,7 @@ export async function POST(req: Request) {
       data: { businessId: business.id, name: DEMO_STORE_NAME },
       select: { id: true },
     });
-    
+
     // Also create a default staff member for demo
     const { hash } = await import("bcryptjs");
     const pinHash = await hash("1234", 10);
@@ -82,7 +88,7 @@ export async function POST(req: Request) {
         pin: pinHash,
         isActive: true,
         inviteStatus: "accepted",
-      }
+      },
     });
   }
 

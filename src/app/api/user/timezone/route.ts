@@ -47,16 +47,20 @@ export const PATCH = withApiHandler(
       );
     }
 
-    // Avoid a redundant write when the stored value is already correct.
+    // Avoid a redundant write when the stored value is already correct and
+    // has already been confirmed at least once by a real sync (a Jakarta
+    // user's detected zone can legitimately equal the schema default — the
+    // point of timezoneUpdatedAt is to record that this value came from a
+    // real sync rather than being left over from account creation).
     const current = await prisma.user.findUnique({
       where: { id: userId },
-      select: { timezone: true },
+      select: { timezone: true, timezoneUpdatedAt: true },
     });
 
-    if (current?.timezone !== timezone) {
+    if (current?.timezone !== timezone || current?.timezoneUpdatedAt === null) {
       await prisma.user.update({
         where: { id: userId },
-        data: { timezone },
+        data: { timezone, timezoneUpdatedAt: new Date() },
       });
     }
 

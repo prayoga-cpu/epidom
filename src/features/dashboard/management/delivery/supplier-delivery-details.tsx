@@ -51,11 +51,9 @@ export function SupplierDeliveryDetails({
 
   if (!selectedDelivery) {
     return (
-      <Card className="flex h-full w-full min-h-[450px] flex-col shadow-sm transition-shadow hover:shadow-md lg:min-h-[472px]">
+      <Card className="flex h-full min-h-[450px] w-full flex-col shadow-sm transition-shadow hover:shadow-md lg:min-h-[472px]">
         <CardHeader className="shrink-0 border-b pb-4">
-          <CardTitle className="text-lg">
-            {t("pages.deliveryDetails")}
-          </CardTitle>
+          <CardTitle className="text-lg">{t("pages.deliveryDetails")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-1 items-center justify-center">
           <p className="text-muted-foreground text-center text-sm">
@@ -150,7 +148,7 @@ export function SupplierDeliveryDetails({
   const StatusIcon = getStatusIcon(delivery.status);
 
   return (
-    <Card className="flex h-full w-full min-h-[600px] flex-col shadow-sm transition-shadow hover:shadow-md lg:min-h-[650px]">
+    <Card className="flex h-full min-h-[600px] w-full flex-col shadow-sm transition-shadow hover:shadow-md lg:min-h-[650px]">
       <CardHeader className="shrink-0 border-b">
         <div className="flex flex-col items-start justify-between gap-2">
           <div className="min-w-0 flex-1 overflow-hidden">
@@ -158,9 +156,7 @@ export function SupplierDeliveryDetails({
               {delivery.deliveryReference}
             </CardTitle>
             <p className="text-muted-foreground mt-1 truncate text-xs" title={delivery.id}>
-              <span className="inline-block">
-                {t("management.delivery.details.deliveryId")}:{" "}
-              </span>
+              <span className="inline-block">{t("management.delivery.details.deliveryId")}: </span>
               <span className="inline-block">{delivery.id}</span>
             </p>
           </div>
@@ -215,9 +211,7 @@ export function SupplierDeliveryDetails({
           <div className="bg-muted/90 space-y-1.5 rounded-lg p-3 text-sm">
             <div className="text-muted-foreground flex items-center gap-2 text-xs">
               <Calendar className="h-3 w-3" />
-              <span className="font-medium">
-                {t("management.delivery.details.expected")}:
-              </span>{" "}
+              <span className="font-medium">{t("management.delivery.details.expected")}:</span>{" "}
               {formatDateTime(delivery.expectedDate)}
             </div>
             {delivery.receivedDate && (
@@ -250,9 +244,7 @@ export function SupplierDeliveryDetails({
                   <TableHead className="text-right text-xs">
                     {t("management.delivery.details.quantity")}
                   </TableHead>
-                  <TableHead className="text-xs">
-                    {t("management.delivery.details.unit")}
-                  </TableHead>
+                  <TableHead className="text-xs">{t("management.delivery.details.unit")}</TableHead>
                   <TableHead className="text-xs">
                     {t("management.delivery.details.notes")}
                   </TableHead>
@@ -396,12 +388,10 @@ export function SupplierDeliveryDetails({
         {/* Metadata */}
         <div className="text-muted-foreground space-y-1 text-xs">
           <p>
-            {t("management.delivery.details.created")}:{" "}
-            {formatDateTime(delivery.createdAt)}
+            {t("management.delivery.details.created")}: {formatDateTime(delivery.createdAt)}
           </p>
           <p>
-            {t("management.delivery.details.updated")}:{" "}
-            {formatDateTime(delivery.updatedAt)}
+            {t("management.delivery.details.updated")}: {formatDateTime(delivery.updatedAt)}
           </p>
         </div>
       </CardContent>

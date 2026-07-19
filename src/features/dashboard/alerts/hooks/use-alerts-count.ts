@@ -37,5 +37,3 @@ export function getAlertsCount(): number {
   // that fetches from the API or database directly
   return 0;
 }
-
-

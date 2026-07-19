@@ -1,5 +1,8 @@
 "use client";
-import { PlaceholderPage, PlaceholderSection } from "@/features/marketing/shared/components/placeholder-page";
+import {
+  PlaceholderPage,
+  PlaceholderSection,
+} from "@/features/marketing/shared/components/placeholder-page";
 export function PressClient() {
   return (
     <PlaceholderPage
@@ -26,7 +29,9 @@ export function PressClient() {
       />
       <PlaceholderSection
         title="Press contact"
-        items={["press@epidom.app — response within 24 hours on business days"]}
+        items={[
+          "cro@prionation.io, ceo@prionation.io, consult@prionation.io — response within 24 hours on business days",
+        ]}
       />
     </PlaceholderPage>
   );

@@ -9,20 +9,33 @@ import { getExchangeRate, refreshExchangeRate } from "@/lib/services/exchange-ra
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 
+const CURRENCY_CODE_RE = /^[A-Z]{3}$/;
+
+/** Only accept well-formed 3-letter codes — anything else falls back to the caller's default. */
+function parseCurrencyParam(value: string | null): string | undefined {
+  if (value && CURRENCY_CODE_RE.test(value)) return value;
+  return undefined;
+}
+
 /**
- * GET /api/exchange-rates
+ * GET /api/exchange-rates?from=IDR&to=GBP
  *
- * Retrieves the current cached exchange rate (EUR to USD).
- * This endpoint is optimized for speed and relies on service-layer caching.
+ * Retrieves the current cached exchange rate for a currency pair (defaults
+ * to EUR/USD if omitted). This endpoint is optimized for speed and relies
+ * on service-layer caching.
  *
  * @returns {Promise<NextResponse>} Exchange rate data including expiration
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // Note: Public access allowed for frontend pricing display
     // If strict auth is needed later, wrap with withApiHandler
 
-    const rateData = await getExchangeRate();
+    const { searchParams } = new URL(request.url);
+    const from = parseCurrencyParam(searchParams.get("from"));
+    const to = parseCurrencyParam(searchParams.get("to"));
+
+    const rateData = await getExchangeRate(from, to);
 
     return NextResponse.json(
       createSuccessResponse({
@@ -53,9 +66,10 @@ export async function GET() {
  */
 export const POST = withApiHandler(
   async (request, { userId }) => {
-
-
-    const rateData = await refreshExchangeRate();
+    const { searchParams } = new URL(request.url);
+    const from = parseCurrencyParam(searchParams.get("from"));
+    const to = parseCurrencyParam(searchParams.get("to"));
+    const rateData = await refreshExchangeRate(from, to);
 
     return NextResponse.json(
       createSuccessResponse({

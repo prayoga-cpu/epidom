@@ -248,7 +248,7 @@ export function UpdateDeliveryStatusDialog({
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
                   >
-                    <CalendarIcon className="mr-1 h-4 w-4 hidden sm:inline" />
+                    <CalendarIcon className="mr-1 hidden h-4 w-4 sm:inline" />
                     {receivedDate
                       ? formatDate(receivedDate)
                       : t("management.delivery.updateStatus.selectReceivedDatePlaceholder") ||

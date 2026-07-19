@@ -11,6 +11,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { OrderStatus, SubscriptionPlan } from "@prisma/client";
+import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 
 const PLAN_ORDER: SubscriptionPlan[] = ["FREE", "POS", "OPERATIONS", "ENTERPRISE"];
 
@@ -19,7 +20,9 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const session = await getSession();
   if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), { status: 401 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+      status: 401,
+    });
   }
 
   const userId = session.user.id;
@@ -40,12 +43,16 @@ export async function GET(request: Request) {
   });
 
   if (!business) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "No business found"), { status: 404 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "No business found"), {
+      status: 404,
+    });
   }
 
   const { searchParams } = new URL(request.url);
   const now = new Date();
-  const from = new Date(searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
+  const from = new Date(
+    searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  );
   const to = new Date(searchParams.get("to") ?? now.toISOString());
 
   // Per-store revenue in parallel
@@ -55,7 +62,7 @@ export async function GET(request: Request) {
         prisma.order.aggregate({
           where: {
             storeId: store.id,
-            status: { notIn: [OrderStatus.CANCELLED] },
+            status: { notIn: NON_REVENUE_STATUSES },
             orderDate: { gte: from, lte: to },
           },
           _sum: { total: true },

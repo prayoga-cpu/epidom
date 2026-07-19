@@ -57,44 +57,42 @@ export function PaymentHero({ plan }: PaymentHeroProps) {
       <Container maxWidth="7xl">
         <div className="text-center">
           <Button asChild variant="ghost" className="mb-6 text-gray-600 hover:opacity-80">
-            <Link href="/pricing" className="flex items-center gap-2 text-brand-primary">
+            <Link href="/pricing" className="text-brand-primary flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
               {t("payments.backToPricing")}
             </Link>
           </Button>
 
-          <h1 className="mb-4 text-3xl font-bold tracking-tight md:text-5xl text-brand-primary">
+          <h1 className="text-brand-primary mb-4 text-3xl font-bold tracking-tight md:text-5xl">
             {title}
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-gray-600 md:text-xl mb-8">
-            {subtitle}
-          </p>
+          <p className="mx-auto mb-8 max-w-2xl text-lg text-gray-600 md:text-xl">{subtitle}</p>
 
           {/* Step Indicator - Only for starter and pro plans */}
           {showSteps && (
             <div className="mx-auto max-w-2xl">
-              <div className="flex items-center justify-center gap-1 sm:gap-2 mb-2">
+              <div className="mb-2 flex items-center justify-center gap-1 sm:gap-2">
                 {steps.map((step, index) => (
                   <div key={step.id} className="flex items-center">
                     {/* Step Circle */}
-                    <div className="flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
+                    <div className="flex min-w-[60px] flex-col items-center sm:min-w-[80px]">
                       <div
-                        className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border-2 transition-colors ${
+                        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-colors sm:h-8 sm:w-8 ${
                           step.completed
                             ? "border-brand-primary bg-brand-primary text-white"
                             : step.active
-                              ? "border-brand-primary bg-white text-brand-primary"
+                              ? "border-brand-primary text-brand-primary bg-white"
                               : "border-gray-300 bg-white text-gray-400"
                         }`}
                       >
                         {step.completed ? (
                           <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         ) : (
-                          <span className="text-[10px] sm:text-xs font-semibold">{step.id}</span>
+                          <span className="text-[10px] font-semibold sm:text-xs">{step.id}</span>
                         )}
                       </div>
                       <span
-                        className={`mt-1.5 sm:mt-2 text-[10px] sm:text-xs font-medium text-center ${
+                        className={`mt-1.5 text-center text-[10px] font-medium sm:mt-2 sm:text-xs ${
                           step.active
                             ? "text-brand-primary"
                             : step.completed
@@ -109,7 +107,7 @@ export function PaymentHero({ plan }: PaymentHeroProps) {
                     {/* Connector Line */}
                     {index < steps.length - 1 && (
                       <div
-                        className={`mx-1 sm:mx-2 h-0.5 w-8 sm:w-12 transition-colors ${
+                        className={`mx-1 h-0.5 w-8 transition-colors sm:mx-2 sm:w-12 ${
                           step.completed ? "bg-brand-primary" : "bg-gray-300"
                         }`}
                       />
@@ -117,9 +115,7 @@ export function PaymentHero({ plan }: PaymentHeroProps) {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {t("payments.steps.current")}
-              </p>
+              <p className="mt-1 text-xs text-gray-500">{t("payments.steps.current")}</p>
             </div>
           )}
         </div>

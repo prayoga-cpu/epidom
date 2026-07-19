@@ -8,9 +8,7 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-const getStorefront = cache((slug: string) =>
-  storefrontService.getStorefrontBySlug(slug)
-);
+const getStorefront = cache((slug: string) => storefrontService.getStorefrontBySlug(slug));
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -25,7 +23,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${storefront.displayName} | Epidom Storefront`,
-    description: storefront.description || `${storefront.displayName} on Epidom. Lihat menu dan hubungi kami langsung.`,
+    description:
+      storefront.description ||
+      `${storefront.displayName} on Epidom. Lihat menu dan hubungi kami langsung.`,
   };
 }
 

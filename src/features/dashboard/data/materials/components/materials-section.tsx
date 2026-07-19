@@ -58,7 +58,6 @@ import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-
 import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
 import { SmartImportDialog } from "../../import";
 
-
 type StockFilter = "in_stock" | "low_stock" | "out_of_stock" | "overstocked" | undefined;
 
 // Helper function to get stock status
@@ -670,7 +669,10 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
         onOpenChange={setBulkDeleteDialogOpen}
         title={t("data.materials.bulkDeleteConfirm.title") || "Delete Multiple Materials"}
         description={
-          t("data.materials.bulkDeleteConfirm.description")?.replace("{count}", selectedCount.toString()) ||
+          t("data.materials.bulkDeleteConfirm.description")?.replace(
+            "{count}",
+            selectedCount.toString()
+          ) ||
           `Are you sure you want to delete ${selectedCount} material(s)? This action cannot be undone.`
         }
         confirmText={t("common.actions.delete")}

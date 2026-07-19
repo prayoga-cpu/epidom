@@ -411,7 +411,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center border-b pb-2 mt-4">
+          <div className="mt-4 flex items-center border-b pb-2">
             <p className="text-muted-foreground text-sm">
               {t("common.showing")} {suppliers.length} {t("common.of")} {totalSuppliers}{" "}
               {t("data.suppliers.pageTitle")}
@@ -443,19 +443,17 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                 <div className="text-muted-foreground my-2 space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span>{t("common.email")}:</span>
-                    <span className="text-foreground truncate font-medium max-w-[120px] text-right">
+                    <span className="text-foreground max-w-[120px] truncate text-right font-medium">
                       {supplier.email ? `${supplier.email.split("@")[0]}...` : "-"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>{t("common.phone")}:</span>
-                    <span className="text-foreground font-medium">
-                      {supplier.phone || "-"}
-                    </span>
+                    <span className="text-foreground font-medium">{supplier.phone || "-"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>{t("common.location")}:</span>
-                    <span className="text-foreground font-medium text-right">
+                    <span className="text-foreground text-right font-medium">
                       {[supplier.city, supplier.country].filter(Boolean).join(", ") || "-"}
                     </span>
                   </div>
@@ -638,7 +636,10 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
         onOpenChange={setBulkDeleteDialogOpen}
         title={t("data.suppliers.bulkDeleteConfirm.title") || "Delete Multiple Suppliers"}
         description={
-          t("data.suppliers.bulkDeleteConfirm.description")?.replace("{count}", selectedCount.toString()) ||
+          t("data.suppliers.bulkDeleteConfirm.description")?.replace(
+            "{count}",
+            selectedCount.toString()
+          ) ||
           `Are you sure you want to delete ${selectedCount} supplier(s)? This action cannot be undone.`
         }
         confirmText={t("common.actions.delete")}

@@ -95,9 +95,7 @@ async function writeChunks(data: Uint8Array): Promise<void> {
   if (!activeCharacteristic) throw new Error("Printer not connected");
   const CHUNK = 512;
   for (let i = 0; i < data.length; i += CHUNK) {
-    await activeCharacteristic.writeValueWithoutResponse(
-      data.slice(i, i + CHUNK)
-    );
+    await activeCharacteristic.writeValueWithoutResponse(data.slice(i, i + CHUNK));
   }
 }
 

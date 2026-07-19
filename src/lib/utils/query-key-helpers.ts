@@ -13,9 +13,7 @@
  * Example: { search: "test", sortBy: "name" } dan { sortBy: "name", search: "test" }
  * akan menghasilkan query key yang sama.
  */
-export function normalizeFilters<T extends Record<string, any>>(
-  filters?: T
-): T | undefined {
+export function normalizeFilters<T extends Record<string, any>>(filters?: T): T | undefined {
   if (!filters) return undefined;
 
   const normalized: Record<string, unknown> = {};
@@ -38,4 +36,3 @@ export function normalizeFilters<T extends Record<string, any>>(
 
   return normalized as T;
 }
-

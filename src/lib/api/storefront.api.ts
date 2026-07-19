@@ -4,7 +4,7 @@ import {
   CreateMenuCategoryInput,
   UpdateMenuCategoryInput,
   CreateMenuItemInput,
-  UpdateMenuItemInput
+  UpdateMenuItemInput,
 } from "@/lib/validation/storefront.schemas";
 
 export class StorefrontApi {
@@ -28,7 +28,11 @@ export class StorefrontApi {
     return apiClient.post(`/stores/${storeId}/storefront/categories`, input);
   }
 
-  async updateCategory(storeId: string, categoryId: string, input: UpdateMenuCategoryInput): Promise<any> {
+  async updateCategory(
+    storeId: string,
+    categoryId: string,
+    input: UpdateMenuCategoryInput
+  ): Promise<any> {
     return apiClient.patch(`/stores/${storeId}/storefront/categories/${categoryId}`, input);
   }
 

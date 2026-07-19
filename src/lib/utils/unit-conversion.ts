@@ -143,12 +143,12 @@ export function formatQuantityWithUnit(quantity: number, unit: string): string {
   const u = unit.toLowerCase();
 
   // For small units like mg, ml - use more decimal places
-  if (u === 'mg' || u === 'ml') {
+  if (u === "mg" || u === "ml") {
     return `${quantity.toFixed(1)} ${unit}`;
   }
 
   // For large units like kg, l - use fewer decimal places
-  if (u === 'kg' || u === 'l') {
+  if (u === "kg" || u === "l") {
     return `${quantity.toFixed(3)} ${unit}`;
   }
 

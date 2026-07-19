@@ -123,14 +123,20 @@ export function EditBusinessInfoDialog({
           <FormDialogFooter
             formId="edit-business-info-form"
             onCancel={() => onOpenChange(false)}
-            submitText={isCreating ? t("profile.business.addBusinessInfo") : t("profile.actions.save")}
+            submitText={
+              isCreating ? t("profile.business.addBusinessInfo") : t("profile.actions.save")
+            }
             isPending={updateBusiness.isPending}
             variant="full-width"
           />
         }
       >
         <Form {...form}>
-          <form id="edit-business-info-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            id="edit-business-info-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="name"

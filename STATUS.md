@@ -2,13 +2,14 @@
 
 ## Current State: Phase 5 + Maintenance — ✅ PRODUCTION LIVE (2026-05-29)
 
-*(AI Agents: Update this checklist every time you finish a task)*
+_(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
 ## ✅ 2026-05-29 — Integration, Auth & UX Sprint
 
 ### Auth & Production Fixes
+
 - [x] **SW clone bug** — `sw.js` was calling `response.clone()` inside an async `.then()` causing "body already used" errors on login. Fixed to clone synchronously before `caches.open()`.
 - [x] **Prisma 6 → 7 migration** — Removed `url`/`directUrl` from `schema.prisma`; created `prisma.config.ts` for CLI; swapped `PrismaClient datasources` option for `@prisma/adapter-pg` driver adapter; fixed `Decimal` import path (`runtime/library` → `runtime/client`).
 - [x] **DB connection** — Added `DIRECT_URL` (Neon non-pooled endpoint) for `prisma migrate deploy`; `DATABASE_URL` remains pooled for runtime.
@@ -20,6 +21,7 @@
 - [x] **Pricing labels fixed** — id.ts had `Rp 429.000` and `Rp 1.169.000`; corrected to `Rp 99.000` (POS) and `Rp 249.000` (OPERATIONS).
 
 ### Data / Management / Tracking Integration
+
 - [x] **"Add to POS menu" button** on product cards in Data page — finds or creates matching `MenuCategory`, creates `MenuItem` with `productId`, shows "In Menu" badge immediately via optimistic update (`onMutate` + `onSettled` invalidation).
 - [x] **Sync-to-menu prompt** in edit-product-dialog — after saving, if name or price changed and a linked MenuItem exists, a toast offers one-click sync to update the MenuItem.
 - [x] **"In Menu" badge** — `useProductMenuStatus` queries all linked MenuItems; `staleTime: 0` + `refetchOnWindowFocus: true` so badge is always fresh.
@@ -32,17 +34,21 @@
 - [x] **Removed `data-manage.tsx`** — orphaned placeholder with hardcoded dummy data.
 
 ### Storefront
+
 - [x] **Photo upload for logo and cover image** — replaced plain URL text inputs with `ImageUpload` component (drag-and-drop, Vercel Blob, compression, preview); logo: 1:1 · 400×400 min · 2 MB; cover: 16:9 · 1920×1080 ideal · 5 MB. Guide text below each field.
 
 ### PWA
+
 - [x] **Install button** — `usePwaInstall` hook + `PwaInstallButton` in topbar; auto-hides when already in standalone mode.
 
 ### Tests
+
 - [x] **311 tests passing** (25 files) — includes new auth suite (17 tests: getSession, /api/session, useLogin/useRegister) and 3 pre-existing vi.mock hoisting fixes.
 
 ---
 
 ## Developer / Operator To-Do (still pending)
+
 - [ ] Set `DIRECT_URL` in Vercel env vars (Neon non-pooled URL = `POSTGRES_URL_NON_POOLING`)
 - [ ] Set `DATABASE_URL` in Vercel env vars (Neon pooled URL)
 - [ ] Forward aggregator order emails to `orders@epidom.id` with subject prefix `[@slug] Original subject`
@@ -56,6 +62,7 @@
 ## ✅ i18n Dashboard Refactor — Eliminate All Hardcoded Strings (2026-05-24)
 
 ### Completed
+
 - [x] **100+ new translation keys** added to `en.ts`, `id.ts`, `fr.ts` — `pos.orderCard`, `pos.kds.*` (extended), `pos.tables.*` (extended), `storefront.*` (new namespace), `common.datePicker`, `pages.finance*`
 - [x] **fr.ts missing `pos:` section** — entire POS dashboard section (kds, tables, orderCard) was absent; added with EN stubs
 - [x] **Group A — `pos-order-card.tsx`** — added `useI18n`; date-fns locale mapped from `useI18n().locale`; all strings replaced
@@ -71,6 +78,7 @@
 ## ✅ UI System Sync — Dark/Light Mode + Brand Tokens (2026-05-24)
 
 ### Completed
+
 - [x] **Dark/light mode toggle** — `next-themes` ThemeProvider in `(app)/layout.tsx`, default `dark`, `suppressHydrationWarning` on `<html>` + `<body>`
 - [x] **epi-navy palette bridged into `.dark` CSS vars** — `--background`, `--card`, `--sidebar`, `--border`, `--muted` all mapped to `--epi-navy-*` tokens
 - [x] **Cream light mode** — `:root` sets `--background: #FBF9E4`, body uses cream gradient; `--muted: #EEE9C4`
@@ -98,13 +106,14 @@
 
 ## Current Phase: Phase 5 (Aggregator + Finance) — ✅ CODE COMPLETE, VERIFICATION COMPLETE
 
-*(AI Agents: Update this checklist every time you finish a task)*
+_(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
 ## ✅ Marketing Site — Dark Navy Redesign (2026-05-22)
 
 ### Completed
+
 - [x] Full dark-navy redesign: new hero, 13 home sections, services & pricing pages
 - [x] Floating pill navbar (lowercase links, custom lang switcher)
 - [x] i18n for EN / ID / FR (FR deprecated — no new keys going forward)
@@ -131,15 +140,15 @@ Milestones completed: Schema + Plan Gating, Stock Deduction Service, Staff + Shi
 ### Phase 4 Verification — ✅ COMPLETE
 
 - [x] Verify: Stock auto-decrements when an order is marked DELIVERED.
-  — `deductStockForOrder()` called in `/api/stores/[id]/pos/orders/[orderId]/route.ts` on `status === "DELIVERED"`.
+      — `deductStockForOrder()` called in `/api/stores/[id]/pos/orders/[orderId]/route.ts` on `status === "DELIVERED"`.
 - [x] Verify: Low-stock alert fires when material goes below threshold.
-  — `stock-deduction.service.ts` emits `LOW_STOCK`/`CRITICAL_STOCK` alerts when `currentStock < minStock`.
+      — `stock-deduction.service.ts` emits `LOW_STOCK`/`CRITICAL_STOCK` alerts when `currentStock < minStock`.
 - [x] Verify: Shift open/close reconciliation matches cash drawer expectations within 1%.
-  — `cashDifference = closingCash − expectedCash` computed and stored in DB on every shift close; UI surfaces the delta.
+      — `cashDifference = closingCash − expectedCash` computed and stored in DB on every shift close; UI surfaces the delta.
 - [x] Verify: A cashier with a PIN can clock in/out without a manager.
-  — `requireStoreAuth: true` (not manager-only); PIN validated via `bcryptjs.compare()` in `/api/stores/[id]/shifts/route.ts`.
+      — `requireStoreAuth: true` (not manager-only); PIN validated via `bcryptjs.compare()` in `/api/stores/[id]/shifts/route.ts`.
 - [x] Verify: HPP (cost per dish) is calculated correctly to 2 decimal places in recipe view.
-  — `recalculateCost()` in `recipe.repository.ts` computes `qty × unitCost` per ingredient (Prisma.Decimal); exported with `.toFixed(2)`.
+      — `recalculateCost()` in `recipe.repository.ts` computes `qty × unitCost` per ingredient (Prisma.Decimal); exported with `.toFixed(2)`.
 
 ---
 
@@ -150,13 +159,13 @@ Milestones completed: Schema + Aggregator Foundation, Email Ingestion, Finance R
 ### Phase 5 Acceptance Criteria — ✅ COMPLETE
 
 - [x] Verify: ENTERPRISE merchant sees orders from all sources in one queue.
-  — `/api/stores/[id]/pos/orders` fetches all orders for the store regardless of `source` field (POS, ONLINE, AGGREGATOR). No source filter applied.
+      — `/api/stores/[id]/pos/orders` fetches all orders for the store regardless of `source` field (POS, ONLINE, AGGREGATOR). No source filter applied.
 - [x] Verify: Finance reports balance to the penny against raw order data.
-  — `/api/stores/[id]/finance/summary` sums `order.total` via `prisma.order.aggregate` (same raw table), rounds with `Math.round(x * 100) / 100`. COGS derived from `StockMovement` records of type `SALE`. 7 unit tests pass covering summary + channel breakdown.
+      — `/api/stores/[id]/finance/summary` sums `order.total` via `prisma.order.aggregate` (same raw table), rounds with `Math.round(x * 100) / 100`. COGS derived from `StockMovement` records of type `SALE`. 7 unit tests pass covering summary + channel breakdown.
 - [x] Verify: Multi-outlet owner can drill down from rollup → outlet → shift → order.
-  — `/api/owner/summary` returns per-store revenue + pending order counts (ENTERPRISE-gated). Individual store drill-down via `/api/stores/[id]/finance/*` and `/api/stores/[id]/shifts/*`. 10 rollup unit tests pass.
+      — `/api/owner/summary` returns per-store revenue + pending order counts (ENTERPRISE-gated). Individual store drill-down via `/api/stores/[id]/finance/*` and `/api/stores/[id]/shifts/*`. 10 rollup unit tests pass.
 - [x] Verify: Email parsing accuracy >95% on common GoFood/GrabFood/ShopeeFood templates.
-  — `detectPlatform()` in email webhook classifies by `from`/`subject` keywords (gofood, grabfood, shopeefood, tokopedia). OpenAI parsing triggered via Inngest for structured order extraction. 16 email webhook unit tests pass covering platform detection and slug routing.
+      — `detectPlatform()` in email webhook classifies by `from`/`subject` keywords (gofood, grabfood, shopeefood, tokopedia). OpenAI parsing triggered via Inngest for structured order extraction. 16 email webhook unit tests pass covering platform detection and slug routing.
 
 ### Phase 5 Definition of Done — ✅ COMPLETE
 
@@ -165,13 +174,14 @@ Milestones completed: Schema + Aggregator Foundation, Email Ingestion, Finance R
 - [x] `/docs` updated to reflect Phase 5 changes (ARCHITECTURE, DATABASE).
 - [x] `docs/CHANGELOG.md` has Phase 5 entry.
 - [ ] At least 5 friendly users have used aggregator + finance without manual intervention.
-  *(Requires live merchant testing — cannot be automated. Ship to beta users.)*
+      _(Requires live merchant testing — cannot be automated. Ship to beta users.)_
 
 ---
 
 ## ✅ Beta Polish + Reservations (2026-05-28)
 
 ### Completed
+
 - [x] **Staff email invitations** — `email` + `inviteStatus` added to `StaffMember` (migration `20260527170327_add_staff_email_invite_status`). POST /staff optionally sends PIN via `sendStaffPinEmail()` (Resend). Invite status badges in staff table (Pending / Invited).
 - [x] **Staff edit dialog** — role change, reset/set PIN (blank by default), "Send new PIN to email" checkbox (appears when PIN filled + email set). PATCH /staff/[staffId] handles email send.
 - [x] **Owner pinned row** — current logged-in user shown at top of staff table with Crown icon + Owner badge; separate from staff CRUD.
@@ -193,7 +203,7 @@ Milestones completed: Schema + Aggregator Foundation, Email Ingestion, Finance R
 
 ## Developer / Operator To-Do
 
-*(Completed items marked below — remaining items still require manual action)*
+_(Completed items marked below — remaining items still require manual action)_
 
 - [x] **Database**: Phase 5 migration `phase5_aggregator_finance` applied to local DB (2026-05-23). Apply to production when ready.
 - [x] **Email Ingestion**: `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_WEBHOOK_SECRET` added to `.env` and Vercel. Configure Resend inbound webhook to `/api/webhooks/email`.
@@ -224,32 +234,34 @@ Milestones completed: Schema + Aggregator Foundation, Email Ingestion, Finance R
 ## Testing / Verification Results
 
 ### Automated Tests (2026-05-23)
+
 - **Unit + integration tests**: 219/219 ✅ (`pnpm test`) — fixed year assertion in `stripe/route.test.ts` (PROMO_END_DATE updated to 2026)
 - **TypeScript type-check**: 0 errors ✅ (`pnpm type-check`)
 
 ### Live API Tests (2026-05-21, localhost:3000)
 
-| Test | Endpoint | Result |
-|------|----------|--------|
-| Storefront page load | `GET /@demo-verified` | ✅ HTTP 200 |
-| Storefront API | `GET /api/public/storefront/demo-verified` | ✅ Returns store + 2 categories + 4 items |
-| Menu page | `GET /@demo-verified/menu` | ✅ HTTP 200 |
-| Checkout page | `GET /@demo-verified/order` | ✅ HTTP 200 |
-| Validation: empty items | `POST /api/public/orders` | ✅ 400 INVALID_INPUT |
-| CASH order creation | `POST /api/public/orders` | ✅ 201 `ORD-20260521-10YYJJ` — CONFIRMED/PAID |
-| Order status polling | `GET /api/public/orders/[id]/status` | ✅ `{status: CONFIRMED, paymentStatus: PAID}` |
+| Test                    | Endpoint                                   | Result                                        |
+| ----------------------- | ------------------------------------------ | --------------------------------------------- |
+| Storefront page load    | `GET /@demo-verified`                      | ✅ HTTP 200                                   |
+| Storefront API          | `GET /api/public/storefront/demo-verified` | ✅ Returns store + 2 categories + 4 items     |
+| Menu page               | `GET /@demo-verified/menu`                 | ✅ HTTP 200                                   |
+| Checkout page           | `GET /@demo-verified/order`                | ✅ HTTP 200                                   |
+| Validation: empty items | `POST /api/public/orders`                  | ✅ 400 INVALID_INPUT                          |
+| CASH order creation     | `POST /api/public/orders`                  | ✅ 201 `ORD-20260521-10YYJJ` — CONFIRMED/PAID |
+| Order status polling    | `GET /api/public/orders/[id]/status`       | ✅ `{status: CONFIRMED, paymentStatus: PAID}` |
 
 ### Dashboard Flow — 5 Critical Journeys (2026-05-23, localhost:3000)
 
-| Journey | Check | Result |
-|---------|-------|--------|
-| 1. Sign-up → publish storefront | `GET /register` | ✅ HTTP 200, auth guard active (redirects unauthenticated to login) |
-| 2. Place online order | `GET /api/public/storefront/demo-verified` + `POST /api/public/orders` | ✅ Storefront returns 3 categories + items; order validation returns 400 on empty items; prior session confirmed 201 CONFIRMED/PAID on valid CASH order |
-| 3. Open shift → POS sale → close shift | `GET /api/stores/[id]/pos/orders` | ✅ 200, returns live order queue with real orders (e.g. ORD-20260521-I9AP40) |
-| 4. Finance report export | `GET /api/stores/[id]/finance/summary` | ✅ 200, revenue=325,000 IDR, orderCount=7, cogs=0, grossMarginPct=100 |
-| 5. Multi-outlet owner drill-down | `GET /api/owner/summary` | ✅ 200, totalRevenue=325,000, storeCount=1, totalOrders=7, totalPending=0 |
+| Journey                                | Check                                                                  | Result                                                                                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Sign-up → publish storefront        | `GET /register`                                                        | ✅ HTTP 200, auth guard active (redirects unauthenticated to login)                                                                                     |
+| 2. Place online order                  | `GET /api/public/storefront/demo-verified` + `POST /api/public/orders` | ✅ Storefront returns 3 categories + items; order validation returns 400 on empty items; prior session confirmed 201 CONFIRMED/PAID on valid CASH order |
+| 3. Open shift → POS sale → close shift | `GET /api/stores/[id]/pos/orders`                                      | ✅ 200, returns live order queue with real orders (e.g. ORD-20260521-I9AP40)                                                                            |
+| 4. Finance report export               | `GET /api/stores/[id]/finance/summary`                                 | ✅ 200, revenue=325,000 IDR, orderCount=7, cogs=0, grossMarginPct=100                                                                                   |
+| 5. Multi-outlet owner drill-down       | `GET /api/owner/summary`                                               | ✅ 200, totalRevenue=325,000, storeCount=1, totalOrders=7, totalPending=0                                                                               |
 
 ### Environment / Provider Setup (2026-05-23)
+
 - `RESEND_API_KEY` — ✅ real key, added to `.env` + Vercel
 - `EMAIL_FROM` — ✅ set to `EPIDOM <noreply@epidom.id>`, added to Vercel
 - `EMAIL_WEBHOOK_SECRET` — ✅ generated, added to `.env` + Vercel

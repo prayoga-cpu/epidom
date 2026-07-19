@@ -13,14 +13,10 @@ export function useFeatureAccess() {
   const plan = subscription?.plan;
 
   const supplierManagementAccess =
-    plan && subscription?.status === "ACTIVE"
-      ? hasSupplierManagementAccess(plan)
-      : false;
+    plan && subscription?.status === "ACTIVE" ? hasSupplierManagementAccess(plan) : false;
 
   const advancedReportsAccess =
-    plan && subscription?.status === "ACTIVE"
-      ? hasAdvancedReportsAccess(plan)
-      : false;
+    plan && subscription?.status === "ACTIVE" ? hasAdvancedReportsAccess(plan) : false;
 
   return {
     supplierManagementAccess,
@@ -30,4 +26,3 @@ export function useFeatureAccess() {
     isActive: subscription?.status === "ACTIVE",
   };
 }
-

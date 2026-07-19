@@ -12,7 +12,7 @@ import { Plus, GripVertical, Settings2, Trash2, ArrowRight, Loader2 } from "luci
 import { Input } from "@/components/ui/input";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { ImageUpload } from "@/components/shared/image-upload";
-import { formatCurrency, getCurrencySymbol } from "@/lib/utils/formatting";
+import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useConfirm } from "@/components/ui/use-confirm";
 import {
@@ -41,7 +41,7 @@ interface MenuEditorProps {
 export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: MenuEditorProps) {
   const { t } = useI18n();
   const { confirm, confirmDialog } = useConfirm();
-  const { currency } = useCurrency();
+  const { currency, formatPrice } = useCurrency();
   const router = useRouter();
   const [newCatName, setNewCatName] = useState("");
   const [isAddingCat, setIsAddingCat] = useState(false);
@@ -256,7 +256,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                                 </h5>
                                 <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
                                   <span className="text-foreground font-medium">
-                                    {formatCurrency(Number(item.price), currency)}
+                                    {formatPrice(Number(item.price))}
                                   </span>
                                   {item.isAvailable ? (
                                     <span className="text-emerald-600">

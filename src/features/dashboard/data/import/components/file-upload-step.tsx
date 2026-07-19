@@ -121,18 +121,16 @@ export function FileUploadStep({
     <div className="space-y-6">
       {/* Entity Type Selector */}
       <div className="flex flex-col items-center justify-center gap-2">
-        <div className="flex items-center gap-2 bg-muted/40 p-1 pl-3 pr-1 rounded-lg border shadow-sm">
-          <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+        <div className="bg-muted/40 flex items-center gap-2 rounded-lg border p-1 pr-1 pl-3 shadow-sm">
+          <span className="text-muted-foreground text-sm font-medium whitespace-nowrap">
             {t("import.upload.label")}
           </span>
           <Select
             value={selectedEntityType || "auto"}
-            onValueChange={(v) =>
-              onEntityTypeChange(v === "auto" ? undefined : (v as EntityType))
-            }
+            onValueChange={(v) => onEntityTypeChange(v === "auto" ? undefined : (v as EntityType))}
             disabled={isLoading}
           >
-            <SelectTrigger className="w-[200px] border-none shadow-none bg-transparent hover:bg-muted/50 focus:ring-0 h-8">
+            <SelectTrigger className="hover:bg-muted/50 h-8 w-[200px] border-none bg-transparent shadow-none focus:ring-0">
               <SelectValue placeholder="Auto-detect" />
             </SelectTrigger>
             <SelectContent align="center">
@@ -154,10 +152,10 @@ export function FileUploadStep({
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         className={cn(
-          "border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors",
+          "cursor-pointer rounded-lg border-2 border-dashed p-12 text-center transition-colors",
           isDragActive && "border-primary bg-primary/5",
           !isDragActive && "border-muted-foreground/25 hover:border-primary/50",
-          isLoading && "opacity-50 cursor-not-allowed"
+          isLoading && "cursor-not-allowed opacity-50"
         )}
       >
         <input
@@ -172,34 +170,32 @@ export function FileUploadStep({
         <div className="flex flex-col items-center gap-4">
           {isLoading ? (
             <>
-              <Loader2 className="h-12 w-12 text-primary animate-spin" />
+              <Loader2 className="text-primary h-12 w-12 animate-spin" />
               <div>
                 <p className="text-lg font-medium">{t("import.upload.processing")}</p>
-                <p className="text-sm text-muted-foreground">{t("import.upload.analyzing")}</p>
+                <p className="text-muted-foreground text-sm">{t("import.upload.analyzing")}</p>
               </div>
             </>
           ) : isDragActive ? (
             <>
-              <Upload className="h-12 w-12 text-primary" />
+              <Upload className="text-primary h-12 w-12" />
               <p className="text-lg font-medium">{t("import.upload.dropToUpload")}</p>
             </>
           ) : (
             <>
-              <FileText className="h-12 w-12 text-muted-foreground" />
+              <FileText className="text-muted-foreground h-12 w-12" />
               <div>
                 <p className="text-lg font-medium">{t("import.upload.dropZone")}</p>
-                <p className="text-sm text-muted-foreground">{t("import.upload.browse")}</p>
+                <p className="text-muted-foreground text-sm">{t("import.upload.browse")}</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-4">
-                {t("import.upload.supports")}
-              </p>
+              <p className="text-muted-foreground mt-4 text-xs">{t("import.upload.supports")}</p>
             </>
           )}
         </div>
       </div>
 
       {/* Error message */}
-      {dragError && <p className="text-sm text-destructive text-center">{dragError}</p>}
+      {dragError && <p className="text-destructive text-center text-sm">{dragError}</p>}
     </div>
   );
 }

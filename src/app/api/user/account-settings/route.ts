@@ -71,7 +71,10 @@ export const POST = withApiHandler(
 
       if (!newPassword || newPassword.length < 8) {
         return NextResponse.json(
-          createErrorResponse(ApiErrorCode.INVALID_INPUT, "New password must be at least 8 characters"),
+          createErrorResponse(
+            ApiErrorCode.INVALID_INPUT,
+            "New password must be at least 8 characters"
+          ),
           { status: 400 }
         );
       }
@@ -83,7 +86,10 @@ export const POST = withApiHandler(
 
       if (!account?.password) {
         return NextResponse.json(
-          createErrorResponse(ApiErrorCode.INVALID_INPUT, "No password set on this account. Use a social login."),
+          createErrorResponse(
+            ApiErrorCode.INVALID_INPUT,
+            "No password set on this account. Use a social login."
+          ),
           { status: 400 }
         );
       }
@@ -124,10 +130,9 @@ export const POST = withApiHandler(
       return NextResponse.json(createSuccessResponse({ deleted: true }));
     }
 
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INVALID_INPUT, "Unknown action"),
-      { status: 400 }
-    );
+    return NextResponse.json(createErrorResponse(ApiErrorCode.INVALID_INPUT, "Unknown action"), {
+      status: 400,
+    });
   },
   { rateLimitEndpoint: "/api/user/account-settings", requireStoreAuth: false }
 );

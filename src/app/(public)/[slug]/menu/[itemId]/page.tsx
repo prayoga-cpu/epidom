@@ -12,49 +12,51 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug, itemId } = await params;
   const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
   const storefront = await storefrontService.getStorefrontBySlug(cleanSlug);
-  
+
   if (!storefront) {
     return { title: "Store Not Found | Epidom" };
   }
-  
+
   const item = await prisma.menuItem.findFirst({
-    where: { 
+    where: {
       id: itemId,
-      storefrontId: storefront.id 
-    }
+      storefrontId: storefront.id,
+    },
   });
-  
+
   if (!item) {
     return { title: `Item Not Found | ${storefront.displayName}` };
   }
-  
+
   return {
     title: `${item.name} - ${storefront.displayName} | Epidom`,
-    description: item.description || `Pesan ${item.name} dari ${storefront.displayName} langsung via WhatsApp.`,
+    description:
+      item.description ||
+      `Pesan ${item.name} dari ${storefront.displayName} langsung via WhatsApp.`,
   };
 }
 
 export default async function ItemDetailPage({ params }: PageProps) {
   const { slug, itemId } = await params;
   const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
-  
+
   const storefront = await storefrontService.getStorefrontBySlug(cleanSlug);
-  
+
   if (!storefront || !storefront.isPublished) {
     notFound();
   }
-  
+
   const item = await prisma.menuItem.findFirst({
-    where: { 
+    where: {
       id: itemId,
-      storefrontId: storefront.id 
-    }
+      storefrontId: storefront.id,
+    },
   });
-  
+
   if (!item) {
     notFound();
   }
-  
+
   // Cast item and storefront data for serializability
   const castItem = {
     id: item.id,

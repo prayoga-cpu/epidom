@@ -66,6 +66,20 @@ export function downloadCSV(csv: string, filename: string): void {
 }
 
 /**
+ * Trigger a browser download for a data URL (e.g. a canvas `toDataURL()` PNG).
+ */
+export function downloadDataUrl(dataUrl: string, filename: string): void {
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = filename;
+  link.style.visibility = "hidden";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
  * Export data to CSV file
  */
 export function exportToCSV<T extends Record<string, any>>(

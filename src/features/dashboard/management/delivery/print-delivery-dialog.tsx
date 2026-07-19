@@ -23,11 +23,7 @@ interface PrintDeliveryDialogProps {
   delivery: SupplierDelivery | null;
 }
 
-export function PrintDeliveryDialog({
-  open,
-  onOpenChange,
-  delivery,
-}: PrintDeliveryDialogProps) {
+export function PrintDeliveryDialog({ open, onOpenChange, delivery }: PrintDeliveryDialogProps) {
   const { t } = useI18n();
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -38,14 +34,17 @@ export function PrintDeliveryDialog({
     // Map of English system notes to translation keys
     const systemNoteMap: Record<string, string> = {
       "Delivery scheduled": "management.delivery.details.systemNotes.deliveryScheduled",
-      "Shipment departed from supplier warehouse": "management.delivery.details.systemNotes.shipmentDeparted",
-      "All items received in good condition": "management.delivery.details.systemNotes.itemsReceived",
+      "Shipment departed from supplier warehouse":
+        "management.delivery.details.systemNotes.shipmentDeparted",
+      "All items received in good condition":
+        "management.delivery.details.systemNotes.itemsReceived",
       "Out for delivery": "management.delivery.details.systemNotes.outForDelivery",
       "Order placed, awaiting confirmation": "management.delivery.details.systemNotes.orderPlaced",
       "Weekly bulk order scheduled": "management.delivery.details.systemNotes.weeklyBulkOrder",
       "Special order for specialty items": "management.delivery.details.systemNotes.specialOrder",
       "Regular dairy delivery": "management.delivery.details.systemNotes.regularDairyDelivery",
-      "Regular weekly delivery - all items inspected and stored properly": "management.delivery.details.systemNotes.regularWeeklyDelivery",
+      "Regular weekly delivery - all items inspected and stored properly":
+        "management.delivery.details.systemNotes.regularWeeklyDelivery",
     };
 
     // Check if note matches a system message
@@ -154,7 +153,10 @@ export function PrintDeliveryDialog({
         <DialogHeader>
           <DialogTitle>{t("management.delivery.dialogs.printDelivery.title")}</DialogTitle>
           <DialogDescription>
-            {t("management.delivery.dialogs.printDelivery.previewDescription").replace("{reference}", delivery.deliveryReference)}
+            {t("management.delivery.dialogs.printDelivery.previewDescription").replace(
+              "{reference}",
+              delivery.deliveryReference
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -162,7 +164,9 @@ export function PrintDeliveryDialog({
         <div ref={printRef} className="space-y-4">
           {/* Header */}
           <div>
-            <h1 className="text-2xl font-bold">{t("management.delivery.dialogs.printDelivery.supplierDeliveryNote")}</h1>
+            <h1 className="text-2xl font-bold">
+              {t("management.delivery.dialogs.printDelivery.supplierDeliveryNote")}
+            </h1>
             <p className="text-muted-foreground text-sm">
               {t("management.delivery.table.reference")}: {delivery.deliveryReference}
             </p>
@@ -171,7 +175,9 @@ export function PrintDeliveryDialog({
           {/* Delivery Information */}
           <div className="bg-muted/30 rounded-lg p-4">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t("management.delivery.details.deliveryDetails")}</h2>
+              <h2 className="text-lg font-semibold">
+                {t("management.delivery.details.deliveryDetails")}
+              </h2>
               <div className="flex gap-2">
                 <Badge variant="secondary">{getTypeLabel(delivery.deliveryType)}</Badge>
                 <Badge>{getStatusLabel(delivery.status)}</Badge>
@@ -194,7 +200,9 @@ export function PrintDeliveryDialog({
 
           {/* Supplier Information */}
           <div className="bg-muted/30 rounded-lg p-4">
-            <h2 className="mb-2 text-lg font-semibold">{t("management.delivery.details.supplier")}</h2>
+            <h2 className="mb-2 text-lg font-semibold">
+              {t("management.delivery.details.supplier")}
+            </h2>
             <Separator className="my-2" />
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
@@ -203,7 +211,9 @@ export function PrintDeliveryDialog({
               </div>
               {delivery.supplier?.contactPerson && (
                 <div className="flex justify-between">
-                  <span className="font-medium">{t("management.delivery.dialogs.printDelivery.contactPerson")}:</span>
+                  <span className="font-medium">
+                    {t("management.delivery.dialogs.printDelivery.contactPerson")}:
+                  </span>
                   <span>{delivery.supplier.contactPerson}</span>
                 </div>
               )}
@@ -229,9 +239,13 @@ export function PrintDeliveryDialog({
               <thead>
                 <tr className="bg-muted">
                   <th className="border p-2 text-left">#</th>
-                  <th className="border p-2 text-left">{t("management.delivery.details.material")}</th>
+                  <th className="border p-2 text-left">
+                    {t("management.delivery.details.material")}
+                  </th>
                   <th className="border p-2 text-left">{t("common.sku")}</th>
-                  <th className="border p-2 text-right">{t("management.delivery.details.quantity")}</th>
+                  <th className="border p-2 text-right">
+                    {t("management.delivery.details.quantity")}
+                  </th>
                   <th className="border p-2 text-left">{t("management.delivery.details.unit")}</th>
                   <th className="border p-2 text-left">{t("management.delivery.details.notes")}</th>
                 </tr>
@@ -240,7 +254,9 @@ export function PrintDeliveryDialog({
                 {delivery.items.map((item, index) => (
                   <tr key={index}>
                     <td className="border p-2">{index + 1}</td>
-                    <td className="border p-2">{item.material?.name || t("management.delivery.details.unknownMaterial")}</td>
+                    <td className="border p-2">
+                      {item.material?.name || t("management.delivery.details.unknownMaterial")}
+                    </td>
                     <td className="border p-2">{item.material?.sku || "-"}</td>
                     <td className="border p-2 text-right">{item.quantity}</td>
                     <td className="border p-2">{item.unit}</td>
@@ -254,7 +270,9 @@ export function PrintDeliveryDialog({
           {/* Notes */}
           {delivery.notes && (
             <div className="bg-muted/30 rounded-lg p-4">
-              <h2 className="mb-2 text-lg font-semibold">{t("management.delivery.details.notes")}</h2>
+              <h2 className="mb-2 text-lg font-semibold">
+                {t("management.delivery.details.notes")}
+              </h2>
               <Separator className="my-2" />
               <p className="text-sm">{translateSystemNote(delivery.notes)}</p>
             </div>
@@ -262,7 +280,9 @@ export function PrintDeliveryDialog({
 
           {/* Footer */}
           <div className="text-muted-foreground mt-6 text-xs">
-            <p>{t("management.delivery.dialogs.printDelivery.printedOn")}: {formatDate(new Date())}</p>
+            <p>
+              {t("management.delivery.dialogs.printDelivery.printedOn")}: {formatDate(new Date())}
+            </p>
             <p>{t("management.delivery.dialogs.printDelivery.generatedBy")}</p>
           </div>
         </div>
@@ -272,11 +292,11 @@ export function PrintDeliveryDialog({
             {t("common.actions.close")}
           </Button>
           <Button type="button" variant="outline" onClick={handleExportPDF}>
-            <Download className="mr-1 h-4 w-4 hidden sm:inline" />
+            <Download className="mr-1 hidden h-4 w-4 sm:inline" />
             {t("management.delivery.dialogs.printDelivery.downloadPDF")}
           </Button>
           <Button type="button" onClick={handlePrint}>
-            <Printer className="mr-1 h-4 w-4 hidden sm:inline" />
+            <Printer className="mr-1 hidden h-4 w-4 sm:inline" />
             {t("management.delivery.dialogs.printDelivery.print")}
           </Button>
         </DialogFooter>

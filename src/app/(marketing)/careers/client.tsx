@@ -1,5 +1,8 @@
 "use client";
-import { PlaceholderPage, PlaceholderSection } from "@/features/marketing/shared/components/placeholder-page";
+import {
+  PlaceholderPage,
+  PlaceholderSection,
+} from "@/features/marketing/shared/components/placeholder-page";
 export function CareersClient() {
   return (
     <PlaceholderPage
@@ -26,7 +29,9 @@ export function CareersClient() {
       />
       <PlaceholderSection
         title="Apply"
-        items={["Send your CV and a short note to careers@epidom.app"]}
+        items={[
+          "Send your CV and a short note to cro@prionation.io, ceo@prionation.io, or consult@prionation.io",
+        ]}
       />
     </PlaceholderPage>
   );

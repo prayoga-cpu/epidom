@@ -51,9 +51,7 @@ export function AlertsClient({ initialAlerts, storeId }: AlertsClientProps) {
 
   // Get title and description based on current view
   const pageTitle = isOrders ? t("alerts.ordersToPlace") : t("alerts.title");
-  const pageDescription = isOrders
-    ? t("alerts.ordersToPlaceDescription")
-    : t("alerts.description");
+  const pageDescription = isOrders ? t("alerts.ordersToPlaceDescription") : t("alerts.description");
 
   return (
     <>
@@ -103,5 +101,3 @@ export function AlertsClient({ initialAlerts, storeId }: AlertsClientProps) {
     </>
   );
 }
-
-

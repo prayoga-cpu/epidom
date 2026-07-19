@@ -34,8 +34,8 @@ describe("finance summary calculations", () => {
 
   it("correctly computes COGS from stock movements", () => {
     const result = calcSummary(500_000, [
-      { quantity: 2, unitCost: 50_000 },  // 100k
-      { quantity: 1, unitCost: 30_000 },  // 30k
+      { quantity: 2, unitCost: 50_000 }, // 100k
+      { quantity: 1, unitCost: 30_000 }, // 30k
     ]);
     expect(result.cogs).toBe(130_000);
     expect(result.grossProfit).toBe(370_000);

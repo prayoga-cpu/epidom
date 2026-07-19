@@ -18,7 +18,9 @@ interface EmptyStateProps {
  */
 export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={`col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center ${className || ""}`}>
+    <div
+      className={`col-span-full flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center ${className || ""}`}
+    >
       <Icon className="text-muted-foreground/50 mb-4 h-12 w-12" />
       <h3 className="mb-2 text-lg font-semibold">{title}</h3>
       <p className="text-muted-foreground mb-4 text-sm">{description}</p>
@@ -26,4 +28,3 @@ export function EmptyState({ icon: Icon, title, description, action, className }
     </div>
   );
 }
-

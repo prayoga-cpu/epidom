@@ -49,7 +49,12 @@ export function TrustBar() {
             <span
               key={name}
               className="epi-script"
-              style={{ color: "var(--epi-cream-50)", opacity: 0.72, fontSize: 22, letterSpacing: "0.01em" }}
+              style={{
+                color: "var(--epi-cream-50)",
+                opacity: 0.72,
+                fontSize: 22,
+                letterSpacing: "0.01em",
+              }}
             >
               {name}
             </span>

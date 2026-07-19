@@ -39,6 +39,7 @@ export interface CartState {
 
 export interface PosOrderItemDisplay {
   id: string;
+  menuItemId: string | null;
   name: string;
   quantity: number;
   unitPrice: number;

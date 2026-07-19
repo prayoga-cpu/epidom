@@ -58,9 +58,7 @@ export interface PaymentInitResponse {
   expiresAt: Date;
 }
 
-export async function initiatePayment(
-  req: PaymentInitRequest
-): Promise<PaymentInitResponse> {
+export async function initiatePayment(req: PaymentInitRequest): Promise<PaymentInitResponse> {
   if (req.paymentMethod === "CASH") {
     return {
       provider: "none",

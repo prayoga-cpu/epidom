@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { prisma } from "@/lib/prisma";
+import { ACTIVE_POS_STATUSES } from "@/lib/constants/order-status";
 
 // SSE endpoint for real-time order updates.
 // Clients poll the latest pending/confirmed orders every 5 seconds.
@@ -10,10 +11,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
 
   const session = await getSession();
@@ -36,15 +34,15 @@ export async function GET(
       const safeClose = () => {
         if (isClosed) return;
         isClosed = true;
-        try { controller.close(); } catch {}
+        try {
+          controller.close();
+        } catch {}
       };
 
       const send = (data: unknown) => {
         if (isClosed) return;
         try {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-          );
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
         } catch {
           safeClose();
         }
@@ -56,7 +54,7 @@ export async function GET(
           where: {
             storeId,
             // Phase 3: include POS + STOREFRONT orders (not just STOREFRONT)
-            status: { in: ["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY"] },
+            status: { in: ACTIVE_POS_STATUSES },
           },
           orderBy: { createdAt: "desc" },
           take: 50,
@@ -76,39 +74,39 @@ export async function GET(
       await poll();
 
       const interval = setInterval(() => {
-          poll().catch(() => {
-            clearInterval(interval);
-            safeClose();
-          });
-        }, 5000);
-
-        // Clean up when client disconnects
-        const cleanup = () => {
+        poll().catch(() => {
           clearInterval(interval);
+          safeClose();
+        });
+      }, 5000);
+
+      // Clean up when client disconnects
+      const cleanup = () => {
+        clearInterval(interval);
+        clearInterval(keepAlive);
+        safeClose();
+      };
+
+      // Send keep-alive every 25s to prevent proxy timeouts
+      const keepAlive = setInterval(() => {
+        if (isClosed) {
+          clearInterval(keepAlive);
+          return;
+        }
+        try {
+          controller.enqueue(encoder.encode(": keep-alive\n\n"));
+        } catch {
           clearInterval(keepAlive);
           safeClose();
-        };
+        }
+      }, 25000);
 
-        // Send keep-alive every 25s to prevent proxy timeouts
-        const keepAlive = setInterval(() => {
-          if (isClosed) {
-            clearInterval(keepAlive);
-            return;
-          }
-          try {
-            controller.enqueue(encoder.encode(": keep-alive\n\n"));
-          } catch {
-            clearInterval(keepAlive);
-            safeClose();
-          }
-        }, 25000);
-
-        return cleanup;
-      },
-      cancel() {
-        // Stream canceled by client
-      }
-    });
+      return cleanup;
+    },
+    cancel() {
+      // Stream canceled by client
+    },
+  });
 
   return new Response(stream, {
     headers: {

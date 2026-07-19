@@ -53,4 +53,3 @@ export function useProductUsage(storeId: string, enabled: boolean = true) {
     refetchOnMount: "always", // Always fetch fresh data on mount
   });
 }
-

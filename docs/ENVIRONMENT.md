@@ -8,19 +8,19 @@ When you add a new env var to the codebase, update this doc and `.env.example` i
 
 ## Quick reference
 
-| Group | Required for | Phase added |
-|---|---|---|
-| Core app | Local dev to boot | Existing |
-| Better Auth | Login flows | Existing |
-| Stripe (SaaS) | Subscription billing | Existing |
-| Xendit | Customer payments | Phase 2 |
-| Fonnte | WhatsApp notifications | Phase 2 |
-| Inngest | Background jobs | Phase 2 |
-| Resend | Transactional email | Existing |
-| Google OAuth | Google login button | Existing |
-| Sentry | Error tracking | Phase 1 |
-| Upstash Redis | Rate limiting | Phase 1 |
-| Feature flags | Hiding legacy surfaces | Phase 0 |
+| Group         | Required for           | Phase added |
+| ------------- | ---------------------- | ----------- |
+| Core app      | Local dev to boot      | Existing    |
+| Better Auth   | Login flows            | Existing    |
+| Stripe (SaaS) | Subscription billing   | Existing    |
+| Xendit        | Customer payments      | Phase 2     |
+| Fonnte        | WhatsApp notifications | Phase 2     |
+| Inngest       | Background jobs        | Phase 2     |
+| Resend        | Transactional email    | Existing    |
+| Google OAuth  | Google login button    | Existing    |
+| Sentry        | Error tracking         | Phase 1     |
+| Upstash Redis | Rate limiting          | Phase 1     |
+| Feature flags | Hiding legacy surfaces | Phase 0     |
 
 ---
 
@@ -53,6 +53,7 @@ GOOGLE_CLIENT_SECRET=<from-google-cloud-console>
 ```
 
 **Where to get Google OAuth credentials:**
+
 1. Go to Google Cloud Console → APIs & Services → Credentials
 2. Create OAuth 2.0 Client ID
 3. Add authorized redirect URI: `{APP_URL}/api/auth/callback/google`
@@ -80,15 +81,18 @@ STRIPE_PRICE_ENT_ANNUAL_IDR=price_...
 ```
 
 **Where to get keys:**
+
 1. Stripe dashboard → Developers → API keys
 2. Use test mode keys for local development
 3. Webhook secret: Stripe → Developers → Webhooks → click your endpoint → reveal signing secret
 
 **Setting up webhooks for local dev:**
+
 ```bash
 stripe login
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
+
 The CLI prints the webhook secret. Paste it into `STRIPE_WEBHOOK_SECRET`.
 
 ---
@@ -102,6 +106,7 @@ XENDIT_CALLBACK_URL=https://your-tunnel-url.com/api/webhooks/xendit
 ```
 
 **Where to get keys:**
+
 1. Sign up at xendit.co
 2. Get test mode API keys from Dashboard → Settings → Developers → API Keys
 3. Configure webhooks at Dashboard → Settings → Webhooks
@@ -120,6 +125,7 @@ FONNTE_SENDER_NUMBER=628xxxxxxxxx  # WA number connected to Fonnte
 ```
 
 **Where to get a token:**
+
 1. Sign up at fonnte.com
 2. Connect a WhatsApp number (you'll scan a QR with the WA Web app)
 3. Get the token from Dashboard → API
@@ -139,6 +145,7 @@ WHATSAPP_WEBHOOK_VERIFY_TOKEN=<your-own-secret>
 ```
 
 Requires:
+
 - Verified Meta Business account
 - WhatsApp Business API access (apply through a BSP partner like Twilio, MessageBird, or 360dialog)
 - Per-template message approval
@@ -153,6 +160,7 @@ INNGEST_SIGNING_KEY=<from-inngest-cloud>
 ```
 
 **Where to get keys:**
+
 1. Sign up at inngest.com
 2. Create an app
 3. Copy event key and signing key from the dashboard
@@ -169,11 +177,13 @@ EMAIL_FROM="Epidom <noreply@epidom.id>"
 ```
 
 **Where to get a key:**
+
 1. Sign up at resend.com
 2. Add and verify your domain (`epidom.id`)
 3. Create an API key under API Keys
 
 DNS records required at the domain level:
+
 - SPF
 - DKIM
 - DMARC (recommended)
@@ -189,6 +199,7 @@ NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
 ```
 
 **Where to get keys:**
+
 1. Sign up at sentry.io
 2. Create a Next.js project
 3. Run `npx @sentry/wizard@latest -i nextjs` (one-time setup)
@@ -203,6 +214,7 @@ UPSTASH_REDIS_REST_TOKEN=<from-upstash-console>
 ```
 
 **Where to get keys:**
+
 1. Sign up at upstash.com
 2. Create a Redis database in Singapore region
 3. Copy REST URL and token
@@ -312,13 +324,13 @@ EPIDOM_OWNER_EMAIL=owner@epidom.id
 
 ## Rotation policy
 
-| Key type | Rotation |
-|---|---|
-| Stripe secret | Rotate annually, or immediately on suspected compromise |
-| Xendit secret | Rotate annually |
-| Better Auth secret | Rotate annually, requires re-login of all users |
-| Fonnte token | Rotate if WhatsApp number changes |
-| Database password | Rotate annually |
-| All API tokens | Rotate immediately if any employee leaves |
+| Key type           | Rotation                                                |
+| ------------------ | ------------------------------------------------------- |
+| Stripe secret      | Rotate annually, or immediately on suspected compromise |
+| Xendit secret      | Rotate annually                                         |
+| Better Auth secret | Rotate annually, requires re-login of all users         |
+| Fonnte token       | Rotate if WhatsApp number changes                       |
+| Database password  | Rotate annually                                         |
+| All API tokens     | Rotate immediately if any employee leaves               |
 
 Document each rotation in the operator's runbook (not in the repo).

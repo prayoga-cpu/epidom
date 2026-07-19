@@ -10,11 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import {
-  upsertMemory,
-  recordSuccess,
-  recordFailure,
-} from "@/lib/ai/memory/ai-memory.service";
+import { upsertMemory, recordSuccess, recordFailure } from "@/lib/ai/memory/ai-memory.service";
 import { z } from "zod";
 import type { MemoryType } from "@/lib/ai/import/types";
 

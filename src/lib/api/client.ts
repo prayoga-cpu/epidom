@@ -64,10 +64,7 @@ export class ApiClient {
   /**
    * Make HTTP request
    */
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
     const config: RequestInit = {
@@ -96,9 +93,7 @@ export class ApiClient {
       }
 
       // Handle network errors or JSON parsing errors
-      throw new Error(
-        error instanceof Error ? error.message : "Network error occurred"
-      );
+      throw new Error(error instanceof Error ? error.message : "Network error occurred");
     }
   }
 
@@ -106,9 +101,7 @@ export class ApiClient {
    * GET request
    */
   async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
-    const query = params
-      ? `?${new URLSearchParams(params).toString()}`
-      : "";
+    const query = params ? `?${new URLSearchParams(params).toString()}` : "";
     return this.request<T>(`${endpoint}${query}`, {
       method: "GET",
     });

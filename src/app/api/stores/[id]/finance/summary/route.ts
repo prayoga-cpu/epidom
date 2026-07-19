@@ -12,7 +12,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
-import { MovementType, OrderStatus } from "@prisma/client";
+import { MovementType } from "@prisma/client";
+import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export const GET = withApiHandler(
     const revenueResult = await prisma.order.aggregate({
       where: {
         storeId,
-        status: { notIn: [OrderStatus.CANCELLED] },
+        status: { notIn: NON_REVENUE_STATUSES },
         orderDate: { gte: from, lte: to },
       },
       _sum: { total: true, subtotal: true },
@@ -54,7 +55,7 @@ export const GET = withApiHandler(
         order: {
           storeId,
           orderDate: { gte: from, lte: to },
-          status: { notIn: [OrderStatus.CANCELLED] },
+          status: { notIn: NON_REVENUE_STATUSES },
         },
         materialId: { not: null },
       },
@@ -74,7 +75,7 @@ export const GET = withApiHandler(
     const rawOrders = await prisma.order.findMany({
       where: {
         storeId,
-        status: { notIn: [OrderStatus.CANCELLED] },
+        status: { notIn: NON_REVENUE_STATUSES },
         orderDate: { gte: from, lte: to },
       },
       select: { orderDate: true, total: true },

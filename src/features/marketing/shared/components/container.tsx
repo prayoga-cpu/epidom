@@ -32,11 +32,7 @@ const maxWidthClasses = {
 export function Container({ children, className = "", maxWidth = "7xl" }: ContainerProps) {
   return (
     <div
-      className={cn(
-        "mx-auto w-full px-6 md:px-8 lg:px-8",
-        maxWidthClasses[maxWidth],
-        className
-      )}
+      className={cn("mx-auto w-full px-6 md:px-8 lg:px-8", maxWidthClasses[maxWidth], className)}
     >
       {children}
     </div>

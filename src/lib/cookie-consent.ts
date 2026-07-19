@@ -43,9 +43,10 @@ export function getCookiePreferences(): CookiePreferences | null {
 
     // Validate language
     const validLanguages: Locale[] = ["en", "fr", "id"];
-    const language = preferences.language && validLanguages.includes(preferences.language)
-      ? preferences.language
-      : "en"; // Default to English if invalid
+    const language =
+      preferences.language && validLanguages.includes(preferences.language)
+        ? preferences.language
+        : "en"; // Default to English if invalid
 
     return {
       essential: true, // Always true
@@ -70,9 +71,10 @@ export function setCookiePreferences(preferences: Partial<CookiePreferences>): v
 
     // Validate language
     const validLanguages: Locale[] = ["en", "fr", "id"];
-    const language = preferences.language && validLanguages.includes(preferences.language)
-      ? preferences.language
-      : current?.language ?? "en"; // Default to English or current language
+    const language =
+      preferences.language && validLanguages.includes(preferences.language)
+        ? preferences.language
+        : (current?.language ?? "en"); // Default to English or current language
 
     const updated: CookiePreferences & { version: string } = {
       essential: true, // Always true
@@ -95,8 +97,7 @@ export function setCookiePreferences(preferences: Partial<CookiePreferences>): v
         detail: updated,
       })
     );
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /**
@@ -203,4 +204,3 @@ export function hasAnalyticsConsent(): boolean {
 export function hasMarketingConsent(): boolean {
   return hasConsent("marketing");
 }
-

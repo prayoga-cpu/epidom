@@ -58,4 +58,3 @@ export function toPrismaDecimal<T extends Record<string, unknown>>(
 export function numberToDecimal(value: number | string | null | undefined): Prisma.Decimal {
   return toDecimal(value);
 }
-

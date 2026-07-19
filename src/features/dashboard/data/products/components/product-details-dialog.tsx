@@ -312,7 +312,9 @@ export function ProductDetailsDialog({
                                   {t("data.recipes.form.category")}:{" "}
                                 </span>
                                 <Badge variant="outline">
-                                  {recipe.category ? getTranslatedCategory(recipe.category, t) : t("common.notAvailable")}
+                                  {recipe.category
+                                    ? getTranslatedCategory(recipe.category, t)
+                                    : t("common.notAvailable")}
                                 </Badge>
                               </div>
                               <div>

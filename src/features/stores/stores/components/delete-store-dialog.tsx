@@ -39,15 +39,11 @@ export function DeleteStoreDialog({ store, trigger }: DeleteStoreDialogProps) {
   const handleDelete = () => {
     deleteStore(store.id, {
       onSuccess: () => {
-        toast.success(
-          t("stores.deleteSuccess") || "Store deleted successfully"
-        );
+        toast.success(t("stores.deleteSuccess") || "Store deleted successfully");
         setOpen(false);
       },
       onError: (error) => {
-        toast.error(
-          error.message || t("stores.deleteError") || "Failed to delete store"
-        );
+        toast.error(error.message || t("stores.deleteError") || "Failed to delete store");
       },
     });
   };
@@ -57,7 +53,7 @@ export function DeleteStoreDialog({ store, trigger }: DeleteStoreDialogProps) {
       <AlertDialogTrigger asChild>
         {trigger || (
           <Button variant="ghost" size="sm" className="text-destructive">
-            <Trash2 className="h-4 w-4 mr-2" />
+            <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
         )}
@@ -66,9 +62,9 @@ export function DeleteStoreDialog({ store, trigger }: DeleteStoreDialogProps) {
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will deactivate <strong>{store.name}</strong>. This action can
-            be reversed by contacting support. All data associated with this
-            store will be preserved but the store will no longer be accessible.
+            This will deactivate <strong>{store.name}</strong>. This action can be reversed by
+            contacting support. All data associated with this store will be preserved but the store
+            will no longer be accessible.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

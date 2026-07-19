@@ -75,6 +75,7 @@ quantity    Decimal  @db.Decimal(12, 3)   // material quantities, 3 decimals
 ```
 
 Rounding rules in business logic:
+
 - Use `Decimal.toFixed(2)` only for display
 - Sum and multiply with full precision, round at the end
 - Currency conversions go through `ExchangeRate` table, never hardcoded rates
@@ -85,20 +86,20 @@ Rounding rules in business logic:
 
 ### Existing (pre-Phase 0)
 
-| Model | Purpose |
-|---|---|
-| `User`, `Session`, `Account`, `Verification` | Better Auth tables |
-| `Business`, `Store` | Tenant hierarchy |
-| `Subscription` | SaaS billing state |
-| `Product`, `Material`, `MaterialSupplier` | Catalog (now operations-gated) |
-| `Recipe`, `RecipeIngredient`, `RecipeProduct` | Recipes (now operations-gated) |
-| `ProductionBatch` | Manufacturing batches (now enterprise-gated) |
-| `StockMovement` | Inventory audit log |
-| `Supplier`, `SupplierOrder`, `SupplierOrderItem` | Supply chain |
-| `Order`, `OrderItem` | Sales (heavily extended in Phase 2) |
-| `Alert` | Stock alerts |
-| `ExchangeRate` | Currency conversion |
-| `AIImportMemory`, `AIImportSession` | AI-assisted CSV import |
+| Model                                            | Purpose                                      |
+| ------------------------------------------------ | -------------------------------------------- |
+| `User`, `Session`, `Account`, `Verification`     | Better Auth tables                           |
+| `Business`, `Store`                              | Tenant hierarchy                             |
+| `Subscription`                                   | SaaS billing state                           |
+| `Product`, `Material`, `MaterialSupplier`        | Catalog (now operations-gated)               |
+| `Recipe`, `RecipeIngredient`, `RecipeProduct`    | Recipes (now operations-gated)               |
+| `ProductionBatch`                                | Manufacturing batches (now enterprise-gated) |
+| `StockMovement`                                  | Inventory audit log                          |
+| `Supplier`, `SupplierOrder`, `SupplierOrderItem` | Supply chain                                 |
+| `Order`, `OrderItem`                             | Sales (heavily extended in Phase 2)          |
+| `Alert`                                          | Stock alerts                                 |
+| `ExchangeRate`                                   | Currency conversion                          |
+| `AIImportMemory`, `AIImportSession`              | AI-assisted CSV import                       |
 
 ### Phase 1 additions
 
@@ -114,7 +115,7 @@ model Storefront {
   heroImageUrl    String?
   themeColor      String   @default("#FF6B35")
   fontFamily      String   @default("Inter")
-  
+
   whatsappNumber  String?
   instagramUrl    String?
   tiktokUrl       String?
@@ -123,19 +124,19 @@ model Storefront {
   shopeefoodUrl   String?
   googleMapsUrl   String?
   customLinks     Json?
-  
+
   isPublished     Boolean  @default(false)
   acceptsOrders   Boolean  @default(false)
   openingHours    Json?
   viewCount       Int      @default(0)
-  
+
   store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   menuCategories  MenuCategory[]
   menuItems       MenuItem[]
-  
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
+
   @@index([slug])
   @@map("storefronts")
 }
@@ -145,10 +146,10 @@ model MenuCategory {
   storefrontId  String
   name          String
   displayOrder  Int          @default(0)
-  
+
   storefront    Storefront   @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
   items         MenuItem[]
-  
+
   @@map("menu_categories")
 }
 
@@ -166,11 +167,11 @@ model MenuItem {
   isFeatured      Boolean      @default(false)
   displayOrder    Int          @default(0)
   modifiers       Json?        // [{name, options: [{name, priceAdd}]}]
-  
+
   storefront      Storefront   @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
   category        MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   product         Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
-  
+
   @@index([storefrontId])
   @@map("menu_items")
 }
@@ -183,7 +184,7 @@ Adds to existing `Order`:
 ```prisma
 model Order {
   // existing fields preserved
-  
+
   storefrontId       String?
   orderType          OrderType    @default(DINE_IN)
   tableNumber        String?
@@ -194,9 +195,9 @@ model Order {
   paymentStatus      PaymentStatus @default(PENDING)
   paymentProviderRef String?
   source             OrderSource   @default(DIRECT)
-  
+
   storefront         Storefront?  @relation(fields: [storefrontId], references: [id])
-  
+
   @@index([storefrontId, createdAt])
   @@index([customerPhone])
 }
@@ -244,10 +245,10 @@ model Table {
   seatCapacity  Int         @default(4)
   zone          String?
   isActive      Boolean     @default(true)
-  
+
   store         Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
   orders        Order[]
-  
+
   @@unique([storeId, number])
   @@map("tables")
 }
@@ -258,7 +259,7 @@ OrderItem extension:
 ```prisma
 model OrderItem {
   // existing fields preserved
-  
+
   status         OrderItemStatus  @default(PENDING)
   preparedAt     DateTime?
   servedAt       DateTime?
@@ -285,11 +286,11 @@ model StaffMember {
   role        StaffRole   @default(CASHIER)
   pin         String?     // hashed
   isActive    Boolean     @default(true)
-  
+
   store       Store       @relation(fields: [storeId], references: [id])
   user        User?       @relation(fields: [userId], references: [id])
   shifts      Shift[]
-  
+
   @@map("staff_members")
 }
 
@@ -312,11 +313,11 @@ model Shift {
   expectedCash    Decimal?    @db.Decimal(12, 2)
   discrepancy     Decimal?    @db.Decimal(12, 2)
   notes           String?
-  
+
   store           Store       @relation(fields: [storeId], references: [id])
   staffMember     StaffMember @relation(fields: [staffMemberId], references: [id])
   orders          Order[]
-  
+
   @@map("shifts")
 }
 ```
@@ -402,24 +403,26 @@ Migration: `prisma/migrations/<timestamp>_rename_subscription_plans/`. Handles t
 
 ## Migration discipline
 
-| Rule | Why |
-|---|---|
-| Every schema change goes through `prisma migrate dev --name <descriptive_name>` | History matters |
-| Manual SQL allowed for enum changes and data migrations | Prisma can't safely do enum value rename |
-| Never use `prisma db push` against any database except your local dev | It skips the migration history |
-| Test the migration against a snapshot of prod data before merging | Most migration failures are data-shape problems |
-| Commit the migration file alongside the schema change | They must move together |
+| Rule                                                                            | Why                                             |
+| ------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Every schema change goes through `prisma migrate dev --name <descriptive_name>` | History matters                                 |
+| Manual SQL allowed for enum changes and data migrations                         | Prisma can't safely do enum value rename        |
+| Never use `prisma db push` against any database except your local dev           | It skips the migration history                  |
+| Test the migration against a snapshot of prod data before merging               | Most migration failures are data-shape problems |
+| Commit the migration file alongside the schema change                           | They must move together                         |
 
 ---
 
 ## Indexing strategy
 
 Indexed by default (Prisma auto-indexes):
+
 - All `@id` fields
 - All foreign keys
 - All `@unique` fields
 
 Add explicit indexes for:
+
 - Frequent `WHERE` conditions: `@@index([storeId, createdAt])` on `Order` for dashboard queries
 - Search by phone or slug: `@@index([slug])` on `Storefront`
 - Time-series queries: `@@index([storeId, createdAt])` everywhere it appears
@@ -430,15 +433,15 @@ Don't over-index. Each index slows writes. Audit after a few months of productio
 
 ## Soft deletes vs hard deletes
 
-| Model | Strategy |
-|---|---|
-| `User` | Hard delete, with cascade to all owned data |
-| `Store` | Hard delete on user request, after explicit confirmation |
-| `Subscription` | Never delete, only mark canceled |
-| `Order` | Never delete. Mark with `status = "CANCELLED"`. Audit trail matters. |
-| `Material`, `Product`, `Recipe` | Soft delete with `isActive: false`. Cannot delete if referenced by historical orders. |
-| `MenuItem` | Soft delete with `isAvailable: false`. Hard delete only if never ordered. |
-| `StockMovement`, `Shift`, `OrderItem` | Never delete. Append-only. |
+| Model                                 | Strategy                                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------- |
+| `User`                                | Hard delete, with cascade to all owned data                                           |
+| `Store`                               | Hard delete on user request, after explicit confirmation                              |
+| `Subscription`                        | Never delete, only mark canceled                                                      |
+| `Order`                               | Never delete. Mark with `status = "CANCELLED"`. Audit trail matters.                  |
+| `Material`, `Product`, `Recipe`       | Soft delete with `isActive: false`. Cannot delete if referenced by historical orders. |
+| `MenuItem`                            | Soft delete with `isAvailable: false`. Hard delete only if never ordered.             |
+| `StockMovement`, `Shift`, `OrderItem` | Never delete. Append-only.                                                            |
 
 The rationale: anything tied to money or compliance must be immutable in history.
 
@@ -447,14 +450,17 @@ The rationale: anything tied to money or compliance must be immutable in history
 ## Backups and recovery
 
 Production:
+
 - Neon (or chosen Postgres provider) point-in-time recovery, 7 days
 - Daily logical backup to Cloudflare R2 bucket, 90-day retention
 - Quarterly restore drill (manual)
 
 Staging:
+
 - Same setup but 3-day retention
 
 Local dev:
+
 - No backups. Use `prisma migrate reset` to start fresh.
 
 ---
@@ -494,16 +500,16 @@ const order = await prisma.$transaction(async (tx) => {
       // ...
     },
   });
-  
+
   await tx.orderItem.createMany({
-    data: items.map(i => ({
+    data: items.map((i) => ({
       orderId: order.id,
       menuItemId: i.menuItemId,
       quantity: i.quantity,
       unitPrice: i.unitPrice,
     })),
   });
-  
+
   return order;
 });
 ```
@@ -514,7 +520,7 @@ const order = await prisma.$transaction(async (tx) => {
 import { revalidateTag } from "next/cache";
 
 const updated = await prisma.storefront.update({
-  where: { id, storeId },  // tenant scope
+  where: { id, storeId }, // tenant scope
   data: { displayName, themeColor },
 });
 

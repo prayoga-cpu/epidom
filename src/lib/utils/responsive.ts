@@ -61,4 +61,3 @@ export const responsiveText = {
   description: "text-sm",
   descriptionSmall: "text-xs",
 } as const;
-

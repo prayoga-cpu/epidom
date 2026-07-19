@@ -43,10 +43,10 @@ export function RecipesCardGridSkeleton({ cards = 6 }: { cards?: number }) {
                 {/* Header - matches recipe card header structure with icon */}
                 <div className="mb-2 flex items-start justify-between">
                   <div className="flex-1">
-                    <Skeleton className="h-4 w-36 mb-1" /> {/* Name - line-clamp-2 */}
-                    <Skeleton className="h-5 w-20 rounded-full mt-1" /> {/* Category Badge */}
+                    <Skeleton className="mb-1 h-4 w-36" /> {/* Name - line-clamp-2 */}
+                    <Skeleton className="mt-1 h-5 w-20 rounded-full" /> {/* Category Badge */}
                   </div>
-                  <Skeleton className="h-8 w-8 rounded-lg ml-2 shrink-0" /> {/* Icon container */}
+                  <Skeleton className="ml-2 h-8 w-8 shrink-0 rounded-lg" /> {/* Icon container */}
                 </div>
 
                 {/* Description - matches min-h-[2.5rem] */}
@@ -56,7 +56,7 @@ export function RecipesCardGridSkeleton({ cards = 6 }: { cards?: number }) {
                 </div>
 
                 {/* Separator */}
-                <div className="h-px bg-border my-2" />
+                <div className="bg-border my-2 h-px" />
 
                 {/* Recipe Info - matches exact structure (yield, production time, cost per batch, cost per unit, ingredients) */}
                 <div className="my-2 space-y-1">

@@ -33,7 +33,13 @@ export function SupplierCard() {
   // Check if subscription is locked (POS plan)
   const isSubscriptionLocked =
     (!isLoadingAccess && !supplierManagementAccess) ||
-    (error && (isSubscriptionError(error) || (typeof error === "object" && error !== null && ("code" in error && error.code === "SUBSCRIPTION_FEATURE_LOCKED") || ("status" in error && error.status === 403))));
+    (error &&
+      (isSubscriptionError(error) ||
+        (typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "SUBSCRIPTION_FEATURE_LOCKED") ||
+        ("status" in error && error.status === 403)));
 
   const cardContent = (
     <div className="h-full overflow-auto">
@@ -48,9 +54,7 @@ export function SupplierCard() {
         </div>
       ) : isSubscriptionLocked ? (
         <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
-          <p className="text-muted-foreground text-sm">
-            {t("data.suppliers.locked")}
-          </p>
+          <p className="text-muted-foreground text-sm">{t("data.suppliers.locked")}</p>
           <Button
             onClick={() => router.push("/pricing")}
             size="sm"

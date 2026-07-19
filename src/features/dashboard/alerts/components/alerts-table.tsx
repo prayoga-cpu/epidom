@@ -92,8 +92,6 @@ export function AlertsTable({ alerts, onViewDetails, onCreateOrder }: AlertsTabl
     return result;
   }, [alerts, t]);
 
-
-
   if (alertsBySupplier.length === 0) {
     return (
       <Card>

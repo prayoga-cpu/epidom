@@ -63,8 +63,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { sessionId, storeId, entityType, data, decisions, mappingCorrections } =
-      validation.data;
+    const { sessionId, storeId, entityType, data, decisions, mappingCorrections } = validation.data;
 
     // Verify store access
     const store = await prisma.store.findFirst({

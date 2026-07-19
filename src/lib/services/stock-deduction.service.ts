@@ -322,3 +322,98 @@ export async function deductStockForOrder(
 
   return { deducted: productDeductions.length + materialDeductions.length, skipped };
 }
+
+/**
+ * Reverse stock deducted for an order when it's cancelled after having already
+ * reached DELIVERED (i.e. deductStockForOrder already ran for it).
+ *
+ * Reuses the order's own SALE StockMovement rows as the source of truth for
+ * what to restore, rather than recomputing from the order/recipe — robust
+ * against the product or recipe having changed since the original sale.
+ *
+ * Idempotent: if a RETURN StockMovement already exists for this order, the
+ * call is a no-op, so retries (or double-clicking cancel) can't double-restock.
+ */
+export async function reverseStockForOrder(
+  orderId: string,
+  storeId: string
+): Promise<{ reversed: number }> {
+  const existingReturn = await prisma.stockMovement.findFirst({
+    where: { orderId, type: MovementType.RETURN },
+    select: { id: true },
+  });
+  if (existingReturn) {
+    return { reversed: 0 };
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, storeId: true, orderNumber: true },
+  });
+  if (!order || order.storeId !== storeId) return { reversed: 0 };
+
+  const saleMovements = await prisma.stockMovement.findMany({
+    where: { orderId, type: MovementType.SALE },
+    select: { productId: true, materialId: true, quantity: true, unit: true },
+  });
+  if (saleMovements.length === 0) return { reversed: 0 };
+
+  await prisma.$transaction(
+    async (tx) => {
+      for (const movement of saleMovements) {
+        const restoreQty = Math.abs(Number(movement.quantity));
+
+        if (movement.productId) {
+          const product = await tx.product.findUnique({
+            where: { id: movement.productId },
+            select: { currentStock: true },
+          });
+          if (!product) continue;
+          const newStock = Number(product.currentStock) + restoreQty;
+
+          await tx.product.update({
+            where: { id: movement.productId },
+            data: { currentStock: toDecimal(newStock) },
+          });
+          await tx.stockMovement.create({
+            data: {
+              productId: movement.productId,
+              orderId,
+              type: MovementType.RETURN,
+              quantity: toDecimal(restoreQty),
+              unit: movement.unit,
+              balanceAfter: toDecimal(newStock),
+              notes: `Restored — order ${order.orderNumber} cancelled`,
+            },
+          });
+        } else if (movement.materialId) {
+          const material = await tx.material.findUnique({
+            where: { id: movement.materialId },
+            select: { currentStock: true },
+          });
+          if (!material) continue;
+          const newStock = Number(material.currentStock) + restoreQty;
+
+          await tx.material.update({
+            where: { id: movement.materialId },
+            data: { currentStock: toDecimal(newStock) },
+          });
+          await tx.stockMovement.create({
+            data: {
+              materialId: movement.materialId,
+              orderId,
+              type: MovementType.RETURN,
+              quantity: toDecimal(restoreQty),
+              unit: movement.unit,
+              balanceAfter: toDecimal(newStock),
+              notes: `Restored — order ${order.orderNumber} cancelled`,
+            },
+          });
+        }
+      }
+    },
+    { isolationLevel: "Serializable" }
+  );
+
+  return { reversed: saleMovements.length };
+}

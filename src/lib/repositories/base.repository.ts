@@ -27,9 +27,7 @@ export abstract class BaseRepository {
    *   return result;
    * });
    */
-  async transaction<T>(
-    callback: (tx: PrismaClient) => Promise<T>
-  ): Promise<T> {
+  async transaction<T>(callback: (tx: PrismaClient) => Promise<T>): Promise<T> {
     return this.db.$transaction(async (tx) => {
       return callback(tx as PrismaClient);
     });

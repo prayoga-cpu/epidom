@@ -118,10 +118,7 @@ export class SupplierService {
    * Bulk delete suppliers (hard delete)
    * WARNING: This will permanently delete suppliers and cascade delete related records
    */
-  async bulkDeleteSuppliers(
-    supplierIds: string[],
-    storeId: string
-  ): Promise<{ count: number }> {
+  async bulkDeleteSuppliers(supplierIds: string[], storeId: string): Promise<{ count: number }> {
     // Verify all suppliers belong to the store
     const suppliers = await supplierRepository.findByIds(supplierIds);
     const invalidSuppliers = suppliers.filter((s) => s.storeId !== storeId);

@@ -11,12 +11,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wand2, Upload, Loader2, Check, AlertTriangle, X, FileSpreadsheet } from "lucide-react";
@@ -156,30 +151,34 @@ export function SmartImportDialog({
   // Get current step index
   const getCurrentStepIndex = () => {
     switch (step) {
-      case "upload": return 0;
-      case "analyzing": return 1;
-      case "preview": return 2;
-      case "importing": return 2;
-      case "results": return 3;
-      default: return 0;
+      case "upload":
+        return 0;
+      case "analyzing":
+        return 1;
+      case "preview":
+        return 2;
+      case "importing":
+        return 2;
+      case "results":
+        return 3;
+      default:
+        return 0;
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-5xl w-full max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden sm:max-w-5xl">
+      <DialogContent className="flex max-h-[90vh] w-full max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
         {/* Header */}
-        <DialogHeader className="px-6 pt-4 pb-10 border-b bg-gradient-to-r from-primary/5 to-primary/10">
+        <DialogHeader className="from-primary/5 to-primary/10 border-b bg-gradient-to-r px-6 pt-4 pb-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Wand2 className="h-5 w-5 text-primary" />
+              <div className="bg-primary/10 rounded-lg p-2">
+                <Wand2 className="text-primary h-5 w-5" />
               </div>
               <div>
                 <DialogTitle className="text-xl">{t("import.title")}</DialogTitle>
-                <p className="text-sm text-muted-foreground">
-                  {t("import.subtitle")}
-                </p>
+                <p className="text-muted-foreground text-sm">{t("import.subtitle")}</p>
               </div>
             </div>
             {file && (
@@ -191,7 +190,7 @@ export function SmartImportDialog({
           </div>
 
           {/* Step indicators */}
-          <div className="flex w-full items-center justify-center py-2 mt-2">
+          <div className="mt-2 flex w-full items-center justify-center py-2">
             {STEPS.map((s, idx) => {
               const Icon = s.icon;
               const isCurrent = getCurrentStepIndex() === idx;
@@ -204,7 +203,7 @@ export function SmartImportDialog({
                   {idx > 0 && (
                     <div
                       className={cn(
-                        "h-[3px] w-16 sm:w-24 transition-colors duration-300",
+                        "h-[3px] w-16 transition-colors duration-300 sm:w-24",
                         isPast || isCurrent ? "bg-primary" : "bg-gray-300 dark:bg-gray-700"
                       )}
                     />
@@ -214,7 +213,7 @@ export function SmartImportDialog({
                   <div className="relative flex flex-col items-center">
                     <div
                       className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-full border-[3px] transition-all duration-300 z-10 bg-background",
+                        "bg-background z-10 flex h-10 w-10 items-center justify-center rounded-full border-[3px] transition-all duration-300",
                         isCurrent && "border-primary bg-primary text-primary-foreground scale-110",
                         isPast && "border-primary bg-primary text-primary-foreground",
                         !isCurrent && !isPast && "border-muted text-muted-foreground"
@@ -232,7 +231,7 @@ export function SmartImportDialog({
                     {/* Label */}
                     <span
                       className={cn(
-                        "absolute top-11 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors duration-300",
+                        "absolute top-11 text-xs font-medium whitespace-nowrap transition-colors duration-300 sm:text-sm",
                         isCurrent ? "text-primary font-semibold" : "text-muted-foreground",
                         !isCurrent && !isPast && "opacity-70"
                       )}
@@ -277,9 +276,9 @@ export function SmartImportDialog({
           {step === "importing" && (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-                <div className="relative p-6 rounded-full bg-primary/10">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <div className="bg-primary/20 absolute inset-0 animate-ping rounded-full" />
+                <div className="bg-primary/10 relative rounded-full p-6">
+                  <Loader2 className="text-primary h-12 w-12 animate-spin" />
                 </div>
               </div>
               <h3 className="mt-6 text-lg font-semibold">Importing Data...</h3>
@@ -295,14 +294,14 @@ export function SmartImportDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-muted/30">
+        <div className="bg-muted/30 border-t px-6 py-4">
           {step === "preview" && (
             <div className="flex items-center justify-between">
               <Button variant="ghost" onClick={() => setStep("upload")}>
                 ← {t("import.preview.startOver")}
               </Button>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   {t("import.preview.itemsReady")?.replace("{count}", editedData.length.toString())}
                 </span>
                 <Button variant="outline" onClick={() => handleOpenChange(false)}>
@@ -322,9 +321,7 @@ export function SmartImportDialog({
 
           {step === "results" && (
             <div className="flex justify-end">
-              <Button onClick={() => handleOpenChange(false)}>
-                {t("import.results.close")}
-              </Button>
+              <Button onClick={() => handleOpenChange(false)}>{t("import.results.close")}</Button>
             </div>
           )}
 

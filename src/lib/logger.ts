@@ -108,15 +108,16 @@ export const logger = {
   },
 
   error: (message: string, error?: unknown, context?: LogContext) => {
-    const errorDetails = error instanceof Error
-      ? {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-        }
-      : {
-          message: String(error),
-        };
+    const errorDetails =
+      error instanceof Error
+        ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          }
+        : {
+            message: String(error),
+          };
 
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),

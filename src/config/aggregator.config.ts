@@ -5,9 +5,9 @@ import type { AggregatorPlatform, OrderSource } from "@prisma/client";
  * These are hardcoded estimates; update as official rates change.
  */
 export const AGGREGATOR_COMMISSION: Record<AggregatorPlatform, number> = {
-  GOFOOD: 0.20,
-  GRABFOOD: 0.20,
-  SHOPEEFOOD: 0.20,
+  GOFOOD: 0.2,
+  GRABFOOD: 0.2,
+  SHOPEEFOOD: 0.2,
   TOKOPEDIA: 0.15,
 };
 
@@ -28,12 +28,7 @@ export const PLATFORM_TO_SOURCE: Record<AggregatorPlatform, OrderSource> = {
 };
 
 /** OrderSources that are aggregator channels */
-export const AGGREGATOR_SOURCES: OrderSource[] = [
-  "GOFOOD",
-  "GRABFOOD",
-  "SHOPEEFOOD",
-  "TOKOPEDIA",
-];
+export const AGGREGATOR_SOURCES: OrderSource[] = ["GOFOOD", "GRABFOOD", "SHOPEEFOOD", "TOKOPEDIA"];
 
 /** Commission rate for a given OrderSource (0 for non-aggregator channels) */
 export function commissionRate(source: OrderSource): number {

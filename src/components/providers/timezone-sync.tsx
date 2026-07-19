@@ -3,7 +3,11 @@
 import { useEffect } from "react";
 import { useSession } from "@/lib/auth-client";
 
-const TZ_STORAGE_KEY = "epidom:tz";
+// v2: bumped so every browser re-syncs once after `timezoneUpdatedAt` was
+// added — otherwise a browser that already matched its stored timezone
+// under the old key would never call the route again, leaving that column
+// null forever even though the value itself was already correct.
+const TZ_STORAGE_KEY = "epidom:tz:v2";
 
 /**
  * TimezoneSync

@@ -34,10 +34,7 @@ export class AuthApi {
   /**
    * Reset password with token
    */
-  async resetPassword(
-    token: string,
-    password: string
-  ): Promise<{ message: string }> {
+  async resetPassword(token: string, password: string): Promise<{ message: string }> {
     return apiClient.post("/auth/password-reset/confirm", {
       token,
       password,

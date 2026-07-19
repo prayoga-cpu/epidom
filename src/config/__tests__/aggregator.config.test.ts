@@ -9,16 +9,13 @@ import type { OrderSource } from "@prisma/client";
 
 describe("commissionRate", () => {
   it.each([
-    ["GOFOOD", 0.20],
-    ["GRABFOOD", 0.20],
-    ["SHOPEEFOOD", 0.20],
+    ["GOFOOD", 0.2],
+    ["GRABFOOD", 0.2],
+    ["SHOPEEFOOD", 0.2],
     ["TOKOPEDIA", 0.15],
-  ] as [OrderSource, number][])(
-    "returns %s → %d for aggregator sources",
-    (source, expected) => {
-      expect(commissionRate(source)).toBe(expected);
-    }
-  );
+  ] as [OrderSource, number][])("returns %s → %d for aggregator sources", (source, expected) => {
+    expect(commissionRate(source)).toBe(expected);
+  });
 
   it.each(["MANUAL", "STOREFRONT", "POS"] as OrderSource[])(
     "returns 0 for non-aggregator source %s",

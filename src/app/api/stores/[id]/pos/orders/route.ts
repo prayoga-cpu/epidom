@@ -8,6 +8,12 @@ import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
 import { inngest } from "@/lib/inngest/client";
 import { initiatePayment } from "@/lib/payments";
+import { ACTIVE_POS_STATUSES } from "@/lib/constants/order-status";
+import {
+  validateAndBuildOrderItems,
+  OrderBuildError,
+  type BuiltOrderItem,
+} from "@/lib/services/pos-order-builder";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -19,15 +25,14 @@ function generateOrderNumber(): string {
  * GET /api/stores/[id]/pos/orders
  * List orders for the POS queue (all sources, active statuses)
  */
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
 
   const session = await getSession();
   if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), { status: 401 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+      status: 401,
+    });
   }
 
   const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
@@ -37,7 +42,7 @@ export async function GET(
     const orders = await prisma.order.findMany({
       where: {
         storeId,
-        status: { in: ["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY"] },
+        status: { in: ACTIVE_POS_STATUSES },
       },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -65,15 +70,14 @@ export async function GET(
  * POST /api/stores/[id]/pos/orders
  * Create a new order from the POS cashier (authenticated)
  */
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
 
   const session = await getSession();
   if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), { status: 401 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+      status: 401,
+    });
   }
 
   const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
@@ -86,48 +90,30 @@ export async function POST(
 
     if (!parsed.success) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Invalid order data", parsed.error.flatten()),
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Invalid order data",
+          parsed.error.flatten()
+        ),
         { status: 400 }
       );
     }
 
     const input = parsed.data;
 
-    // Validate menu items belong to this store and are available
-    const menuItemIds = input.items.map((i) => i.menuItemId);
-    const menuItems = await prisma.menuItem.findMany({
-      where: {
-        id: { in: menuItemIds },
-        storefront: { storeId },
-        isAvailable: true,
-      },
-    });
-
-    if (menuItems.length !== menuItemIds.length) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "One or more menu items are unavailable or not found"),
-        { status: 422 }
-      );
+    let orderItems: BuiltOrderItem[];
+    let subtotal: number;
+    try {
+      ({ orderItems, subtotal } = await validateAndBuildOrderItems(storeId, input.items));
+    } catch (err) {
+      if (err instanceof OrderBuildError) {
+        return NextResponse.json(createErrorResponse(ApiErrorCode.INVALID_INPUT, err.message), {
+          status: 422,
+        });
+      }
+      throw err;
     }
 
-    const menuItemMap = new Map(menuItems.map((m) => [m.id, m]));
-
-    const orderItems = input.items.map((i) => {
-      const menuItem = menuItemMap.get(i.menuItemId)!;
-      const modifierTotal = (i.modifierSelections ?? []).reduce((sum, m) => sum + m.priceAdd, 0);
-      const unitPrice = Number(menuItem.price) + modifierTotal;
-      const total = unitPrice * i.quantity;
-      return {
-        menuItemId: i.menuItemId,
-        name: menuItem.name,
-        quantity: i.quantity,
-        unit: "pcs",
-        unitPrice,
-        total,
-      };
-    });
-
-    const subtotal = orderItems.reduce((s, i) => s + i.total, 0);
     const orderNumber = generateOrderNumber();
 
     const order = await prisma.$transaction(async (tx) => {
@@ -202,9 +188,10 @@ export async function POST(
     }
 
     // Calculate change for cash payments
-    const change = input.paymentMethod === "CASH" && input.amountTendered != null
-      ? Math.max(0, input.amountTendered - subtotal)
-      : null;
+    const change =
+      input.paymentMethod === "CASH" && input.amountTendered != null
+        ? Math.max(0, input.amountTendered - subtotal)
+        : null;
 
     // Initiate payment for non-CASH methods
     let qrString: string | null = null;
@@ -258,9 +245,8 @@ export async function POST(
   } catch (error) {
     console.error("[POS_ORDERS_POST]", error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, message),
-      { status: 500 }
-    );
+    return NextResponse.json(createErrorResponse(ApiErrorCode.INTERNAL_ERROR, message), {
+      status: 500,
+    });
   }
 }

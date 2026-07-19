@@ -73,9 +73,9 @@ export function useImportStock(storeId: string) {
     },
     onError: (error) => {
       toast.error("Stock Import Failed", {
-        description: error.message || "Failed to import stock. Please check your CSV file and try again.",
+        description:
+          error.message || "Failed to import stock. Please check your CSV file and try again.",
       });
     },
   });
 }
-

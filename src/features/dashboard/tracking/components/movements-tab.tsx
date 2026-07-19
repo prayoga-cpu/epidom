@@ -60,8 +60,7 @@ export function MovementsTab({ storeId }: MovementsTabProps) {
   const { data, isLoading } = useQuery<{ movements: Movement[]; total: number }>({
     queryKey: ["stock-movements", storeId, "all", typeFilter],
     queryFn: () =>
-      fetch(`/api/stores/${storeId}/stock-movements?${params.toString()}`)
-        .then((r) => r.json()),
+      fetch(`/api/stores/${storeId}/stock-movements?${params.toString()}`).then((r) => r.json()),
     enabled: !!storeId,
     staleTime: 15 * 1000,
     refetchInterval: 30 * 1000,
@@ -78,7 +77,7 @@ export function MovementsTab({ storeId }: MovementsTabProps) {
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="text-muted-foreground absolute left-2.5 top-2.5 h-4 w-4" />
+          <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
           <Input
             placeholder={t("tracking.movements.searchPlaceholder") || "Search item…"}
             value={search}
@@ -93,7 +92,9 @@ export function MovementsTab({ storeId }: MovementsTabProps) {
           <SelectContent>
             <SelectItem value="ALL">{t("filters.allTypes") || "All types"}</SelectItem>
             {Object.values(MovementType).map((v) => (
-              <SelectItem key={v} value={v}>{v}</SelectItem>
+              <SelectItem key={v} value={v}>
+                {v}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -117,12 +118,16 @@ export function MovementsTab({ storeId }: MovementsTabProps) {
             const isOut = qty < 0;
             return (
               <div key={m.id} className="flex items-center gap-3 px-4 py-3">
-                <div className={`rounded-full p-1.5 ${isOut ? "bg-red-50 text-red-500" : "bg-green-50 text-green-600"}`}>
-                  {isOut
-                    ? <ArrowDownCircle className="h-4 w-4" />
-                    : qty === 0
-                    ? <Minus className="h-4 w-4 text-muted-foreground" />
-                    : <ArrowUpCircle className="h-4 w-4" />}
+                <div
+                  className={`rounded-full p-1.5 ${isOut ? "bg-red-50 text-red-500" : "bg-green-50 text-green-600"}`}
+                >
+                  {isOut ? (
+                    <ArrowDownCircle className="h-4 w-4" />
+                  ) : qty === 0 ? (
+                    <Minus className="text-muted-foreground h-4 w-4" />
+                  ) : (
+                    <ArrowUpCircle className="h-4 w-4" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
@@ -131,8 +136,11 @@ export function MovementsTab({ storeId }: MovementsTabProps) {
                   <p className="text-muted-foreground truncate text-xs">{sourceLabel(m)}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className={`text-sm font-semibold ${isOut ? "text-red-600" : "text-green-600"}`}>
-                    {qty > 0 ? "+" : ""}{qty} {m.unit}
+                  <span
+                    className={`text-sm font-semibold ${isOut ? "text-red-600" : "text-green-600"}`}
+                  >
+                    {qty > 0 ? "+" : ""}
+                    {qty} {m.unit}
                   </span>
                   <Badge className={`text-xs ${TYPE_COLORS[m.type] ?? ""}`}>{m.type}</Badge>
                 </div>

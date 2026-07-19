@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-
 /* ========================================
    SCROLLBAR STYLES
    ======================================== */
@@ -277,8 +276,12 @@ body.dialog-open {
 }
 
 @keyframes marquee-half {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .animate-marquee-half {
@@ -318,39 +321,39 @@ body.dialog-open {
 
 :root {
   /* Navy palette */
-  --epi-navy-950: #04080F;
-  --epi-navy-900: #060F1B;
-  --epi-navy-850: #0A1628;
-  --epi-navy-800: #0E1F38;
-  --epi-navy-700: #122C4F;
-  --epi-navy-600: #1B3D67;
-  --epi-navy-500: #2A5A8C;
-  --epi-navy-400: #5B88B2;
+  --epi-navy-950: #04080f;
+  --epi-navy-900: #060f1b;
+  --epi-navy-850: #0a1628;
+  --epi-navy-800: #0e1f38;
+  --epi-navy-700: #122c4f;
+  --epi-navy-600: #1b3d67;
+  --epi-navy-500: #2a5a8c;
+  --epi-navy-400: #5b88b2;
 
   /* Cream palette */
-  --epi-cream-50:  #FBF9E4;
-  --epi-cream-100: #F5F4DC;
-  --epi-cream-200: #E8E5C7;
-  --epi-cream-300: #D4D0A8;
+  --epi-cream-50: #fbf9e4;
+  --epi-cream-100: #f5f4dc;
+  --epi-cream-200: #e8e5c7;
+  --epi-cream-300: #d4d0a8;
 
   /* Gold palette */
-  --epi-gold-300: #F4DC72;
-  --epi-gold-400: #E5C45C;
-  --epi-gold-500: #D9AE3B;
-  --epi-gold-600: #BF8E31;
-  --epi-gold-700: #8A6420;
+  --epi-gold-300: #f4dc72;
+  --epi-gold-400: #e5c45c;
+  --epi-gold-500: #d9ae3b;
+  --epi-gold-600: #bf8e31;
+  --epi-gold-700: #8a6420;
 
   /* Typography */
   --epi-font-display: var(--font-bebas-neue, "Bebas Neue", "Oswald", sans-serif);
-  --epi-font-body:    var(--font-jost, "Jost", "Futura PT", "Helvetica Neue", sans-serif);
-  --epi-font-serif:   var(--font-im-fell, "IM Fell French Canon", "IM Fell DW Pica", Georgia, serif);
+  --epi-font-body: var(--font-jost, "Jost", "Futura PT", "Helvetica Neue", sans-serif);
+  --epi-font-serif: var(--font-im-fell, "IM Fell French Canon", "IM Fell DW Pica", Georgia, serif);
 }
 
 /* ---- Marketing dark page background ---- */
 .epidom-dark-page {
   background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(91,136,178,0.18), transparent 60%),
-    radial-gradient(900px 500px at 10% 110%, rgba(217,174,59,0.10), transparent 60%),
+    radial-gradient(1200px 600px at 80% -10%, rgba(91, 136, 178, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(217, 174, 59, 0.1), transparent 60%),
     var(--epi-navy-900);
   color: var(--epi-cream-50);
   min-height: 100vh;
@@ -359,15 +362,27 @@ body.dialog-open {
 }
 
 /* ---- Section spacing ---- */
-.epi-section        { padding: 120px 0; }
-.epi-section--tight { padding:  80px 0; }
+.epi-section {
+  padding: 120px 0;
+}
+.epi-section--tight {
+  padding: 80px 0;
+}
 @media (max-width: 1024px) {
-  .epi-section        { padding: 80px 0; }
-  .epi-section--tight { padding: 56px 0; }
+  .epi-section {
+    padding: 80px 0;
+  }
+  .epi-section--tight {
+    padding: 56px 0;
+  }
 }
 @media (max-width: 720px) {
-  .epi-section        { padding: 56px 0; }
-  .epi-section--tight { padding: 40px 0; }
+  .epi-section {
+    padding: 56px 0;
+  }
+  .epi-section--tight {
+    padding: 40px 0;
+  }
 }
 
 /* ---- Container ---- */
@@ -377,8 +392,16 @@ body.dialog-open {
   margin: 0 auto;
   padding: 0 32px;
 }
-@media (max-width: 1024px) { .epi-container { padding: 0 24px; } }
-@media (max-width: 720px)  { .epi-container { padding: 0 20px; } }
+@media (max-width: 1024px) {
+  .epi-container {
+    padding: 0 24px;
+  }
+}
+@media (max-width: 720px) {
+  .epi-container {
+    padding: 0 20px;
+  }
+}
 
 /* ---- Typography ---- */
 .epi-display {
@@ -405,8 +428,8 @@ body.dialog-open {
 
 /* ---- Glass card ---- */
 .epi-glass {
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-  border: 1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 22px;
@@ -419,8 +442,8 @@ body.dialog-open {
   gap: 8px;
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(217,174,59,0.12);
-  border: 1px solid rgba(217,174,59,0.32);
+  background: rgba(217, 174, 59, 0.12);
+  border: 1px solid rgba(217, 174, 59, 0.32);
   color: var(--epi-gold-300);
   font-size: 11px;
   font-weight: 500;
@@ -431,23 +454,24 @@ body.dialog-open {
 /* ---- Gold horizontal rule ---- */
 .epi-gold-rule {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(217,174,59,0.6), transparent);
+  background: linear-gradient(90deg, transparent, rgba(217, 174, 59, 0.6), transparent);
 }
 
 /* ---- Warm cream section (Setup steps, Testimonials) ---- */
 .epi-warm-section {
   background:
-    radial-gradient(900px 500px at 10% -10%, rgba(217,174,59,0.18), transparent 60%),
-    radial-gradient(700px 400px at 90% 100%, rgba(91,136,178,0.10), transparent 60%),
+    radial-gradient(900px 500px at 10% -10%, rgba(217, 174, 59, 0.18), transparent 60%),
+    radial-gradient(700px 400px at 90% 100%, rgba(91, 136, 178, 0.1), transparent 60%),
     var(--epi-cream-50);
   color: var(--epi-navy-900);
   position: relative;
 }
 .epi-warm-section::before,
 .epi-warm-section::after {
-  content: '';
+  content: "";
   position: absolute;
-  left: 0; right: 0;
+  left: 0;
+  right: 0;
   height: 80px;
   pointer-events: none;
   z-index: 1;
@@ -462,7 +486,10 @@ body.dialog-open {
   background: linear-gradient(0deg, var(--epi-navy-900), transparent);
   opacity: 0.15;
 }
-.epi-warm-section > * { position: relative; z-index: 2; }
+.epi-warm-section > * {
+  position: relative;
+  z-index: 2;
+}
 
 /* ---- Adjacent warm (cream) sections ----
    The navy top/bottom blend fades exist to ease a cream section into the
@@ -470,8 +497,12 @@ body.dialog-open {
    Testimonials) those two fades stack into a muddy navy band. The sections
    render as direct DOM siblings, so we can drop just the fades on the shared
    edge and let the cream flow seamlessly into the next section. */
-.epi-warm-section:has(+ .epi-warm-section)::after { content: none; }
-.epi-warm-section + .epi-warm-section::before { content: none; }
+.epi-warm-section:has(+ .epi-warm-section)::after {
+  content: none;
+}
+.epi-warm-section + .epi-warm-section::before {
+  content: none;
+}
 
 /* ---- Hero diamond pattern ---- */
 .epi-hero-pattern {
@@ -486,30 +517,66 @@ body.dialog-open {
 
 /* ---- Floating mockup animations ---- */
 @keyframes epi-float-dash {
-  0%, 100% { transform: rotate(2deg) translate3d(0, 0, 0); }
-  50%       { transform: rotate(2deg) translate3d(0, -8px, 0); }
+  0%,
+  100% {
+    transform: rotate(2deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(2deg) translate3d(0, -8px, 0);
+  }
 }
 @keyframes epi-float-phone {
-  0%, 100% { transform: rotate(-4deg) translate3d(0, 0, 0); }
-  50%       { transform: rotate(-4deg) translate3d(0, -10px, 0); }
+  0%,
+  100% {
+    transform: rotate(-4deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(-4deg) translate3d(0, -10px, 0);
+  }
 }
 @keyframes epi-float-chip {
-  0%, 100% { transform: rotate(3deg) translate3d(0, 0, 0); }
-  50%       { transform: rotate(3deg) translate3d(0, -5px, 0); }
+  0%,
+  100% {
+    transform: rotate(3deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(3deg) translate3d(0, -5px, 0);
+  }
 }
-.epi-float-dash  { animation: epi-float-dash  7s ease-in-out infinite;      will-change: transform; }
-.epi-float-phone { animation: epi-float-phone 8s ease-in-out infinite 0.6s; will-change: transform; }
-.epi-float-chip  { animation: epi-float-chip  6s ease-in-out infinite 0.3s; will-change: transform; }
+.epi-float-dash {
+  animation: epi-float-dash 7s ease-in-out infinite;
+  will-change: transform;
+}
+.epi-float-phone {
+  animation: epi-float-phone 8s ease-in-out infinite 0.6s;
+  will-change: transform;
+}
+.epi-float-chip {
+  animation: epi-float-chip 6s ease-in-out infinite 0.3s;
+  will-change: transform;
+}
 @media (prefers-reduced-motion: reduce) {
-  .epi-float-dash, .epi-float-phone, .epi-float-chip { animation: none; }
+  .epi-float-dash,
+  .epi-float-phone,
+  .epi-float-chip {
+    animation: none;
+  }
 }
 
 /* ---- Page fade-in ---- */
 @keyframes epi-page-fade {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.epi-page-fade-in { animation: epi-page-fade 0.4s ease-out; }
+.epi-page-fade-in {
+  animation: epi-page-fade 0.4s ease-out;
+}
 
 /* ---- Floating pill navbar ---- */
 .epi-floating-nav {
@@ -524,25 +591,42 @@ body.dialog-open {
   background: rgba(6, 15, 27, 0.62);
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border: 1px solid rgba(245, 244, 220, 0.10);
-  box-shadow: 0 18px 40px -16px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+  border: 1px solid rgba(245, 244, 220, 0.1);
+  box-shadow:
+    0 18px 40px -16px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  transition: width 0.3s ease, background 0.3s ease;
+  transition:
+    width 0.3s ease,
+    background 0.3s ease;
 }
 @media (max-width: 1024px) {
-  .epi-floating-nav { width: calc(100% - 32px); padding: 8px 8px 8px 16px; }
-  .epi-floating-nav .epi-nav-items { display: none !important; }
+  .epi-floating-nav {
+    width: calc(100% - 32px);
+    padding: 8px 8px 8px 16px;
+  }
+  .epi-floating-nav .epi-nav-items {
+    display: none !important;
+  }
 }
-@media (max-width: 720px) { .epi-floating-nav { top: 12px; } }
+@media (max-width: 720px) {
+  .epi-floating-nav {
+    top: 12px;
+  }
+}
 
 /* ---- Marketing dark scrollbar ---- */
-.epidom-dark-page ::-webkit-scrollbar { width: 10px; }
-.epidom-dark-page ::-webkit-scrollbar-track { background: var(--epi-navy-900); }
+.epidom-dark-page ::-webkit-scrollbar {
+  width: 10px;
+}
+.epidom-dark-page ::-webkit-scrollbar-track {
+  background: var(--epi-navy-900);
+}
 .epidom-dark-page ::-webkit-scrollbar-thumb {
-  background: rgba(91,136,178,0.3);
+  background: rgba(91, 136, 178, 0.3);
   border-radius: 5px;
 }
 
@@ -555,26 +639,26 @@ body.dialog-open {
 @theme inline {
   --color-brand-primary: #444444;
   --color-brand-white: #ffffff;
-  --color-bg-warm: #FAF9F6;
-  --color-accent-warm: #B45309;
+  --color-bg-warm: #faf9f6;
+  --color-accent-warm: #b45309;
   /* Epidom dark palette — available as Tailwind classes */
-  --color-epi-navy-950: #04080F;
-  --color-epi-navy-900: #060F1B;
-  --color-epi-navy-850: #0A1628;
-  --color-epi-navy-800: #0E1F38;
-  --color-epi-navy-700: #122C4F;
-  --color-epi-navy-600: #1B3D67;
-  --color-epi-navy-500: #2A5A8C;
-  --color-epi-navy-400: #5B88B2;
-  --color-epi-cream-50:  #FBF9E4;
-  --color-epi-cream-100: #F5F4DC;
-  --color-epi-cream-200: #E8E5C7;
-  --color-epi-cream-300: #D4D0A8;
-  --color-epi-gold-300: #F4DC72;
-  --color-epi-gold-400: #E5C45C;
-  --color-epi-gold-500: #D9AE3B;
-  --color-epi-gold-600: #BF8E31;
-  --color-epi-gold-700: #8A6420;
+  --color-epi-navy-950: #04080f;
+  --color-epi-navy-900: #060f1b;
+  --color-epi-navy-850: #0a1628;
+  --color-epi-navy-800: #0e1f38;
+  --color-epi-navy-700: #122c4f;
+  --color-epi-navy-600: #1b3d67;
+  --color-epi-navy-500: #2a5a8c;
+  --color-epi-navy-400: #5b88b2;
+  --color-epi-cream-50: #fbf9e4;
+  --color-epi-cream-100: #f5f4dc;
+  --color-epi-cream-200: #e8e5c7;
+  --color-epi-cream-300: #d4d0a8;
+  --color-epi-gold-300: #f4dc72;
+  --color-epi-gold-400: #e5c45c;
+  --color-epi-gold-500: #d9ae3b;
+  --color-epi-gold-600: #bf8e31;
+  --color-epi-gold-700: #8a6420;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -616,7 +700,7 @@ body.dialog-open {
 
 :root {
   --radius: 0.625rem;
-  --background: #FBF9E4;
+  --background: #fbf9e4;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
@@ -626,9 +710,9 @@ body.dialog-open {
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: #EEE9C4;
+  --muted: #eee9c4;
   --muted-foreground: oklch(0.556 0 0);
-  --accent: #F5F4DC;
+  --accent: #f5f4dc;
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
@@ -639,10 +723,10 @@ body.dialog-open {
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --chart-grid: oklch(0.556 0 0 / 0.10);
+  --chart-grid: oklch(0.556 0 0 / 0.1);
   --chart-axis: oklch(0.556 0 0 / 0.18);
   --chart-line: var(--epi-gold-500);
-  --sidebar: #F5F4DC;
+  --sidebar: #f5f4dc;
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -666,31 +750,31 @@ body.dialog-open {
 
 .dark {
   /* epi-navy bridged: dark mode uses the brand palette */
-  --background: var(--epi-navy-900);           /* #060F1B */
-  --foreground: var(--epi-cream-50);           /* #FBF9E4 */
-  --card: var(--epi-navy-850);                 /* #0A1628 */
+  --background: var(--epi-navy-900); /* #060F1B */
+  --foreground: var(--epi-cream-50); /* #FBF9E4 */
+  --card: var(--epi-navy-850); /* #0A1628 */
   --card-foreground: var(--epi-cream-50);
   --popover: var(--epi-navy-850);
   --popover-foreground: var(--epi-cream-50);
-  --primary: var(--epi-gold-400);              /* #E5C45C — gold accent */
+  --primary: var(--epi-gold-400); /* #E5C45C — gold accent */
   --primary-foreground: var(--epi-navy-900);
-  --secondary: var(--epi-navy-800);            /* #0E1F38 */
+  --secondary: var(--epi-navy-800); /* #0E1F38 */
   --secondary-foreground: var(--epi-cream-100);
   --muted: var(--epi-navy-800);
-  --muted-foreground: rgba(251,249,228,0.55);
-  --accent: var(--epi-navy-700);               /* #122C4F */
+  --muted-foreground: rgba(251, 249, 228, 0.55);
+  --accent: var(--epi-navy-700); /* #122C4F */
   --accent-foreground: var(--epi-cream-50);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(255,255,255,0.08);
-  --input: rgba(255,255,255,0.08);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
   --ring: var(--epi-gold-500);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --chart-grid: rgba(251,249,228,0.09);
-  --chart-axis: rgba(251,249,228,0.14);
+  --chart-grid: rgba(251, 249, 228, 0.09);
+  --chart-axis: rgba(251, 249, 228, 0.14);
   --chart-line: var(--epi-gold-400);
   --sidebar: var(--epi-navy-850);
   --sidebar-foreground: var(--epi-cream-50);
@@ -698,7 +782,7 @@ body.dialog-open {
   --sidebar-primary-foreground: var(--epi-navy-900);
   --sidebar-accent: var(--epi-navy-800);
   --sidebar-accent-foreground: var(--epi-cream-50);
-  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: var(--epi-gold-500);
 }
 
@@ -712,12 +796,7 @@ body.dialog-open {
   }
   body {
     @apply text-foreground;
-    background: linear-gradient(
-      135deg,
-      #F5F4DC 0%,
-      #FBF9E4 40%,
-      #FEFDF6 100%
-    );
+    background: linear-gradient(135deg, #f5f4dc 0%, #fbf9e4 40%, #fefdf6 100%);
     background-attachment: fixed;
     min-height: 100vh;
   }
@@ -743,21 +822,37 @@ body.dialog-open {
    automatically switch via CSS variables.
    ======================================== */
 
-.dark .text-gray-900, .dark .text-gray-800, .dark .text-gray-700,
-.dark .text-slate-900, .dark .text-slate-800, .dark .text-slate-700,
-.dark .text-zinc-900, .dark .text-zinc-800, .dark .text-zinc-700,
-.dark .text-neutral-900, .dark .text-neutral-800, .dark .text-neutral-700,
-.dark .text-black { color: var(--epi-cream-50) !important; }
-
-.dark .text-gray-600, .dark .text-gray-500,
-.dark .text-slate-600, .dark .text-slate-500,
-.dark .text-zinc-600, .dark .text-zinc-500,
-.dark .text-neutral-600, .dark .text-neutral-500 {
-  color: rgba(251,249,228,0.6) !important;
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-zinc-900,
+.dark .text-zinc-800,
+.dark .text-zinc-700,
+.dark .text-neutral-900,
+.dark .text-neutral-800,
+.dark .text-neutral-700,
+.dark .text-black {
+  color: var(--epi-cream-50) !important;
 }
 
-.dark .text-gray-400, .dark .text-slate-400, .dark .text-zinc-400 {
-  color: rgba(251,249,228,0.4) !important;
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-slate-600,
+.dark .text-slate-500,
+.dark .text-zinc-600,
+.dark .text-zinc-500,
+.dark .text-neutral-600,
+.dark .text-neutral-500 {
+  color: rgba(251, 249, 228, 0.6) !important;
+}
+
+.dark .text-gray-400,
+.dark .text-slate-400,
+.dark .text-zinc-400 {
+  color: rgba(251, 249, 228, 0.4) !important;
 }
 
 /* ========================================
@@ -1066,14 +1161,25 @@ body.dialog-open {
 }
 
 @keyframes ai-glow-sweep {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 300% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
 }
 
 @keyframes ai-glow-pulse {
-  0%, 100% { box-shadow: 0 0 12px -3px rgba(66, 133, 244, 0.55); }
-  33% { box-shadow: 0 0 13px -2px rgba(155, 114, 203, 0.55); }
-  66% { box-shadow: 0 0 13px -2px rgba(217, 101, 112, 0.55); }
+  0%,
+  100% {
+    box-shadow: 0 0 12px -3px rgba(66, 133, 244, 0.55);
+  }
+  33% {
+    box-shadow: 0 0 13px -2px rgba(155, 114, 203, 0.55);
+  }
+  66% {
+    box-shadow: 0 0 13px -2px rgba(217, 101, 112, 0.55);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -24,6 +24,7 @@ but are **currently NOT being used** in the codebase.
 ⚠️ **DO NOT USE YET** - These are premature optimization (YAGNI violation)
 
 ✅ **Use these when:**
+
 - Implementing API versioning (v1, v2, etc.)
 - Need to expose different data shapes to external APIs
 - Building GraphQL schema mappings
@@ -52,4 +53,3 @@ import type { Material, Product, Recipe } from "@prisma/client";
 
 **Last Updated:** 2025-01-24
 **Decision:** Keep for now, but mark as unused to avoid confusion
-

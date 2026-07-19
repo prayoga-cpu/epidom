@@ -29,4 +29,3 @@ export function SSRPlaceholder({ height, className = "" }: SSRPlaceholderProps) 
     </section>
   );
 }
-

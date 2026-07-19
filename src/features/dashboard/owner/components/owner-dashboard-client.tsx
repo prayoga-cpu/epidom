@@ -72,7 +72,9 @@ export function OwnerDashboardClient() {
       {isEnterpriseLocked && (
         <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
           <CardContent className="pt-6">
-            <p className="font-medium text-orange-700 dark:text-orange-300">{t("pages.enterpriseRequired")}</p>
+            <p className="font-medium text-orange-700 dark:text-orange-300">
+              {t("pages.enterpriseRequired")}
+            </p>
             <p className="text-muted-foreground mt-1 text-sm">{t("pages.upgradeToEnterprise")}</p>
           </CardContent>
         </Card>
@@ -82,11 +84,23 @@ export function OwnerDashboardClient() {
       <div className="flex flex-wrap gap-4">
         <div className="space-y-1">
           <Label htmlFor="from">{t("common.datePicker.from")}</Label>
-          <Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+          <Input
+            id="from"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="w-40"
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="to">{t("common.datePicker.to")}</Label>
-          <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
+          <Input
+            id="to"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="w-40"
+          />
         </div>
       </div>
 
@@ -96,7 +110,9 @@ export function OwnerDashboardClient() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-1">
-                <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.ownerTotalRevenue")}</CardTitle>
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  {t("pages.ownerTotalRevenue")}
+                </CardTitle>
                 <TrendingUp className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
@@ -105,7 +121,9 @@ export function OwnerDashboardClient() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-1">
-                <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.ownerTotalOrders")}</CardTitle>
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  {t("pages.ownerTotalOrders")}
+                </CardTitle>
                 <ShoppingCart className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
@@ -114,7 +132,9 @@ export function OwnerDashboardClient() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-1">
-                <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.ownerPendingOrders")}</CardTitle>
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  {t("pages.ownerPendingOrders")}
+                </CardTitle>
                 <Clock className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
@@ -123,7 +143,9 @@ export function OwnerDashboardClient() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-1">
-                <CardTitle className="text-muted-foreground text-sm font-medium">{t("pages.ownerStoreCount")}</CardTitle>
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  {t("pages.ownerStoreCount")}
+                </CardTitle>
                 <Store className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
@@ -151,22 +173,24 @@ export function OwnerDashboardClient() {
                         {t("common.loading")}
                       </TableCell>
                     </TableRow>
-                  ) : data.stores.map((store) => (
-                    <TableRow key={store.storeId}>
-                      <TableCell className="font-medium">{store.name}</TableCell>
-                      <TableCell className="text-right">{formatPrice(store.revenue)}</TableCell>
-                      <TableCell className="text-right">{store.orderCount}</TableCell>
-                      <TableCell className="text-right">
-                        {store.pendingOrders > 0 ? (
-                          <Badge variant="outline" className="text-orange-600">
-                            {store.pendingOrders}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">0</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  ) : (
+                    data.stores.map((store) => (
+                      <TableRow key={store.storeId}>
+                        <TableCell className="font-medium">{store.name}</TableCell>
+                        <TableCell className="text-right">{formatPrice(store.revenue)}</TableCell>
+                        <TableCell className="text-right">{store.orderCount}</TableCell>
+                        <TableCell className="text-right">
+                          {store.pendingOrders > 0 ? (
+                            <Badge variant="outline" className="text-orange-600">
+                              {store.pendingOrders}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>

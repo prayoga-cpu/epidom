@@ -84,7 +84,9 @@ export interface PipelineOutput {
  */
 const AIParseCSVSchema = z.object({
   headers: z.array(z.string()).describe("Array of column headers"),
-  rows: z.array(z.array(z.string())).describe("Array of row data (each row is array of cell values)"),
+  rows: z
+    .array(z.array(z.string()))
+    .describe("Array of row data (each row is array of cell values)"),
   parseSuccess: z.boolean().describe("Whether parsing was successful"),
   parseNotes: z.string().optional().describe("Any notes about parsing issues"),
 });
@@ -188,7 +190,6 @@ function parseCSVFallback(
   };
 }
 
-
 /**
  * Create preview string from first N lines
  */
@@ -231,10 +232,7 @@ function mapRowsToRecords(
  * Convert rows to records preserving ALL columns from CSV headers
  * This ensures no data is lost even if AI mapping doesn't recognize some columns
  */
-function rowsToFullRecords(
-  rows: string[][],
-  headers: string[]
-): Array<Record<string, string>> {
+function rowsToFullRecords(rows: string[][], headers: string[]): Array<Record<string, string>> {
   return rows.map((row) => {
     const record: Record<string, string> = {};
     headers.forEach((header, idx) => {
@@ -310,8 +308,7 @@ export async function runImportPipeline(input: PipelineInput): Promise<PipelineO
     skipEntityDetection,
   });
   usages.push(structureResult.totalUsage);
-  aiCallCount +=
-    !skipEntityDetection && structureResult.structure.hasMultipleEntities ? 3 : 2;
+  aiCallCount += !skipEntityDetection && structureResult.structure.hasMultipleEntities ? 3 : 2;
 
   // Get actual headers and data rows based on structure analysis
   const headerRowIndex = structureResult.structure.headerRowIndex;

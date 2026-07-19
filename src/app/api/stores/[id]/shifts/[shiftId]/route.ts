@@ -5,6 +5,7 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { withApiHandler } from "@/lib/api-handler";
 import { toDecimal } from "@/lib/utils/types.server";
 import { PaymentMethod } from "@prisma/client";
+import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +30,9 @@ export const GET = withApiHandler(
     });
 
     if (!shift || shift.storeId !== storeId) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "Shift not found"),
-        { status: 404 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Shift not found"), {
+        status: 404,
+      });
     }
 
     return NextResponse.json(createSuccessResponse({ shift }));
@@ -50,10 +50,9 @@ export const PATCH = withApiHandler(
     });
 
     if (!shift || shift.storeId !== storeId) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "Shift not found"),
-        { status: 404 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Shift not found"), {
+        status: 404,
+      });
     }
 
     if (shift.closedAt) {
@@ -67,7 +66,11 @@ export const PATCH = withApiHandler(
     const parsed = closeShiftSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Validation failed", parsed.error.flatten()),
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Validation failed",
+          parsed.error.flatten()
+        ),
         { status: 400 }
       );
     }
@@ -76,7 +79,7 @@ export const PATCH = withApiHandler(
 
     // Expected cash = opening cash + all CASH orders in this shift
     const cashOrders = shift.orders.filter(
-      (o) => o.paymentMethod === PaymentMethod.CASH && o.status !== "CANCELLED"
+      (o) => o.paymentMethod === PaymentMethod.CASH && !NON_REVENUE_STATUSES.includes(o.status)
     );
     const cashTotal = cashOrders.reduce((sum, o) => sum + Number(o.total), 0);
     const expectedCash = Number(shift.openingCash) + cashTotal;

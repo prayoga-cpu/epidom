@@ -206,18 +206,18 @@ export const SiteFooter = memo(function SiteFooter() {
               <li>
                 <ContactRow icon={<MailIcon />}>
                   <Link
-                    href="mailto:support@epidom.fr"
+                    href="mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io"
                     style={linkStyle}
                     className="hover:text-[rgba(251,249,228,0.9)]"
                   >
-                    support@epidom.fr
+                    cro@prionation.io, ceo@prionation.io, consult@prionation.io
                   </Link>
                 </ContactRow>
               </li>
               <li>
                 <ContactRow icon={<WaIcon />}>
                   <Link
-                    href="https://wa.me/6281234567890"
+                    href="https://wa.me/33781732386"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={linkStyle}

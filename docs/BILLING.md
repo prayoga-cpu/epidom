@@ -6,11 +6,11 @@ How Epidom charges, who pays whom, and how the payment flows are wired.
 
 ## TL;DR
 
-| Flow | Provider | Currency | Frequency |
-|---|---|---|---|
-| **SaaS subscription** (merchant → Epidom) | Stripe | IDR (primary), EUR (legacy) | Monthly recurring |
-| **Customer payments** (diner → merchant) | Xendit | IDR | Per order |
-| **Connect payouts** (Epidom → merchant) | Stripe Connect, optional | IDR / EUR | Per order, Phase 5+ |
+| Flow                                      | Provider                 | Currency                    | Frequency           |
+| ----------------------------------------- | ------------------------ | --------------------------- | ------------------- |
+| **SaaS subscription** (merchant → Epidom) | Stripe                   | IDR (primary), EUR (legacy) | Monthly recurring   |
+| **Customer payments** (diner → merchant)  | Xendit                   | IDR                         | Per order           |
+| **Connect payouts** (Epidom → merchant)   | Stripe Connect, optional | IDR / EUR                   | Per order, Phase 5+ |
 
 The two flows live in different modules and never share code paths. See `/docs/ARCHITECTURE.md` section 5.
 
@@ -20,20 +20,22 @@ The two flows live in different modules and never share code paths. See `/docs/A
 
 The current public pricing for Indonesia.
 
-| Tier | IDR/month | USD equiv | EUR equiv (legacy) | Trial |
-|---|---|---|---|---|
-| FREE | Rp 0 | $0 | €0 | n/a, free forever |
-| POS | Rp 99,000 | ~$6 | €19 | 14 days |
-| OPERATIONS | Rp 249,000 | ~$15 | €49 | 14 days |
-| ENTERPRISE | Rp 499,000+ | ~$30+ | €99+ | Sales-assisted |
+| Tier       | IDR/month   | USD equiv | EUR equiv (legacy) | Trial             |
+| ---------- | ----------- | --------- | ------------------ | ----------------- |
+| FREE       | Rp 0        | $0        | €0                 | n/a, free forever |
+| POS        | Rp 99,000   | ~$6       | €19                | 14 days           |
+| OPERATIONS | Rp 249,000  | ~$15      | €49                | 14 days           |
+| ENTERPRISE | Rp 499,000+ | ~$30+     | €99+               | Sales-assisted    |
 
 Pricing rationale and the Indonesian SaaS benchmarks behind these numbers are in `/docs/STRATEGY.md` section 7.
 
 ### Annual discount
+
 - 20% off when paid annually
 - Stripe price IDs for annual variants live alongside monthly ones
 
 ### Free tier limits
+
 Defined in `/docs/FEATURES.md`. Hitting any limit prompts an upgrade flow, never a hard block on essential reads.
 
 ---
@@ -44,9 +46,9 @@ Defined in `/docs/FEATURES.md`. Hitting any limit prompts an upgrade flow, never
 
 In the Stripe dashboard:
 
-| Product | Monthly Price ID | Annual Price ID |
-|---|---|---|
-| Epidom POS | `price_pos_monthly_idr` | `price_pos_annual_idr` |
+| Product           | Monthly Price ID        | Annual Price ID        |
+| ----------------- | ----------------------- | ---------------------- |
+| Epidom POS        | `price_pos_monthly_idr` | `price_pos_annual_idr` |
 | Epidom OPERATIONS | `price_ops_monthly_idr` | `price_ops_annual_idr` |
 | Epidom ENTERPRISE | `price_ent_monthly_idr` | `price_ent_annual_idr` |
 
@@ -105,15 +107,15 @@ A user with no subscription is implicitly on `FREE`. Don't require a `Subscripti
 
 ### Supported methods (Phase 2)
 
-| Method | Settlement | Xendit fee |
-|---|---|---|
-| QRIS | T+1 | 0.7% |
-| GoPay | T+1 | 2.0% |
-| OVO | T+1 | 2.0% |
-| DANA | T+1 | 2.0% |
-| ShopeePay | T+1 | 2.0% |
-| Bank Transfer (Virtual Account) | T+1 | Rp 4,000 flat |
-| Credit Card | T+2 | 2.9% + Rp 2,000 |
+| Method                          | Settlement | Xendit fee      |
+| ------------------------------- | ---------- | --------------- |
+| QRIS                            | T+1        | 0.7%            |
+| GoPay                           | T+1        | 2.0%            |
+| OVO                             | T+1        | 2.0%            |
+| DANA                            | T+1        | 2.0%            |
+| ShopeePay                       | T+1        | 2.0%            |
+| Bank Transfer (Virtual Account) | T+1        | Rp 4,000 flat   |
+| Credit Card                     | T+2        | 2.9% + Rp 2,000 |
 
 Fees are passed through to merchants, not absorbed by Epidom (FREE tier). On ENTERPRISE Stripe Connect, Epidom takes an additional 20% margin on top — but only if the merchant opts into Connect.
 
@@ -169,6 +171,7 @@ The original codebase has Stripe Connect scaffolding for an 80/20 revenue split.
 Until then, ENTERPRISE merchants on Connect-style billing get a custom integration, not the productized flow.
 
 When Connect ships:
+
 - Merchant connects their Stripe account through Connect OAuth
 - Every customer payment flows: Customer → Epidom Stripe → 80% to merchant, 20% to Epidom
 - Replaces Xendit for that merchant entirely
@@ -178,12 +181,12 @@ When Connect ships:
 
 ## Billing UI
 
-| Surface | Path | Audience |
-|---|---|---|
-| Public pricing page | `/pricing` | Anyone |
-| In-app billing page | `/store/[storeId]/billing` | Logged-in merchant |
-| Upgrade flow | `/store/[storeId]/billing?upgrade=POS` | Merchant hitting plan limit |
-| Stripe Customer Portal | Linked from in-app billing | Existing subscriber |
+| Surface                | Path                                   | Audience                    |
+| ---------------------- | -------------------------------------- | --------------------------- |
+| Public pricing page    | `/pricing`                             | Anyone                      |
+| In-app billing page    | `/store/[storeId]/billing`             | Logged-in merchant          |
+| Upgrade flow           | `/store/[storeId]/billing?upgrade=POS` | Merchant hitting plan limit |
+| Stripe Customer Portal | Linked from in-app billing             | Existing subscriber         |
 
 The Customer Portal handles payment method changes, invoice history, and cancellations. We do not build these ourselves.
 
@@ -191,13 +194,13 @@ The Customer Portal handles payment method changes, invoice history, and cancell
 
 ## Plan changes and proration
 
-| Change | Behavior |
-|---|---|
-| FREE → POS | Immediate, full month charged |
-| POS → OPERATIONS | Immediate, prorated upgrade charge |
-| OPERATIONS → POS | Effective at next renewal, no immediate refund |
-| Annual → Monthly | Effective at next renewal |
-| Cancel | Stays active until period end, then drops to FREE |
+| Change           | Behavior                                          |
+| ---------------- | ------------------------------------------------- |
+| FREE → POS       | Immediate, full month charged                     |
+| POS → OPERATIONS | Immediate, prorated upgrade charge                |
+| OPERATIONS → POS | Effective at next renewal, no immediate refund    |
+| Annual → Monthly | Effective at next renewal                         |
+| Cancel           | Stays active until period end, then drops to FREE |
 
 We never delete data on downgrade. A merchant who drops from OPERATIONS to FREE still has their inventory data; they just can't access the inventory UI until they upgrade again.
 
@@ -207,10 +210,10 @@ We never delete data on downgrade. A merchant who drops from OPERATIONS to FREE 
 
 Stripe handles dunning. We mirror the state:
 
-| Stripe state | App state | What we show |
-|---|---|---|
-| Invoice payment failed (1st attempt) | `PAST_DUE` | Banner: "Payment failed, retrying in 3 days" |
-| All retries failed | `CANCELED` | Banner: "Subscription canceled" + downgrade to FREE |
+| Stripe state                         | App state  | What we show                                        |
+| ------------------------------------ | ---------- | --------------------------------------------------- |
+| Invoice payment failed (1st attempt) | `PAST_DUE` | Banner: "Payment failed, retrying in 3 days"        |
+| All retries failed                   | `CANCELED` | Banner: "Subscription canceled" + downgrade to FREE |
 
 Notifications go out via Resend (email) and WhatsApp.
 
@@ -218,11 +221,11 @@ Notifications go out via Resend (email) and WhatsApp.
 
 ## Refunds
 
-| Scenario | Policy |
-|---|---|
-| First 14 days of subscription | Full refund, manual via Stripe |
-| After 14 days | No refund, but immediate downgrade-at-period-end allowed |
-| Annual plan, mid-year cancel | Prorated refund of unused months minus 1 |
+| Scenario                                         | Policy                                                          |
+| ------------------------------------------------ | --------------------------------------------------------------- |
+| First 14 days of subscription                    | Full refund, manual via Stripe                                  |
+| After 14 days                                    | No refund, but immediate downgrade-at-period-end allowed        |
+| Annual plan, mid-year cancel                     | Prorated refund of unused months minus 1                        |
 | Customer payment failed but merchant marked paid | Merchant resolves with customer directly; we don't intermediate |
 
 Refund operations are manual through the Stripe dashboard. Document the reason in the customer note field for every refund.
@@ -231,12 +234,12 @@ Refund operations are manual through the Stripe dashboard. Document the reason i
 
 ## Currency handling
 
-| Field | Storage | Display |
-|---|---|---|
-| `subscription.plan` | enum | tier name (localized) |
-| `subscription.amount` | Decimal | formatted with currency code |
-| `order.currency` | string (`IDR`, `EUR`) | displayed with merchant's currency |
-| `order.subtotal`, `order.total` | Decimal(12, 2) | localized formatting |
+| Field                           | Storage               | Display                            |
+| ------------------------------- | --------------------- | ---------------------------------- |
+| `subscription.plan`             | enum                  | tier name (localized)              |
+| `subscription.amount`           | Decimal               | formatted with currency code       |
+| `order.currency`                | string (`IDR`, `EUR`) | displayed with merchant's currency |
+| `order.subtotal`, `order.total` | Decimal(12, 2)        | localized formatting               |
 
 Indonesia uses period `.` for thousands and comma `,` for decimals: `Rp 99.000,00`. Use `Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" })`.
 

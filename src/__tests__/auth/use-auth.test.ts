@@ -90,7 +90,12 @@ describe("useRegister", () => {
 
     const { result } = renderHook(() => useRegister(), { wrapper: makeWrapper() });
 
-    result.current.mutate({ email: "new@user.com", password: "Pass123", confirmPassword: "Pass123", name: "New User" });
+    result.current.mutate({
+      email: "new@user.com",
+      password: "Pass123",
+      confirmPassword: "Pass123",
+      name: "New User",
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data?.email).toBe("new@user.com");
@@ -104,7 +109,12 @@ describe("useRegister", () => {
 
     const { result } = renderHook(() => useRegister(), { wrapper: makeWrapper() });
 
-    result.current.mutate({ email: "dup@user.com", password: "Pass123", confirmPassword: "Pass123", name: "Dup" });
+    result.current.mutate({
+      email: "dup@user.com",
+      password: "Pass123",
+      confirmPassword: "Pass123",
+      name: "Dup",
+    });
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(result.current.error?.message).toBe("Email already in use");

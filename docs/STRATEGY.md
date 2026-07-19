@@ -14,14 +14,14 @@ The business case behind every technical decision in this repo. Update this doc 
 
 The original Epidom positioning was "cookie bar inventory management for France." Strategic audit revealed:
 
-| Finding | Implication |
-|---|---|
-| The French F&B POS market is saturated (Sunday, Tiller, Innovorder, Zelty) | Direct POS competition is a multi-year, capital-heavy fight |
-| Most small restaurants and cafés still use **Linktree for landing, WhatsApp for reservations, Google Drive for menus** | The customer-facing layer is broken and underserved |
-| Mie Gacoan-style QR self-order works, but only large chains can afford to build it | Massive whitespace for a productized version |
-| Indonesia has 5.28M F&B businesses (BPS, 2024), 62% independent | Larger TAM than France, lower competitive density on the customer-facing layer |
-| Owner.com hit $1B valuation in 2025 doing this playbook in the US | Thesis is validated at the venture scale |
-| Sunday raised $100M+ for QR pay alone, then retreated from 4 markets | A standalone QR layer is not sticky enough. The ladder matters. |
+| Finding                                                                                                                | Implication                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| The French F&B POS market is saturated (Sunday, Tiller, Innovorder, Zelty)                                             | Direct POS competition is a multi-year, capital-heavy fight                    |
+| Most small restaurants and cafés still use **Linktree for landing, WhatsApp for reservations, Google Drive for menus** | The customer-facing layer is broken and underserved                            |
+| Mie Gacoan-style QR self-order works, but only large chains can afford to build it                                     | Massive whitespace for a productized version                                   |
+| Indonesia has 5.28M F&B businesses (BPS, 2024), 62% independent                                                        | Larger TAM than France, lower competitive density on the customer-facing layer |
+| Owner.com hit $1B valuation in 2025 doing this playbook in the US                                                      | Thesis is validated at the venture scale                                       |
+| Sunday raised $100M+ for QR pay alone, then retreated from 4 markets                                                   | A standalone QR layer is not sticky enough. The ladder matters.                |
 
 The pivot trades a saturated niche (French bakeries) for a defensible wedge (Indonesian customer-facing layer) with a clearer monetization ladder.
 
@@ -36,12 +36,12 @@ The pivot trades a saturated niche (French bakeries) for a defensible wedge (Ind
 
 ### Customer segments
 
-| Tier | Who | Trigger to upgrade |
-|---|---|---|
-| **FREE** | Solo warung, home baker, food truck, single-location café | They open shop, post on Instagram, customers want to order online |
-| **POS** (~IDR 99k/mo) | Café or warung doing >50 orders/day with a cashier | They hire a cashier, can't manage orders by hand |
-| **OPERATIONS** (~IDR 249k/mo) | Multi-staff café or restaurant | They hire a second shift, need ingredient cost control and shift handover |
-| **ENTERPRISE** (~IDR 499k+/mo) | Multi-outlet brand, small manufacturer | They open a second outlet, need consolidated finance and aggregator dashboards |
+| Tier                           | Who                                                       | Trigger to upgrade                                                             |
+| ------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **FREE**                       | Solo warung, home baker, food truck, single-location café | They open shop, post on Instagram, customers want to order online              |
+| **POS** (~IDR 99k/mo)          | Café or warung doing >50 orders/day with a cashier        | They hire a cashier, can't manage orders by hand                               |
+| **OPERATIONS** (~IDR 249k/mo)  | Multi-staff café or restaurant                            | They hire a second shift, need ingredient cost control and shift handover      |
+| **ENTERPRISE** (~IDR 499k+/mo) | Multi-outlet brand, small manufacturer                    | They open a second outlet, need consolidated finance and aggregator dashboards |
 
 ---
 
@@ -54,12 +54,13 @@ The wedge is the **public storefront** (`epidom.id/@warung-pak-budi`). Free fore
 - WhatsApp ordering chaos
 
 Why this is the right wedge:
+
 - **Activation cost is near zero.** A merchant signs up, picks a theme, adds 3 menu items, publishes. Done in 5 minutes.
 - **Visible value on day 1.** They share the link on Instagram, customers actually use it.
 - **Built-in distribution.** Every storefront page is a marketing surface that shows "Powered by Epidom" (until they pay to remove it).
 - **Data lock-in over time.** Once they have 200 orders in our system, they don't want to switch.
 
-The POS, KDS, and inventory features upsell *after* we have the storefront relationship. We never lead with POS.
+The POS, KDS, and inventory features upsell _after_ we have the storefront relationship. We never lead with POS.
 
 ---
 
@@ -67,30 +68,30 @@ The POS, KDS, and inventory features upsell *after* we have the storefront relat
 
 ### Direct competitors (Indonesia)
 
-| Competitor | Strength | Where we win |
-|---|---|---|
-| **Moka POS** (GoTo-owned) | Brand recognition, GoFood/Gojek integration | Free customer-facing storefront; Moka has none. Lower price. |
-| **Majoo** | Comprehensive business management | Cleaner public ordering UX; less feature bloat. |
-| **Klikit** | Best-in-class aggregator dashboard | Free tier; Klikit charges from day one. |
-| **Pawoon, iSeller, Olsera** | Local F&B-specific POS | Storefront wedge, freemium funnel. |
-| **Loyverse** | Free, multi-language including Bahasa | Customer-facing storefront, IDN-specific payments, WhatsApp notifications. |
+| Competitor                  | Strength                                    | Where we win                                                               |
+| --------------------------- | ------------------------------------------- | -------------------------------------------------------------------------- |
+| **Moka POS** (GoTo-owned)   | Brand recognition, GoFood/Gojek integration | Free customer-facing storefront; Moka has none. Lower price.               |
+| **Majoo**                   | Comprehensive business management           | Cleaner public ordering UX; less feature bloat.                            |
+| **Klikit**                  | Best-in-class aggregator dashboard          | Free tier; Klikit charges from day one.                                    |
+| **Pawoon, iSeller, Olsera** | Local F&B-specific POS                      | Storefront wedge, freemium funnel.                                         |
+| **Loyverse**                | Free, multi-language including Bahasa       | Customer-facing storefront, IDN-specific payments, WhatsApp notifications. |
 
 ### Indirect competitors
 
-| Competitor | What they cover | Why we still win |
-|---|---|---|
-| **GoFood / GrabFood / ShopeeFood** | Hosted storefront + delivery | We're commission-free. Position as "the platform that helps you reduce your dependency on them." |
-| **WhatsApp Business Catalog** | Free menu listing in WhatsApp | We offer real payment, order history per customer, analytics, and Instagram-shareable links. |
-| **Linktree + Google Drive menu** | What most merchants use today | We replace the entire stitched-together mess with one tool. |
+| Competitor                         | What they cover               | Why we still win                                                                                 |
+| ---------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| **GoFood / GrabFood / ShopeeFood** | Hosted storefront + delivery  | We're commission-free. Position as "the platform that helps you reduce your dependency on them." |
+| **WhatsApp Business Catalog**      | Free menu listing in WhatsApp | We offer real payment, order history per customer, analytics, and Instagram-shareable links.     |
+| **Linktree + Google Drive menu**   | What most merchants use today | We replace the entire stitched-together mess with one tool.                                      |
 
 ### Global benchmarks
 
-| Company | Stage | What we learn |
-|---|---|---|
-| **Owner.com (US)** | $1B, $178M raised | The full ladder, including AI-driven content, is the right shape. |
-| **Sunday (FR)** | Burned $100M+ then retreated | QR pay alone is not enough. Must own the operational layer above it. |
-| **Choice QR (CZ)** | Bootstrap-ish, 7,500 restaurants on €1M | Lean execution can compete in the QR menu layer. |
-| **Toast (US)** | Public, $7B revenue | Compound POS works at the high end, but we cannot fund that fight. |
+| Company            | Stage                                   | What we learn                                                        |
+| ------------------ | --------------------------------------- | -------------------------------------------------------------------- |
+| **Owner.com (US)** | $1B, $178M raised                       | The full ladder, including AI-driven content, is the right shape.    |
+| **Sunday (FR)**    | Burned $100M+ then retreated            | QR pay alone is not enough. Must own the operational layer above it. |
+| **Choice QR (CZ)** | Bootstrap-ish, 7,500 restaurants on €1M | Lean execution can compete in the QR menu layer.                     |
+| **Toast (US)**     | Public, $7B revenue                     | Compound POS works at the high end, but we cannot fund that fight.   |
 
 ---
 
@@ -114,12 +115,12 @@ Each tier upgrade is triggered by a clear business event, not a feature gate. Up
 
 ## 7. Pricing rationale
 
-| Tier | Indonesia (IDR/mo) | France-ready price (EUR/mo) | Why |
-|---|---|---|---|
-| FREE | Rp 0 | €0 | Wedge. Forever free. |
-| POS | Rp 99,000 (~$6) | €19 | Beats Klikit's Rp 390k by being focused on small operators |
-| OPERATIONS | Rp 249,000 (~$15) | €49 | Where most revenue comes from |
-| ENTERPRISE | Rp 499,000+ (~$30+) | €99+ | Custom upsell for chains and manufacturers |
+| Tier       | Indonesia (IDR/mo)  | France-ready price (EUR/mo) | Why                                                        |
+| ---------- | ------------------- | --------------------------- | ---------------------------------------------------------- |
+| FREE       | Rp 0                | €0                          | Wedge. Forever free.                                       |
+| POS        | Rp 99,000 (~$6)     | €19                         | Beats Klikit's Rp 390k by being focused on small operators |
+| OPERATIONS | Rp 249,000 (~$15)   | €49                         | Where most revenue comes from                              |
+| ENTERPRISE | Rp 499,000+ (~$30+) | €99+                        | Custom upsell for chains and manufacturers                 |
 
 The IDR pricing matters more than any other number in this strategy. Reference: Indonesian SME SaaS ARPU benchmarks suggest pain threshold ~Rp 300k/month for software, soft ceiling ~Rp 500k for non-payment SaaS.
 
@@ -146,6 +147,7 @@ Order of acquisition channels by expected ROI:
 4. **Paid ads, retargeting only**: Google Ads against high-intent keywords ("aplikasi kasir warung," "menu QR resto"), only after PLG validates ICP
 
 Avoid:
+
 - Door-to-door sales (expensive, doesn't scale)
 - Large enterprise sales motions (wrong product stage)
 - Generic brand awareness ads
@@ -154,14 +156,14 @@ Avoid:
 
 ## 10. Key metrics to watch
 
-| Metric | Healthy benchmark | Trigger to pivot |
-|---|---|---|
-| Activation: % of signups who publish a menu in week 1 | >40% | <20% after 90 days means the wedge is wrong |
-| Time to first customer order via storefront | <7 days | >30 days means the storefront isn't getting shared |
-| Free → POS conversion at 90 days | 4-6% | <2% means pricing or feature gap |
-| Monthly churn (paid users) | <5% | >10% means the operations layer isn't sticky enough |
-| CAC payback period | <12 months | >24 months means the funnel is broken |
-| Net revenue retention (paid cohort) | >100% | <90% sustained means we're not laddering users up |
+| Metric                                                | Healthy benchmark | Trigger to pivot                                    |
+| ----------------------------------------------------- | ----------------- | --------------------------------------------------- |
+| Activation: % of signups who publish a menu in week 1 | >40%              | <20% after 90 days means the wedge is wrong         |
+| Time to first customer order via storefront           | <7 days           | >30 days means the storefront isn't getting shared  |
+| Free → POS conversion at 90 days                      | 4-6%              | <2% means pricing or feature gap                    |
+| Monthly churn (paid users)                            | <5%               | >10% means the operations layer isn't sticky enough |
+| CAC payback period                                    | <12 months        | >24 months means the funnel is broken               |
+| Net revenue retention (paid cohort)                   | >100%             | <90% sustained means we're not laddering users up   |
 
 These metrics are reviewed monthly. Strategy changes get logged in the Changelog with the metric that triggered them.
 

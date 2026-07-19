@@ -9,7 +9,7 @@ vi.mock("@/lib/auth", () => ({ getSession: vi.fn() }));
 vi.mock("@/lib/admin", () => ({
   isAdminUser: vi.fn((email: string) => email === "prayogadevelopment@gmail.com"),
 }));
-vi.mock("bcryptjs", () => ({ default: { hash: vi.fn().mockResolvedValue("hashed-pw") } }));
+vi.mock("better-auth/crypto", () => ({ hashPassword: vi.fn().mockResolvedValue("hashed-pw") }));
 
 // var avoids TDZ — vi.mock factory is hoisted above const/let declarations.
 var mockPrisma: any;

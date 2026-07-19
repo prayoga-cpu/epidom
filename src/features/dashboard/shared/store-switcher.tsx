@@ -68,8 +68,10 @@ export function StoreSwitcher() {
         onClick={handleCreateStore}
         className="h-9 w-[140px] text-xs sm:w-[160px] sm:text-sm lg:h-9 lg:w-auto lg:text-sm"
       >
-        <Store className="mr-1 h-3.5 w-3.5 hidden sm:inline sm:mr-1 sm:h-4 sm:w-4 lg:mr-1 lg:h-4 lg:w-4" />
-        <span className="hidden sm:inline lg:inline">{t("dashboard.storeSelector.createFirst")}</span>
+        <Store className="mr-1 hidden h-3.5 w-3.5 sm:mr-1 sm:inline sm:h-4 sm:w-4 lg:mr-1 lg:h-4 lg:w-4" />
+        <span className="hidden sm:inline lg:inline">
+          {t("dashboard.storeSelector.createFirst")}
+        </span>
         <span className="sm:hidden">Store</span>
       </Button>
     );
@@ -83,7 +85,7 @@ export function StoreSwitcher() {
           role="combobox"
           aria-expanded={open}
           aria-label={t("dashboard.storeSelector.label")}
-          className="h-9 w-[140px] justify-between rounded-2xl text-xs text-foreground sm:w-[160px] sm:text-sm lg:w-[180px] lg:text-sm"
+          className="text-foreground h-9 w-[140px] justify-between rounded-2xl text-xs sm:w-[160px] sm:text-sm lg:w-[180px] lg:text-sm"
         >
           <div className="flex min-w-0 items-center gap-1.5 truncate sm:gap-2">
             <Store className="text-muted-foreground h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
@@ -96,13 +98,9 @@ export function StoreSwitcher() {
       </PopoverTrigger>
       <PopoverContent className="w-[220px] p-0" align="end">
         <Command>
-          <CommandInput
-            placeholder={t("dashboard.storeSelector.searchPlaceholder")}
-          />
+          <CommandInput placeholder={t("dashboard.storeSelector.searchPlaceholder")} />
           <CommandList>
-            <CommandEmpty>
-              {t("dashboard.storeSelector.noStores")}
-            </CommandEmpty>
+            <CommandEmpty>{t("dashboard.storeSelector.noStores")}</CommandEmpty>
             <CommandGroup heading={t("dashboard.storeSelector.yourStores")}>
               {stores.map((store) => (
                 <CommandItem
@@ -134,7 +132,7 @@ export function StoreSwitcher() {
             <CommandSeparator />
             <CommandGroup>
               <CommandItem onSelect={handleCreateStore} className="cursor-pointer">
-                <Plus className="mr-1 h-4 w-4 hidden sm:inline" />
+                <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
                 {t("dashboard.storeSelector.createNew")}
               </CommandItem>
             </CommandGroup>

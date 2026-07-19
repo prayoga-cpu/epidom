@@ -29,10 +29,7 @@ import { NextResponse } from "next/server";
  * }
  * ```
  */
-export async function verifyStoreOwnership(
-  storeId: string,
-  userId: string
-): Promise<Store> {
+export async function verifyStoreOwnership(storeId: string, userId: string): Promise<Store> {
   // Get user's business
   const business = await businessService.getBusinessByUserId(userId);
   if (!business) {
@@ -85,14 +82,10 @@ export async function verifyStoreOwnershipWithResponse(
           { status: 404 }
         );
       }
-      if (
-        error.message === "Store not found" ||
-        error.message.includes("does not belong")
-      ) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.NOT_FOUND, error.message),
-          { status: 404 }
-        );
+      if (error.message === "Store not found" || error.message.includes("does not belong")) {
+        return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
+          status: 404,
+        });
       }
     }
     return NextResponse.json(
@@ -104,4 +97,3 @@ export async function verifyStoreOwnershipWithResponse(
     );
   }
 }
-

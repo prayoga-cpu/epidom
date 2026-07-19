@@ -46,7 +46,7 @@ export function RouteLoadingIndicator() {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-[9999] h-1 bg-primary transition-all duration-200 ease-out"
+      className="bg-primary fixed top-0 right-0 left-0 z-[9999] h-1 transition-all duration-200 ease-out"
       style={{
         width: `${progress}%`,
         opacity: progress === 100 ? 0 : 1,

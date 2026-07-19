@@ -49,4 +49,3 @@ export function useDialogState<T>() {
     closeAllDialogs,
   };
 }
-

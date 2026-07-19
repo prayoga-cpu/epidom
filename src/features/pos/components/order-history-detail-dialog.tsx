@@ -2,17 +2,22 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatCurrency, formatDateTime } from "@/lib/utils/formatting";
+import { formatDateTime } from "@/lib/utils/formatting";
 import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
 import type { OrderHistoryItem } from "../types/pos.types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useConfirm } from "@/components/ui/use-confirm";
+import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
+import { toast } from "sonner";
 
 function getSourceBadgeVariant(source: string) {
   switch (source) {
@@ -39,6 +44,8 @@ function getStatusBadgeVariant(status: string) {
       return "default";
     case "CANCELLED":
       return "destructive";
+    case "HELD":
+      return "secondary";
     default:
       return "outline";
   }
@@ -61,12 +68,41 @@ function getPaymentBadgeVariant(paymentStatus: string) {
 
 interface OrderHistoryDetailDialogProps {
   order: OrderHistoryItem | null;
+  storeId: string;
   onOpenChange: (open: boolean) => void;
 }
 
-export function OrderHistoryDetailDialog({ order, onOpenChange }: OrderHistoryDetailDialogProps) {
+export function OrderHistoryDetailDialog({
+  order,
+  storeId,
+  onOpenChange,
+}: OrderHistoryDetailDialogProps) {
   const { t } = useI18n();
-  const { currency } = useCurrency();
+  const { formatPrice } = useCurrency();
+  const { confirm, confirmDialog } = useConfirm();
+  const updateStatus = useUpdateOrderStatus(storeId);
+
+  const handleCancel = async () => {
+    if (!order) return;
+    const wasDelivered = order.status === "DELIVERED";
+    const ok = await confirm({
+      title: t("pos.orderCard.cancelConfirmTitle"),
+      description: wasDelivered
+        ? t("pos.orderCard.cancelConfirmDescDelivered")
+        : t("pos.orderCard.cancelConfirmDesc"),
+      confirmText: t("pos.orderCard.cancel"),
+      variant: "destructive",
+    });
+    if (!ok) return;
+
+    try {
+      await updateStatus.mutateAsync({ orderId: order.id, status: "CANCELLED" });
+      toast.success(t("pos.orderCard.cancelSuccess"));
+      onOpenChange(false);
+    } catch {
+      toast.error(t("pos.queue.updateFailed"));
+    }
+  };
 
   const mapStatusLabel = (s: string) => {
     const key = s === "IN_PRODUCTION" ? "inProduction" : s.toLowerCase();
@@ -162,9 +198,7 @@ export function OrderHistoryDetailDialog({ order, onOpenChange }: OrderHistoryDe
                   <span>
                     {Number(item.quantity)}x {item.menuItem?.name ?? item.name}
                   </span>
-                  <span className="shrink-0 text-right">
-                    {formatCurrency(Number(item.total), currency)}
-                  </span>
+                  <span className="shrink-0 text-right">{formatPrice(Number(item.total))}</span>
                 </div>
               ))}
             </div>
@@ -172,19 +206,19 @@ export function OrderHistoryDetailDialog({ order, onOpenChange }: OrderHistoryDe
             <div className="flex flex-col gap-1 border-t pt-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("pos.cart.subtotal")}</span>
-                <span>{formatCurrency(Number(order.subtotal), currency)}</span>
+                <span>{formatPrice(Number(order.subtotal))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("pos.cart.tax")}</span>
-                <span>{formatCurrency(Number(order.tax), currency)}</span>
+                <span>{formatPrice(Number(order.tax))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("pos.history.delivery")}</span>
-                <span>{formatCurrency(Number(order.delivery), currency)}</span>
+                <span>{formatPrice(Number(order.delivery))}</span>
               </div>
               <div className="flex justify-between font-semibold">
                 <span>{t("pos.cart.total")}</span>
-                <span>{formatCurrency(Number(order.total), currency)}</span>
+                <span>{formatPrice(Number(order.total))}</span>
               </div>
             </div>
 
@@ -202,9 +236,23 @@ export function OrderHistoryDetailDialog({ order, onOpenChange }: OrderHistoryDe
                 {t("pos.history.detailDelivered")}: {formatDateTime(order.deliveredDate)}
               </p>
             )}
+
+            {order.status !== "CANCELLED" && (
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={updateStatus.isPending}
+                  onClick={handleCancel}
+                >
+                  {t("pos.orderCard.cancel")}
+                </Button>
+              </DialogFooter>
+            )}
           </>
         )}
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

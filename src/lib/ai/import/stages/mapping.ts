@@ -9,10 +9,7 @@
 
 import { generateStructuredResponse } from "../../openai-client";
 import type { TokenUsage } from "../../openai-client";
-import {
-  EPIDOM_CONTEXT,
-  getEntityFieldDefinitions,
-} from "../../context/epidom-context";
+import { EPIDOM_CONTEXT, getEntityFieldDefinitions } from "../../context/epidom-context";
 import {
   MappingAnalysisSchema,
   type MappingAnalysis,
@@ -261,15 +258,17 @@ Detect relationships:
 For each relationship, provide examples from the data.`;
 
   const RelationshipSchema = z.object({
-    detectedRelationships: z.array(
-      z.object({
-        type: z.string(),
-        sourceColumn: z.string(),
-        targetEntity: z.enum(["material", "product", "supplier", "recipe"]),
-        linkMethod: z.string().default(""),
-        examples: z.array(z.record(z.string())).optional().default([]),
-      })
-    ).default([]),
+    detectedRelationships: z
+      .array(
+        z.object({
+          type: z.string(),
+          sourceColumn: z.string(),
+          targetEntity: z.enum(["material", "product", "supplier", "recipe"]),
+          linkMethod: z.string().default(""),
+          examples: z.array(z.record(z.string())).optional().default([]),
+        })
+      )
+      .default([]),
   });
 
   const { data, usage } = await generateStructuredResponse(

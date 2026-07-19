@@ -10,11 +10,7 @@
 import { generateStructuredResponse } from "../../openai-client";
 import type { TokenUsage } from "../../openai-client";
 import { EPIDOM_CONTEXT, ENTITY_DETECTION_HINTS } from "../../context/epidom-context";
-import {
-  StructureAnalysisSchema,
-  type StructureAnalysis,
-  type EntityType,
-} from "../types";
+import { StructureAnalysisSchema, type StructureAnalysis, type EntityType } from "../types";
 import { z } from "zod";
 
 /**
@@ -140,16 +136,18 @@ Return entity breakdown with row indices for each type.`;
   // Schema that accepts either array of numbers OR full object
   const EntityBreakdownSchema = z.object({
     isMixedEntity: z.boolean().default(false),
-    entityBreakdown: z.record(
-      z.union([
-        z.array(z.number()), // AI might return just [0, 1, 2]
-        z.object({
-          count: z.number().optional(),
-          rowIndices: z.array(z.number()).optional(),
-          confidence: z.enum(["HIGH", "MEDIUM", "LOW"]).optional(),
-        }),
-      ])
-    ).default({}),
+    entityBreakdown: z
+      .record(
+        z.union([
+          z.array(z.number()), // AI might return just [0, 1, 2]
+          z.object({
+            count: z.number().optional(),
+            rowIndices: z.array(z.number()).optional(),
+            confidence: z.enum(["HIGH", "MEDIUM", "LOW"]).optional(),
+          }),
+        ])
+      )
+      .default({}),
     reasoning: z.string().default(""),
   });
 

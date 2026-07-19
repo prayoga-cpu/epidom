@@ -29,21 +29,24 @@ export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
 
   const handleItemStatus = async (itemId: string, currentStatus: string) => {
     const next =
-      currentStatus === "PENDING" ? "PREPARING"
-      : currentStatus === "PREPARING" ? "READY"
-      : null;
+      currentStatus === "PENDING" ? "PREPARING" : currentStatus === "PREPARING" ? "READY" : null;
     if (!next) return;
 
     queryClient.setQueryData(["pos", "orders", storeId], (old: any[]) => {
       if (!old) return [];
       return old.map((o) => {
         if (o.id !== order.id) return o;
-        return { ...o, items: o.items.map((i: any) => i.id === itemId ? { ...i, status: next } : i) };
+        return {
+          ...o,
+          items: o.items.map((i: any) => (i.id === itemId ? { ...i, status: next } : i)),
+        };
       });
     });
 
     try {
-      await apiClient.patch(`/stores/${storeId}/pos/orders/${order.id}/items/${itemId}`, { status: next });
+      await apiClient.patch(`/stores/${storeId}/pos/orders/${order.id}/items/${itemId}`, {
+        status: next,
+      });
     } catch {
       toast.error(t("pos.kds.updateFailed"));
     }
@@ -52,7 +55,7 @@ export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
   const handleOrderReady = async () => {
     queryClient.setQueryData(["pos", "orders", storeId], (old: any[]) => {
       if (!old) return [];
-      return old.map((o) => o.id === order.id ? { ...o, status: "READY" } : o);
+      return old.map((o) => (o.id === order.id ? { ...o, status: "READY" } : o));
     });
     try {
       await apiClient.patch(`/stores/${storeId}/pos/orders/${order.id}`, { status: "READY" });
@@ -68,8 +71,8 @@ export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm transition-all ${
-        order.status === "READY" ? "border-emerald-500/50 shadow-emerald-500/10 shadow-md" : ""
+      className={`bg-card flex flex-col gap-3 rounded-xl border p-4 shadow-sm transition-all ${
+        order.status === "READY" ? "border-emerald-500/50 shadow-md shadow-emerald-500/10" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -77,15 +80,19 @@ export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
           <div className="flex items-center gap-2">
             <span className="font-bold">{order.orderNumber}</span>
             {order.tableLabel || order.tableNumber ? (
-              <Badge variant="outline" className="text-xs">{order.tableLabel || order.tableNumber}</Badge>
+              <Badge variant="outline" className="text-xs">
+                {order.tableLabel || order.tableNumber}
+              </Badge>
             ) : (
-              <Badge variant="secondary" className="text-xs">{t("pos.checkout.takeaway")}</Badge>
+              <Badge variant="secondary" className="text-xs">
+                {t("pos.checkout.takeaway")}
+              </Badge>
             )}
           </div>
           <KdsTimer startTime={order.createdAt} />
         </div>
         {order.customerName && (
-          <span className="text-xs text-muted-foreground">{order.customerName}</span>
+          <span className="text-muted-foreground text-xs">{order.customerName}</span>
         )}
       </div>
 
@@ -103,16 +110,18 @@ export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
             >
               <div className="flex items-center gap-2">
                 <span className="font-semibold">{item.quantity}×</span>
-                <span className="font-medium leading-tight">{item.menuItem?.name ?? item.name}</span>
+                <span className="leading-tight font-medium">
+                  {item.menuItem?.name ?? item.name}
+                </span>
               </div>
-              <span className="text-xs font-semibold uppercase tracking-wide">
+              <span className="text-xs font-semibold tracking-wide uppercase">
                 {item.status === "PENDING"
                   ? t("pos.kds.preparing")
                   : item.status === "PREPARING"
-                  ? t("pos.kds.tapToComplete")
-                  : item.status === "READY"
-                  ? t("pos.kds.checkReady")
-                  : item.status}
+                    ? t("pos.kds.tapToComplete")
+                    : item.status === "READY"
+                      ? t("pos.kds.checkReady")
+                      : item.status}
               </span>
             </button>
           ))}
@@ -131,7 +140,11 @@ export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
           {t("pos.kds.markAllComplete")}
         </Button>
       ) : order.status !== "READY" ? (
-        <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOrderReady}>
+        <Button
+          size="sm"
+          className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+          onClick={handleOrderReady}
+        >
           <CheckCircle className="mr-2 h-4 w-4" />
           {t("pos.kds.orderReadyTitle")}
         </Button>

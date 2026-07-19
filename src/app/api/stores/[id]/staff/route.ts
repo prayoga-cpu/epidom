@@ -25,7 +25,7 @@ export const GET = withApiHandler(
       },
       orderBy: { name: "asc" },
     });
-    
+
     const staffResponse = staff.map(({ pin, ...s }) => ({
       ...s,
       hasPin: pin !== null,
@@ -42,7 +42,11 @@ export const POST = withApiHandler(
     const parsed = createStaffSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Validation failed", parsed.error.flatten()),
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Validation failed",
+          parsed.error.flatten()
+        ),
         { status: 400 }
       );
     }
@@ -51,7 +55,10 @@ export const POST = withApiHandler(
     const pinHash = pin && pin !== "" ? await hash(pin, 10) : null;
     const emailVal = email && email.trim() !== "" ? email.trim() : undefined;
 
-    const store = await prisma.store.findUnique({ where: { id: storeId! }, select: { name: true } });
+    const store = await prisma.store.findUnique({
+      where: { id: storeId! },
+      select: { name: true },
+    });
 
     const staff = await prisma.staffMember.create({
       data: {
@@ -62,7 +69,15 @@ export const POST = withApiHandler(
         pin: pinHash,
         inviteStatus: emailVal && sendInvite ? "pending" : null,
       },
-      select: { id: true, name: true, email: true, role: true, isActive: true, inviteStatus: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        inviteStatus: true,
+        createdAt: true,
+      },
     });
 
     // Fire-and-forget: don't block the response on email delivery

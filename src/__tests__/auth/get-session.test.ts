@@ -55,9 +55,7 @@ const BASE_SESSION = {
 function makeCookieStore(tokenValue?: string, secureName = false) {
   return {
     get: vi.fn((name: string) => {
-      const key = secureName
-        ? "__Secure-better-auth.session_token"
-        : "better-auth.session_token";
+      const key = secureName ? "__Secure-better-auth.session_token" : "better-auth.session_token";
       return name === key ? { value: tokenValue } : undefined;
     }),
   };

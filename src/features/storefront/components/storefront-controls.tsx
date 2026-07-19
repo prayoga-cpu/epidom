@@ -37,9 +37,9 @@ export function StorefrontControls({ className = "" }: { className?: string }) {
       <div
         role="group"
         aria-label={t("common.language.label")}
-        className="flex items-center rounded-full border border-border bg-muted/60 p-0.5"
+        className="border-border bg-muted/60 flex items-center rounded-full border p-0.5"
       >
-        <Globe className="mx-1 size-3.5 text-muted-foreground" aria-hidden="true" />
+        <Globe className="text-muted-foreground mx-1 size-3.5" aria-hidden="true" />
         {LANGS.map((l) => {
           const active = activeLang === l.value;
           return (
@@ -48,7 +48,7 @@ export function StorefrontControls({ className = "" }: { className?: string }) {
               type="button"
               onClick={() => setLocale(l.value)}
               aria-pressed={active}
-              className={`rounded-full px-2 py-1 text-[11px] font-bold leading-none transition-colors ${
+              className={`rounded-full px-2 py-1 text-[11px] leading-none font-bold transition-colors ${
                 active
                   ? "bg-[var(--store-theme)] text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -68,7 +68,7 @@ export function StorefrontControls({ className = "" }: { className?: string }) {
         onClick={() => setTheme(isDark ? "light" : "dark")}
         aria-label={t("common.theme.toggle")}
         title={mounted ? (isDark ? t("common.theme.light") : t("common.theme.dark")) : undefined}
-        className="flex size-8 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition-colors hover:text-foreground"
+        className="border-border bg-muted/60 text-muted-foreground hover:text-foreground flex size-8 items-center justify-center rounded-full border transition-colors"
       >
         {mounted && isDark ? (
           <Sun className="size-4" aria-hidden="true" />

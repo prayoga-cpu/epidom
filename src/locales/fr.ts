@@ -767,7 +767,7 @@ export const fr = {
         number: "+62 812-3456-7890",
       },
       email: {
-        address: "support@epidom.fr",
+        address: "cro@prionation.io, ceo@prionation.io, consult@prionation.io",
       },
     },
     map: {
@@ -4131,7 +4131,7 @@ export const fr = {
       title: "2. Processus de Remboursement",
       content: "Pour demander un remboursement, veuillez suivre ces étapes :",
       step1:
-        "Contactez notre équipe de support à support@epidom.fr avec votre demande de remboursement",
+        "Contactez notre équipe de support à cro@prionation.io, ceo@prionation.io, ou consult@prionation.io avec votre demande de remboursement",
       step2: "Fournissez votre e-mail de compte et les détails de l'abonnement",
       step3: "Expliquez la raison de votre demande de remboursement",
       step4: "Nous examinerons votre demande et répondrons dans les 5 à 7 jours ouvrables",
@@ -4675,7 +4675,7 @@ export const fr = {
       helpText: "Encore des questions ? Écrivez-nous sur",
       helpWa: "WhatsApp",
       helpOr: "ou par e-mail",
-      helpEmail: "support@epidom.fr",
+      helpEmail: "cro@prionation.io, ceo@prionation.io, consult@prionation.io",
       q1: "Epidom est-il vraiment gratuit à vie ?",
       a1: "Oui. Le forfait Free vous donne une page menu illimitée, un QR code, des commandes en ligne et les paiements QR sur un établissement — pour toujours. Nous gagnons de l'argent quand vous passez à POS, Opérations ou Entreprise.",
       q2: "Combien de temps prend la mise en place ?",

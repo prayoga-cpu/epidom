@@ -86,10 +86,10 @@ export function ContactSalesForm() {
       <Card className="border-primary rounded-xl border-2 sm:rounded-2xl">
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg sm:text-xl text-brand-primary">
+            <CardTitle className="text-brand-primary text-lg sm:text-xl">
               {t("pricing.plans.enterprise.title")}
             </CardTitle>
-            <Badge className="w-fit border bg-brand-primary text-white border-brand-primary">
+            <Badge className="bg-brand-primary border-brand-primary w-fit border text-white">
               {t("pricing.plans.enterprise.billing")}
             </Badge>
           </div>
@@ -99,22 +99,24 @@ export function ContactSalesForm() {
             {t("pricing.plans.enterprise.description")}
           </p>
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-brand-primary">{t("payments.enterprise.included")}</h4>
+            <h4 className="text-brand-primary text-sm font-semibold">
+              {t("payments.enterprise.included")}
+            </h4>
             <ul className="space-y-2">
               <li className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-primary" />
+                <Check className="text-brand-primary mt-0.5 h-4 w-4 flex-shrink-0" />
                 <span className="text-xs text-gray-600 sm:text-sm">
                   {t("pricing.plans.enterprise.f1")}
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-primary" />
+                <Check className="text-brand-primary mt-0.5 h-4 w-4 flex-shrink-0" />
                 <span className="text-xs text-gray-600 sm:text-sm">
                   {t("pricing.plans.enterprise.f2")}
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-primary" />
+                <Check className="text-brand-primary mt-0.5 h-4 w-4 flex-shrink-0" />
                 <span className="text-xs text-gray-600 sm:text-sm">
                   {t("pricing.plans.enterprise.f3")}
                 </span>
@@ -127,15 +129,18 @@ export function ContactSalesForm() {
       {/* Contact Form */}
       <Card className="rounded-xl border-2 sm:rounded-2xl">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl text-brand-primary">
-            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
+          <CardTitle className="text-brand-primary flex items-center gap-2 text-lg sm:text-xl">
+            <MessageSquare className="text-brand-primary h-4 w-4 sm:h-5 sm:w-5" />
             {t("payments.enterprise.form.title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {/* Error Message */}
           {error && (
-            <Alert variant="destructive" className="mb-4 rounded-lg border-red-200 bg-red-50 text-red-800">
+            <Alert
+              variant="destructive"
+              className="mb-4 rounded-lg border-red-200 bg-red-50 text-red-800"
+            >
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
@@ -152,8 +157,8 @@ export function ContactSalesForm() {
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Personal Information */}
             <div className="space-y-4">
-              <h3 className="flex items-center gap-2 text-base font-semibold sm:text-lg text-brand-primary">
-                <User className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
+              <h3 className="text-brand-primary flex items-center gap-2 text-base font-semibold sm:text-lg">
+                <User className="text-brand-primary h-4 w-4 sm:h-5 sm:w-5" />
                 {t("payments.enterprise.form.personalInfo")}
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -201,8 +206,8 @@ export function ContactSalesForm() {
 
             {/* Company Information */}
             <div className="space-y-4">
-              <h3 className="flex items-center gap-2 text-base font-semibold sm:text-lg text-brand-primary">
-                <Building className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
+              <h3 className="text-brand-primary flex items-center gap-2 text-base font-semibold sm:text-lg">
+                <Building className="text-brand-primary h-4 w-4 sm:h-5 sm:w-5" />
                 {t("payments.enterprise.form.companyInfo")}
               </h3>
               <div className="space-y-2">
@@ -238,7 +243,7 @@ export function ContactSalesForm() {
 
             {/* Requirements */}
             <div className="space-y-4">
-              <h3 className="text-base font-semibold sm:text-lg text-brand-primary">
+              <h3 className="text-brand-primary text-base font-semibold sm:text-lg">
                 {t("payments.enterprise.form.requirements")}
               </h3>
               <div className="space-y-2">
@@ -278,7 +283,7 @@ export function ContactSalesForm() {
       <Card className="rounded-xl border-2 sm:rounded-2xl">
         <CardContent className="pt-4 sm:pt-6">
           <div className="space-y-3 text-center sm:space-y-4">
-            <h3 className="text-base font-semibold sm:text-lg text-brand-primary">
+            <h3 className="text-brand-primary text-base font-semibold sm:text-lg">
               {t("payments.enterprise.contact.title")}
             </h3>
             <p className="text-sm text-gray-600 sm:text-base">

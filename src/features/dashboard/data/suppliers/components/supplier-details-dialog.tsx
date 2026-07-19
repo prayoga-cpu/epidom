@@ -62,13 +62,13 @@ export function SupplierDetailsDialog({
             <div className="flex gap-2">
               {onEdit && (
                 <Button variant="outline" size="sm" onClick={onEdit}>
-                  <Edit className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <Edit className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("common.actions.edit")}
                 </Button>
               )}
               {onDelete && (
                 <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
-                  <Trash2 className="mr-1 h-4 w-4 hidden sm:inline" />
+                  <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("common.actions.delete")}
                 </Button>
               )}
@@ -260,7 +260,9 @@ export function SupplierDetailsDialog({
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
           title={t("data.suppliers.toasts.deleted.title")}
-          description={t("data.suppliers.toasts.deleted.description")?.replace("{name}", supplier.name) || ""}
+          description={
+            t("data.suppliers.toasts.deleted.description")?.replace("{name}", supplier.name) || ""
+          }
           confirmText={t("common.actions.delete")}
           onConfirm={async () => {
             if (onDelete) await onDelete();

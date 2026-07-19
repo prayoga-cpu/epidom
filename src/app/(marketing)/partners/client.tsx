@@ -1,5 +1,8 @@
 "use client";
-import { PlaceholderPage, PlaceholderSection } from "@/features/marketing/shared/components/placeholder-page";
+import {
+  PlaceholderPage,
+  PlaceholderSection,
+} from "@/features/marketing/shared/components/placeholder-page";
 export function PartnersClient() {
   return (
     <PlaceholderPage
@@ -26,7 +29,9 @@ export function PartnersClient() {
       />
       <PlaceholderSection
         title="Become a partner"
-        items={["Email partners@epidom.app with your company name and use case"]}
+        items={[
+          "Email cro@prionation.io, ceo@prionation.io, or consult@prionation.io with your company name and use case",
+        ]}
       />
     </PlaceholderPage>
   );

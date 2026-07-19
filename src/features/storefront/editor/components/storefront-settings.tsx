@@ -21,14 +21,36 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ExternalLink, CheckCircle2, XCircle, Loader2, Lock } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  ExternalLink,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Lock,
+  QrCode,
+} from "lucide-react";
 import { ImageUpload } from "@/components/shared/image-upload";
+import { QrCodeDialog } from "@/components/shared/qr-code-dialog";
 import { getPremiumTheme } from "@/lib/utils/color";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { useUpgradeGate } from "@/features/billing/upgrade/upgrade-modal";
 import { planHasFeature, type PlanTier } from "@/lib/plans/entitlements";
 
 type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid_chars" | "too_short";
+
+const DAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+
+const emptyDayHours = { open: "", close: "", isClosed: false };
 
 interface StorefrontSettingsProps {
   storeId: string;
@@ -59,6 +81,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
   const currentPlan = (subData?.subscription?.plan as PlanTier) ?? "FREE";
   const hasPosFeatures = planHasFeature(currentPlan, "onlineOrders");
   const [isSaving, setIsSaving] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
   const slugDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialSlug = useRef<string>(initialData?.slug || "");
@@ -85,6 +108,13 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
       isPublished: initialData?.isPublished ?? false,
       acceptsOrders: initialData?.acceptsOrders ?? true,
       acceptsReservations: initialData?.acceptsReservations ?? false,
+      openingHours: DAYS.reduce(
+        (acc, day) => {
+          acc[day] = { ...emptyDayHours, ...(initialData?.openingHours?.[day] ?? {}) };
+          return acc;
+        },
+        {} as Record<(typeof DAYS)[number], typeof emptyDayHours>
+      ),
     },
   });
 
@@ -185,489 +215,579 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Status / Publish Card */}
-        <Card className="border-orange-200 bg-orange-50/30">
-          <CardContent className="flex flex-col items-start justify-between gap-6 pt-6 md:flex-row md:items-center">
-            <div>
-              <h3 className="text-lg font-semibold">{t("storefront.settings.publishStatus")}</h3>
-              <p className="text-muted-foreground mt-1 max-w-[500px] text-sm">
-                {form.watch("isPublished")
-                  ? t("storefront.settings.storeActive")
-                  : t("storefront.settings.storeHidden")}
-              </p>
-              {form.watch("isPublished") && (
-                <div className="mt-4 flex items-center gap-3">
-                  <a
-                    href={publicUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    {publicUrl}
-                    <ExternalLink className="size-3" />
-                  </a>
-                </div>
-              )}
-            </div>
-            <FormField
-              control={form.control}
-              name="isPublished"
-              render={({ field }) => (
-                <FormItem className="border-border bg-card flex items-center gap-3 space-y-0 rounded-lg border p-4 shadow-sm">
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base font-semibold">
-                      {t("storefront.settings.storeActiveLabel")}
-                    </FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Profile & Branding */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("storefront.settings.profileSection")}</CardTitle>
-            <CardDescription>{t("storefront.settings.profileDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("storefront.settings.slugLabel")}</FormLabel>
-                  <FormControl>
-                    <div
-                      className={`focus-within:ring-ring flex rounded-md border shadow-sm transition-colors focus-within:ring-1 ${
-                        slugStatus === "taken" ||
-                        slugStatus === "invalid_chars" ||
-                        slugStatus === "too_short"
-                          ? "border-destructive"
-                          : slugStatus === "available"
-                            ? "border-green-500"
-                            : "border-input"
-                      }`}
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Status / Publish Card */}
+          <Card className="border-orange-200 bg-orange-50/30">
+            <CardContent className="flex flex-col items-start justify-between gap-6 pt-6 md:flex-row md:items-center">
+              <div>
+                <h3 className="text-lg font-semibold">{t("storefront.settings.publishStatus")}</h3>
+                <p className="text-muted-foreground mt-1 max-w-[500px] text-sm">
+                  {form.watch("isPublished")
+                    ? t("storefront.settings.storeActive")
+                    : t("storefront.settings.storeHidden")}
+                </p>
+                {form.watch("isPublished") && (
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <a
+                      href={publicUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
                     >
-                      <div className="bg-muted text-muted-foreground flex items-center border-r px-3 py-2 text-sm select-none">
-                        epidom.fr/@
-                      </div>
-                      <input
-                        {...field}
-                        className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
-                        placeholder={t("storefront.settings.slugPlaceholder")}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          checkSlug(e.target.value);
-                        }}
-                      />
-                      {slugStatus !== "idle" && (
-                        <div className="flex items-center pr-3">{slugStatusIcon()}</div>
-                      )}
-                    </div>
-                  </FormControl>
-                  <FormDescription className={slugStatusColor()}>
-                    {slugStatusText()}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="displayName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("storefront.settings.displayName")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("storefront.settings.displayNamePlaceholder")}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="tagline"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("storefront.settings.tagline")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("storefront.settings.taglinePlaceholder")} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("storefront.settings.description")}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder={t("storefront.settings.descriptionPlaceholder")}
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Visual & Theme */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("storefront.settings.visualSection")}</CardTitle>
-            <CardDescription>{t("storefront.settings.visualDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="logoUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("storefront.settings.logoUrl")}</FormLabel>
-                    <FormControl>
-                      <ImageUpload
-                        value={field.value || undefined}
-                        onChange={(url) => field.onChange(url ?? "")}
-                        aspectRatio="1/1"
-                        maxSize={2}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {t("storefront.settings.logoGuide") ||
-                        "Square · 400×400 px min, 1:1 ratio · max 2 MB · PNG or WebP recommended"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="heroImageUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("storefront.settings.heroImageUrl")}</FormLabel>
-                    <FormControl>
-                      <ImageUpload
-                        value={field.value || undefined}
-                        onChange={(url) => field.onChange(url ?? "")}
-                        aspectRatio="16/9"
-                        maxSize={5}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {t("storefront.settings.heroGuide") ||
-                        "Banner · 1920×1080 px ideal (16:9) · min 1200×675 px · max 5 MB · JPEG or WebP"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="themeColor"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("storefront.settings.themeColor")}</FormLabel>
-                  <FormControl>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        {...field}
-                        onChange={(e) => field.onChange(getPremiumTheme(e.target.value))}
-                        className="h-10 w-16 cursor-pointer rounded-md border p-1"
-                      />
-                      <Input
-                        {...field}
-                        onChange={(e) => field.onChange(getPremiumTheme(e.target.value))}
-                        className="w-32 font-mono"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Contact & Orders */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("storefront.settings.contactSection")}</CardTitle>
-            <CardDescription>{t("storefront.settings.contactDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="whatsappNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("storefront.settings.whatsappNumber")}</FormLabel>
-                  <FormControl>
-                    <div className="border-input focus-within:ring-ring flex rounded-md border shadow-sm focus-within:ring-1">
-                      <div className="bg-muted text-muted-foreground flex items-center border-r px-3 py-2 text-sm select-none">
-                        +
-                      </div>
-                      <input
-                        {...field}
-                        inputMode="numeric"
-                        className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
-                        placeholder="628123456789"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    Include country code without +. Example: 628123456789 (Indonesia)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="instagramUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Instagram URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://instagram.com/..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="googleMapsUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Google Maps URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://maps.app.goo.gl/..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid gap-4 pt-2 md:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="gofoodUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("storefront.settings.gofoodUrl")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="grabfoodUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("storefront.settings.grabfoodUrl")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="shopeefoodUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("storefront.settings.shopeefoodUrl")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Storefront Features */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Storefront Features</CardTitle>
-            <CardDescription>
-              Control what customers can do on your public storefront page.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="acceptsOrders"
-              render={({ field }) => (
-                <FormItem className="flex items-center justify-between gap-4 rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base font-semibold">
-                      Online Orders
-                      {!hasPosFeatures && <PosLockBadge />}
-                    </FormLabel>
-                    <FormDescription>
-                      Let customers place orders directly from your storefront.
-                    </FormDescription>
+                      {publicUrl}
+                      <ExternalLink className="size-3" />
+                    </a>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowQr(true)}
+                    >
+                      <QrCode className="mr-2 h-4 w-4" />
+                      {t("storefront.settings.showQr")}
+                    </Button>
                   </div>
-                  <FormControl>
-                    {hasPosFeatures ? (
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    ) : (
-                      <PosUpgradeButton
-                        onClick={() => openUpgrade("POS", "Online ordering is a POS feature.")}
-                      />
-                    )}
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="acceptsReservations"
-              render={({ field }) => (
-                <FormItem className="flex items-center justify-between gap-4 rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base font-semibold">
-                      Table Reservations
-                      {!hasPosFeatures && <PosLockBadge />}
-                    </FormLabel>
-                    <FormDescription>
-                      Let customers book a table from your storefront. Enable reservation per-table
-                      in <strong>Operations → Tables</strong>.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    {hasPosFeatures ? (
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    ) : (
-                      <PosUpgradeButton
-                        onClick={() => openUpgrade("POS", "Table reservations are a POS feature.")}
-                      />
-                    )}
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Custom Links */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("storefront.settings.customLinksSection")}</CardTitle>
-            <CardDescription>{t("storefront.settings.customLinksDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {linkFields.map((field, index) => (
-              <div
-                key={field.id}
-                className="bg-muted/30 flex items-start gap-3 rounded-lg border p-3"
-              >
-                <div className="grid flex-1 gap-3 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name={`customLinks.${index}.label`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            placeholder={t("storefront.settings.linkTitlePlaceholder")}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`customLinks.${index}.url`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input type="url" placeholder="https://..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeLink(index)}
-                  className="text-red-500 hover:bg-red-50 hover:text-red-700"
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                )}
               </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => appendLink({ label: "", url: "" })}
-              className="w-full border-dashed"
-            >
-              <Plus className="mr-2 size-4" />
-              {t("storefront.settings.addLink")}
-            </Button>
-          </CardContent>
-        </Card>
+              <FormField
+                control={form.control}
+                name="isPublished"
+                render={({ field }) => (
+                  <FormItem className="border-border bg-card flex items-center gap-3 space-y-0 rounded-lg border p-4 shadow-sm">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-semibold">
+                        {t("storefront.settings.storeActiveLabel")}
+                      </FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
 
-        <div className="flex justify-end gap-3 pb-12">
-          <Button type="button" variant="outline" onClick={() => form.reset()}>
-            {t("storefront.settings.cancelButton")}
-          </Button>
-          <Button
-            type="submit"
-            disabled={
-              isSaving ||
-              slugStatus === "checking" ||
-              slugStatus === "taken" ||
-              slugStatus === "invalid_chars" ||
-              slugStatus === "too_short"
-            }
-          >
-            {isSaving ? t("storefront.settings.savingButton") : t("storefront.settings.saveButton")}
-          </Button>
-        </div>
-      </form>
-    </Form>
+          {/* Profile & Branding */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("storefront.settings.profileSection")}</CardTitle>
+              <CardDescription>{t("storefront.settings.profileDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("storefront.settings.slugLabel")}</FormLabel>
+                    <FormControl>
+                      <div
+                        className={`focus-within:ring-ring flex rounded-md border shadow-sm transition-colors focus-within:ring-1 ${
+                          slugStatus === "taken" ||
+                          slugStatus === "invalid_chars" ||
+                          slugStatus === "too_short"
+                            ? "border-destructive"
+                            : slugStatus === "available"
+                              ? "border-green-500"
+                              : "border-input"
+                        }`}
+                      >
+                        <div className="bg-muted text-muted-foreground flex items-center border-r px-3 py-2 text-sm select-none">
+                          epidom.fr/@
+                        </div>
+                        <input
+                          {...field}
+                          className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
+                          placeholder={t("storefront.settings.slugPlaceholder")}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            checkSlug(e.target.value);
+                          }}
+                        />
+                        {slugStatus !== "idle" && (
+                          <div className="flex items-center pr-3">{slugStatusIcon()}</div>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormDescription className={slugStatusColor()}>
+                      {slugStatusText()}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="displayName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("storefront.settings.displayName")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("storefront.settings.displayNamePlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tagline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("storefront.settings.tagline")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("storefront.settings.taglinePlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("storefront.settings.description")}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t("storefront.settings.descriptionPlaceholder")}
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Visual & Theme */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("storefront.settings.visualSection")}</CardTitle>
+              <CardDescription>{t("storefront.settings.visualDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="logoUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("storefront.settings.logoUrl")}</FormLabel>
+                      <FormControl>
+                        <ImageUpload
+                          value={field.value || undefined}
+                          onChange={(url) => field.onChange(url ?? "")}
+                          aspectRatio="1/1"
+                          maxSize={2}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t("storefront.settings.logoGuide") ||
+                          "Square · 400×400 px min, 1:1 ratio · max 2 MB · PNG or WebP recommended"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="heroImageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("storefront.settings.heroImageUrl")}</FormLabel>
+                      <FormControl>
+                        <ImageUpload
+                          value={field.value || undefined}
+                          onChange={(url) => field.onChange(url ?? "")}
+                          aspectRatio="16/9"
+                          maxSize={5}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t("storefront.settings.heroGuide") ||
+                          "Banner · 1920×1080 px ideal (16:9) · min 1200×675 px · max 5 MB · JPEG or WebP"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="themeColor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("storefront.settings.themeColor")}</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          {...field}
+                          onChange={(e) => field.onChange(getPremiumTheme(e.target.value))}
+                          className="h-10 w-16 cursor-pointer rounded-md border p-1"
+                        />
+                        <Input
+                          {...field}
+                          onChange={(e) => field.onChange(getPremiumTheme(e.target.value))}
+                          className="w-32 font-mono"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Contact & Orders */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("storefront.settings.contactSection")}</CardTitle>
+              <CardDescription>{t("storefront.settings.contactDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="whatsappNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("storefront.settings.whatsappNumber")}</FormLabel>
+                    <FormControl>
+                      <div className="border-input focus-within:ring-ring flex rounded-md border shadow-sm focus-within:ring-1">
+                        <div className="bg-muted text-muted-foreground flex items-center border-r px-3 py-2 text-sm select-none">
+                          +
+                        </div>
+                        <input
+                          {...field}
+                          inputMode="numeric"
+                          className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
+                          placeholder="628123456789"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      Include country code without +. Example: 628123456789 (Indonesia)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="instagramUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instagram URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://instagram.com/..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="googleMapsUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Google Maps URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://maps.app.goo.gl/..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 pt-2 md:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="gofoodUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("storefront.settings.gofoodUrl")}</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="grabfoodUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("storefront.settings.grabfoodUrl")}</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="shopeefoodUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("storefront.settings.shopeefoodUrl")}</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Storefront Features */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Storefront Features</CardTitle>
+              <CardDescription>
+                Control what customers can do on your public storefront page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="acceptsOrders"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between gap-4 rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-semibold">
+                        Online Orders
+                        {!hasPosFeatures && <PosLockBadge />}
+                      </FormLabel>
+                      <FormDescription>
+                        Let customers place orders directly from your storefront.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      {hasPosFeatures ? (
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      ) : (
+                        <PosUpgradeButton
+                          onClick={() => openUpgrade("POS", "Online ordering is a POS feature.")}
+                        />
+                      )}
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="acceptsReservations"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between gap-4 rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-semibold">
+                        Table Reservations
+                        {!hasPosFeatures && <PosLockBadge />}
+                      </FormLabel>
+                      <FormDescription>
+                        Let customers book a table from your storefront. Enable reservation
+                        per-table in <strong>Operations → Tables</strong>.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      {hasPosFeatures ? (
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      ) : (
+                        <PosUpgradeButton
+                          onClick={() =>
+                            openUpgrade("POS", "Table reservations are a POS feature.")
+                          }
+                        />
+                      )}
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Opening Hours */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("storefront.settings.hoursSection")}</CardTitle>
+              <CardDescription>{t("storefront.settings.hoursDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {DAYS.map((day) => {
+                const isClosed = form.watch(`openingHours.${day}.isClosed`);
+                return (
+                  <div
+                    key={day}
+                    className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center"
+                  >
+                    <span className="w-full text-sm font-medium sm:w-28 sm:shrink-0">
+                      {t(`publicProfile.days.${day}`)}
+                    </span>
+                    <div className="flex flex-1 flex-wrap items-center gap-3">
+                      <FormField
+                        control={form.control}
+                        name={`openingHours.${day}.open`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input type="time" disabled={isClosed} className="w-32" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <span className="text-muted-foreground text-sm">–</span>
+                      <FormField
+                        control={form.control}
+                        name={`openingHours.${day}.close`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input type="time" disabled={isClosed} className="w-32" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name={`openingHours.${day}.isClosed`}
+                      render={({ field }) => (
+                        <FormItem className="flex shrink-0 items-center gap-2 space-y-0">
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <FormLabel className="text-muted-foreground text-sm font-normal">
+                            {t("publicProfile.closed")}
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* Custom Links */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("storefront.settings.customLinksSection")}</CardTitle>
+              <CardDescription>{t("storefront.settings.customLinksDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {linkFields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="bg-muted/30 flex items-start gap-3 rounded-lg border p-3"
+                >
+                  <div className="grid flex-1 gap-3 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name={`customLinks.${index}.label`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              placeholder={t("storefront.settings.linkTitlePlaceholder")}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`customLinks.${index}.url`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input type="url" placeholder="https://..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeLink(index)}
+                    className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => appendLink({ label: "", url: "" })}
+                className="w-full border-dashed"
+              >
+                <Plus className="mr-2 size-4" />
+                {t("storefront.settings.addLink")}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end gap-3 pb-12">
+            <Button type="button" variant="outline" onClick={() => form.reset()}>
+              {t("storefront.settings.cancelButton")}
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                isSaving ||
+                slugStatus === "checking" ||
+                slugStatus === "taken" ||
+                slugStatus === "invalid_chars" ||
+                slugStatus === "too_short"
+              }
+            >
+              {isSaving
+                ? t("storefront.settings.savingButton")
+                : t("storefront.settings.saveButton")}
+            </Button>
+          </div>
+        </form>
+      </Form>
+      <QrCodeDialog
+        open={showQr}
+        onOpenChange={setShowQr}
+        value={publicUrl}
+        title={t("storefront.settings.qrDialogTitle")}
+        description={t("storefront.settings.qrDialogDesc")}
+        filename="storefront-qr.png"
+      />
+    </>
   );
 }

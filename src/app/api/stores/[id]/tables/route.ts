@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
+import { ACTIVE_POS_STATUSES } from "@/lib/constants/order-status";
 
 const createTableSchema = z.object({
   label: z.string().min(1).max(50),
@@ -18,13 +19,13 @@ const updateTableSchema = z.object({
 });
 
 /** GET /api/stores/[id]/tables */
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
   const session = await getSession();
-  if (!session?.user?.id) return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), { status: 401 });
+  if (!session?.user?.id)
+    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+      status: 401,
+    });
 
   const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
   if (v instanceof NextResponse) return v;
@@ -34,7 +35,7 @@ export async function GET(
     orderBy: { label: "asc" },
     include: {
       orders: {
-        where: { status: { in: ["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY"] } },
+        where: { status: { in: ACTIVE_POS_STATUSES } },
         select: { id: true, orderNumber: true, status: true, total: true },
         take: 1,
         orderBy: { createdAt: "desc" },
@@ -47,20 +48,24 @@ export async function GET(
 }
 
 /** POST /api/stores/[id]/tables */
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
   const session = await getSession();
-  if (!session?.user?.id) return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), { status: 401 });
+  if (!session?.user?.id)
+    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+      status: 401,
+    });
 
   const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
   if (v instanceof NextResponse) return v;
 
   const body = await req.json();
   const parsed = createTableSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json(createErrorResponse(ApiErrorCode.INVALID_INPUT, "Invalid input", parsed.error.flatten()), { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.INVALID_INPUT, "Invalid input", parsed.error.flatten()),
+      { status: 400 }
+    );
 
   try {
     const table = await prisma.table.create({
@@ -69,8 +74,13 @@ export async function POST(
     return NextResponse.json(createSuccessResponse(table), { status: 201 });
   } catch (e: any) {
     if (e.code === "P2002") {
-      return NextResponse.json(createErrorResponse(ApiErrorCode.CONFLICT, `Table "${parsed.data.label}" already exists`), { status: 409 });
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.CONFLICT, `Table "${parsed.data.label}" already exists`),
+        { status: 409 }
+      );
     }
-    return NextResponse.json(createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Internal error"), { status: 500 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Internal error"), {
+      status: 500,
+    });
   }
 }

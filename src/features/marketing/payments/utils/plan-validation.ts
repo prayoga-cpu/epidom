@@ -41,4 +41,3 @@ export function toStripePlan(plan: PlanType): StripePlanType | null {
 export function isStripePlan(plan: PlanType): plan is "starter" | "pro" {
   return plan === "starter" || plan === "pro";
 }
-

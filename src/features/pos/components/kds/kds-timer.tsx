@@ -29,12 +29,8 @@ export function KdsTimer({ startTime }: KdsTimerProps) {
     seconds < 300
       ? "text-emerald-500"
       : seconds < 600
-      ? "text-amber-500"
-      : "text-red-500 animate-pulse";
+        ? "text-amber-500"
+        : "text-red-500 animate-pulse";
 
-  return (
-    <span className={`font-mono text-xs font-bold tabular-nums ${colorClass}`}>
-      {label}
-    </span>
-  );
+  return <span className={`font-mono text-xs font-bold tabular-nums ${colorClass}`}>{label}</span>;
 }

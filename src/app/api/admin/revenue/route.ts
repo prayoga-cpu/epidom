@@ -29,8 +29,22 @@ const MAX_PAYMENT_LOG = 500;
 
 /** Stripe zero-decimal currencies — their amounts are already in the major unit. */
 const ZERO_DECIMAL = new Set([
-  "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf", "ugx",
-  "vnd", "vuv", "xaf", "xof", "xpf",
+  "bif",
+  "clp",
+  "djf",
+  "gnf",
+  "jpy",
+  "kmf",
+  "krw",
+  "mga",
+  "pyg",
+  "rwf",
+  "ugx",
+  "vnd",
+  "vuv",
+  "xaf",
+  "xof",
+  "xpf",
 ]);
 
 /** Approximate EUR→X rates used if the live FX API is unavailable. */
@@ -113,7 +127,9 @@ async function getEurRates(): Promise<{ rates: Record<string, number>; live: boo
   const base = process.env.EXCHANGE_RATE_API_URL || "https://v6.exchangerate-api.com/v6";
   if (!key) return { rates: { ...FALLBACK_EUR_RATES }, live: false };
   try {
-    const res = await fetch(`${base}/${key}/latest/EUR`, { headers: { Accept: "application/json" } });
+    const res = await fetch(`${base}/${key}/latest/EUR`, {
+      headers: { Accept: "application/json" },
+    });
     const data = await res.json();
     if (!res.ok || data.result !== "success" || !data.conversion_rates) {
       return { rates: { ...FALLBACK_EUR_RATES }, live: false };
@@ -224,7 +240,10 @@ export async function GET() {
       let items = sub.items.data;
       if (sub.items.has_more) {
         items = [];
-        for await (const it of stripe.subscriptionItems.list({ subscription: sub.id, limit: 100 })) {
+        for await (const it of stripe.subscriptionItems.list({
+          subscription: sub.id,
+          limit: 100,
+        })) {
           items.push(it);
         }
       }
@@ -235,7 +254,10 @@ export async function GET() {
       for (const item of items) {
         const price = item.price;
         const unit = await resolveUnitAmount(price, cur);
-        const monthlyNative = toMajor(monthlyFromUnit(unit, price?.recurring, item.quantity ?? 1), cur);
+        const monthlyNative = toMajor(
+          monthlyFromUnit(unit, price?.recurring, item.quantity ?? 1),
+          cur
+        );
         const monthlyEur = toEur(monthlyNative, cur);
         subMonthlyEur += monthlyEur;
         const plan = (price?.id && pricePlanMap[price.id]) || "OTHER";

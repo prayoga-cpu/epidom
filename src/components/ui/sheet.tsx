@@ -81,11 +81,7 @@ function SheetContent({
             side === "left" ? "left-4" : "right-4"
           )}
         >
-          {side === "left" ? (
-            <ChevronLeft className="size-5" />
-          ) : (
-            <XIcon className="size-4" />
-          )}
+          {side === "left" ? <ChevronLeft className="size-5" /> : <XIcon className="size-4" />}
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>

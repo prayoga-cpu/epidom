@@ -4,8 +4,8 @@ import { NextRequest } from "next/server";
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock("@/lib/api-handler", () => ({
-  withApiHandler: (fn: Function, _opts: object) =>
-    async (req: NextRequest, _ctx?: unknown) => fn(req, { userId: "user-1", storeId: undefined }),
+  withApiHandler: (fn: Function, _opts: object) => async (req: NextRequest, _ctx?: unknown) =>
+    fn(req, { userId: "user-1", storeId: undefined }),
 }));
 
 // var avoids TDZ — vi.mock factory is hoisted above const/let declarations.

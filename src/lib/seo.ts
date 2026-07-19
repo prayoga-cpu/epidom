@@ -195,7 +195,7 @@ export function generateStructuredData(
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer service",
-      email: "prayogadevelopment@gmail.com",
+      email: "consult@prionation.io",
     },
     foundingDate: "2024",
     ...data,

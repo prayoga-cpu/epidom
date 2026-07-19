@@ -3,18 +3,26 @@ import * as React from "react";
 import { useI18n } from "./i18n-provider";
 
 const OPTS = [
-  { label: "English",   value: "en", short: "EN", flag: "🇺🇸" },
+  { label: "English", value: "en", short: "EN", flag: "🇺🇸" },
   { label: "Indonesia", value: "id", short: "ID", flag: "🇮🇩" },
-  { label: "Français",  value: "fr", short: "FR", flag: "🇫🇷" },
+  { label: "Français", value: "fr", short: "FR", flag: "🇫🇷" },
 ] as const;
 
-export default function LangSwitcher({ className = "", dropUp = false }: { className?: string; dropUp?: boolean }) {
+export default function LangSwitcher({
+  className = "",
+  dropUp = false,
+}: {
+  className?: string;
+  dropUp?: boolean;
+}) {
   const { locale, setLocale } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => { setMounted(true); }, []);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     if (!open) return;
@@ -78,9 +86,7 @@ export default function LangSwitcher({ className = "", dropUp = false }: { class
           role="listbox"
           style={{
             position: "absolute",
-            ...(dropUp
-              ? { bottom: "calc(100% + 8px)" }
-              : { top: "calc(100% + 8px)" }),
+            ...(dropUp ? { bottom: "calc(100% + 8px)" } : { top: "calc(100% + 8px)" }),
             right: 0,
             minWidth: 160,
             borderRadius: 14,
@@ -99,7 +105,10 @@ export default function LangSwitcher({ className = "", dropUp = false }: { class
                 key={opt.value}
                 role="option"
                 aria-selected={active}
-                onClick={() => { setLocale(opt.value); setOpen(false); }}
+                onClick={() => {
+                  setLocale(opt.value);
+                  setOpen(false);
+                }}
                 style={{
                   display: "flex",
                   width: "100%",
@@ -114,32 +123,57 @@ export default function LangSwitcher({ className = "", dropUp = false }: { class
                   transition: "background 0.12s",
                   outline: "none",
                 }}
-                onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; }}
-                onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = active ? "rgba(217,174,59,0.10)" : "transparent"; }}
+                onMouseEnter={(e) => {
+                  if (!active)
+                    (e.currentTarget as HTMLButtonElement).style.background =
+                      "rgba(255,255,255,0.05)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!active)
+                    (e.currentTarget as HTMLButtonElement).style.background = active
+                      ? "rgba(217,174,59,0.10)"
+                      : "transparent";
+                }}
               >
                 <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{opt.flag}</span>
-                <span style={{
-                  fontSize: 11,
-                  fontFamily: "var(--epi-font-body)",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  color: active ? "var(--epi-gold-400)" : "rgba(251,249,228,0.55)",
-                  flexShrink: 0,
-                }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontFamily: "var(--epi-font-body)",
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    color: active ? "var(--epi-gold-400)" : "rgba(251,249,228,0.55)",
+                    flexShrink: 0,
+                  }}
+                >
                   {opt.short}
                 </span>
-                <span style={{
-                  fontSize: 12,
-                  fontFamily: "var(--epi-font-body)",
-                  color: active ? "var(--epi-cream-100)" : "rgba(251,249,228,0.32)",
-                  marginLeft: "auto",
-                  whiteSpace: "nowrap",
-                }}>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontFamily: "var(--epi-font-body)",
+                    color: active ? "var(--epi-cream-100)" : "rgba(251,249,228,0.32)",
+                    marginLeft: "auto",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {opt.label}
                 </span>
                 {active && (
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" style={{ flexShrink: 0, marginLeft: 2 }}>
-                    <path d="M2 5.5l2.5 2.5 4.5-5" stroke="var(--epi-gold-400)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 11 11"
+                    fill="none"
+                    style={{ flexShrink: 0, marginLeft: 2 }}
+                  >
+                    <path
+                      d="M2 5.5l2.5 2.5 4.5-5"
+                      stroke="var(--epi-gold-400)"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 )}
               </button>
@@ -153,7 +187,14 @@ export default function LangSwitcher({ className = "", dropUp = false }: { class
 
 function GlobeIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 13 13"
+      fill="none"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
       <circle cx="6.5" cy="6.5" r="5.7" stroke="currentColor" strokeWidth="1.1" />
       <ellipse cx="6.5" cy="6.5" rx="2.4" ry="5.7" stroke="currentColor" strokeWidth="1.1" />
       <path d="M0.8 6.5h11.4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
@@ -165,10 +206,24 @@ function GlobeIcon() {
 function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg
-      width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true"
-      style={{ transition: "transform 0.15s ease", transform: open ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}
+      width="9"
+      height="9"
+      viewBox="0 0 9 9"
+      fill="none"
+      aria-hidden="true"
+      style={{
+        transition: "transform 0.15s ease",
+        transform: open ? "rotate(180deg)" : "rotate(0deg)",
+        flexShrink: 0,
+      }}
     >
-      <path d="M1.5 3l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M1.5 3l3 3 3-3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

@@ -106,7 +106,9 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
     onSuccess: () => {
       toast.success(t("profile.accountSettings.passwordChanged"));
       setPwDialog(false);
-      setCurrentPw(""); setNewPw(""); setConfirmPw("");
+      setCurrentPw("");
+      setNewPw("");
+      setConfirmPw("");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -138,24 +140,28 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
     <>
       <Card className="border-2">
         <CardHeader>
-          <CardTitle className="text-xl font-bold flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+          <CardTitle className="flex items-center gap-2 text-xl font-bold">
+            <ShieldCheck className="text-muted-foreground h-5 w-5" />
             {t("profile.accountSettings.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
             </div>
           ) : (
             <>
               {/* Account Created */}
               {data?.createdAt && (
                 <div className="flex items-center gap-3 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">{t("profile.accountSettings.accountCreated")}</span>
-                  <span className="font-medium ml-auto">{formatDate(new Date(data.createdAt))}</span>
+                  <Calendar className="text-muted-foreground h-4 w-4 shrink-0" />
+                  <span className="text-muted-foreground">
+                    {t("profile.accountSettings.accountCreated")}
+                  </span>
+                  <span className="ml-auto font-medium">
+                    {formatDate(new Date(data.createdAt))}
+                  </span>
                 </div>
               )}
 
@@ -163,14 +169,30 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
 
               {/* Data Usage */}
               <div className="space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                <p className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
                   {t("profile.accountSettings.dataUsage")}
                 </p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <DataStat icon={Store} label={t("profile.accountSettings.stores")} value={data?.dataUsage.totalStores ?? 0} />
-                  <DataStat icon={Package} label={t("profile.accountSettings.products")} value={data?.dataUsage.totalProducts ?? 0} />
-                  <DataStat icon={ShoppingCart} label={t("profile.accountSettings.orders")} value={data?.dataUsage.totalOrders ?? 0} />
-                  <DataStat icon={Users} label={t("profile.accountSettings.staff")} value={data?.dataUsage.totalStaff ?? 0} />
+                  <DataStat
+                    icon={Store}
+                    label={t("profile.accountSettings.stores")}
+                    value={data?.dataUsage.totalStores ?? 0}
+                  />
+                  <DataStat
+                    icon={Package}
+                    label={t("profile.accountSettings.products")}
+                    value={data?.dataUsage.totalProducts ?? 0}
+                  />
+                  <DataStat
+                    icon={ShoppingCart}
+                    label={t("profile.accountSettings.orders")}
+                    value={data?.dataUsage.totalOrders ?? 0}
+                  />
+                  <DataStat
+                    icon={Users}
+                    label={t("profile.accountSettings.staff")}
+                    value={data?.dataUsage.totalStaff ?? 0}
+                  />
                 </div>
               </div>
 
@@ -178,31 +200,39 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
 
               {/* Linked Accounts */}
               <div className="space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <p className="text-muted-foreground flex items-center gap-2 text-sm font-semibold tracking-wide uppercase">
                   <Link2 className="h-4 w-4" />
                   {t("profile.accountSettings.linkedAccounts")}
                 </p>
                 {data?.linkedAccounts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{t("profile.accountSettings.noLinkedAccounts")}</p>
+                  <p className="text-muted-foreground text-sm">
+                    {t("profile.accountSettings.noLinkedAccounts")}
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {data?.linkedAccounts.map((acc) => (
                       <div
                         key={acc.provider}
-                        className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5"
+                        className="bg-muted/30 flex items-center gap-3 rounded-lg border px-3 py-2.5"
                       >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-background border text-xs font-bold shrink-0">
+                        <span className="bg-background flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold">
                           {PROVIDER_ICONS[acc.provider] ?? acc.provider?.[0]?.toUpperCase() ?? "A"}
                         </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{PROVIDER_LABELS[acc.provider] ?? acc.provider}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">
+                            {PROVIDER_LABELS[acc.provider] ?? acc.provider}
+                          </p>
                           {acc.connectedAt && (
-                            <p className="text-xs text-muted-foreground">
-                              {t("profile.accountSettings.connected")} {formatDate(new Date(acc.connectedAt))}
+                            <p className="text-muted-foreground text-xs">
+                              {t("profile.accountSettings.connected")}{" "}
+                              {formatDate(new Date(acc.connectedAt))}
                             </p>
                           )}
                         </div>
-                        <Badge variant="outline" className="text-emerald-600 border-emerald-400 text-xs shrink-0">
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 border-emerald-400 text-xs text-emerald-600"
+                        >
                           {t("common.status.Active")}
                         </Badge>
                       </div>
@@ -215,21 +245,19 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
 
               {/* Actions */}
               <div className="space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t("profile.accountSettings.security")}</p>
+                <p className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+                  {t("profile.accountSettings.security")}
+                </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   {data?.hasPasswordAccount && (
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => setPwDialog(true)}
-                    >
+                    <Button variant="outline" className="gap-2" onClick={() => setPwDialog(true)}>
                       <Key className="h-4 w-4" />
                       {t("profile.accountSettings.changePassword")}
                     </Button>
                   )}
                   <Button
                     variant="outline"
-                    className="gap-2 text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                    className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive gap-2"
                     onClick={() => setDeleteDialog(true)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -247,7 +275,9 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("profile.accountSettings.changePassword")}</DialogTitle>
-            <DialogDescription>{t("profile.accountSettings.changePasswordDescription")}</DialogDescription>
+            <DialogDescription>
+              {t("profile.accountSettings.changePasswordDescription")}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
@@ -279,9 +309,15 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPwDialog(false)}>{t("common.actions.cancel")}</Button>
+            <Button variant="outline" onClick={() => setPwDialog(false)}>
+              {t("common.actions.cancel")}
+            </Button>
             <Button onClick={handleChangePw} disabled={changePwMutation.isPending}>
-              {changePwMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("profile.accountSettings.savePassword")}
+              {changePwMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                t("profile.accountSettings.savePassword")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -291,10 +327,10 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
       <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">{t("profile.accountSettings.deleteAccount")}</DialogTitle>
-            <DialogDescription>
-              {t("profile.accountSettings.deleteDescription")}
-            </DialogDescription>
+            <DialogTitle className="text-destructive">
+              {t("profile.accountSettings.deleteAccount")}
+            </DialogTitle>
+            <DialogDescription>{t("profile.accountSettings.deleteDescription")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Label>
@@ -307,13 +343,19 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialog(false)}>{t("common.actions.cancel")}</Button>
+            <Button variant="outline" onClick={() => setDeleteDialog(false)}>
+              {t("common.actions.cancel")}
+            </Button>
             <Button
               variant="destructive"
               onClick={() => deleteAccountMutation.mutate()}
               disabled={deleteConfirmEmail !== userEmail || deleteAccountMutation.isPending}
             >
-              {deleteAccountMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("profile.accountSettings.deleteConfirmButton")}
+              {deleteAccountMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                t("profile.accountSettings.deleteConfirmButton")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -332,10 +374,10 @@ function DataStat({
   value: number;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-lg border bg-muted/30 p-3 text-center">
-      <Icon className="h-4 w-4 text-muted-foreground" />
+    <div className="bg-muted/30 flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center">
+      <Icon className="text-muted-foreground h-4 w-4" />
       <p className="text-xl font-bold">{value.toLocaleString()}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
     </div>
   );
 }

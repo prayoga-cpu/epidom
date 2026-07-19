@@ -42,7 +42,7 @@ export function StoreInfoBadge() {
       {store.city && (
         <>
           <span className="text-muted-foreground">•</span>
-          <span className="flex items-center gap-1 text-muted-foreground">
+          <span className="text-muted-foreground flex items-center gap-1">
             <MapPin className="h-3 w-3" />
             {store.city}
           </span>

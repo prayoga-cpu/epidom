@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
-import { OrderStatus } from "@prisma/client";
+import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,9 @@ export const GET = withApiHandler(
   async (request, { storeId }) => {
     const { searchParams } = new URL(request.url);
     const now = new Date();
-    const from = new Date(searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
+    const from = new Date(
+      searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    );
     const to = new Date(searchParams.get("to") ?? now.toISOString());
     const limit = Math.min(Number(searchParams.get("limit") ?? "10"), 50);
 
@@ -25,7 +27,7 @@ export const GET = withApiHandler(
       where: {
         order: {
           storeId,
-          status: { notIn: [OrderStatus.CANCELLED] },
+          status: { notIn: NON_REVENUE_STATUSES },
           orderDate: { gte: from, lte: to },
         },
       },
@@ -42,7 +44,9 @@ export const GET = withApiHandler(
       totalRevenue: Math.round(Number(item._sum.total ?? 0) * 100) / 100,
     }));
 
-    return NextResponse.json(createSuccessResponse({ from: from.toISOString(), to: to.toISOString(), items: topItems }));
+    return NextResponse.json(
+      createSuccessResponse({ from: from.toISOString(), to: to.toISOString(), items: topItems })
+    );
   },
   { rateLimitEndpoint: "/api/stores/[id]/finance/top-items", requireStoreAuth: true }
 );

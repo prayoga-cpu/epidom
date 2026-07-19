@@ -60,7 +60,8 @@ export const GET = withApiHandler(
 
     for (const r of pendingRes) {
       const when = new Date(r.scheduledAt).toLocaleDateString("en-GB", {
-        day: "numeric", month: "short",
+        day: "numeric",
+        month: "short",
       });
       notifications.push({
         id: `res-${r.id}`,
@@ -75,7 +76,11 @@ export const GET = withApiHandler(
     // 3. Onboarding checklist: storefront not published
     const storefront = await prisma.storefront.findUnique({
       where: { storeId },
-      select: { isPublished: true, displayName: true, menuCategories: { take: 1, select: { id: true } } },
+      select: {
+        isPublished: true,
+        displayName: true,
+        menuCategories: { take: 1, select: { id: true } },
+      },
     });
 
     if (storefront && !storefront.isPublished) {

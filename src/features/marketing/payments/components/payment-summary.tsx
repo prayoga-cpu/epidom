@@ -68,7 +68,7 @@ export function PaymentSummary({ plan }: PaymentSummaryProps) {
   return (
     <Card className="h-full rounded-xl border border-gray-200 bg-white shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold text-brand-primary">
+        <CardTitle className="text-brand-primary text-lg font-semibold">
           {t("payments.summary.title")}
         </CardTitle>
       </CardHeader>
@@ -76,14 +76,14 @@ export function PaymentSummary({ plan }: PaymentSummaryProps) {
         {/* Plan Selection */}
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-base font-semibold sm:text-lg text-brand-primary">
+            <h3 className="text-brand-primary text-base font-semibold sm:text-lg">
               {planDetail.title}
             </h3>
             <p className="text-sm text-gray-600">{planDetail.period}</p>
           </div>
           <Badge
             variant="secondary"
-            className="w-fit border bg-brand-primary text-white border-brand-primary"
+            className="bg-brand-primary border-brand-primary w-fit border text-white"
           >
             {t("payments.summary.selected")}
           </Badge>
@@ -95,14 +95,16 @@ export function PaymentSummary({ plan }: PaymentSummaryProps) {
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">{t("payments.summary.subtotal")}</span>
-            <span className="text-base font-semibold text-brand-primary">{planDetail.price}</span>
+            <span className="text-brand-primary text-base font-semibold">{planDetail.price}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">{t("payments.summary.tax")}</span>
-            <span className="text-base font-semibold text-brand-primary">{t("payments.form.taxAmount")}</span>
+            <span className="text-brand-primary text-base font-semibold">
+              {t("payments.form.taxAmount")}
+            </span>
           </div>
           <Separator className="bg-gray-200" />
-          <div className="flex items-center justify-between text-lg font-bold text-brand-primary">
+          <div className="text-brand-primary flex items-center justify-between text-lg font-bold">
             <span>{t("payments.summary.total")}</span>
             <span>{planDetail.price}</span>
           </div>
@@ -112,14 +114,14 @@ export function PaymentSummary({ plan }: PaymentSummaryProps) {
 
         {/* Features */}
         <div className="space-y-2.5">
-          <h4 className="text-sm font-semibold text-brand-primary">
+          <h4 className="text-brand-primary text-sm font-semibold">
             {t("payments.summary.included")}
           </h4>
           <ul className="space-y-2">
             {planDetail.features.map((feature, index) => (
               <li key={index} className="flex items-start gap-2.5">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-primary" />
-                <span className="text-sm text-gray-600 leading-relaxed">{feature}</span>
+                <Check className="text-brand-primary mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span className="text-sm leading-relaxed text-gray-600">{feature}</span>
               </li>
             ))}
           </ul>
@@ -128,8 +130,8 @@ export function PaymentSummary({ plan }: PaymentSummaryProps) {
         <Separator className="bg-gray-200" />
 
         {/* Billing Info */}
-        <div className="rounded-lg bg-gray-50 p-3 space-y-1">
-          <p className="text-xs text-gray-600 font-medium">{t("payments.summary.billingInfo1")}</p>
+        <div className="space-y-1 rounded-lg bg-gray-50 p-3">
+          <p className="text-xs font-medium text-gray-600">{t("payments.summary.billingInfo1")}</p>
           <p className="text-xs text-gray-600">{t("payments.summary.billingInfo2")}</p>
         </div>
       </CardContent>

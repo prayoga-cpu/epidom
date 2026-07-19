@@ -24,7 +24,11 @@ export const PATCH = withApiHandler(
     const parsed = updateStaffSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Validation failed", parsed.error.flatten()),
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Validation failed",
+          parsed.error.flatten()
+        ),
         { status: 400 }
       );
     }
@@ -43,12 +47,23 @@ export const PATCH = withApiHandler(
       }
     }
 
-    const store = await prisma.store.findUnique({ where: { id: storeId! }, select: { name: true } });
+    const store = await prisma.store.findUnique({
+      where: { id: storeId! },
+      select: { name: true },
+    });
 
     const staff = await prisma.staffMember.update({
       where: { id: staffId },
       data: updateData,
-      select: { id: true, name: true, email: true, role: true, isActive: true, inviteStatus: true, updatedAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        inviteStatus: true,
+        updatedAt: true,
+      },
     });
 
     // Send PIN email if requested and we have an email + a PIN
@@ -57,7 +72,10 @@ export const PATCH = withApiHandler(
       if (targetEmail) {
         sendStaffPinEmail(targetEmail, existing.name, store?.name ?? "your store", pin)
           .then(() =>
-            prisma.staffMember.update({ where: { id: staffId }, data: { inviteStatus: "accepted" } })
+            prisma.staffMember.update({
+              where: { id: staffId },
+              data: { inviteStatus: "accepted" },
+            })
           )
           .catch((err) => console.error("[staff/resend-pin] email send failed:", err));
       }

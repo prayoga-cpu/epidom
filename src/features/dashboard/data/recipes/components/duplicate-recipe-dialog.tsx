@@ -44,7 +44,8 @@ import {
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { formatCurrency, formatDuration } from "@/lib/utils/formatting";
+import { formatDuration } from "@/lib/utils/formatting";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useDuplicateRecipe, type RecipeWithIngredients } from "../hooks/use-recipes";
 import { useMaterials } from "../../materials/hooks/use-materials";
@@ -68,6 +69,7 @@ export default function DuplicateRecipeDialog({
 }: DuplicateRecipeDialogProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
 
@@ -310,7 +312,7 @@ export default function DuplicateRecipeDialog({
                             <p className="text-muted-foreground text-xs">
                               {t("data.recipes.duplicateDialog.costSummary")}
                             </p>
-                            <p className="text-sm font-medium">{formatCurrency(totalCost)}</p>
+                            <p className="text-sm font-medium">{formatPrice(totalCost)}</p>
                           </div>
                         </div>
                       </div>
@@ -354,11 +356,11 @@ export default function DuplicateRecipeDialog({
                       <div className="bg-muted/50 rounded-lg p-3">
                         <div className="mb-2 flex justify-between text-sm">
                           <span className="text-muted-foreground">Total Batch Cost</span>
-                          <span className="font-semibold">{formatCurrency(totalCost)}</span>
+                          <span className="font-semibold">{formatPrice(totalCost)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Cost per {recipe.yieldUnit}</span>
-                          <span className="font-semibold">{formatCurrency(costPerUnit)}</span>
+                          <span className="font-semibold">{formatPrice(costPerUnit)}</span>
                         </div>
                       </div>
                     </CardContent>

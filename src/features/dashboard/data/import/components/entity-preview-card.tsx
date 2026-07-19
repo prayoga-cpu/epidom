@@ -27,7 +27,10 @@ interface EntityPreviewCardProps {
 }
 
 // Field definitions for each entity type
-const ENTITY_FIELDS: Record<EntityType, { key: string; label: string; type: "text" | "number" | "textarea" }[]> = {
+const ENTITY_FIELDS: Record<
+  EntityType,
+  { key: string; label: string; type: "text" | "number" | "textarea" }[]
+> = {
   material: [
     { key: "name", label: "Nama", type: "text" },
     { key: "sku", label: "SKU", type: "text" },
@@ -117,33 +120,29 @@ export function EntityPreviewCard({
   };
 
   return (
-    <Card className={cn(
-      "transition-all duration-200",
-      selected ? "ring-2 ring-primary" : "hover:shadow-md",
-      !selected && "opacity-60"
-    )}>
+    <Card
+      className={cn(
+        "transition-all duration-200",
+        selected ? "ring-primary ring-2" : "hover:shadow-md",
+        !selected && "opacity-60"
+      )}
+    >
       <CardContent className="p-4">
         {/* Header */}
-        <div className="flex items-start gap-3 mb-3">
-          <Checkbox
-            checked={selected}
-            onCheckedChange={onToggleSelect}
-            className="mt-1"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-semibold truncate">
-                {formatValue(data.name)}
-              </h4>
-              <Badge variant="outline" className="text-xs shrink-0">
+        <div className="mb-3 flex items-start gap-3">
+          <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-1" />
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex items-center gap-2">
+              <h4 className="truncate font-semibold">{formatValue(data.name)}</h4>
+              <Badge variant="outline" className="shrink-0 text-xs">
                 #{index + 1}
               </Badge>
             </div>
             {data.sku !== undefined && data.sku !== null && data.sku !== "" && (
-              <p className="text-xs text-muted-foreground">SKU: {String(data.sku)}</p>
+              <p className="text-muted-foreground text-xs">SKU: {String(data.sku)}</p>
             )}
           </div>
-          <div className="flex gap-1 shrink-0">
+          <div className="flex shrink-0 gap-1">
             {isEditing ? (
               <>
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSave}>
@@ -155,10 +154,20 @@ export function EntityPreviewCard({
               </>
             ) : (
               <>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditing(true)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => setIsEditing(true)}
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={onRemove}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-destructive h-8 w-8"
+                  onClick={onRemove}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </>
@@ -176,10 +185,10 @@ export function EntityPreviewCard({
                   type={field.type === "number" ? "number" : "text"}
                   value={String(editData[field.key] || "")}
                   onChange={(e) => setEditData({ ...editData, [field.key]: e.target.value })}
-                  className="w-24 px-1 text-right border rounded text-xs"
+                  className="w-24 rounded border px-1 text-right text-xs"
                 />
               ) : (
-                <span className="font-medium truncate">{formatValue(data[field.key])}</span>
+                <span className="truncate font-medium">{formatValue(data[field.key])}</span>
               )}
             </div>
           ))}
@@ -191,47 +200,54 @@ export function EntityPreviewCard({
             <Button
               variant="ghost"
               size="sm"
-              className="w-full mt-2 h-6 text-xs"
+              className="mt-2 h-6 w-full text-xs"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               {isExpanded ? (
                 <>
-                  <ChevronUp className="h-3 w-3 mr-1" />
+                  <ChevronUp className="mr-1 h-3 w-3" />
                   Sembunyikan Detail
                 </>
               ) : (
                 <>
-                  <ChevronDown className="h-3 w-3 mr-1" />
+                  <ChevronDown className="mr-1 h-3 w-3" />
                   Lihat Detail ({secondaryFields.length} field lagi)
                 </>
               )}
             </Button>
 
             {isExpanded && (
-              <div className="grid grid-cols-2 gap-2 text-sm mt-2 pt-2 border-t">
+              <div className="mt-2 grid grid-cols-2 gap-2 border-t pt-2 text-sm">
                 {secondaryFields.map((field) => (
-                  <div key={field.key} className={cn(
-                    "flex justify-between gap-2",
-                    field.type === "textarea" && "col-span-2"
-                  )}>
+                  <div
+                    key={field.key}
+                    className={cn(
+                      "flex justify-between gap-2",
+                      field.type === "textarea" && "col-span-2"
+                    )}
+                  >
                     <span className="text-muted-foreground truncate">{field.label}:</span>
                     {isEditing ? (
                       field.type === "textarea" ? (
                         <textarea
                           value={String(editData[field.key] || "")}
-                          onChange={(e) => setEditData({ ...editData, [field.key]: e.target.value })}
-                          className="flex-1 px-1 border rounded text-xs min-h-[60px]"
+                          onChange={(e) =>
+                            setEditData({ ...editData, [field.key]: e.target.value })
+                          }
+                          className="min-h-[60px] flex-1 rounded border px-1 text-xs"
                         />
                       ) : (
                         <input
                           type={field.type === "number" ? "number" : "text"}
                           value={String(editData[field.key] || "")}
-                          onChange={(e) => setEditData({ ...editData, [field.key]: e.target.value })}
-                          className="w-24 px-1 text-right border rounded text-xs"
+                          onChange={(e) =>
+                            setEditData({ ...editData, [field.key]: e.target.value })
+                          }
+                          className="w-24 rounded border px-1 text-right text-xs"
                         />
                       )
                     ) : (
-                      <span className="font-medium truncate">{formatValue(data[field.key])}</span>
+                      <span className="truncate font-medium">{formatValue(data[field.key])}</span>
                     )}
                   </div>
                 ))}

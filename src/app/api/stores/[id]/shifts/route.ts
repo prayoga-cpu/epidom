@@ -39,7 +39,11 @@ export const POST = withApiHandler(
     const parsed = openShiftSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Validation failed", parsed.error.flatten()),
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Validation failed",
+          parsed.error.flatten()
+        ),
         { status: 400 }
       );
     }
@@ -56,17 +60,15 @@ export const POST = withApiHandler(
 
     if (staff.pin) {
       if (!pin || pin === "") {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.UNAUTHORIZED, "PIN required"),
-          { status: 401 }
-        );
+        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "PIN required"), {
+          status: 401,
+        });
       }
       const pinValid = await compare(pin, staff.pin);
       if (!pinValid) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"),
-          { status: 401 }
-        );
+        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"), {
+          status: 401,
+        });
       }
     }
 

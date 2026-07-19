@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
 import { updateOrderStatusSchema } from "@/lib/validation/pos.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
+import { deductStockForOrder, reverseStockForOrder } from "@/lib/services/stock-deduction.service";
 
 /**
  * PATCH /api/stores/[id]/pos/orders/[orderId]
@@ -18,7 +18,9 @@ export async function PATCH(
 
   const session = await getSession();
   if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), { status: 401 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+      status: 401,
+    });
   }
 
   const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
@@ -44,9 +46,15 @@ export async function PATCH(
     });
 
     if (!existing) {
+      return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"), {
+        status: 404,
+      });
+    }
+
+    if (status === "CANCELLED" && existing.status === "CANCELLED") {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"),
-        { status: 404 }
+        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Order is already cancelled"),
+        { status: 400 }
       );
     }
 
@@ -83,6 +91,16 @@ export async function PATCH(
       }
     }
 
+    // Cancelling an already-delivered order must restore the stock that was
+    // deducted for it, or inventory numbers go wrong.
+    if (status === "CANCELLED" && existing.status === "DELIVERED") {
+      try {
+        await reverseStockForOrder(updated.id, storeId);
+      } catch (err) {
+        console.error("[STOCK_REVERSAL]", err);
+      }
+    }
+
     return NextResponse.json(createSuccessResponse({ id: updated.id, status: updated.status }));
   } catch (error) {
     console.error("[POS_ORDER_PATCH]", error);
@@ -105,7 +123,9 @@ export async function GET(
 
   const session = await getSession();
   if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), { status: 401 });
+    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
+      status: 401,
+    });
   }
 
   const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
@@ -125,10 +145,9 @@ export async function GET(
     });
 
     if (!order) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"),
-        { status: 404 }
-      );
+      return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"), {
+        status: 404,
+      });
     }
 
     return NextResponse.json(createSuccessResponse(order));

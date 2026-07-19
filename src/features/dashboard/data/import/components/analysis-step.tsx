@@ -27,13 +27,31 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
   const [elapsed, setElapsed] = useState(0);
 
   // Stages configuration with i18n
-  const ANALYSIS_STAGES = useMemo(() => [
-    { id: "language", label: t("import.analysis.stages.language"), icon: Languages, duration: 2000 },
-    { id: "structure", label: t("import.analysis.stages.structure"), icon: Table, duration: 3000 },
-    { id: "mapping", label: t("import.analysis.stages.mapping"), icon: Database, duration: 4000 },
-    { id: "healing", label: t("import.analysis.stages.healing"), icon: Wand2, duration: 2000 },
-    { id: "validation", label: t("import.analysis.stages.validation"), icon: Check, duration: 1500 },
-  ], [t]);
+  const ANALYSIS_STAGES = useMemo(
+    () => [
+      {
+        id: "language",
+        label: t("import.analysis.stages.language"),
+        icon: Languages,
+        duration: 2000,
+      },
+      {
+        id: "structure",
+        label: t("import.analysis.stages.structure"),
+        icon: Table,
+        duration: 3000,
+      },
+      { id: "mapping", label: t("import.analysis.stages.mapping"), icon: Database, duration: 4000 },
+      { id: "healing", label: t("import.analysis.stages.healing"), icon: Wand2, duration: 2000 },
+      {
+        id: "validation",
+        label: t("import.analysis.stages.validation"),
+        icon: Check,
+        duration: 1500,
+      },
+    ],
+    [t]
+  );
 
   // Simulate stage progression for visual feedback
   useEffect(() => {
@@ -80,13 +98,13 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
     <div className="flex flex-col items-center py-8">
       {/* Main animation */}
       <div className="relative mb-8">
-        <div className="absolute inset-0 animate-ping bg-primary/20 rounded-full" />
-        <div className="relative bg-primary text-primary-foreground rounded-full p-6">
+        <div className="bg-primary/20 absolute inset-0 animate-ping rounded-full" />
+        <div className="bg-primary text-primary-foreground relative rounded-full p-6">
           <Brain className="h-12 w-12" />
         </div>
       </div>
 
-      <h3 className="text-xl font-semibold mb-2">{t("import.analysis.title")}</h3>
+      <h3 className="mb-2 text-xl font-semibold">{t("import.analysis.title")}</h3>
       <p className="text-muted-foreground mb-8">{fileName}</p>
 
       {/* Stages progress */}
@@ -101,7 +119,7 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
             <div
               key={stage.id}
               className={cn(
-                "flex items-center gap-3 p-3 rounded-lg transition-all duration-300",
+                "flex items-center gap-3 rounded-lg p-3 transition-all duration-300",
                 isCompleted && "bg-green-500/10 text-green-600 dark:text-green-400",
                 isCurrent && "bg-primary/10 text-primary",
                 !isCompleted && !isCurrent && "text-muted-foreground"
@@ -121,13 +139,13 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
               </span>
               {isCurrent && (
                 <div className="ml-auto flex gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
+                  <div className="bg-primary h-1.5 w-1.5 animate-bounce rounded-full" />
                   <div
-                    className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
+                    className="bg-primary h-1.5 w-1.5 animate-bounce rounded-full"
                     style={{ animationDelay: "0.1s" }}
                   />
                   <div
-                    className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
+                    className="bg-primary h-1.5 w-1.5 animate-bounce rounded-full"
                     style={{ animationDelay: "0.2s" }}
                   />
                 </div>
@@ -139,16 +157,16 @@ export function AnalysisStep({ fileName, isLoading }: AnalysisStepProps) {
         {/* Finalizing row — shown once the simulated stages complete but the
             backend is still working, with a live elapsed-time counter. */}
         {finalizing && (
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 text-primary transition-all duration-300">
+          <div className="bg-primary/10 text-primary flex items-center gap-3 rounded-lg p-3 transition-all duration-300">
             <Loader2 className="h-5 w-5 animate-spin" />
             <span className="text-sm font-medium">{t("import.analysis.finalizing")}</span>
-            <span className="ml-auto text-xs tabular-nums text-muted-foreground">{elapsed}s</span>
+            <span className="text-muted-foreground ml-auto text-xs tabular-nums">{elapsed}s</span>
           </div>
         )}
       </div>
 
       {/* Info text */}
-      <p className="text-xs text-muted-foreground mt-8 text-center max-w-md">
+      <p className="text-muted-foreground mt-8 max-w-md text-center text-xs">
         {t("import.analysis.description")}
       </p>
     </div>

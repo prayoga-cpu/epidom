@@ -6,20 +6,16 @@ import { KdsPageHeader } from "@/features/pos/components/pos-page-headers";
 
 export const metadata = { title: "KDS | Epidom" };
 
-export default async function KdsPage({
-  params,
-}: {
-  params: Promise<{ storeId: string }>;
-}) {
+export default async function KdsPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
   const session = await getSession();
   if (!session?.user?.id) redirect("/login");
   await verifyStoreOwnership(storeId, session.user.id);
 
   return (
-    <div className="flex flex-col flex-1 h-full">
+    <div className="flex h-full flex-1 flex-col">
       <KdsPageHeader />
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <KdsShell storeId={storeId} />
       </div>
     </div>

@@ -24,7 +24,9 @@ interface SubscriptionInfoCardProps {
   } | null;
 }
 
-export function SubscriptionInfoCard({ subscription: initialSubscription }: SubscriptionInfoCardProps) {
+export function SubscriptionInfoCard({
+  subscription: initialSubscription,
+}: SubscriptionInfoCardProps) {
   const { t } = useI18n();
   const { currency } = useCurrency();
   const { data: subStatus } = useSubscriptionStatus();
@@ -119,30 +121,32 @@ export function SubscriptionInfoCard({ subscription: initialSubscription }: Subs
           </div>
 
           {/* Billing Period */}
-          {subscription.plan !== "FREE" && subscription.currentPeriodStart && subscription.currentPeriodEnd && (
-            <div className="space-y-3 border-t pt-4">
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="text-muted-foreground h-4 w-4" />
-                <span className="text-muted-foreground">
-                  {t("profile.subscription.billingPeriod")}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-muted-foreground text-xs">
-                    {t("profile.subscription.periodStart")}
-                  </p>
-                  <p className="font-semibold">{formatDate(subscription.currentPeriodStart)}</p>
+          {subscription.plan !== "FREE" &&
+            subscription.currentPeriodStart &&
+            subscription.currentPeriodEnd && (
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground">
+                    {t("profile.subscription.billingPeriod")}
+                  </span>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">
-                    {t("profile.subscription.periodEnd")}
-                  </p>
-                  <p className="font-semibold">{formatDate(subscription.currentPeriodEnd)}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-muted-foreground text-xs">
+                      {t("profile.subscription.periodStart")}
+                    </p>
+                    <p className="font-semibold">{formatDate(subscription.currentPeriodStart)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">
+                      {t("profile.subscription.periodEnd")}
+                    </p>
+                    <p className="font-semibold">{formatDate(subscription.currentPeriodEnd)}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Warnings */}
           {subscription.cancelAtPeriodEnd && (
@@ -202,14 +206,14 @@ export function SubscriptionInfoCard({ subscription: initialSubscription }: Subs
             <Button
               variant="default"
               asChild
-              className="w-full sm:flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md transition-all duration-300 hover:scale-[1.02] active:scale-95"
+              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md transition-all duration-300 hover:scale-[1.02] hover:from-emerald-600 hover:to-emerald-700 active:scale-95 sm:flex-1"
             >
               <Link href="/pricing#plans">Upgrade Plan</Link>
             </Button>
           ) : (
             <Button
               variant="outline"
-              className="group w-full gap-2 sm:flex-1 transition-all hover:border-emerald-500/50 hover:bg-emerald-500/5 active:scale-95"
+              className="group w-full gap-2 transition-all hover:border-emerald-500/50 hover:bg-emerald-500/5 active:scale-95 sm:flex-1"
               onClick={handleManageBilling}
               disabled={isLoadingPortal}
             >

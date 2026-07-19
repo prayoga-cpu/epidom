@@ -42,15 +42,27 @@ export const createPosOrderSchema = z.object({
 
 export type CreatePosOrderInput = z.infer<typeof createPosOrderSchema>;
 
+/**
+ * Holding a cart has no payment method yet — a materially smaller contract
+ * than a full checkout submission. `orderId` is set when re-holding an
+ * already-held order in place (e.g. resumed, edited, held again) instead of
+ * creating a duplicate row.
+ */
+export const createHoldOrderSchema = z.object({
+  items: createPosOrderSchema.shape.items,
+  orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
+  tableId: z.string().cuid().optional(),
+  tableNumber: z.string().optional(),
+  customerName: z.string().optional(),
+  notes: z.string().optional(),
+  shiftId: z.string().cuid().optional(),
+  orderId: z.string().cuid().optional(),
+});
+
+export type CreateHoldOrderInput = z.infer<typeof createHoldOrderSchema>;
+
 export const updateOrderStatusSchema = z.object({
-  status: z.enum([
-    "PENDING",
-    "CONFIRMED",
-    "IN_PRODUCTION",
-    "READY",
-    "DELIVERED",
-    "CANCELLED",
-  ]),
+  status: z.enum(["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED", "CANCELLED"]),
 });
 
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
@@ -59,6 +71,4 @@ export const updateOrderItemStatusSchema = z.object({
   status: z.enum(["PENDING", "PREPARING", "READY", "SERVED", "CANCELLED"]),
 });
 
-export type UpdateOrderItemStatusInput = z.infer<
-  typeof updateOrderItemStatusSchema
->;
+export type UpdateOrderItemStatusInput = z.infer<typeof updateOrderItemStatusSchema>;

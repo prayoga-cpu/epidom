@@ -6,14 +6,14 @@ import { withApiHandler } from "@/lib/api-handler";
 
 /**
  * PATCH /api/stores/[id]/storefront/items/[itemId]
- * 
+ *
  * Update an existing menu item.
  */
 export const PATCH = withApiHandler(
   async (request, { storeId, params }) => {
     const { itemId } = params;
     const storefront = await storefrontService.getStorefrontByStoreId(storeId!);
-    
+
     const body = await request.json();
     const input = updateMenuItemSchema.parse(body);
 
@@ -27,14 +27,14 @@ export const PATCH = withApiHandler(
 
 /**
  * DELETE /api/stores/[id]/storefront/items/[itemId]
- * 
+ *
  * Delete a menu item.
  */
 export const DELETE = withApiHandler(
   async (request, { storeId, params }) => {
     const { itemId } = params;
     const storefront = await storefrontService.getStorefrontByStoreId(storeId!);
-    
+
     await storefrontService.deleteMenuItem(itemId, storefront.id);
     return NextResponse.json(createSuccessResponse({ success: true }));
   },

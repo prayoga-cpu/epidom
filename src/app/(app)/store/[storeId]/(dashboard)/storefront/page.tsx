@@ -6,11 +6,7 @@ export const metadata: Metadata = {
   description: "Manage your public storefront and menu",
 };
 
-export default async function StorefrontPage({
-  params,
-}: {
-  params: Promise<{ storeId: string }>;
-}) {
+export default async function StorefrontPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
   return <StorefrontEditorClient storeId={storeId} />;
 }

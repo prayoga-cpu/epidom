@@ -82,9 +82,7 @@ export const requestPasswordResetSchema = z.object({
   email: emailSchema,
 });
 
-export type RequestPasswordResetInput = z.infer<
-  typeof requestPasswordResetSchema
->;
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
 
 // Reset password schema
 export const resetPasswordSchema = z

@@ -34,14 +34,14 @@ export interface XenditWebhookPayload {
   // Generic / QRIS
   external_id?: string;
   status?: string;
-  
+
   // E-Wallet (nested in data)
   event?: string;
   data?: {
     reference_id?: string;
     status?: string;
   };
-  
+
   // VA
   bank_code?: string;
   amount?: number;
@@ -105,10 +105,7 @@ export async function createXenditPayment(
       expires_at: expiresAt.toISOString(),
     };
 
-    const data = await xenditRequest<{ id: string; qr_string: string }>(
-      "/qr_codes",
-      payload
-    );
+    const data = await xenditRequest<{ id: string; qr_string: string }>("/qr_codes", payload);
 
     return {
       providerRef: data.id,

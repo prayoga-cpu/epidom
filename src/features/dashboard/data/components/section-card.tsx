@@ -17,10 +17,5 @@ interface SectionCardProps {
  * Follows DRY principle by centralizing the card styling pattern.
  */
 export function SectionCard({ children, className }: SectionCardProps) {
-  return (
-    <Card className={cn(responsive.cardWrapper, className)}>
-      {children}
-    </Card>
-  );
+  return <Card className={cn(responsive.cardWrapper, className)}>{children}</Card>;
 }
-

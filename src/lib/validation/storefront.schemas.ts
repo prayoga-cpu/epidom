@@ -9,8 +9,16 @@ export const customLinkSchema = z.object({
 
 // Opening hours for a single day
 export const dayOpeningHoursSchema = z.object({
-  open: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time format (HH:MM)").optional().or(z.literal("")),
-  close: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time format (HH:MM)").optional().or(z.literal("")),
+  open: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time format (HH:MM)")
+    .optional()
+    .or(z.literal("")),
+  close: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time format (HH:MM)")
+    .optional()
+    .or(z.literal("")),
   isClosed: z.boolean().default(false),
 });
 
@@ -48,13 +56,24 @@ export const updateStorefrontSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug must only contain lowercase letters, numbers, and hyphens")
     .optional(),
   displayName: nameSchema.optional(),
-  tagline: z.string().max(150, "Tagline must not exceed 150 characters").optional().or(z.literal("")),
-  description: z.string().max(500, "Description must not exceed 500 characters").optional().or(z.literal("")),
+  tagline: z
+    .string()
+    .max(150, "Tagline must not exceed 150 characters")
+    .optional()
+    .or(z.literal("")),
+  description: z
+    .string()
+    .max(500, "Description must not exceed 500 characters")
+    .optional()
+    .or(z.literal("")),
   logoUrl: urlSchema,
   heroImageUrl: urlSchema,
-  themeColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Invalid hex color format").optional(),
+  themeColor: z
+    .string()
+    .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Invalid hex color format")
+    .optional(),
   fontFamily: z.string().default("Inter").optional(),
-  
+
   whatsappNumber: phoneSchema,
   instagramUrl: urlSchema,
   tiktokUrl: urlSchema,
@@ -63,7 +82,7 @@ export const updateStorefrontSchema = z.object({
   shopeefoodUrl: urlSchema,
   googleMapsUrl: urlSchema,
   customLinks: z.array(customLinkSchema).optional(),
-  
+
   isPublished: z.boolean().default(false),
   acceptsOrders: z.boolean().default(false),
   acceptsReservations: z.boolean().default(false),

@@ -7,7 +7,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
-import { OrderStatus, OrderSource } from "@prisma/client";
+import { OrderSource } from "@prisma/client";
+import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { commissionRate, AGGREGATOR_LABELS } from "@/config/aggregator.config";
 
 export const dynamic = "force-dynamic";
@@ -26,14 +27,16 @@ export const GET = withApiHandler(
   async (request, { storeId }) => {
     const { searchParams } = new URL(request.url);
     const now = new Date();
-    const from = new Date(searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
+    const from = new Date(
+      searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    );
     const to = new Date(searchParams.get("to") ?? now.toISOString());
 
     const grouped = await prisma.order.groupBy({
       by: ["source"],
       where: {
         storeId,
-        status: { notIn: [OrderStatus.CANCELLED] },
+        status: { notIn: NON_REVENUE_STATUSES },
         orderDate: { gte: from, lte: to },
       },
       _sum: { total: true },
@@ -59,7 +62,9 @@ export const GET = withApiHandler(
     // Sort: highest revenue first
     channels.sort((a, b) => b.revenue - a.revenue);
 
-    return NextResponse.json(createSuccessResponse({ from: from.toISOString(), to: to.toISOString(), channels }));
+    return NextResponse.json(
+      createSuccessResponse({ from: from.toISOString(), to: to.toISOString(), channels })
+    );
   },
   { rateLimitEndpoint: "/api/stores/[id]/finance/channels", requireStoreAuth: true }
 );

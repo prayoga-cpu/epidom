@@ -217,14 +217,21 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
     }
   }, [cart, storefront.slug]);
 
-  // Check URL query parameters on mount to open cart
+  // Check URL query parameters on mount to open cart / pre-fill a table (e.g. scanned from a table's QR code)
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
+      const table = params.get("table");
+      if (table) {
+        setTableNumber(decodeURIComponent(table));
+        setOrderMethod("DINE_IN");
+      }
       if (params.get("openCart") === "true") {
         setIsCartOpen(true);
-        // Clean URL to prevent reopening on reload
-        const newUrl = window.location.pathname;
+        // Clean URL to prevent reopening on reload (table stays if present, so a refresh keeps it)
+        const newUrl = table
+          ? `${window.location.pathname}?table=${encodeURIComponent(table)}`
+          : window.location.pathname;
         window.history.replaceState({}, "", newUrl);
       }
     }
