@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Select,
   SelectContent,
@@ -26,9 +27,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { Plus, Loader2, X, Star, Trash2 } from "lucide-react";
+import { Plus, Loader2, X, Star, Trash2, RefreshCw, Check } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useCreateMaterial } from "../hooks/use-materials";
+import { useCreateMaterial, useMaterials } from "../hooks/use-materials";
 import { useSuppliers, supplierKeys } from "../../suppliers/hooks/use-suppliers";
 import { useParams } from "next/navigation";
 import {
@@ -40,6 +41,8 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
+import { generateSku } from "@/lib/utils/sku-generator";
+import { useSkuAvailability } from "@/hooks/use-sku-availability";
 
 // Use the form schema (without storeId)
 const formSchema = createIngredientFormSchema;
@@ -126,6 +129,42 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
   });
 
   // Track if dialog is closing due to submission to prevent form reset
+
+  // Existing categories, for the category combobox's suggestions
+  const { data: materialsData } = useMaterials(storeId);
+  const categoryOptions = useMemo(() => {
+    const cats = new Set(
+      (materialsData?.materials || []).map((m) => m.category).filter(Boolean) as string[]
+    );
+    return Array.from(cats)
+      .sort()
+      .map((c) => ({ value: c, label: c }));
+  }, [materialsData]);
+
+  // Auto-generate a SKU from name/category until the user edits it themselves
+  const skuTouchedRef = useRef(false);
+  const nameValue = form.watch("name");
+  const categoryValue = form.watch("category");
+  const skuValue = form.watch("sku") || "";
+
+  useEffect(() => {
+    if (skuTouchedRef.current) return;
+    if (!nameValue) return;
+    form.setValue("sku", generateSku(nameValue, categoryValue), { shouldValidate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameValue, categoryValue]);
+
+  const handleRegenerateSku = () => {
+    skuTouchedRef.current = false;
+    if (nameValue) {
+      form.setValue("sku", generateSku(nameValue, categoryValue), { shouldValidate: true });
+    }
+  };
+
+  const { status: skuStatus } = useSkuAvailability(
+    `/api/stores/${storeId}/materials/check-sku`,
+    skuValue
+  );
 
   /**
    * Type assertion needed because React Hook Form's useFieldArray has type limitations
@@ -278,8 +317,42 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">{t("data.materials.form.sku")} *</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("data.materials.form.skuPlaceholder")} {...field} />
+                        <div className="flex items-center gap-1">
+                          <Input
+                            placeholder={t("data.materials.form.skuPlaceholder")}
+                            {...field}
+                            onChange={(e) => {
+                              skuTouchedRef.current = true;
+                              field.onChange(e);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 shrink-0"
+                            onClick={handleRegenerateSku}
+                            title={t("data.materials.form.regenerateSku")}
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </FormControl>
+                      {skuStatus === "checking" && (
+                        <FormDescription className="text-xs">
+                          {t("data.materials.form.skuChecking")}
+                        </FormDescription>
+                      )}
+                      {skuStatus === "available" && (
+                        <FormDescription className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                          <Check className="h-3 w-3" /> {t("data.materials.form.skuAvailable")}
+                        </FormDescription>
+                      )}
+                      {skuStatus === "taken" && (
+                        <FormDescription className="text-destructive flex items-center gap-1 text-xs">
+                          <X className="h-3 w-3" /> {t("data.materials.form.skuTaken")}
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -294,9 +367,16 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">{t("data.materials.form.category")}</FormLabel>
                       <FormControl>
-                        <Input
+                        <Combobox
+                          creatable
+                          options={categoryOptions}
+                          value={field.value || undefined}
+                          onChange={field.onChange}
                           placeholder={t("data.materials.form.categoryPlaceholder")}
-                          {...field}
+                          searchPlaceholder={t("data.materials.form.categorySearchPlaceholder")}
+                          createLabel={(v) =>
+                            t("data.materials.form.createCategory").replace("{value}", v)
+                          }
                         />
                       </FormControl>
                       <FormMessage />

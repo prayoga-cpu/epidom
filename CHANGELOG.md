@@ -9,6 +9,11 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.13.0] - 2026-07-20 · feat
+
+- Data → Products: linking a recipe to a product now auto-calculates the Cost Price from that recipe's real ingredient cost (summed across every linked recipe if more than one), instead of requiring manual entry. The field stays editable — this is a smart default, not a locked value — and only kicks in when you actively change the recipe selection, so opening an existing product never overwrites a price you already set.
+- Data → Materials and Products: adding a new item now suggests a SKU automatically from the name/category (still fully editable, with a regenerate button), and shows a live "available" / "already used" check as you type — no more finding out about a duplicate SKU only after a failed save. The Category field is now a searchable picker suggesting categories you've already used, instead of free text, to cut down on near-duplicate categories from typos — you can still type a brand-new one.
+
 ## [2.12.0] - 2026-07-19 · feat
 
 - Admin Feedback console: entries now group by status (Open → In Progress → Resolved → Archived) with newest first within each group, each row/card and its status dropdown are color-coded by status, and every entry shows its ID (click to copy) for referencing a specific ticket.

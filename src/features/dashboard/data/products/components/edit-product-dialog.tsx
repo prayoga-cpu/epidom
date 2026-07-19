@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -26,9 +26,10 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import type { Product, RecipeProduct, Recipe } from "@prisma/client";
 
@@ -36,11 +37,13 @@ type ProductWithRecipes = Product & {
   recipeProducts?: Array<RecipeProduct & { recipe: Recipe }>;
 };
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useUpdateProduct } from "../hooks/use-products";
+import { useUpdateProduct, useProducts } from "../hooks/use-products";
+import { useRecipesForSelector } from "../../recipes/hooks/use-recipes";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
+import { useSkuAvailability } from "@/hooks/use-sku-availability";
 
 // Helper function to create product schema with translated messages
 // Note: Number fields allow undefined in form state (for better UX - can clear field),
@@ -95,6 +98,20 @@ export function EditProductDialog({
 
   const isSubmittingRef = useRef(false);
   const savedFormDataRef = useRef<ProductFormValues | null>(null);
+  // The recipe selection the form was last populated from (product data or a
+  // restored draft) — used to detect when the user actively changes the
+  // selection, as opposed to the dialog simply re-rendering with the same set.
+  const lastKnownRecipeIdsRef = useRef<string[]>([]);
+
+  // Same query params as RecipeSelector uses internally, so this shares its
+  // React Query cache instead of firing a second fetch.
+  const { data: recipesData } = useRecipesForSelector(storeId, {
+    sortBy: "name" as const,
+    sortOrder: "asc" as const,
+    skip: 0,
+    take: 100,
+  });
+  const allRecipes = recipesData?.recipes || [];
 
   const handleOpenChange = (newOpen: boolean) => {
     // If closing manually (not submitting), clear saved data
@@ -130,6 +147,7 @@ export function EditProductDialog({
 
     // Restore saved data if any
     if (savedFormDataRef.current) {
+      lastKnownRecipeIdsRef.current = savedFormDataRef.current.recipeIds || [];
       requestAnimationFrame(() => {
         form.reset(savedFormDataRef.current!);
       });
@@ -145,6 +163,7 @@ export function EditProductDialog({
 
       // Extract recipe IDs from recipeProducts
       const recipeIds = product.recipeProducts?.map((rp) => rp.recipeId) || [];
+      lastKnownRecipeIdsRef.current = recipeIds;
 
       form.reset({
         name: product.name || "",
@@ -164,7 +183,59 @@ export function EditProductDialog({
 
   // Watch cost price for pricing suggestions
   const costPrice = form.watch("costPrice");
+  const recipeIds = form.watch("recipeIds") || [];
+
+  // Auto-calculate cost price from linked recipes' cost-per-unit (costPerBatch /
+  // yieldQuantity, summed across every linked recipe) whenever the user actively
+  // changes the recipe selection — not on initial load, so we don't clobber a
+  // manually-set cost price the moment the dialog opens with recipes already linked.
+  const recipeIdsKey = recipeIds.slice().sort().join(",");
+  useEffect(() => {
+    if (!open) return;
+    const baseline = lastKnownRecipeIdsRef.current.slice().sort().join(",");
+    if (recipeIdsKey === baseline) return; // unchanged from what we loaded — leave costPrice alone
+
+    if (recipeIds.length === 0 || allRecipes.length === 0) return;
+    const linked = allRecipes.filter((r) => recipeIds.includes(r.id));
+    if (linked.length === 0) return;
+
+    const totalBaseCost = linked.reduce((sum, r) => {
+      const yieldQty = Number(r.yieldQuantity);
+      return sum + (yieldQty > 0 ? Number(r.costPerBatch) / yieldQty : 0);
+    }, 0);
+
+    if (totalBaseCost > 0) {
+      form.setValue("costPrice", Number(convertPrice(totalBaseCost).toFixed(2)), {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipeIdsKey, allRecipes, open]);
   const suggestedRetailPrice = costPrice && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
+
+  // Existing categories, for the category combobox's suggestions
+  const { data: productsData } = useProducts(storeId, {
+    sortBy: "name" as const,
+    sortOrder: "asc" as const,
+    skip: 0,
+    take: 100,
+  });
+  const categoryOptions = useMemo(() => {
+    const cats = new Set(
+      (productsData?.products || []).map((p) => p.category).filter(Boolean) as string[]
+    );
+    return Array.from(cats)
+      .sort()
+      .map((c) => ({ value: c, label: c }));
+  }, [productsData]);
+
+  const skuValue = form.watch("sku") || "";
+  const { status: skuStatus } = useSkuAvailability(
+    `/api/stores/${storeId}/products/check-sku`,
+    skuValue,
+    product.id
+  );
 
   const isSubmitting = updateProduct.isPending;
 
@@ -295,9 +366,26 @@ export function EditProductDialog({
                       <FormControl>
                         <Input placeholder={t("data.products.form.skuPlaceholder")} {...field} />
                       </FormControl>
-                      <FormDescription className="text-xs">
-                        {t("data.products.form.skuHint")}
-                      </FormDescription>
+                      {skuStatus === "checking" && (
+                        <FormDescription className="text-xs">
+                          {t("data.products.form.skuChecking")}
+                        </FormDescription>
+                      )}
+                      {skuStatus === "available" && (
+                        <FormDescription className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                          <Check className="h-3 w-3" /> {t("data.products.form.skuAvailable")}
+                        </FormDescription>
+                      )}
+                      {skuStatus === "taken" && (
+                        <FormDescription className="text-destructive flex items-center gap-1 text-xs">
+                          <X className="h-3 w-3" /> {t("data.products.form.skuTaken")}
+                        </FormDescription>
+                      )}
+                      {skuStatus === "idle" && (
+                        <FormDescription className="text-xs">
+                          {t("data.products.form.skuHint")}
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -329,7 +417,17 @@ export function EditProductDialog({
                   <FormItem className="space-y-0.5">
                     <FormLabel className="text-sm">{t("data.products.form.category")} *</FormLabel>
                     <FormControl>
-                      <Input placeholder={t("data.products.form.categoryPlaceholder")} {...field} />
+                      <Combobox
+                        creatable
+                        options={categoryOptions}
+                        value={field.value || undefined}
+                        onChange={field.onChange}
+                        placeholder={t("data.products.form.categoryPlaceholder")}
+                        searchPlaceholder={t("data.products.form.categorySearchPlaceholder")}
+                        createLabel={(v) =>
+                          t("data.products.form.createCategory").replace("{value}", v)
+                        }
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -381,7 +479,9 @@ export function EditProductDialog({
                         />
                       </FormControl>
                       <FormDescription className="text-xs">
-                        {t("data.products.form.costPriceHint")}
+                        {recipeIds.length > 0
+                          ? t("data.products.form.costPriceFromRecipesHint")
+                          : t("data.products.form.costPriceHint")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

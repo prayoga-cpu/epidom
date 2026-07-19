@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams } from "next/navigation";
@@ -25,14 +25,15 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2, Plus, X, Star, Trash2 } from "lucide-react";
+import { Loader2, Plus, X, Star, Trash2, Check } from "lucide-react";
 import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useUpdateMaterial } from "../hooks/use-materials";
+import { useUpdateMaterial, useMaterials } from "../hooks/use-materials";
 import { useSuppliers } from "../../suppliers/hooks/use-suppliers";
 import {
   updateIngredientFormSchema,
@@ -41,6 +42,7 @@ import {
 import { useCurrency } from "@/components/providers/currency-provider";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
+import { useSkuAvailability } from "@/hooks/use-sku-availability";
 
 interface EditMaterialDialogProps {
   open: boolean;
@@ -76,6 +78,17 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
     take: 100,
   });
   const suppliers = suppliersData?.suppliers || [];
+
+  // Existing categories, for the category combobox's suggestions
+  const { data: materialsData } = useMaterials(storeId);
+  const categoryOptions = useMemo(() => {
+    const cats = new Set(
+      (materialsData?.materials || []).map((m) => m.category).filter(Boolean) as string[]
+    );
+    return Array.from(cats)
+      .sort()
+      .map((c) => ({ value: c, label: c }));
+  }, [materialsData]);
 
   /**
    * Type assertion needed because React Hook Form's zodResolver has type incompatibility
@@ -153,6 +166,13 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
       });
     }
   }, [material, open, form, convertPrice]);
+
+  const skuValue = form.watch("sku") || "";
+  const { status: skuStatus } = useSkuAvailability(
+    `/api/stores/${storeId}/materials/check-sku`,
+    skuValue,
+    materialId
+  );
 
   const onSubmit = async (data: UpdateIngredientFormInput) => {
     if (!material) return;
@@ -268,6 +288,21 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                       <FormControl>
                         <Input placeholder={t("data.materials.form.skuPlaceholder")} {...field} />
                       </FormControl>
+                      {skuStatus === "checking" && (
+                        <FormDescription className="text-xs">
+                          {t("data.materials.form.skuChecking")}
+                        </FormDescription>
+                      )}
+                      {skuStatus === "available" && (
+                        <FormDescription className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                          <Check className="h-3 w-3" /> {t("data.materials.form.skuAvailable")}
+                        </FormDescription>
+                      )}
+                      {skuStatus === "taken" && (
+                        <FormDescription className="text-destructive flex items-center gap-1 text-xs">
+                          <X className="h-3 w-3" /> {t("data.materials.form.skuTaken")}
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -282,9 +317,16 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">{t("data.materials.form.category")}</FormLabel>
                       <FormControl>
-                        <Input
+                        <Combobox
+                          creatable
+                          options={categoryOptions}
+                          value={field.value || undefined}
+                          onChange={field.onChange}
                           placeholder={t("data.materials.form.categoryPlaceholder")}
-                          {...field}
+                          searchPlaceholder={t("data.materials.form.categorySearchPlaceholder")}
+                          createLabel={(v) =>
+                            t("data.materials.form.createCategory").replace("{value}", v)
+                          }
                         />
                       </FormControl>
                       <FormMessage />
