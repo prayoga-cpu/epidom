@@ -27,6 +27,7 @@ import type { SupplierWithRelations } from "@/lib/repositories/supplier.reposito
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUpdateSupplier } from "../hooks/use-suppliers";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 
 // Zod validation schema
 // Helper function to create supplier schema with translated messages
@@ -119,6 +120,8 @@ export function EditSupplierDialog({ supplier, open, onOpenChange }: EditSupplie
         error: (err) => {
           isSubmittingRef.current = false;
           onOpenChange(true);
+          const fieldSummary = applyServerFieldErrors(form, err);
+          if (fieldSummary) return fieldSummary;
           return err instanceof Error ? err.message : "Failed to update supplier";
         },
       });

@@ -38,6 +38,7 @@ import { updateRecipeFormSchema } from "@/lib/validation/inventory.schemas";
 import type { UpdateRecipeFormInput } from "@/lib/validation/inventory.schemas";
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
 import { DecimalInput } from "@/components/shared/decimal-input";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 
 import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
 import { convertUnit } from "@/lib/utils/unit-conversion";
@@ -205,7 +206,9 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
           isSubmittingRef.current = false;
           // Re-open dialog, useEffect will restore savedFormDataRef
           onOpenChange(true);
-          return t("messages.errorLoadingRecipes");
+          const fieldSummary = applyServerFieldErrors(form, err);
+          if (fieldSummary) return fieldSummary;
+          return err instanceof Error ? err.message : t("messages.errorLoadingRecipes");
         },
       });
 
@@ -580,7 +583,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                           )}
                         />
 
-                        {selectedMaterial && quantity && quantity > 0 && (
+                        {selectedMaterial && Number(quantity) > 0 && (
                           <div className="bg-muted/50 rounded-md p-3 text-xs">
                             <div className="flex items-center justify-between">
                               <span className="text-muted-foreground font-medium">

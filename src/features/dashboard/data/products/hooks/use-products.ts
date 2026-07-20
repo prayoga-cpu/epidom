@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateProductInput, UpdateProductInput } from "@/lib/validation/inventory.schemas";
 import type { Product } from "@prisma/client";
+import { ApiClientError } from "@/lib/api/client";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
 import { trackEvent } from "@/lib/analytics";
@@ -65,7 +66,7 @@ async function fetchProducts(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.error || "Failed to fetch products");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -78,7 +79,7 @@ async function fetchProductById(storeId: string, productId: string): Promise<Pro
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.error || "Failed to fetch product");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -95,12 +96,7 @@ async function createProduct(storeId: string, data: CreateProductInput): Promise
 
   if (!response.ok) {
     const error = await response.json();
-    const details = error.error?.details;
-    const detail =
-      Array.isArray(details) && details.length > 0
-        ? `${details[0].field}: ${details[0].message}`
-        : null;
-    throw new Error(detail || error.error?.message || error.error || "Failed to create product");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -121,7 +117,7 @@ async function updateProduct(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.error || "Failed to update product");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -136,7 +132,7 @@ async function deleteProduct(storeId: string, productId: string): Promise<void> 
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to delete product");
+    throw new ApiClientError(error, response.status);
   }
 }
 
@@ -152,7 +148,7 @@ async function bulkDeleteProducts(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to delete products");
+    throw new ApiClientError(error, response.status);
   }
 
   return response.json();
@@ -182,7 +178,7 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
       throw customError;
     }
 
-    throw new Error(error.error || "Failed to export products");
+    throw new ApiClientError(error, response.status);
   }
 
   // Download CSV file
@@ -517,7 +513,7 @@ export function useAddProductToMenu(storeId: string) {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error?.message || error.error || "Failed to add to menu");
+        throw new ApiClientError(error, response.status);
       }
       return response.json();
     },
@@ -573,8 +569,16 @@ export function useRemoveProductFromMenu(storeId: string) {
           method: "DELETE",
         });
         if (!res.ok) {
-          const error = await res.json().catch(() => ({}));
-          throw new Error(error.error?.message || error.error || "Failed to remove from menu");
+          const error = await res.json().catch(() => null);
+          throw new ApiClientError(
+            error?.error
+              ? error
+              : {
+                  success: false,
+                  error: { code: "INTERNAL_ERROR", message: "Failed to remove product from menu" },
+                },
+            res.status
+          );
         }
       }
       return { removed: items.length };

@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.13.1] - 2026-07-20 · fix
+
+- Fixed every Materials/Products/Recipes/Suppliers/Feedback save showing a generic "Invalid input data" error with no explanation. The server always computed the exact field and reason (e.g. "SKU is required", "Price must be non-negative"), but every form was discarding that detail before showing it. Errors now say exactly which field is wrong and why, and highlight that field in red on the form — instead of leaving you to guess.
+- Fixed saving a Material or Product failing with "Price can only have 2 decimal places" even when the price you typed was a clean whole number. Any account on a display currency other than IDR converts prices through a floating-point exchange rate before saving, which almost never lands on an exact 2-decimal value — that unrounded value was then rejected by the server. Converted prices are now rounded to 2 decimals at the source, so this can no longer happen.
+- Fixed linking a recipe to a Product sometimes leaving Cost Price stuck at a stray "0" instead of the recipe's real cost. A cheap recipe's per-unit cost can be a real, non-zero amount in the base currency (IDR) that still rounds to 0.00 once converted to a stronger display currency — that rounded-to-zero value was being written into the field anyway (now it's left alone instead), and a separate rendering bug was displaying that 0 as a stray floating character on the form even when the field itself was otherwise empty.
+- Data → Products: Cost Price is now locked to the recipe's auto-calculated value whenever a recipe is linked, so it can't drift out of sync with the recipe by accident. A "Customize cost price manually" checkbox (off by default) unlocks the field for a manual override when you actually need one.
+
 ## [2.13.0] - 2026-07-20 · feat
 
 - Data → Products: linking a recipe to a product now auto-calculates the Cost Price from that recipe's real ingredient cost (summed across every linked recipe if more than one), instead of requiring manual entry. The field stays editable — this is a smart default, not a locked value — and only kicks in when you actively change the recipe selection, so opening an existing product never overwrites a price you already set.

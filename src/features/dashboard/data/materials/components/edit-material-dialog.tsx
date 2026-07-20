@@ -43,6 +43,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useSkuAvailability } from "@/hooks/use-sku-availability";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 
 interface EditMaterialDialogProps {
   open: boolean;
@@ -217,6 +218,8 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
         error: (err) => {
           isSubmittingRef.current = false;
           onOpenChange(true);
+          const fieldSummary = applyServerFieldErrors(form, err);
+          if (fieldSummary) return fieldSummary;
           return err instanceof Error ? err.message : t("messages.failedToUpdateMaterial");
         },
       });

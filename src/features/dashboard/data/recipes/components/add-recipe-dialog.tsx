@@ -52,6 +52,7 @@ import {
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 
@@ -230,6 +231,8 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
           // Error! Re-open dialog and restore state
           isSubmittingRef.current = false;
           setOpen(true);
+          const fieldSummary = applyServerFieldErrors(form, err);
+          if (fieldSummary) return fieldSummary;
           return err instanceof Error ? err.message : t("common.error");
         },
       });

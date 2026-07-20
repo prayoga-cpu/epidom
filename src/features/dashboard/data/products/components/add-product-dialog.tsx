@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2, RefreshCw, Check, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -36,6 +37,7 @@ import { useProductUsage } from "../hooks/use-product-usage";
 import { useRecipesForSelector } from "../../recipes/hooks/use-recipes";
 import { generateSku } from "@/lib/utils/sku-generator";
 import { useSkuAvailability } from "@/hooks/use-sku-availability";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -110,8 +112,16 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   const costPrice = form.watch("costPrice");
   const recipeIds = form.watch("recipeIds") || [];
 
+  // Whether the user has opted to type a custom cost price instead of the
+  // value auto-calculated from linked recipes. Off by default: as long as a
+  // recipe with a calculable cost is linked, the field is locked to that
+  // value so it can't silently drift out of sync with the recipe.
+  const [manualCostPrice, setManualCostPrice] = useState(false);
+  const costPriceLocked = recipeIds.length > 0 && !manualCostPrice;
+
   // Auto-suggest retail price based on 2.5x markup
-  const suggestedRetailPrice = costPrice && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
+  const suggestedRetailPrice =
+    costPrice !== undefined && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
 
   // Same query params as RecipeSelector uses internally, so this shares its
   // React Query cache instead of firing a second fetch.
@@ -124,9 +134,11 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   const allRecipes = recipesData?.recipes || [];
 
   // Auto-calculate cost price from linked recipes' cost-per-unit (costPerBatch /
-  // yieldQuantity, summed across every linked recipe) whenever recipes are selected.
+  // yieldQuantity, summed across every linked recipe) whenever recipes are
+  // selected, as long as the field isn't manually overridden.
   const recipeIdsKey = recipeIds.slice().sort().join(",");
   useEffect(() => {
+    if (manualCostPrice) return;
     if (recipeIds.length === 0 || allRecipes.length === 0) return;
     const linked = allRecipes.filter((r) => recipeIds.includes(r.id));
     if (linked.length === 0) return;
@@ -136,14 +148,20 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
       return sum + (yieldQty > 0 ? Number(r.costPerBatch) / yieldQty : 0);
     }, 0);
 
-    if (totalBaseCost > 0) {
-      form.setValue("costPrice", Number(convertPrice(totalBaseCost).toFixed(2)), {
+    // Round-trip through the display currency before checking positivity: a
+    // real, non-zero base-currency cost (e.g. a few hundred IDR per unit) can
+    // still round to 0.00 once converted to a stronger currency like EUR. Only
+    // set the field when the suggestion is still meaningfully positive after
+    // rounding, so a genuinely cheap recipe doesn't silently zero it out.
+    const suggestedCostPrice = Number(convertPrice(totalBaseCost).toFixed(2));
+    if (suggestedCostPrice > 0) {
+      form.setValue("costPrice", suggestedCostPrice, {
         shouldValidate: true,
         shouldDirty: true,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipeIdsKey, allRecipes]);
+  }, [recipeIdsKey, allRecipes, manualCostPrice]);
 
   // Existing categories, for the category combobox's suggestions
   const { data: productsData } = useProducts(storeId, {
@@ -224,14 +242,13 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
 
       // Map form fields to API schema
       // Note: retailPrice maps to sellingPrice
-      const round2 = (n: number) => Math.round(n * 100) / 100;
       const apiData = {
         sku: data.sku,
         name: data.name,
         description: data.description,
         category: data.category,
-        costPrice: round2(convertToBase(costPrice)),
-        sellingPrice: round2(convertToBase(retailPrice)),
+        costPrice: convertToBase(costPrice),
+        sellingPrice: convertToBase(retailPrice),
         currentStock: currentStock,
         unit: data.unit,
         minStock: minStock,
@@ -256,6 +273,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
         success: (data) => {
           isSubmittingRef.current = false;
           form.reset();
+          setManualCostPrice(false);
           return (
             t("data.products.toasts.added.description")?.replace("{name}", data.name) ||
             "Product added successfully"
@@ -265,6 +283,8 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
           // Re-open on error
           isSubmittingRef.current = false;
           setOpen(true);
+          const fieldSummary = applyServerFieldErrors(form, err);
+          if (fieldSummary) return fieldSummary;
           return err instanceof Error ? err.message : t("messages.registrationFailed");
         },
       });
@@ -280,6 +300,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
     setOpen(newOpen);
     if (!newOpen && !isSubmittingRef.current) {
       form.reset();
+      setManualCostPrice(false);
     }
     if (newOpen) {
       isSubmittingRef.current = false;
@@ -501,13 +522,29 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
+                          disabled={costPriceLocked}
                         />
                       </FormControl>
                       <FormDescription className="text-xs">
-                        {recipeIds.length > 0
+                        {recipeIds.length > 0 && !manualCostPrice
                           ? t("data.products.form.costPriceFromRecipesHint")
                           : t("data.products.form.costPriceHint")}
                       </FormDescription>
+                      {recipeIds.length > 0 && (
+                        <div className="flex items-center gap-2 pt-0.5">
+                          <Checkbox
+                            id="add-product-manual-cost-price"
+                            checked={manualCostPrice}
+                            onCheckedChange={(checked) => setManualCostPrice(checked === true)}
+                          />
+                          <label
+                            htmlFor="add-product-manual-cost-price"
+                            className="text-muted-foreground cursor-pointer text-xs font-normal"
+                          >
+                            {t("data.products.form.costPriceOverride")}
+                          </label>
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -541,7 +578,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                   )}
                 />
               </div>
-              {costPrice && costPrice > 0 && (
+              {costPrice !== undefined && costPrice > 0 && (
                 <div className="bg-muted mt-1 rounded-lg p-1.5 text-xs">
                   <p className="font-medium">{t("data.products.pricingSuggestions.title")}</p>
                   <p className="text-muted-foreground mt-0.5">

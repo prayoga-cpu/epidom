@@ -8,6 +8,7 @@ import {
   BulkDeleteInput,
 } from "@/lib/validation/inventory.schemas";
 import { ApiSuccessResponse } from "@/types/api/responses";
+import { ApiClientError } from "@/lib/api/client";
 import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
@@ -60,7 +61,7 @@ export function useMaterials(
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to fetch materials");
+        throw new ApiClientError(errorData, response.status);
       }
 
       const data: ApiSuccessResponse<MaterialsResponse> = await response.json();
@@ -91,7 +92,7 @@ export function useMaterial(storeId: string, id: string) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to fetch material");
+        throw new ApiClientError(errorData, response.status);
       }
 
       const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
@@ -125,7 +126,7 @@ export function useCreateMaterial(storeId: string) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to create material");
+        throw new ApiClientError(errorData, response.status);
       }
 
       const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
@@ -251,7 +252,7 @@ export function useUpdateMaterial(storeId: string, id: string) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to update material");
+        throw new ApiClientError(errorData, response.status);
       }
 
       const data: ApiSuccessResponse<MaterialWithSuppliers> = await response.json();
@@ -357,7 +358,7 @@ export function useDeleteMaterial(storeId: string) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to delete material");
+        throw new ApiClientError(errorData, response.status);
       }
 
       const data: ApiSuccessResponse<{ message: string }> = await response.json();
@@ -423,7 +424,7 @@ export function useBulkDeleteMaterials(storeId: string) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to delete materials");
+        throw new ApiClientError(errorData, response.status);
       }
 
       const data: ApiSuccessResponse<{ message: string; deletedCount: number }> =
@@ -471,7 +472,7 @@ export function useExportMaterials(storeId: string) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to export materials");
+        throw new ApiClientError(errorData, response.status);
       }
 
       return response.blob();

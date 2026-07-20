@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateSupplier } from "../hooks/use-suppliers";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 
 // Helper function to create supplier schema with translated messages
 function createSupplierSchema(t: (key: string) => string) {
@@ -95,6 +96,8 @@ export function AddSupplierDialog({ children }: AddSupplierDialogProps) {
           // Re-open on error
           isSubmittingRef.current = false;
           setOpen(true);
+          const fieldSummary = applyServerFieldErrors(form, err);
+          if (fieldSummary) return fieldSummary;
           return err instanceof Error ? err.message : t("common.error");
         },
       });

@@ -7,6 +7,7 @@ import {
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateRecipeRelatedQueries } from "@/lib/utils/cache-helpers";
 import { trackEvent } from "@/lib/analytics";
+import { ApiClientError } from "@/lib/api/client";
 
 // Types
 export interface RecipeWithIngredients {
@@ -90,7 +91,7 @@ async function fetchRecipes(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.error || "Failed to fetch recipes");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -103,7 +104,7 @@ async function fetchRecipeById(storeId: string, recipeId: string): Promise<Recip
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.error || "Failed to fetch recipe");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -123,7 +124,7 @@ async function createRecipe(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.error || "Failed to create recipe");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -144,7 +145,7 @@ async function updateRecipe(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.error || "Failed to update recipe");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -159,7 +160,7 @@ async function deleteRecipe(storeId: string, recipeId: string): Promise<void> {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to delete recipe");
+    throw new ApiClientError(error, response.status);
   }
 }
 
@@ -172,7 +173,7 @@ async function bulkDeleteRecipes(storeId: string, recipeIds: string[]): Promise<
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to delete recipes");
+    throw new ApiClientError(error, response.status);
   }
 
   return response.json();
@@ -191,7 +192,7 @@ async function duplicateRecipe(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.error || "Failed to duplicate recipe");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -223,7 +224,7 @@ async function exportRecipes(storeId: string, filters: RecipeFilterInput): Promi
       throw customError;
     }
 
-    throw new Error(error.error || "Failed to export recipes");
+    throw new ApiClientError(error, response.status);
   }
 
   // Download CSV file

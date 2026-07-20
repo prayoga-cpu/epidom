@@ -43,6 +43,7 @@ import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 import { generateSku } from "@/lib/utils/sku-generator";
 import { useSkuAvailability } from "@/hooks/use-sku-availability";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 
 // Use the form schema (without storeId)
 const formSchema = createIngredientFormSchema;
@@ -225,6 +226,8 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
           // Error! Re-open dialog
           isSubmittingRef.current = false;
           setOpen(true);
+          const fieldSummary = applyServerFieldErrors(form, err);
+          if (fieldSummary) return fieldSummary;
           return err instanceof Error ? err.message : t("messages.errorLoadingMaterials");
         },
       });

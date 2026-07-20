@@ -5,6 +5,7 @@ import { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { invalidateSupplierRelatedQueries } from "@/lib/utils/cache-helpers";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { trackEvent } from "@/lib/analytics";
+import { ApiClientError } from "@/lib/api/client";
 
 // Response interfaces
 export interface SuppliersResponse {
@@ -149,7 +150,7 @@ async function fetchSupplierById(
       throw customError;
     }
 
-    throw new Error(error.error?.message || error.message || "Failed to fetch supplier");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -169,7 +170,7 @@ async function createSupplier(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.message || "Failed to create supplier");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -190,7 +191,7 @@ async function updateSupplier(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.message || "Failed to update supplier");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -205,7 +206,7 @@ async function deleteSupplier(storeId: string, supplierId: string): Promise<void
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.message || "Failed to delete supplier");
+    throw new ApiClientError(error, response.status);
   }
 }
 
@@ -221,7 +222,7 @@ async function bulkDeleteSuppliers(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || error.message || "Failed to delete suppliers");
+    throw new ApiClientError(error, response.status);
   }
 
   const responseData = await response.json();
@@ -251,7 +252,7 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
       throw customError;
     }
 
-    throw new Error(error.error?.message || error.message || "Failed to export suppliers");
+    throw new ApiClientError(error, response.status);
   }
 
   // Download CSV file
@@ -327,7 +328,7 @@ export function useSuppliers(
           throw customError;
         }
 
-        throw new Error(error.error || "Failed to fetch suppliers");
+        throw new ApiClientError(error, response.status);
       }
 
       // Mark access as granted

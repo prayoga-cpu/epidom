@@ -2291,6 +2291,8 @@ export const fr = {
         imageUrlHint: "URL de l'image du produit (optionnel)",
         costPrice: "Prix de Revient",
         costPriceHint: "Coût de production",
+        costPriceFromRecipesHint: "Calculé automatiquement à partir des recettes liées",
+        costPriceOverride: "Personnaliser le prix de revient manuellement",
         wholesalePrice: "Prix de Gros",
         wholesalePriceHint: "Prix B2B (optionnel)",
         retailPrice: "Prix de Vente",

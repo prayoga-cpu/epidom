@@ -50,6 +50,7 @@ import {
   useUpdateFeedback,
 } from "../hooks/use-feedback";
 import { ApiSuccessResponse } from "@/types/api/responses";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -257,8 +258,9 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
             form.reset(blankValues);
             setActiveTab("history");
           },
-          onError: () => {
-            toast.error(t("feedback.history.updateError"));
+          onError: (error) => {
+            const fieldSummary = applyServerFieldErrors(form, error);
+            toast.error(fieldSummary || t("feedback.history.updateError"));
           },
         }
       );
@@ -314,7 +316,12 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
           setStep("success");
         },
         onError: (error) => {
-          toast.error(error.status === 429 ? t("feedback.rateLimited") : t("feedback.submitError"));
+          if (error.status === 429) {
+            toast.error(t("feedback.rateLimited"));
+            return;
+          }
+          const fieldSummary = applyServerFieldErrors(form, error);
+          toast.error(fieldSummary || t("feedback.submitError"));
         },
       }
     );

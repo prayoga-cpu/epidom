@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -44,6 +45,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useSkuAvailability } from "@/hooks/use-sku-availability";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 
 // Helper function to create product schema with translated messages
 // Note: Number fields allow undefined in form state (for better UX - can clear field),
@@ -98,10 +100,11 @@ export function EditProductDialog({
 
   const isSubmittingRef = useRef(false);
   const savedFormDataRef = useRef<ProductFormValues | null>(null);
-  // The recipe selection the form was last populated from (product data or a
-  // restored draft) — used to detect when the user actively changes the
-  // selection, as opposed to the dialog simply re-rendering with the same set.
-  const lastKnownRecipeIdsRef = useRef<string[]>([]);
+  // Whether the user has opted to type a custom cost price instead of the
+  // value auto-calculated from linked recipes. Off by default: as long as a
+  // recipe with a calculable cost is linked, the field is locked to that
+  // value so it can't silently drift out of sync with the recipe.
+  const [manualCostPrice, setManualCostPrice] = useState(false);
 
   // Same query params as RecipeSelector uses internally, so this shares its
   // React Query cache instead of firing a second fetch.
@@ -147,7 +150,6 @@ export function EditProductDialog({
 
     // Restore saved data if any
     if (savedFormDataRef.current) {
-      lastKnownRecipeIdsRef.current = savedFormDataRef.current.recipeIds || [];
       requestAnimationFrame(() => {
         form.reset(savedFormDataRef.current!);
       });
@@ -163,7 +165,7 @@ export function EditProductDialog({
 
       // Extract recipe IDs from recipeProducts
       const recipeIds = product.recipeProducts?.map((rp) => rp.recipeId) || [];
-      lastKnownRecipeIdsRef.current = recipeIds;
+      setManualCostPrice(false);
 
       form.reset({
         name: product.name || "",
@@ -185,16 +187,18 @@ export function EditProductDialog({
   const costPrice = form.watch("costPrice");
   const recipeIds = form.watch("recipeIds") || [];
 
+  // Cost Price is locked to the auto-calculated value as long as a recipe is
+  // linked and the user hasn't opted into a manual override (see the
+  // "Customize manually" checkbox below the field).
+  const costPriceLocked = recipeIds.length > 0 && !manualCostPrice;
+
   // Auto-calculate cost price from linked recipes' cost-per-unit (costPerBatch /
-  // yieldQuantity, summed across every linked recipe) whenever the user actively
-  // changes the recipe selection — not on initial load, so we don't clobber a
-  // manually-set cost price the moment the dialog opens with recipes already linked.
+  // yieldQuantity, summed across every linked recipe). Keeps the field synced
+  // to the recipe cost whenever it's locked — including right when the dialog
+  // opens with recipes already attached, not just when the selection changes.
   const recipeIdsKey = recipeIds.slice().sort().join(",");
   useEffect(() => {
-    if (!open) return;
-    const baseline = lastKnownRecipeIdsRef.current.slice().sort().join(",");
-    if (recipeIdsKey === baseline) return; // unchanged from what we loaded — leave costPrice alone
-
+    if (!open || manualCostPrice) return;
     if (recipeIds.length === 0 || allRecipes.length === 0) return;
     const linked = allRecipes.filter((r) => recipeIds.includes(r.id));
     if (linked.length === 0) return;
@@ -204,15 +208,23 @@ export function EditProductDialog({
       return sum + (yieldQty > 0 ? Number(r.costPerBatch) / yieldQty : 0);
     }, 0);
 
-    if (totalBaseCost > 0) {
-      form.setValue("costPrice", Number(convertPrice(totalBaseCost).toFixed(2)), {
+    // Round-trip through the display currency before checking positivity: a
+    // real, non-zero base-currency cost (e.g. a few hundred IDR per unit) can
+    // still round to 0.00 once converted to a stronger currency like EUR. Only
+    // overwrite the field when the suggestion is still meaningfully positive
+    // after rounding — otherwise we'd silently zero out a field the user may
+    // already have set, rather than leaving it alone as intended.
+    const suggestedCostPrice = Number(convertPrice(totalBaseCost).toFixed(2));
+    if (suggestedCostPrice > 0) {
+      form.setValue("costPrice", suggestedCostPrice, {
         shouldValidate: true,
         shouldDirty: true,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipeIdsKey, allRecipes, open]);
-  const suggestedRetailPrice = costPrice && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
+  }, [recipeIdsKey, allRecipes, open, manualCostPrice]);
+  const suggestedRetailPrice =
+    costPrice !== undefined && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
 
   // Existing categories, for the category combobox's suggestions
   const { data: productsData } = useProducts(storeId, {
@@ -307,6 +319,8 @@ export function EditProductDialog({
         error: (err) => {
           isSubmittingRef.current = false;
           onOpenChange(true);
+          const fieldSummary = applyServerFieldErrors(form, err);
+          if (fieldSummary) return fieldSummary;
           return err instanceof Error
             ? err.message
             : t("data.products.toasts.updateError.description") ||
@@ -476,13 +490,29 @@ export function EditProductDialog({
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
+                          disabled={costPriceLocked}
                         />
                       </FormControl>
                       <FormDescription className="text-xs">
-                        {recipeIds.length > 0
+                        {recipeIds.length > 0 && !manualCostPrice
                           ? t("data.products.form.costPriceFromRecipesHint")
                           : t("data.products.form.costPriceHint")}
                       </FormDescription>
+                      {recipeIds.length > 0 && (
+                        <div className="flex items-center gap-2 pt-0.5">
+                          <Checkbox
+                            id="edit-product-manual-cost-price"
+                            checked={manualCostPrice}
+                            onCheckedChange={(checked) => setManualCostPrice(checked === true)}
+                          />
+                          <label
+                            htmlFor="edit-product-manual-cost-price"
+                            className="text-muted-foreground cursor-pointer text-xs font-normal"
+                          >
+                            {t("data.products.form.costPriceOverride")}
+                          </label>
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -516,7 +546,7 @@ export function EditProductDialog({
                   )}
                 />
               </div>
-              {costPrice && costPrice > 0 && (
+              {costPrice !== undefined && costPrice > 0 && (
                 <div className="bg-muted mt-1 rounded-lg p-1.5 text-xs">
                   <p className="font-medium">{t("data.products.pricingSuggestions.title")}</p>
                   <p className="text-muted-foreground mt-0.5">

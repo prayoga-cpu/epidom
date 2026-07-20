@@ -107,6 +107,17 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   };
 
   /**
+   * Every price in this system is persisted/validated to exactly 2 decimal
+   * places (see `priceSchema`'s `.multipleOf(0.01)`), regardless of the
+   * display currency's own natural precision. Multiplying/dividing by a
+   * floating-point exchange rate almost never lands on a clean 2-decimal
+   * value (e.g. `2 / 0.00006...` yields 15+ decimal digits), which would
+   * otherwise fail that server-side check on every submit. Round at the
+   * source so every caller gets a value the schema will actually accept.
+   */
+  const round2 = (value: number): number => Math.round(value * 100) / 100;
+
+  /**
    * Convert a stored value to the user's display currency. `fromCurrency`
    * is the currency the value is actually stored in (defaults to the
    * platform base, IDR). Only IDR <-> userCurrency pairs are backed by a
@@ -115,7 +126,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
    */
   const convertPrice = (value: number, fromCurrency: string = BASE_CURRENCY): number => {
     if (fromCurrency === userCurrency) return value;
-    if (fromCurrency === BASE_CURRENCY) return value * exchangeRate;
+    if (fromCurrency === BASE_CURRENCY) return round2(value * exchangeRate);
     return value;
   };
 
@@ -124,7 +135,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     toCurrency: string = BASE_CURRENCY
   ): number => {
     if (toCurrency === userCurrency) return valueInUserCurrency;
-    if (toCurrency === BASE_CURRENCY) return valueInUserCurrency / exchangeRate;
+    if (toCurrency === BASE_CURRENCY) return round2(valueInUserCurrency / exchangeRate);
     return valueInUserCurrency;
   };
 

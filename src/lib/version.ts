@@ -5,4 +5,4 @@
  * Bump this with every release (see AGENTS.md "Changelog & versioning").
  * Used for the footer/dashboard version badge and the "What's new" bell prompt.
  */
-export const APP_VERSION = "2.13.0";
+export const APP_VERSION = "2.13.1";

@@ -5,7 +5,7 @@ import type {
   CreateFeedbackInput,
   UpdateOwnFeedbackInput,
 } from "@/lib/validation/feedback.schemas";
-import { ApiSuccessResponse } from "@/types/api/responses";
+import { ApiSuccessResponse, ValidationError } from "@/types/api/responses";
 
 // Feedback types matching Prisma schema (kept local to avoid client-side Prisma imports)
 export type FeedbackType = "BUG" | "FEATURE_SUGGESTION" | "GENERAL_FEEDBACK";
@@ -22,9 +22,11 @@ export interface FeedbackItem {
   createdAt: string;
 }
 
-// Error carrying the HTTP status so callers can react to specific codes (e.g. 429)
+// Error carrying the HTTP status so callers can react to specific codes (e.g. 429),
+// plus any field-level validation details the server reported.
 export interface ApiError extends Error {
   status?: number;
+  details?: ValidationError[];
 }
 
 // Query key for the current user's own feedback list
@@ -50,6 +52,7 @@ export function useSubmitFeedback() {
         const errorData = await response.json();
         const error: ApiError = new Error(errorData.error?.message || "Failed to submit feedback");
         error.status = response.status;
+        error.details = errorData.error?.details;
         throw error;
       }
 
@@ -107,6 +110,7 @@ export function useUpdateFeedback() {
         const errorData = await response.json();
         const error: ApiError = new Error(errorData.error?.message || "Failed to update feedback");
         error.status = response.status;
+        error.details = errorData.error?.details;
         throw error;
       }
 

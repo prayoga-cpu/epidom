@@ -53,6 +53,7 @@ import { duplicateRecipeSchema } from "@/lib/validation/inventory.schemas";
 import type { DuplicateRecipeInput } from "@/lib/validation/inventory.schemas";
 import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
 import { convertUnit } from "@/lib/utils/unit-conversion";
+import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 
 type DuplicateRecipeFormValues = DuplicateRecipeInput;
 
@@ -110,7 +111,12 @@ export default function DuplicateRecipeDialog({
       toast.success(t("data.recipes.toasts.duplicated.title"));
       onOpenChange(false);
     } catch (error) {
-      toast.error(t("messages.errorLoadingRecipes"));
+      const fieldSummary = applyServerFieldErrors(form, error);
+      if (fieldSummary) {
+        toast.error(fieldSummary);
+        return;
+      }
+      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingRecipes"));
     }
   };
 

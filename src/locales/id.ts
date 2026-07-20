@@ -2067,8 +2067,8 @@ export const id = {
         imageUrlHint: "URL gambar produk (opsional)",
         costPrice: "Harga Pokok",
         costPriceHint: "Biaya produksi",
-        costPriceFromRecipesHint:
-          "Dihitung otomatis dari resep tertaut — Anda tetap bisa mengubahnya",
+        costPriceFromRecipesHint: "Dihitung otomatis dari resep tertaut",
+        costPriceOverride: "Sesuaikan harga pokok secara manual",
         wholesalePrice: "Harga Grosir",
         wholesalePriceHint: "Harga B2B (opsional)",
         retailPrice: "Harga Eceran",
