@@ -44,6 +44,11 @@ import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useSkuAvailability } from "@/hooks/use-sku-availability";
 import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
+import {
+  roundToSixDecimals,
+  formatDerivedUnitCost,
+  SupplierPackPriceFields,
+} from "./pack-price-fields";
 
 interface EditMaterialDialogProps {
   open: boolean;
@@ -107,6 +112,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
       description: "",
       unit: "",
       unitCost: undefined,
+      purchaseQuantity: 1,
       currentStock: undefined,
       minStock: undefined,
       maxStock: undefined,
@@ -144,9 +150,17 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
 
     if (material) {
       const unitCost = Number(material.unitCost) || 0;
+      const purchaseQuantity = Number(material.purchaseQuantity) || 1;
       const currentStock = Number(material.currentStock) || 0;
       const minStock = Number(material.minStock) || 0;
       const maxStock = Number(material.maxStock) || 0;
+
+      // Reconstruct what the user originally paid for one purchase pack
+      // (unitCost × purchaseQuantity), so editing shows "Purchase Quantity:
+      // 1000, Purchase Price: €2" again instead of forcing them to re-derive
+      // it from the stored per-unit cost.
+      const purchasePrice =
+        unitCost > 0 ? roundToSixDecimals(convertPrice(unitCost) * purchaseQuantity) : undefined;
 
       form.reset({
         name: material.name,
@@ -155,16 +169,28 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
         description: material.description || "",
         unit: material.unit,
         unitCost: unitCost > 0 ? convertPrice(unitCost) : undefined, // Convert EUR to user's currency, undefined if 0
+        purchaseQuantity,
+        purchasePrice,
         currentStock: currentStock > 0 ? currentStock : undefined,
         minStock: minStock > 0 ? minStock : undefined,
         maxStock: maxStock > 0 ? maxStock : undefined,
         suppliers:
-          material.materialSuppliers?.map((s) => ({
-            supplierId: s.supplierId,
-            price: convertPrice(Number(s.price) || 0), // Convert EUR to user's currency for display
-            isPreferred: s.isPreferred,
-          })) || [],
-      });
+          material.materialSuppliers?.map((s) => {
+            const supplierUnitCost = Number(s.price) || 0;
+            const supplierPurchaseQuantity = Number(s.purchaseQuantity) || 1;
+            const supplierPurchasePrice =
+              supplierUnitCost > 0
+                ? roundToSixDecimals(convertPrice(supplierUnitCost) * supplierPurchaseQuantity)
+                : undefined;
+            return {
+              supplierId: s.supplierId,
+              price: convertPrice(supplierUnitCost), // Convert EUR to user's currency for display
+              purchaseQuantity: supplierPurchaseQuantity,
+              purchasePrice: supplierPurchasePrice,
+              isPreferred: s.isPreferred,
+            };
+          }) || [],
+      } as any);
     }
   }, [material, open, form, convertPrice]);
 
@@ -174,6 +200,37 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
     skuValue,
     materialId
   );
+
+  // Auto-derive Unit Cost from Purchase Quantity + Purchase Price, so the
+  // user edits cost the way they actually buy it (e.g. "€2 for a 1000g bag")
+  // instead of dividing it into a per-gram rate by hand. `purchasePrice` isn't
+  // part of the submitted schema — it only exists to compute `unitCost`,
+  // which is what's actually validated and sent to the server.
+  const unitValue = form.watch("unit") || "kg";
+  const purchaseQuantityValue = form.watch("purchaseQuantity");
+  const purchasePriceValue = form.watch("purchasePrice" as any) as number | undefined;
+
+  useEffect(() => {
+    const qty = purchaseQuantityValue ?? 1;
+    const price = purchasePriceValue ?? 0;
+    if (!(qty > 0)) return;
+    form.setValue("unitCost", roundToSixDecimals(price / qty), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purchaseQuantityValue, purchasePriceValue]);
+
+  const unitCostValue = form.watch("unitCost");
+  const derivedUnitCostHint =
+    unitCostValue && unitCostValue > 0
+      ? t("data.materials.form.derivedUnitCostHint")
+          .replace(
+            "{value}",
+            `${getCurrencySymbol(currency)}${formatDerivedUnitCost(unitCostValue)}`
+          )
+          .replace("{unit}", unitValue)
+      : undefined;
 
   const onSubmit = async (data: UpdateIngredientFormInput) => {
     if (!material) return;
@@ -186,6 +243,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
       const payload = {
         ...data,
         unitCost: convertToBase(data.unitCost ?? 0), // Convert back to EUR before saving, default to 0 if undefined
+        purchaseQuantity: data.purchaseQuantity ?? 1,
         currentStock: data.currentStock ?? 0, // Default to 0 if undefined
         minStock: data.minStock ?? 0, // Default to 0 if undefined
         maxStock: data.maxStock ?? 0, // Default to 0 if undefined
@@ -193,6 +251,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
         suppliers: validSuppliers.map((s) => ({
           ...s,
           price: convertToBase(s.price ?? 0), // Convert supplier prices back to EUR
+          purchaseQuantity: s.purchaseQuantity ?? 1,
         })),
       };
 
@@ -395,17 +454,17 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
               <div className="grid grid-cols-2 items-start gap-1.5">
                 <FormField
                   control={form.control}
-                  name="unitCost"
+                  name="purchaseQuantity"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">
-                        {t("data.materials.form.unitCost")} ({getCurrencySymbol(currency)}) *
+                        {t("data.materials.form.purchaseQuantity")} ({unitValue}) *
                       </FormLabel>
                       <FormControl>
                         <DecimalInput
-                          decimals={2}
+                          decimals={3}
                           min={0}
-                          placeholder={t("data.materials.form.costPlaceholder")}
+                          placeholder="1000"
                           value={field.value}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
@@ -413,11 +472,44 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                           ref={field.ref}
                         />
                       </FormControl>
+                      <FormDescription className="text-xs">
+                        {t("data.materials.form.purchaseQuantityHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name={"purchasePrice" as any}
+                  render={({ field }) => (
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">
+                        {t("data.materials.form.purchasePrice")} ({getCurrencySymbol(currency)}) *
+                      </FormLabel>
+                      <FormControl>
+                        <DecimalInput
+                          decimals={2}
+                          min={0}
+                          placeholder={t("data.materials.form.costPlaceholder")}
+                          value={field.value as number | undefined}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      {derivedUnitCostHint && (
+                        <FormDescription className="text-xs">{derivedUnitCostHint}</FormDescription>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 items-start gap-1.5">
                 <FormField
                   control={form.control}
                   name="currentStock"
@@ -442,9 +534,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                     </FormItem>
                   )}
                 />
-              </div>
 
-              <div className="grid grid-cols-2 items-start gap-1.5">
                 <FormField
                   control={form.control}
                   name="minStock"
@@ -517,8 +607,10 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                     append({
                       supplierId: "",
                       price: undefined as number | undefined,
+                      purchaseQuantity: 1,
+                      purchasePrice: undefined as number | undefined,
                       isPreferred: false,
-                    })
+                    } as any)
                   }
                   className="h-8 gap-1.5"
                 >
@@ -539,8 +631,10 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                       append({
                         supplierId: "",
                         price: undefined as number | undefined,
+                        purchaseQuantity: 1,
+                        purchasePrice: undefined as number | undefined,
                         isPreferred: false,
-                      })
+                      } as any)
                     }
                   >
                     {t("data.materials.form.addSupplier")}
@@ -615,56 +709,29 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                           )}
                         />
 
-                        <div className="flex items-start gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`suppliers.${index}.price` as any}
-                            render={({ field }) => (
-                              <FormItem className="flex-1 space-y-1">
-                                <FormLabel className="text-xs font-medium">
-                                  {t("data.materials.form.supplierPrice")} (
-                                  {getCurrencySymbol(currency)})
-                                </FormLabel>
+                        <SupplierPackPriceFields form={form} index={index} currency={currency} />
+
+                        <FormField
+                          control={form.control}
+                          name={`suppliers.${index}.isPreferred` as any}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col items-start gap-1">
+                              <div className="flex items-center gap-2">
                                 <FormControl>
-                                  <DecimalInput
-                                    decimals={2}
-                                    min={0}
-                                    placeholder="25.00"
-                                    className="h-9"
-                                    value={field.value as number | undefined}
-                                    onChange={field.onChange}
-                                    onBlur={field.onBlur}
-                                    name={field.name}
-                                    ref={field.ref}
+                                  <Checkbox
+                                    checked={field.value as boolean}
+                                    onCheckedChange={field.onChange}
+                                    className="data-[state=checked]:bg-primary"
                                   />
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`suppliers.${index}.isPreferred` as any}
-                            render={({ field }) => (
-                              <FormItem className="flex flex-col items-start gap-1 pt-6">
-                                <div className="flex items-center gap-2">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value as boolean}
-                                      onCheckedChange={field.onChange}
-                                      className="data-[state=checked]:bg-primary"
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="text-muted-foreground cursor-pointer text-xs font-normal">
-                                    {t("data.materials.form.preferred")}
-                                  </FormLabel>
-                                </div>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                                <FormLabel className="text-muted-foreground cursor-pointer text-xs font-normal">
+                                  {t("data.materials.form.preferred")}
+                                </FormLabel>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                     </div>
                   </div>

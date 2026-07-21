@@ -21,6 +21,7 @@ const mockMaterial: MaterialWithSuppliers = {
   category: "Test Category",
   unit: "kg",
   unitCost: new Prisma.Decimal(10.0),
+  purchaseQuantity: new Prisma.Decimal(1),
   currentStock: new Prisma.Decimal(100),
   minStock: new Prisma.Decimal(10),
   maxStock: new Prisma.Decimal(200),

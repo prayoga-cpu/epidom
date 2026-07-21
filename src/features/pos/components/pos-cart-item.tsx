@@ -42,13 +42,13 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-sm"
+            className="h-11 w-11 touch-manipulation rounded-sm"
             onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
           >
             {item.quantity === 1 ? (
-              <Trash2 className="text-destructive h-3.5 w-3.5" />
+              <Trash2 className="text-destructive h-4 w-4" />
             ) : (
-              <Minus className="h-3.5 w-3.5" />
+              <Minus className="h-4 w-4" />
             )}
             <span className="sr-only">Decrease</span>
           </Button>
@@ -56,17 +56,17 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-sm"
+            className="h-11 w-11 touch-manipulation rounded-sm"
             onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-4 w-4" />
             <span className="sr-only">Increase</span>
           </Button>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive h-11 touch-manipulation"
           onClick={() => onRemove(item.id)}
         >
           {t("common.actions.remove")}

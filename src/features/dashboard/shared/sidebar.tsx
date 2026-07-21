@@ -55,8 +55,11 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
     <aside
       className={cn(
         mode === "desktop"
-          ? "hidden h-full w-[230px] shrink-0 md:block"
-          : "mt-12 flex h-[calc(100%-3rem)] md:hidden"
+          ? // Fixed rail only at true desktop/laptop widths (xl+) — every iPad
+            // size (including 1024px landscape) uses the hamburger-drawer
+            // Sidebar (mode="mobile") instead, so tablets keep full content width.
+            "hidden h-full w-[230px] shrink-0 xl:block"
+          : "mt-12 flex h-[calc(100%-3rem)] xl:hidden"
       )}
     >
       <div

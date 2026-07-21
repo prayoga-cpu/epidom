@@ -80,7 +80,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
         <Button
           variant="ghost"
           size="sm"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive h-10 touch-manipulation"
           onClick={cart.clearCart}
         >
           <Trash2 className="mr-2 h-4 w-4" />
@@ -130,7 +130,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
           <Button
             variant="outline"
             size="lg"
-            className="shrink-0"
+            className="h-12 w-12 shrink-0 touch-manipulation"
             onClick={handleHoldClick}
             disabled={holdOrder.isPending}
             title={t("pos.cart.hold")}
@@ -138,7 +138,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
             <Pause className="h-4 w-4" />
           </Button>
           <Button
-            className="w-full"
+            className="h-12 w-full touch-manipulation text-base"
             size="lg"
             onClick={() => (onRequestCheckout ? onRequestCheckout() : setIsCheckoutOpen(true))}
           >

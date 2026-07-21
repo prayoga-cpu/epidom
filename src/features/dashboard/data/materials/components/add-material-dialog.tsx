@@ -44,6 +44,11 @@ import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 import { generateSku } from "@/lib/utils/sku-generator";
 import { useSkuAvailability } from "@/hooks/use-sku-availability";
 import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
+import {
+  roundToSixDecimals,
+  formatDerivedUnitCost,
+  SupplierPackPriceFields,
+} from "./pack-price-fields";
 
 // Use the form schema (without storeId)
 const formSchema = createIngredientFormSchema;
@@ -167,6 +172,37 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
     skuValue
   );
 
+  // Auto-derive Unit Cost from Purchase Quantity + Purchase Price, so the
+  // user enters cost the way they actually buy it (e.g. "€2 for a 1000g
+  // bag") instead of dividing it into a per-gram rate by hand. `purchasePrice`
+  // isn't part of the submitted schema — it only exists to compute `unitCost`,
+  // which is what's actually validated and sent to the server.
+  const unitValue = form.watch("unit") || "kg";
+  const purchaseQuantityValue = form.watch("purchaseQuantity");
+  const purchasePriceValue = form.watch("purchasePrice" as any) as number | undefined;
+
+  useEffect(() => {
+    const qty = purchaseQuantityValue ?? 1;
+    const price = purchasePriceValue ?? 0;
+    if (!(qty > 0)) return;
+    form.setValue("unitCost", roundToSixDecimals(price / qty), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purchaseQuantityValue, purchasePriceValue]);
+
+  const unitCostValue = form.watch("unitCost");
+  const derivedUnitCostHint =
+    unitCostValue && unitCostValue > 0
+      ? t("data.materials.form.derivedUnitCostHint")
+          .replace(
+            "{value}",
+            `${getCurrencySymbol(currency)}${formatDerivedUnitCost(unitCostValue)}`
+          )
+          .replace("{unit}", unitValue)
+      : undefined;
+
   /**
    * Type assertion needed because React Hook Form's useFieldArray has type limitations
    * The actual data structure is validated by Zod schema before reaching this function
@@ -185,6 +221,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         ...data,
         unit: data.unit || "kg",
         unitCost: convertToBase(data.unitCost ?? 0), // Convert from user's currency to EUR
+        purchaseQuantity: data.purchaseQuantity ?? 1,
         currentStock: data.currentStock ?? 0,
         minStock: data.minStock ?? 0,
         maxStock: data.maxStock ?? 1000,
@@ -194,6 +231,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
             ? validSuppliers.map((s) => ({
                 ...s,
                 price: convertToBase(s.price ?? 0), // Convert supplier prices to EUR
+                purchaseQuantity: s.purchaseQuantity ?? 1,
               }))
             : undefined,
       };
@@ -444,17 +482,17 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
               <div className="grid grid-cols-2 items-start gap-1.5">
                 <FormField
                   control={form.control}
-                  name="unitCost"
+                  name="purchaseQuantity"
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">
-                        {t("data.materials.form.unitCost")} ({getCurrencySymbol(currency)}) *
+                        {t("data.materials.form.purchaseQuantity")} ({unitValue}) *
                       </FormLabel>
                       <FormControl>
                         <DecimalInput
-                          decimals={2}
+                          decimals={3}
                           min={0}
-                          placeholder={t("data.materials.form.costPlaceholder")}
+                          placeholder="1000"
                           value={field.value}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
@@ -462,11 +500,44 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                           ref={field.ref}
                         />
                       </FormControl>
+                      <FormDescription className="text-xs">
+                        {t("data.materials.form.purchaseQuantityHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name={"purchasePrice" as any}
+                  render={({ field }) => (
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">
+                        {t("data.materials.form.purchasePrice")} ({getCurrencySymbol(currency)}) *
+                      </FormLabel>
+                      <FormControl>
+                        <DecimalInput
+                          decimals={2}
+                          min={0}
+                          placeholder={t("data.materials.form.costPlaceholder")}
+                          value={field.value as number | undefined}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      {derivedUnitCostHint && (
+                        <FormDescription className="text-xs">{derivedUnitCostHint}</FormDescription>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 items-start gap-1.5">
                 <FormField
                   control={form.control}
                   name="currentStock"
@@ -491,9 +562,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                     </FormItem>
                   )}
                 />
-              </div>
 
-              <div className="grid grid-cols-2 items-start gap-1.5">
                 <FormField
                   control={form.control}
                   name="minStock"
@@ -566,8 +635,10 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                     append({
                       supplierId: "",
                       price: undefined as number | undefined,
+                      purchaseQuantity: 1,
+                      purchasePrice: undefined as number | undefined,
                       isPreferred: false,
-                    })
+                    } as any)
                   }
                   className="h-8 gap-1.5"
                 >
@@ -588,8 +659,10 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                       append({
                         supplierId: "",
                         price: undefined as number | undefined,
+                        purchaseQuantity: 1,
+                        purchasePrice: undefined as number | undefined,
                         isPreferred: false,
-                      })
+                      } as any)
                     }
                   >
                     {t("data.materials.form.addSupplier")}
@@ -664,56 +737,29 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                           )}
                         />
 
-                        <div className="flex items-start gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`suppliers.${index}.price` as any}
-                            render={({ field }) => (
-                              <FormItem className="flex-1 space-y-1">
-                                <FormLabel className="text-xs font-medium">
-                                  {t("data.materials.form.supplierPrice")} (
-                                  {getCurrencySymbol(currency)})
-                                </FormLabel>
+                        <SupplierPackPriceFields form={form} index={index} currency={currency} />
+
+                        <FormField
+                          control={form.control}
+                          name={`suppliers.${index}.isPreferred` as any}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col items-start gap-1">
+                              <div className="flex items-center gap-2">
                                 <FormControl>
-                                  <DecimalInput
-                                    decimals={2}
-                                    min={0}
-                                    placeholder="25.00"
-                                    className="h-9"
-                                    value={field.value as number | undefined}
-                                    onChange={field.onChange}
-                                    onBlur={field.onBlur}
-                                    name={field.name}
-                                    ref={field.ref}
+                                  <Checkbox
+                                    checked={field.value as boolean}
+                                    onCheckedChange={field.onChange}
+                                    className="data-[state=checked]:bg-primary"
                                   />
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`suppliers.${index}.isPreferred` as any}
-                            render={({ field }) => (
-                              <FormItem className="flex flex-col items-start gap-1 pt-6">
-                                <div className="flex items-center gap-2">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value as boolean}
-                                      onCheckedChange={field.onChange}
-                                      className="data-[state=checked]:bg-primary"
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="text-muted-foreground cursor-pointer text-xs font-normal">
-                                    {t("data.materials.form.preferred")}
-                                  </FormLabel>
-                                </div>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                                <FormLabel className="text-muted-foreground cursor-pointer text-xs font-normal">
+                                  {t("data.materials.form.preferred")}
+                                </FormLabel>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                     </div>
                   </div>

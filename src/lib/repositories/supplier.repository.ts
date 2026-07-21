@@ -14,6 +14,7 @@ export type SupplierWithRelations = Supplier & {
     materialId: string;
     supplierId: string;
     price: Prisma.Decimal;
+    purchaseQuantity: Prisma.Decimal;
     isPreferred: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -24,6 +25,7 @@ export type SupplierWithRelations = Supplier & {
       category: string | null;
       unit: string;
       unitCost: Prisma.Decimal;
+      purchaseQuantity: Prisma.Decimal;
       currentStock: Prisma.Decimal;
       minStock: Prisma.Decimal;
       maxStock: Prisma.Decimal;
@@ -85,6 +87,7 @@ export class SupplierRepository extends BaseRepository {
                   category: true,
                   unit: true,
                   unitCost: true,
+                  purchaseQuantity: true,
                   currentStock: true,
                   minStock: true,
                   maxStock: true,
@@ -121,6 +124,7 @@ export class SupplierRepository extends BaseRepository {
                 category: true,
                 unit: true,
                 unitCost: true,
+                purchaseQuantity: true,
                 currentStock: true,
                 minStock: true,
                 maxStock: true,

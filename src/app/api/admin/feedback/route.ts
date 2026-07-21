@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdminUser } from "@/lib/admin";
 import { feedbackService } from "@/lib/services/feedback.service";
-import { updateFeedbackStatusSchema } from "@/lib/validation/feedback.schemas";
+import { updateFeedbackTriageSchema } from "@/lib/validation/feedback.schemas";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -32,7 +32,7 @@ export async function GET() {
 
 /**
  * PATCH /api/admin/feedback
- * Update the status of a feedback entry.
+ * Update the status and/or priority of a feedback entry.
  */
 export async function PATCH(req: NextRequest) {
   if (!(await requireAdmin())) {
@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const parsed = updateFeedbackStatusSchema.safeParse(body);
+  const parsed = updateFeedbackTriageSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", details: parsed.error.flatten() },
@@ -54,7 +54,10 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const feedback = await feedbackService.updateFeedbackStatus(parsed.data.id, parsed.data.status);
+  const feedback = await feedbackService.updateFeedbackTriage(parsed.data.id, {
+    status: parsed.data.status,
+    priority: parsed.data.priority,
+  });
 
   return NextResponse.json({ feedback });
 }

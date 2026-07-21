@@ -751,21 +751,21 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                           {formatPrice(singleTotal)}
                         </p>
                       </div>
-                      <div className="bg-card flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 shadow-sm">
+                      <div className="bg-card flex shrink-0 items-center gap-0.5 rounded-full border pl-0.5 shadow-sm">
                         <button
                           onClick={() => updateCartQuantity(item.uniqueId, -1)}
-                          className="text-muted-foreground hover:text-destructive p-0.5"
+                          className="text-muted-foreground hover:text-destructive flex h-9 w-9 touch-manipulation items-center justify-center"
                         >
-                          <Minus className="size-3" />
+                          <Minus className="size-3.5" />
                         </button>
                         <span className="text-foreground min-w-[16px] text-center text-xs font-bold">
                           {item.quantity}
                         </span>
                         <button
                           onClick={() => updateCartQuantity(item.uniqueId, 1)}
-                          className="text-muted-foreground p-0.5 hover:text-[var(--store-theme)]"
+                          className="text-muted-foreground flex h-9 w-9 touch-manipulation items-center justify-center hover:text-[var(--store-theme)]"
                         >
-                          <Plus className="size-3" />
+                          <Plus className="size-3.5" />
                         </button>
                       </div>
                     </div>
@@ -796,7 +796,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
 
       {/* Sticky Floating Cart Bar — mobile only */}
       {cart.length > 0 && !isCartOpen && (
-        <div className="fixed right-4 bottom-4 left-4 z-40 mx-auto max-w-md md:hidden">
+        <div className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-40 mx-auto max-w-md md:hidden">
           <div
             onClick={() => setIsCartOpen(true)}
             className="flex w-full cursor-pointer items-center justify-between rounded-2xl p-4 text-white shadow-xl transition-transform active:scale-[0.98]"
@@ -821,7 +821,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 e.stopPropagation();
                 setIsCheckoutOpen(true);
               }}
-              className="z-10 flex items-center gap-1 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-bold"
+              className="z-10 flex h-11 touch-manipulation items-center gap-1 rounded-lg bg-white/20 px-4 text-xs font-bold"
             >
               <span>{t("publicOrder.menu.checkout")}</span>
               <ChevronRight className="size-4" />
@@ -833,7 +833,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       {/* Cart Drawer — mobile only (desktop uses sidebar) */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 md:hidden">
-          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
+          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
             {/* Header */}
             <div className="bg-muted flex items-center justify-between border-b p-4">
               <div className="flex items-center gap-2">
@@ -878,10 +878,10 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                         {formatPrice(singleTotal)}
                       </p>
                     </div>
-                    <div className="bg-muted flex items-center gap-2 rounded-full border px-2 py-1 shadow-inner">
+                    <div className="bg-muted flex items-center gap-0.5 rounded-full border pl-0.5 shadow-inner">
                       <button
                         onClick={() => updateCartQuantity(item.uniqueId, -1)}
-                        className="text-muted-foreground hover:text-destructive p-1 transition"
+                        className="text-muted-foreground hover:text-destructive flex h-9 w-9 touch-manipulation items-center justify-center transition"
                       >
                         <Minus className="size-3.5" />
                       </button>
@@ -890,7 +890,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                       </span>
                       <button
                         onClick={() => updateCartQuantity(item.uniqueId, 1)}
-                        className="text-muted-foreground p-1 transition hover:text-[var(--store-theme)]"
+                        className="text-muted-foreground flex h-9 w-9 touch-manipulation items-center justify-center transition hover:text-[var(--store-theme)]"
                       >
                         <Plus className="size-3.5" />
                       </button>
@@ -901,7 +901,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
             </div>
 
             {/* Footer Summary */}
-            <div className="bg-muted space-y-4 border-t p-4">
+            <div className="bg-muted space-y-4 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="text-foreground flex items-center justify-between text-sm font-extrabold">
                 <span>{t("publicOrder.menu.subtotal")}</span>
                 <span>{formatPrice(cartTotals.subtotal)}</span>
@@ -924,7 +924,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       {/* Checkout Drawer */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
-          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
+          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
             {/* Header */}
             <div className="bg-muted flex items-center justify-between border-b p-4">
               <div className="flex items-center gap-2">
@@ -1179,7 +1179,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
             </div>
 
             {/* Footer */}
-            <div className="bg-muted space-y-4 border-t p-4">
+            <div className="bg-muted space-y-4 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="text-foreground flex items-center justify-between text-sm font-extrabold">
                 <span>
                   {t("publicOrder.menu.subtotal")} ({cartTotals.totalCount}{" "}
@@ -1210,7 +1210,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       {/* Item Detail / Modifier Selection Drawer */}
       {activeItem && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
-          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
+          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
             {/* Image (if exists) */}
             <div className="bg-muted relative h-44 w-full shrink-0">
               {activeItem.imageUrl ? (
@@ -1311,7 +1311,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
             </div>
 
             {/* Quantity Selector & Add to Cart button */}
-            <div className="bg-muted space-y-4 border-t p-4">
+            <div className="bg-muted space-y-4 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
                   {t("publicOrder.itemDetail.quantityLabel")}

@@ -14,6 +14,7 @@ export type MaterialWithSuppliers = Material & {
     materialId: string;
     supplierId: string;
     price: Prisma.Decimal;
+    purchaseQuantity: Prisma.Decimal;
     isPreferred: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -242,12 +243,14 @@ export class MaterialRepository extends BaseRepository {
     category?: string;
     unit: string;
     unitCost: number;
+    purchaseQuantity?: number;
     currentStock?: number;
     minStock?: number;
     maxStock?: number;
     suppliers?: Array<{
       supplierId: string;
       price: number;
+      purchaseQuantity?: number;
       isPreferred?: boolean;
     }>;
   }): Promise<MaterialWithSuppliers> {
@@ -262,6 +265,7 @@ export class MaterialRepository extends BaseRepository {
               create: suppliers.map((s) => ({
                 supplierId: s.supplierId,
                 price: s.price,
+                purchaseQuantity: s.purchaseQuantity ?? 1,
                 isPreferred: s.isPreferred ?? false,
               })),
             },

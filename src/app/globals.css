@@ -60,6 +60,23 @@ html {
 }
 
 /* ========================================
+   TOUCH-FRIENDLY TAP BEHAVIOR (iOS Safari / iPad)
+   ========================================
+   Without `touch-action: manipulation`, iOS Safari waits to see whether a
+   tap is the start of a double-tap-to-zoom gesture before dispatching the
+   click — on iPad this shows up as buttons that feel unresponsive or need
+   a second tap. This removes that delay for every clickable element,
+   across the marketing site, dashboard, POS, and public storefront. */
+button,
+a,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+.cursor-pointer {
+  touch-action: manipulation;
+}
+
+/* ========================================
    NAVBAR STYLES & FIXES
    ======================================== */
 

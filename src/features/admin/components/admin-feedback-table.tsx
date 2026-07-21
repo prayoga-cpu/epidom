@@ -26,6 +26,7 @@ import { toast } from "sonner";
 
 type FeedbackType = "BUG" | "FEATURE_SUGGESTION" | "GENERAL_FEEDBACK";
 type FeedbackStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "ARCHIVED";
+type FeedbackPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
 
 interface FeedbackRow {
   id: string;
@@ -37,6 +38,7 @@ interface FeedbackRow {
   description: string;
   screenshotUrl: string | null;
   status: FeedbackStatus;
+  priority: FeedbackPriority;
   createdAt: string;
   user: { id: string; name: string | null; email: string } | null;
 }
@@ -86,6 +88,30 @@ const statusColors: Record<FeedbackStatus, { row: string; select: string }> = {
   },
 };
 
+const PRIORITY_OPTIONS: FeedbackPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
+
+const priorityLabels: Record<FeedbackPriority, string> = {
+  URGENT: "Urgent",
+  HIGH: "High",
+  MEDIUM: "Medium",
+  LOW: "Low",
+};
+
+// Higher-priority items sort first within a status group.
+const PRIORITY_ORDER: Record<FeedbackPriority, number> = {
+  URGENT: 0,
+  HIGH: 1,
+  MEDIUM: 2,
+  LOW: 3,
+};
+
+const priorityColors: Record<FeedbackPriority, string> = {
+  URGENT: "border-red-500/40 text-red-400",
+  HIGH: "border-orange-500/40 text-orange-400",
+  MEDIUM: "border-blue-500/40 text-blue-400",
+  LOW: "border-slate-500/40 text-slate-400",
+};
+
 const DESCRIPTION_PREVIEW_LENGTH = 80;
 
 export function AdminFeedbackTable() {
@@ -106,7 +132,7 @@ export function AdminFeedbackTable() {
   });
 
   const mutation = useMutation({
-    mutationFn: (body: { id: string; status: FeedbackStatus }) =>
+    mutationFn: (body: { id: string; status?: FeedbackStatus; priority?: FeedbackPriority }) =>
       fetch("/api/admin/feedback", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -118,20 +144,26 @@ export function AdminFeedbackTable() {
         }
         return r.json();
       }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-feedback"] });
-      toast.success("Status updated");
+      toast.success(variables.priority ? "Priority updated" : "Status updated");
     },
     onError: (e: Error) => toast.error(e.message || "Failed"),
   });
 
   const rawRows = data?.feedback ?? [];
 
-  // Group by status (Open → In Progress → Resolved → Archived); the API
-  // already returns createdAt desc, and Array#sort is stable, so newest-first
-  // ordering is preserved within each status group.
+  // Group by status (Open → In Progress → Resolved → Archived), then by
+  // priority (Urgent → ... → Low) within each status group; the API already
+  // returns createdAt desc, and Array#sort is stable, so newest-first
+  // ordering is preserved within each status+priority group.
   const rows = useMemo(
-    () => [...rawRows].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
+    () =>
+      [...rawRows].sort(
+        (a, b) =>
+          STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
+          PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+      ),
     [rawRows]
   );
 
@@ -267,7 +299,7 @@ export function AdminFeedbackTable() {
                     : row.description}
                 </button>
 
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   {row.screenshotUrl ? (
                     <button
                       type="button"
@@ -279,27 +311,50 @@ export function AdminFeedbackTable() {
                   ) : (
                     <span className="text-muted-foreground text-xs">—</span>
                   )}
-                  <Select
-                    value={row.status}
-                    onValueChange={(v) =>
-                      mutation.mutate({ id: row.id, status: v as FeedbackStatus })
-                    }
-                    disabled={mutation.isPending}
-                  >
-                    <SelectTrigger
-                      size="sm"
-                      className={`w-[140px] font-medium ${statusColors[row.status].select}`}
+                  <div className="flex gap-2">
+                    <Select
+                      value={row.priority}
+                      onValueChange={(v) =>
+                        mutation.mutate({ id: row.id, priority: v as FeedbackPriority })
+                      }
+                      disabled={mutation.isPending}
                     >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {statusLabels[s]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <SelectTrigger
+                        size="sm"
+                        className={`w-[110px] font-medium ${priorityColors[row.priority]}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRIORITY_OPTIONS.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {priorityLabels[p]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={row.status}
+                      onValueChange={(v) =>
+                        mutation.mutate({ id: row.id, status: v as FeedbackStatus })
+                      }
+                      disabled={mutation.isPending}
+                    >
+                      <SelectTrigger
+                        size="sm"
+                        className={`w-[140px] font-medium ${statusColors[row.status].select}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {statusLabels[s]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             );
@@ -309,7 +364,7 @@ export function AdminFeedbackTable() {
         {/* Table */}
         <div className="border-border bg-card hidden overflow-hidden rounded-xl border lg:block">
           <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
+            <div className="min-w-[1020px]">
               <Table>
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
@@ -320,27 +375,28 @@ export function AdminFeedbackTable() {
                     <TableHead className="text-muted-foreground">Page</TableHead>
                     <TableHead className="text-muted-foreground">Description</TableHead>
                     <TableHead className="text-muted-foreground">Screenshot</TableHead>
+                    <TableHead className="text-muted-foreground">Priority</TableHead>
                     <TableHead className="text-muted-foreground">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-muted-foreground py-12 text-center">
+                      <TableCell colSpan={9} className="text-muted-foreground py-12 text-center">
                         Loading feedback...
                       </TableCell>
                     </TableRow>
                   )}
                   {isError && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-destructive py-12 text-center">
+                      <TableCell colSpan={9} className="text-destructive py-12 text-center">
                         Failed to load feedback. Refresh the page or sign in again.
                       </TableCell>
                     </TableRow>
                   )}
                   {!isLoading && !isError && rows.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-muted-foreground py-12 text-center">
+                      <TableCell colSpan={9} className="text-muted-foreground py-12 text-center">
                         No feedback yet
                       </TableCell>
                     </TableRow>
@@ -412,6 +468,29 @@ export function AdminFeedbackTable() {
                           ) : (
                             <span className="text-muted-foreground text-xs">—</span>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={row.priority}
+                            onValueChange={(v) =>
+                              mutation.mutate({ id: row.id, priority: v as FeedbackPriority })
+                            }
+                            disabled={mutation.isPending}
+                          >
+                            <SelectTrigger
+                              size="sm"
+                              className={`w-[110px] font-medium ${priorityColors[row.priority]}`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PRIORITY_OPTIONS.map((p) => (
+                                <SelectItem key={p} value={p}>
+                                  {priorityLabels[p]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell>
                           <Select

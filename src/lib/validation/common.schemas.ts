@@ -69,6 +69,23 @@ export const priceSchema = z
   .finite("Price must be finite")
   .multipleOf(0.01, "Price can only have 2 decimal places");
 
+// How many base `unit`s come in one purchase pack (e.g. 1000 if a Material's
+// unit is "g" and it's bought in 1kg bags). Must be strictly positive since
+// it's a divisor when deriving cost-per-unit from a pack price.
+export const purchaseQuantitySchema = z
+  .number()
+  .positive("Purchase quantity must be greater than zero")
+  .finite("Purchase quantity must be finite");
+
+// Cost per one base `unit`, derived server-side as purchasePrice ÷
+// purchaseQuantity rather than typed directly by a user — e.g. a €2, 1000g
+// pack of flour is €0.002/g. priceSchema's .multipleOf(0.01) would reject
+// that, so this allows finer precision for this specific derived value.
+export const derivedUnitCostSchema = z
+  .number()
+  .nonnegative("Cost must be non-negative")
+  .finite("Cost must be finite");
+
 // Pagination schemas
 export const paginationSchema = z.object({
   page: z.number().int().positive().default(1),

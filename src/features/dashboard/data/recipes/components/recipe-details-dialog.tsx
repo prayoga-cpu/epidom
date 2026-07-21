@@ -29,7 +29,14 @@ import {
   XCircle,
   Box,
 } from "lucide-react";
-import { formatCurrency, formatDate, formatDuration, formatNumber } from "@/lib/utils/formatting";
+import {
+  formatCurrency,
+  formatDate,
+  formatDuration,
+  formatNumber,
+  getCurrencySymbol,
+  formatDerivedUnitCost,
+} from "@/lib/utils/formatting";
 import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -56,7 +63,7 @@ export function RecipeDetailsDialog({
 }: RecipeDetailsDialogProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  const { currency, convertPrice, formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;
 
@@ -254,8 +261,9 @@ export function RecipeDetailsDialog({
                                 </p>
                                 {material && (
                                   <p className="text-muted-foreground text-xs">
-                                    {formatPrice(Number(material.unitCost))}/{material.unit} ×{" "}
-                                    {ingredient.quantity} {ingredient.unit}
+                                    {getCurrencySymbol(currency)}
+                                    {formatDerivedUnitCost(convertPrice(Number(material.unitCost)))}
+                                    /{material.unit} × {ingredient.quantity} {ingredient.unit}
                                   </p>
                                 )}
                                 {isMaterialDeleted && (

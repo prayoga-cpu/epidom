@@ -539,7 +539,15 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                     <div className="flex justify-between">
                       <span>{t("common.cost")}:</span>
                       <span className="text-foreground font-medium">
-                        {formatPrice(Number(material.unitCost))}
+                        {formatPrice(
+                          Number(material.unitCost) * Number(material.purchaseQuantity ?? 1)
+                        )}
+                        {Number(material.purchaseQuantity ?? 1) !== 1 && (
+                          <span className="text-muted-foreground font-normal">
+                            {" "}
+                            / {Number(material.purchaseQuantity)} {material.unit}
+                          </span>
+                        )}
                       </span>
                     </div>
 

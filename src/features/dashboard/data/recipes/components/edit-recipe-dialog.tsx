@@ -36,6 +36,7 @@ import { useUpdateRecipe, type RecipeWithIngredients } from "../hooks/use-recipe
 import { useMaterials } from "../../materials/hooks/use-materials";
 import { updateRecipeFormSchema } from "@/lib/validation/inventory.schemas";
 import type { UpdateRecipeFormInput } from "@/lib/validation/inventory.schemas";
+import { getCurrencySymbol, formatDerivedUnitCost } from "@/lib/utils/formatting";
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
@@ -594,8 +595,11 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                               </span>
                             </div>
                             <div className="text-muted-foreground mt-1">
-                              {formatPrice(Number(selectedMaterial.unitCost))} {t("common.per")}{" "}
-                              {selectedMaterial.unit} × {quantity}
+                              {getCurrencySymbol(currency)}
+                              {formatDerivedUnitCost(
+                                convertPrice(Number(selectedMaterial.unitCost))
+                              )}{" "}
+                              {t("common.per")} {selectedMaterial.unit} × {quantity}
                             </div>
                           </div>
                         )}

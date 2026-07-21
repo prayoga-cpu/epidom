@@ -1,4 +1,4 @@
-import { Feedback, FeedbackStatus } from "@prisma/client";
+import { Feedback, FeedbackStatus, FeedbackPriority } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { inngest, type FeedbackSubmittedEventData } from "@/lib/inngest/client";
 import { NotFoundError } from "@/lib/errors";
@@ -143,12 +143,15 @@ export class FeedbackService {
   }
 
   /**
-   * Update feedback status
+   * Update feedback status and/or priority (admin triage)
    */
-  async updateFeedbackStatus(id: string, status: FeedbackStatus): Promise<Feedback> {
+  async updateFeedbackTriage(
+    id: string,
+    data: { status?: FeedbackStatus; priority?: FeedbackPriority }
+  ): Promise<Feedback> {
     return prisma.feedback.update({
       where: { id },
-      data: { status },
+      data,
     });
   }
 }

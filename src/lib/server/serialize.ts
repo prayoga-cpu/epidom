@@ -24,12 +24,14 @@ export function serializeMaterial(material: MaterialWithSuppliers): MaterialWith
   return {
     ...material,
     unitCost: decimalToNumber(material.unitCost) as any,
+    purchaseQuantity: decimalToNumber(material.purchaseQuantity) as any,
     currentStock: decimalToNumber(material.currentStock) as any,
     minStock: decimalToNumber(material.minStock) as any,
     maxStock: decimalToNumber(material.maxStock) as any,
     materialSuppliers: material.materialSuppliers.map((ms) => ({
       ...ms,
       price: decimalToNumber(ms.price) as any,
+      purchaseQuantity: decimalToNumber(ms.purchaseQuantity) as any,
     })),
   };
 }
@@ -61,9 +63,11 @@ export function serializeSupplier(supplier: SupplierWithRelations): SupplierWith
       return {
         ...ms,
         price: decimalToNumber(ms.price) as any,
+        purchaseQuantity: decimalToNumber(ms.purchaseQuantity) as any,
         material: {
           ...ms.material,
           unitCost: decimalToNumber(ms.material.unitCost) as any,
+          purchaseQuantity: decimalToNumber(ms.material.purchaseQuantity) as any,
           currentStock: decimalToNumber(ms.material.currentStock) as any,
           minStock: decimalToNumber(ms.material.minStock) as any,
           maxStock: decimalToNumber(ms.material.maxStock) as any,

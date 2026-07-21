@@ -29,12 +29,14 @@ export interface CreateMaterialInput {
   category?: string;
   unit: string;
   unitCost: number;
+  purchaseQuantity?: number;
   currentStock?: number;
   minStock?: number;
   maxStock?: number;
   suppliers?: Array<{
     supplierId: string;
     price: number;
+    purchaseQuantity?: number;
     isPreferred?: boolean;
   }>;
 }
@@ -46,12 +48,14 @@ export interface UpdateMaterialInput {
   category?: string;
   unit?: string;
   unitCost?: number;
+  purchaseQuantity?: number;
   currentStock?: number;
   minStock?: number;
   maxStock?: number;
   suppliers?: Array<{
     supplierId: string;
     price: number;
+    purchaseQuantity?: number;
     isPreferred?: boolean;
   }>;
 }
@@ -315,6 +319,7 @@ export class MaterialService {
                   materialId,
                   supplierId: s.supplierId,
                   price: s.price,
+                  purchaseQuantity: s.purchaseQuantity ?? 1,
                   isPreferred: s.isPreferred ?? false,
                 })),
               });
@@ -330,6 +335,8 @@ export class MaterialService {
           if (input.unit !== undefined) updateData.unit = input.unit;
           // Convert numbers to Prisma Decimal using type helper
           if (input.unitCost !== undefined) updateData.unitCost = toDecimal(input.unitCost);
+          if (input.purchaseQuantity !== undefined)
+            updateData.purchaseQuantity = toDecimal(input.purchaseQuantity);
           if (input.currentStock !== undefined)
             updateData.currentStock = toDecimal(input.currentStock);
           if (input.minStock !== undefined) updateData.minStock = toDecimal(input.minStock);
@@ -358,6 +365,8 @@ export class MaterialService {
     if (input.unit !== undefined) updateData.unit = input.unit;
     // Convert numbers to Prisma Decimal using type helper
     if (input.unitCost !== undefined) updateData.unitCost = toDecimal(input.unitCost);
+    if (input.purchaseQuantity !== undefined)
+      updateData.purchaseQuantity = toDecimal(input.purchaseQuantity);
     if (input.currentStock !== undefined) updateData.currentStock = toDecimal(input.currentStock);
     if (input.minStock !== undefined) updateData.minStock = toDecimal(input.minStock);
     if (input.maxStock !== undefined) updateData.maxStock = toDecimal(input.maxStock);
@@ -497,7 +506,7 @@ export class MaterialService {
       else if (current > max) stockStatus = "Overstocked";
 
       const suppliers = material.materialSuppliers
-        .map((s) => `${s.supplier.name} ($${Number(s.price).toFixed(2)})`)
+        .map((s) => `${s.supplier.name} ($${Number(s.price)})`)
         .join("; ");
 
       return [
@@ -505,7 +514,10 @@ export class MaterialService {
         material.name,
         material.category || "",
         material.unit,
-        Number(material.unitCost).toFixed(2),
+        // Not .toFixed(2): unitCost is derived (purchasePrice ÷ purchaseQuantity)
+        // and can genuinely need more than 2 decimal places (e.g. €0.002/g) —
+        // truncating here would silently export it as "0.00".
+        Number(material.unitCost),
         current,
         min,
         max,

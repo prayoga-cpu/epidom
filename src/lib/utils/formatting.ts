@@ -244,6 +244,23 @@ export function formatCurrencyValue(
   return formatNumber(value, decimals, locale);
 }
 
+export const roundToSixDecimals = (value: number): number => Math.round(value * 1e6) / 1e6;
+
+/**
+ * Trims a per-base-unit cost (e.g. a Material's unitCost, which can be a
+ * derived value like 0.002 €/g) down to a readable number of decimals
+ * without trailing zeros. A plain 2-decimal currency formatter would show
+ * such values as a misleading "€0.00" — this is a lightweight display hint,
+ * not a currency amount, so it doesn't need Intl.NumberFormat's rules.
+ */
+export function formatDerivedUnitCost(value: number): string {
+  const decimals = value < 1 ? 4 : 2;
+  return value
+    .toFixed(decimals)
+    .replace(/(\.\d*?)0+$/, "$1")
+    .replace(/\.$/, "");
+}
+
 // ============================================================================
 // UNIT FORMATTING
 // ============================================================================

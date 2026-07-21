@@ -23,7 +23,13 @@ import {
   Package,
 } from "lucide-react";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
-import { formatDate, formatCurrency, formatNumber } from "@/lib/utils/formatting";
+import {
+  formatDate,
+  formatCurrency,
+  formatNumber,
+  getCurrencySymbol,
+  formatDerivedUnitCost,
+} from "@/lib/utils/formatting";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -46,7 +52,7 @@ export function SupplierDetailsDialog({
 }: SupplierDetailsDialogProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  const { currency, convertPrice, formatPrice } = useCurrency();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -179,10 +185,12 @@ export function SupplierDetailsDialog({
                                 Stock: {formatNumber(Number(material.currentStock))} {material.unit}
                               </span>
                               <span className="text-muted-foreground">
-                                Unit Cost: {formatPrice(Number(material.unitCost))}
+                                Unit Cost: {getCurrencySymbol(currency)}
+                                {formatDerivedUnitCost(convertPrice(Number(material.unitCost)))}
                               </span>
                               <span className="font-medium text-green-600">
-                                Supplier Price: {formatPrice(Number(ms.price))}
+                                Supplier Price: {getCurrencySymbol(currency)}
+                                {formatDerivedUnitCost(convertPrice(Number(ms.price)))}
                               </span>
                             </div>
                           </div>

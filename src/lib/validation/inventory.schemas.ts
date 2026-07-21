@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { cuidSchema, priceSchema, decimalSchema, phoneSchema } from "./common.schemas";
+import {
+  cuidSchema,
+  priceSchema,
+  decimalSchema,
+  phoneSchema,
+  purchaseQuantitySchema,
+  derivedUnitCostSchema,
+} from "./common.schemas";
 
 /**
  * Inventory management validation schemas (Products & Ingredients)
@@ -40,7 +47,8 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 // Ingredient schemas
 export const ingredientSupplierSchema = z.object({
   supplierId: cuidSchema,
-  price: priceSchema,
+  price: derivedUnitCostSchema,
+  purchaseQuantity: purchaseQuantitySchema.default(1),
   isPreferred: z.boolean().default(false),
 });
 
@@ -51,7 +59,8 @@ const baseIngredientSchema = z.object({
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").default("kg"),
-  unitCost: priceSchema,
+  unitCost: derivedUnitCostSchema,
+  purchaseQuantity: purchaseQuantitySchema.default(1),
   currentStock: decimalSchema.default(0),
   minStock: decimalSchema.default(0),
   maxStock: decimalSchema.default(1000),
@@ -87,7 +96,8 @@ const baseIngredientFormSchema = z.object({
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").optional(),
-  unitCost: priceSchema,
+  unitCost: derivedUnitCostSchema,
+  purchaseQuantity: purchaseQuantitySchema.optional(),
   currentStock: decimalSchema.optional(),
   minStock: decimalSchema.optional(),
   maxStock: decimalSchema.optional(),

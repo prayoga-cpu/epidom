@@ -26,6 +26,7 @@ export const FORM_DEFAULTS = {
     category: "",
     unit: "kg",
     unitCost: undefined as number | undefined,
+    purchaseQuantity: 1 as number | undefined,
     currentStock: undefined as number | undefined,
     minStock: undefined as number | undefined,
     maxStock: undefined as number | undefined,

@@ -199,7 +199,17 @@ export function MaterialDetailsDialog({
                     <span className="text-muted-foreground text-sm">
                       {t("data.materials.details.unitCost")}
                     </span>
-                    <span className="font-medium">{formatPrice(Number(material.unitCost))}</span>
+                    <span className="font-medium">
+                      {formatPrice(
+                        Number(material.unitCost) * Number(material.purchaseQuantity ?? 1)
+                      )}
+                      {Number(material.purchaseQuantity ?? 1) !== 1 && (
+                        <span className="text-muted-foreground font-normal">
+                          {" "}
+                          / {Number(material.purchaseQuantity)} {material.unit}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground text-sm">

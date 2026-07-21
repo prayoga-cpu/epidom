@@ -10,6 +10,8 @@ export const FEEDBACK_TYPES = ["BUG", "FEATURE_SUGGESTION", "GENERAL_FEEDBACK"] 
 
 export const FEEDBACK_STATUSES = ["OPEN", "IN_PROGRESS", "RESOLVED", "ARCHIVED"] as const;
 
+export const FEEDBACK_PRIORITIES = ["URGENT", "HIGH", "MEDIUM", "LOW"] as const;
+
 export const createFeedbackSchema = z.object({
   type: z.enum(FEEDBACK_TYPES),
   page: z.string().min(1).max(200),
@@ -39,12 +41,21 @@ export const createFeedbackSchema = z.object({
 
 export type CreateFeedbackInput = z.infer<typeof createFeedbackSchema>;
 
-export const updateFeedbackStatusSchema = z.object({
-  id: z.string().min(1),
-  status: z.enum(FEEDBACK_STATUSES),
-});
+// Admin triage update — status and priority are both admin-set (never
+// user-submitted), so either can be patched independently from the same
+// endpoint. At least one must be present.
+export const updateFeedbackTriageSchema = z
+  .object({
+    id: z.string().min(1),
+    status: z.enum(FEEDBACK_STATUSES).optional(),
+    priority: z.enum(FEEDBACK_PRIORITIES).optional(),
+  })
+  .refine((data) => data.status !== undefined || data.priority !== undefined, {
+    message: "At least one of status or priority is required",
+    path: ["status"],
+  });
 
-export type UpdateFeedbackStatusInput = z.infer<typeof updateFeedbackStatusSchema>;
+export type UpdateFeedbackTriageInput = z.infer<typeof updateFeedbackTriageSchema>;
 
 export const updateOwnFeedbackSchema = z.object({
   type: z.enum(FEEDBACK_TYPES),

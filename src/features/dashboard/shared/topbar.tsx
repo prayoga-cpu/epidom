@@ -40,8 +40,10 @@ export function Topbar() {
       }}
     >
       <div className="mx-auto max-w-7xl px-2 sm:px-3 lg:px-3">
-        {/* Mobile/Tablet Layout */}
-        <div className="flex h-14 items-center justify-between gap-1 sm:gap-2 lg:hidden">
+        {/* Mobile/Tablet Layout — covers phones through every iPad size
+            (including 1024px landscape), matching Sidebar's xl: breakpoint
+            for the fixed desktop rail */}
+        <div className="flex h-14 items-center justify-between gap-1 sm:gap-2 xl:hidden">
           {/* Left: Mobile menu + Logo */}
           <div className="flex min-w-0 items-center gap-1 sm:gap-2">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -111,8 +113,8 @@ export function Topbar() {
           </div>
         </div>
 
-        {/* Desktop Layout - SAME AS BEFORE */}
-        <div className="hidden h-14 grid-cols-[1fr_minmax(220px,720px)_1fr] items-center gap-3 lg:grid">
+        {/* Desktop Layout */}
+        <div className="hidden h-14 grid-cols-[1fr_minmax(220px,720px)_1fr] items-center gap-3 xl:grid">
           {/* Left: Mobile menu + Logo */}
           <div className="flex items-center gap-2">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>

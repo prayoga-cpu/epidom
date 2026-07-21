@@ -202,7 +202,14 @@ model Material {
   description        String?
   category           String?
   unit               String              @default("kg")
-  unitCost           Decimal             @db.Decimal(10, 2)
+  // Cost per one `unit`, derived server-side as purchasePrice ÷ purchaseQuantity
+  // rather than typed directly — see CreateMaterialInput. Needs more than 2
+  // decimal places (e.g. a €2, 1000g pack of flour is €0.002/g).
+  unitCost           Decimal             @db.Decimal(14, 6)
+  // How many `unit`s come in one purchase pack (e.g. 1000 if unit="g" and you
+  // buy 1kg bags) — lets the Add/Edit Material form show "Purchase Price" the
+  // way it's actually bought, and reconstruct it on edit as unitCost × this.
+  purchaseQuantity   Decimal             @default(1) @db.Decimal(10, 3)
   currentStock       Decimal             @default(0) @db.Decimal(10, 3)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -224,7 +231,12 @@ model Material {
 model MaterialSupplier {
   id          String   @id @default(cuid())
   supplierId  String
-  price       Decimal  @db.Decimal(10, 2)
+  // Cost per one Material.unit from this supplier, derived server-side the
+  // same way as Material.unitCost (see purchaseQuantity below).
+  price       Decimal  @db.Decimal(14, 6)
+  // How many Material.unit`s come in one pack this supplier sells, e.g. 1000
+  // if the material's unit is "g" and this supplier sells 1kg bags.
+  purchaseQuantity Decimal @default(1) @db.Decimal(10, 3)
   isPreferred Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -509,7 +521,7 @@ model Alert {
 }
 
 model Feedback {
-  id            String         @id @default(cuid())
+  id            String           @id @default(cuid())
   userId        String?
   userName      String
   userEmail     String
@@ -518,12 +530,14 @@ model Feedback {
   page          String
   description   String
   screenshotUrl String?
-  status        FeedbackStatus @default(OPEN)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status        FeedbackStatus   @default(OPEN)
+  priority      FeedbackPriority @default(MEDIUM)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([status])
+  @@index([priority])
   @@index([createdAt])
   @@map("feedback")
 }
@@ -628,6 +642,13 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   ARCHIVED
+}
+
+enum FeedbackPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
 }
 
 // Phase 2 enums

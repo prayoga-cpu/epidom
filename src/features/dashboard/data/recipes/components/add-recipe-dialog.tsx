@@ -45,6 +45,7 @@ import { useParams } from "next/navigation";
 import { useCreateRecipe } from "../hooks/use-recipes";
 import { useMaterials } from "../../materials/hooks/use-materials";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { getCurrencySymbol, formatDerivedUnitCost } from "@/lib/utils/formatting";
 import {
   createRecipeFormSchema,
   type CreateRecipeFormInput,
@@ -730,8 +731,11 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                                 </span>
                               </div>
                               <p className="text-muted-foreground mt-1">
-                                {formatPrice(Number(selectedMaterial.unitCost))} {t("common.per")}{" "}
-                                {selectedMaterial.unit} ×{" "}
+                                {getCurrencySymbol(currency)}
+                                {formatDerivedUnitCost(
+                                  convertPrice(Number(selectedMaterial.unitCost))
+                                )}{" "}
+                                {t("common.per")} {selectedMaterial.unit} ×{" "}
                                 {form.watch(`ingredients.${index}.quantity`) ?? "—"}
                               </p>
                             </div>

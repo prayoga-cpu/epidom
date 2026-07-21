@@ -9,6 +9,16 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.14.0] - 2026-07-20 · feat
+
+- Data → Materials: added Purchase Quantity + Purchase Price to raw materials and their per-supplier prices. Buy flour as "a 1000g bag for €2" instead of having to work out and type a per-gram cost by hand — the exact per-unit cost is derived and stored automatically in the background, and everywhere that cost feeds into (recipe costing, stock value, supplier comparisons) keeps working exactly as before. Existing materials are unaffected — they're treated as a pack of 1, same as today.
+- Fixed Unit Cost silently rounding down to "€0.00" wherever it was shown as a standalone per-unit rate (Materials list, Material details, Recipe cost-estimate breakdowns, Supplier details) — a real cost like €0.002/g was being truncated to 2 decimal places for display. It now shows enough precision to actually be meaningful.
+- Fixed buttons feeling unresponsive or needing a second tap on iPad Safari across the POS Cashier and public storefront — the app never told iOS to skip its default double-tap-to-zoom detection delay, which can eat a fast, deliberate tap. Also enlarged several touch targets that were well under Apple's recommended minimum size for a fingertip: the POS cart's quantity +/- and Remove controls, the Pay/Hold/Clear buttons, and the storefront cart's quantity +/- and floating "Checkout" button (previously as small as ~16px, now 36–48px).
+- Admin → Feedback: added a Priority field (Urgent / High / Medium / Low) alongside Status, editable inline from the same dropdown pattern. Tickets are now sorted by priority within each status group, so the most urgent open items always surface first.
+- Fixed the Data page crashing with "Decimal objects are not supported" right after saving a Material — the new Purchase Quantity field wasn't included in the step that converts database values into plain data before sending them to the page, for both a Material's own record and its per-supplier prices.
+- Dashboard: the fixed sidebar now only shows at true desktop/laptop widths. Every iPad size (Mini, Air, and Pro in portrait, up to 1024px) previously got the full 230px sidebar forced on top of already-tight content — they now get the same collapsible hamburger menu already used on phones, giving the actual page far more room.
+- Fixed the storefront's checkout, cart, and item-detail sheets getting cropped on iPhone Safari with the "Pay" button pushed out of reach — they sized themselves against the full-screen viewport height instead of the actually-visible area above Safari's address bar and toolbar. Also padded each sheet's bottom edge for the home-indicator area on notched iPhones.
+
 ## [2.13.1] - 2026-07-20 · fix
 
 - Fixed every Materials/Products/Recipes/Suppliers/Feedback save showing a generic "Invalid input data" error with no explanation. The server always computed the exact field and reason (e.g. "SKU is required", "Price must be non-negative"), but every form was discarding that detail before showing it. Errors now say exactly which field is wrong and why, and highlight that field in red on the form — instead of leaving you to guess.
