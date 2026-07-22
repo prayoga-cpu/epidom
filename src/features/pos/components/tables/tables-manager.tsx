@@ -324,26 +324,29 @@ export function TablesManager({ storeId }: TablesManagerProps) {
                         : "border-blue-500/40 bg-blue-500/5"
                 }`}
               >
-                {/* Action icons — sibling of the status button, not nested inside it (buttons can't contain buttons) */}
-                <div className="absolute top-1 right-1 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                {/* Action icons — sibling of the status button, not nested inside it (buttons
+                    can't contain buttons). Visible by default (not hover-only): a hover-gated
+                    opacity-0 leaves these permanently unreachable on touch devices, which have
+                    no persistent hover state. */}
+                <div className="absolute top-1 right-1 z-10 flex gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
                   <button
                     onClick={() => setQrTable(table)}
-                    className="hover:bg-background/60 rounded p-1"
+                    className="hover:bg-background/60 flex h-9 w-9 touch-manipulation items-center justify-center rounded"
                     title={t("pos.tables.showQr")}
                   >
-                    <QrCode className="h-3 w-3" />
+                    <QrCode className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => setEditTable(table)}
-                    className="hover:bg-background/60 rounded p-1"
+                    className="hover:bg-background/60 flex h-9 w-9 touch-manipulation items-center justify-center rounded"
                   >
-                    <Pencil className="h-3 w-3" />
+                    <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => setDeleteTable(table)}
-                    className="text-destructive hover:bg-background/60 rounded p-1"
+                    className="text-destructive hover:bg-background/60 flex h-9 w-9 touch-manipulation items-center justify-center rounded"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
 

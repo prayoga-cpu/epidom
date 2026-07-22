@@ -3,6 +3,7 @@ import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { OrderStatus, OrderSource } from "@prisma/client";
+import { serializePosOrders } from "@/lib/server/serialize";
 
 /**
  * GET /api/stores/[id]/orders
@@ -86,7 +87,9 @@ export const GET = withApiHandler(
     const orders = hasMore ? rows.slice(0, take) : rows;
     const nextCursor = hasMore ? orders[orders.length - 1].id : null;
 
-    return NextResponse.json(createSuccessResponse({ orders, nextCursor, totalCount }));
+    return NextResponse.json(
+      createSuccessResponse({ orders: serializePosOrders(orders), nextCursor, totalCount })
+    );
   },
   { rateLimitEndpoint: "/api/stores/[id]/orders", requireStoreAuth: true }
 );

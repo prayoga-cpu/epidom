@@ -170,7 +170,7 @@ export function ReservationList({ storeId }: Props) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-10 w-10 touch-manipulation"
             onClick={() => refetch()}
             title="Refresh"
           >
@@ -332,7 +332,7 @@ export function ReservationList({ storeId }: Props) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-muted-foreground h-7 w-7 hover:bg-red-500/10 hover:text-red-500"
+                    className="text-muted-foreground h-10 w-10 touch-manipulation hover:bg-red-500/10 hover:text-red-500"
                     onClick={() => setDeleteId(r.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />

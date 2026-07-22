@@ -5,6 +5,7 @@ import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification
 import { updateOrderStatusSchema } from "@/lib/validation/pos.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { deductStockForOrder, reverseStockForOrder } from "@/lib/services/stock-deduction.service";
+import { serializePosOrder } from "@/lib/server/serialize";
 
 /**
  * PATCH /api/stores/[id]/pos/orders/[orderId]
@@ -150,7 +151,7 @@ export async function GET(
       });
     }
 
-    return NextResponse.json(createSuccessResponse(order));
+    return NextResponse.json(createSuccessResponse(serializePosOrder(order)));
   } catch (error) {
     console.error("[POS_ORDER_GET]", error);
     return NextResponse.json(

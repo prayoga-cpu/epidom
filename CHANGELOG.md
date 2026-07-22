@@ -9,6 +9,19 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.14.1] - 2026-07-22 · fix
+
+- Added Credit Card as a POS payment method, alongside Cash/QRIS/e-wallets/Virtual Account.
+- Fixed the POS cart failing to Pay or Hold again after resuming a held order, with visibly wrong totals (e.g. a subtotal in the billions). The API endpoints powering the order queue were sending raw database price values straight to the browser instead of converting them to plain numbers first — the browser received them as text, so every total calculation silently glued numbers together as strings instead of adding them.
+- Fixed the storefront's checkout button becoming unreachable when several items were in the cart — the same underlying viewport-height issue from the last release, found in more places (POS's mobile cart sheet and about a dozen other dialogs across Data, Recipes, Suppliers, and Management) and fixed everywhere at once via the shared dialog component.
+- Fixed table action buttons (QR code, edit, delete) and a notification's dismiss button being completely unreachable on iPad/touch devices — they were only ever shown on mouse hover, which touchscreens don't have. They're now always visible.
+- Enlarged several more touch targets that were under Apple's recommended minimum tap size across POS (staff switch, table actions, reservation actions).
+- Fixed the desktop POS cart's Pay button becoming unreachable with enough items in the cart, with no way to scroll down to it. A shared layout container was missing `min-height: 0`, a CSS default that (combined with a scrollable flex container) otherwise lets content grow past its allotted space instead of scrolling within it — silently clipping the bottom instead of showing a scrollbar. Fixed at the shared layout level, so this can't recur on any dashboard page, not just POS.
+- Fixed the desktop POS cart's Pay button overflowing past the panel's right edge regardless of total size — it was sized to 100% of the row's width while sitting next to the Hold button, which a plain width percentage doesn't account for. It now correctly grows to fill only the space actually left over, and wraps onto a second line for a very large total instead of cropping.
+- Fixed the desktop POS cart panel itself getting squeezed/cropped on the right — the menu grid next to it had the same missing "shrink below natural width" behavior horizontally that the scroll bug had vertically, so it could refuse to make room for the cart's fixed width. The cart panel now always keeps its full width regardless of the menu's content.
+- Audited the rest of the app for the same iPad/touch issues found above and fixed what else turned up: the Create/Edit Store dialogs had the same viewport-height bug, and a toast notification's dismiss button plus the "remove photo" control on every image upload (menu items, profile photo, etc.) were hover-only and unreachable on touch, same as the table buttons.
+- Documented all of these as explicit rules in the project's coding guidelines, so future changes get checked for them upfront instead of being caught one bug report at a time.
+
 ## [2.14.0] - 2026-07-20 · feat
 
 - Data → Materials: added Purchase Quantity + Purchase Price to raw materials and their per-supplier prices. Buy flour as "a 1000g bag for €2" instead of having to work out and type a per-gram cost by hand — the exact per-unit cost is derived and stored automatically in the background, and everywhere that cost feeds into (recipe costing, stock value, supplier comparisons) keeps working exactly as before. Existing materials are unaffected — they're treated as a pack of 1, same as today.

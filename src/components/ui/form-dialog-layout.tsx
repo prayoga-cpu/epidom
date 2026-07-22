@@ -19,7 +19,7 @@ interface FormDialogLayoutProps {
   contentClassName?: string;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
   showCloseButton?: boolean;
-  /** If true, dialog height auto-fits content. If false, uses fixed 90vh height for long content. Default: true */
+  /** If true, dialog height auto-fits content. If false, uses fixed 90dvh height for long content. Default: true */
   autoHeight?: boolean;
 }
 
@@ -56,7 +56,11 @@ export function FormDialogLayout({
     <DialogContent
       className={cn(
         "flex flex-col overflow-hidden p-0",
-        autoHeight ? "max-h-[90vh]" : "h-[90vh] max-h-[90vh]",
+        // dvh (not vh): on iOS Safari, vh is calculated against the full
+        // viewport as if the address bar/toolbar were hidden, so a dialog
+        // sized with vh can render taller than what's actually visible,
+        // pushing the footer's action buttons out of reach.
+        autoHeight ? "max-h-[90dvh]" : "h-[90dvh] max-h-[90dvh]",
         maxWidthClasses[maxWidth],
         className
       )}

@@ -136,6 +136,17 @@ docs/                  # READ THIS for context before non-trivial work
 - Tab bars with multiple items must handle narrow viewports: use `overflow-x-auto` on the `TabsList`, or collapse into a 2-column grid at mobile (see management-client.tsx for the pattern).
 - Most Indonesian merchants open the dashboard on Android phones; the storefront is also primarily accessed on mobile. Desktop usability for managers on larger screens is equally important — test both before marking a task done.
 
+**Touch & tablet safety (iPad is the primary cashier device — treat this as priority, not an afterthought)**
+
+These five bug classes have each caused real, shipped breakage on iPad Safari. Check for all of them on any new or touched button/modal/panel, especially in `src/features/pos/`:
+
+- **`touch-action: manipulation` is applied globally already** (see `globals.css`) — don't remove it from the global rule, and don't need to add it per-component, but do add it explicitly to any new custom clickable `<div>`/`<span>` that isn't a real `<button>`/`<a>`/`.cursor-pointer` (the global selector only covers those).
+- **Touch targets must be ≥40px (ideally 44px), never below ~32px**, for anything actually tappable — icon buttons, steppers, small dismiss/remove controls. `size-3`/`size-3.5` icons are fine; the _clickable area_ around them is what must hit the minimum, via padding or an explicit `h-*/w-*`.
+- **Never gate a functional element behind `:hover` alone** (`opacity-0 ... group-hover:opacity-100`, `invisible ... group-hover:visible`). Touch devices have no persistent hover state, so this makes the control permanently unreachable, not just harder to find. Default to a visible-but-subtle state (e.g. `opacity-70`) and enhance on hover, or just always show it.
+- **Use `dvh`, never `vh`, for any dialog/sheet/drawer height** (`max-h-[90dvh]`, not `max-h-[90vh]`). iOS Safari's `vh` is sized as if the address bar/toolbar were hidden, so a `vh`-capped sheet can render taller than what's actually visible, pushing footer action buttons off-screen with no way to reach them. `min-h-[calc(100vh-Npx)]` on normal in-flow page content is lower-risk and not covered by this rule — the danger is specifically `position: fixed` sheets/dialogs.
+- **Every link in a nested flex `flex-1`/`overflow-y-auto` scroll chain needs `min-h-0` (or `min-w-0` for a row) on each intermediate flex item.** A flex item's browser default is to refuse to shrink below its own content's size; skip this and content quietly overflows/is clipped by an ancestor's `overflow-hidden` instead of scrolling, with no scrollbar ever appearing.
+- **In a flex row with more than one button, give the one that should fill remaining space `flex-1`, never `w-full`.** `width: 100%` doesn't know about sibling elements and claims the _entire_ row on top of them, overflowing by exactly the sibling's width — regardless of screen size or device, but it's easiest to notice on a cramped tablet panel.
+
 **i18n**
 
 - Every user-facing string goes through `useI18n()`.

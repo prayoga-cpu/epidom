@@ -26,7 +26,7 @@ export function PosMobileCart({ store }: PosMobileCartProps) {
   return (
     <>
       {cart.items.length > 0 && !cartOpen && (
-        <div className="fixed right-4 bottom-4 left-4 z-40 mx-auto max-w-md md:hidden">
+        <div className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-40 mx-auto max-w-md md:hidden">
           <div
             onClick={() => setCartOpen(true)}
             className="bg-primary text-primary-foreground flex cursor-pointer items-center justify-between rounded-2xl p-4 shadow-xl"
@@ -41,7 +41,10 @@ export function PosMobileCart({ store }: PosMobileCartProps) {
       )}
 
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
-        <SheetContent side="bottom" className="max-h-[85vh] rounded-t-3xl p-0 md:hidden">
+        <SheetContent
+          side="bottom"
+          className="max-h-[85dvh] overflow-hidden rounded-t-3xl p-0 md:hidden"
+        >
           <PosCart
             storeId={store.id}
             storeName={store.name}

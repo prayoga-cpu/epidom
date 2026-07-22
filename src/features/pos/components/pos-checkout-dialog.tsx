@@ -372,6 +372,12 @@ export function PosCheckoutDialog({
                             </FormControl>
                             <FormLabel className="font-normal">Virtual Account</FormLabel>
                           </FormItem>
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="STRIPE_CARD" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Credit Card</FormLabel>
+                          </FormItem>
                         </RadioGroup>
                       </FormControl>
                     </FormItem>

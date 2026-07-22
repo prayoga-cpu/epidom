@@ -168,7 +168,7 @@ export function SmartImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-full max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+      <DialogContent className="flex max-h-[90dvh] w-full max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
         {/* Header */}
         <DialogHeader className="from-primary/5 to-primary/10 border-b bg-gradient-to-r px-6 pt-4 pb-10">
           <div className="flex items-center justify-between">

@@ -328,7 +328,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-full max-h-[100dvh] w-full flex-col gap-0 p-0 sm:h-auto sm:max-h-[90vh] sm:max-w-5xl sm:rounded-lg [&>button]:hidden">
+      <DialogContent className="flex h-full max-h-[100dvh] w-full flex-col gap-0 p-0 sm:h-auto sm:max-h-[90dvh] sm:max-w-5xl sm:rounded-lg [&>button]:hidden">
         <DialogHeader className="border-b p-4 pb-2 sm:p-6 sm:pb-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">

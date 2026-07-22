@@ -149,7 +149,7 @@ export function PrintDeliveryDialog({ open, onOpenChange, delivery }: PrintDeliv
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[700px]">
+      <DialogContent className="max-h-[80dvh] overflow-y-auto sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>{t("management.delivery.dialogs.printDelivery.title")}</DialogTitle>
           <DialogDescription>

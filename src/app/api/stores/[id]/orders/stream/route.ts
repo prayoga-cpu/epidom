@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { prisma } from "@/lib/prisma";
 import { ACTIVE_POS_STATUSES } from "@/lib/constants/order-status";
+import { serializePosOrders } from "@/lib/server/serialize";
 
 // SSE endpoint for real-time order updates.
 // Clients poll the latest pending/confirmed orders every 5 seconds.
@@ -68,7 +69,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
             },
           },
         });
-        send({ type: "orders", orders });
+        send({ type: "orders", orders: serializePosOrders(orders) });
       };
 
       await poll();

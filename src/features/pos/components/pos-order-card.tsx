@@ -50,11 +50,15 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
       id: item.id,
       menuItemId: item.menuItemId ?? "",
       name: item.menuItem?.name ?? item.name,
-      unitPrice: item.unitPrice,
-      quantity: item.quantity,
+      // Number(...) defensively: these should already be plain numbers from
+      // the API, but a Prisma Decimal that slips through unconverted
+      // serializes as a *string*, which would silently turn every total
+      // calculation downstream into string concatenation instead of addition.
+      unitPrice: Number(item.unitPrice),
+      quantity: Number(item.quantity),
       // Not persisted on OrderItem — see pos.orderCard.resumedBanner.
       modifiers: [],
-      lineTotal: item.total,
+      lineTotal: Number(item.total),
     }));
 
     cart.hydrateFromOrder(mapped, order.id);

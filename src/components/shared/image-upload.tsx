@@ -304,9 +304,13 @@ export function ImageUpload({
           >
             <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
 
-            {/* Remove Button */}
+            {/* Remove Button — the dark backdrop is a hover-only decorative
+                enhancement (mouse only), but the button itself stays fully
+                visible always: it already has its own solid destructive
+                background, so it doesn't need the backdrop for contrast,
+                and touch devices have no hover state to reveal it with. */}
             {!disabled && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/50">
                 <Button
                   type="button"
                   variant="destructive"

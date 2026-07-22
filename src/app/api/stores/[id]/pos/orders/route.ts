@@ -14,6 +14,7 @@ import {
   OrderBuildError,
   type BuiltOrderItem,
 } from "@/lib/services/pos-order-builder";
+import { serializePosOrders } from "@/lib/server/serialize";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -56,7 +57,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       },
     });
 
-    return NextResponse.json(createSuccessResponse(orders));
+    return NextResponse.json(createSuccessResponse(serializePosOrders(orders)));
   } catch (error) {
     console.error("[POS_ORDERS_GET]", error);
     return NextResponse.json(

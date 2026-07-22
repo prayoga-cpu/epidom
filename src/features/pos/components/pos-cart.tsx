@@ -96,7 +96,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
       )}
 
       {/* Cart Items */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col pb-4">
           {cart.items.map((item: any) => (
             <PosCartItem
@@ -138,11 +138,22 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
             <Pause className="h-4 w-4" />
           </Button>
           <Button
-            className="h-12 w-full touch-manipulation text-base"
+            // flex-1 (not w-full!): width:100% ignores sibling elements in a
+            // flex row, so it claimed the *entire* row's width on top of the
+            // Hold button + gap, overflowing past the panel's right edge by
+            // exactly that much. flex-1 correctly grows to fill only the
+            // space actually left over. h-auto + min-h-12 (not a fixed h-12)
+            // lets a large total's text wrap onto a second line instead of
+            // being cropped; min-w-0 lets it shrink below its content's
+            // natural (nowrap) width so wrapping can happen at all.
+            className="h-auto min-h-12 min-w-0 flex-1 touch-manipulation py-3"
             size="lg"
             onClick={() => (onRequestCheckout ? onRequestCheckout() : setIsCheckoutOpen(true))}
           >
-            {t("pos.cart.pay")} {formatPrice(cart.total)}
+            <span className="flex min-w-0 flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-base whitespace-normal">
+              <span>{t("pos.cart.pay")}</span>
+              <span>{formatPrice(cart.total)}</span>
+            </span>
           </Button>
         </div>
       </div>

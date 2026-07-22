@@ -41,7 +41,7 @@ export function PosItemGrid({
   }
 
   return (
-    <div className="flex-1 overflow-auto p-4 pb-24 lg:pb-4">
+    <div className="min-h-0 flex-1 overflow-auto p-4 pb-24 lg:pb-4">
       {filteredCategories.map((category) => (
         <div key={category.name} className="mb-8 last:mb-0">
           <h2 className="mb-4 text-lg font-semibold tracking-tight">{category.name}</h2>

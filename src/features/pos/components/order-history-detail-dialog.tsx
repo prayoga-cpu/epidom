@@ -152,7 +152,7 @@ export function OrderHistoryDetailDialog({
 
   return (
     <Dialog open={!!order} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto">
         {order && (
           <>
             <DialogHeader>

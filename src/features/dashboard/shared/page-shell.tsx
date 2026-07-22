@@ -26,8 +26,14 @@ export function PageShell({ children }: { children: React.ReactNode }) {
 
           {/* Content - Fixed height box with scrollable content inside */}
           <main className="bg-card/80 page-content flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border shadow-lg backdrop-blur-md">
-            {/* Scrollable content area */}
-            <div className="scrollbar-thin flex flex-1 flex-col overflow-y-auto p-4 md:p-6">
+            {/* Scrollable content area. min-h-0 is required here: a flex
+                item defaults to min-height:auto (sized to its content),
+                which — combined with flex-1 inside an overflow-hidden
+                ancestor — lets content grow past the available space
+                instead of this div's own overflow-y-auto ever kicking in,
+                silently clipping the bottom (e.g. a page with a fixed
+                footer button) with no way to scroll to it. */}
+            <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">
               <UpgradeGateProvider>{children}</UpgradeGateProvider>
             </div>
           </main>

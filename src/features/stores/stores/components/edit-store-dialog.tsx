@@ -57,7 +57,7 @@ export function EditStoreDialog({ store, trigger }: EditStoreDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 sm:h-[90vh] sm:max-w-[550px]">
+      <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden p-0 sm:h-[90dvh] sm:max-w-[550px]">
         {/* Fixed Header */}
         <DialogHeader className="border-border shrink-0 border-b px-4 py-3 pr-10 sm:px-6 sm:py-4 sm:pr-6">
           <DialogTitle className="text-lg font-bold sm:text-xl md:text-2xl">

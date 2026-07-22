@@ -81,7 +81,7 @@ export function PosHeader({ store }: PosHeaderProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-destructive h-7 w-7"
+              className="text-muted-foreground hover:text-destructive h-10 w-10 touch-manipulation"
               onClick={handleLogout}
               title="Switch staff"
             >

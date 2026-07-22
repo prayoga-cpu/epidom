@@ -156,7 +156,7 @@ export default function DuplicateRecipeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[700px] [&>button]:hidden">
+      <DialogContent className="flex h-[90dvh] max-h-[90dvh] flex-col overflow-hidden p-0 sm:max-w-[700px] [&>button]:hidden">
         {/* Fixed Header */}
         <DialogHeader className="border-border shrink-0 border-b px-6 py-4">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold sm:text-2xl">

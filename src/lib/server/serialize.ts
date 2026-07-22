@@ -233,3 +233,38 @@ export function serializeRecipe(recipe: RecipeWithIngredientsRepo): RecipeWithIn
 export function serializeRecipes(recipes: RecipeWithIngredientsRepo[]): RecipeWithIngredients[] {
   return recipes.map(serializeRecipe);
 }
+
+/**
+ * Serialize a POS Order (with its items): convert all Decimal fields to
+ * numbers.
+ *
+ * Unlike the Server-Component serializers above, this guards an API route
+ * response — but the same rule applies: an unconverted Prisma Decimal
+ * serializes through JSON.stringify as a *string* (Decimal.toJSON() returns
+ * a string), not a number. The POS cart's totals math (`sum + item.total`,
+ * resume-from-hold, etc.) then silently does string concatenation instead of
+ * addition, producing wildly wrong totals with no type error to catch it.
+ */
+export function serializePosOrder(order: any): any {
+  return {
+    ...order,
+    subtotal: decimalToNumber(order.subtotal),
+    tax: decimalToNumber(order.tax),
+    delivery: decimalToNumber(order.delivery),
+    total: decimalToNumber(order.total),
+    items:
+      order.items?.map((item: any) => ({
+        ...item,
+        quantity: decimalToNumber(item.quantity),
+        unitPrice: decimalToNumber(item.unitPrice),
+        total: decimalToNumber(item.total),
+      })) ?? order.items,
+  };
+}
+
+/**
+ * Serialize an array of POS Orders
+ */
+export function serializePosOrders(orders: any[]): any[] {
+  return orders.map(serializePosOrder);
+}

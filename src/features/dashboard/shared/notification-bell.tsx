@@ -189,10 +189,13 @@ export function NotificationBell() {
                       </div>
                       <button
                         onClick={(e) => dismiss(n.id, e)}
-                        className="hover:bg-muted mt-0.5 ml-1 shrink-0 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+                        // Visible by default (not hover-only): a hover-gated opacity-0 leaves
+                        // this permanently unreachable on touch devices, which have no
+                        // persistent hover state.
+                        className="hover:bg-muted mt-0.5 ml-1 flex h-8 w-8 shrink-0 touch-manipulation items-center justify-center rounded opacity-70 transition-opacity group-hover:opacity-100"
                         aria-label={t("notifications.dismiss")}
                       >
-                        <X className="text-muted-foreground h-3 w-3" />
+                        <X className="text-muted-foreground h-3.5 w-3.5" />
                       </button>
                     </div>
                   </li>

@@ -31,13 +31,15 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
 
   return (
     <PosStaffGate storeId={store.id} bypassGate={bypassStaffGate}>
-      <div className="bg-muted/10 flex w-full flex-1 flex-col overflow-hidden rounded-xl">
+      <div className="bg-muted/10 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl">
         <PosHeader store={store} />
         <PosOfflineBanner storeId={store.id} />
 
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left pane: Menu Grid */}
-          <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* Left pane: Menu Grid. min-w-0 stops this pane's content from
+              refusing to shrink below its natural width (the flex-item
+              default) and squeezing the fixed-width cart pane next to it. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div className="bg-background flex items-center gap-4 border-b p-4">
               <div className="relative max-w-md flex-1">
                 <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
@@ -75,8 +77,10 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
             )}
           </div>
 
-          {/* Right pane: Cart */}
-          <div className="z-10 hidden w-80 flex-col border-l shadow-xl md:flex lg:w-96">
+          {/* Right pane: Cart. shrink-0 guarantees this pane keeps its
+              fixed w-80/lg:w-96 width rather than being compressed if the
+              menu pane's content pushes total width past what's available. */}
+          <div className="z-10 hidden min-h-0 w-80 shrink-0 flex-col border-l shadow-xl md:flex lg:w-96">
             <PosCart storeId={store.id} storeName={store.name} />
           </div>
         </div>
