@@ -9,14 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Calendar,
   Store,
@@ -272,13 +266,24 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
 
       {/* Change Password Dialog */}
       <Dialog open={pwDialog} onOpenChange={setPwDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("profile.accountSettings.changePassword")}</DialogTitle>
-            <DialogDescription>
-              {t("profile.accountSettings.changePasswordDescription")}
-            </DialogDescription>
-          </DialogHeader>
+        <FormDialogLayout
+          title={t("profile.accountSettings.changePassword")}
+          description={t("profile.accountSettings.changePasswordDescription")}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setPwDialog(false)}>
+                {t("common.actions.cancel")}
+              </Button>
+              <Button onClick={handleChangePw} disabled={changePwMutation.isPending}>
+                {changePwMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t("profile.accountSettings.savePassword")
+                )}
+              </Button>
+            </>
+          }
+        >
           <div className="space-y-4">
             <div className="space-y-1">
               <Label>{t("profile.accountSettings.currentPassword")}</Label>
@@ -308,30 +313,33 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPwDialog(false)}>
-              {t("common.actions.cancel")}
-            </Button>
-            <Button onClick={handleChangePw} disabled={changePwMutation.isPending}>
-              {changePwMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t("profile.accountSettings.savePassword")
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+        </FormDialogLayout>
       </Dialog>
 
       {/* Delete Account Dialog */}
       <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-destructive">
-              {t("profile.accountSettings.deleteAccount")}
-            </DialogTitle>
-            <DialogDescription>{t("profile.accountSettings.deleteDescription")}</DialogDescription>
-          </DialogHeader>
+        <FormDialogLayout
+          title={t("profile.accountSettings.deleteAccount")}
+          description={t("profile.accountSettings.deleteDescription")}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDeleteDialog(false)}>
+                {t("common.actions.cancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteAccountMutation.mutate()}
+                disabled={deleteConfirmEmail !== userEmail || deleteAccountMutation.isPending}
+              >
+                {deleteAccountMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t("profile.accountSettings.deleteConfirmButton")
+                )}
+              </Button>
+            </>
+          }
+        >
           <div className="space-y-3">
             <Label>
               {t("profile.accountSettings.confirmEmailLabel").replace("{email}", userEmail)}
@@ -342,23 +350,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
               placeholder={userEmail}
             />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialog(false)}>
-              {t("common.actions.cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteAccountMutation.mutate()}
-              disabled={deleteConfirmEmail !== userEmail || deleteAccountMutation.isPending}
-            >
-              {deleteAccountMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t("profile.accountSettings.deleteConfirmButton")
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+        </FormDialogLayout>
       </Dialog>
     </>
   );

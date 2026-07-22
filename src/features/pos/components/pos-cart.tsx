@@ -12,6 +12,7 @@ import { PosCheckoutDialog } from "./pos-checkout-dialog";
 import { PosHoldDialog, type HoldFormValues } from "./pos-hold-dialog";
 import { usePosSession } from "../hooks/use-pos-session";
 import { useHoldOrder } from "../hooks/use-hold-order";
+import { ApiClientError } from "@/lib/api/client";
 import { toast } from "sonner";
 
 interface PosCartProps {
@@ -54,7 +55,10 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
       setIsHoldOpen(false);
       toast.success(t("pos.orderCard.holdSuccess"));
     } catch (error) {
-      toast.error(t("pos.orderCard.holdFailed"));
+      // Surface the server's real reason (e.g. a stale item that's no longer
+      // on the menu) instead of a blanket failure message, same as checkout.
+      const serverMessage = error instanceof ApiClientError ? error.response.error.message : null;
+      toast.error(serverMessage || t("pos.orderCard.holdFailed"));
     }
   };
 
@@ -72,8 +76,12 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
 
   return (
     <div className="bg-background flex h-full flex-col border-l">
-      {/* Cart Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      {/* Cart Header — pr-10 (not pr-4) below md reserves room for the
+          mobile Sheet's own absolutely-positioned close button
+          (SheetContent's `right-4` X), which otherwise overlaps "Clear
+          All" here. The desktop sidebar has no such close button, so its
+          padding is unaffected at md:+. */}
+      <div className="flex items-center justify-between border-b py-3 pr-10 pl-4 md:pr-4">
         <div className="font-semibold">
           {t("pos.title")} <span className="text-muted-foreground ml-1">({totalItems})</span>
         </div>
@@ -110,7 +118,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
       </ScrollArea>
 
       {/* Cart Footer / Totals */}
-      <div className="bg-muted/20 border-t p-4">
+      <div className="bg-muted/20 border-t p-3 sm:p-4">
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("pos.cart.subtotal")}</span>

@@ -32,14 +32,19 @@ export function BaseItemCard({
   return (
     <Card
       className={cn(
-        "group bg-card relative rounded-lg border px-0 py-4 shadow-sm transition-all hover:shadow-md",
+        // Flat on mobile (no card chrome, just tight vertical spacing) — the
+        // base Card component applies rounded-xl/border/shadow-sm/py-6
+        // unprefixed (i.e. at every size), so those must be explicitly
+        // cancelled here before the full bordered/shadowed look returns at
+        // sm: and up.
+        "group bg-card relative rounded-none border-0 px-0 py-2 shadow-none transition-all sm:rounded-lg sm:border sm:py-4 sm:shadow-sm sm:hover:shadow-md",
         isSelected && "ring-primary ring-2",
         className
       )}
     >
       {/* Bulk Select Checkbox */}
       {bulkSelectMode && onSelect && (
-        <div className="absolute top-4 left-2">
+        <div className="absolute top-2 left-2 sm:top-4">
           <Checkbox checked={isSelected} onCheckedChange={onSelect} />
         </div>
       )}

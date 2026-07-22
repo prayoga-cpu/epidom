@@ -8,13 +8,8 @@ import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import {
   Form,
   FormControl,
@@ -81,58 +76,62 @@ export function TableCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? t("pos.tables.edit") : t("pos.tables.add")}</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="label"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("pos.tables.label")}</FormLabel>
-                  <FormControl>
-                    <Input placeholder="A1, B2, VIP 1..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="capacity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("pos.tables.capacityPax")}</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={1} max={50} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                {t("common.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
-                  ? t("common.actions.saving")
-                  : isEdit
-                    ? t("common.actions.save")
-                    : t("common.actions.add")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="contents">
+          <FormDialogLayout
+            title={isEdit ? t("pos.tables.edit") : t("pos.tables.add")}
+            maxWidth="sm"
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting}
+                >
+                  {t("common.actions.cancel")}
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting
+                    ? t("common.actions.saving")
+                    : isEdit
+                      ? t("common.actions.save")
+                      : t("common.actions.add")}
+                </Button>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("pos.tables.label")}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="A1, B2, VIP 1..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="capacity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("pos.tables.capacityPax")}</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={1} max={50} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </FormDialogLayout>
+        </form>
+      </Form>
     </Dialog>
   );
 }

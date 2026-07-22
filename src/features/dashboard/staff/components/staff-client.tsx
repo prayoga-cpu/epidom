@@ -6,13 +6,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -205,17 +200,20 @@ export function StaffClient({
           </div>
         ) : (
           staff.map((member) => (
-            <div key={member.id} className="bg-muted/50 space-y-3 rounded-lg border p-4">
+            <div
+              key={member.id}
+              className="sm:bg-muted/50 space-y-2 border-b p-2 sm:space-y-3 sm:rounded-lg sm:border sm:p-4"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{member.name}</p>
                   {member.email ? (
-                    <span className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
+                    <span className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[8px] sm:text-xs">
                       <Mail className="h-3 w-3" />
                       {member.email}
                     </span>
                   ) : (
-                    <span className="text-muted-foreground/50 text-xs">—</span>
+                    <span className="text-muted-foreground/50 text-[8px] sm:text-xs">—</span>
                   )}
                 </div>
                 <Badge variant="secondary">{ROLE_LABELS[member.role]}</Badge>
@@ -383,99 +381,115 @@ export function StaffClient({
           if (!open) reset();
         }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("pages.addStaff")}</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={handleSubmit((data) => addMutation.mutate(data as never))}
-            className="space-y-4"
+        <form
+          onSubmit={handleSubmit((data) => addMutation.mutate(data as never))}
+          className="contents"
+        >
+          <FormDialogLayout
+            title={t("pages.addStaff")}
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setAddOpen(false);
+                    reset();
+                  }}
+                >
+                  {t("common.actions.cancel")}
+                </Button>
+                <Button type="submit" disabled={isSubmitting || addMutation.isPending}>
+                  {addMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    t("common.actions.save")
+                  )}
+                </Button>
+              </>
+            }
           >
-            <div className="space-y-1">
-              <Label htmlFor="name">{t("common.name")}</Label>
-              <Input id="name" {...register("name")} />
-              {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Label htmlFor="name">{t("common.name")}</Label>
+                <Input id="name" {...register("name")} />
+                {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="add-email">
+                  Email <span className="text-muted-foreground text-xs">(optional)</span>
+                </Label>
+                <Input
+                  id="add-email"
+                  type="email"
+                  {...register("email" as never)}
+                  placeholder="staff@example.com"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("pages.staffRole")}</Label>
+                <Select
+                  defaultValue="CASHIER"
+                  onValueChange={(v) => setValue("role", v as StaffRole)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLES_FOR_SELECT.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pin">
+                  {t("pages.staffPin")}{" "}
+                  <span className="text-muted-foreground text-xs">(optional)</span>
+                </Label>
+                <Input
+                  id="pin"
+                  type="password"
+                  maxLength={4}
+                  inputMode="numeric"
+                  placeholder="4-digit PIN"
+                  {...register("pin")}
+                />
+                {errors.pin && <p className="text-destructive text-xs">{errors.pin.message}</p>}
+              </div>
+              {watchEmail && (
+                <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
+                  <input type="checkbox" className="rounded" {...register("sendInvite" as never)} />
+                  Send PIN to staff email
+                </label>
+              )}
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="add-email">
-                Email <span className="text-muted-foreground text-xs">(optional)</span>
-              </Label>
-              <Input
-                id="add-email"
-                type="email"
-                {...register("email" as never)}
-                placeholder="staff@example.com"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>{t("pages.staffRole")}</Label>
-              <Select
-                defaultValue="CASHIER"
-                onValueChange={(v) => setValue("role", v as StaffRole)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES_FOR_SELECT.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {ROLE_LABELS[r]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="pin">
-                {t("pages.staffPin")}{" "}
-                <span className="text-muted-foreground text-xs">(optional)</span>
-              </Label>
-              <Input
-                id="pin"
-                type="password"
-                maxLength={4}
-                inputMode="numeric"
-                placeholder="4-digit PIN"
-                {...register("pin")}
-              />
-              {errors.pin && <p className="text-destructive text-xs">{errors.pin.message}</p>}
-            </div>
-            {watchEmail && (
-              <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
-                <input type="checkbox" className="rounded" {...register("sendInvite" as never)} />
-                Send PIN to staff email
-              </label>
-            )}
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setAddOpen(false);
-                  reset();
-                }}
-              >
-                {t("common.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={isSubmitting || addMutation.isPending}>
-                {addMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  t("common.actions.save")
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
+          </FormDialogLayout>
+        </form>
       </Dialog>
 
       {/* Edit Staff Dialog */}
       {editTarget && (
         <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Staff — {editTarget.name}</DialogTitle>
-            </DialogHeader>
+          <FormDialogLayout
+            title={`Edit Staff — ${editTarget.name}`}
+            footer={
+              <>
+                <Button variant="outline" onClick={() => setEditTarget(null)}>
+                  {t("common.actions.cancel")}
+                </Button>
+                <Button onClick={handleEditSave} disabled={editLoading || !editName.trim()}>
+                  {editLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    t("common.actions.save")
+                  )}
+                </Button>
+              </>
+            }
+          >
             <div className="space-y-4">
               <div className="space-y-1">
                 <Label>Name</Label>
@@ -548,19 +562,7 @@ export function StaffClient({
                 </label>
               )}
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditTarget(null)}>
-                {t("common.actions.cancel")}
-              </Button>
-              <Button onClick={handleEditSave} disabled={editLoading || !editName.trim()}>
-                {editLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  t("common.actions.save")
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
+          </FormDialogLayout>
         </Dialog>
       )}
       {confirmDialog}

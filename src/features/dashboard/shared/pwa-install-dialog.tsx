@@ -76,30 +76,32 @@ export function PwaInstallTrigger({ variant }: { variant: PwaInstallTriggerVaria
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       {/* z-[80] so it renders above the mobile nav drawer (Sheet is z-[70]) when
           the install button is tapped from inside the drawer */}
-      <DialogContent className="z-[80]">
-        <DialogHeader>
+      <DialogContent className="z-[80] flex max-h-[85dvh] flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{t("common.pwa.installTitle")}</DialogTitle>
           <DialogDescription>{t("common.pwa.installIntro")}</DialogDescription>
         </DialogHeader>
 
-        {canInstall && (
-          <Button className="w-full" onClick={handleInstall}>
-            <Download className="size-4" />
-            {t("common.pwa.installNow")}
-          </Button>
-        )}
+        <div className="flex-1 space-y-4 overflow-y-auto">
+          {canInstall && (
+            <Button className="w-full" onClick={handleInstall}>
+              <Download className="size-4" />
+              {t("common.pwa.installNow")}
+            </Button>
+          )}
 
-        {showIosSteps ? (
-          <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
-            <Share className="size-4 shrink-0" aria-hidden />
-            {t("common.pwa.installIosStep")}
-          </p>
-        ) : (
-          <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
-            <Plus className="size-4 shrink-0" aria-hidden />
-            {t("common.pwa.installDesktopStep")}
-          </p>
-        )}
+          {showIosSteps ? (
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+              <Share className="size-4 shrink-0" aria-hidden />
+              {t("common.pwa.installIosStep")}
+            </p>
+          ) : (
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+              <Plus className="size-4 shrink-0" aria-hidden />
+              {t("common.pwa.installDesktopStep")}
+            </p>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

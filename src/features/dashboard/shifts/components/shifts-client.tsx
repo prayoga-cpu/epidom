@@ -6,13 +6,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Input } from "@/components/ui/input";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { Label } from "@/components/ui/label";
@@ -190,11 +185,16 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
           </div>
         ) : (
           shifts.map((shift) => (
-            <div key={shift.id} className="bg-muted/50 space-y-3 rounded-lg border p-4">
+            <div
+              key={shift.id}
+              className="sm:bg-muted/50 space-y-2 border-b p-2 sm:space-y-3 sm:rounded-lg sm:border sm:p-4"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{shift.staffMember.name}</p>
-                  <p className="text-muted-foreground text-xs">{formatDateTime(shift.openedAt)}</p>
+                  <p className="text-muted-foreground text-[8px] sm:text-xs">
+                    {formatDateTime(shift.openedAt)}
+                  </p>
                 </div>
                 <Badge variant={shift.closedAt ? "outline" : "default"}>
                   {shift.closedAt ? t("pages.shiftClosed") : t("pages.shiftOpen")}
@@ -324,91 +324,57 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
 
       {/* Open Shift Dialog */}
       <Dialog open={openOpen} onOpenChange={setOpenOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("pages.openShift")}</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={openForm.handleSubmit((data) => openMutation.mutate(data))}
-            className="space-y-4"
+        <form
+          onSubmit={openForm.handleSubmit((data) => openMutation.mutate(data))}
+          className="contents"
+        >
+          <FormDialogLayout
+            title={t("pages.openShift")}
+            footer={
+              <>
+                <Button type="button" variant="outline" onClick={() => setOpenOpen(false)}>
+                  {t("common.actions.cancel")}
+                </Button>
+                <Button type="submit" disabled={openMutation.isPending}>
+                  {t("pages.openShift")}
+                </Button>
+              </>
+            }
           >
-            <div className="space-y-1">
-              <Label>Staff</Label>
-              <Select onValueChange={(v) => openForm.setValue("staffId", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staff.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="pin">{t("pages.staffPin")}</Label>
-              <Input
-                id="pin"
-                type="password"
-                maxLength={4}
-                inputMode="numeric"
-                {...openForm.register("pin")}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="openingCash">{t("pages.openingCash")}</Label>
-              <Controller
-                control={openForm.control}
-                name="openingCash"
-                render={({ field }) => (
-                  <DecimalInput
-                    id="openingCash"
-                    decimals={2}
-                    min={0}
-                    value={field.value}
-                    onChange={(v) => field.onChange(v ?? 0)}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  />
-                )}
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenOpen(false)}>
-                {t("common.actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={openMutation.isPending}>
-                {t("pages.openShift")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Close Shift Dialog */}
-      {closeTarget && (
-        <Dialog open={!!closeTarget} onOpenChange={() => setCloseTarget(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("pages.closeShift")}</DialogTitle>
-            </DialogHeader>
-            <form
-              onSubmit={closeForm.handleSubmit((data) =>
-                closeMutation.mutate({ shiftId: closeTarget.id, body: data })
-              )}
-              className="space-y-4"
-            >
+            <div className="space-y-4">
               <div className="space-y-1">
-                <Label htmlFor="closingCash">{t("pages.closingCash")}</Label>
+                <Label>Staff</Label>
+                <Select onValueChange={(v) => openForm.setValue("staffId", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pin">{t("pages.staffPin")}</Label>
+                <Input
+                  id="pin"
+                  type="password"
+                  maxLength={4}
+                  inputMode="numeric"
+                  {...openForm.register("pin")}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="openingCash">{t("pages.openingCash")}</Label>
                 <Controller
-                  control={closeForm.control}
-                  name="closingCash"
+                  control={openForm.control}
+                  name="openingCash"
                   render={({ field }) => (
                     <DecimalInput
-                      id="closingCash"
+                      id="openingCash"
                       decimals={2}
                       min={0}
                       value={field.value}
@@ -420,20 +386,60 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
                   )}
                 />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="notes">Notes</Label>
-                <Input id="notes" {...closeForm.register("notes")} />
+            </div>
+          </FormDialogLayout>
+        </form>
+      </Dialog>
+
+      {/* Close Shift Dialog */}
+      {closeTarget && (
+        <Dialog open={!!closeTarget} onOpenChange={() => setCloseTarget(null)}>
+          <form
+            onSubmit={closeForm.handleSubmit((data) =>
+              closeMutation.mutate({ shiftId: closeTarget.id, body: data })
+            )}
+            className="contents"
+          >
+            <FormDialogLayout
+              title={t("pages.closeShift")}
+              footer={
+                <>
+                  <Button type="button" variant="outline" onClick={() => setCloseTarget(null)}>
+                    {t("common.actions.cancel")}
+                  </Button>
+                  <Button type="submit" variant="destructive" disabled={closeMutation.isPending}>
+                    {t("pages.closeShift")}
+                  </Button>
+                </>
+              }
+            >
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label htmlFor="closingCash">{t("pages.closingCash")}</Label>
+                  <Controller
+                    control={closeForm.control}
+                    name="closingCash"
+                    render={({ field }) => (
+                      <DecimalInput
+                        id="closingCash"
+                        decimals={2}
+                        min={0}
+                        value={field.value}
+                        onChange={(v) => field.onChange(v ?? 0)}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                      />
+                    )}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Input id="notes" {...closeForm.register("notes")} />
+                </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setCloseTarget(null)}>
-                  {t("common.actions.cancel")}
-                </Button>
-                <Button type="submit" variant="destructive" disabled={closeMutation.isPending}>
-                  {t("pages.closeShift")}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
+            </FormDialogLayout>
+          </form>
         </Dialog>
       )}
     </div>

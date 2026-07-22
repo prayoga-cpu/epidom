@@ -17,7 +17,7 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
   const { formatPrice } = useCurrency();
 
   return (
-    <div className="flex flex-col gap-2 border-b p-4 last:border-0">
+    <div className="flex flex-col gap-2 border-b p-2 last:border-0 sm:p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <h4 className="leading-none font-medium">{item.name}</h4>

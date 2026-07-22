@@ -33,7 +33,12 @@ export async function validateAndBuildOrderItems(
   });
 
   if (menuItems.length !== menuItemIds.length) {
-    throw new OrderBuildError("One or more menu items are unavailable or not found");
+    const foundIds = new Set(menuItems.map((m) => m.id));
+    // Name the exact items so the cashier knows what to remove, rather than a
+    // vague "something is wrong" — this is the common case when a held order
+    // is resumed after the menu changed (item deleted / made unavailable).
+    const missingNames = items.filter((i) => !foundIds.has(i.menuItemId)).map((i) => i.name);
+    throw new OrderBuildError(`No longer available, remove from cart: ${missingNames.join(", ")}`);
   }
 
   const menuItemMap = new Map(menuItems.map((m) => [m.id, m]));

@@ -789,8 +789,8 @@ export function AdminDashboard() {
           }
         }}
       >
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <LogIn className="h-4 w-4 text-emerald-400" />
               Temporary Access
@@ -801,7 +801,7 @@ export function AdminDashboard() {
               after.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-2">
+          <div className="flex-1 space-y-3 overflow-y-auto py-2">
             {!tempPw ? (
               <div className="flex items-center justify-center py-4">
                 <div className="border-border h-5 w-5 animate-spin rounded-full border-2 border-t-emerald-400" />
@@ -853,7 +853,7 @@ export function AdminDashboard() {
               </>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button
               variant="outline"
               onClick={() => {
@@ -881,8 +881,8 @@ export function AdminDashboard() {
           if (!open) setPwTarget(null);
         }}
       >
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-blue-400" />
               {pwTarget?.hasPassword ? "Reset Password" : "Set Password"}
@@ -897,7 +897,7 @@ export function AdminDashboard() {
               </span>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-2">
+          <div className="flex-1 space-y-2 overflow-y-auto py-2">
             <p className="text-muted-foreground text-xs">New password (min 8 characters)</p>
             <div className="relative">
               <Input
@@ -917,7 +917,7 @@ export function AdminDashboard() {
               </button>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => setPwTarget(null)}>
               Cancel
             </Button>
@@ -950,15 +950,15 @@ export function AdminDashboard() {
           }
         }}
       >
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="text-red-500">Delete Account</DialogTitle>
             <DialogDescription>
               This permanently deletes <strong>{deleteTarget?.email}</strong> and all their data
               (stores, products, orders, subscriptions). This cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-2">
+          <div className="flex-1 space-y-2 overflow-y-auto py-2">
             <p className="text-muted-foreground text-xs">Type the email address to confirm:</p>
             <Input
               value={deleteConfirm}
@@ -967,7 +967,7 @@ export function AdminDashboard() {
               className="font-mono text-sm"
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button
               variant="outline"
               onClick={() => {
@@ -1002,8 +1002,8 @@ export function AdminDashboard() {
           }
         }}
       >
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="text-amber-500">Reset Account Data</DialogTitle>
             <DialogDescription>
               This wipes all business data for <strong>{resetTarget?.email}</strong> — stores,
@@ -1012,7 +1012,7 @@ export function AdminDashboard() {
               and subscription/billing are kept untouched. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-2">
+          <div className="flex-1 space-y-2 overflow-y-auto py-2">
             <p className="text-muted-foreground text-xs">Type the email address to confirm:</p>
             <Input
               value={resetConfirm}
@@ -1021,7 +1021,7 @@ export function AdminDashboard() {
               className="font-mono text-sm"
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button
               variant="outline"
               onClick={() => {

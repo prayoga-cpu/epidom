@@ -572,12 +572,12 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                 Control what customers can do on your public storefront page.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="divide-border space-y-0 divide-y sm:space-y-4 sm:divide-y-0">
               <FormField
                 control={form.control}
                 name="acceptsOrders"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between gap-4 rounded-lg border p-4">
+                  <FormItem className="flex items-center justify-between gap-3 py-3 first:pt-0 sm:gap-4 sm:rounded-lg sm:border sm:p-4 sm:first:pt-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base font-semibold">
                         Online Orders
@@ -603,7 +603,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                 control={form.control}
                 name="acceptsReservations"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between gap-4 rounded-lg border p-4">
+                  <FormItem className="flex items-center justify-between gap-3 py-3 last:pb-0 sm:gap-4 sm:rounded-lg sm:border sm:p-4 sm:last:pb-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base font-semibold">
                         Table Reservations

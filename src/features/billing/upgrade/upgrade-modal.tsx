@@ -81,8 +81,8 @@ export function UpgradeGateProvider({ children }: { children: React.ReactNode })
     <UpgradeGateContext.Provider value={value}>
       {children}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-md">
+          <DialogHeader className="shrink-0">
             <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-full">
               <Sparkles className="text-primary h-6 w-6" />
             </div>
@@ -94,7 +94,7 @@ export function UpgradeGateProvider({ children }: { children: React.ReactNode })
               {isPos ? " " + t("billing.upgradeGate.trialHint") : ""}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-2">
+          <DialogFooter className="shrink-0 gap-2 sm:gap-2">
             <Button variant="ghost" onClick={() => setOpen(false)}>
               {t("billing.upgradeGate.notNow")}
             </Button>

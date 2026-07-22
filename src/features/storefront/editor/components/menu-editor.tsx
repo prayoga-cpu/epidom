@@ -15,14 +15,8 @@ import { ImageUpload } from "@/components/shared/image-upload";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useConfirm } from "@/components/ui/use-confirm";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 
 interface Product {
   id: string;
@@ -313,15 +307,36 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
       {/* Add Item Dialog — Consistent Form Input */}
       <Dialog open={!!addItemDialog?.open} onOpenChange={(open) => !open && setAddItemDialog(null)}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{t("storefront.menu.addItem") || "Add New Item"}</DialogTitle>
-            <DialogDescription>
-              {t("storefront.menu.addItemDesc") ||
-                "Fill in the details below to add a new item to your menu."}
-            </DialogDescription>
-          </DialogHeader>
-
+        <FormDialogLayout
+          title={t("storefront.menu.addItem") || "Add New Item"}
+          description={
+            t("storefront.menu.addItemDesc") ||
+            "Fill in the details below to add a new item to your menu."
+          }
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setAddItemDialog(null)}
+                className="transition-transform active:scale-[0.98]"
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!newItemName.trim() || newItemPrice === undefined || isSubmittingItem}
+                onClick={handleCreateManualItem}
+                className="transition-transform active:scale-[0.98]"
+              >
+                {isSubmittingItem ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" />
+                )}
+                {t("storefront.menu.saveItem") || "Add Item"}
+              </Button>
+            </>
+          }
+        >
           <div className="grid gap-5 py-4">
             <div className="space-y-2">
               <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
@@ -371,29 +386,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
               </div>
             </div>
           </div>
-
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setAddItemDialog(null)}
-              className="transition-transform active:scale-[0.98]"
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={!newItemName.trim() || newItemPrice === undefined || isSubmittingItem}
-              onClick={handleCreateManualItem}
-              className="transition-transform active:scale-[0.98]"
-            >
-              {isSubmittingItem ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="mr-2 h-4 w-4" />
-              )}
-              {t("storefront.menu.saveItem") || "Add Item"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+        </FormDialogLayout>
       </Dialog>
 
       {/* Edit Item Dialog */}
@@ -401,12 +394,35 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
         open={!!editItemDialog?.open}
         onOpenChange={(open) => !open && setEditItemDialog(null)}
       >
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{t("storefront.menu.editItem")}</DialogTitle>
-            <DialogDescription>{t("storefront.menu.editItemDesc")}</DialogDescription>
-          </DialogHeader>
-
+        <FormDialogLayout
+          title={t("storefront.menu.editItem")}
+          description={t("storefront.menu.editItemDesc")}
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setEditItemDialog(null)}
+                className="transition-transform active:scale-[0.98]"
+              >
+                {t("actions.cancel")}
+              </Button>
+              <Button
+                disabled={
+                  !editItemName.trim() || editItemPrice === undefined || isSubmittingEditItem
+                }
+                onClick={handleUpdateItem}
+                className="transition-transform active:scale-[0.98]"
+              >
+                {isSubmittingEditItem ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Settings2 className="mr-2 h-4 w-4" />
+                )}
+                {t("storefront.menu.updateItem")}
+              </Button>
+            </>
+          }
+        >
           <div className="grid gap-5 py-4">
             <div className="space-y-2">
               <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
@@ -454,29 +470,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
               </div>
             </div>
           </div>
-
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setEditItemDialog(null)}
-              className="transition-transform active:scale-[0.98]"
-            >
-              {t("actions.cancel")}
-            </Button>
-            <Button
-              disabled={!editItemName.trim() || editItemPrice === undefined || isSubmittingEditItem}
-              onClick={handleUpdateItem}
-              className="transition-transform active:scale-[0.98]"
-            >
-              {isSubmittingEditItem ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Settings2 className="mr-2 h-4 w-4" />
-              )}
-              {t("storefront.menu.updateItem")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+        </FormDialogLayout>
       </Dialog>
       {confirmDialog}
     </div>

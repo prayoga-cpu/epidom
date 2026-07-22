@@ -2,14 +2,8 @@
 
 import { useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { downloadDataUrl } from "@/lib/utils/export";
@@ -43,23 +37,23 @@ export function QrCodeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xs">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
-        </DialogHeader>
+      <FormDialogLayout
+        title={title}
+        description={description}
+        maxWidth="sm"
+        footer={
+          <Button onClick={handleDownload} className="w-full sm:w-auto">
+            <Download className="mr-2 h-4 w-4" />
+            {t("common.actions.download")}
+          </Button>
+        }
+      >
         <div className="flex justify-center py-2">
           <div className="rounded-xl border-2 border-slate-100 bg-white p-4">
             <QRCodeCanvas ref={canvasRef} value={value} size={200} level="M" marginSize={0} />
           </div>
         </div>
-        <DialogFooter>
-          <Button onClick={handleDownload} className="w-full sm:w-auto">
-            <Download className="mr-2 h-4 w-4" />
-            {t("common.actions.download")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+      </FormDialogLayout>
     </Dialog>
   );
 }

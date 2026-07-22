@@ -601,9 +601,9 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
             <div className="scrollbar-none bg-card sticky top-[53px] z-20 flex gap-2 overflow-x-auto border-b px-4 py-3">
               <button
                 onClick={() => setSelectedCategory("all")}
-                className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors ${
+                className={`shrink-0 rounded-full border-0 px-3 py-1 text-xs font-bold transition-colors sm:border sm:px-4 sm:py-1.5 ${
                   selectedCategory === "all"
-                    ? "border-transparent bg-[var(--store-theme)] text-white shadow-sm"
+                    ? "border-transparent bg-[var(--store-theme)] text-white sm:shadow-sm"
                     : "bg-muted text-muted-foreground border-border"
                 }`}
               >
@@ -613,9 +613,9 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors ${
+                  className={`shrink-0 rounded-full border-0 px-3 py-1 text-xs font-bold transition-colors sm:border sm:px-4 sm:py-1.5 ${
                     selectedCategory === cat.id
-                      ? "border-transparent bg-[var(--store-theme)] text-white shadow-sm"
+                      ? "border-transparent bg-[var(--store-theme)] text-white sm:shadow-sm"
                       : "bg-muted text-muted-foreground border-border"
                   }`}
                 >
@@ -645,7 +645,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                         <div
                           key={item.id}
                           onClick={() => handleItemClick(item)}
-                          className={`bg-card flex cursor-pointer gap-3 rounded-xl border p-3 shadow-sm transition active:scale-[0.99] ${
+                          className={`bg-card flex cursor-pointer gap-3 border-b p-2 transition active:scale-[0.99] sm:rounded-xl sm:border sm:p-3 sm:shadow-sm ${
                             item.isAvailable
                               ? "hover:border-muted-foreground/30"
                               : "opacity-60 select-none hover:border-transparent"
@@ -686,7 +686,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                                 )}
                               </div>
                               {item.description && (
-                                <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[11px] leading-snug">
+                                <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[8px] leading-snug sm:text-[11px]">
                                   {item.description}
                                 </p>
                               )}

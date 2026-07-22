@@ -256,18 +256,18 @@ export function AdminFeedbackTable() {
             return (
               <div
                 key={row.id}
-                className={`border-border bg-card space-y-3 rounded-xl border p-4 ${statusColors[row.status].row}`}
+                className={`bg-card sm:border-border space-y-2 border-b p-2 sm:space-y-3 sm:rounded-xl sm:border sm:p-4 ${statusColors[row.status].row}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-foreground text-sm font-medium">
                       {row.user?.name ?? row.userName}
                     </p>
-                    <p className="text-muted-foreground truncate text-xs">
+                    <p className="text-muted-foreground truncate text-[8px] sm:text-xs">
                       {row.user?.email ?? row.userEmail}
                     </p>
                   </div>
-                  <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
+                  <span className="text-muted-foreground shrink-0 text-[8px] whitespace-nowrap sm:text-xs">
                     {new Date(row.createdAt).toLocaleDateString("en-GB", {
                       day: "2-digit",
                       month: "short",

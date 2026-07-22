@@ -42,11 +42,11 @@ export function PosHeader({ store }: PosHeaderProps) {
   };
 
   return (
-    <header className="bg-background flex h-14 items-center justify-between border-b px-4 md:px-6">
-      <div className="flex items-center gap-4">
-        <h1 className="text-lg font-semibold">{store.name}</h1>
+    <header className="bg-background flex h-14 items-center justify-between gap-2 border-b px-3 md:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+        <h1 className="truncate text-base font-semibold sm:text-lg">{store.name}</h1>
         <div
-          className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+          className={`flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium sm:px-2.5 ${
             isOnline
               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
               : "bg-destructive/10 text-destructive"
@@ -66,17 +66,21 @@ export function PosHeader({ store }: PosHeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="text-muted-foreground text-sm font-medium">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+        {/* Redundant with the phone's own status-bar clock and the least
+            essential info here — hidden on mobile so the store name / staff
+            badge / logout button never overflow the fixed h-14 header and
+            wrap into overlapping text. */}
+        <div className="text-muted-foreground hidden text-sm font-medium sm:block">
           {format(time, "dd MMM yyyy • HH:mm")}
         </div>
 
         {staffName && (
           <div className="flex items-center gap-2">
-            <div className="bg-primary/10 text-primary flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
+            <div className="bg-primary/10 text-primary flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium sm:px-3">
               <UserCircle2 className="h-3.5 w-3.5" />
-              <span>{staffName}</span>
-              {staffRole && <span className="text-primary/60">· {staffRole}</span>}
+              <span className="max-w-[80px] truncate sm:max-w-none">{staffName}</span>
+              {staffRole && <span className="text-primary/60 hidden sm:inline">· {staffRole}</span>}
             </div>
             <Button
               variant="ghost"

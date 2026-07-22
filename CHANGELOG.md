@@ -9,6 +9,16 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.14.2] - 2026-07-22 · fix
+
+- Fixed the POS checkout "Change" amount not always updating live as Amount Tendered was typed — switched to React Hook Form's `useWatch`, the more reliable pattern for a value that needs to recompute on every keystroke.
+- Fixed checkout and Hold showing a generic "Failed to create order"/"Failed to hold order" toast with no way to know what went wrong. The API already knew the real reason (most commonly: resuming a held order after one of its items was deleted or taken off the menu) — the dialog was discarding it before showing a toast. It now surfaces the server's actual reason, naming the exact item(s) that are no longer available so the cashier knows what to remove from the cart.
+- Fixed several dialogs across POS and the dashboard (checkout, hold order, staff, shifts, account settings, menu editor, and more) that had no internal scroll region — on a phone, content taller than the screen (e.g. a Notes field at the bottom of checkout) simply ran off the bottom with no way to scroll to it. They now use the same bounded-height, scrollable-body pattern already used elsewhere in the app.
+- Simplified the mobile phone layout across POS, the customer storefront menu, and dashboard list views (Materials, Products, Recipes, Suppliers, Staff, Shifts, Feedback): removed boxy card borders/shadows/heavy padding in favor of a flatter, whitespace-separated list, and shrank secondary/metadata text (timestamps, emails, descriptions) so primary content stands out more. Desktop and tablet views are unchanged — this only applies below the `sm` breakpoint.
+- Fixed the POS mobile cart's "Clear All" button overlapping the sheet's own close (X) button — the sheet's close button floats in the top-right corner regardless of content, so the cart header now reserves room for it on mobile.
+- Fixed the POS header's date/time and staff badge overlapping the store name on narrow phone screens — the header has a fixed height, so text that didn't fit was wrapping and getting clipped instead of showing cleanly. The clock is now hidden on mobile (redundant with the phone's own status bar) and the staff name truncates instead of overflowing.
+- Tightened the Storefront Settings "Online Orders" / "Table Reservations" toggle cards on mobile — removed the box border/rounded corners/padding in favor of a plain divided list, matching the flattened style used elsewhere.
+
 ## [2.14.1] - 2026-07-22 · fix
 
 - Added Credit Card as a POS payment method, alongside Cash/QRIS/e-wallets/Virtual Account.

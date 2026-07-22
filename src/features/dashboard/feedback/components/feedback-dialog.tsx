@@ -703,7 +703,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
           if (!nextOpen) setDeleteTarget(null);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="max-h-[85dvh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>{t("feedback.history.deleteConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
