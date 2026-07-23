@@ -255,7 +255,7 @@ export function TablesManager({ storeId }: TablesManagerProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 px-6 pt-2 pb-4">
+      <div className="flex flex-col gap-3 px-3 pt-2 pb-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:pb-4">
         <p className="text-muted-foreground text-sm">
           {tables.length} {t("pos.tables.countHint")}
         </p>
@@ -266,12 +266,13 @@ export function TablesManager({ storeId }: TablesManagerProps) {
               size="sm"
               variant="outline"
               disabled={isBulkGenerating}
+              className="flex-1 sm:flex-none"
             >
               <Download className="mr-2 h-4 w-4" />
               {t("pos.tables.downloadAllQr")}
             </Button>
           )}
-          <Button onClick={() => setCreateOpen(true)} size="sm">
+          <Button onClick={() => setCreateOpen(true)} size="sm" className="shrink-0">
             <Plus className="mr-2 h-4 w-4" />
             {t("pos.tables.add")}
           </Button>
@@ -307,14 +308,18 @@ export function TablesManager({ storeId }: TablesManagerProps) {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 px-6 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 px-3 pb-3 sm:grid-cols-3 sm:gap-4 sm:px-6 sm:pb-6 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {tables.map((table) => {
             const activeOrder = table.orders?.[0];
             const pendingReservations = table._count?.reservations ?? 0;
             return (
               <div
                 key={table.id}
-                className={`group relative flex flex-col rounded-xl border-2 shadow-sm transition-all hover:shadow-md ${
+                // border (not border-2) on mobile: the color itself is the
+                // status signal (available/occupied/reserved/other), not
+                // decoration, so it stays — just thinner until sm:, where
+                // the full border-2 + shadow look returns.
+                className={`group relative flex flex-col rounded-xl border transition-all sm:border-2 sm:shadow-sm sm:hover:shadow-md ${
                   table.status === "AVAILABLE"
                     ? "border-emerald-500/40 bg-emerald-500/5"
                     : table.status === "OCCUPIED"
@@ -324,11 +329,16 @@ export function TablesManager({ storeId }: TablesManagerProps) {
                         : "border-blue-500/40 bg-blue-500/5"
                 }`}
               >
-                {/* Action icons — sibling of the status button, not nested inside it (buttons
-                    can't contain buttons). Visible by default (not hover-only): a hover-gated
-                    opacity-0 leaves these permanently unreachable on touch devices, which have
-                    no persistent hover state. */}
-                <div className="absolute top-1 right-1 z-10 flex gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
+                {/* Action icons — a normal-flow row above the status button
+                    (not absolutely positioned over it): an absolute overlay
+                    here didn't reserve any clearance in the button below it,
+                    so the table label and these icons collided/overlapped on
+                    narrower cards. A real row can't collide with its own
+                    sibling. Visible by default (not hover-only): a
+                    hover-gated opacity-0 leaves these permanently
+                    unreachable on touch devices, which have no persistent
+                    hover state. */}
+                <div className="flex items-center justify-end gap-0.5 px-1 pt-1 opacity-70 transition-opacity group-hover:opacity-100">
                   <button
                     onClick={() => setQrTable(table)}
                     className="hover:bg-background/60 flex h-9 w-9 touch-manipulation items-center justify-center rounded"
@@ -353,7 +363,7 @@ export function TablesManager({ storeId }: TablesManagerProps) {
                 {/* Clickable status area */}
                 <button
                   onClick={() => handleStatusChange(table, nextStatus(table.status))}
-                  className="flex flex-col items-center justify-center gap-2 p-4 text-center focus:outline-none"
+                  className="flex flex-col items-center justify-center gap-2 px-3 pt-0 pb-3 text-center focus:outline-none sm:px-4 sm:pb-4"
                 >
                   <span className="text-2xl font-bold tracking-tight">{table.label}</span>
                   <TableStatusBadge status={table.status} />

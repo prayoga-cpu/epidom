@@ -14,7 +14,7 @@ const TIERS = [
   { idx: 3, key: "t4", highlight: false, promo: false, plan: "ENTERPRISE" },
 ] as const;
 
-const FEAT_COUNTS = [6, 6, 8, 8] as const;
+const FEAT_COUNTS = [6, 6, 8, 9] as const;
 
 const FREE_PRICES = new Set(["$0", "0 €", "Rp 0", "€0"]);
 const CUSTOM_PRICES = new Set(["Custom", "Sur devis", "Kustom"]);

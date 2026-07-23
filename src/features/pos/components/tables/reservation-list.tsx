@@ -136,51 +136,53 @@ export function ReservationList({ storeId }: Props) {
 
   return (
     <div className="border-border mt-8 border-t">
-      {/* Section header */}
-      <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <CalendarClock className="text-muted-foreground h-5 w-5" />
-          <h2 className="text-foreground text-base font-semibold">Reservations</h2>
-          {counts.PENDING ? (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600">
-              {counts.PENDING} pending
-            </span>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Quick status filter chips */}
-          <div className="flex flex-wrap gap-1">
-            {(["ALL", ...STATUS_OPTIONS] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s as any)}
-                className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                  statusFilter === s
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {s === "ALL" ? "All" : STATUS_LABELS[s as ReservationStatus]}
-                {s !== "ALL" && counts[s as ReservationStatus]
-                  ? ` (${counts[s as ReservationStatus]})`
-                  : ""}
-              </button>
-            ))}
+      {/* Section header — the refresh button lives in this row (not among
+          the filter chips below) so it can never end up stranded alone on
+          its own line when the chips wrap on a narrow phone. */}
+      <div className="flex flex-col gap-3 px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <CalendarClock className="text-muted-foreground h-5 w-5 shrink-0" />
+            <h2 className="text-foreground truncate text-base font-semibold">Reservations</h2>
+            {counts.PENDING ? (
+              <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600">
+                {counts.PENDING} pending
+              </span>
+            ) : null}
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10 touch-manipulation"
+            className="h-10 w-10 shrink-0 touch-manipulation"
             onClick={() => refetch()}
             title="Refresh"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         </div>
+        {/* Quick status filter chips */}
+        <div className="flex flex-wrap gap-1">
+          {(["ALL", ...STATUS_OPTIONS] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s as any)}
+              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                statusFilter === s
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {s === "ALL" ? "All" : STATUS_LABELS[s as ReservationStatus]}
+              {s !== "ALL" && counts[s as ReservationStatus]
+                ? ` (${counts[s as ReservationStatus]})`
+                : ""}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Search */}
-      <div className="px-6 pb-3">
+      <div className="px-3 pb-3 sm:px-6">
         <Input
           placeholder="Search by guest name, phone, email, or table…"
           value={search}
@@ -191,11 +193,11 @@ export function ReservationList({ storeId }: Props) {
 
       {/* List */}
       {isLoading ? (
-        <div className="text-muted-foreground px-6 py-8 text-center text-sm">
+        <div className="text-muted-foreground px-3 py-8 text-center text-sm sm:px-6">
           Loading reservations…
         </div>
       ) : reservations.length === 0 ? (
-        <div className="px-6 py-12 text-center">
+        <div className="px-3 py-12 text-center sm:px-6">
           <CalendarClock className="text-muted-foreground/30 mx-auto mb-3 h-10 w-10" />
           <p className="text-muted-foreground text-sm">No reservations found.</p>
           {statusFilter !== "ALL" && (
@@ -208,7 +210,7 @@ export function ReservationList({ storeId }: Props) {
           )}
         </div>
       ) : (
-        <div className="divide-border divide-y px-6">
+        <div className="divide-border divide-y px-3 sm:px-6">
           {reservations.map((r) => {
             const date = new Date(r.scheduledAt);
             const isUpcoming = date > new Date();

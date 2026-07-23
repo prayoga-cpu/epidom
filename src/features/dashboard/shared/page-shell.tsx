@@ -20,12 +20,12 @@ export function PageShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content area - Fixed height container with padding for topbar */}
       <div className="flex min-h-0 flex-1 overflow-hidden pt-14">
-        <div className="mx-auto flex w-full max-w-[1600px] gap-4 p-3 md:gap-6 md:p-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1600px] gap-4 pt-2 md:gap-6 md:p-6 lg:px-8">
           {/* Sidebar column (desktop only) */}
           <Sidebar mode="desktop" />
 
           {/* Content - Fixed height box with scrollable content inside */}
-          <main className="bg-card/80 page-content flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border shadow-lg backdrop-blur-md">
+          <main className="bg-card/80 page-content flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl rounded-b-none border shadow-lg backdrop-blur-md md:rounded-b-xl">
             {/* Scrollable content area. min-h-0 is required here: a flex
                 item defaults to min-height:auto (sized to its content),
                 which — combined with flex-1 inside an overflow-hidden
@@ -33,7 +33,7 @@ export function PageShell({ children }: { children: React.ReactNode }) {
                 instead of this div's own overflow-y-auto ever kicking in,
                 silently clipping the bottom (e.g. a page with a fixed
                 footer button) with no way to scroll to it. */}
-            <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">
+            <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto p-2 md:p-6">
               <UpgradeGateProvider>{children}</UpgradeGateProvider>
             </div>
           </main>

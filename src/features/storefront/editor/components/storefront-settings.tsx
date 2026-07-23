@@ -220,7 +220,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Status / Publish Card */}
           <Card className="border-orange-200 bg-orange-50/30">
-            <CardContent className="flex flex-col items-start justify-between gap-6 pt-6 md:flex-row md:items-center">
+            <CardContent className="flex flex-col items-start justify-between gap-3 pt-0 sm:gap-6 sm:pt-6 md:flex-row md:items-center">
               <div>
                 <h3 className="text-lg font-semibold">{t("storefront.settings.publishStatus")}</h3>
                 <p className="text-muted-foreground mt-1 max-w-[500px] text-sm">
@@ -229,7 +229,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                     : t("storefront.settings.storeHidden")}
                 </p>
                 {form.watch("isPublished") && (
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-4 sm:gap-3">
                     <a
                       href={publicUrl}
                       target="_blank"
@@ -255,7 +255,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                 control={form.control}
                 name="isPublished"
                 render={({ field }) => (
-                  <FormItem className="border-border bg-card flex items-center gap-3 space-y-0 rounded-lg border p-4 shadow-sm">
+                  <FormItem className="border-border bg-card flex items-center gap-2 space-y-0 rounded-lg border p-2 shadow-sm sm:gap-3 sm:p-4">
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
@@ -637,18 +637,22 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
               <CardTitle>{t("storefront.settings.hoursSection")}</CardTitle>
               <CardDescription>{t("storefront.settings.hoursDesc")}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-0 px-0 sm:space-y-2 sm:px-6">
               {DAYS.map((day) => {
                 const isClosed = form.watch(`openingHours.${day}.isClosed`);
                 return (
                   <div
                     key={day}
-                    className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center"
+                    // Flush to the screen edge on mobile (no card box, no
+                    // horizontal padding at all — just a bottom divider
+                    // between days); the bordered/rounded/padded card look
+                    // returns at sm: and up.
+                    className="flex flex-col gap-3 border-b px-0 py-3 sm:flex-row sm:items-center sm:rounded-lg sm:border sm:p-3"
                   >
-                    <span className="w-full text-sm font-medium sm:w-28 sm:shrink-0">
+                    <span className="w-full px-3 text-sm font-medium sm:w-28 sm:shrink-0 sm:px-0">
                       {t(`publicProfile.days.${day}`)}
                     </span>
-                    <div className="flex flex-1 flex-wrap items-center gap-3">
+                    <div className="flex flex-1 flex-wrap items-center gap-3 px-3 sm:px-0">
                       <FormField
                         control={form.control}
                         name={`openingHours.${day}.open`}
@@ -679,7 +683,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                       control={form.control}
                       name={`openingHours.${day}.isClosed`}
                       render={({ field }) => (
-                        <FormItem className="flex shrink-0 items-center gap-2 space-y-0">
+                        <FormItem className="flex shrink-0 items-center gap-2 space-y-0 px-3 sm:px-0">
                           <FormControl>
                             <Switch checked={field.value} onCheckedChange={field.onChange} />
                           </FormControl>

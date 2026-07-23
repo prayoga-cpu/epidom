@@ -41,17 +41,28 @@ export function PosItemGrid({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto p-4 pb-24 lg:pb-4">
+    // pt-2 (not p-2) on mobile: only top spacing below the search/category
+    // bar is needed — no left/right container padding, so tiles run to the
+    // actual screen edge. pb-24 stays regardless of breakpoint: that's
+    // functional clearance for the floating cart bar, not decorative
+    // padding.
+    <div className="min-h-0 flex-1 overflow-auto pt-2 pb-24 sm:p-4 lg:pb-4">
       {filteredCategories.map((category) => (
-        <div key={category.name} className="mb-8 last:mb-0">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">{category.name}</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div key={category.name} className="mb-6 last:mb-0 sm:mb-8">
+          <h2 className="mb-3 text-lg font-semibold tracking-tight sm:mb-4">{category.name}</h2>
+          <div className="grid grid-cols-2 gap-0 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5">
             {category.items.map((item) => (
               <button
                 key={item.id}
                 disabled={!item.isAvailable}
                 onClick={() => onItemClick(item)}
-                className={`group bg-card hover:border-primary/50 focus-visible:ring-primary relative flex h-full min-h-[120px] flex-col overflow-hidden rounded-xl border text-left transition-all hover:shadow-md focus-visible:ring-2 focus-visible:outline-none ${
+                // border stays at every size (not sm:border-only): with
+                // zero gap between tiles on mobile, a border is the only
+                // thing marking where one tappable tile ends and the next
+                // begins — without it, text-only tiles (no image) have no
+                // visible boundary at all. Rounded corners still wait for
+                // sm: — square borders read as a clean grid at zero gap.
+                className={`group bg-card hover:border-primary/50 focus-visible:ring-primary relative flex h-full min-h-[120px] flex-col overflow-hidden border text-left transition-all focus-visible:ring-2 focus-visible:outline-none sm:rounded-xl sm:hover:shadow-md ${
                   !item.isAvailable ? "opacity-50 grayscale" : ""
                 }`}
               >
@@ -66,7 +77,7 @@ export function PosItemGrid({
                     />
                   </div>
                 )}
-                <div className="flex flex-1 flex-col justify-between p-3">
+                <div className="flex flex-1 flex-col justify-between p-1 sm:p-3">
                   <div>
                     <h3 className="line-clamp-2 leading-tight font-medium">{item.name}</h3>
                   </div>

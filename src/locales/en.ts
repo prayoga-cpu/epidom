@@ -5057,6 +5057,7 @@ export const en = {
       t4f6: "SSO + advanced roles",
       t4f7: "Dedicated account manager",
       t4f8: "Custom SLAs",
+      t4f9: "Custom integrations & bespoke website builds",
       cmpEyebrow: "Side by side",
       cmpTitle: "Everything in detail.",
       cmpSub: "The full feature matrix. Skim the rows that matter to your shop.",

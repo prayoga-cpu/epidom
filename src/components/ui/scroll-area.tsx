@@ -13,7 +13,12 @@ function ScrollArea({
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
-      className={cn("relative", className)}
+      // overflow-hidden is required, not decorative: without it this Root
+      // doesn't actually clip its Viewport, so a parent flex chain's
+      // min-h-0/flex-1 has nothing to constrain against — content just
+      // renders at full height and gets cropped by an ancestor instead of
+      // scrolling inside this component.
+      className={cn("relative overflow-hidden", className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport

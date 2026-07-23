@@ -247,7 +247,7 @@ export const SiteHeader = memo(function SiteHeader({
                 </SheetClose>
               </div>
 
-              <nav aria-label="Mobile" className="flex-1 px-4 py-6">
+              <nav aria-label="Mobile" className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
                 {showNav && (
                   <div>
                     <div

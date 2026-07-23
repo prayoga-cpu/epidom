@@ -76,62 +76,63 @@ export function TableCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="contents">
-          <FormDialogLayout
-            title={isEdit ? t("pos.tables.edit") : t("pos.tables.add")}
-            maxWidth="sm"
-            footer={
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isSubmitting}
-                >
-                  {t("common.actions.cancel")}
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting
-                    ? t("common.actions.saving")
-                    : isEdit
-                      ? t("common.actions.save")
-                      : t("common.actions.add")}
-                </Button>
-              </>
-            }
-          >
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="label"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("pos.tables.label")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="A1, B2, VIP 1..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="capacity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("pos.tables.capacityPax")}</FormLabel>
-                    <FormControl>
-                      <Input type="number" min={1} max={50} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </FormDialogLayout>
-        </form>
-      </Form>
+      <FormDialogLayout
+        title={isEdit ? t("pos.tables.edit") : t("pos.tables.add")}
+        maxWidth="sm"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              {t("common.actions.cancel")}
+            </Button>
+            {/* form="table-create-form" (not a wrapping <form>): DialogContent
+                renders through a Portal, so a <form> wrapping FormDialogLayout
+                never actually contains this button in the real DOM. */}
+            <Button type="submit" form="table-create-form" disabled={isSubmitting}>
+              {isSubmitting
+                ? t("common.actions.saving")
+                : isEdit
+                  ? t("common.actions.save")
+                  : t("common.actions.add")}
+            </Button>
+          </>
+        }
+      >
+        <Form {...form}>
+          <form id="table-create-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="label"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("pos.tables.label")}</FormLabel>
+                  <FormControl>
+                    <Input placeholder="A1, B2, VIP 1..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="capacity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("pos.tables.capacityPax")}</FormLabel>
+                  <FormControl>
+                    <Input type="number" min={1} max={50} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
+      </FormDialogLayout>
     </Dialog>
   );
 }

@@ -285,272 +285,275 @@ export function PosCheckoutDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="contents">
-            <FormDialogLayout
-              title={t("pos.checkout.title")}
-              maxWidth="md"
-              footer={
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => onOpenChange(false)}
-                    disabled={isSubmitting}
-                  >
-                    {t("common.actions.cancel")}
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t("pos.checkout.processing")}
-                      </>
-                    ) : (
-                      `${t("pos.checkout.confirm")} • ${formatPrice(cart.total)}`
-                    )}
-                  </Button>
-                </>
-              }
+        <FormDialogLayout
+          title={t("pos.checkout.title")}
+          maxWidth="md"
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                {t("common.actions.cancel")}
+              </Button>
+              {/* form="pos-checkout-form" (not a wrapping <form> element):
+                  DialogContent renders through a React Portal, so a <form>
+                  wrapping FormDialogLayout never actually contains this
+                  button in the real DOM — clicking it wouldn't submit
+                  anything. The form attribute associates them by id
+                  instead, which works regardless of DOM position. */}
+              <Button type="submit" form="pos-checkout-form" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("pos.checkout.processing")}
+                  </>
+                ) : (
+                  `${t("pos.checkout.confirm")} • ${formatPrice(cart.total)}`
+                )}
+              </Button>
+            </>
+          }
+        >
+          <Form {...form}>
+            <form
+              id="pos-checkout-form"
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-6"
             >
-              <div className="space-y-6">
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="orderType"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>{t("pos.checkout.orderType")}</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex flex-col space-y-1"
-                          >
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="DINE_IN" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {t("pos.checkout.dineIn")}
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="TAKEAWAY" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {t("pos.checkout.takeaway")}
-                              </FormLabel>
-                            </FormItem>
-                          </RadioGroup>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="paymentMethod"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>{t("pos.checkout.paymentMethod")}</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex flex-col space-y-1"
-                          >
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="CASH" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {t("pos.checkout.cash")}
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="QRIS" />
-                              </FormControl>
-                              <FormLabel className="font-normal">QRIS</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="GOPAY" />
-                              </FormControl>
-                              <FormLabel className="font-normal">GoPay</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="OVO" />
-                              </FormControl>
-                              <FormLabel className="font-normal">OVO</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="DANA" />
-                              </FormControl>
-                              <FormLabel className="font-normal">DANA</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="SHOPEEPAY" />
-                              </FormControl>
-                              <FormLabel className="font-normal">ShopeePay</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="BANK_TRANSFER" />
-                              </FormControl>
-                              <FormLabel className="font-normal">Virtual Account</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-y-0 space-x-3">
-                              <FormControl>
-                                <RadioGroupItem value="STRIPE_CARD" />
-                              </FormControl>
-                              <FormLabel className="font-normal">Credit Card</FormLabel>
-                            </FormItem>
-                          </RadioGroup>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {paymentMethod === "CASH" && (
-                  <div className="bg-muted/20 space-y-4 rounded-md border p-4">
-                    <FormField
-                      control={form.control}
-                      name="amountTendered"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("pos.checkout.amountTendered")}</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="text-muted-foreground absolute top-2.5 left-3 text-sm">
-                                {getCurrencySymbol(currency)}
-                              </span>
-                              <DecimalInput
-                                decimals={2}
-                                min={0}
-                                placeholder="0"
-                                className="pl-8 text-lg font-medium"
-                                value={field.value}
-                                onChange={field.onChange}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                ref={field.ref}
-                              />
-                            </div>
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex justify-between text-sm font-medium">
-                      <span className="text-muted-foreground">{t("pos.checkout.change")}:</span>
-                      <span className={change > 0 ? "text-emerald-600 dark:text-emerald-400" : ""}>
-                        {formatPrice(change)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === "BANK_TRANSFER" && (
-                  <FormField
-                    control={form.control}
-                    name="bankCode"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>Pilih Bank</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex gap-4"
-                          >
-                            {["BNI", "BRI", "MANDIRI", "PERMATA"].map((bank) => (
-                              <FormItem
-                                key={bank}
-                                className="flex items-center space-y-0 space-x-2"
-                              >
-                                <FormControl>
-                                  <RadioGroupItem value={bank} />
-                                </FormControl>
-                                <FormLabel className="font-normal">{bank}</FormLabel>
-                              </FormItem>
-                            ))}
-                          </RadioGroup>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="customerName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("pos.checkout.customerName")}</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John Doe" {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="customerPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>No. WhatsApp / HP</FormLabel>
-                        <FormControl>
-                          <Input placeholder="0812..." {...field} />
-                        </FormControl>
-                        {["GOPAY", "OVO", "DANA", "SHOPEEPAY"].includes(paymentMethod) && (
-                          <p className="text-muted-foreground mt-1 text-[10px]">
-                            Wajib untuk e-wallet
-                          </p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="tableNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("pos.checkout.tableOptional")}</FormLabel>
-                        <FormControl>
-                          <Input placeholder="A1, B2..." {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="orderType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>{t("pos.checkout.orderType")}</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-col space-y-1"
+                        >
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="DINE_IN" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              {t("pos.checkout.dineIn")}
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="TAKEAWAY" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              {t("pos.checkout.takeaway")}
+                            </FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
-                  name="notes"
+                  name="paymentMethod"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("pos.checkout.notes")}</FormLabel>
+                    <FormItem className="space-y-3">
+                      <FormLabel>{t("pos.checkout.paymentMethod")}</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder={t("pos.checkout.notesPlaceholder")}
-                          className="resize-none"
-                          {...field}
-                        />
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-col space-y-1"
+                        >
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="CASH" />
+                            </FormControl>
+                            <FormLabel className="font-normal">{t("pos.checkout.cash")}</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="QRIS" />
+                            </FormControl>
+                            <FormLabel className="font-normal">QRIS</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="GOPAY" />
+                            </FormControl>
+                            <FormLabel className="font-normal">GoPay</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="OVO" />
+                            </FormControl>
+                            <FormLabel className="font-normal">OVO</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="DANA" />
+                            </FormControl>
+                            <FormLabel className="font-normal">DANA</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="SHOPEEPAY" />
+                            </FormControl>
+                            <FormLabel className="font-normal">ShopeePay</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="BANK_TRANSFER" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Virtual Account</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-y-0 space-x-3">
+                            <FormControl>
+                              <RadioGroupItem value="STRIPE_CARD" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Credit Card</FormLabel>
+                          </FormItem>
+                        </RadioGroup>
                       </FormControl>
                     </FormItem>
                   )}
                 />
               </div>
-            </FormDialogLayout>
-          </form>
-        </Form>
+
+              {paymentMethod === "CASH" && (
+                <div className="bg-muted/20 space-y-4 rounded-md border p-4">
+                  <FormField
+                    control={form.control}
+                    name="amountTendered"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("pos.checkout.amountTendered")}</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="text-muted-foreground absolute top-2.5 left-3 text-sm">
+                              {getCurrencySymbol(currency)}
+                            </span>
+                            <DecimalInput
+                              decimals={2}
+                              min={0}
+                              placeholder="0"
+                              className="pl-8 text-lg font-medium"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
+                          </div>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-between text-sm font-medium">
+                    <span className="text-muted-foreground">{t("pos.checkout.change")}:</span>
+                    <span className={change > 0 ? "text-emerald-600 dark:text-emerald-400" : ""}>
+                      {formatPrice(change)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === "BANK_TRANSFER" && (
+                <FormField
+                  control={form.control}
+                  name="bankCode"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Pilih Bank</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex gap-4"
+                        >
+                          {["BNI", "BRI", "MANDIRI", "PERMATA"].map((bank) => (
+                            <FormItem key={bank} className="flex items-center space-y-0 space-x-2">
+                              <FormControl>
+                                <RadioGroupItem value={bank} />
+                              </FormControl>
+                              <FormLabel className="font-normal">{bank}</FormLabel>
+                            </FormItem>
+                          ))}
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="customerName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("pos.checkout.customerName")}</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customerPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>No. WhatsApp / HP</FormLabel>
+                      <FormControl>
+                        <Input placeholder="0812..." {...field} />
+                      </FormControl>
+                      {["GOPAY", "OVO", "DANA", "SHOPEEPAY"].includes(paymentMethod) && (
+                        <p className="text-muted-foreground mt-1 text-[10px]">
+                          Wajib untuk e-wallet
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tableNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("pos.checkout.tableOptional")}</FormLabel>
+                      <FormControl>
+                        <Input placeholder="A1, B2..." {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("pos.checkout.notes")}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t("pos.checkout.notesPlaceholder")}
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </form>
+          </Form>
+        </FormDialogLayout>
       </Dialog>
 
       {/* Payment QR prompt */}

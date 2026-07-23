@@ -38,10 +38,14 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2 sm:space-y-6">
         <div>
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="mt-2 h-4 w-96" />
+          {/* w-64/w-96 (fixed px widths) overflowed narrow phones — the real
+              title/subtitle wrap there, so the skeleton should shrink with
+              the viewport (max-w-full) instead of assuming desktop width. */}
+          <Skeleton className="h-8 w-64 max-w-full" />
+          <Skeleton className="mt-2 h-4 w-full max-w-96" />
+          <Skeleton className="mt-1.5 h-4 w-2/3 max-w-96 sm:hidden" />
         </div>
         <Skeleton className="h-[500px] w-full rounded-xl" />
       </div>
@@ -49,13 +53,13 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-2 sm:gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("storefront.editor.title")}</h1>
         <p className="text-muted-foreground mt-1">{t("storefront.editor.subtitle")}</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-2 sm:space-y-6">
         <TabsList className="border-border bg-muted/30 w-full overflow-x-auto border p-1 sm:inline-flex sm:w-auto">
           <TabsTrigger
             value="settings"

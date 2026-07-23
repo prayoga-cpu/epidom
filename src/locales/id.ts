@@ -5096,6 +5096,7 @@ export const id = {
       t4f6: "SSO + peran lanjutan",
       t4f7: "Account manager dedikasi",
       t4f8: "SLA kustom",
+      t4f9: "Integrasi & pembuatan website kustom",
       cmpEyebrow: "Perbandingan",
       cmpTitle: "Semua secara detail.",
       cmpSub: "Matriks fitur lengkap. Lihat baris yang penting untuk toko Anda.",

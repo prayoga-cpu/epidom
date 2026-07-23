@@ -1,9 +1,8 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Trash2, Pause, Info } from "lucide-react";
+import { ShoppingBag, Trash2, Pause, Info, X } from "lucide-react";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { PosCartItem } from "./pos-cart-item";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -19,9 +18,14 @@ interface PosCartProps {
   storeId: string;
   storeName?: string;
   onRequestCheckout?: () => void;
+  /** Renders an explicit close (X) button in the header — only passed by
+   * the mobile Dialog wrapper, which has its own close button disabled in
+   * favor of this one sitting in the header's normal flex flow. The desktop
+   * sidebar usage doesn't pass this, so no close button renders there. */
+  onClose?: () => void;
 }
 
-export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps) {
+export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosCartProps) {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const cart = usePosCart();
@@ -64,7 +68,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
 
   if (cart.items.length === 0) {
     return (
-      <div className="bg-muted/20 text-muted-foreground flex h-full flex-col items-center justify-center border-l p-6 text-center">
+      <div className="bg-muted/20 text-muted-foreground flex min-h-0 flex-1 flex-col items-center justify-center border-l p-6 text-center">
         <div className="bg-muted mb-4 rounded-full p-4">
           <ShoppingBag className="h-8 w-8 opacity-50" />
         </div>
@@ -75,36 +79,58 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
   }
 
   return (
-    <div className="bg-background flex h-full flex-col border-l">
-      {/* Cart Header — pr-10 (not pr-4) below md reserves room for the
-          mobile Sheet's own absolutely-positioned close button
-          (SheetContent's `right-4` X), which otherwise overlaps "Clear
-          All" here. The desktop sidebar has no such close button, so its
-          padding is unaffected at md:+. */}
-      <div className="flex items-center justify-between border-b py-3 pr-10 pl-4 md:pr-4">
+    // flex-1 min-h-0 (not h-full): both consumers (the desktop sidebar pane
+    // in pos-shell.tsx, the Dialog in pos-mobile-cart.tsx) are themselves
+    // flex columns, but the mobile Dialog only has `height: auto` clamped
+    // by `max-height` — not a truly definite height — so a percentage-based
+    // `h-full` here doesn't reliably resolve through the flex chain. Sizing
+    // via flex-1 (grow to fill the flex parent) instead of a percentage
+    // avoids that fragile dependency entirely.
+    <div className="bg-background flex min-h-0 flex-1 flex-col border-l">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3">
         <div className="font-semibold">
           {t("pos.title")} <span className="text-muted-foreground ml-1">({totalItems})</span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive h-10 touch-manipulation"
-          onClick={cart.clearCart}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          {t("pos.cart.clear")}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-10 touch-manipulation"
+            onClick={cart.clearCart}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t("pos.cart.clear")}
+          </Button>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground h-10 w-10 shrink-0 touch-manipulation"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {cart.resumingOrderId && (
-        <div className="flex items-start gap-2 border-b bg-amber-50 px-4 py-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+        <div className="flex shrink-0 items-start gap-2 border-b bg-amber-50 px-4 py-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{t("pos.orderCard.resumedBanner")}</span>
         </div>
       )}
 
-      {/* Cart Items */}
-      <ScrollArea className="min-h-0 flex-1">
+      {/* Cart Items — plain overflow-y-auto (not the Radix ScrollArea
+          component): this exact div + flex-1 + min-h-0 + overflow-y-auto
+          shape is already proven working for a mobile cart drawer in
+          public-menu.tsx. ScrollArea wraps content in an extra
+          Root/Viewport pair that (in this auto-height + max-height
+          ancestor chain specifically) was never actually detecting an
+          overflow to scroll, so content just got clipped by the dialog
+          around it instead of scrolling. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex flex-col pb-4">
           {cart.items.map((item: any) => (
             <PosCartItem
@@ -115,10 +141,15 @@ export function PosCart({ storeId, storeName, onRequestCheckout }: PosCartProps)
             />
           ))}
         </div>
-      </ScrollArea>
+      </div>
 
-      {/* Cart Footer / Totals */}
-      <div className="bg-muted/20 border-t p-3 sm:p-4">
+      {/* Cart Footer / Totals — shrink-0 so it can never be compressed by
+          the flex column, bg-background (not bg-muted/20) so it's fully
+          opaque against the scrollable list behind it, and a shadow above
+          the border makes the "this is a separate, fixed panel" boundary
+          unambiguous rather than just a thin line flush against the last
+          scrolled item. */}
+      <div className="bg-background shrink-0 border-t p-3 shadow-[0_-6px_10px_-6px_rgba(0,0,0,0.15)] sm:p-4">
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("pos.cart.subtotal")}</span>

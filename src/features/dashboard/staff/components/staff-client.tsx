@@ -381,93 +381,100 @@ export function StaffClient({
           if (!open) reset();
         }}
       >
-        <form
-          onSubmit={handleSubmit((data) => addMutation.mutate(data as never))}
-          className="contents"
+        <FormDialogLayout
+          title={t("pages.addStaff")}
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setAddOpen(false);
+                  reset();
+                }}
+              >
+                {t("common.actions.cancel")}
+              </Button>
+              {/* form="add-staff-form" (not a wrapping <form>): DialogContent
+                  renders through a Portal, so a <form> wrapping
+                  FormDialogLayout never actually contains this button in the
+                  real DOM. */}
+              <Button
+                type="submit"
+                form="add-staff-form"
+                disabled={isSubmitting || addMutation.isPending}
+              >
+                {addMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t("common.actions.save")
+                )}
+              </Button>
+            </>
+          }
         >
-          <FormDialogLayout
-            title={t("pages.addStaff")}
-            footer={
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setAddOpen(false);
-                    reset();
-                  }}
-                >
-                  {t("common.actions.cancel")}
-                </Button>
-                <Button type="submit" disabled={isSubmitting || addMutation.isPending}>
-                  {addMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    t("common.actions.save")
-                  )}
-                </Button>
-              </>
-            }
+          <form
+            id="add-staff-form"
+            onSubmit={handleSubmit((data) => addMutation.mutate(data as never))}
+            className="space-y-4"
           >
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <Label htmlFor="name">{t("common.name")}</Label>
-                <Input id="name" {...register("name")} />
-                {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="add-email">
-                  Email <span className="text-muted-foreground text-xs">(optional)</span>
-                </Label>
-                <Input
-                  id="add-email"
-                  type="email"
-                  {...register("email" as never)}
-                  placeholder="staff@example.com"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>{t("pages.staffRole")}</Label>
-                <Select
-                  defaultValue="CASHIER"
-                  onValueChange={(v) => setValue("role", v as StaffRole)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES_FOR_SELECT.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {ROLE_LABELS[r]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pin">
-                  {t("pages.staffPin")}{" "}
-                  <span className="text-muted-foreground text-xs">(optional)</span>
-                </Label>
-                <Input
-                  id="pin"
-                  type="password"
-                  maxLength={4}
-                  inputMode="numeric"
-                  placeholder="4-digit PIN"
-                  {...register("pin")}
-                />
-                {errors.pin && <p className="text-destructive text-xs">{errors.pin.message}</p>}
-              </div>
-              {watchEmail && (
-                <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
-                  <input type="checkbox" className="rounded" {...register("sendInvite" as never)} />
-                  Send PIN to staff email
-                </label>
-              )}
+            <div className="space-y-1">
+              <Label htmlFor="name">{t("common.name")}</Label>
+              <Input id="name" {...register("name")} />
+              {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
             </div>
-          </FormDialogLayout>
-        </form>
+            <div className="space-y-1">
+              <Label htmlFor="add-email">
+                Email <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
+              <Input
+                id="add-email"
+                type="email"
+                {...register("email" as never)}
+                placeholder="staff@example.com"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>{t("pages.staffRole")}</Label>
+              <Select
+                defaultValue="CASHIER"
+                onValueChange={(v) => setValue("role", v as StaffRole)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES_FOR_SELECT.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="pin">
+                {t("pages.staffPin")}{" "}
+                <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
+              <Input
+                id="pin"
+                type="password"
+                maxLength={4}
+                inputMode="numeric"
+                placeholder="4-digit PIN"
+                {...register("pin")}
+              />
+              {errors.pin && <p className="text-destructive text-xs">{errors.pin.message}</p>}
+            </div>
+            {watchEmail && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
+                <input type="checkbox" className="rounded" {...register("sendInvite" as never)} />
+                Send PIN to staff email
+              </label>
+            )}
+          </form>
+        </FormDialogLayout>
       </Dialog>
 
       {/* Edit Staff Dialog */}
