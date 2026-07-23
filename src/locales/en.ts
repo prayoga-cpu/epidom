@@ -4399,6 +4399,7 @@ export const en = {
       dineIn: "Dine In",
       amountTendered: "Amount Tendered",
       change: "Change",
+      insufficientAmount: "Insufficient amount — enter at least the order total.",
       confirm: "Confirm Order",
       customerName: "Customer Name (optional)",
       customerPhone: "Phone Number (optional)",

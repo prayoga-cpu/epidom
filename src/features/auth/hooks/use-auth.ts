@@ -54,8 +54,14 @@ export function useRegister() {
     },
     onSuccess: (data) => {
       // Standard Meta event — lets Meta optimize ad campaigns against actual
-      // signups natively, instead of a custom conversion.
-      trackMetaPixelEvent("CompleteRegistration");
+      // signups natively, instead of a custom conversion. content_name/status
+      // are Meta's documented CompleteRegistration params; no value/currency
+      // since a free signup has no monetary amount yet (added downstream at
+      // begin_checkout/Subscribe once a real plan/price is chosen).
+      trackMetaPixelEvent("CompleteRegistration", {
+        content_name: "Signup",
+        status: true,
+      });
       // Standard GA4 event — real signup funnel conversion, marketing-gated
       // so it also feeds Google Ads conversion tracking if/when linked.
       trackConversion("sign_up", { event_label: "email", method: "email" });

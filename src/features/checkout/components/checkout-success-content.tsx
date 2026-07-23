@@ -8,7 +8,7 @@ import { CheckCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supplierOrderKeys } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 import { useSession } from "@/lib/auth-client";
-import { trackConversion } from "@/lib/analytics";
+import { trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 
 export function CheckoutSuccessContent() {
   const { t } = useI18n();
@@ -20,6 +20,7 @@ export function CheckoutSuccessContent() {
 
   const planName = searchParams.get("plan");
   const sessionId = searchParams.get("session_id");
+  const isTrial = searchParams.get("trial") === "true";
   const trackedRef = useRef(false);
 
   // Invalidate subscription-gated caches when subscription changes (after upgrade)
@@ -31,6 +32,22 @@ export function CheckoutSuccessContent() {
         event_label: planName ?? "unknown",
         plan: planName,
       });
+
+      if (isTrial) {
+        // A trial hasn't actually paid yet — track it as its own funnel
+        // stage (GA4 trial_started, Meta's StartTrial) rather than folding
+        // it into subscription_started/Subscribe, which represent real
+        // payment.
+        trackConversion("trial_started", {
+          event_label: planName ?? "unknown",
+          plan: planName,
+        });
+        trackMetaPixelEvent("StartTrial", { content_name: planName ?? undefined });
+      } else {
+        // Standard Meta event for a real (non-trial) paid subscription —
+        // lets Meta optimize/retarget against actual subscribers.
+        trackMetaPixelEvent("Subscribe", { content_name: planName ?? undefined });
+      }
     }
 
     // Invalidate subscription status first (to get new plan info)

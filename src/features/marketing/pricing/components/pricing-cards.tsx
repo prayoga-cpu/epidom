@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUser } from "@/lib/auth-client";
 import { useToast } from "@/hooks/use-toast";
-import { trackEvent, trackConversion } from "@/lib/analytics";
+import { trackEvent, trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 
 const TIERS = [
   { idx: 0, key: "t1", highlight: false, promo: false, plan: "FREE" },
@@ -119,6 +119,14 @@ export function PricingCards({
               trial: confirming.trial ?? false,
               billing_interval: yearly ? "yearly" : "monthly",
             });
+            // Standard Meta event for entering a paid checkout flow — lets
+            // Meta optimize/retarget against real checkout starts instead of
+            // just clicks. content_category distinguishes trial vs.
+            // immediate-pay checkouts for campaign reporting.
+            trackMetaPixelEvent("InitiateCheckout", {
+              content_name: confirming.plan,
+              content_category: confirming.trial ? "trial" : "paid",
+            });
             window.location.href = result.data.url;
             setConfirming(null);
           } else {
@@ -130,6 +138,11 @@ export function PricingCards({
           }
         } else {
           trackConversion("free_plan_activated", { event_label: confirming.plan });
+          // No exact Meta standard event for "activated a free plan" — Lead
+          // is the closest real fit (a qualified, engaged user with no
+          // payment yet) and lets Meta optimize toward it, rather than a
+          // fully custom event Meta's algorithm has no prior signal for.
+          trackMetaPixelEvent("Lead", { content_name: confirming.plan });
           // Full navigation to flush React Query cache so new plan reflects immediately
           window.location.href = "/stores";
         }

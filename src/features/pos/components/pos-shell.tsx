@@ -25,6 +25,7 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   const { t } = useI18n();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const cart = usePosCart();
 
   const { data: menuData, isLoading } = usePosMenu(store.id);
@@ -32,7 +33,7 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   return (
     <PosStaffGate storeId={store.id} bypassGate={bypassStaffGate}>
       <div className="bg-muted/10 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl">
-        <PosHeader store={store} />
+        <PosHeader store={store} onCartClick={() => setMobileCartOpen(true)} />
         <PosOfflineBanner storeId={store.id} />
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -85,7 +86,7 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
           </div>
         </div>
 
-        <PosMobileCart store={store} />
+        <PosMobileCart store={store} open={mobileCartOpen} onOpenChange={setMobileCartOpen} />
       </div>
     </PosStaffGate>
   );

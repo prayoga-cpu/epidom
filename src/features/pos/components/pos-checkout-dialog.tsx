@@ -60,7 +60,7 @@ export function PosCheckoutDialog({
   shiftId,
 }: PosCheckoutDialogProps) {
   const { t, locale } = useI18n();
-  const { currency, formatPrice } = useCurrency();
+  const { currency, formatPrice, convertToBase } = useCurrency();
   const cart = usePosCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -97,11 +97,16 @@ export function PosCheckoutDialog({
     },
   });
 
-  // useWatch (not form.watch) so this component reliably re-renders on every
-  // keystroke — needed for the live Change total below.
+  // useWatch (not form.watch) so this component reliably re-renders when the
+  // payment method changes (shows/hides the cash vs. bank-transfer section).
   const paymentMethod = useWatch({ control: form.control, name: "paymentMethod" });
+  // Only used to gate the Confirm button below — the live Change/error text
+  // next to the input itself is computed from that FormField's own
+  // field.value directly, not from this, so it can never lag a keystroke.
   const amountTendered = useWatch({ control: form.control, name: "amountTendered" });
-  const change = amountTendered ? Math.max(0, amountTendered - cart.total) : 0;
+  const isCashUnderpaid =
+    paymentMethod === "CASH" &&
+    (amountTendered == null || convertToBase(amountTendered) < cart.total);
 
   useEffect(() => {
     if (open) {
@@ -199,6 +204,20 @@ export function PosCheckoutDialog({
   const onSubmit = async (data: CreatePosOrderInput) => {
     setIsSubmitting(true);
     try {
+      // amountTendered was typed by the cashier in their display currency,
+      // but every other monetary value in this order (cart.total, subtotal,
+      // menu item prices) is stored in the base currency (IDR) — the
+      // server, the printed receipt, and buildReceipt's own change
+      // calculation below all assume IDR. Convert once, up front, so
+      // nothing downstream has to know this conversion happened. A no-op
+      // for the (majority) case where the store's display currency is
+      // already IDR.
+      const submitData: CreatePosOrderInput = {
+        ...data,
+        amountTendered:
+          data.amountTendered != null ? convertToBase(data.amountTendered) : undefined,
+      };
+
       if (!navigator.onLine) {
         if (cart.resumingOrderId) {
           // The offline queue always creates a brand-new order on reconnect —
@@ -209,8 +228,8 @@ export function PosCheckoutDialog({
           return;
         }
 
-        const localId = await enqueueOrder(storeId, data);
-        const receipt = buildReceipt(data, `OFFLINE-${localId.slice(0, 8).toUpperCase()}`);
+        const localId = await enqueueOrder(storeId, submitData);
+        const receipt = buildReceipt(submitData, `OFFLINE-${localId.slice(0, 8).toUpperCase()}`);
         setLastReceipt(receipt);
         setShowPrint(true);
         toast(t("pos.offline.queued"), {
@@ -227,7 +246,7 @@ export function PosCheckoutDialog({
         : `/stores/${storeId}/pos/orders`;
 
       const result = await apiClient.post<{ orderNumber: string }>(endpoint, {
-        ...data,
+        ...submitData,
         shiftId,
       });
 
@@ -235,7 +254,7 @@ export function PosCheckoutDialog({
       const qrStr = (result as any)?.qrString ?? null;
       const orderId = (result as any)?.orderId ?? null;
 
-      const receipt = buildReceipt(data, orderNumber);
+      const receipt = buildReceipt(submitData, orderNumber);
       setLastReceipt(receipt);
 
       // Snapshot the cart for the purchase event before clearCart() wipes it —
@@ -304,7 +323,11 @@ export function PosCheckoutDialog({
                   button in the real DOM — clicking it wouldn't submit
                   anything. The form attribute associates them by id
                   instead, which works regardless of DOM position. */}
-              <Button type="submit" form="pos-checkout-form" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                form="pos-checkout-form"
+                disabled={isSubmitting || isCashUnderpaid}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -430,36 +453,71 @@ export function PosCheckoutDialog({
                   <FormField
                     control={form.control}
                     name="amountTendered"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("pos.checkout.amountTendered")}</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <span className="text-muted-foreground absolute top-2.5 left-3 text-sm">
-                              {getCurrencySymbol(currency)}
+                    render={({ field }) => {
+                      // Computed from this same field.value (not a separate
+                      // top-level useWatch) so it's guaranteed to reflect
+                      // exactly what's on screen on every keystroke — no
+                      // separate subscription that can lag or go stale.
+                      //
+                      // field.value is what the cashier typed in *their*
+                      // display currency, but cart.total is always stored
+                      // in the base currency (IDR) — subtracting them
+                      // directly mixes units. Convert the tendered amount
+                      // to base first, do the subtraction in base units
+                      // (matching cart.total), then let formatPrice convert
+                      // the result back to the display currency, same as
+                      // every other price in this dialog.
+                      const tenderedBase = field.value ? convertToBase(field.value) : 0;
+                      const change = tenderedBase ? Math.max(0, tenderedBase - cart.total) : 0;
+                      const isUnderpaid = field.value != null && tenderedBase < cart.total;
+                      return (
+                        <>
+                          <FormItem>
+                            <FormLabel>{t("pos.checkout.amountTendered")}</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <span className="text-muted-foreground absolute top-2.5 left-3 text-sm">
+                                  {getCurrencySymbol(currency)}
+                                </span>
+                                <DecimalInput
+                                  decimals={2}
+                                  min={0}
+                                  placeholder="0"
+                                  className="pl-8 text-lg font-medium"
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
+                                  name={field.name}
+                                  ref={field.ref}
+                                />
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                          <div className="flex justify-between text-sm font-medium">
+                            <span className="text-muted-foreground">
+                              {t("pos.checkout.change")}:
                             </span>
-                            <DecimalInput
-                              decimals={2}
-                              min={0}
-                              placeholder="0"
-                              className="pl-8 text-lg font-medium"
-                              value={field.value}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              name={field.name}
-                              ref={field.ref}
-                            />
+                            <span
+                              className={
+                                isUnderpaid
+                                  ? "text-destructive"
+                                  : change > 0
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : ""
+                              }
+                            >
+                              {formatPrice(change)}
+                            </span>
                           </div>
-                        </FormControl>
-                      </FormItem>
-                    )}
+                          {isUnderpaid && (
+                            <p className="text-destructive text-xs font-medium">
+                              {t("pos.checkout.insufficientAmount")}
+                            </p>
+                          )}
+                        </>
+                      );
+                    }}
                   />
-                  <div className="flex justify-between text-sm font-medium">
-                    <span className="text-muted-foreground">{t("pos.checkout.change")}:</span>
-                    <span className={change > 0 ? "text-emerald-600 dark:text-emerald-400" : ""}>
-                      {formatPrice(change)}
-                    </span>
-                  </div>
                 </div>
               )}
 

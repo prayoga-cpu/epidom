@@ -29,12 +29,24 @@ export const POST = withApiHandler(
     const origin =
       request.headers.get("origin") || process.env.NEXTAUTH_URL || "http://localhost:3000";
 
-    // Build success and cancel URLs
+    // Check if user already has a paid subscription (with a real Stripe customer)
+    const subscription = await subscriptionRepository.findByUserId(userId);
+
+    // The 14-day free trial is POS-only and first-time-only. We derive it server-side
+    // (ignoring any client-sent flag) so the trial can't be applied to other plans or
+    // claimed twice — a returning subscriber already has a stripeSubscriptionId.
+    const applyTrial = plan === "POS" && !subscription?.stripeSubscriptionId;
+
+    // Build success and cancel URLs. `trial` lets the success page fire a
+    // distinct "trial started" conversion (GA4 trial_started, Meta
+    // StartTrial) instead of treating every checkout as an immediate paid
+    // subscription — only relevant on the default URL; a caller-supplied
+    // successUrl is used verbatim.
     const finalSuccessUrl = successUrl
       ? successUrl.startsWith("http")
         ? successUrl
         : `${origin}${successUrl}`
-      : `${origin}/checkout/success?plan=${plan}`;
+      : `${origin}/checkout/success?plan=${plan}&trial=${applyTrial}`;
 
     const finalCancelUrl = cancelUrl
       ? cancelUrl.startsWith("http")
@@ -42,8 +54,6 @@ export const POST = withApiHandler(
         : `${origin}${cancelUrl}`
       : `${origin}/checkout/failed?reason=canceled`;
 
-    // Check if user already has a paid subscription (with a real Stripe customer)
-    const subscription = await subscriptionRepository.findByUserId(userId);
     if (
       subscription &&
       subscription.status === "ACTIVE" &&
@@ -64,11 +74,6 @@ export const POST = withApiHandler(
         { status: 201 }
       );
     }
-
-    // The 14-day free trial is POS-only and first-time-only. We derive it server-side
-    // (ignoring any client-sent flag) so the trial can't be applied to other plans or
-    // claimed twice — a returning subscriber already has a stripeSubscriptionId.
-    const applyTrial = plan === "POS" && !subscription?.stripeSubscriptionId;
 
     // Create checkout session
     const checkoutSession = await subscriptionService.createCheckoutSession(

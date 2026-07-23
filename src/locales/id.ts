@@ -4438,6 +4438,7 @@ export const id = {
       dineIn: "Makan di Tempat",
       amountTendered: "Uang Diterima",
       change: "Kembalian",
+      insufficientAmount: "Jumlah kurang — masukkan minimal sebesar total pesanan.",
       confirm: "Konfirmasi Pesanan",
       customerName: "Nama Pelanggan (opsional)",
       customerPhone: "No. HP (opsional)",

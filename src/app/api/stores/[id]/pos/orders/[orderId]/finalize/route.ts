@@ -83,6 +83,23 @@ export async function POST(
       throw err;
     }
 
+    // Defense in depth — the client already disables the Confirm button for
+    // this case, but never trust that a request actually came from a client
+    // that enforced it.
+    if (
+      input.paymentMethod === "CASH" &&
+      input.amountTendered != null &&
+      input.amountTendered < subtotal
+    ) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Amount tendered is less than the order total"
+        ),
+        { status: 422 }
+      );
+    }
+
     const order = await prisma.$transaction(async (tx) => {
       await tx.orderItem.deleteMany({ where: { orderId: existing.id } });
 
