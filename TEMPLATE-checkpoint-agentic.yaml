@@ -1,22 +1,27 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "fix translation key typo for posOrders in page header"
+task: "feedback dashboard: ticket detail modal, clickable status filters, Table/Board/Feed views"
 gate: "ok"
-success: "changed common.nav.posOrders to nav.posOrders in pos-page-headers.tsx, showing correct label"
+success: "added FeedbackDetailDialog modal, made the 5 stat cards clickable status filters, added type filter + search, and a Table/Board/Feed view switcher (localStorage-persisted) to the admin feedback dashboard; also finished and documented prior uncommitted work (staff active/inactive status, menu item descriptions)"
 
 evidence:
   changed_files:
-    - src/features/pos/components/pos-page-headers.tsx
+    - src/features/admin/components/admin-feedback-table.tsx
+    - package.json
+    - src/lib/version.ts
+    - CHANGELOG.md
+    - STATUS.md
   checks:
     - pnpm type-check
     - pnpm lint
-  rollback: "git checkout src/features/pos/components/pos-page-headers.tsx"
+  rollback: "git revert <commit>"
 
 risks:
   sensitive_without_escalation: false
   over_engineering: false
   claim_without_evidence: false
 
-not_verified: []
+not_verified:
+  - "Interactive browser click-through not performed by the agent (no browser automation tool, no credentials); user confirmed visually in their own running dev server tab."
 next: "none"

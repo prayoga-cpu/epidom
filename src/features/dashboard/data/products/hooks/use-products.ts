@@ -629,3 +629,35 @@ export function useProductMenuStatus(storeId: string): {
   );
   return { menuLinkedIds, isLoading };
 }
+
+/**
+ * Returns all MenuItem rows that are not yet linked to any Product.
+ * Powers the "Link to existing menu item" selector in AddProductDialog.
+ */
+export function useUnlinkedMenuItems(storeId: string) {
+  return useQuery<LinkedMenuItem[]>({
+    queryKey: ["storefront-items-unlinked", storeId],
+    queryFn: () =>
+      fetch(`/api/stores/${storeId}/storefront/items?unlinked=true`)
+        .then((r) => r.json())
+        .then((d) => (d?.data ?? []) as LinkedMenuItem[]),
+    enabled: !!storeId,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Returns the MenuItem(s) currently linked to a specific product.
+ * Used in EditProductDialog to show/manage the product↔menu association.
+ */
+export function useProductLinkedMenuItem(storeId: string, productId: string) {
+  return useQuery<LinkedMenuItem[]>({
+    queryKey: ["storefront-items-linked-product", storeId, productId],
+    queryFn: () =>
+      fetch(`/api/stores/${storeId}/storefront/items?productId=${productId}`)
+        .then((r) => r.json())
+        .then((d) => (d?.data ?? []) as LinkedMenuItem[]),
+    enabled: !!storeId && !!productId,
+    staleTime: 30_000,
+  });
+}

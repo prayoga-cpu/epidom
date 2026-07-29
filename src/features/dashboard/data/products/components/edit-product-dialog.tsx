@@ -30,7 +30,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X } from "lucide-react";
+import { Loader2, Check, X, Link2, Link2Off } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import type { Product, RecipeProduct, Recipe } from "@prisma/client";
 
@@ -38,7 +38,12 @@ type ProductWithRecipes = Product & {
   recipeProducts?: Array<RecipeProduct & { recipe: Recipe }>;
 };
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useUpdateProduct, useProducts } from "../hooks/use-products";
+import {
+  useUpdateProduct,
+  useProducts,
+  useProductLinkedMenuItem,
+  useUnlinkedMenuItems,
+} from "../hooks/use-products";
 import { useRecipesForSelector } from "../../recipes/hooks/use-recipes";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -105,6 +110,18 @@ export function EditProductDialog({
   // recipe with a calculable cost is linked, the field is locked to that
   // value so it can't silently drift out of sync with the recipe.
   const [manualCostPrice, setManualCostPrice] = useState(false);
+  // "keep" = keep current | "none" = unlink | "<itemId>" = link to that item
+  const [menuItemReassign, setMenuItemReassign] = useState<string>("keep");
+
+  const { data: currentLinkedItems = [] } = useProductLinkedMenuItem(storeId, product.id);
+  const currentLinked = currentLinkedItems[0] ?? null;
+
+  const { data: unlinkedMenuItems = [] } = useUnlinkedMenuItems(storeId);
+
+  // When product changes reset the reassign state
+  useEffect(() => {
+    setMenuItemReassign("keep");
+  }, [product.id]);
 
   // Same query params as RecipeSelector uses internally, so this shares its
   // React Query cache instead of firing a second fetch.
@@ -307,6 +324,30 @@ export function EditProductDialog({
 
       const promise = updateProduct.mutateAsync(apiData);
 
+      // Handle menu item re-association separately
+      if (menuItemReassign === "none" && currentLinked) {
+        // Unlink current menu item from this product
+        fetch(`/api/stores/${storeId}/storefront/items/${currentLinked.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: null }),
+        }).catch(console.error);
+      } else if (menuItemReassign && menuItemReassign !== "none" && menuItemReassign !== "keep") {
+        // Unlink current (if any) and link to new item
+        if (currentLinked && currentLinked.id !== menuItemReassign) {
+          fetch(`/api/stores/${storeId}/storefront/items/${currentLinked.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ productId: null }),
+          }).catch(console.error);
+        }
+        fetch(`/api/stores/${storeId}/storefront/items/${menuItemReassign}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: product.id }),
+        }).catch(console.error);
+      }
+
       // Any linked storefront MenuItem is kept in sync automatically server-side
       // (productService.updateProduct) — no manual "Sync" step needed here.
       sonnerToast.promise(promise, {
@@ -464,6 +505,59 @@ export function EditProductDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Menu association panel */}
+              <div className="rounded-lg border p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  {currentLinked ? (
+                    <Link2 className="size-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <Link2Off className="size-4 text-muted-foreground shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">
+                      {currentLinked ? (
+                        <>
+                          Linked to menu item:{" "}
+                          <span className="font-bold">{currentLinked.name}</span>
+                        </>
+                      ) : (
+                        "Not linked to any menu item"
+                      )}
+                    </p>
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                      {currentLinked
+                        ? "Price/stock syncs automatically. You can re-associate or remove the link below."
+                        : "This product has no POS/storefront entry. You can link to an existing menu item below."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Re-association selector */}
+                {(unlinkedMenuItems.length > 0 || currentLinked) && (
+                  <Select
+                    value={menuItemReassign}
+                    onValueChange={setMenuItemReassign}
+                  >
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder="Keep current association" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="keep">Keep current association</SelectItem>
+                      {currentLinked && (
+                        <SelectItem value="none">
+                          ✕ Remove link from &quot;{currentLinked.name}&quot;
+                        </SelectItem>
+                      )}
+                      {unlinkedMenuItems.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          Link to &quot;{item.name}&quot;
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </div>
 
             {/* Pricing */}

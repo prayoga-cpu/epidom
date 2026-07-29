@@ -9,6 +9,35 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.14.9] - 2026-07-29 · ux
+
+- **Feedback dashboard: ticket detail modal.** Every row/card now has an expand icon (and every board card is clickable) that opens a full-detail modal — user, page, full description, screenshot, dev note, and priority/status editing all in one place, without leaving the list.
+- **Clickable status filters.** The 5 summary stat cards (Open / In Progress / Review / Resolved / Archived) now double as filters — click one to narrow the list to that status, click again to clear it.
+- **Type filter + search.** Added a Bug/Feature/General type filter and a free-text search box (matches user, description, page, or ID) next to the view switcher.
+- **Three layouts: Table / Board / Feed.** Added a view switcher — Table (existing grouped list), Board (Notion-style Kanban columns by status, unaffected by the status filter beyond dimming the other columns so the full picture stays visible), and Feed (flat, newest-first card stream). The chosen view persists across visits via `localStorage`.
+
+## [2.14.8] - 2026-07-29 · feat
+
+- **Staff status management.** The staff edit dialog now has an Active/Inactive control, guarded so the last active staff member or the store Owner can't be deactivated (would lock everyone out). The Owner role itself is locked from being changed and always appears pinned at the top of the list.
+- **Role Access Details panel.** The staff edit dialog now shows a reference panel describing exactly what each role (Owner / Manager / Cashier / Kitchen) can access.
+- **PIN validation.** The new-PIN field now requires exactly 4 digits before Save is enabled, with an inline error otherwise.
+- **Menu item descriptions.** Storefront Editor's Add/Edit item dialogs now have an optional description field (e.g. "orange, jasmine, espresso"); it renders under the item name in both the editor list and the POS product grid.
+
+## [2.14.7] - 2026-07-28 · feat
+
+- **Add Product dialog** now shows a "Link to existing menu item" selector when the store has menu items not yet connected to any inventory product. Selecting one links the new product directly to that existing POS/storefront item instead of auto-creating a duplicate entry. Fully optional — leaving it on "Don't link" continues creating a new menu entry as before.
+- Added `?unlinked=true` query param to `GET /api/stores/[id]/storefront/items` to return only menu items with no product association (used by the selector above).
+
+## [2.14.6] - 2026-07-28 · feat
+
+- Added **"Review" status** (`NEEDS_REVIEW`) to the admin feedback tracker, sitting between *In Progress* and *Resolved* (styled purple). Stats card updated to show a 5th column for this status.
+- Added **developer notes** to each feedback entry: a private free-text field (saved as `devNote` in the DB) accessible only to admins. Inline pencil-to-edit textarea with save/cancel — visible below the description in both mobile and desktop views. Existing notes render with a violet 👁 badge and remain editable.
+- DB migration: `20260728083727_add_feedback_needs_review_and_devnote` — added `devNote String?` to the `feedback` table and `NEEDS_REVIEW` to the `FeedbackStatus` enum.
+
+## [2.14.5] - 2026-07-28 · ux
+
+- Added click-to-copy/bubble-to-copy to feedback description text. Clicking the description text now copies the full feedback text to the clipboard with a visual "Copied!" popover bubble (tooltip) and toast notification. Toggling expansion of long description texts is now handled by clear "Show more" / "Show less" links.
+
 ## [2.14.4] - 2026-07-23 · fix
 
 - Made the live "Change" preview in POS checkout recompute directly from the same field value driving the Amount Tendered input, in the same render pass, instead of a separate `useWatch` subscription — removes any chance of it lagging behind a keystroke.

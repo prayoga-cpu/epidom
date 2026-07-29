@@ -32,7 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2, RefreshCw, Check, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useCreateProduct, useProducts } from "../hooks/use-products";
+import { useCreateProduct, useProducts, useUnlinkedMenuItems } from "../hooks/use-products";
 import { useProductUsage } from "../hooks/use-product-usage";
 import { useRecipesForSelector } from "../../recipes/hooks/use-recipes";
 import { generateSku } from "@/lib/utils/sku-generator";
@@ -75,6 +75,7 @@ function createProductSchema(t: (key: string) => string) {
       z.undefined(),
     ]),
     recipeIds: z.array(z.string()).optional(),
+    linkedMenuItemId: z.string().optional(),
   });
 }
 
@@ -106,6 +107,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
     defaultValues: {
       ...FORM_DEFAULTS.product,
       recipeIds: [],
+      linkedMenuItemId: undefined,
     },
   });
 
@@ -118,6 +120,8 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   // value so it can't silently drift out of sync with the recipe.
   const [manualCostPrice, setManualCostPrice] = useState(false);
   const costPriceLocked = recipeIds.length > 0 && !manualCostPrice;
+
+  const { data: unlinkedMenuItems = [] } = useUnlinkedMenuItems(storeId);
 
   // Auto-suggest retail price based on 2.5x markup
   const suggestedRetailPrice =
@@ -255,6 +259,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
         maxStock: maxStock,
         recipeIds: data.recipeIds && data.recipeIds.length > 0 ? data.recipeIds : undefined,
         storeId,
+        linkedMenuItemId: data.linkedMenuItemId || undefined,
       };
 
       // OPTIMISTIC CLOSING
@@ -496,6 +501,44 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                   </FormItem>
                 )}
               />
+
+              {/* Link to existing menu item */}
+              {unlinkedMenuItems.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="linkedMenuItemId"
+                  render={({ field }) => (
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">
+                        Link to existing menu item
+                        <span className="text-muted-foreground ml-1 font-normal">(optional)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value || "none"}
+                          onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
+                        >
+                          <SelectTrigger className="text-sm">
+                            <SelectValue placeholder="Don't link — create new menu entry" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Don&apos;t link — create new menu entry</SelectItem>
+                            {unlinkedMenuItems.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Connect this product to an existing POS/storefront item to avoid duplicates.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             {/* Pricing */}

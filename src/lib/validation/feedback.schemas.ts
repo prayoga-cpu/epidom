@@ -8,7 +8,7 @@ import { z } from "zod";
 
 export const FEEDBACK_TYPES = ["BUG", "FEATURE_SUGGESTION", "GENERAL_FEEDBACK"] as const;
 
-export const FEEDBACK_STATUSES = ["OPEN", "IN_PROGRESS", "RESOLVED", "ARCHIVED"] as const;
+export const FEEDBACK_STATUSES = ["OPEN", "IN_PROGRESS", "NEEDS_REVIEW", "RESOLVED", "ARCHIVED"] as const;
 
 export const FEEDBACK_PRIORITIES = ["URGENT", "HIGH", "MEDIUM", "LOW"] as const;
 
@@ -49,11 +49,18 @@ export const updateFeedbackTriageSchema = z
     id: z.string().min(1),
     status: z.enum(FEEDBACK_STATUSES).optional(),
     priority: z.enum(FEEDBACK_PRIORITIES).optional(),
+    devNote: z.string().max(2000).optional(),
   })
-  .refine((data) => data.status !== undefined || data.priority !== undefined, {
-    message: "At least one of status or priority is required",
-    path: ["status"],
-  });
+  .refine(
+    (data) =>
+      data.status !== undefined ||
+      data.priority !== undefined ||
+      data.devNote !== undefined,
+    {
+      message: "At least one of status, priority, or devNote is required",
+      path: ["status"],
+    }
+  );
 
 export type UpdateFeedbackTriageInput = z.infer<typeof updateFeedbackTriageSchema>;
 

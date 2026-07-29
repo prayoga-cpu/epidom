@@ -57,6 +57,7 @@ export class ProductService {
     recipeIds?: string[]; // Changed from recipeId to recipeIds (array)
     productionTime?: number;
     shelfLife?: number;
+    linkedMenuItemId?: string;
   }): Promise<ProductWithRelations> {
     // Validate SKU uniqueness within store
     const skuExists = await productRepository.existsBySku(data.storeId, data.sku);
@@ -95,14 +96,22 @@ export class ProductService {
       },
     });
 
-    // Auto-add the new product to the store's POS/storefront menu by default —
-    // users can still remove it manually from the product card afterward.
-    await storefrontService.autoLinkProductToMenu(data.storeId, {
-      id: product.id,
-      name: product.name,
-      sellingPrice: Number(product.sellingPrice),
-      category: product.category,
-    });
+    // If user selected an existing menu item, link it instead of creating a new one
+    if (data.linkedMenuItemId && data.linkedMenuItemId !== "none") {
+      await prisma.menuItem.update({
+        where: { id: data.linkedMenuItemId },
+        data: { productId: product.id },
+      });
+    } else {
+      // Auto-add the new product to the store's POS/storefront menu by default —
+      // users can still remove it manually from the product card afterward.
+      await storefrontService.autoLinkProductToMenu(data.storeId, {
+        id: product.id,
+        name: product.name,
+        sellingPrice: Number(product.sellingPrice),
+        category: product.category,
+      });
+    }
 
     // Then link recipes if provided
     if (data.recipeIds && data.recipeIds.length > 0) {

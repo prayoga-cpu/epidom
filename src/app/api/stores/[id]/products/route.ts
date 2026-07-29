@@ -101,6 +101,7 @@ export const POST = withApiHandler(
       recipeIds: validatedData.recipeIds,
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
+      linkedMenuItemId: validatedData.linkedMenuItemId,
     });
 
     // Serialize Decimal fields to numbers for Client Components

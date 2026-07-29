@@ -57,6 +57,7 @@ export async function PATCH(req: NextRequest) {
   const feedback = await feedbackService.updateFeedbackTriage(parsed.data.id, {
     status: parsed.data.status,
     priority: parsed.data.priority,
+    devNote: parsed.data.devNote,
   });
 
   return NextResponse.json({ feedback });

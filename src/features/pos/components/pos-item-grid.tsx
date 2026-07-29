@@ -67,7 +67,7 @@ export function PosItemGrid({
                 }`}
               >
                 {item.imageUrl && (
-                  <div className="bg-muted relative h-32 w-full overflow-hidden">
+                  <div className="bg-muted relative h-32 w-full shrink-0 overflow-hidden">
                     <Image
                       src={item.imageUrl}
                       alt={item.name}
@@ -80,6 +80,11 @@ export function PosItemGrid({
                 <div className="flex flex-1 flex-col justify-between p-1 sm:p-3">
                   <div>
                     <h3 className="line-clamp-2 leading-tight font-medium">{item.name}</h3>
+                    {item.description && (
+                      <p className="text-muted-foreground mt-1 line-clamp-2 text-[11px] leading-snug">
+                        {item.description}
+                      </p>
+                    )}
                   </div>
                   <div className="text-primary mt-2 text-sm font-semibold">
                     {formatPrice(item.price)}

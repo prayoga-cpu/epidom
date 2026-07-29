@@ -147,7 +147,7 @@ export class FeedbackService {
    */
   async updateFeedbackTriage(
     id: string,
-    data: { status?: FeedbackStatus; priority?: FeedbackPriority }
+    data: { status?: FeedbackStatus; priority?: FeedbackPriority; devNote?: string }
   ): Promise<Feedback> {
     return prisma.feedback.update({
       where: { id },

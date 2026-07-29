@@ -45,6 +45,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     null
   );
   const [newItemName, setNewItemName] = useState("");
+  const [newItemDescription, setNewItemDescription] = useState("");
   const [newItemPrice, setNewItemPrice] = useState<number | undefined>(undefined);
   const [newItemImageUrl, setNewItemImageUrl] = useState<string | undefined>(undefined);
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
@@ -52,6 +53,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   // Edit item dialog state
   const [editItemDialog, setEditItemDialog] = useState<{ open: boolean; item: any } | null>(null);
   const [editItemName, setEditItemName] = useState("");
+  const [editItemDescription, setEditItemDescription] = useState("");
   const [editItemPrice, setEditItemPrice] = useState<number | undefined>(undefined);
   const [editItemImageUrl, setEditItemImageUrl] = useState<string | undefined>(undefined);
   const [isSubmittingEditItem, setIsSubmittingEditItem] = useState(false);
@@ -91,6 +93,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
   const openAddItemDialog = (categoryId: string) => {
     setNewItemName("");
+    setNewItemDescription("");
     setNewItemPrice(undefined);
     setNewItemImageUrl(undefined);
     setAddItemDialog({ open: true, categoryId });
@@ -102,6 +105,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     try {
       await storefrontApi.createItem(storeId, {
         name: newItemName,
+        description: newItemDescription || undefined,
         price: newItemPrice,
         categoryId: addItemDialog.categoryId,
         imageUrl: newItemImageUrl || "",
@@ -119,6 +123,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
   const openEditItemDialog = (item: any) => {
     setEditItemName(item.name);
+    setEditItemDescription(item.description || "");
     setEditItemPrice(Number(item.price));
     setEditItemImageUrl(item.imageUrl || undefined);
     setEditItemDialog({ open: true, item });
@@ -130,6 +135,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     try {
       await storefrontApi.updateItem(storeId, editItemDialog.item.id, {
         name: editItemName,
+        description: editItemDescription || "",
         price: editItemPrice,
         imageUrl: editItemImageUrl || "",
       });
@@ -248,6 +254,11 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                                 <h5 className="text-foreground text-sm font-semibold">
                                   {item.name}
                                 </h5>
+                                {item.description && (
+                                  <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
+                                    {item.description}
+                                  </p>
+                                )}
                                 <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
                                   <span className="text-foreground font-medium">
                                     {formatPrice(Number(item.price))}
@@ -369,6 +380,18 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
             <div className="space-y-2">
               <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Description (optional)
+              </label>
+              <Input
+                placeholder="e.g. orange, jasmine, espresso"
+                value={newItemDescription}
+                onChange={(e) => setNewItemDescription(e.target.value)}
+                className="hover:border-foreground/30 focus-visible:ring-foreground/20 transition-all focus-visible:ring-1"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 {t("storefront.menu.itemPrice") || "Selling Price"}
               </label>
               <div className="relative">
@@ -448,6 +471,18 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                 autoFocus
                 value={editItemName}
                 onChange={(e) => setEditItemName(e.target.value)}
+                className="hover:border-foreground/30 focus-visible:ring-foreground/20 transition-all focus-visible:ring-1"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Description (optional)
+              </label>
+              <Input
+                placeholder="e.g. orange, jasmine, espresso"
+                value={editItemDescription}
+                onChange={(e) => setEditItemDescription(e.target.value)}
                 className="hover:border-foreground/30 focus-visible:ring-foreground/20 transition-all focus-visible:ring-1"
               />
             </div>

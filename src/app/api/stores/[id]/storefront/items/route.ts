@@ -16,13 +16,17 @@ export const GET = withApiHandler(
     const storefront = await storefrontService.getStorefrontByStoreId(storeId!);
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId");
+    const unlinked = searchParams.get("unlinked") === "true";
 
     const where: Record<string, unknown> = { storefrontId: storefront.id };
     if (productId) where.productId = productId;
+    // ?unlinked=true → only items not yet connected to any product
+    if (unlinked) where.productId = null;
 
     const items = await prisma.menuItem.findMany({
       where,
       select: { id: true, name: true, price: true, productId: true, isAvailable: true },
+      orderBy: { name: "asc" },
     });
     return NextResponse.json(createSuccessResponse(items));
   },

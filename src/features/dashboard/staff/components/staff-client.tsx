@@ -75,6 +75,7 @@ export function StaffClient({
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editRole, setEditRole] = useState<StaffRole>("CASHIER");
+  const [editIsActive, setEditIsActive] = useState(true);
   const [editPin, setEditPin] = useState("");
   const [editSendPin, setEditSendPin] = useState(false);
   const [editRemovePin, setEditRemovePin] = useState(false);
@@ -86,6 +87,7 @@ export function StaffClient({
   });
 
   const staff = data?.staff ?? [];
+  const activeCount = staff.filter((s) => s.isActive).length;
 
   const {
     register,
@@ -128,6 +130,7 @@ export function StaffClient({
     setEditName(member.name);
     setEditEmail(member.email ?? "");
     setEditRole(member.role);
+    setEditIsActive(member.isActive);
     setEditPin("");
     setEditSendPin(false);
     setEditRemovePin(false);
@@ -141,6 +144,7 @@ export function StaffClient({
         name: editName,
         email: editEmail,
         role: editRole,
+        isActive: editIsActive,
       };
       if (editRemovePin) {
         body.pin = "";
@@ -248,6 +252,7 @@ export function StaffClient({
                     variant="outline"
                     size="sm"
                     className="flex-1"
+                    disabled={activeCount <= 1 || member.role === "OWNER"}
                     onClick={async () => {
                       const ok = await confirm({
                         title: "Deactivate staff member?",
@@ -348,6 +353,7 @@ export function StaffClient({
                           <Button
                             variant="ghost"
                             size="sm"
+                            disabled={activeCount <= 1 || member.role === "OWNER"}
                             onClick={async () => {
                               const ok = await confirm({
                                 title: "Deactivate staff member?",
@@ -487,7 +493,10 @@ export function StaffClient({
                 <Button variant="outline" onClick={() => setEditTarget(null)}>
                   {t("common.actions.cancel")}
                 </Button>
-                <Button onClick={handleEditSave} disabled={editLoading || !editName.trim()}>
+                <Button
+                  onClick={handleEditSave}
+                  disabled={editLoading || !editName.trim() || (editPin.length > 0 && editPin.length < 4)}
+                >
                   {editLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -515,19 +524,87 @@ export function StaffClient({
               </div>
               <div className="space-y-1">
                 <Label>Role</Label>
-                <Select value={editRole} onValueChange={(v) => setEditRole(v as StaffRole)}>
+                <Select
+                  value={editRole}
+                  onValueChange={(v) => setEditRole(v as StaffRole)}
+                  disabled={editTarget.role === "OWNER"}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLES_FOR_SELECT.map((r) => (
+                    {(editTarget.role === "OWNER"
+                      ? (["OWNER", ...ROLES_FOR_SELECT] as StaffRole[])
+                      : ROLES_FOR_SELECT
+                    ).map((r) => (
                       <SelectItem key={r} value={r}>
                         {ROLE_LABELS[r]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {editTarget.role === "OWNER" && (
+                  <p className="text-muted-foreground text-[10px] mt-1">
+                    The owner role cannot be changed.
+                  </p>
+                )}
               </div>
+
+              {/* Detail of access for each role */}
+              <div className="rounded-lg border bg-muted/20 p-3 text-xs space-y-2.5">
+                <p className="font-semibold text-muted-foreground">Role Access Details:</p>
+                <div className="grid gap-2">
+                  <div>
+                    <span className="font-semibold text-amber-500">Owner:</span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5 leading-normal">
+                      Full administrative access: manage billing plans, view financial summaries/reports, configure store settings, and manage all staff.
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Manager:</span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5 leading-normal">
+                      Operations manager access: configure menu items/inventory/recipes, manage staff shifts, use KDS, and log in to POS Cashier. Cannot view Billing or general store settings.
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Cashier:</span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5 leading-normal">
+                      POS access only: open/close cashier shifts, create/hold/pay orders, view active order queue, and issue cash/QRIS checkouts.
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Kitchen:</span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5 leading-normal">
+                      KDS access only: view, prioritize, and mark active food and beverage orders as prepared.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label>Status</Label>
+                <Select
+                  value={editIsActive ? "ACTIVE" : "INACTIVE"}
+                  onValueChange={(v) => setEditIsActive(v === "ACTIVE")}
+                  disabled={editTarget.isActive && (activeCount <= 1 || editTarget.role === "OWNER")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+                {editTarget.isActive && (activeCount <= 1 || editTarget.role === "OWNER") && (
+                  <p className="text-amber-500/80 text-[10px] mt-1">
+                    {editTarget.role === "OWNER"
+                      ? "The owner account access must remain active."
+                      : "At least one staff member must remain active to prevent locking yourself out."}
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-1">
                 <Label>
                   New PIN{" "}
@@ -544,6 +621,11 @@ export function StaffClient({
                   onChange={(e) => setEditPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   disabled={editRemovePin}
                 />
+                {editPin.length > 0 && editPin.length < 4 && (
+                  <p className="text-destructive text-xs mt-1">
+                    PIN must be exactly 4 digits.
+                  </p>
+                )}
               </div>
               <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
                 <input

@@ -28,6 +28,7 @@ const baseProductSchema = z.object({
   recipeIds: z.array(cuidSchema).optional(), // Changed from recipeId to recipeIds (array)
   productionTime: z.number().int().nonnegative("Production time must be non-negative").optional(),
   shelfLife: z.number().int().positive("Shelf life must be positive").optional(),
+  linkedMenuItemId: z.string().optional(),
 });
 
 export const createProductSchema = baseProductSchema.refine(

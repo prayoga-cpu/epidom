@@ -6,6 +6,36 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-07-29 — Feedback Dashboard: Detail Modal, Status Filters, Board/Feed Views
+
+### Feedback Dashboard
+- [x] **Ticket detail modal** — clicking the expand icon on any row/card (or any board card) opens a full-detail modal: user, page, full description, screenshot, dev note, and priority/status editing, without leaving the list.
+- [x] **Clickable status filters** — the 5 stat cards (Open / In Progress / Review / Resolved / Archived) now filter the list on click; clicking the active one again clears the filter.
+- [x] **Type filter + search** — added a Bug/Feature/General type filter and free-text search (user, description, page, ID).
+- [x] **Table / Board / Feed views** — new view switcher: Table (existing grouped list), Board (Notion-style Kanban columns by status), Feed (flat newest-first stream). Preference persists via `localStorage`.
+
+### Staff Management (undocumented from a prior session, verified and shipped alongside)
+- [x] **Active/Inactive status control** — guarded so the last active staff member or the Owner can't be deactivated; Owner role is locked from being changed.
+- [x] **Role Access Details panel** — reference of what each role (Owner/Manager/Cashier/Kitchen) can access, shown in the staff edit dialog.
+- [x] **PIN validation** — new PIN must be exactly 4 digits before Save is enabled.
+
+### Storefront / POS
+- [x] **Menu item descriptions** — optional description field added to Add/Edit item dialogs in the Storefront Editor; renders under the item name in both the editor and the POS product grid.
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+
+---
+
+## ✅ 2026-07-28 — Feedback Copy-to-Clipboard UX Update
+
+### Feedback Dashboard
+- [x] **Description Click-to-Copy** — Integrated the `CopyableDescription` component in both desktop and mobile viewports. Clicking the description now copies the text directly to the clipboard.
+- [x] **Copy Bubble / Tooltip** — Added a floating popover/tooltip bubble showing "Click to copy description" and "Copied!" for clear visual feedback.
+- [x] **Show More/Less links** — Disconnected text-expansion from the copy action, wrapping long texts with distinct, accessible action links.
+
+---
+
 ## ✅ 2026-05-29 — Integration, Auth & UX Sprint
 
 ### Auth & Production Fixes
