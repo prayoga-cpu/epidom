@@ -9,8 +9,7 @@ import { ApiSuccessResponse, ValidationError } from "@/types/api/responses";
 
 // Feedback types matching Prisma schema (kept local to avoid client-side Prisma imports)
 export type FeedbackType = "BUG" | "FEATURE_SUGGESTION" | "GENERAL_FEEDBACK";
-
-export type FeedbackStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "ARCHIVED";
+export type FeedbackStatus = "OPEN" | "IN_PROGRESS" | "NEEDS_REVIEW" | "RESOLVED" | "ARCHIVED";
 
 export interface FeedbackItem {
   id: string;

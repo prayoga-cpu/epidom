@@ -9,6 +9,12 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.14.10] - 2026-07-31 · ux
+
+- **Fix: "My tickets" crash for NEEDS_REVIEW status.** Accounts with tickets transitioned to `NEEDS_REVIEW` by an admin were experiencing a render crash on the "My tickets" tab. Added the missing status to the frontend `FeedbackStatus` union type, the `STATUS_BADGES` map in the feedback dialog, and added corresponding translations (EN: "Needs review" / ID: "Perlu ditinjau").
+- **Storefront settings: real-time auto-save.** All fields in the storefront settings page now auto-save to the database 1.5 seconds after you stop typing. The manual "Save Settings" and "Cancel" buttons have been removed. A subtle "Saving..." / "Store settings saved." indicator appears at the top of the form.
+- **QR code dialog: copy link.** The shared QR code dialog (storefront, table QR, etc.) now shows the URL in a read-only input below the QR image, with a one-click copy button that briefly shows a green checkmark on success.
+
 ## [2.14.9] - 2026-07-29 · ux
 
 - **Feedback dashboard: ticket detail modal.** Every row/card now has an expand icon (and every board card is clickable) that opens a full-detail modal — user, page, full description, screenshot, dev note, and priority/status editing all in one place, without leaving the list.

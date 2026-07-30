@@ -127,30 +127,69 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
     name: "customLinks",
   });
 
-  const onSubmit = async (data: UpdateStorefrontInput) => {
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const formValues = form.watch();
+
+  useEffect(() => {
+    if (!form.formState.isDirty) return;
+
+    const timeoutId = setTimeout(() => {
+      form.handleSubmit((data) => onSubmit(data, true))();
+    }, 1500);
+
+    return () => clearTimeout(timeoutId);
+  }, [formValues, form.formState.isDirty]);
+
+  const onSubmit = async (data: UpdateStorefrontInput, isAutoSave = false) => {
     // Block save if the slug is known to be unavailable
     if (slugStatus === "taken" || slugStatus === "invalid_chars" || slugStatus === "too_short") {
-      form.setError("slug", { message: t("storefront.settings.urlTaken") });
-      toast.error(t("storefront.settings.urlUnavailable"));
-      return;
-    }
-    setIsSaving(true);
-    try {
-      await storefrontApi.updateStorefront(storeId, data);
-      toast.success(t("storefront.settings.saveSuccess"));
-      initialSlug.current = (data.slug || "").trim().toLowerCase();
-      setSlugStatus("idle");
-      onSuccess();
-    } catch (error: any) {
-      if (error.response?.status === 409) {
+      if (!isAutoSave) {
         form.setError("slug", { message: t("storefront.settings.urlTaken") });
         toast.error(t("storefront.settings.urlUnavailable"));
+      }
+      return;
+    }
+    
+    if (isAutoSave) {
+      setIsAutoSaving(true);
+    } else {
+      setIsSaving(true);
+    }
+    
+    try {
+      await storefrontApi.updateStorefront(storeId, data);
+      
+      if (!isAutoSave) {
+        toast.success(t("storefront.settings.saveSuccess"));
+      } else {
+        setLastSaved(new Date());
+      }
+      
+      initialSlug.current = (data.slug || "").trim().toLowerCase();
+      setSlugStatus("idle");
+      
+      form.reset(data, { keepValues: true, keepErrors: true, keepTouched: true });
+      
+      if (!isAutoSave) onSuccess();
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        if (!isAutoSave) {
+          form.setError("slug", { message: t("storefront.settings.urlTaken") });
+          toast.error(t("storefront.settings.urlUnavailable"));
+        }
         setSlugStatus("taken");
       } else {
-        toast.error(t("storefront.settings.saveFailed"));
+        if (!isAutoSave) {
+          toast.error(t("storefront.settings.saveFailed"));
+        }
       }
     } finally {
-      setIsSaving(false);
+      if (isAutoSave) {
+        setIsAutoSaving(false);
+      } else {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -217,7 +256,22 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
   return (
     <>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit((data) => onSubmit(data, false))} className="space-y-6">
+          <div className="flex h-4 justify-end">
+            <div className="text-muted-foreground flex items-center gap-1.5 text-sm transition-opacity duration-300">
+              {isAutoSaving && (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" /> {t("storefront.settings.savingButton")}
+                </>
+              )}
+              {!isAutoSaving && lastSaved && !form.formState.isDirty && (
+                <>
+                  <CheckCircle2 className="size-3.5 text-green-500" /> {t("storefront.settings.saveSuccess")}
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Status / Publish Card */}
           <Card className="border-orange-200 bg-orange-50/30">
             <CardContent className="flex flex-col items-start justify-between gap-3 pt-0 sm:gap-6 sm:pt-6 md:flex-row md:items-center">
@@ -762,26 +816,6 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
               </Button>
             </CardContent>
           </Card>
-
-          <div className="flex justify-end gap-3 pb-12">
-            <Button type="button" variant="outline" onClick={() => form.reset()}>
-              {t("storefront.settings.cancelButton")}
-            </Button>
-            <Button
-              type="submit"
-              disabled={
-                isSaving ||
-                slugStatus === "checking" ||
-                slugStatus === "taken" ||
-                slugStatus === "invalid_chars" ||
-                slugStatus === "too_short"
-              }
-            >
-              {isSaving
-                ? t("storefront.settings.savingButton")
-                : t("storefront.settings.saveButton")}
-            </Button>
-          </div>
         </form>
       </Form>
       <QrCodeDialog

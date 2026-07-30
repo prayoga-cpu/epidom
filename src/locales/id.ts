@@ -1399,6 +1399,7 @@ export const id = {
       cancelEdit: "Batalkan pengubahan",
       statusOpen: "Terbuka",
       statusInProgress: "Diproses",
+      statusNeedsReview: "Perlu ditinjau",
       statusResolved: "Selesai",
       statusArchived: "Diarsipkan",
       screenshot: "Lihat tangkapan layar",

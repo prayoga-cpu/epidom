@@ -6,6 +6,22 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-07-31 — Feedback NEEDS_REVIEW Fix, Storefront Auto-Save, QR Copy Link
+
+### Feedback
+- [x] **NEEDS_REVIEW crash fix** — Added missing status to `FeedbackStatus` type, `STATUS_BADGES` map, and translations (EN/ID). Accounts with tickets in this status no longer crash on "My tickets".
+
+### Storefront Settings
+- [x] **Real-time auto-save** — All fields save to DB 1.5s after user stops typing. Manual Save/Cancel buttons removed.
+
+### QR Code Dialog (shared)
+- [x] **Copy link** — URL shown in read-only input below QR; one-click copy with green checkmark feedback. Applies everywhere QR is shown (storefront, table QR, etc.).
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+
+---
+
 ## ✅ 2026-07-29 — Feedback Dashboard: Detail Modal, Status Filters, Board/Feed Views
 
 ### Feedback Dashboard

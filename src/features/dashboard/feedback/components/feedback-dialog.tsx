@@ -87,6 +87,7 @@ const STATUS_BADGES: Record<
 > = {
   OPEN: { variant: "secondary", labelKey: "feedback.history.statusOpen" },
   IN_PROGRESS: { variant: "default", labelKey: "feedback.history.statusInProgress" },
+  NEEDS_REVIEW: { variant: "default", labelKey: "feedback.history.statusNeedsReview" },
   RESOLVED: { variant: "outline", labelKey: "feedback.history.statusResolved" },
   ARCHIVED: {
     variant: "outline",

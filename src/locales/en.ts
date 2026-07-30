@@ -1369,6 +1369,7 @@ export const en = {
       cancelEdit: "Cancel editing",
       statusOpen: "Open",
       statusInProgress: "In progress",
+      statusNeedsReview: "Needs review",
       statusResolved: "Resolved",
       statusArchived: "Archived",
       screenshot: "View screenshot",
