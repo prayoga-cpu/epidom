@@ -129,7 +129,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
   const [filters, setFilters] = useState({
     search: "",
     category: "",
-    department: "" as "" | "KITCHEN" | "BAR",
+    department: undefined as "KITCHEN" | "BAR" | undefined,
     supplierId: "",
     stockStatus: undefined as StockFilter,
     sortBy: "createdAt" as const,
@@ -281,7 +281,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
   const handleDepartmentFilter = (value: string) => {
     setFilters((prev) => ({
       ...prev,
-      department: value === "all" ? "" : (value as "KITCHEN" | "BAR"),
+      department: value === "all" ? undefined : (value as "KITCHEN" | "BAR"),
       skip: 0,
     }));
   };
@@ -341,7 +341,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
     setFilters({
       search: "",
       category: "",
-      department: "",
+      department: undefined,
       supplierId: "",
       stockStatus: undefined,
       sortBy: "createdAt",

@@ -47,6 +47,7 @@ const mockRecipe = {
   name: "Chocolate Cake",
   description: "Delicious chocolate cake",
   category: "Cakes",
+  department: null,
   yieldQuantity: new Prisma.Decimal(1),
   yieldUnit: "piece",
   productionTimeMinutes: 60,

@@ -89,7 +89,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const [filters, setFilters] = useState({
     search: "",
     category: "",
-    department: "" as "" | "KITCHEN" | "BAR",
+    department: undefined as "KITCHEN" | "BAR" | undefined,
     sortBy: "createdAt" as const,
     sortOrder: "desc" as const,
     skip: 0,
@@ -283,7 +283,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     setFilters({
       search: "",
       category: "",
-      department: "",
+      department: undefined,
       sortBy: "createdAt",
       sortOrder: "desc",
       skip: 0,
@@ -479,7 +479,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                 onValueChange={(v) =>
                   setFilters((prev) => ({
                     ...prev,
-                    department: v === "all" ? "" : (v as "KITCHEN" | "BAR"),
+                    department: v === "all" ? undefined : (v as "KITCHEN" | "BAR"),
                     skip: 0,
                   }))
                 }

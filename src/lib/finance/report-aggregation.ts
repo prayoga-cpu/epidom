@@ -93,7 +93,11 @@ export function bucketItemsByDepartment(items: DepartmentBucketInput[]): Departm
 
 export interface ShiftGroupInput {
   shiftId: string | null;
-  _sum: { total: number | string | null };
+  // `{ toString(): string }` (not just `number | string`) so a raw Prisma
+  // `Decimal` — what `prisma.order.groupBy(...)`'s `_sum.total` actually is —
+  // can be passed straight through without every call site converting it
+  // first; `Number(...)` below coerces via that `toString()`.
+  _sum: { total: number | string | { toString(): string } | null };
   _count: { id: number };
 }
 
