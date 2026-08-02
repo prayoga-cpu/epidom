@@ -1,19 +1,13 @@
 import { z } from "zod";
+import { selectedOptionSchema } from "./pos.schemas";
 
 export const publicOrderItemSchema = z.object({
   menuItemId: z.string().cuid(),
   name: z.string().min(1).max(200),
   quantity: z.number().int().positive().max(99),
   unitPrice: z.number().positive(),
-  modifierSelections: z
-    .array(
-      z.object({
-        modifierName: z.string(),
-        optionName: z.string(),
-        priceAdd: z.number().default(0),
-      })
-    )
-    .optional(),
+  selectedOptions: z.array(selectedOptionSchema).optional(),
+  notes: z.string().max(300, "Note is too long").optional(),
 });
 
 export const createPublicOrderSchema = z.object({

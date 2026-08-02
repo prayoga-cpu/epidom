@@ -16,6 +16,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ChartSkeleton } from "../components/chart-skeleton";
+import { DateRangeLabel } from "@/features/dashboard/shared/components/date-range-label";
+import { todayLocalISO } from "@/lib/utils/date-range";
 
 const RevenueTrendChart = dynamic(
   () => import("./revenue-trend-chart").then((mod) => ({ default: mod.RevenueTrendChart })),
@@ -29,6 +31,13 @@ const OrdersBreakdownChart = dynamic(
 
 interface TopItem {
   name: string;
+  totalQuantity: number;
+  totalRevenue: number;
+}
+
+interface DepartmentRow {
+  department: "KITCHEN" | "BAR" | null;
+  orderItemCount: number;
   totalQuantity: number;
   totalRevenue: number;
 }
@@ -61,20 +70,14 @@ interface AnalyticsSectionProps {
   storeId: string;
 }
 
-function startOfMonth() {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split("T")[0];
-}
-function today() {
-  return new Date().toISOString().split("T")[0];
-}
-
 export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const { advancedReportsAccess } = useFeatureAccess();
-  const [from, setFrom] = useState(startOfMonth());
-  const [to, setTo] = useState(today());
+  // Defaults to today — the report an operator checks most: "how are we
+  // doing right now." The date inputs below let them widen the range.
+  const [from, setFrom] = useState(todayLocalISO());
+  const [to, setTo] = useState(todayLocalISO());
 
   const params = `from=${from}T00:00:00Z&to=${to}T23:59:59Z`;
   const base = `/stores/${storeId}`;
@@ -100,6 +103,13 @@ export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
   const customers = useQuery({
     queryKey: ["analytics-customers", storeId, from, to],
     queryFn: () => apiClient.get<CustomersAnalytics>(`${base}/customers/analytics?${params}`),
+    staleTime,
+  });
+
+  const byDepartment = useQuery({
+    queryKey: ["analytics-by-department", storeId, from, to],
+    queryFn: () =>
+      apiClient.get<{ departments: DepartmentRow[] }>(`${base}/finance/by-department?${params}`),
     staleTime,
   });
 
@@ -216,6 +226,7 @@ export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
             className="w-40"
           />
         </div>
+        <DateRangeLabel from={from} to={to} />
       </div>
 
       {isLoading ? (
@@ -276,6 +287,33 @@ export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
               }
             />
           </div>
+
+          {/* Department split — Kitchen vs Bar, at a glance */}
+          {(byDepartment.data?.departments.length ?? 0) > 0 && (
+            <Card>
+              <CardHeader className="pb-1">
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  {t("dashboard.analytics.departmentSplit")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-6">
+                  {(byDepartment.data?.departments ?? []).map((d) => (
+                    <div key={d.department ?? "unassigned"} className="space-y-0.5">
+                      <p className="text-muted-foreground text-xs">
+                        {d.department === "KITCHEN"
+                          ? t("common.departmentKitchen")
+                          : d.department === "BAR"
+                            ? t("common.departmentBar")
+                            : t("common.departmentUnassigned")}
+                      </p>
+                      <p className="text-xl font-bold">{formatPrice(d.totalRevenue)}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Charts row */}
           <div className="grid gap-4 lg:grid-cols-2">

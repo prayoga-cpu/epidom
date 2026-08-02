@@ -60,7 +60,7 @@ export default async function OrderStatusPage({ params }: PageProps) {
         tableNumber: order.tableNumber,
         notes: order.notes,
         total: Number(order.total),
-        currency: order.items[0]?.menuItem ? "IDR" : "IDR",
+        currency: storefront.store.business.user.currency,
         createdAt: order.createdAt.toISOString(),
         paymentQrString: order.paymentQrString,
         items: order.items.map((i) => ({

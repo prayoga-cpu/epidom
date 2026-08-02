@@ -56,8 +56,8 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
       // calculation downstream into string concatenation instead of addition.
       unitPrice: Number(item.unitPrice),
       quantity: Number(item.quantity),
-      // Not persisted on OrderItem — see pos.orderCard.resumedBanner.
-      modifiers: [],
+      modifiers: item.selectedOptions ?? [],
+      notes: item.notes ?? undefined,
       lineTotal: Number(item.total),
     }));
 
@@ -149,10 +149,20 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
         </span>
         <ul className="text-sm">
           {order.items.slice(0, 3).map((item, i) => (
-            <li key={i} className="flex justify-between py-0.5">
+            <li key={i} className="py-0.5">
               <span>
                 {item.quantity}x {item.menuItem?.name || item.name}
               </span>
+              {item.selectedOptions && item.selectedOptions.length > 0 && (
+                <span className="text-muted-foreground block pl-4 text-xs">
+                  {item.selectedOptions.map((o) => o.optionName).join(", ")}
+                </span>
+              )}
+              {item.notes && (
+                <span className="text-muted-foreground block pl-4 text-xs italic">
+                  “{item.notes}”
+                </span>
+              )}
             </li>
           ))}
           {order.items.length > 3 && (

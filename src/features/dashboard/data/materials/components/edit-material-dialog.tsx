@@ -109,6 +109,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
       name: "",
       sku: "",
       category: "",
+      department: undefined,
       description: "",
       unit: "",
       unitCost: undefined,
@@ -166,6 +167,7 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
         name: material.name,
         sku: material.sku || "",
         category: material.category || "",
+        department: material.department ?? undefined,
         description: material.description || "",
         unit: material.unit,
         unitCost: unitCost > 0 ? convertPrice(unitCost) : undefined, // Convert EUR to user's currency, undefined if 0
@@ -422,6 +424,32 @@ export function EditMaterialDialog({ open, onOpenChange, material }: EditMateria
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("common.department")}</FormLabel>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">—</SelectItem>
+                        <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
+                        <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Description */}
               <FormField

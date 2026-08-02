@@ -44,6 +44,9 @@ const createMockRepository = (): MockedObject<MaterialRepository> =>
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    bulkDelete: vi.fn(),
+    clearCategory: vi.fn(),
+    deleteByCategory: vi.fn(),
     addSupplier: vi.fn(),
     removeSupplier: vi.fn(),
     updateSupplier: vi.fn(),
@@ -202,6 +205,46 @@ describe("MaterialService", () => {
       await expect(service.addSupplier("mat-1", "other-store", "sup-1", 10)).rejects.toThrow(
         "Material does not belong to this store"
       );
+    });
+  });
+
+  describe("deleteCategory", () => {
+    it("should clear the category from every material that uses it (default mode)", async () => {
+      mockRepo.clearCategory.mockResolvedValue({ count: 3 });
+
+      const result = await service.deleteCategory("store-1", "Dairy");
+
+      expect(mockRepo.clearCategory).toHaveBeenCalledWith("store-1", "Dairy");
+      expect(mockRepo.deleteByCategory).not.toHaveBeenCalled();
+      expect(result).toEqual({ count: 3 });
+    });
+
+    it('should clear the category in explicit "uncategorize" mode', async () => {
+      mockRepo.clearCategory.mockResolvedValue({ count: 3 });
+
+      await service.deleteCategory("store-1", "Dairy", "uncategorize");
+
+      expect(mockRepo.clearCategory).toHaveBeenCalledWith("store-1", "Dairy");
+      expect(mockRepo.deleteByCategory).not.toHaveBeenCalled();
+    });
+
+    it('should hard-delete every material in the category in "delete" mode', async () => {
+      mockRepo.deleteByCategory.mockResolvedValue({ count: 3 });
+
+      const result = await service.deleteCategory("store-1", "Dairy", "delete");
+
+      expect(mockRepo.deleteByCategory).toHaveBeenCalledWith("store-1", "Dairy");
+      expect(mockRepo.clearCategory).not.toHaveBeenCalled();
+      expect(result).toEqual({ count: 3 });
+    });
+
+    it("should throw error if category is empty", async () => {
+      await expect(service.deleteCategory("store-1", "")).rejects.toThrow("Category is required");
+      await expect(service.deleteCategory("store-1", "   ")).rejects.toThrow(
+        "Category is required"
+      );
+      expect(mockRepo.clearCategory).not.toHaveBeenCalled();
+      expect(mockRepo.deleteByCategory).not.toHaveBeenCalled();
     });
   });
 

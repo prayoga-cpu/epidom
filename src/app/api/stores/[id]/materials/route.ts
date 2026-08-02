@@ -18,6 +18,7 @@ export const GET = withApiHandler(
     const filters = materialFilterSchema.parse({
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
+      department: searchParams.get("department") || undefined,
       supplierId: searchParams.get("supplierId") || undefined,
       stockStatus: searchParams.get("stockStatus") || undefined,
       sortBy: searchParams.get("sortBy") || "createdAt",

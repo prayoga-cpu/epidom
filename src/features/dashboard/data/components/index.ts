@@ -15,3 +15,4 @@ export { FilterSection, type FilterField, type FilterOption } from "./filter-sec
 export { BaseItemCard, ItemCardGrid } from "./base-item-card";
 export { EmptyState } from "./empty-state";
 export { SKUDisplay } from "./sku-display";
+export { ManageCategoriesDialog, type CategoryUsage } from "./manage-categories-dialog";

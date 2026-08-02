@@ -6,7 +6,7 @@ import type {
   CreateMenuItemInput,
   UpdateMenuItemInput,
 } from "@/lib/validation/storefront.schemas";
-import { Prisma } from "@prisma/client";
+import { Prisma, Department } from "@prisma/client";
 
 export class StorefrontService {
   /**
@@ -37,6 +37,25 @@ export class StorefrontService {
           include: {
             items: {
               orderBy: { displayOrder: "asc" },
+              include: {
+                product: {
+                  select: {
+                    optionGroups: {
+                      orderBy: { displayOrder: "asc" },
+                      include: { options: { orderBy: { displayOrder: "asc" } } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        store: {
+          select: {
+            business: {
+              select: {
+                user: { select: { currency: true } },
+              },
             },
           },
         },
@@ -237,13 +256,27 @@ export class StorefrontService {
     });
   }
 
-  async deleteMenuCategory(categoryId: string, storefrontId: string) {
+  /**
+   * Delete a menu category.
+   * In "uncategorize" mode (default) the category's items are kept and fall
+   * back to Uncategorized (DB cascade sets MenuItem.categoryId to null). In
+   * "delete" mode the items themselves are deleted along with the category.
+   */
+  async deleteMenuCategory(
+    categoryId: string,
+    storefrontId: string,
+    mode: "uncategorize" | "delete" = "uncategorize"
+  ) {
     // Verify ownership
     const category = await prisma.menuCategory.findUnique({
       where: { id: categoryId },
     });
     if (!category || category.storefrontId !== storefrontId) {
       throw new Error("Category not found or does not belong to this storefront");
+    }
+
+    if (mode === "delete") {
+      await prisma.menuItem.deleteMany({ where: { categoryId } });
     }
 
     return prisma.menuCategory.delete({
@@ -265,16 +298,18 @@ export class StorefrontService {
       _max: { displayOrder: true },
     });
     const nextOrder = (maxOrder._max.displayOrder ?? -1) + 1;
+    const currency = input.currency ?? (await this.getOwnerCurrency(storefrontId));
 
     return prisma.menuItem.create({
       data: {
         storefrontId,
         categoryId: input.categoryId,
         productId: input.productId,
+        department: input.department,
         name: input.name,
         description: input.description,
         price: new Prisma.Decimal(input.price),
-        currency: input.currency ?? "IDR",
+        currency,
         imageUrl: input.imageUrl,
         isAvailable: input.isAvailable,
         isFeatured: input.isFeatured,
@@ -283,6 +318,18 @@ export class StorefrontService {
           input.modifiers === undefined ? undefined : (input.modifiers as Prisma.InputJsonValue),
       },
     });
+  }
+
+  /**
+   * The currency a menu item should default to when none is supplied — the
+   * storefront owner's configured display currency, not a hardcoded IDR.
+   */
+  private async getOwnerCurrency(storefrontId: string): Promise<string> {
+    const storefront = await prisma.storefront.findUnique({
+      where: { id: storefrontId },
+      select: { store: { select: { business: { select: { user: { select: { currency: true } } } } } } },
+    });
+    return storefront?.store.business.user.currency ?? "IDR";
   }
 
   async updateMenuItem(itemId: string, storefrontId: string, input: UpdateMenuItemInput) {
@@ -298,6 +345,7 @@ export class StorefrontService {
       data: {
         categoryId: input.categoryId !== undefined ? input.categoryId : item.categoryId,
         productId: input.productId !== undefined ? input.productId : item.productId,
+        department: input.department !== undefined ? input.department : item.department,
         name: input.name !== undefined ? input.name : item.name,
         description: input.description !== undefined ? input.description : item.description,
         price: input.price !== undefined ? new Prisma.Decimal(input.price) : item.price,
@@ -338,7 +386,13 @@ export class StorefrontService {
    */
   async autoLinkProductToMenu(
     storeId: string,
-    product: { id: string; name: string; sellingPrice: number | string; category?: string | null }
+    product: {
+      id: string;
+      name: string;
+      sellingPrice: number | string;
+      category?: string | null;
+      department?: Department | null;
+    }
   ): Promise<void> {
     try {
       const alreadyLinked = await prisma.menuItem.findFirst({
@@ -381,6 +435,7 @@ export class StorefrontService {
           categoryId,
           productId: product.id,
           name: product.name,
+          department: product.department,
           price: new Prisma.Decimal(Number(product.sellingPrice)),
           isAvailable: true,
           displayOrder: (maxItemOrder._max.displayOrder ?? -1) + 1,

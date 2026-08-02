@@ -85,7 +85,8 @@ export function PosCheckoutDialog({
         name: i.name,
         quantity: i.quantity,
         unitPrice: i.unitPrice,
-        modifierSelections: i.modifiers,
+        selectedOptions: i.modifiers,
+        notes: i.notes,
       })),
       paymentMethod: "CASH",
       orderType: "DINE_IN",
@@ -117,7 +118,8 @@ export function PosCheckoutDialog({
           name: i.name,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
-          modifierSelections: i.modifiers,
+          selectedOptions: i.modifiers,
+          notes: i.notes,
         }))
       );
     }
@@ -167,6 +169,8 @@ export function PosCheckoutDialog({
       quantity: i.quantity,
       unitPrice: i.unitPrice,
       total: i.lineTotal,
+      optionNames: i.modifiers.map((m: any) => m.optionName),
+      notes: i.notes,
     })),
     subtotal: cart.subtotal,
     total: cart.total,

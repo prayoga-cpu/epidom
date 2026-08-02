@@ -6,6 +6,7 @@ import { AnalyticsSection } from "../analytics/analytics-section";
 import { ChartSkeleton } from "./chart-skeleton";
 import { CardSkeleton } from "./card-skeleton";
 import { AlertsCard } from "../alerts/alerts-card";
+import { NewOrdersCard } from "../new-orders/new-orders-card";
 import { TrackingCard } from "../tracking/tracking-card";
 import { useI18n } from "@/components/lang/i18n-provider";
 
@@ -92,6 +93,9 @@ export function DashboardClient({
       <PageHeader pageTitle={t("dashboard.title")} pageDescription={t("dashboard.description")} />
 
       <AnalyticsSection storeId={storeId} />
+
+      {/* New orders awaiting confirmation — highlighted so incoming storefront orders don't get missed */}
+      <NewOrdersCard storeId={storeId} />
 
       {/* Top Stats */}
       <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7 lg:items-stretch">

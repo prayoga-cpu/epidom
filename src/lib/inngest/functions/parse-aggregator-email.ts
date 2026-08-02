@@ -107,6 +107,11 @@ export const parseAggregatorEmail = inngest.createFunction(
         source,
         subtotal: toDecimal(subtotal),
         total: toDecimal(total),
+        // tax/serviceCharge/processingFee intentionally left at their schema
+        // defaults (0): aggregator prices already embed the platform's own
+        // tax handling, and the platform's cut is modeled separately via
+        // commissionRate() in finance/channels — computing store fees here
+        // would double-count against the same order.
         orderDate: parsed.orderDate ? new Date(parsed.orderDate) : new Date(),
         items: {
           create: parsed.items.map((item) => ({

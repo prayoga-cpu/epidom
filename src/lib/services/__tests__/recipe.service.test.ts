@@ -18,6 +18,8 @@ vi.mock("@/lib/repositories/recipe.repository", () => ({
     updateWithIngredients: vi.fn(),
     delete: vi.fn(),
     bulkDelete: vi.fn(),
+    clearCategory: vi.fn(),
+    deleteByCategory: vi.fn(),
     belongsToStore: vi.fn(),
     existsByName: vi.fn(),
     addIngredient: vi.fn(),
@@ -203,6 +205,34 @@ describe("RecipeService", () => {
       const result = await service.bulkDeleteRecipes(["recipe-1", "recipe-2"], "store-1");
 
       expect(result.count).toBe(2);
+    });
+  });
+
+  describe("deleteCategory", () => {
+    it("should clear the category from every recipe that uses it (default mode)", async () => {
+      mockedRecipeRepo.clearCategory.mockResolvedValue({ count: 2 });
+
+      const result = await service.deleteCategory("store-1", "Cakes");
+
+      expect(mockedRecipeRepo.clearCategory).toHaveBeenCalledWith("store-1", "Cakes");
+      expect(mockedRecipeRepo.deleteByCategory).not.toHaveBeenCalled();
+      expect(result).toEqual({ count: 2 });
+    });
+
+    it('should hard-delete every recipe in the category in "delete" mode', async () => {
+      mockedRecipeRepo.deleteByCategory.mockResolvedValue({ count: 2 });
+
+      const result = await service.deleteCategory("store-1", "Cakes", "delete");
+
+      expect(mockedRecipeRepo.deleteByCategory).toHaveBeenCalledWith("store-1", "Cakes");
+      expect(mockedRecipeRepo.clearCategory).not.toHaveBeenCalled();
+      expect(result).toEqual({ count: 2 });
+    });
+
+    it("should throw error if category is empty", async () => {
+      await expect(service.deleteCategory("store-1", "")).rejects.toThrow("Category is required");
+      expect(mockedRecipeRepo.clearCategory).not.toHaveBeenCalled();
+      expect(mockedRecipeRepo.deleteByCategory).not.toHaveBeenCalled();
     });
   });
 

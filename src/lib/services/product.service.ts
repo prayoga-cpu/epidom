@@ -1,4 +1,4 @@
-import { Product } from "@prisma/client";
+import { Product, Department } from "@prisma/client";
 import {
   productRepository,
   ProductWithRelations,
@@ -7,6 +7,7 @@ import {
 import { arrayToCSV } from "../utils/csv-export";
 import { prisma } from "@/lib/prisma";
 import { storefrontService } from "./storefront.service";
+import type { CategoryDeleteMode, ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
 
 /**
  * Product Service
@@ -54,10 +55,12 @@ export class ProductService {
     unit?: string;
     minStock?: number;
     maxStock?: number;
+    department?: Department | null;
     recipeIds?: string[]; // Changed from recipeId to recipeIds (array)
     productionTime?: number;
     shelfLife?: number;
     linkedMenuItemId?: string;
+    optionGroups?: ProductOptionGroupInput[];
   }): Promise<ProductWithRelations> {
     // Validate SKU uniqueness within store
     const skuExists = await productRepository.existsBySku(data.storeId, data.sku);
@@ -82,6 +85,7 @@ export class ProductService {
       name: data.name,
       description: data.description,
       category: data.category,
+      department: data.department,
       costPrice: data.costPrice,
       sellingPrice: data.sellingPrice,
       currentStock: data.currentStock ?? 0,
@@ -100,7 +104,7 @@ export class ProductService {
     if (data.linkedMenuItemId && data.linkedMenuItemId !== "none") {
       await prisma.menuItem.update({
         where: { id: data.linkedMenuItemId },
-        data: { productId: product.id },
+        data: { productId: product.id, department: product.department },
       });
     } else {
       // Auto-add the new product to the store's POS/storefront menu by default —
@@ -110,12 +114,21 @@ export class ProductService {
         name: product.name,
         sellingPrice: Number(product.sellingPrice),
         category: product.category,
+        department: product.department,
       });
     }
 
     // Then link recipes if provided
     if (data.recipeIds && data.recipeIds.length > 0) {
       await productRepository.updateRecipes(product.id, data.recipeIds);
+    }
+
+    // Then create option groups if provided
+    if (data.optionGroups && data.optionGroups.length > 0) {
+      return productRepository.updateOptionGroups(product.id, data.optionGroups);
+    }
+
+    if (data.recipeIds && data.recipeIds.length > 0) {
       // Return updated product with recipes
       return (await productRepository.findById(product.id))!;
     }
@@ -134,6 +147,7 @@ export class ProductService {
       name?: string;
       description?: string;
       category?: string;
+      department?: Department | null;
       costPrice?: number;
       sellingPrice?: number;
       currentStock?: number;
@@ -143,6 +157,7 @@ export class ProductService {
       recipeIds?: string[]; // Changed from recipeId to recipeIds (array)
       productionTime?: number;
       shelfLife?: number;
+      optionGroups?: ProductOptionGroupInput[];
     }
   ): Promise<ProductWithRelations> {
     // Get current product to check if values are actually changing
@@ -185,6 +200,7 @@ export class ProductService {
       ...(data.name && { name: data.name }),
       ...(data.description !== undefined && { description: data.description }),
       ...(data.category !== undefined && { category: data.category }),
+      ...(data.department !== undefined && { department: data.department }),
       ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
       ...(data.sellingPrice !== undefined && { sellingPrice: data.sellingPrice }),
       ...(data.currentStock !== undefined && { currentStock: data.currentStock }),
@@ -197,13 +213,18 @@ export class ProductService {
 
     // Keep any storefront menu item(s) linked to this product (MenuItem.productId)
     // in sync automatically — a linked MenuItem is what customers/POS actually see,
-    // so its name/price should never drift from the Product it's backed by.
-    if (data.name !== undefined || data.sellingPrice !== undefined) {
+    // so its name/price/department should never drift from the Product it's backed by.
+    if (
+      data.name !== undefined ||
+      data.sellingPrice !== undefined ||
+      data.department !== undefined
+    ) {
       await prisma.menuItem.updateMany({
         where: { productId },
         data: {
           ...(data.name !== undefined && { name: updatedProduct.name }),
           ...(data.sellingPrice !== undefined && { price: updatedProduct.sellingPrice }),
+          ...(data.department !== undefined && { department: updatedProduct.department }),
         },
       });
     }
@@ -211,6 +232,14 @@ export class ProductService {
     // Update recipes if provided
     if (data.recipeIds !== undefined) {
       await productRepository.updateRecipes(productId, data.recipeIds);
+    }
+
+    // Update option groups if provided
+    if (data.optionGroups !== undefined) {
+      return productRepository.updateOptionGroups(productId, data.optionGroups);
+    }
+
+    if (data.recipeIds !== undefined) {
       // Return updated product with recipes
       return (await productRepository.findById(productId))!;
     }
@@ -246,6 +275,28 @@ export class ProductService {
     }
 
     return productRepository.bulkDelete(productIds);
+  }
+
+  /**
+   * Delete a category
+   * Products don't have a separate category entity — category is a free-text
+   * field on each row. In "uncategorize" mode (default) this clears the
+   * category on every product that has it, which removes it from the
+   * derived category list while keeping the products. In "delete" mode it
+   * hard-deletes every product in that category instead.
+   */
+  async deleteCategory(
+    storeId: string,
+    category: string,
+    mode: CategoryDeleteMode = "uncategorize"
+  ): Promise<{ count: number }> {
+    if (!category || !category.trim()) {
+      throw new Error("Category is required");
+    }
+    if (mode === "delete") {
+      return productRepository.deleteByCategory(storeId, category);
+    }
+    return productRepository.clearCategory(storeId, category);
   }
 
   /**

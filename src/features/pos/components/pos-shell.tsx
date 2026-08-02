@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Store } from "@prisma/client";
 import { PosHeader } from "./pos-header";
 import { PosCategoryBar } from "./pos-category-bar";
+import { PosDepartmentBar } from "./pos-department-bar";
 import { PosItemGrid } from "./pos-item-grid";
 import { PosCart } from "./pos-cart";
 import { PosMobileCart } from "./pos-mobile-cart";
@@ -15,6 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { MenuItemOptionsDialog } from "@/components/shared/menu-item-options-dialog";
+import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
+import type { PosMenuItem } from "../types/pos.types";
 
 interface PosShellProps {
   store: Pick<Store, "id" | "name">;
@@ -23,12 +28,24 @@ interface PosShellProps {
 
 export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   const { t } = useI18n();
+  const { formatPrice } = useCurrency();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<"KITCHEN" | "BAR" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  const [configuringItem, setConfiguringItem] = useState<PosMenuItem | null>(null);
   const cart = usePosCart();
 
   const { data: menuData, isLoading } = usePosMenu(store.id);
+
+  const handleItemClick = (item: PosMenuItem) => {
+    const groups = getMergedOptionGroups(item, item.product);
+    if (groups.length === 0) {
+      cart.addItem(item.id, item.name, item.price, 1, [], item.imageUrl);
+      return;
+    }
+    setConfiguringItem(item);
+  };
 
   return (
     <PosStaffGate storeId={store.id} bypassGate={bypassStaffGate}>
@@ -54,6 +71,11 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
               </div>
             </div>
 
+            <PosDepartmentBar
+              selectedDepartment={selectedDepartment}
+              onSelectDepartment={setSelectedDepartment}
+            />
+
             <PosCategoryBar
               categories={menuData?.categories.map((c: any) => c.name) ?? []}
               selectedCategory={selectedCategory}
@@ -70,10 +92,9 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
               <PosItemGrid
                 categories={menuData?.categories ?? []}
                 selectedCategory={selectedCategory}
+                selectedDepartment={selectedDepartment}
                 searchQuery={searchQuery}
-                onItemClick={(item) =>
-                  cart.addItem(item.id, item.name, item.price, 1, [], item.imageUrl)
-                }
+                onItemClick={handleItemClick}
               />
             )}
           </div>
@@ -87,6 +108,28 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
         </div>
 
         <PosMobileCart store={store} open={mobileCartOpen} onOpenChange={setMobileCartOpen} />
+
+        {configuringItem && (
+          <MenuItemOptionsDialog
+            open={!!configuringItem}
+            onOpenChange={(open) => !open && setConfiguringItem(null)}
+            itemName={configuringItem.name}
+            groups={getMergedOptionGroups(configuringItem, configuringItem.product)}
+            formatPrice={formatPrice}
+            onConfirm={({ selectedOptions, notes }) => {
+              cart.addItem(
+                configuringItem.id,
+                configuringItem.name,
+                configuringItem.price,
+                1,
+                selectedOptions,
+                configuringItem.imageUrl,
+                notes
+              );
+              setConfiguringItem(null);
+            }}
+          />
+        )}
       </div>
     </PosStaffGate>
   );

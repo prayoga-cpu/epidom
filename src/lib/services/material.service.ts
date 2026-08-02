@@ -1,4 +1,4 @@
-import { Material, MovementType } from "@prisma/client";
+import { Material, MovementType, Department } from "@prisma/client";
 import {
   materialRepository,
   MaterialRepository,
@@ -7,6 +7,7 @@ import {
 } from "@/lib/repositories/material.repository";
 import { prisma } from "@/lib/prisma";
 import { toDecimal } from "@/lib/utils/types.server";
+import type { CategoryDeleteMode } from "@/lib/validation/inventory.schemas";
 
 /**
  * Material (Ingredient) Service
@@ -27,6 +28,7 @@ export interface CreateMaterialInput {
   name: string;
   description?: string;
   category?: string;
+  department?: Department | null;
   unit: string;
   unitCost: number;
   purchaseQuantity?: number;
@@ -46,6 +48,7 @@ export interface UpdateMaterialInput {
   name?: string;
   description?: string;
   category?: string;
+  department?: Department | null;
   unit?: string;
   unitCost?: number;
   purchaseQuantity?: number;
@@ -332,6 +335,7 @@ export class MaterialService {
           if (input.sku !== undefined) updateData.sku = input.sku;
           if (input.description !== undefined) updateData.description = input.description;
           if (input.category !== undefined) updateData.category = input.category;
+          if (input.department !== undefined) updateData.department = input.department;
           if (input.unit !== undefined) updateData.unit = input.unit;
           // Convert numbers to Prisma Decimal using type helper
           if (input.unitCost !== undefined) updateData.unitCost = toDecimal(input.unitCost);
@@ -362,6 +366,7 @@ export class MaterialService {
     if (input.sku !== undefined) updateData.sku = input.sku;
     if (input.description !== undefined) updateData.description = input.description;
     if (input.category !== undefined) updateData.category = input.category;
+    if (input.department !== undefined) updateData.department = input.department;
     if (input.unit !== undefined) updateData.unit = input.unit;
     // Convert numbers to Prisma Decimal using type helper
     if (input.unitCost !== undefined) updateData.unitCost = toDecimal(input.unitCost);
@@ -405,6 +410,28 @@ export class MaterialService {
 
     // Use direct repository bulk delete (relies on DB cascade)
     return this.materialRepo.bulkDelete(materialIds);
+  }
+
+  /**
+   * Delete a category
+   * Materials don't have a separate category entity — category is a free-text
+   * field on each row. In "uncategorize" mode (default) this clears the
+   * category on every material that has it, which removes it from the
+   * derived category list while keeping the materials. In "delete" mode it
+   * hard-deletes every material in that category instead.
+   */
+  async deleteCategory(
+    storeId: string,
+    category: string,
+    mode: CategoryDeleteMode = "uncategorize"
+  ): Promise<{ count: number }> {
+    if (!category || !category.trim()) {
+      throw new Error("Category is required");
+    }
+    if (mode === "delete") {
+      return this.materialRepo.deleteByCategory(storeId, category);
+    }
+    return this.materialRepo.clearCategory(storeId, category);
   }
 
   /**

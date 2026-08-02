@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CreateProductInput, UpdateProductInput } from "@/lib/validation/inventory.schemas";
+import {
+  CreateProductInput,
+  UpdateProductInput,
+  type CategoryDeleteMode,
+} from "@/lib/validation/inventory.schemas";
 import type { Product } from "@prisma/client";
 import { ApiClientError } from "@/lib/api/client";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
@@ -25,6 +29,7 @@ export interface ProductsResponse {
 export interface ProductFilterInput {
   search?: string;
   category?: string;
+  department?: "KITCHEN" | "BAR";
   sortBy?:
     | "name"
     | "sku"
@@ -57,6 +62,7 @@ async function fetchProducts(
 
   if (filters.search) params.append("search", filters.search);
   if (filters.category) params.append("category", filters.category);
+  if (filters.department) params.append("department", filters.department);
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
   if (filters.skip !== undefined) params.append("skip", filters.skip.toString());
@@ -154,11 +160,36 @@ async function bulkDeleteProducts(
   return response.json();
 }
 
+async function deleteProductCategory(
+  storeId: string,
+  category: string,
+  mode: CategoryDeleteMode
+): Promise<{ count: number; mode: CategoryDeleteMode }> {
+  const response = await fetch(
+    `/api/stores/${storeId}/products/categories/${encodeURIComponent(category)}`,
+    {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new ApiClientError(error, response.status);
+  }
+
+  const responseData = await response.json();
+  // API response is wrapped in { success: true, data: {...} }
+  return responseData.success === true ? responseData.data : responseData;
+}
+
 async function exportProducts(storeId: string, filters: ProductFilterInput): Promise<void> {
   const params = new URLSearchParams();
 
   if (filters.search) params.append("search", filters.search);
   if (filters.category) params.append("category", filters.category);
+  if (filters.department) params.append("department", filters.department);
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
 
@@ -448,6 +479,49 @@ export function useBulkDeleteProducts(storeId: string) {
       // Non-blocking cache invalidation: Only invalidate products immediately
       // Other queries (alerts) will sync in background
       invalidateProductRelatedQueries(queryClient, storeId, false);
+    },
+  });
+}
+
+/**
+ * Delete a category — clears it from every product that has it (products
+ * have no separate category entity, so this just removes the derived tag).
+ */
+export function useDeleteProductCategory(storeId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      category,
+      mode = "uncategorize",
+    }: {
+      category: string;
+      mode?: CategoryDeleteMode;
+    }) => deleteProductCategory(storeId, category, mode),
+    onSuccess: (_, { category, mode = "uncategorize" }) => {
+      // Optimistically update all matching cached products
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: productKeys.lists(storeId), exact: false },
+        (oldData) => {
+          if (!oldData || !oldData.products) return oldData;
+          if (mode === "delete") {
+            const remaining = oldData.products.filter((p) => p.category !== category);
+            return {
+              ...oldData,
+              products: remaining,
+              total: Math.max(0, oldData.total - (oldData.products.length - remaining.length)),
+            };
+          }
+          return {
+            ...oldData,
+            products: oldData.products.map((p) =>
+              p.category === category ? { ...p, category: null } : p
+            ),
+          };
+        }
+      );
+
+      invalidateProductRelatedQueries(queryClient, storeId, true);
     },
   });
 }

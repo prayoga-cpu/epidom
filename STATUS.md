@@ -6,6 +6,48 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-08-02 — Finance Reporting (Category/Department/Shift) + Dashboard Enhancements
+
+### Finance Reports
+- [x] **Staff and Category filters** added to the Finance page filter bar; threaded into `summary`, `channels`, `top-items` (`staffId`/`shiftId`), and `top-items` (`category`). Category/shift filters do **not** apply to the whole-order Summary/Channels P&L (tax/fees are frozen per-order, not itemized — would require proportional allocation).
+- [x] **New report views**: `GET /finance/by-category` (menu-category breakdown), `GET /finance/by-shift` (per-cashier-session "open to close" totals — the "total sales today" report), `GET /finance/by-department` (Kitchen vs. Bar split). All bucket unattributable items (aggregator-email orders with no `menuItemId`, or no category/department/shift) under an explicit "Uncategorized"/"Unassigned" row rather than dropping them. Pure bucketing/filter logic lives in `src/lib/finance/report-aggregation.ts` + `report-filters.ts`, unit-tested.
+- [x] Sortable column headers (shared `useSortable` hook, lifted from `shifts-client.tsx`) across all Finance report tables.
+
+### Kitchen/Bar Department
+- [x] New `Department` enum (`KITCHEN`/`BAR`), added to `Material`, `Recipe`, `Product`, `MenuItem` — deliberately separate from the existing free-text `category` field. Filter + form field + badge on the Data page (Products/Materials/Recipes), Menu editor, and a new department toggle on the POS item grid.
+- [x] A Product's `department` syncs to its linked storefront `MenuItem` automatically on create/update, mirroring the existing name/price sync.
+
+### Dashboard
+- [x] **"New Orders" card** — highlights orders awaiting confirmation (calling out storefront-sourced ones), links to the Order Queue (`/pos/orders`). Reuses `usePosOrders`' existing SSE stream, so it updates live.
+- [x] **Dynamic date-range label** ("Today," "Yesterday," "Last 7 Days," "This Month") next to the Dashboard Analytics and Finance date pickers (`src/lib/utils/date-range.ts`, shared `<DateRangeLabel>`). Dashboard Analytics now defaults to today instead of month-to-date; fixed a UTC-vs-local off-by-one in the date default that could show yesterday's data for timezones ahead of UTC.
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 464 passing
+
+---
+
+## ✅ 2026-08-02 — Fees & Taxes (per store) + Finance Report Integration
+
+### Profile / Store Settings
+- [x] **"Fees & Taxes" card** on the store-scoped Profile page (`/store/[storeId]/profile`) — configurable tax rate (inclusive/exclusive toggle, custom label), service charge rate, and a payment-processing fee-rate table per `PaymentMethod`, pre-filled with editable estimated defaults (`src/config/payment-fees.config.ts`). New `StoreFinanceSettings` model (1:1 with `Store`), `GET`/`PATCH /api/stores/[id]/finance/settings`.
+- [x] **Store-scoped profile page now actually fetches its `Store`** — previously ignored the `storeId` param entirely and rendered the same content as the account-level profile page.
+
+### Order Calculation
+- [x] **Fees/tax are computed once and frozen onto the order** (not recomputed live from current settings) — `src/lib/finance/order-charges.ts`, wired into POS checkout, POS hold/finalize, and storefront checkout. Editing a store's rates later never rewrites past orders/reports. New `Order` columns: `serviceCharge`, `processingFee`, `taxRate`, `serviceChargeRate`, `processingFeeRate` (all default 0 — existing orders unaffected).
+- [x] Aggregator-imported orders (GoFood/GrabFood/etc.) explicitly keep these fields at 0 — the platform's own commission (`commissionRate()`) already models that cut; computing store fees there would double-count.
+
+### Finance Reports
+- [x] **Summary** (`/finance/summary`) now returns `taxCollected`, `serviceCharge`, `processingFee`, `netRevenue`, `netProfit`. **Channels** (`/finance/channels`) deducts tax + processing fee alongside aggregator commission in `netRevenue`. Both surfaced in the Finance page KPI cards, the channels table, and the Excel export.
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 411 passing (new: `order-charges.test.ts`; updated: `channels.test.ts`, `summary.test.ts`)
+
+**Known limitation:** the processing fee is an *estimate* from the merchant's configured rate, not a reconciliation with actual Xendit/Stripe settlement — the Xendit webhook payload doesn't carry a fee amount in this integration, and Stripe's real fee needs a separate balance-transaction call neither webhook makes.
+
+---
+
 ## ✅ 2026-07-31 — Feedback NEEDS_REVIEW Fix, Storefront Auto-Save, QR Copy Link
 
 ### Feedback

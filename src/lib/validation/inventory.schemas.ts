@@ -12,6 +12,30 @@ import {
  * Inventory management validation schemas (Products & Ingredients)
  */
 
+// Operational team split (Kitchen/Bar), independent of the free-text `category`
+// field — shared across Product/Material/Recipe.
+export const departmentSchema = z.enum(["KITCHEN", "BAR"]);
+
+// Product option schemas — variant groups editable on a Product (e.g.
+// "Size"), each option optionally linked to a Material with a custom
+// stock-deduction quantity (e.g. "Large" consumes +5g of Sugar per sale).
+export const productOptionSchema = z.object({
+  name: z.string().min(1, "Option name is required").max(100, "Option name is too long"),
+  priceAdjustment: z.number().default(0),
+  materialId: cuidSchema.optional(),
+  materialQty: z.number().positive("Quantity must be positive").optional(),
+});
+
+export const productOptionGroupSchema = z.object({
+  name: z.string().min(1, "Group name is required").max(100, "Group name is too long"),
+  isRequired: z.boolean().default(false),
+  maxSelections: z.number().int().positive().default(1),
+  options: z.array(productOptionSchema).min(1, "At least one option is required"),
+});
+
+export type ProductOptionInput = z.infer<typeof productOptionSchema>;
+export type ProductOptionGroupInput = z.infer<typeof productOptionGroupSchema>;
+
 // Product schemas
 const baseProductSchema = z.object({
   storeId: cuidSchema,
@@ -19,6 +43,7 @@ const baseProductSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
+  department: departmentSchema.nullable().optional(),
   costPrice: priceSchema,
   sellingPrice: priceSchema,
   currentStock: decimalSchema.default(0),
@@ -29,6 +54,7 @@ const baseProductSchema = z.object({
   productionTime: z.number().int().nonnegative("Production time must be non-negative").optional(),
   shelfLife: z.number().int().positive("Shelf life must be positive").optional(),
   linkedMenuItemId: z.string().optional(),
+  optionGroups: z.array(productOptionGroupSchema).optional(),
 });
 
 export const createProductSchema = baseProductSchema.refine(
@@ -59,6 +85,7 @@ const baseIngredientSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
+  department: departmentSchema.nullable().optional(),
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").default("kg"),
   unitCost: derivedUnitCostSchema,
   purchaseQuantity: purchaseQuantitySchema.default(1),
@@ -96,6 +123,7 @@ const baseIngredientFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
+  department: departmentSchema.nullable().optional(),
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").optional(),
   unitCost: derivedUnitCostSchema,
   purchaseQuantity: purchaseQuantitySchema.optional(),
@@ -163,6 +191,7 @@ export type UpdateIngredientFormInput = z.infer<typeof updateIngredientFormSchem
 export const materialFilterSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
+  department: departmentSchema.optional(),
   supplierId: cuidSchema.optional(),
   stockStatus: z.enum(["in_stock", "low_stock", "out_of_stock", "overstocked"]).optional(),
   sortBy: z
@@ -181,6 +210,15 @@ export const bulkDeleteSchema = z.object({
 });
 
 export type BulkDeleteInput = z.infer<typeof bulkDeleteSchema>;
+
+// Category delete schema — controls what happens to items in the category:
+// "uncategorize" clears the category tag (items are kept), "delete" removes
+// the items themselves. Shared by products, materials, and recipes.
+export const categoryDeleteSchema = z.object({
+  mode: z.enum(["uncategorize", "delete"]).default("uncategorize"),
+});
+
+export type CategoryDeleteMode = z.infer<typeof categoryDeleteSchema>["mode"];
 
 // Update supplier for material schema
 export const updateMaterialSupplierSchema = z.object({
@@ -212,6 +250,7 @@ const baseRecipeSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
+  department: departmentSchema.nullable().optional(),
   yieldQuantity: z.number().positive("Yield quantity must be positive"),
   yieldUnit: z.string().min(1, "Yield unit is required").max(20, "Yield unit is too long"),
   productionTimeMinutes: z
@@ -238,6 +277,7 @@ const baseRecipeFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
+  department: departmentSchema.nullable().optional(),
   yieldQuantity: z.number().positive("Yield quantity must be positive").optional(),
   yieldUnit: z.string().min(1, "Yield unit is required").max(20, "Yield unit is too long"),
   productionTimeMinutes: z
@@ -262,6 +302,7 @@ export type UpdateRecipeFormInput = z.infer<typeof updateRecipeFormSchema>;
 export const recipeFilterSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
+  department: departmentSchema.optional(),
   sortBy: z
     .enum(["name", "category", "productionTimeMinutes", "costPerBatch", "createdAt", "updatedAt"])
     .default("createdAt"),

@@ -22,6 +22,7 @@ interface ServerOrderSummary {
   orderNumber: string;
   status: OrderStatus;
   total: number;
+  currency: string;
   createdAt: string;
   itemsSummary: string;
 }
@@ -36,10 +37,10 @@ export function MyOrdersClient({ storefront }: MyOrdersClientProps) {
     "--store-theme": storefront.themeColor,
   } as React.CSSProperties;
 
-  const formatPrice = (amount: number) =>
+  const formatPrice = (amount: number, currency: string = "IDR") =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
-      currency: "IDR",
+      currency,
       minimumFractionDigits: 0,
     }).format(amount);
 
@@ -163,7 +164,7 @@ export function MyOrdersClient({ storefront }: MyOrdersClientProps) {
                     </p>
                   )}
                   <p className="text-foreground mt-2 text-sm font-bold">
-                    {formatPrice(server?.total ?? ref.total)}
+                    {formatPrice(server?.total ?? ref.total, server?.currency)}
                   </p>
                 </Link>
               );

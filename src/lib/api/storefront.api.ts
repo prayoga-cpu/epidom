@@ -6,6 +6,7 @@ import {
   CreateMenuItemInput,
   UpdateMenuItemInput,
 } from "@/lib/validation/storefront.schemas";
+import type { CategoryDeleteMode } from "@/lib/validation/inventory.schemas";
 
 export class StorefrontApi {
   // ============ Storefront Operations ============
@@ -36,8 +37,12 @@ export class StorefrontApi {
     return apiClient.patch(`/stores/${storeId}/storefront/categories/${categoryId}`, input);
   }
 
-  async deleteCategory(storeId: string, categoryId: string): Promise<{ success: boolean }> {
-    return apiClient.delete(`/stores/${storeId}/storefront/categories/${categoryId}`);
+  async deleteCategory(
+    storeId: string,
+    categoryId: string,
+    mode: CategoryDeleteMode = "uncategorize"
+  ): Promise<{ success: boolean; mode: CategoryDeleteMode }> {
+    return apiClient.delete(`/stores/${storeId}/storefront/categories/${categoryId}`, { mode });
   }
 
   // ============ Item Operations ============

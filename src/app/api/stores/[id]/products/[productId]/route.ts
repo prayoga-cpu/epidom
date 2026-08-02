@@ -53,6 +53,7 @@ export const PATCH = withApiHandler(
       name: validatedData.name,
       description: validatedData.description,
       category: validatedData.category,
+      department: validatedData.department,
       costPrice:
         validatedData.costPrice !== undefined ? Number(validatedData.costPrice) : undefined,
       sellingPrice:
@@ -65,6 +66,7 @@ export const PATCH = withApiHandler(
       recipeIds: validatedData.recipeIds,
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
+      optionGroups: validatedData.optionGroups,
     });
 
     // Serialize Decimal fields to numbers for Client Components

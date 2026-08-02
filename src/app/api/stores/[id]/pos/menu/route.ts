@@ -49,6 +49,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         imageUrl: true,
         isAvailable: true,
         category: true,
+        department: true,
+        modifiers: true,
+        product: {
+          select: {
+            optionGroups: {
+              orderBy: { displayOrder: "asc" },
+              include: { options: { orderBy: { displayOrder: "asc" } } },
+            },
+          },
+        },
       },
     });
 

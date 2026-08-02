@@ -14,6 +14,13 @@ export function usePosMenu(storeId: string) {
       return apiClient.get<PosMenuData>(`/stores/${storeId}/pos/menu`);
     },
     enabled: !!storeId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    // Prices, availability, and options can be edited from Data/Menu Editor
+    // in a different tab/device while the cashier has this screen open — a
+    // long staleTime would leave POS silently serving a stale menu. Polling
+    // (same pattern as useMaterials) keeps it self-healing without needing
+    // a full realtime/WebSocket setup; mutations that touch the menu also
+    // invalidate this key directly for instant same-tab feedback.
+    staleTime: 3 * 1000,
+    refetchInterval: 5 * 1000,
   });
 }

@@ -9,6 +9,19 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.14.12] - 2026-08-02 · feat
+
+- **Finance reports: filter/breakdown by category, department, and staff shift.** The Finance page now has Staff and Category (menu category) filters, plus new "By Category," "By Shift," and "By Department" report tabs/cards — the last answering "how much did Kitchen sell vs. Bar today." All tables gained sortable column headers.
+- **Kitchen/Bar department field**, separate from the existing free-text category, on Raw Materials, Recipes, and Products — filterable and shown as a badge on the Data page, the Menu editor, and a new Kitchen/Bar toggle on the POS item grid. A Product's department automatically syncs to its linked storefront menu item, same as name/price already did.
+- **Dashboard: "New Orders" card.** Highlights orders awaiting confirmation (especially storefront orders) right on the dashboard, with a link straight to the Order Queue. Live-updates via the existing order SSE stream.
+- **Dashboard & Finance date ranges now show a dynamic label** ("Today," "Last 7 Days," "This Month," etc.) next to the date pickers, and the Dashboard's Analytics section now defaults to today instead of month-to-date.
+
+## [2.14.11] - 2026-08-02 · feat
+
+- **Fees & Taxes settings, per store.** Added a "Fees & Taxes" card to each store's Profile page: a configurable tax rate (with an inclusive/exclusive toggle and custom label, e.g. "PPN 11%"), a separate service charge rate, and a payment-processing fee-rate table per method (QRIS, GoPay, OVO, DANA, ShopeePay, bank transfer, Stripe card), pre-filled with editable estimated default rates so a store gets accurate-ish reports even before touching the settings.
+- **Financial calculations and reports now account for fees and taxes.** Tax, service charge, and the estimated payment-processing fee are computed once per order (at POS checkout, hold/finalize, and storefront checkout) and frozen onto the order — so editing a store's rates later never rewrites past reports. The Finance page now shows Tax, Processing Fee, and Net Revenue KPIs, and the per-channel breakdown deducts tax and processing fee alongside aggregator commission; both are included in the Excel export.
+- The payment-processing fee is an estimate based on the merchant's configured rate, not a live reconciliation with Xendit/Stripe settlement data — Xendit's webhook payload doesn't carry the actual charged fee in this integration.
+
 ## [2.14.10] - 2026-07-31 · ux
 
 - **Fix: "My tickets" crash for NEEDS_REVIEW status.** Accounts with tickets transitioned to `NEEDS_REVIEW` by an admin were experiencing a render crash on the "My tickets" tab. Added the missing status to the frontend `FeedbackStatus` union type, the `STATUS_BADGES` map in the feedback dialog, and added corresponding translations (EN: "Needs review" / ID: "Perlu ditinjau").

@@ -9,6 +9,8 @@ import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
 import { STRIPE_CONFIG } from "@/config/stripe.config";
 import { planHasFeature } from "@/lib/plans/entitlements";
+import { resolveFinanceSettingsForOrder } from "@/lib/services";
+import { computeOrderCharges } from "@/lib/finance/order-charges";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -40,6 +42,7 @@ export async function POST(request: Request) {
               include: {
                 user: {
                   select: {
+                    currency: true,
                     stripeConnectAccountId: true,
                     stripeConnectOnboarded: true,
                     subscription: { select: { plan: true, status: true } },
@@ -92,8 +95,8 @@ export async function POST(request: Request) {
 
     const orderItems = input.items.map((i) => {
       const menuItem = menuItemMap.get(i.menuItemId)!;
-      const modifierTotal = (i.modifierSelections ?? []).reduce(
-        (sum, m) => sum + m.priceAdd,
+      const modifierTotal = (i.selectedOptions ?? []).reduce(
+        (sum, m) => sum + m.priceAdjustment,
         0
       );
       const unitPrice = Number(menuItem.price) + modifierTotal;
@@ -106,6 +109,8 @@ export async function POST(request: Request) {
         unit: "pcs",
         unitPrice,
         total,
+        notes: i.notes,
+        selectedOptions: i.selectedOptions,
       };
     });
 
@@ -114,6 +119,13 @@ export async function POST(request: Request) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const slug = storefront.slug;
+
+    const financeSettings = await resolveFinanceSettingsForOrder(storefront.storeId);
+    const charges = computeOrderCharges({
+      itemsTotal: subtotal,
+      paymentMethod: input.paymentMethod as PaymentMethod,
+      settings: financeSettings,
+    });
 
     // Create the order in a transaction
     const order = await prisma.$transaction(async (tx) => {
@@ -130,10 +142,15 @@ export async function POST(request: Request) {
           paymentStatus: "PENDING",
           source: "STOREFRONT",
           notes: input.notes,
-          subtotal: new Prisma.Decimal(subtotal),
-          tax: new Prisma.Decimal(0),
+          subtotal: new Prisma.Decimal(charges.subtotal),
+          tax: new Prisma.Decimal(charges.tax),
           delivery: new Prisma.Decimal(0),
-          total: new Prisma.Decimal(subtotal),
+          total: new Prisma.Decimal(charges.total),
+          serviceCharge: new Prisma.Decimal(charges.serviceCharge),
+          processingFee: new Prisma.Decimal(charges.processingFee),
+          taxRate: new Prisma.Decimal(charges.taxRate),
+          serviceChargeRate: new Prisma.Decimal(charges.serviceChargeRate),
+          processingFeeRate: new Prisma.Decimal(charges.processingFeeRate),
           items: {
             create: orderItems.map((i) => ({
               menuItemId: i.menuItemId,
@@ -142,6 +159,8 @@ export async function POST(request: Request) {
               unit: i.unit,
               unitPrice: new Prisma.Decimal(i.unitPrice),
               total: new Prisma.Decimal(i.total),
+              notes: i.notes,
+              selectedOptions: i.selectedOptions as Prisma.InputJsonValue | undefined,
             })),
           },
         },
@@ -169,8 +188,8 @@ export async function POST(request: Request) {
 
         const payment = await initiatePayment({
           orderId: order.id,
-          amount: subtotal,
-          currency: menuItems[0]?.currency ?? "IDR",
+          amount: charges.total,
+          currency: storefront.store.business.user.currency,
           customerName: input.customerName,
           customerPhone: input.customerPhone,
           description: `Pesanan ${orderNumber} - ${storefront.displayName}`,
@@ -226,8 +245,8 @@ export async function POST(request: Request) {
           storefrontSlug: slug,
           orderNumber,
           customerName: input.customerName,
-          totalAmount: subtotal,
-          currency: menuItems[0]?.currency ?? "IDR",
+          totalAmount: charges.total,
+          currency: storefront.store.business.user.currency,
           paymentMethod: input.paymentMethod,
           items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
           merchantPhone: store.phone ?? null,

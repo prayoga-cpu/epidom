@@ -46,6 +46,8 @@ import Link from "next/link";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
+import { OptionGroupsEditor } from "@/components/shared/option-groups-editor";
+import type { ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
 
 // Helper function to create product schema with translated messages
 // Note: Number fields allow undefined in form state (for better UX - can clear field),
@@ -56,6 +58,7 @@ function createProductSchema(t: (key: string) => string) {
     sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
+    department: z.enum(["KITCHEN", "BAR"]).optional(),
     retailPrice: z.union([
       z.number().positive(t("common.validation.pricePositive")),
       z.undefined(),
@@ -120,6 +123,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   // value so it can't silently drift out of sync with the recipe.
   const [manualCostPrice, setManualCostPrice] = useState(false);
   const costPriceLocked = recipeIds.length > 0 && !manualCostPrice;
+  const [optionGroups, setOptionGroups] = useState<ProductOptionGroupInput[]>([]);
 
   const { data: unlinkedMenuItems = [] } = useUnlinkedMenuItems(storeId);
 
@@ -251,6 +255,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
         name: data.name,
         description: data.description,
         category: data.category,
+        department: data.department,
         costPrice: convertToBase(costPrice),
         sellingPrice: convertToBase(retailPrice),
         currentStock: currentStock,
@@ -260,6 +265,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
         recipeIds: data.recipeIds && data.recipeIds.length > 0 ? data.recipeIds : undefined,
         storeId,
         linkedMenuItemId: data.linkedMenuItemId || undefined,
+        optionGroups: optionGroups.length > 0 ? optionGroups : undefined,
       };
 
       // OPTIMISTIC CLOSING
@@ -279,6 +285,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
           isSubmittingRef.current = false;
           form.reset();
           setManualCostPrice(false);
+          setOptionGroups([]);
           return (
             t("data.products.toasts.added.description")?.replace("{name}", data.name) ||
             "Product added successfully"
@@ -306,6 +313,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
     if (!newOpen && !isSubmittingRef.current) {
       form.reset();
       setManualCostPrice(false);
+      setOptionGroups([]);
     }
     if (newOpen) {
       isSubmittingRef.current = false;
@@ -480,6 +488,32 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                         }
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("common.department")}</FormLabel>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">—</SelectItem>
+                        <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
+                        <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -746,6 +780,22 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                   )}
                 />
               </div>
+            </div>
+
+            {/* Options */}
+            <div className="space-y-1">
+              <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
+                {t("data.products.sections.options")}
+              </h3>
+              <p className="text-muted-foreground mb-2 text-xs">
+                {t("data.products.options.description")}
+              </p>
+              <OptionGroupsEditor
+                storeId={storeId}
+                value={optionGroups}
+                onChange={setOptionGroups}
+                allowMaterialLink
+              />
             </div>
           </form>
         </Form>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -10,9 +10,10 @@ interface PosCartItemProps {
   item: CartItem;
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
+  onEdit?: (item: CartItem) => void;
 }
 
-export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemProps) {
+export function PosCartItem({ item, onUpdateQuantity, onRemove, onEdit }: PosCartItemProps) {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
 
@@ -20,18 +21,37 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove }: PosCartItemPro
     <div className="flex flex-col gap-2 border-b p-2 last:border-0 sm:p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <h4 className="leading-none font-medium">{item.name}</h4>
+          <div className="flex items-center gap-1.5">
+            <h4 className="leading-none font-medium">{item.name}</h4>
+            {onEdit && (item.modifiers.length > 0 || item.notes) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground h-5 w-5 shrink-0"
+                onClick={() => onEdit(item)}
+              >
+                <Pencil className="h-3 w-3" />
+                <span className="sr-only">{t("common.actions.edit")}</span>
+              </Button>
+            )}
+          </div>
           {item.modifiers.length > 0 && (
             <ul className="text-muted-foreground mt-1 text-sm">
               {item.modifiers.map((mod, i) => (
                 <li key={i}>
-                  + {mod.name} ({formatPrice(mod.priceAdd)})
+                  + {mod.optionName} ({formatPrice(mod.priceAdjustment)})
                 </li>
               ))}
             </ul>
           )}
+          {item.notes && (
+            <p className="text-muted-foreground mt-1 text-xs italic">“{item.notes}”</p>
+          )}
           <div className="text-primary mt-1.5 text-sm font-medium">
-            {formatPrice(item.unitPrice + item.modifiers.reduce((sum, m) => sum + m.priceAdd, 0))}
+            {formatPrice(
+              item.unitPrice + item.modifiers.reduce((sum, m) => sum + m.priceAdjustment, 0)
+            )}
           </div>
         </div>
         <div className="text-right font-medium">{formatPrice(item.lineTotal)}</div>

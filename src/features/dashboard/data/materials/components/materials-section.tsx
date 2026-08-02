@@ -27,7 +27,10 @@ import {
   BaseItemCard,
   EmptyState,
   SKUDisplay,
+  ManageCategoriesDialog,
+  type CategoryUsage,
 } from "../../components";
+import type { CategoryDeleteMode } from "@/components/ui/category-delete-dialog";
 import { MaterialsCardGridSkeleton } from "./materials-skeleton";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
@@ -44,6 +47,7 @@ import {
   Loader2,
   X,
   Wand2,
+  Tags,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -53,6 +57,7 @@ import {
   useDeleteMaterial,
   useBulkDeleteMaterials,
   useExportMaterials,
+  useDeleteMaterialCategory,
 } from "../hooks/use-materials";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
@@ -124,6 +129,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
   const [filters, setFilters] = useState({
     search: "",
     category: "",
+    department: "" as "" | "KITCHEN" | "BAR",
     supplierId: "",
     stockStatus: undefined as StockFilter,
     sortBy: "createdAt" as const,
@@ -156,12 +162,33 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
   const deleteMaterial = useDeleteMaterial(storeId);
   const bulkDelete = useBulkDeleteMaterials(storeId);
   const exportMaterials = useExportMaterials(storeId);
+  const deleteMaterialCategory = useDeleteMaterialCategory(storeId);
 
-  // Get unique categories from materials
-  const categories = useMemo(() => {
-    const cats = new Set(materials.map((m) => m.category).filter(Boolean));
-    return Array.from(cats).sort();
+  // Get unique categories from materials, with item counts (for filters + category management)
+  const categoryUsage = useMemo<CategoryUsage[]>(() => {
+    const counts = new Map<string, number>();
+    materials.forEach((m) => {
+      if (m.category) counts.set(m.category, (counts.get(m.category) ?? 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [materials]);
+
+  const categories = useMemo(() => categoryUsage.map((c) => c.name), [categoryUsage]);
+
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
+
+  const handleDeleteCategory = async (category: string, mode: CategoryDeleteMode) => {
+    try {
+      await deleteMaterialCategory.mutateAsync({ category, mode });
+      toast.success(t("data.materials.manageCategories.deleted"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("data.materials.manageCategories.deleteFailed")
+      );
+    }
+  };
 
   // Filter and process materials
   const processedMaterials = useMemo(() => {
@@ -183,6 +210,11 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
       filtered = filtered.filter((m) => m.category === filters.category);
     }
 
+    // Department filter
+    if (filters.department) {
+      filtered = filtered.filter((m) => m.department === filters.department);
+    }
+
     // Stock status filter
     if (filters.stockStatus) {
       filtered = filtered.filter((m) => {
@@ -202,7 +234,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
     }
 
     return filtered;
-  }, [materials, filters.search, filters.category, filters.stockStatus]);
+  }, [materials, filters.search, filters.category, filters.department, filters.stockStatus]);
 
   // Use reusable hooks for dialog and bulk selection state
   const {
@@ -244,6 +276,14 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
 
   const handleCategoryFilter = (value: string) => {
     setFilters((prev) => ({ ...prev, category: value === "all" ? "" : value, skip: 0 }));
+  };
+
+  const handleDepartmentFilter = (value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      department: value === "all" ? "" : (value as "KITCHEN" | "BAR"),
+      skip: 0,
+    }));
   };
 
   const handleStockStatusFilter = (value: string) => {
@@ -301,6 +341,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
     setFilters({
       search: "",
       category: "",
+      department: "",
       supplierId: "",
       stockStatus: undefined,
       sortBy: "createdAt",
@@ -310,7 +351,12 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
     });
   };
 
-  const hasActiveFilters = !!(filters.search || filters.category || filters.stockStatus);
+  const hasActiveFilters = !!(
+    filters.search ||
+    filters.category ||
+    filters.department ||
+    filters.stockStatus
+  );
 
   // Loading state - use pixel-perfect skeleton to prevent layout shift
   if (isLoading) {
@@ -385,6 +431,15 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                   </Button>
                 }
               />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setManageCategoriesOpen(true)}
+                className="w-full md:w-auto"
+              >
+                <Tags className="mr-1 hidden h-4 w-4 sm:inline" />
+                {t("data.materials.manageCategories.button")}
+              </Button>
               {bulkSelectMode && selectedCount > 0 && (
                 <Button
                   variant="destructive"
@@ -437,6 +492,18 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                     value: category ?? "none",
                     label: category ?? t("common.notAvailable"),
                   })),
+                ],
+              },
+              {
+                key: "department",
+                label: t("filters.allDepartments"),
+                placeholder: t("filters.allDepartments"),
+                value: filters.department || "all",
+                onChange: handleDepartmentFilter,
+                options: [
+                  { value: "all", label: t("filters.allDepartments") },
+                  { value: "KITCHEN", label: t("common.departmentKitchen") },
+                  { value: "BAR", label: t("common.departmentBar") },
                 ],
               },
               {
@@ -528,6 +595,21 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                       <div className="flex justify-between">
                         <span>{t("common.category")}:</span>
                         <span className="text-foreground font-medium">{material.category}</span>
+                      </div>
+                    )}
+                    {material.department && (
+                      <div className="flex justify-between">
+                        <span>{t("common.department")}:</span>
+                        <Badge
+                          variant="outline"
+                          className={
+                            material.department === "KITCHEN" ? "text-amber-600" : "text-blue-600"
+                          }
+                        >
+                          {material.department === "KITCHEN"
+                            ? t("common.departmentKitchen")
+                            : t("common.departmentBar")}
+                        </Badge>
                       </div>
                     )}
                     <div className="flex justify-between">
@@ -694,6 +776,44 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
         open={smartImportOpen}
         onOpenChange={setSmartImportOpen}
         storeId={storeId}
+      />
+
+      {/* Manage Categories Dialog */}
+      <ManageCategoriesDialog
+        open={manageCategoriesOpen}
+        onOpenChange={setManageCategoriesOpen}
+        categories={categoryUsage}
+        onDelete={handleDeleteCategory}
+        isDeleting={deleteMaterialCategory.isPending}
+        title={t("data.materials.manageCategories.title")}
+        description={t("data.materials.manageCategories.description")}
+        emptyText={t("data.materials.manageCategories.empty")}
+        itemCountLabel={(count) =>
+          t("data.materials.manageCategories.itemCount")?.replace("{count}", String(count)) ||
+          `${count}`
+        }
+        confirmTitle={(category) =>
+          t("data.materials.manageCategories.confirmTitle")?.replace(
+            "{category}",
+            category.name
+          ) || category.name
+        }
+        uncategorizeLabel={t("data.materials.manageCategories.uncategorizeLabel")}
+        uncategorizeDescription={(category) =>
+          t("data.materials.manageCategories.uncategorizeDescription")?.replace(
+            "{count}",
+            String(category.count)
+          ) || ""
+        }
+        deleteLabel={t("data.materials.manageCategories.deleteLabel")}
+        deleteDescription={(category) =>
+          t("data.materials.manageCategories.deleteDescription")?.replace(
+            "{count}",
+            String(category.count)
+          ) || ""
+        }
+        confirmText={t("common.actions.delete")}
+        cancelText={t("common.actions.cancel")}
       />
     </>
   );

@@ -11,6 +11,7 @@ import { withApiHandler } from "@/lib/api-handler";
 const productFilterSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
+  department: z.enum(["KITCHEN", "BAR"]).optional(),
   sortBy: z
     .enum(["name", "sku", "currentStock", "costPrice", "sellingPrice", "createdAt", "updatedAt"])
     .default("createdAt"),
@@ -30,6 +31,7 @@ export const GET = withApiHandler(
     const filterParams = {
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
+      department: searchParams.get("department") || undefined,
       sortBy: searchParams.get("sortBy") || "createdAt",
       sortOrder: searchParams.get("sortOrder") || "desc",
       skip: searchParams.get("skip") || "0",
@@ -92,6 +94,7 @@ export const POST = withApiHandler(
       name: validatedData.name,
       description: validatedData.description,
       category: validatedData.category,
+      department: validatedData.department,
       costPrice: Number(validatedData.costPrice),
       sellingPrice: Number(validatedData.sellingPrice),
       currentStock: validatedData.currentStock ? Number(validatedData.currentStock) : 0,
@@ -102,6 +105,7 @@ export const POST = withApiHandler(
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
       linkedMenuItemId: validatedData.linkedMenuItemId,
+      optionGroups: validatedData.optionGroups,
     });
 
     // Serialize Decimal fields to numbers for Client Components

@@ -24,6 +24,16 @@ function calcSummary(revenue: number, cogsMovements: { quantity: number; unitCos
   };
 }
 
+// Inline the net revenue/profit formulas added alongside fees & taxes
+function calcNet(revenue: number, taxCollected: number, processingFee: number, cogs: number) {
+  const netRevenue = revenue - taxCollected - processingFee;
+  const netProfit = netRevenue - cogs;
+  return {
+    netRevenue: Math.round(netRevenue * 100) / 100,
+    netProfit: Math.round(netProfit * 100) / 100,
+  };
+}
+
 describe("finance summary calculations", () => {
   it("returns zero COGS and zero margin when no stock movements", () => {
     const result = calcSummary(500_000, []);
@@ -75,5 +85,30 @@ describe("finance summary calculations", () => {
     const result = calcSummary(100_000, [{ quantity: 1, unitCost: 100_000 }]);
     expect(result.grossProfit).toBe(0);
     expect(result.grossMarginPct).toBe(0);
+  });
+});
+
+describe("net revenue / net profit (tax + processing fee deducted)", () => {
+  it("netRevenue = revenue when no tax or fees were charged", () => {
+    const result = calcNet(500_000, 0, 0, 0);
+    expect(result.netRevenue).toBe(500_000);
+  });
+
+  it("subtracts tax collected and processing fee from revenue", () => {
+    const result = calcNet(1_116_550, 116_550, 7_781.85, 0);
+    expect(result.netRevenue).toBe(992_218.15);
+  });
+
+  it("netProfit further subtracts COGS from netRevenue", () => {
+    const result = calcNet(1_000_000, 100_000, 7_000, 300_000);
+    expect(result.netRevenue).toBe(893_000);
+    expect(result.netProfit).toBe(593_000);
+  });
+
+  it("tax is excluded from net revenue even though it's included in gross revenue", () => {
+    // revenue always equals Σ Order.total (unchanged), tax is carved back out here
+    const revenue = 111_000; // 100,000 + 11,000 tax
+    const result = calcNet(revenue, 11_000, 0, 0);
+    expect(result.netRevenue).toBe(100_000);
   });
 });

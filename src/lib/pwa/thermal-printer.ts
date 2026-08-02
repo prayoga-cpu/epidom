@@ -6,7 +6,14 @@ export interface ReceiptData {
   storeName: string;
   orderNumber: string;
   date: string;
-  items: Array<{ name: string; quantity: number; unitPrice: number; total: number }>;
+  items: Array<{
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    optionNames?: string[];
+    notes?: string;
+  }>;
   subtotal: number;
   total: number;
   paymentMethod: string;
@@ -168,6 +175,12 @@ function buildEscPos(receipt: ReceiptData): Uint8Array {
         cols
       )
     );
+    if (item.optionNames && item.optionNames.length > 0) {
+      line(`  ${item.optionNames.join(", ")}`.substring(0, cols));
+    }
+    if (item.notes) {
+      line(`  * ${item.notes}`.substring(0, cols));
+    }
   }
 
   line(divider);

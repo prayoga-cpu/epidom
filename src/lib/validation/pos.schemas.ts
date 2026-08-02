@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+// Frozen snapshot of one chosen modifier/option, shared by POS, hold, and
+// public-order item schemas. materialId/materialQty pass through untouched
+// from Product-linked options so stock-deduction can later read them off the
+// persisted OrderItem without re-deriving from (possibly since-changed)
+// MenuItem/Product data.
+export const selectedOptionSchema = z.object({
+  groupName: z.string(),
+  optionName: z.string(),
+  priceAdjustment: z.number(),
+  materialId: z.string().cuid().optional(),
+  materialQty: z.number().optional(),
+});
+
+export type SelectedOptionInput = z.infer<typeof selectedOptionSchema>;
+
 export const createPosOrderSchema = z.object({
   items: z
     .array(
@@ -8,14 +23,8 @@ export const createPosOrderSchema = z.object({
         name: z.string(),
         quantity: z.number().int().min(1),
         unitPrice: z.number().min(0),
-        modifierSelections: z
-          .array(
-            z.object({
-              name: z.string(),
-              priceAdd: z.number(),
-            })
-          )
-          .optional(),
+        selectedOptions: z.array(selectedOptionSchema).optional(),
+        notes: z.string().max(300, "Note is too long").optional(),
       })
     )
     .min(1),

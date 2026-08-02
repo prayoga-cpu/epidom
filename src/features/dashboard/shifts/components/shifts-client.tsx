@@ -35,8 +35,10 @@ import {
   type CloseShiftInput,
 } from "@/lib/validation/operations.schemas";
 import { apiClient } from "@/lib/api/client";
-import { Clock, Plus, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Clock, Plus, X } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/formatting";
+import { useSortable } from "@/features/dashboard/shared/hooks/use-sortable";
+import { SortIcon } from "@/features/dashboard/shared/components/sort-icon";
 
 interface StaffMember {
   id: string;
@@ -58,20 +60,10 @@ interface Shift {
 }
 
 type SortField = "date" | "name" | "openingCash";
-type SortDir = "asc" | "desc";
 
 interface ShiftsClientProps {
   storeId: string;
   staff: StaffMember[];
-}
-
-function SortIcon({ field, active, dir }: { field: string; active: boolean; dir: SortDir }) {
-  if (!active) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 opacity-40" />;
-  return dir === "asc" ? (
-    <ArrowUp className="ml-1 inline h-3.5 w-3.5" />
-  ) : (
-    <ArrowDown className="ml-1 inline h-3.5 w-3.5" />
-  );
 }
 
 export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
@@ -80,8 +72,7 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
   const queryClient = useQueryClient();
   const [openOpen, setOpenOpen] = useState(false);
   const [closeTarget, setCloseTarget] = useState<Shift | null>(null);
-  const [sortField, setSortField] = useState<SortField>("date");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const { sortField, sortDir, toggleSort } = useSortable<SortField>("date");
 
   const { data, isLoading } = useQuery({
     queryKey: ["shifts", storeId],
@@ -105,15 +96,6 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
     });
     return sorted;
   }, [rawShifts, sortField, sortDir]);
-
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDir("desc");
-    }
-  };
 
   const openForm = useForm<OpenShiftInput>({
     resolver: zodResolver(openShiftSchema),
@@ -240,7 +222,7 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
                     onClick={() => toggleSort("name")}
                   >
                     {t("common.name")}
-                    <SortIcon field="name" active={sortField === "name"} dir={sortDir} />
+                    <SortIcon active={sortField === "name"} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -249,11 +231,7 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
                     onClick={() => toggleSort("openingCash")}
                   >
                     {t("pages.openingCash")}
-                    <SortIcon
-                      field="openingCash"
-                      active={sortField === "openingCash"}
-                      dir={sortDir}
-                    />
+                    <SortIcon active={sortField === "openingCash"} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>{t("pages.closingCash")}</TableHead>
@@ -265,7 +243,7 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
                     onClick={() => toggleSort("date")}
                   >
                     Date
-                    <SortIcon field="date" active={sortField === "date"} dir={sortDir} />
+                    <SortIcon active={sortField === "date"} dir={sortDir} />
                   </button>
                 </TableHead>
               </TableRow>

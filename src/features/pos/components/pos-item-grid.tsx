@@ -8,6 +8,7 @@ import Image from "next/image";
 interface PosItemGridProps {
   categories: PosMenuCategory[];
   selectedCategory: string | null;
+  selectedDepartment?: "KITCHEN" | "BAR" | null;
   onItemClick: (item: PosMenuItem) => void;
   searchQuery: string;
 }
@@ -15,6 +16,7 @@ interface PosItemGridProps {
 export function PosItemGrid({
   categories,
   selectedCategory,
+  selectedDepartment = null,
   onItemClick,
   searchQuery,
 }: PosItemGridProps) {
@@ -27,6 +29,7 @@ export function PosItemGrid({
       items: cat.items.filter(
         (item) =>
           (selectedCategory === null || cat.name === selectedCategory) &&
+          (selectedDepartment === null || item.department === selectedDepartment) &&
           item.name.toLowerCase().includes(searchQuery.toLowerCase())
       ),
     }))

@@ -7,11 +7,25 @@ import type { OrderSource } from "@prisma/client";
  * Mirrors the formula in finance/channels/route.ts.
  */
 
-function calcChannel(source: OrderSource, revenue: number) {
+function calcChannel(
+  source: OrderSource,
+  revenue: number,
+  taxAmount = 0,
+  processingFeeAmount = 0
+) {
   const commission = commissionRate(source);
   const commissionAmount = Math.round(revenue * commission * 100) / 100;
-  const netRevenue = Math.round((revenue - commissionAmount) * 100) / 100;
-  return { source, revenue, commissionPct: commission * 100, commissionAmount, netRevenue };
+  const netRevenue =
+    Math.round((revenue - commissionAmount - processingFeeAmount - taxAmount) * 100) / 100;
+  return {
+    source,
+    revenue,
+    commissionPct: commission * 100,
+    commissionAmount,
+    taxAmount,
+    processingFeeAmount,
+    netRevenue,
+  };
 }
 
 describe("per-channel commission calculations", () => {
@@ -61,5 +75,17 @@ describe("per-channel commission calculations", () => {
   it("netRevenue + commissionAmount = revenue (within floating point tolerance)", () => {
     const result = calcChannel("GOFOOD", 1_234_567);
     expect(result.netRevenue + result.commissionAmount).toBeCloseTo(result.revenue, 1);
+  });
+
+  it("POS: netRevenue also deducts tax collected and the processing fee", () => {
+    const result = calcChannel("POS", 111_000, 11_000, 777);
+    expect(result.commissionAmount).toBe(0); // POS isn't an aggregator channel
+    expect(result.netRevenue).toBe(99_223); // 111,000 - 11,000 - 777
+  });
+
+  it("GoFood: commission, tax, and processing fee all stack against netRevenue", () => {
+    const result = calcChannel("GOFOOD", 1_000_000, 50_000, 5_000);
+    expect(result.commissionAmount).toBe(200_000);
+    expect(result.netRevenue).toBe(745_000); // 1,000,000 - 200,000 - 50,000 - 5,000
   });
 });

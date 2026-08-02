@@ -191,6 +191,58 @@ export async function deductStockForOrder(
     }
   }
 
+  // Selected modifiers/options can optionally carry their own material stock
+  // impact (e.g. "Extra Sugar" == +5g), independent of whether the line's
+  // product has a recipe at all. Aggregate these into the same materialAgg
+  // map so they sum alongside recipe-driven consumption into one deduction
+  // per material, one StockMovement, one transaction. materialQty is stored
+  // in the linked Material's own unit (enforced when the option is created),
+  // so no unit conversion is needed here.
+  type SelectedOption = { materialId?: string; materialQty?: number };
+  const optionMaterialNeed = new Map<string, number>();
+  for (const item of order.items) {
+    const orderedQty = Number(item.quantity);
+    const selected = (item.selectedOptions as SelectedOption[] | null) ?? [];
+    for (const opt of selected) {
+      if (!opt.materialId || !opt.materialQty) continue;
+      const needed = opt.materialQty * orderedQty;
+      optionMaterialNeed.set(opt.materialId, (optionMaterialNeed.get(opt.materialId) ?? 0) + needed);
+    }
+  }
+
+  if (optionMaterialNeed.size > 0) {
+    const missingMaterialIds = Array.from(optionMaterialNeed.keys()).filter(
+      (id) => !materialAgg.has(id)
+    );
+    const fetchedMaterials = missingMaterialIds.length
+      ? await prisma.material.findMany({ where: { id: { in: missingMaterialIds } } })
+      : [];
+    const fetchedMaterialMap = new Map(fetchedMaterials.map((m) => [m.id, m]));
+
+    for (const [materialId, needed] of optionMaterialNeed.entries()) {
+      const existingMaterial = materialAgg.get(materialId);
+      if (existingMaterial) {
+        existingMaterial.totalNeeded += needed;
+        continue;
+      }
+      const material = fetchedMaterialMap.get(materialId);
+      if (!material) {
+        console.warn(
+          `[stock-deduction] orderId=${orderId}: option material=${materialId} not found, skipping`
+        );
+        continue;
+      }
+      materialAgg.set(materialId, {
+        materialName: material.name,
+        materialUnit: material.unit,
+        minStock: Number(material.minStock),
+        currentStock: Number(material.currentStock),
+        totalNeeded: needed,
+        unit: material.unit,
+      });
+    }
+  }
+
   // Collapse each aggregate to a single deduction with one final newStock.
   const productDeductions: ProductDeduction[] = Array.from(productAgg.entries()).map(
     ([productId, p]) => ({

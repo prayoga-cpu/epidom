@@ -19,6 +19,8 @@ vi.mock("@/lib/repositories/product.repository", () => ({
     updateRecipes: vi.fn(),
     delete: vi.fn(),
     bulkDelete: vi.fn(),
+    clearCategory: vi.fn(),
+    deleteByCategory: vi.fn(),
     belongsToStore: vi.fn(),
     existsBySku: vi.fn(),
     existsByName: vi.fn(),
@@ -241,6 +243,32 @@ describe("ProductService", () => {
 
       expect(prisma.menuItem.updateMany).not.toHaveBeenCalled();
     });
+
+    it("should sync department to any linked storefront MenuItem", async () => {
+      mockedProductRepo.findById.mockResolvedValue(mockProduct);
+      const updated = { ...mockProduct, department: "KITCHEN" };
+      mockedProductRepo.update.mockResolvedValue(updated);
+
+      await service.updateProduct("prod-1", "store-1", { department: "KITCHEN" as any });
+
+      expect(prisma.menuItem.updateMany).toHaveBeenCalledWith({
+        where: { productId: "prod-1" },
+        data: { department: "KITCHEN" },
+      });
+    });
+
+    it("should clear the linked MenuItem's department when set back to null", async () => {
+      mockedProductRepo.findById.mockResolvedValue({ ...mockProduct, department: "KITCHEN" });
+      const updated = { ...mockProduct, department: null };
+      mockedProductRepo.update.mockResolvedValue(updated);
+
+      await service.updateProduct("prod-1", "store-1", { department: null });
+
+      expect(prisma.menuItem.updateMany).toHaveBeenCalledWith({
+        where: { productId: "prod-1" },
+        data: { department: null },
+      });
+    });
   });
 
   describe("deleteProduct", () => {
@@ -284,6 +312,37 @@ describe("ProductService", () => {
       const result = await service.bulkDeleteProducts(["prod-1", "prod-2"], "store-1");
 
       expect(result.count).toBe(2);
+    });
+  });
+
+  describe("deleteCategory", () => {
+    it("should clear the category from every product that uses it (default mode)", async () => {
+      mockedProductRepo.clearCategory.mockResolvedValue({ count: 4 });
+
+      const result = await service.deleteCategory("store-1", "Cakes");
+
+      expect(mockedProductRepo.clearCategory).toHaveBeenCalledWith("store-1", "Cakes");
+      expect(mockedProductRepo.deleteByCategory).not.toHaveBeenCalled();
+      expect(result).toEqual({ count: 4 });
+    });
+
+    it('should hard-delete every product in the category in "delete" mode', async () => {
+      mockedProductRepo.deleteByCategory.mockResolvedValue({ count: 4 });
+
+      const result = await service.deleteCategory("store-1", "Cakes", "delete");
+
+      expect(mockedProductRepo.deleteByCategory).toHaveBeenCalledWith("store-1", "Cakes");
+      expect(mockedProductRepo.clearCategory).not.toHaveBeenCalled();
+      expect(result).toEqual({ count: 4 });
+    });
+
+    it("should throw error if category is empty", async () => {
+      await expect(service.deleteCategory("store-1", "")).rejects.toThrow("Category is required");
+      await expect(service.deleteCategory("store-1", "   ")).rejects.toThrow(
+        "Category is required"
+      );
+      expect(mockedProductRepo.clearCategory).not.toHaveBeenCalled();
+      expect(mockedProductRepo.deleteByCategory).not.toHaveBeenCalled();
     });
   });
 

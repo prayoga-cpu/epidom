@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,7 @@ import {
   Plus,
   Wand2,
   UtensilsCrossed,
+  Tags,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils/formatting";
@@ -51,6 +52,7 @@ import {
   useAddProductToMenu,
   useRemoveProductFromMenu,
   useProductMenuStatus,
+  useDeleteProductCategory,
   type Product,
 } from "../hooks/use-products";
 import { useConfirm } from "@/components/ui/use-confirm";
@@ -62,7 +64,10 @@ import {
   SectionErrorState,
   SectionLoadingState,
   SKUDisplay,
+  ManageCategoriesDialog,
+  type CategoryUsage,
 } from "../../components";
+import type { CategoryDeleteMode } from "@/components/ui/category-delete-dialog";
 import { ProductsCardGridSkeleton } from "./products-skeleton";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
@@ -84,6 +89,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const [filters, setFilters] = useState({
     search: "",
     category: "",
+    department: "" as "" | "KITCHEN" | "BAR",
     sortBy: "createdAt" as const,
     sortOrder: "desc" as const,
     skip: 0,
@@ -120,9 +126,23 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const { menuLinkedIds } = useProductMenuStatus(storeId);
   const { confirm, confirmDialog } = useConfirm();
   const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
+  const deleteProductCategory = useDeleteProductCategory(storeId);
 
   const products = data?.products || [];
   const totalProducts = data?.total || 0;
+
+  // Get unique categories from products, with item counts (for category management)
+  const categoryUsage = useMemo<CategoryUsage[]>(() => {
+    const counts = new Map<string, number>();
+    products.forEach((p) => {
+      if (p.category) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [products]);
+
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
   const currentPage = Math.floor(filters.skip / filters.take) + 1;
   const totalPages = Math.ceil(totalProducts / filters.take);
 
@@ -231,6 +251,17 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     }
   };
 
+  const handleDeleteCategory = async (category: string, mode: CategoryDeleteMode) => {
+    try {
+      await deleteProductCategory.mutateAsync({ category, mode });
+      toast.success(t("data.products.manageCategories.deleted"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("data.products.manageCategories.deleteFailed")
+      );
+    }
+  };
+
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
     setFilters((prev) => ({
@@ -252,6 +283,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     setFilters({
       search: "",
       category: "",
+      department: "",
       sortBy: "createdAt",
       sortOrder: "desc",
       skip: 0,
@@ -259,7 +291,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     });
   };
 
-  const hasActiveFilters = filters.search || filters.category;
+  const hasActiveFilters = filters.search || filters.category || filters.department;
 
   // Loading state - wait for both products and usage data to sync loading
   // But if we have products (e.g. from initialData), show them immediately
@@ -354,6 +386,15 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                   </TooltipContent>
                 )}
               </Tooltip>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setManageCategoriesOpen(true)}
+                className="w-full md:w-auto"
+              >
+                <Tags className="mr-1 hidden h-4 w-4 sm:inline" />
+                {t("data.products.manageCategories.button")}
+              </Button>
               {bulkSelectMode && selectedCount > 0 && (
                 <Button
                   variant="destructive"
@@ -429,6 +470,27 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                   <SelectItem value="sellingPrice-desc">{t("sort.priceHighLow")}</SelectItem>
                   <SelectItem value="createdAt-desc">{t("sort.newest")}</SelectItem>
                   <SelectItem value="createdAt-asc">{t("sort.oldest")}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Department filter */}
+              <Select
+                value={filters.department || "all"}
+                onValueChange={(v) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    department: v === "all" ? "" : (v as "KITCHEN" | "BAR"),
+                    skip: 0,
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <SelectValue placeholder={t("filters.allDepartments")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filters.allDepartments")}</SelectItem>
+                  <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
+                  <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -514,6 +576,23 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                       <div className="flex justify-between">
                         <span>{t("common.category")}:</span>
                         <span className="text-foreground font-medium">{product.category}</span>
+                      </div>
+                    )}
+                    {product.department && (
+                      <div className="flex justify-between">
+                        <span>{t("common.department")}:</span>
+                        <Badge
+                          variant="outline"
+                          className={
+                            product.department === "KITCHEN"
+                              ? "text-amber-600"
+                              : "text-blue-600"
+                          }
+                        >
+                          {product.department === "KITCHEN"
+                            ? t("common.departmentKitchen")
+                            : t("common.departmentBar")}
+                        </Badge>
                       </div>
                     )}
                     <div className="flex justify-between">
@@ -809,6 +888,44 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
         open={smartImportOpen}
         onOpenChange={setSmartImportOpen}
         storeId={storeId}
+      />
+
+      {/* Manage Categories Dialog */}
+      <ManageCategoriesDialog
+        open={manageCategoriesOpen}
+        onOpenChange={setManageCategoriesOpen}
+        categories={categoryUsage}
+        onDelete={handleDeleteCategory}
+        isDeleting={deleteProductCategory.isPending}
+        title={t("data.products.manageCategories.title")}
+        description={t("data.products.manageCategories.description")}
+        emptyText={t("data.products.manageCategories.empty")}
+        itemCountLabel={(count) =>
+          t("data.products.manageCategories.itemCount")?.replace("{count}", String(count)) ||
+          `${count}`
+        }
+        confirmTitle={(category) =>
+          t("data.products.manageCategories.confirmTitle")?.replace(
+            "{category}",
+            category.name
+          ) || category.name
+        }
+        uncategorizeLabel={t("data.products.manageCategories.uncategorizeLabel")}
+        uncategorizeDescription={(category) =>
+          t("data.products.manageCategories.uncategorizeDescription")?.replace(
+            "{count}",
+            String(category.count)
+          ) || ""
+        }
+        deleteLabel={t("data.products.manageCategories.deleteLabel")}
+        deleteDescription={(category) =>
+          t("data.products.manageCategories.deleteDescription")?.replace(
+            "{count}",
+            String(category.count)
+          ) || ""
+        }
+        confirmText={t("common.actions.delete")}
+        cancelText={t("common.actions.cancel")}
       />
       {confirmDialog}
     </>

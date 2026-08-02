@@ -1,4 +1,4 @@
-import { Recipe, Prisma, RecipeProduct, Product } from "@prisma/client";
+import { Recipe, Prisma, RecipeProduct, Product, Department } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 
@@ -31,6 +31,7 @@ export type RecipeWithIngredients = Recipe & {
 export interface RecipeFilters {
   search?: string;
   category?: string;
+  department?: Department;
   sortBy?:
     | "name"
     | "category"
@@ -54,6 +55,7 @@ export class RecipeRepository extends BaseRepository {
     const {
       search,
       category,
+      department,
       sortBy = "createdAt",
       sortOrder = "desc",
       skip = 0,
@@ -71,6 +73,7 @@ export class RecipeRepository extends BaseRepository {
         ],
       }),
       ...(category && { category }),
+      ...(department && { department }),
     };
 
     // Build orderBy clause
@@ -181,6 +184,7 @@ export class RecipeRepository extends BaseRepository {
     name: string;
     description?: string;
     category?: string;
+    department?: Department | null;
     yieldQuantity: number;
     yieldUnit: string;
     productionTimeMinutes: number;
@@ -278,6 +282,7 @@ export class RecipeRepository extends BaseRepository {
       name?: string;
       description?: string;
       category?: string;
+      department?: Department | null;
       yieldQuantity?: number;
       yieldUnit?: string;
       productionTimeMinutes?: number;
@@ -405,6 +410,28 @@ export class RecipeRepository extends BaseRepository {
           in: recipeIds,
         },
       },
+    });
+    return result;
+  }
+
+  /**
+   * Clear a category from all recipes in a store that use it
+   * (sets category to null, removing it from the derived category list)
+   */
+  async clearCategory(storeId: string, category: string): Promise<{ count: number }> {
+    const result = await this.db.recipe.updateMany({
+      where: { storeId, category },
+      data: { category: null },
+    });
+    return result;
+  }
+
+  /**
+   * Hard delete every recipe in a store that has a given category
+   */
+  async deleteByCategory(storeId: string, category: string): Promise<{ count: number }> {
+    const result = await this.db.recipe.deleteMany({
+      where: { storeId, category },
     });
     return result;
   }

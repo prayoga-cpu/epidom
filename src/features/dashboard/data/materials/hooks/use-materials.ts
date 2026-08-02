@@ -6,6 +6,7 @@ import {
   UpdateIngredientInput,
   MaterialFilterInput,
   BulkDeleteInput,
+  type CategoryDeleteMode,
 } from "@/lib/validation/inventory.schemas";
 import { ApiSuccessResponse } from "@/types/api/responses";
 import { ApiClientError } from "@/lib/api/client";
@@ -445,6 +446,66 @@ export function useBulkDeleteMaterials(storeId: string) {
 
       // Invalidate other related queries in background (skip materials)
       invalidateMaterialRelatedQueries(queryClient, storeId, true).catch(console.warn);
+    },
+  });
+}
+
+/**
+ * Delete a category. Materials have no separate category entity, so this
+ * affects every material that has it: "uncategorize" (default) clears the
+ * tag and keeps the materials, "delete" removes the materials themselves.
+ */
+export function useDeleteMaterialCategory(storeId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { message: string; count: number; mode: CategoryDeleteMode },
+    Error,
+    { category: string; mode?: CategoryDeleteMode }
+  >({
+    mutationFn: async ({ category, mode = "uncategorize" }) => {
+      const response = await fetch(
+        `/api/stores/${storeId}/materials/categories/${encodeURIComponent(category)}`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new ApiClientError(errorData, response.status);
+      }
+
+      const data: ApiSuccessResponse<{ message: string; count: number; mode: CategoryDeleteMode }> =
+        await response.json();
+      return data.data;
+    },
+    onSuccess: (_, { category, mode = "uncategorize" }) => {
+      // Optimistically update all matching cached materials
+      queryClient.setQueriesData<MaterialsResponse>(
+        { queryKey: materialKeys.lists(storeId), exact: false },
+        (oldData) => {
+          if (!oldData || !oldData.materials) return oldData;
+          if (mode === "delete") {
+            const remaining = oldData.materials.filter((m) => m.category !== category);
+            return {
+              ...oldData,
+              materials: remaining,
+              total: Math.max(0, oldData.total - (oldData.materials.length - remaining.length)),
+            };
+          }
+          return {
+            ...oldData,
+            materials: oldData.materials.map((m) =>
+              m.category === category ? { ...m, category: null } : m
+            ),
+          };
+        }
+      );
+
+      invalidateMaterialRelatedQueries(queryClient, storeId, true);
     },
   });
 }

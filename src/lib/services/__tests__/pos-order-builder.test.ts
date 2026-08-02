@@ -46,7 +46,7 @@ describe("validateAndBuildOrderItems", () => {
     expect(subtotal).toBe(30000);
   });
 
-  it("adds modifier price-adds into the unit price and total", async () => {
+  it("adds selected option price-adjustments into the unit price and total", async () => {
     prismaMock.menuItem.findMany.mockResolvedValue([
       { id: "menu-1", name: "Coffee", price: 20000 },
     ]);
@@ -57,13 +57,37 @@ describe("validateAndBuildOrderItems", () => {
         name: "Coffee",
         quantity: 1,
         unitPrice: 20000,
-        modifierSelections: [{ name: "Large", priceAdd: 5000 }],
+        selectedOptions: [{ groupName: "Size", optionName: "Large", priceAdjustment: 5000 }],
       },
     ] as any);
 
     expect(orderItems[0].unitPrice).toBe(25000);
     expect(orderItems[0].total).toBe(25000);
     expect(subtotal).toBe(25000);
+  });
+
+  it("passes notes and selectedOptions through onto the built order item", async () => {
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      { id: "menu-1", name: "Coffee", price: 20000 },
+    ]);
+
+    const selectedOptions = [
+      { groupName: "Size", optionName: "Large", priceAdjustment: 5000, materialId: "mat-1", materialQty: 5 },
+    ];
+
+    const { orderItems } = await validateAndBuildOrderItems("store-1", [
+      {
+        menuItemId: "menu-1",
+        name: "Coffee",
+        quantity: 1,
+        unitPrice: 20000,
+        selectedOptions,
+        notes: "no ice",
+      },
+    ] as any);
+
+    expect(orderItems[0].notes).toBe("no ice");
+    expect(orderItems[0].selectedOptions).toEqual(selectedOptions);
   });
 
   it("sums totals across multiple line items", async () => {

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { CreatePosOrderInput } from "@/lib/validation/pos.schemas";
+import type { CreatePosOrderInput, SelectedOptionInput } from "@/lib/validation/pos.schemas";
 
 /** Thrown when one or more requested menu items are missing/unavailable — callers map this to a 422. */
 export class OrderBuildError extends Error {}
@@ -11,6 +11,8 @@ export interface BuiltOrderItem {
   unit: string;
   unitPrice: number;
   total: number;
+  notes?: string;
+  selectedOptions?: SelectedOptionInput[];
 }
 
 /**
@@ -45,7 +47,7 @@ export async function validateAndBuildOrderItems(
 
   const orderItems: BuiltOrderItem[] = items.map((i) => {
     const menuItem = menuItemMap.get(i.menuItemId)!;
-    const modifierTotal = (i.modifierSelections ?? []).reduce((sum, m) => sum + m.priceAdd, 0);
+    const modifierTotal = (i.selectedOptions ?? []).reduce((sum, m) => sum + m.priceAdjustment, 0);
     const unitPrice = Number(menuItem.price) + modifierTotal;
     const total = unitPrice * i.quantity;
     return {
@@ -55,6 +57,8 @@ export async function validateAndBuildOrderItems(
       unit: "pcs",
       unitPrice,
       total,
+      notes: i.notes,
+      selectedOptions: i.selectedOptions,
     };
   });
 

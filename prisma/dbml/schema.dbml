@@ -115,6 +115,23 @@ Table stores {
   reservations reservations [not null]
   aggregatorConnections aggregator_connections [not null]
   aggregatorEmails aggregator_emails [not null]
+  financeSettings store_finance_settings
+}
+
+Table store_finance_settings {
+  id String [pk]
+  storeId String [unique, not null]
+  taxEnabled Boolean [not null, default: false]
+  taxRate Decimal [not null, default: 0]
+  taxLabel String
+  taxInclusive Boolean [not null, default: true]
+  serviceChargeEnabled Boolean [not null, default: false]
+  serviceChargeRate Decimal [not null, default: 0]
+  processingFeeEnabled Boolean [not null, default: true]
+  processingFeeOverrides Json
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
 }
 
 Table subscriptions {
@@ -140,6 +157,7 @@ Table products {
   name String [not null]
   description String
   category String
+  department Department
   costPrice Decimal [not null]
   sellingPrice Decimal [not null]
   currentStock Decimal [not null, default: 0]
@@ -157,10 +175,38 @@ Table products {
   recipeProducts recipe_products [not null]
   stockMovements stock_movements [not null]
   menuItems menu_items [not null]
+  optionGroups product_option_groups [not null]
 
   indexes {
     (storeId, sku) [unique]
   }
+}
+
+Table product_option_groups {
+  id String [pk]
+  productId String [not null]
+  name String [not null]
+  isRequired Boolean [not null, default: false]
+  maxSelections Int [not null, default: 1]
+  displayOrder Int [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  product products [not null]
+  options product_options [not null]
+}
+
+Table product_options {
+  id String [pk]
+  groupId String [not null]
+  name String [not null]
+  priceAdjustment Decimal [not null, default: 0]
+  materialId String
+  materialQty Decimal
+  displayOrder Int [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  group product_option_groups [not null]
+  material ingredients
 }
 
 Table ingredients {
@@ -169,6 +215,7 @@ Table ingredients {
   name String [not null]
   description String
   category String
+  department Department
   unit String [not null, default: 'kg']
   unitCost Decimal [not null]
   purchaseQuantity Decimal [not null, default: 1]
@@ -183,6 +230,7 @@ Table ingredients {
   recipeIngredients recipe_ingredients [not null]
   stockMovements stock_movements [not null]
   supplierOrderItems supplier_order_items [not null]
+  productOptions product_options [not null]
 
   indexes {
     (storeId, sku) [unique]
@@ -213,6 +261,7 @@ Table recipes {
   updatedAt DateTime [not null]
   storeId String [not null]
   category String
+  department Department
   costPerBatch Decimal [not null, default: 0]
   description String
   name String [not null]
@@ -366,6 +415,11 @@ Table orders {
   tax Decimal [not null, default: 0]
   delivery Decimal [not null, default: 0]
   total Decimal [not null]
+  serviceCharge Decimal [not null, default: 0]
+  processingFee Decimal [not null, default: 0]
+  taxRate Decimal [not null, default: 0]
+  serviceChargeRate Decimal [not null, default: 0]
+  processingFeeRate Decimal [not null, default: 0]
   notes String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -398,6 +452,8 @@ Table order_items {
   unit String [not null]
   unitPrice Decimal [not null]
   total Decimal [not null]
+  notes String
+  selectedOptions Json
   status OrderItemStatus [not null, default: 'PENDING']
   preparedAt DateTime
   servedAt DateTime
@@ -651,6 +707,7 @@ Table menu_items {
   storefrontId String [not null]
   categoryId String
   productId String
+  department Department
   name String [not null]
   description String
   price Decimal [not null]
@@ -813,6 +870,11 @@ Enum StaffRole {
   KITCHEN
 }
 
+Enum Department {
+  KITCHEN
+  BAR
+}
+
 Enum AggregatorPlatform {
   GOFOOD
   GRABFOOD
@@ -828,9 +890,17 @@ Ref: businesses.userId - user.id [delete: Cascade]
 
 Ref: stores.businessId > businesses.id [delete: Cascade]
 
+Ref: store_finance_settings.storeId - stores.id [delete: Cascade]
+
 Ref: subscriptions.userId - user.id [delete: Cascade]
 
 Ref: products.storeId > stores.id [delete: Cascade]
+
+Ref: product_option_groups.productId > products.id [delete: Cascade]
+
+Ref: product_options.groupId > product_option_groups.id [delete: Cascade]
+
+Ref: product_options.materialId > ingredients.id [delete: Set Null]
 
 Ref: ingredients.storeId > stores.id [delete: Cascade]
 

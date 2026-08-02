@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import {
   X,
   Wand2,
   UtensilsCrossed,
+  Tags,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDuration } from "@/lib/utils/formatting";
@@ -40,6 +41,7 @@ import {
   useBulkDeleteRecipes,
   useExportRecipes,
   useRecipeDemand,
+  useDeleteRecipeCategory,
   type RecipeWithIngredients,
 } from "../hooks/use-recipes";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
@@ -49,8 +51,11 @@ import {
   FilterSection,
   ItemCardGrid,
   BaseItemCard,
+  ManageCategoriesDialog,
+  type CategoryUsage,
   type FilterField,
 } from "../../components";
+import type { CategoryDeleteMode } from "@/components/ui/category-delete-dialog";
 import { RecipesCardGridSkeleton } from "./recipes-skeleton";
 import { LoadingPage } from "@/features/loading/loading-page";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
@@ -107,6 +112,9 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
   // State
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
+  const [departmentFilter, setDepartmentFilter] = useState<"KITCHEN" | "BAR" | undefined>(
+    undefined
+  );
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   // Duplicate dialog is not part of useDialogState, handle separately
@@ -131,6 +139,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
     {
       search: debouncedSearch || undefined,
       category: categoryFilter,
+      department: departmentFilter,
       sortBy: sortField,
       sortOrder: sortOrder,
       skip: 0,
@@ -148,9 +157,36 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
   const bulkDeleteRecipes = useBulkDeleteRecipes(storeId);
   const exportRecipes = useExportRecipes();
   const recipeDemand = useRecipeDemand(storeId);
+  const deleteRecipeCategory = useDeleteRecipeCategory(storeId);
 
   const recipes = recipesData?.recipes || [];
   const total = recipesData?.total || 0;
+
+  // Get unique categories from recipes, with item counts (for category management).
+  // Recipe categories are a fixed preset list — the raw value is stored on
+  // the recipe, but shown translated.
+  const categoryUsage = useMemo<CategoryUsage[]>(() => {
+    const counts = new Map<string, number>();
+    recipes.forEach((r) => {
+      if (r.category) counts.set(r.category, (counts.get(r.category) ?? 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([name, count]) => ({ name, label: getTranslatedCategory(name, t), count }))
+      .sort((a, b) => (a.label ?? a.name).localeCompare(b.label ?? b.name));
+  }, [recipes, t]);
+
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
+
+  const handleDeleteCategory = async (category: string, mode: CategoryDeleteMode) => {
+    try {
+      await deleteRecipeCategory.mutateAsync({ category, mode });
+      toast.success(t("data.recipes.manageCategories.deleted"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("data.recipes.manageCategories.deleteFailed")
+      );
+    }
+  };
 
   // Use reusable hooks for dialog and bulk selection state
   const {
@@ -232,6 +268,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
         filters: {
           search: searchQuery || undefined,
           category: categoryFilter,
+          department: departmentFilter,
           sortBy: sortField,
           sortOrder: sortOrder,
           skip: 0,
@@ -252,11 +289,13 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
   const clearFilters = () => {
     setSearchQuery("");
     setCategoryFilter(undefined);
+    setDepartmentFilter(undefined);
     setSortField("createdAt");
     setSortOrder("desc");
   };
 
-  const hasActiveFilters = searchQuery || categoryFilter !== undefined;
+  const hasActiveFilters =
+    searchQuery || categoryFilter !== undefined || departmentFilter !== undefined;
 
   // Loading state - use pixel-perfect skeleton to prevent layout shift
   if (isLoading) {
@@ -327,6 +366,15 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                   </Button>
                 }
               />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setManageCategoriesOpen(true)}
+                className="w-full md:w-auto"
+              >
+                <Tags className="mr-1 hidden h-4 w-4 sm:inline" />
+                {t("data.recipes.manageCategories.button")}
+              </Button>
               {bulkSelectMode && selectedCount > 0 && (
                 <Button
                   variant="destructive"
@@ -376,6 +424,19 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                 options: [
                   { value: "all", label: t("filters.allCategories") },
                   ...getRecipeCategories(t),
+                ],
+              },
+              {
+                key: "department",
+                label: t("filters.allDepartments"),
+                placeholder: t("filters.allDepartments"),
+                value: departmentFilter || "all",
+                onChange: (value) =>
+                  setDepartmentFilter(value === "all" ? undefined : (value as "KITCHEN" | "BAR")),
+                options: [
+                  { value: "all", label: t("filters.allDepartments") },
+                  { value: "KITCHEN", label: t("common.departmentKitchen") },
+                  { value: "BAR", label: t("common.departmentBar") },
                 ],
               },
               {
@@ -451,6 +512,18 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                         {recipe.category && (
                           <Badge variant="secondary" className="text-xs">
                             {getTranslatedCategory(recipe.category, t)}
+                          </Badge>
+                        )}
+                        {recipe.department && (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              recipe.department === "KITCHEN" ? "text-amber-600" : "text-blue-600"
+                            }`}
+                          >
+                            {recipe.department === "KITCHEN"
+                              ? t("common.departmentKitchen")
+                              : t("common.departmentBar")}
                           </Badge>
                         )}
                         {(recipeDemand.get(recipe.id) ?? 0) > 0 && (
@@ -683,6 +756,46 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
         open={smartImportOpen}
         onOpenChange={setSmartImportOpen}
         storeId={storeId}
+      />
+
+      {/* Manage Categories Dialog */}
+      <ManageCategoriesDialog
+        open={manageCategoriesOpen}
+        onOpenChange={setManageCategoriesOpen}
+        categories={categoryUsage}
+        onDelete={handleDeleteCategory}
+        isDeleting={deleteRecipeCategory.isPending}
+        title={t("data.recipes.manageCategories.title")}
+        description={t("data.recipes.manageCategories.description")}
+        emptyText={t("data.recipes.manageCategories.empty")}
+        itemCountLabel={(count) =>
+          t("data.recipes.manageCategories.itemCount")?.replace("{count}", String(count)) ||
+          `${count}`
+        }
+        confirmTitle={(category) =>
+          t("data.recipes.manageCategories.confirmTitle")?.replace(
+            "{category}",
+            category.label ?? category.name
+          ) ||
+          category.label ||
+          category.name
+        }
+        uncategorizeLabel={t("data.recipes.manageCategories.uncategorizeLabel")}
+        uncategorizeDescription={(category) =>
+          t("data.recipes.manageCategories.uncategorizeDescription")?.replace(
+            "{count}",
+            String(category.count)
+          ) || ""
+        }
+        deleteLabel={t("data.recipes.manageCategories.deleteLabel")}
+        deleteDescription={(category) =>
+          t("data.recipes.manageCategories.deleteDescription")?.replace(
+            "{count}",
+            String(category.count)
+          ) || ""
+        }
+        confirmText={t("common.actions.delete")}
+        cancelText={t("common.actions.cancel")}
       />
     </>
   );

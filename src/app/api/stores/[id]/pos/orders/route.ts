@@ -15,6 +15,8 @@ import {
   type BuiltOrderItem,
 } from "@/lib/services/pos-order-builder";
 import { serializePosOrders } from "@/lib/server/serialize";
+import { resolveFinanceSettingsForOrder } from "@/lib/services";
+import { computeOrderCharges } from "@/lib/finance/order-charges";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -115,13 +117,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw err;
     }
 
+    const financeSettings = await resolveFinanceSettingsForOrder(storeId);
+    const charges = computeOrderCharges({
+      itemsTotal: subtotal,
+      paymentMethod: input.paymentMethod as PaymentMethod,
+      settings: financeSettings,
+    });
+
     // Defense in depth — the client already disables the Confirm button for
     // this case, but never trust that a request actually came from a client
     // that enforced it.
     if (
       input.paymentMethod === "CASH" &&
       input.amountTendered != null &&
-      input.amountTendered < subtotal
+      input.amountTendered < charges.total
     ) {
       return NextResponse.json(
         createErrorResponse(
@@ -150,10 +159,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           status: input.paymentMethod === "CASH" ? "CONFIRMED" : "PENDING",
           source: "POS",
           notes: input.notes,
-          subtotal: new Prisma.Decimal(subtotal),
-          tax: new Prisma.Decimal(0),
+          subtotal: new Prisma.Decimal(charges.subtotal),
+          tax: new Prisma.Decimal(charges.tax),
           delivery: new Prisma.Decimal(0),
-          total: new Prisma.Decimal(subtotal),
+          total: new Prisma.Decimal(charges.total),
+          serviceCharge: new Prisma.Decimal(charges.serviceCharge),
+          processingFee: new Prisma.Decimal(charges.processingFee),
+          taxRate: new Prisma.Decimal(charges.taxRate),
+          serviceChargeRate: new Prisma.Decimal(charges.serviceChargeRate),
+          processingFeeRate: new Prisma.Decimal(charges.processingFeeRate),
           items: {
             create: orderItems.map((i) => ({
               menuItemId: i.menuItemId,
@@ -162,6 +176,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
               unit: i.unit,
               unitPrice: new Prisma.Decimal(i.unitPrice),
               total: new Prisma.Decimal(i.total),
+              notes: i.notes,
+              selectedOptions: i.selectedOptions as Prisma.InputJsonValue | undefined,
               status: "PENDING",
             })),
           },
@@ -193,7 +209,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           storefrontSlug: null,
           orderNumber,
           customerName: input.customerName ?? "Walk-in",
-          totalAmount: subtotal,
+          totalAmount: charges.total,
           currency: "IDR",
           paymentMethod: input.paymentMethod,
           items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
@@ -208,7 +224,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // Calculate change for cash payments
     const change =
       input.paymentMethod === "CASH" && input.amountTendered != null
-        ? Math.max(0, input.amountTendered - subtotal)
+        ? Math.max(0, input.amountTendered - charges.total)
         : null;
 
     // Initiate payment for non-CASH methods
@@ -220,7 +236,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const payment = await initiatePayment({
           orderId: order.id,
-          amount: subtotal,
+          amount: charges.total,
           currency: "IDR",
           customerName: input.customerName ?? "Walk-in",
           customerPhone: input.customerPhone,

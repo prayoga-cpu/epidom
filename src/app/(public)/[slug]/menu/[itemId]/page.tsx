@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { storefrontService } from "@/lib/services";
 import { prisma } from "@/lib/prisma";
 import { PublicItemDetail } from "@/features/storefront/components/public-item-detail";
+import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -51,6 +52,16 @@ export default async function ItemDetailPage({ params }: PageProps) {
       id: itemId,
       storefrontId: storefront.id,
     },
+    include: {
+      product: {
+        select: {
+          optionGroups: {
+            orderBy: { displayOrder: "asc" },
+            include: { options: { orderBy: { displayOrder: "asc" } } },
+          },
+        },
+      },
+    },
   });
 
   if (!item) {
@@ -63,11 +74,14 @@ export default async function ItemDetailPage({ params }: PageProps) {
     name: item.name,
     description: item.description,
     price: Number(item.price),
-    currency: item.currency,
+    currency: storefront.store.business.user.currency,
     imageUrl: item.imageUrl,
     isAvailable: item.isAvailable,
     isFeatured: item.isFeatured,
     modifiers: item.modifiers,
+    product: item.product
+      ? { optionGroups: serializeProductOptionGroups(item.product.optionGroups) }
+      : null,
   };
 
   const storefrontData = {

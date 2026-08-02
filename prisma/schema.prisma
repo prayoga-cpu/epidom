@@ -141,9 +141,32 @@ model Store {
   reservations          Reservation[]
   aggregatorConnections AggregatorConnection[]
   aggregatorEmails      AggregatorEmail[]
+  financeSettings       StoreFinanceSettings?
 
   @@index([businessId])
   @@map("stores")
+}
+
+model StoreFinanceSettings {
+  id      String @id @default(cuid())
+  storeId String @unique
+
+  taxEnabled   Boolean @default(false)
+  taxRate      Decimal @default(0) @db.Decimal(6, 4) // 0.1100 = 11%
+  taxLabel     String?
+  taxInclusive Boolean @default(true)
+
+  serviceChargeEnabled Boolean @default(false)
+  serviceChargeRate    Decimal @default(0) @db.Decimal(6, 4)
+
+  processingFeeEnabled   Boolean @default(true)
+  processingFeeOverrides Json? // partial Record<PaymentMethod, { percent, flat }>
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("store_finance_settings")
 }
 
 model Subscription {
@@ -171,6 +194,7 @@ model Product {
   name              String
   description       String?
   category          String?
+  department        Department?
   costPrice         Decimal           @db.Decimal(10, 2)
   sellingPrice      Decimal           @db.Decimal(10, 2)
   currentStock      Decimal           @default(0) @db.Decimal(10, 3)
@@ -188,11 +212,55 @@ model Product {
   recipeProducts    RecipeProduct[]
   stockMovements    StockMovement[]
   menuItems         MenuItem[]
+  optionGroups      ProductOptionGroup[]
 
   @@unique([storeId, sku])
   @@index([storeId])
   @@index([category])
+  @@index([department])
   @@map("products")
+}
+
+// A named group of selectable variants for a Product, e.g. "Size" or "Sugar
+// Level". Mirrors MenuItem.modifiers' shape (isRequired/maxSelections) but is
+// relational (not JSON) so each option can optionally link to a Material with
+// a custom stock-deduction quantity — see ProductOption.
+model ProductOptionGroup {
+  id            String          @id @default(cuid())
+  productId     String
+  name          String
+  isRequired    Boolean         @default(false)
+  maxSelections Int             @default(1)
+  displayOrder  Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  product       Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options       ProductOption[]
+
+  @@index([productId])
+  @@map("product_option_groups")
+}
+
+model ProductOption {
+  id              String             @id @default(cuid())
+  groupId         String
+  name            String
+  priceAdjustment Decimal            @default(0) @db.Decimal(10, 2)
+  // Optional stock linkage: choosing this option additionally consumes
+  // `materialQty` units (in the material's own unit) of `materialId` per
+  // unit sold, on top of whatever the product's recipe already consumes.
+  // Null materialId = price-only option, no stock impact.
+  materialId      String?
+  materialQty     Decimal?           @db.Decimal(10, 3)
+  displayOrder    Int                @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  group           ProductOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  material        Material?          @relation(fields: [materialId], references: [id], onDelete: SetNull)
+
+  @@index([groupId])
+  @@index([materialId])
+  @@map("product_options")
 }
 
 model Material {
@@ -201,6 +269,7 @@ model Material {
   name               String
   description        String?
   category           String?
+  department         Department?
   unit               String              @default("kg")
   // Cost per one `unit`, derived server-side as purchasePrice ÷ purchaseQuantity
   // rather than typed directly — see CreateMaterialInput. Needs more than 2
@@ -221,10 +290,12 @@ model Material {
   recipeIngredients  RecipeIngredient[]
   stockMovements     StockMovement[]
   supplierOrderItems SupplierOrderItem[]
+  productOptions     ProductOption[]
 
   @@unique([storeId, sku])
   @@index([storeId])
   @@index([category])
+  @@index([department])
   @@map("ingredients")
 }
 
@@ -257,6 +328,7 @@ model Recipe {
   updatedAt             DateTime           @updatedAt
   storeId               String
   category              String?
+  department            Department?
   costPerBatch          Decimal            @default(0) @db.Decimal(10, 2)
   description           String?
   name                  String
@@ -270,6 +342,7 @@ model Recipe {
 
   @@index([storeId])
   @@index([category])
+  @@index([department])
   @@map("recipes")
 }
 
@@ -439,6 +512,15 @@ model Order {
   tax                Decimal         @default(0) @db.Decimal(10, 2)
   delivery           Decimal         @default(0) @db.Decimal(10, 2)
   total              Decimal         @db.Decimal(10, 2)
+  // Phase 5: fees & taxes — amounts are frozen at order-creation/finalize time
+  // (not recomputed from current store settings), so editing a store's rates
+  // later never rewrites the numbers on past orders. taxRate/serviceChargeRate/
+  // processingFeeRate are the audit trail — the rate that produced the amount.
+  serviceCharge      Decimal         @default(0) @db.Decimal(10, 2)
+  processingFee      Decimal         @default(0) @db.Decimal(10, 2)
+  taxRate            Decimal         @default(0) @db.Decimal(6, 4)
+  serviceChargeRate  Decimal         @default(0) @db.Decimal(6, 4)
+  processingFeeRate  Decimal         @default(0) @db.Decimal(6, 4)
   notes              String?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -484,6 +566,16 @@ model OrderItem {
   unit       String
   unitPrice  Decimal         @db.Decimal(10, 2)
   total      Decimal         @db.Decimal(10, 2)
+  // Free-text instruction for this line (e.g. "no ice"), separate from the
+  // order-level Order.notes.
+  notes      String?
+  // Frozen snapshot of the chosen modifiers/options at order time —
+  // [{groupName, optionName, priceAdjustment, materialId?, materialQty?}].
+  // Snapshotted (not a live relation) so edits/deletes to the source
+  // MenuItem.modifiers or ProductOption rows never rewrite past orders, and
+  // so stock-deduction has a stable record of exactly what extra material to
+  // subtract even if the option is later changed.
+  selectedOptions Json?
   // Phase 3: KDS workflow
   status     OrderItemStatus @default(PENDING)
   preparedAt DateTime?
@@ -766,6 +858,14 @@ enum StaffRole {
   KITCHEN
 }
 
+// Operational team split for reporting — deliberately separate from the
+// free-text `category` field (which stores use for arbitrary grouping like
+// supplier origin or menu display sections).
+enum Department {
+  KITCHEN
+  BAR
+}
+
 model StaffMember {
   id           String    @id @default(cuid())
   storeId      String
@@ -960,6 +1060,7 @@ model MenuItem {
   storefrontId String
   categoryId   String?
   productId    String? // optional link to Product for inventory deduction
+  department   Department? // synced from the linked Product on create/update; settable directly otherwise
   name         String
   description  String?
   price        Decimal @db.Decimal(12, 2)
@@ -976,5 +1077,6 @@ model MenuItem {
   orderItems OrderItem[]
 
   @@index([storefrontId])
+  @@index([department])
   @@map("menu_items")
 }

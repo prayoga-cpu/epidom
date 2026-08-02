@@ -1,4 +1,4 @@
-import { Material, Prisma } from "@prisma/client";
+import { Material, Prisma, Department } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
 
 /**
@@ -28,6 +28,7 @@ export type MaterialWithSuppliers = Material & {
 export interface MaterialFilters {
   search?: string;
   category?: string;
+  department?: Department;
   supplierId?: string;
   stockStatus?: "in_stock" | "low_stock" | "out_of_stock" | "overstocked";
   sortBy?: "name" | "sku" | "currentStock" | "unitCost" | "createdAt" | "updatedAt";
@@ -47,6 +48,7 @@ export class MaterialRepository extends BaseRepository {
     const {
       search,
       category,
+      department,
       supplierId,
       stockStatus,
       sortBy = "createdAt",
@@ -115,6 +117,7 @@ export class MaterialRepository extends BaseRepository {
         ],
       }),
       ...(category && { category }),
+      ...(department && { department }),
       ...(supplierId && {
         materialSuppliers: {
           some: {
@@ -241,6 +244,7 @@ export class MaterialRepository extends BaseRepository {
     name: string;
     description?: string;
     category?: string;
+    department?: Department | null;
     unit: string;
     unitCost: number;
     purchaseQuantity?: number;
@@ -320,6 +324,28 @@ export class MaterialRepository extends BaseRepository {
           in: materialIds,
         },
       },
+    });
+    return result;
+  }
+
+  /**
+   * Clear a category from all materials in a store that use it
+   * (sets category to null, removing it from the derived category list)
+   */
+  async clearCategory(storeId: string, category: string): Promise<{ count: number }> {
+    const result = await this.db.material.updateMany({
+      where: { storeId, category },
+      data: { category: null },
+    });
+    return result;
+  }
+
+  /**
+   * Hard delete every material in a store that has a given category
+   */
+  async deleteByCategory(storeId: string, category: string): Promise<{ count: number }> {
+    const result = await this.db.material.deleteMany({
+      where: { storeId, category },
     });
     return result;
   }

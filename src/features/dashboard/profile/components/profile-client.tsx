@@ -6,6 +6,7 @@ import { PersonalInfoCard } from "./personal-info-card";
 import { BusinessInfoCard } from "./business-info-card";
 import { SubscriptionInfoCard } from "./subscription-info-card";
 import { AccountSettingsCard } from "./account-settings-card";
+import { FeesAndTaxesCard } from "./fees-and-taxes-card";
 import { useProfile } from "../hooks/use-profile";
 import type { ProfileData } from "../types";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
@@ -16,9 +17,11 @@ import { useEffect, useRef } from "react";
 interface ProfileClientProps {
   initialProfile: ProfileData;
   isOwner: boolean;
+  storeId?: string;
+  storeName?: string;
 }
 
-export function ProfileClient({ initialProfile, isOwner }: ProfileClientProps) {
+export function ProfileClient({ initialProfile, isOwner, storeId, storeName }: ProfileClientProps) {
   const { t } = useI18n();
   const { data: session, refetch } = useSession();
 
@@ -76,6 +79,12 @@ export function ProfileClient({ initialProfile, isOwner }: ProfileClientProps) {
             onUpdate={undefined}
           />
         </div>
+
+        {storeId && (
+          <div className="animate-slide-up-delayed-3">
+            <FeesAndTaxesCard storeId={storeId} storeName={storeName} />
+          </div>
+        )}
 
         <div className="animate-slide-up-delayed-3">
           <AccountSettingsCard userEmail={profileData.email} />

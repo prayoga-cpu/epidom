@@ -1,10 +1,11 @@
-import { Recipe } from "@prisma/client";
+import { Recipe, Department } from "@prisma/client";
 import {
   recipeRepository,
   RecipeWithIngredients,
   RecipeFilters,
 } from "../repositories/recipe.repository";
 import { materialRepository } from "../repositories/material.repository";
+import type { CategoryDeleteMode } from "@/lib/validation/inventory.schemas";
 
 /**
  * Recipe Service
@@ -38,6 +39,7 @@ export class RecipeService {
     name: string;
     description?: string;
     category?: string;
+    department?: Department | null;
     yieldQuantity: number;
     yieldUnit: string;
     productionTimeMinutes: number;
@@ -84,6 +86,7 @@ export class RecipeService {
       name?: string;
       description?: string;
       category?: string;
+      department?: Department | null;
       yieldQuantity?: number;
       yieldUnit?: string;
       productionTimeMinutes?: number;
@@ -140,6 +143,28 @@ export class RecipeService {
     }
 
     return recipeRepository.bulkDelete(recipeIds);
+  }
+
+  /**
+   * Delete a category
+   * Recipe categories are a fixed preset list (see recipes/utils/category-helpers.ts),
+   * not a separate entity, so "deleting" one only affects recipes that
+   * currently use it. In "uncategorize" mode (default) this clears the
+   * category on every matching recipe (kept, just untagged). In "delete"
+   * mode it hard-deletes every recipe in that category instead.
+   */
+  async deleteCategory(
+    storeId: string,
+    category: string,
+    mode: CategoryDeleteMode = "uncategorize"
+  ): Promise<{ count: number }> {
+    if (!category || !category.trim()) {
+      throw new Error("Category is required");
+    }
+    if (mode === "delete") {
+      return recipeRepository.deleteByCategory(storeId, category);
+    }
+    return recipeRepository.clearCategory(storeId, category);
   }
 
   /**

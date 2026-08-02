@@ -7,6 +7,8 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { Prisma, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
 import { validateAndBuildOrderItems, OrderBuildError } from "@/lib/services/pos-order-builder";
+import { resolveFinanceSettingsForOrder } from "@/lib/services";
+import { computeOrderCharges } from "@/lib/finance/order-charges";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -69,6 +71,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw err;
     }
 
+    // A hold has no chosen payment method yet (paymentMethod: "CASH" below is
+    // an inert placeholder), so the processing fee can't be determined —
+    // force it off. Tax/service charge don't depend on payment method, so
+    // they're still computed for an accurate held total.
+    const financeSettings = await resolveFinanceSettingsForOrder(storeId);
+    const charges = computeOrderCharges({
+      itemsTotal: subtotal,
+      paymentMethod: "CASH",
+      settings: { ...financeSettings, processingFeeEnabled: false },
+    });
+
     // Re-holding an existing held order (resume -> edit -> hold again).
     if (input.orderId) {
       const existing = await prisma.order.findFirst({
@@ -97,8 +110,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             tableNumber: input.tableNumber,
             tableId: input.tableId,
             notes: input.notes,
-            subtotal: new Prisma.Decimal(subtotal),
-            total: new Prisma.Decimal(subtotal),
+            subtotal: new Prisma.Decimal(charges.subtotal),
+            tax: new Prisma.Decimal(charges.tax),
+            total: new Prisma.Decimal(charges.total),
+            serviceCharge: new Prisma.Decimal(charges.serviceCharge),
+            processingFee: new Prisma.Decimal(charges.processingFee),
+            taxRate: new Prisma.Decimal(charges.taxRate),
+            serviceChargeRate: new Prisma.Decimal(charges.serviceChargeRate),
+            processingFeeRate: new Prisma.Decimal(charges.processingFeeRate),
             items: {
               create: orderItems.map((i) => ({
                 menuItemId: i.menuItemId,
@@ -107,6 +126,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 unit: i.unit,
                 unitPrice: new Prisma.Decimal(i.unitPrice),
                 total: new Prisma.Decimal(i.total),
+                notes: i.notes,
+                selectedOptions: i.selectedOptions as Prisma.InputJsonValue | undefined,
                 status: "PENDING",
               })),
             },
@@ -140,10 +161,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           status: "HELD",
           source: "POS",
           notes: input.notes,
-          subtotal: new Prisma.Decimal(subtotal),
-          tax: new Prisma.Decimal(0),
+          subtotal: new Prisma.Decimal(charges.subtotal),
+          tax: new Prisma.Decimal(charges.tax),
           delivery: new Prisma.Decimal(0),
-          total: new Prisma.Decimal(subtotal),
+          total: new Prisma.Decimal(charges.total),
+          serviceCharge: new Prisma.Decimal(charges.serviceCharge),
+          processingFee: new Prisma.Decimal(charges.processingFee),
+          taxRate: new Prisma.Decimal(charges.taxRate),
+          serviceChargeRate: new Prisma.Decimal(charges.serviceChargeRate),
+          processingFeeRate: new Prisma.Decimal(charges.processingFeeRate),
           items: {
             create: orderItems.map((i) => ({
               menuItemId: i.menuItemId,

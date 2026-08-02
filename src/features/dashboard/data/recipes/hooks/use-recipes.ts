@@ -3,6 +3,7 @@ import {
   CreateRecipeFormInput,
   UpdateRecipeFormInput,
   RecipeFilterInput,
+  type CategoryDeleteMode,
 } from "@/lib/validation/inventory.schemas";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateRecipeRelatedQueries } from "@/lib/utils/cache-helpers";
@@ -15,6 +16,7 @@ export interface RecipeWithIngredients {
   name: string;
   description: string | null;
   category: string | null;
+  department: "KITCHEN" | "BAR" | null;
   yieldQuantity: number;
   yieldUnit: string;
   productionTimeMinutes: number;
@@ -82,6 +84,7 @@ async function fetchRecipes(
 
   if (filters.search) params.append("search", filters.search);
   if (filters.category) params.append("category", filters.category);
+  if (filters.department) params.append("department", filters.department);
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
   if (filters.skip !== undefined) params.append("skip", filters.skip.toString());
@@ -205,6 +208,7 @@ async function exportRecipes(storeId: string, filters: RecipeFilterInput): Promi
 
   if (filters.search) params.append("search", filters.search);
   if (filters.category) params.append("category", filters.category);
+  if (filters.department) params.append("department", filters.department);
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
 
@@ -512,6 +516,68 @@ export function useBulkDeleteRecipes(storeId: string) {
       // Non-blocking cache invalidation: Only invalidate recipes immediately
       // Other queries (products, materials) will sync in background
       invalidateRecipeRelatedQueries(queryClient, storeId, false);
+    },
+  });
+}
+
+/**
+ * Delete a category. Recipe categories are a fixed preset list, not a
+ * separate entity, so this affects every recipe that has it: "uncategorize"
+ * (default) clears the tag and keeps the recipes, "delete" removes the
+ * recipes themselves.
+ */
+export function useDeleteRecipeCategory(storeId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      category,
+      mode = "uncategorize",
+    }: {
+      category: string;
+      mode?: CategoryDeleteMode;
+    }) => {
+      const response = await fetch(
+        `/api/stores/${storeId}/recipes/categories/${encodeURIComponent(category)}`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new ApiClientError(errorData, response.status);
+      }
+
+      const responseData = await response.json();
+      return responseData.success === true ? responseData.data : responseData;
+    },
+    onSuccess: (_, { category, mode = "uncategorize" }) => {
+      // Optimistically update all matching cached recipes
+      queryClient.setQueriesData<RecipesResponse>(
+        { queryKey: recipeKeys.lists(storeId), exact: false },
+        (oldData) => {
+          if (!oldData || !oldData.recipes) return oldData;
+          if (mode === "delete") {
+            const remaining = oldData.recipes.filter((r) => r.category !== category);
+            return {
+              ...oldData,
+              recipes: remaining,
+              total: Math.max(0, oldData.total - (oldData.recipes.length - remaining.length)),
+            };
+          }
+          return {
+            ...oldData,
+            recipes: oldData.recipes.map((r) =>
+              r.category === category ? { ...r, category: null } : r
+            ),
+          };
+        }
+      );
+
+      invalidateRecipeRelatedQueries(queryClient, storeId, true);
     },
   });
 }

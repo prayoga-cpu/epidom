@@ -124,6 +124,22 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 100,
     window: 60,
   },
+  "/api/stores/[id]/finance/settings": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/finance/by-category": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/finance/by-department": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/finance/by-shift": {
+    limit: 100,
+    window: 60,
+  },
 
   // Stock operations
   "/api/stores/[id]/stock/adjust": {
@@ -165,6 +181,18 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60,
   },
   "/api/stores/[id]/suppliers/bulk": {
+    limit: 30,
+    window: 60,
+  },
+  "/api/stores/[id]/materials/categories/[category]": {
+    limit: 30,
+    window: 60, // 30 category deletions per minute
+  },
+  "/api/stores/[id]/products/categories/[category]": {
+    limit: 30,
+    window: 60,
+  },
+  "/api/stores/[id]/recipes/categories/[category]": {
     limit: 30,
     window: 60,
   },

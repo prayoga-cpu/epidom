@@ -1,27 +1,24 @@
 # AGENTIC CHECKPOINT
 # Minimal closeout record.
 
-task: "feedback dashboard: ticket detail modal, clickable status filters, Table/Board/Feed views"
+task: "storefront-autosave-and-qr-copy"
 gate: "ok"
-success: "added FeedbackDetailDialog modal, made the 5 stat cards clickable status filters, added type filter + search, and a Table/Board/Feed view switcher (localStorage-persisted) to the admin feedback dashboard; also finished and documented prior uncommitted work (staff active/inactive status, menu item descriptions)"
+success: "Auto-save implemented in storefront settings, QR dialog includes copy URL function, typecheck and lint pass."
 
 evidence:
-  changed_files:
-    - src/features/admin/components/admin-feedback-table.tsx
-    - package.json
-    - src/lib/version.ts
-    - CHANGELOG.md
-    - STATUS.md
-  checks:
-    - pnpm type-check
-    - pnpm lint
-  rollback: "git revert <commit>"
+  changed_files: 
+    - "src/features/storefront/editor/components/storefront-settings.tsx"
+    - "src/components/shared/qr-code-dialog.tsx"
+  checks: 
+    - "pnpm type-check"
+    - "pnpm lint"
+  rollback: "git checkout src/features/storefront/editor/components/storefront-settings.tsx src/components/shared/qr-code-dialog.tsx"
 
 risks:
   sensitive_without_escalation: false
   over_engineering: false
   claim_without_evidence: false
 
-not_verified:
-  - "Interactive browser click-through not performed by the agent (no browser automation tool, no credentials); user confirmed visually in their own running dev server tab."
+not_verified: 
+  - "Visual UI check (requires manual testing of storefront settings UI auto-save)"
 next: "none"

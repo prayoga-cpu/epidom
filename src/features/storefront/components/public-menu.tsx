@@ -24,13 +24,17 @@ import {
   ReceiptText,
 } from "lucide-react";
 import { getPremiumTheme } from "@/lib/utils/color";
+import { formatCurrency } from "@/lib/utils/formatting";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
 import { appendLocalOrder } from "../lib/local-orders";
+import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
 
 interface ModifierOption {
   name: string;
   priceAdd: number;
+  materialId?: string;
+  materialQty?: number;
 }
 
 interface ModifierGroup {
@@ -50,7 +54,37 @@ interface MenuItem {
   isAvailable: boolean;
   isFeatured: boolean;
   modifiers: any; // ModifierGroup[]
+  product?: {
+    optionGroups?: Array<{
+      name: string;
+      isRequired: boolean;
+      maxSelections: number;
+      options: Array<{
+        name: string;
+        priceAdjustment: number | string;
+        materialId?: string | null;
+        materialQty?: number | string | null;
+      }>;
+    }>;
+  } | null;
 }
+
+/** Merges a menu item's own modifiers with its linked product's
+ * material-aware option groups, then converts back to this file's local
+ * {name, priceAdd} shape so the rest of the cart/checkout code below (which
+ * predates the merge) doesn't need to change. */
+const getItemModifierGroups = (item: MenuItem): ModifierGroup[] =>
+  getMergedOptionGroups(item, item.product).map((group) => ({
+    name: group.name,
+    isRequired: group.isRequired,
+    maxSelections: group.maxSelections,
+    options: group.options.map((option) => ({
+      name: option.name,
+      priceAdd: option.priceAdjustment,
+      materialId: option.materialId,
+      materialQty: option.materialQty,
+    })),
+  }));
 
 interface MenuCategory {
   id: string;
@@ -81,6 +115,7 @@ interface CartItem {
     groupName: string;
     options: ModifierOption[];
   }[];
+  notes?: string;
 }
 
 type PaymentMethod =
@@ -241,6 +276,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   const [activeItem, setActiveItem] = useState<MenuItem | null>(null);
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, ModifierOption[]>>({});
   const [itemQuantity, setItemQuantity] = useState(1);
+  const [itemNoteText, setItemNoteText] = useState("");
 
   // Theme variable
   const safeTheme = getPremiumTheme(storefront.themeColor || "#FF6B35");
@@ -256,6 +292,10 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   const allItems = useMemo(() => {
     return menuCategories.flatMap((cat) => cat.items);
   }, [menuCategories]);
+
+  // A storefront has a single owner currency — every item shares it, so the
+  // first item found carries it for cart/subtotal totals that span items.
+  const storeCurrency = allItems[0]?.currency ?? "IDR";
 
   // Filter categories and items based on search and selected tab
   const filteredCategories = useMemo(() => {
@@ -286,24 +326,18 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
   }, [cart]);
 
   // Format currency helper
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
+  const formatPrice = (price: number) => formatCurrency(price, storeCurrency);
 
   // Open item details for customization
   const handleItemClick = (item: MenuItem) => {
     if (!item.isAvailable) return;
     setActiveItem(item);
     setItemQuantity(1);
+    setItemNoteText("");
 
     // Set default empty arrays for modifier selections
     const initialModifiers: Record<string, ModifierOption[]> = {};
-    const modGroups = (item.modifiers as ModifierGroup[]) || [];
+    const modGroups = getItemModifierGroups(item);
     modGroups.forEach((group) => {
       initialModifiers[group.name] = [];
     });
@@ -350,7 +384,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
     if (!activeItem) return;
 
     // Check if required modifiers are selected
-    const modGroups = (activeItem.modifiers as ModifierGroup[]) || [];
+    const modGroups = getItemModifierGroups(activeItem);
     for (const group of modGroups) {
       if (
         group.isRequired &&
@@ -369,7 +403,9 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
         options,
       }));
 
-    // Create a unique key for the cart items (so same item with different modifiers is split)
+    // Create a unique key for the cart items (so same item with different
+    // modifiers OR a different note is split into its own line).
+    const noteText = itemNoteText.trim();
     const modifierKey = formattedModifiers
       .map(
         (g) =>
@@ -380,7 +416,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
       )
       .sort()
       .join("|");
-    const uniqueId = `${activeItem.id}-${modifierKey}`;
+    const uniqueId = `${activeItem.id}-${modifierKey}-note:${noteText}`;
 
     const existingIndex = cart.findIndex((item) => item.uniqueId === uniqueId);
 
@@ -398,6 +434,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
         price: Number(activeItem.price),
         quantity: itemQuantity,
         selectedModifiers: formattedModifiers,
+        notes: noteText || undefined,
       };
       setCart([...cart, newItem]);
     }
@@ -430,17 +467,21 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
     try {
       const formattedItems = cart.map((i) => {
         // Flatten modifiers for API
-        const modifierSelections: Array<{
-          modifierName: string;
+        const selectedOptions: Array<{
+          groupName: string;
           optionName: string;
-          priceAdd: number;
+          priceAdjustment: number;
+          materialId?: string;
+          materialQty?: number;
         }> = [];
         i.selectedModifiers.forEach((group) => {
           group.options.forEach((opt) => {
-            modifierSelections.push({
-              modifierName: group.groupName,
+            selectedOptions.push({
+              groupName: group.groupName,
               optionName: opt.name,
-              priceAdd: opt.priceAdd,
+              priceAdjustment: opt.priceAdd,
+              materialId: opt.materialId,
+              materialQty: opt.materialQty,
             });
           });
         });
@@ -450,7 +491,8 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
           name: i.name,
           quantity: i.quantity,
           unitPrice: i.price,
-          modifierSelections,
+          selectedOptions,
+          notes: i.notes,
         };
       });
 
@@ -874,6 +916,11 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                             .join(", ")}
                         </p>
                       ))}
+                      {item.notes && (
+                        <p className="text-muted-foreground mt-0.5 text-[10px] italic">
+                          “{item.notes}”
+                        </p>
+                      )}
                       <p className="text-foreground mt-1 text-xs font-extrabold">
                         {formatPrice(singleTotal)}
                       </p>
@@ -1250,7 +1297,7 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
 
             {/* Modifiers List */}
             <div className="flex-1 space-y-6 overflow-y-auto p-4">
-              {((activeItem.modifiers as ModifierGroup[]) || []).map((group, groupIdx) => (
+              {getItemModifierGroups(activeItem).map((group, groupIdx) => (
                 <div key={groupIdx} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="text-foreground text-sm font-bold">
@@ -1308,6 +1355,19 @@ export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
                   </div>
                 </div>
               ))}
+
+              <div className="space-y-1.5">
+                <label className="text-muted-foreground pl-1 text-[11px] font-extrabold tracking-widest uppercase">
+                  {t("publicOrder.itemDetail.noteLabel")}
+                </label>
+                <textarea
+                  placeholder={t("publicOrder.itemDetail.notePlaceholder")}
+                  value={itemNoteText}
+                  onChange={(e) => setItemNoteText(e.target.value)}
+                  rows={2}
+                  className="bg-muted/50 border-border focus:bg-card w-full resize-none rounded-xl border p-3 text-sm font-medium transition-all focus:border-transparent focus:ring-2 focus:ring-[var(--store-theme)] focus:outline-none"
+                />
+              </div>
             </div>
 
             {/* Quantity Selector & Add to Cart button */}

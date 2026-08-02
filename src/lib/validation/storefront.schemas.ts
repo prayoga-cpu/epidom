@@ -102,14 +102,23 @@ export const updateMenuCategorySchema = createMenuCategorySchema.partial();
 export type CreateMenuCategoryInput = z.infer<typeof createMenuCategorySchema>;
 export type UpdateMenuCategoryInput = z.infer<typeof updateMenuCategorySchema>;
 
+// Delete mode: "uncategorize" keeps the items and drops them to Uncategorized,
+// "delete" removes the items along with the category.
+export const deleteMenuCategorySchema = z.object({
+  mode: z.enum(["uncategorize", "delete"]).default("uncategorize"),
+});
+
+export type DeleteMenuCategoryInput = z.infer<typeof deleteMenuCategorySchema>;
+
 // MenuItem schema
 export const createMenuItemSchema = z.object({
   name: z.string().min(1, "Item name is required").max(100, "Item name is too long"),
   categoryId: z.string().nullable().optional(),
   productId: z.string().nullable().optional(),
+  department: z.enum(["KITCHEN", "BAR"]).nullable().optional(),
   description: z.string().max(300, "Description is too long").optional().or(z.literal("")),
   price: priceSchema,
-  currency: z.string().default("IDR"),
+  currency: z.string().optional(),
   imageUrl: urlSchema,
   isAvailable: z.boolean().default(true),
   isFeatured: z.boolean().default(false),

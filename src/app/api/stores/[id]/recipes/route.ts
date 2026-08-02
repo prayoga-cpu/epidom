@@ -11,6 +11,7 @@ const createRecipeSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
+  department: z.enum(["KITCHEN", "BAR"]).nullable().optional(),
   yieldQuantity: z.number().positive("Yield quantity must be positive"),
   yieldUnit: z.string().min(1, "Yield unit is required").max(20, "Yield unit is too long"),
   productionTimeMinutes: z.number().int().nonnegative("Production time must be non-negative"),
@@ -31,6 +32,7 @@ const createRecipeSchema = z.object({
 const recipeFilterSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
+  department: z.enum(["KITCHEN", "BAR"]).optional(),
   sortBy: z
     .enum(["name", "category", "productionTimeMinutes", "costPerBatch", "createdAt", "updatedAt"])
     .default("createdAt"),
@@ -50,6 +52,7 @@ export const GET = withApiHandler(
     const filterParams = {
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
+      department: searchParams.get("department") || undefined,
       sortBy: searchParams.get("sortBy") || "createdAt",
       sortOrder: searchParams.get("sortOrder") || "desc",
       skip: searchParams.get("skip") || "0",

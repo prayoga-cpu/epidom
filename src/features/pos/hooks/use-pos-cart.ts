@@ -2,12 +2,30 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartItem, CartModifier } from "../types/pos.types";
 import { nanoid } from "@/lib/utils/nanoid";
+import { computeOrderCharges, type ResolvedFinanceSettings } from "@/lib/finance/order-charges";
+
+const DEFAULT_FINANCE_SETTINGS: ResolvedFinanceSettings = {
+  taxEnabled: false,
+  taxRate: 0,
+  taxInclusive: true,
+  serviceChargeEnabled: false,
+  serviceChargeRate: 0,
+  processingFeeEnabled: false,
+  processingFeeOverrides: null,
+};
 
 interface PosCartState {
   items: CartItem[];
   subtotal: number;
   tax: number;
+  serviceCharge: number;
   total: number;
+  /** The store's resolved tax/service-charge settings — set once by the POS
+   * shell after fetching them, so the cart preview matches what the server
+   * will actually freeze onto the order. Payment method (and therefore the
+   * processing fee) isn't known yet at cart-building time and doesn't affect
+   * the total the customer pays, so it's never part of this preview. */
+  financeSettings: ResolvedFinanceSettings;
   /** Set while the cart holds a resumed HELD order — cleared by clearCart(). */
   resumingOrderId: string | null;
   addItem: (
@@ -16,12 +34,18 @@ interface PosCartState {
     unitPrice: number,
     quantity?: number,
     modifiers?: CartModifier[],
-    imageUrl?: string | null
+    imageUrl?: string | null,
+    notes?: string
   ) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
+  /** Reconfigure an existing line's modifiers/note in place (edit affordance
+   * in the cart) without the remove+re-add that addItem's merge-by-identity
+   * would otherwise require. */
+  updateItemOptions: (id: string, modifiers: CartModifier[], notes?: string) => void;
   clearCart: () => void;
   setResumingOrderId: (id: string | null) => void;
+  setFinanceSettings: (settings: ResolvedFinanceSettings) => void;
   /**
    * Loads items reconstructed from a HELD order directly, bypassing
    * addItem()'s same-menuItem+modifiers merge — resumed items always carry
@@ -32,11 +56,21 @@ interface PosCartState {
   hydrateFromOrder: (items: CartItem[], resumingOrderId: string) => void;
 }
 
-const calculateTotals = (items: CartItem[]) => {
-  const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
-  const tax = 0; // Configurable per store later
-  const total = subtotal + tax;
-  return { subtotal, tax, total };
+const calculateTotals = (items: CartItem[], settings: ResolvedFinanceSettings) => {
+  const itemsTotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
+  // Payment method isn't chosen yet — processing fee never affects the cart
+  // total (the merchant absorbs it), so it's forced off here.
+  const charges = computeOrderCharges({
+    itemsTotal,
+    paymentMethod: "CASH",
+    settings: { ...settings, processingFeeEnabled: false },
+  });
+  return {
+    subtotal: charges.subtotal,
+    tax: charges.tax,
+    serviceCharge: charges.serviceCharge,
+    total: charges.total,
+  };
 };
 
 export const usePosCart = create<PosCartState>()(
@@ -45,16 +79,22 @@ export const usePosCart = create<PosCartState>()(
       items: [] as CartItem[],
       subtotal: 0,
       tax: 0,
+      serviceCharge: 0,
       total: 0,
+      financeSettings: DEFAULT_FINANCE_SETTINGS,
       resumingOrderId: null as string | null,
 
-      addItem: (menuItemId, name, unitPrice, quantity = 1, modifiers = [], imageUrl) => {
-        const { items } = get();
+      addItem: (menuItemId, name, unitPrice, quantity = 1, modifiers = [], imageUrl, notes) => {
+        const { items, financeSettings } = get();
 
-        // Check if identical item (same ID and modifiers) already exists
+        // Check if identical item (same ID, modifiers, and note) already
+        // exists — a different note makes it a distinct line even if the
+        // modifiers match, since it carries its own special instruction.
         const existingItemIndex = items.findIndex(
           (i: any) =>
-            i.menuItemId === menuItemId && JSON.stringify(i.modifiers) === JSON.stringify(modifiers)
+            i.menuItemId === menuItemId &&
+            JSON.stringify(i.modifiers) === JSON.stringify(modifiers) &&
+            (i.notes || "") === (notes || "")
         );
 
         let newItems;
@@ -63,7 +103,10 @@ export const usePosCart = create<PosCartState>()(
           newItems = [...items];
           const item = newItems[existingItemIndex];
           const newQuantity = item.quantity + quantity;
-          const modifierTotal = item.modifiers.reduce((sum: number, m: any) => sum + m.priceAdd, 0);
+          const modifierTotal = item.modifiers.reduce(
+            (sum: number, m: any) => sum + m.priceAdjustment,
+            0
+          );
           newItems[existingItemIndex] = {
             ...item,
             quantity: newQuantity,
@@ -71,7 +114,7 @@ export const usePosCart = create<PosCartState>()(
           };
         } else {
           // Add new item
-          const modifierTotal = modifiers.reduce((sum: number, m: any) => sum + m.priceAdd, 0);
+          const modifierTotal = modifiers.reduce((sum: number, m: any) => sum + m.priceAdjustment, 0);
           const lineTotal = (unitPrice + modifierTotal) * quantity;
           newItems = [
             ...items,
@@ -82,20 +125,21 @@ export const usePosCart = create<PosCartState>()(
               unitPrice,
               quantity,
               modifiers,
+              notes,
               lineTotal,
               imageUrl,
             },
           ];
         }
 
-        const totals = calculateTotals(newItems);
+        const totals = calculateTotals(newItems, financeSettings);
         set({ items: newItems, ...totals });
       },
 
       removeItem: (id: string) => {
-        const { items } = get();
+        const { items, financeSettings } = get();
         const newItems = items.filter((i: any) => i.id !== id);
-        const totals = calculateTotals(newItems);
+        const totals = calculateTotals(newItems, financeSettings);
         set({ items: newItems, ...totals });
       },
 
@@ -105,11 +149,11 @@ export const usePosCart = create<PosCartState>()(
           return;
         }
 
-        const { items } = get();
+        const { items, financeSettings } = get();
         const newItems = items.map((item: any) => {
           if (item.id === id) {
             const modifierTotal = item.modifiers.reduce(
-              (sum: number, m: any) => sum + m.priceAdd,
+              (sum: number, m: any) => sum + m.priceAdjustment,
               0
             );
             return {
@@ -121,20 +165,43 @@ export const usePosCart = create<PosCartState>()(
           return item;
         });
 
-        const totals = calculateTotals(newItems);
+        const totals = calculateTotals(newItems, financeSettings);
+        set({ items: newItems, ...totals });
+      },
+
+      updateItemOptions: (id: string, modifiers: CartModifier[], notes?: string) => {
+        const { items, financeSettings } = get();
+        const newItems = items.map((item: any) => {
+          if (item.id !== id) return item;
+          const modifierTotal = modifiers.reduce((sum: number, m: any) => sum + m.priceAdjustment, 0);
+          return {
+            ...item,
+            modifiers,
+            notes,
+            lineTotal: (item.unitPrice + modifierTotal) * item.quantity,
+          };
+        });
+        const totals = calculateTotals(newItems, financeSettings);
         set({ items: newItems, ...totals });
       },
 
       clearCart: () => {
-        set({ items: [], subtotal: 0, tax: 0, total: 0, resumingOrderId: null });
+        set({ items: [], subtotal: 0, tax: 0, serviceCharge: 0, total: 0, resumingOrderId: null });
       },
 
       setResumingOrderId: (id: string | null) => {
         set({ resumingOrderId: id });
       },
 
+      setFinanceSettings: (settings: ResolvedFinanceSettings) => {
+        const { items } = get();
+        const totals = calculateTotals(items, settings);
+        set({ financeSettings: settings, ...totals });
+      },
+
       hydrateFromOrder: (items: CartItem[], resumingOrderId: string) => {
-        const totals = calculateTotals(items);
+        const { financeSettings } = get();
+        const totals = calculateTotals(items, financeSettings);
         set({ items, resumingOrderId, ...totals });
       },
     }),

@@ -1654,6 +1654,11 @@ export const fr = {
       clear: "Tout effacer",
       items: "articles",
     },
+    options: {
+      dialogDesc: "Choisissez les options pour cet article",
+      addToCart: "Ajouter au panier",
+      notesPlaceholder: "ex : sans glace, serviettes en plus...",
+    },
     checkout: {
       orderType: "Type de Commande",
       title: "Confirmer le Paiement",
@@ -2267,6 +2272,7 @@ export const fr = {
         basicInfo: "Informations de Base",
         pricing: "Tarification",
         stockManagement: "Gestion des Stocks",
+        options: "Options",
       },
 
       // Form fields
@@ -2320,6 +2326,24 @@ export const fr = {
         box: "Boîte",
         kg: "Kilogramme",
         g: "Gramme",
+      },
+
+      // Groupes d'options produit (variantes comme Taille ou Niveau de sucre)
+      options: {
+        description:
+          "Variantes comme Taille ou Niveau de sucre. Liez une option à une Matière première pour déduire le stock avec précision lorsqu'elle est choisie.",
+        groupNamePlaceholder: "ex : Taille",
+        required: "Obligatoire",
+        maxSelections: "Sélections max",
+        optionNameLabel: "Nom de l'option",
+        optionNamePlaceholder: "ex : Grand",
+        priceAddOnLabel: "Supplément de prix",
+        linkMaterialLabel: "Matière première",
+        linkMaterial: "Lier une matière première",
+        noMaterial: "Aucun impact sur le stock",
+        stockReductionLabel: "Quantité de stock déduite",
+        addOption: "Ajouter une option",
+        addGroup: "Ajouter un groupe d'options",
       },
 
       // Pricing suggestions
@@ -5020,6 +5044,8 @@ export const fr = {
       addToCart: "Ajouter au panier",
       addToCartShort: "Ajouter au panier",
       selectOptionAlert: "Veuillez sélectionner une option pour",
+      noteLabel: "Note",
+      notePlaceholder: "ex : sans glace, serviettes en plus...",
     },
     myOrders: {
       title: "Mes commandes",
@@ -5155,6 +5181,10 @@ export const fr = {
       itemPrice: "Prix de vente",
       saveItem: "Enregistrer l'article",
       itemAddFailed: "Échec de l'ajout de l'article",
+      modifiers: "Modificateurs",
+      modifiersDesc: "Options supplémentaires comme le niveau de glace, facturées par option.",
+      inheritsProductOptions:
+        "Cet article est lié à un produit — ses groupes d'options apparaissent automatiquement en caisse/boutique, en plus des modificateurs ci-dessous.",
     },
     analytics: {
       totalVisitors: "Visiteurs totaux",

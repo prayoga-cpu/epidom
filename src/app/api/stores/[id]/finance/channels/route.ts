@@ -10,6 +10,7 @@ import { withApiHandler } from "@/lib/api-handler";
 import { OrderSource } from "@prisma/client";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { commissionRate, AGGREGATOR_LABELS } from "@/config/aggregator.config";
+import { shiftFilter } from "@/lib/finance/report-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export const GET = withApiHandler(
       searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     );
     const to = new Date(searchParams.get("to") ?? now.toISOString());
+    const shiftWhere = shiftFilter(searchParams);
 
     const grouped = await prisma.order.groupBy({
       by: ["source"],
@@ -38,16 +40,36 @@ export const GET = withApiHandler(
         storeId,
         status: { notIn: NON_REVENUE_STATUSES },
         orderDate: { gte: from, lte: to },
+        ...shiftWhere,
       },
-      _sum: { total: true },
+      _sum: { total: true, tax: true },
       _count: { id: true },
     });
 
+    // Processing fee only accrues on orders that were actually charged.
+    const feeGrouped = await prisma.order.groupBy({
+      by: ["source"],
+      where: {
+        storeId,
+        status: { notIn: NON_REVENUE_STATUSES },
+        paymentStatus: "PAID",
+        orderDate: { gte: from, lte: to },
+        ...shiftWhere,
+      },
+      _sum: { processingFee: true },
+    });
+    const feeBySource = new Map(
+      feeGrouped.map((g) => [g.source, Number(g._sum.processingFee ?? 0)])
+    );
+
     const channels = grouped.map((g) => {
       const revenue = Number(g._sum.total ?? 0);
+      const taxAmount = Math.round(Number(g._sum.tax ?? 0) * 100) / 100;
+      const processingFeeAmount = Math.round((feeBySource.get(g.source) ?? 0) * 100) / 100;
       const commission = commissionRate(g.source);
       const commissionAmount = Math.round(revenue * commission * 100) / 100;
-      const netRevenue = Math.round((revenue - commissionAmount) * 100) / 100;
+      const netRevenue =
+        Math.round((revenue - commissionAmount - processingFeeAmount - taxAmount) * 100) / 100;
       return {
         source: g.source,
         label: SOURCE_LABELS[g.source] ?? g.source,
@@ -55,6 +77,8 @@ export const GET = withApiHandler(
         revenue: Math.round(revenue * 100) / 100,
         commissionPct: commission * 100,
         commissionAmount,
+        taxAmount,
+        processingFeeAmount,
         netRevenue,
       };
     });

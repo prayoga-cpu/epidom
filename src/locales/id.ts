@@ -58,6 +58,10 @@ export const id = {
     stock: "Stok",
     cost: "Biaya",
     category: "Kategori",
+    department: "Departemen",
+    departmentKitchen: "Dapur",
+    departmentBar: "Bar",
+    departmentUnassigned: "Belum Ditentukan",
     recipe: "Resep",
     price: "Harga",
     profit: "Untung",
@@ -88,9 +92,11 @@ export const id = {
       to: "Sampai",
       presets: {
         today: "Hari ini",
+        yesterday: "Kemarin",
         last7Days: "7 hari terakhir",
         last30Days: "30 hari terakhir",
         last90Days: "90 hari terakhir",
+        thisMonth: "Bulan ini",
         thisYear: "Tahun ini",
         custom: "Kustom",
       },
@@ -169,6 +175,7 @@ export const id = {
       page: "Halaman",
     },
     loading: "Memuat...",
+    method: "Metode",
     goHome: "Kembali ke Beranda",
     needHelp: "Butuh bantuan?",
     contactSupport: "Hubungi Dukungan",
@@ -1485,6 +1492,21 @@ export const id = {
     financeQtySold: "Qty Terjual",
     financePeriod: "Periode",
     financeSummarySheet: "Ringkasan",
+    financeTax: "Pajak",
+    financeServiceCharge: "Biaya Layanan",
+    financeProcessingFee: "Biaya Proses Pembayaran",
+    financeNetProfit: "Laba Bersih",
+    financeByCategory: "Per Kategori",
+    financeByShift: "Per Shift",
+    financeCategory: "Kategori",
+    financeStaff: "Staf",
+    financeCashier: "Kasir",
+    financeUncategorized: "Tanpa Kategori",
+    financeUnassigned: "Tanpa Shift",
+    financeShiftPeriod: "Buka → Tutup",
+    financeShiftStatusOpen: "Berjalan",
+    financeShiftStatusClosed: "Selesai",
+    financeDepartmentSplit: "Rincian Departemen",
     ownerTitle: "Owner Dashboard",
     ownerDesc: "Ringkasan semua toko dalam bisnis Anda",
     ownerTotalRevenue: "Total Pendapatan",
@@ -1533,6 +1555,7 @@ export const id = {
       anonymousOrders: "Pesanan Anonim",
       revenueTrend: "Tren Pendapatan",
       ordersByStatus: "Pesanan per Status",
+      departmentSplit: "Rincian Departemen",
       topProducts: "Produk Terlaris",
       topCustomers: "Pelanggan Teratas",
       noData: "Tidak ada data untuk periode ini",
@@ -1559,6 +1582,14 @@ export const id = {
       stockLevel: "Tingkat Stok",
       current: "Saat Ini",
       unknownMaterial: "Bahan Mentah Tidak Dikenal",
+    },
+    newOrders: {
+      title: "Pesanan Baru",
+      description: "Pesanan menunggu konfirmasi",
+      empty: "Tidak ada pesanan baru — semua sudah diproses",
+      pendingCount: "{count} pesanan menunggu konfirmasi",
+      pendingWithStorefront: "{count} pesanan menunggu ({storefrontCount} dari storefront)",
+      viewQueue: "Antrean Pesanan",
     },
     trackingCard: {
       title: "Tingkat Stok",
@@ -1773,6 +1804,22 @@ export const id = {
           "Apakah Anda yakin ingin menghapus {count} bahan mentah? Tindakan ini tidak dapat dibatalkan.",
       },
       deletedMaterial: "Bahan Mentah Dihapus",
+      manageCategories: {
+        button: "Kelola Kategori",
+        title: "Kelola Kategori",
+        description:
+          "Hapus kategori untuk menghapusnya dari semua bahan mentah yang menggunakannya, atau hapus bahan mentah dalam kategori tersebut sepenuhnya.",
+        empty: "Belum ada kategori.",
+        itemCount: "{count} bahan",
+        confirmTitle: 'Hapus kategori "{category}"?',
+        uncategorizeLabel: "Pindahkan ke Tanpa Kategori",
+        uncategorizeDescription: "Simpan {count} bahan mentah — hanya hapus label kategorinya.",
+        deleteLabel: "Hapus semua bahan dalam kategori ini",
+        deleteDescription:
+          "Hapus permanen {count} bahan mentah dalam kategori ini. Tindakan ini tidak dapat dibatalkan.",
+        deleted: "Kategori dihapus",
+        deleteFailed: "Gagal menghapus kategori",
+      },
     },
 
     // Recipes section
@@ -1978,6 +2025,22 @@ export const id = {
         description:
           "Apakah Anda yakin ingin menghapus {count} resep? Tindakan ini tidak dapat dibatalkan.",
       },
+      manageCategories: {
+        button: "Kelola Kategori",
+        title: "Kelola Kategori",
+        description:
+          "Hapus kategori untuk menghapusnya dari semua resep yang menggunakannya, atau hapus resep dalam kategori tersebut sepenuhnya.",
+        empty: "Belum ada kategori.",
+        itemCount: "{count} resep",
+        confirmTitle: 'Hapus kategori "{category}"?',
+        uncategorizeLabel: "Pindahkan ke Tanpa Kategori",
+        uncategorizeDescription: "Simpan {count} resep — hanya hapus label kategorinya.",
+        deleteLabel: "Hapus semua resep dalam kategori ini",
+        deleteDescription:
+          "Hapus permanen {count} resep dalam kategori ini. Tindakan ini tidak dapat dibatalkan.",
+        deleted: "Kategori dihapus",
+        deleteFailed: "Gagal menghapus kategori",
+      },
       noDescription: "Tidak ada deskripsi yang disediakan",
 
       // Details section
@@ -2038,6 +2101,7 @@ export const id = {
         basicInfo: "Informasi Dasar",
         pricing: "Harga",
         stockManagement: "Manajemen Stok",
+        options: "Opsi",
       },
 
       // Form fields
@@ -2097,6 +2161,24 @@ export const id = {
         box: "Kotak",
         kg: "Kilogram",
         g: "Gram",
+      },
+
+      // Grup opsi produk (varian seperti Ukuran atau Level Gula)
+      options: {
+        description:
+          "Varian seperti Ukuran atau Level Gula. Hubungkan opsi ke Bahan Baku agar stok berkurang secara akurat saat opsi tersebut dipilih.",
+        groupNamePlaceholder: "contoh: Ukuran",
+        required: "Wajib",
+        maxSelections: "Maks. pilihan",
+        optionNameLabel: "Nama opsi",
+        optionNamePlaceholder: "contoh: Besar",
+        priceAddOnLabel: "Tambahan harga",
+        linkMaterialLabel: "Bahan baku",
+        linkMaterial: "Hubungkan bahan baku",
+        noMaterial: "Tanpa dampak stok",
+        stockReductionLabel: "Jumlah pengurangan stok",
+        addOption: "Tambah opsi",
+        addGroup: "Tambah grup opsi",
       },
 
       // Pricing suggestions
@@ -2170,6 +2252,22 @@ export const id = {
         title: "Hapus Beberapa Produk",
         description:
           "Apakah Anda yakin ingin menghapus {count} produk? Tindakan ini tidak dapat dibatalkan.",
+      },
+      manageCategories: {
+        button: "Kelola Kategori",
+        title: "Kelola Kategori",
+        description:
+          "Hapus kategori untuk menghapusnya dari semua produk yang menggunakannya, atau hapus produk dalam kategori tersebut sepenuhnya.",
+        empty: "Belum ada kategori.",
+        itemCount: "{count} produk",
+        confirmTitle: 'Hapus kategori "{category}"?',
+        uncategorizeLabel: "Pindahkan ke Tanpa Kategori",
+        uncategorizeDescription: "Simpan {count} produk — hanya hapus label kategorinya.",
+        deleteLabel: "Hapus semua produk dalam kategori ini",
+        deleteDescription:
+          "Hapus permanen {count} produk dalam kategori ini. Tindakan ini tidak dapat dibatalkan.",
+        deleted: "Kategori dihapus",
+        deleteFailed: "Gagal menghapus kategori",
       },
       limitReached: {
         title: "Batas Produk Tercapai",
@@ -2302,6 +2400,8 @@ export const id = {
     critical: "Kritis",
     overstocked: "Stok Berlebih",
     allCategories: "Semua Kategori",
+    allDepartments: "Semua Departemen",
+    allStaff: "Semua Staf",
     allTerms: "Semua Syarat",
     allRatings: "Semua Penilaian",
     allTypes: "Semua Tipe",
@@ -2635,6 +2735,37 @@ export const id = {
       addBusinessInfo: "Tambahkan Informasi Bisnis",
     },
 
+    // Biaya & Pajak
+    feesAndTaxes: {
+      title: "Biaya & Pajak",
+      enabled: "Aktif",
+      disabled: "Nonaktif",
+      notConfigured: "Belum diatur",
+      appliesToNewOrdersOnly: "Perubahan hanya berlaku untuk pesanan baru.",
+      tax: {
+        enabled: "Pajak",
+        rate: "Tarif Pajak",
+        label: "Label Pajak",
+        mode: "Mode Pajak",
+        inclusive: "Sudah termasuk dalam harga menu",
+        exclusive: "Ditambahkan di atas harga menu",
+      },
+      serviceCharge: {
+        enabled: "Biaya Layanan",
+        rate: "Tarif Biaya Layanan",
+      },
+      processingFee: {
+        title: "Biaya Proses Pembayaran",
+        enabled: "Biaya Proses Pembayaran",
+        perMethod: "{count} metode pembayaran dikonfigurasi",
+        percent: "Persen (%)",
+        flat: "Tetap (Rp)",
+        resetDefaults: "Kembalikan ke Default",
+        estimateDisclaimer:
+          "Perkiraan berdasarkan tarif yang Anda atur — bukan rekonsiliasi langsung dengan Xendit/Stripe.",
+      },
+    },
+
     // Langganan
     subscription: {
       title: "Langganan",
@@ -2743,6 +2874,9 @@ export const id = {
       editBusinessInfo: "Edit Informasi Bisnis",
       editBusinessInfoDescription: "Perbarui informasi kontak dan detail bisnis Anda",
       addBusinessInfoDescription: "Tambahkan informasi bisnis Anda untuk melengkapi profil",
+      editFeesAndTaxes: "Edit Biaya & Pajak",
+      editFeesAndTaxesDescription:
+        "Atur tarif pajak, biaya layanan, dan biaya proses pembayaran untuk toko ini",
       editAvatar: "Edit Foto Profil",
       editAvatarDescription: "Unggah foto profil baru atau hapus foto yang ada.",
       cropAvatarDescription: "Potong dan sesuaikan foto profil Anda.",
@@ -2779,6 +2913,8 @@ export const id = {
     errors: {
       updateFailed: "Gagal memperbarui profil. Silakan coba lagi.",
       businessUpdateFailed: "Gagal memperbarui informasi bisnis. Silakan coba lagi.",
+      feesAndTaxesUpdateFailed: "Gagal memperbarui biaya & pajak. Silakan coba lagi.",
+      feesAndTaxesLoadFailed: "Gagal memuat pengaturan biaya & pajak.",
       loadImageFailed: "Gagal memuat gambar",
       uploadFailed: "Gagal mengunggah",
     },
@@ -2796,6 +2932,10 @@ export const id = {
       businessCreated: {
         title: "Info Bisnis Ditambahkan",
         description: "Informasi bisnis berhasil ditambahkan.",
+      },
+      feesAndTaxesUpdated: {
+        title: "Biaya & Pajak Diperbarui",
+        description: "Pengaturan biaya & pajak berhasil disimpan.",
       },
       avatarUpdated: {
         title: "Avatar Diperbarui",
@@ -4350,6 +4490,8 @@ export const id = {
       addToCart: "Tambahkan ke Keranjang",
       addToCartShort: "Masukkan Keranjang",
       selectOptionAlert: "Silakan pilih salah satu opsi untuk",
+      noteLabel: "Catatan",
+      notePlaceholder: "contoh: tanpa es, tambah tisu...",
     },
     myOrders: {
       title: "Pesanan Saya",
@@ -4420,12 +4562,18 @@ export const id = {
       emptyDesc: "Ketuk item di menu untuk menambahkan ke pesanan",
       subtotal: "Subtotal",
       tax: "Pajak",
+      serviceCharge: "Biaya Layanan",
       total: "Total",
       pay: "Bayar",
       clear: "Hapus Semua",
       items: "item",
       hold: "Tahan pesanan",
       holdOffline: "Tidak bisa menahan pesanan saat offline",
+    },
+    options: {
+      dialogDesc: "Pilih opsi untuk item ini",
+      addToCart: "Tambah ke keranjang",
+      notesPlaceholder: "contoh: tanpa es, tambah tisu...",
     },
     checkout: {
       title: "Konfirmasi Pembayaran",
@@ -4574,7 +4722,7 @@ export const id = {
       holdSuccess: "Pesanan ditahan",
       holdFailed: "Gagal menahan pesanan",
       resumedBanner:
-        "Dilanjutkan dari pesanan yang ditahan — modifier tidak dapat dipulihkan dan harga mengikuti tarif menu saat ini. Mohon periksa kembali item sebelum menagih.",
+        "Dilanjutkan dari pesanan yang ditahan — harga mengikuti tarif menu saat ini. Mohon periksa kembali item sebelum menagih.",
     },
     hold: {
       title: "Tahan pesanan",
@@ -5197,7 +5345,12 @@ export const id = {
       addCategory: "Tambah Kategori",
       addCategoryPlaceholder: "Nama Kategori Baru (Cth: Minuman Dingin)",
       addItem: "Tambah Menu",
-      deleteConfirm: "Hapus kategori ini dan semua menunya?",
+      deleteConfirm: 'Hapus kategori "{category}"?',
+      deleteMoveLabel: "Pindahkan ke Tanpa Kategori",
+      deleteMoveDescription: "Simpan {count} menu — hanya hapus label kategorinya.",
+      deleteItemsLabel: "Hapus semua menu dalam kategori ini",
+      deleteItemsDescription:
+        "Hapus permanen {count} menu dalam kategori ini. Tindakan ini tidak dapat dibatalkan.",
       categoryAdded: "Kategori ditambahkan",
       categoryAddFailed: "Gagal menambahkan kategori",
       categoryDeleted: "Kategori dihapus",
@@ -5228,6 +5381,10 @@ export const id = {
       itemDeleteFailed: "Gagal menghapus menu",
       freeHint:
         "Pengunjung bisa melihat menu ini — tingkatkan ke POS untuk menerima pesanan online dan menjualnya lewat Kasir POS.",
+      modifiers: "Modifier",
+      modifiersDesc: "Tambahan opsional seperti Level Es, dengan harga per opsi.",
+      inheritsProductOptions:
+        "Menu ini tertaut ke produk — grup opsi produknya otomatis muncul di POS/Storefront, selain modifier di bawah ini.",
     },
     analytics: {
       totalVisitors: "Total Pengunjung",

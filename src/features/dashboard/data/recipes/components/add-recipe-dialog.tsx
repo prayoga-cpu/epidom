@@ -457,6 +457,32 @@ export function AddRecipeDialog({ trigger }: AddRecipeDialogProps) {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem className="space-y-0.5">
+                      <FormLabel className="text-sm">{t("common.department")}</FormLabel>
+                      <Select
+                        value={field.value ?? "none"}
+                        onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">—</SelectItem>
+                          <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
+                          <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="grid items-start gap-1.5 sm:grid-cols-2">
                   <FormField
                     control={form.control}

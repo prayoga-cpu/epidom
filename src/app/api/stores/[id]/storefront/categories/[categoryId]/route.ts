@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { storefrontService } from "@/lib/services";
-import { updateMenuCategorySchema } from "@/lib/validation/storefront.schemas";
+import {
+  updateMenuCategorySchema,
+  deleteMenuCategorySchema,
+} from "@/lib/validation/storefront.schemas";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 
@@ -28,15 +31,20 @@ export const PATCH = withApiHandler(
 /**
  * DELETE /api/stores/[id]/storefront/categories/[categoryId]
  *
- * Delete a menu category.
+ * Delete a menu category. Request body: { mode?: "uncategorize" | "delete" }.
+ * "uncategorize" (default) keeps the category's items, moving them to
+ * Uncategorized. "delete" removes the items along with the category.
  */
 export const DELETE = withApiHandler(
   async (request, { storeId, params }) => {
     const { categoryId } = params;
     const storefront = await storefrontService.getStorefrontByStoreId(storeId!);
 
-    await storefrontService.deleteMenuCategory(categoryId, storefront.id);
-    return NextResponse.json(createSuccessResponse({ success: true }));
+    const body = await request.json().catch(() => ({}));
+    const { mode } = deleteMenuCategorySchema.parse(body);
+
+    await storefrontService.deleteMenuCategory(categoryId, storefront.id, mode);
+    return NextResponse.json(createSuccessResponse({ success: true, mode }));
   },
   {
     requireStoreAuth: true,

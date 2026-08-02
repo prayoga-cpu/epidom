@@ -6,13 +6,18 @@ import { ShoppingBag, Trash2, Pause, Info, X } from "lucide-react";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { PosCartItem } from "./pos-cart-item";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PosCheckoutDialog } from "./pos-checkout-dialog";
 import { PosHoldDialog, type HoldFormValues } from "./pos-hold-dialog";
 import { usePosSession } from "../hooks/use-pos-session";
 import { useHoldOrder } from "../hooks/use-hold-order";
 import { ApiClientError } from "@/lib/api/client";
 import { toast } from "sonner";
+import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
+import { usePosMenu } from "../hooks/use-pos-menu";
+import { MenuItemOptionsDialog } from "@/components/shared/menu-item-options-dialog";
+import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
+import type { CartItem } from "../types/pos.types";
 
 interface PosCartProps {
   storeId: string;
@@ -33,6 +38,35 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isHoldOpen, setIsHoldOpen] = useState(false);
   const holdOrder = useHoldOrder(storeId);
+  const { data: financeSettings } = useFinanceSettings(storeId);
+  // Shares the same query cache as pos-shell.tsx's usePosMenu call — used
+  // here only to look up a cart line's option groups when the cashier taps
+  // the edit affordance to reconfigure it in place.
+  const { data: menuData } = usePosMenu(storeId);
+  const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  const editingMenuItem = editingItem
+    ? menuData?.categories
+        .flatMap((c: any) => c.items)
+        .find((i: any) => i.id === editingItem.menuItemId)
+    : null;
+
+  // Keep the cart preview in sync with the store's real tax/service-charge
+  // settings, so what the cashier sees matches what the server will freeze
+  // onto the order.
+  useEffect(() => {
+    if (financeSettings) {
+      cart.setFinanceSettings({
+        taxEnabled: financeSettings.taxEnabled,
+        taxRate: financeSettings.taxRate,
+        taxInclusive: financeSettings.taxInclusive,
+        serviceChargeEnabled: financeSettings.serviceChargeEnabled,
+        serviceChargeRate: financeSettings.serviceChargeRate,
+        processingFeeEnabled: false,
+        processingFeeOverrides: null,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [financeSettings]);
 
   const totalItems = cart.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
 
@@ -138,6 +172,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
               item={item}
               onUpdateQuantity={cart.updateQuantity}
               onRemove={cart.removeItem}
+              onEdit={setEditingItem}
             />
           ))}
         </div>
@@ -155,6 +190,12 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
             <span className="text-muted-foreground">{t("pos.cart.subtotal")}</span>
             <span>{formatPrice(cart.subtotal)}</span>
           </div>
+          {cart.serviceCharge > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t("pos.cart.serviceCharge")}</span>
+              <span>{formatPrice(cart.serviceCharge)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("pos.cart.tax")}</span>
             <span>{formatPrice(cart.tax)}</span>
@@ -214,6 +255,22 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
         onSubmit={handleHoldSubmit}
         isSubmitting={holdOrder.isPending}
       />
+
+      {editingItem && (
+        <MenuItemOptionsDialog
+          open={!!editingItem}
+          onOpenChange={(open) => !open && setEditingItem(null)}
+          itemName={editingItem.name}
+          groups={getMergedOptionGroups(editingMenuItem, editingMenuItem?.product)}
+          initialSelected={editingItem.modifiers}
+          initialNotes={editingItem.notes}
+          formatPrice={formatPrice}
+          onConfirm={({ selectedOptions, notes }) => {
+            cart.updateItemOptions(editingItem.id, selectedOptions, notes);
+            setEditingItem(null);
+          }}
+        />
+      )}
     </div>
   );
 }

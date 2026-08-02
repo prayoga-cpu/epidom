@@ -32,10 +32,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, X, Link2, Link2Off } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import type { Product, RecipeProduct, Recipe } from "@prisma/client";
+import type {
+  Product,
+  RecipeProduct,
+  Recipe,
+  ProductOptionGroup,
+  ProductOption,
+} from "@prisma/client";
 
 type ProductWithRecipes = Product & {
   recipeProducts?: Array<RecipeProduct & { recipe: Recipe }>;
+  optionGroups?: Array<ProductOptionGroup & { options: ProductOption[] }>;
 };
 import { useI18n } from "@/components/lang/i18n-provider";
 import {
@@ -51,6 +58,8 @@ import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useSkuAvailability } from "@/hooks/use-sku-availability";
 import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
+import { OptionGroupsEditor } from "@/components/shared/option-groups-editor";
+import type { ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
 
 // Helper function to create product schema with translated messages
 // Note: Number fields allow undefined in form state (for better UX - can clear field),
@@ -61,6 +70,7 @@ function createProductSchema(t: (key: string) => string) {
     sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
+    department: z.enum(["KITCHEN", "BAR"]).optional(),
     retailPrice: z.union([
       z.number().positive(t("common.validation.pricePositive")),
       z.undefined(),
@@ -112,6 +122,9 @@ export function EditProductDialog({
   const [manualCostPrice, setManualCostPrice] = useState(false);
   // "keep" = keep current | "none" = unlink | "<itemId>" = link to that item
   const [menuItemReassign, setMenuItemReassign] = useState<string>("keep");
+  // Controlled outside react-hook-form (like menuItemReassign above) since
+  // OptionGroupsEditor is a plain value/onChange component, not RHF fields.
+  const [optionGroups, setOptionGroups] = useState<ProductOptionGroupInput[]>([]);
 
   const { data: currentLinkedItems = [] } = useProductLinkedMenuItem(storeId, product.id);
   const currentLinked = currentLinkedItems[0] ?? null;
@@ -151,6 +164,7 @@ export function EditProductDialog({
       sku: "",
       description: "",
       category: "",
+      department: undefined,
       retailPrice: undefined,
       costPrice: undefined,
       unit: "piece",
@@ -184,11 +198,26 @@ export function EditProductDialog({
       const recipeIds = product.recipeProducts?.map((rp) => rp.recipeId) || [];
       setManualCostPrice(false);
 
+      setOptionGroups(
+        (product.optionGroups ?? []).map((group) => ({
+          name: group.name,
+          isRequired: group.isRequired,
+          maxSelections: group.maxSelections,
+          options: group.options.map((option) => ({
+            name: option.name,
+            priceAdjustment: Number(option.priceAdjustment) || 0,
+            materialId: option.materialId ?? undefined,
+            materialQty: option.materialQty != null ? Number(option.materialQty) : undefined,
+          })),
+        }))
+      );
+
       form.reset({
         name: product.name || "",
         sku: product.sku || "",
         description: product.description || "",
         category: product.category || "",
+        department: product.department ?? undefined,
         retailPrice: sellingPrice > 0 ? convertPrice(sellingPrice) : undefined, // Convert to user's currency, undefined if 0
         costPrice: costPrice > 0 ? convertPrice(costPrice) : undefined, // Convert to user's currency, undefined if 0
         unit: product.unit || "piece",
@@ -308,6 +337,7 @@ export function EditProductDialog({
         name: data.name,
         description: data.description,
         category: data.category,
+        department: data.department ?? null,
         costPrice: convertToBase(costPrice), // Convert back to EUR
         sellingPrice: convertToBase(retailPrice), // Convert back to EUR
         currentStock: currentStock,
@@ -315,6 +345,7 @@ export function EditProductDialog({
         minStock: minStock,
         maxStock: maxStock,
         recipeIds: data.recipeIds && data.recipeIds.length > 0 ? data.recipeIds : undefined,
+        optionGroups,
       };
 
       // OPTIMISTIC CLOSING
@@ -484,6 +515,32 @@ export function EditProductDialog({
                         }
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("common.department")}</FormLabel>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">—</SelectItem>
+                        <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
+                        <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -765,6 +822,22 @@ export function EditProductDialog({
                   )}
                 />
               </div>
+            </div>
+
+            {/* Options */}
+            <div className="space-y-1">
+              <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
+                {t("data.products.sections.options")}
+              </h3>
+              <p className="text-muted-foreground mb-2 text-xs">
+                {t("data.products.options.description")}
+              </p>
+              <OptionGroupsEditor
+                storeId={storeId}
+                value={optionGroups}
+                onChange={setOptionGroups}
+                allowMaterialLink
+              />
             </div>
           </form>
         </Form>

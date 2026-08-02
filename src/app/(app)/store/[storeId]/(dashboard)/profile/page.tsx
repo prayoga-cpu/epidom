@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { userService } from "@/lib/services";
+import { userService, businessService } from "@/lib/services";
 import { ProfileClient } from "@/features/dashboard/profile/components/profile-client";
 import type { ProfileData } from "@/features/dashboard/profile/types";
 
@@ -14,6 +14,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ storeI
 
   // Fetch user profile
   const profileDto = await userService.getProfile(session.user.id);
+
+  // Store name for the Fees & Taxes card header — actual store-scoped data
+  // (settings, orders) stays protected by requireStoreAuth on the API
+  // routes, same as every other store-scoped dashboard page.
+  const store = await businessService.getStoreById(storeId).catch(() => null);
 
   // Transform UserProfileDto to ProfileData format
   const profileData: ProfileData = {
@@ -55,5 +60,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ storeI
     process.env.NEXT_PUBLIC_EPIDOM_OWNER_EMAIL || process.env.EPIDOM_OWNER_EMAIL;
   const isOwner = session.user.email === epidomOwnerEmail;
 
-  return <ProfileClient initialProfile={profileData} isOwner={isOwner} />;
+  return (
+    <ProfileClient
+      initialProfile={profileData}
+      isOwner={isOwner}
+      storeId={storeId}
+      storeName={store?.name}
+    />
+  );
 }

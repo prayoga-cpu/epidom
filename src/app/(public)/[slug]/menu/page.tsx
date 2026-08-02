@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { storefrontService } from "@/lib/services";
 import { PublicMenu } from "@/features/storefront/components/public-menu";
+import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -34,6 +35,11 @@ export default async function MenuPage({ params }: PageProps) {
     notFound();
   }
 
+  // The owner's live account currency, not each item's persisted currency
+  // snapshot — the latter goes stale the moment the owner changes it in
+  // Profile settings, since nothing re-saves existing menu items at that point.
+  const ownerCurrency = storefront.store.business.user.currency;
+
   // Cast menu categories with items
   const menuCategories = storefront.menuCategories.map((cat) => ({
     id: cat.id,
@@ -43,11 +49,14 @@ export default async function MenuPage({ params }: PageProps) {
       name: item.name,
       description: item.description,
       price: Number(item.price),
-      currency: item.currency,
+      currency: ownerCurrency,
       imageUrl: item.imageUrl,
       isAvailable: item.isAvailable,
       isFeatured: item.isFeatured,
       modifiers: item.modifiers,
+      product: item.product
+        ? { optionGroups: serializeProductOptionGroups(item.product.optionGroups) }
+        : null,
     })),
   }));
 

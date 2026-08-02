@@ -1,5 +1,14 @@
-import { Product, Prisma, Recipe, RecipeProduct } from "@prisma/client";
+import {
+  Product,
+  Prisma,
+  Recipe,
+  RecipeProduct,
+  ProductOptionGroup,
+  ProductOption,
+  Department,
+} from "@prisma/client";
 import { BaseRepository } from "./base.repository";
+import type { ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
 
 /**
  * Product Repository
@@ -10,11 +19,20 @@ import { BaseRepository } from "./base.repository";
 
 export type ProductWithRelations = Product & {
   recipeProducts?: Array<RecipeProduct & { recipe: Recipe }>;
+  optionGroups?: Array<ProductOptionGroup & { options: ProductOption[] }>;
+};
+
+const optionGroupsInclude = {
+  optionGroups: {
+    include: { options: { orderBy: { displayOrder: "asc" as const } } },
+    orderBy: { displayOrder: "asc" as const },
+  },
 };
 
 export interface ProductFilters {
   search?: string;
   category?: string;
+  department?: Department;
   sortBy?:
     | "name"
     | "sku"
@@ -39,6 +57,7 @@ export class ProductRepository extends BaseRepository {
     const {
       search,
       category,
+      department,
       sortBy = "createdAt",
       sortOrder = "desc",
       skip = 0,
@@ -58,6 +77,7 @@ export class ProductRepository extends BaseRepository {
         ],
       }),
       ...(category && { category }),
+      ...(department && { department }),
     };
 
     // Build orderBy clause
@@ -81,6 +101,7 @@ export class ProductRepository extends BaseRepository {
               createdAt: "asc", // Order by creation date
             },
           },
+          ...optionGroupsInclude,
         },
       }),
       this.db.product.count({ where }),
@@ -104,6 +125,7 @@ export class ProductRepository extends BaseRepository {
             createdAt: "asc", // Order by creation date
           },
         },
+        ...optionGroupsInclude,
       },
     });
   }
@@ -180,6 +202,7 @@ export class ProductRepository extends BaseRepository {
             recipe: true,
           },
         },
+        ...optionGroupsInclude,
       },
     });
   }
@@ -200,6 +223,7 @@ export class ProductRepository extends BaseRepository {
             createdAt: "asc", // Order by creation date
           },
         },
+        ...optionGroupsInclude,
       },
     });
   }
@@ -229,6 +253,45 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
+   * Replace a product's option groups (and their options) wholesale.
+   * Same delete-all-then-recreate approach as updateRecipes — option groups
+   * have no independent identity worth preserving across an edit, and this
+   * keeps display order and option membership trivially correct.
+   */
+  async updateOptionGroups(
+    productId: string,
+    groups: ProductOptionGroupInput[]
+  ): Promise<ProductWithRelations> {
+    // Deleting the group cascades to its options (onDelete: Cascade).
+    await this.db.productOptionGroup.deleteMany({
+      where: { productId },
+    });
+
+    for (const [groupIndex, group] of groups.entries()) {
+      await this.db.productOptionGroup.create({
+        data: {
+          productId,
+          name: group.name,
+          isRequired: group.isRequired,
+          maxSelections: group.maxSelections,
+          displayOrder: groupIndex,
+          options: {
+            create: group.options.map((option, optionIndex) => ({
+              name: option.name,
+              priceAdjustment: option.priceAdjustment,
+              materialId: option.materialId,
+              materialQty: option.materialQty,
+              displayOrder: optionIndex,
+            })),
+          },
+        },
+      });
+    }
+
+    return this.findById(productId) as Promise<ProductWithRelations>;
+  }
+
+  /**
    * Delete product (hard delete)
    * Note: Related records (OrderItem, ProductionBatch, StockMovement) will be cascade deleted
    */
@@ -245,6 +308,30 @@ export class ProductRepository extends BaseRepository {
   async bulkDelete(productIds: string[]): Promise<{ count: number }> {
     const result = await this.db.product.deleteMany({
       where: { id: { in: productIds } },
+    });
+
+    return { count: result.count };
+  }
+
+  /**
+   * Clear a category from all products in a store that use it
+   * (sets category to null, removing it from the derived category list)
+   */
+  async clearCategory(storeId: string, category: string): Promise<{ count: number }> {
+    const result = await this.db.product.updateMany({
+      where: { storeId, category },
+      data: { category: null },
+    });
+
+    return { count: result.count };
+  }
+
+  /**
+   * Hard delete every product in a store that has a given category
+   */
+  async deleteByCategory(storeId: string, category: string): Promise<{ count: number }> {
+    const result = await this.db.product.deleteMany({
+      where: { storeId, category },
     });
 
     return { count: result.count };

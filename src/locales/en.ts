@@ -57,6 +57,10 @@ export const en = {
     stock: "Stock",
     cost: "Cost",
     category: "Category",
+    department: "Department",
+    departmentKitchen: "Kitchen",
+    departmentBar: "Bar",
+    departmentUnassigned: "Unassigned",
     recipe: "Recipe",
     price: "Price",
     profit: "Profit",
@@ -156,9 +160,11 @@ export const en = {
       to: "To",
       presets: {
         today: "Today",
+        yesterday: "Yesterday",
         last7Days: "Last 7 days",
         last30Days: "Last 30 days",
         last90Days: "Last 90 days",
+        thisMonth: "This month",
         thisYear: "This year",
         custom: "Custom",
       },
@@ -168,6 +174,7 @@ export const en = {
       producedQuantity: "Produced Quantity",
     },
     loading: "Loading...",
+    method: "Method",
     goHome: "Go to Homepage",
     needHelp: "Need help?",
     contactSupport: "Contact Support",
@@ -1455,6 +1462,21 @@ export const en = {
     financeQtySold: "Qty Sold",
     financePeriod: "Period",
     financeSummarySheet: "Summary",
+    financeTax: "Tax",
+    financeServiceCharge: "Service Charge",
+    financeProcessingFee: "Processing Fee",
+    financeNetProfit: "Net Profit",
+    financeByCategory: "By Category",
+    financeByShift: "By Shift",
+    financeCategory: "Category",
+    financeStaff: "Staff",
+    financeCashier: "Cashier",
+    financeUncategorized: "Uncategorized",
+    financeUnassigned: "Unassigned",
+    financeShiftPeriod: "Open → Close",
+    financeShiftStatusOpen: "Open",
+    financeShiftStatusClosed: "Closed",
+    financeDepartmentSplit: "Department Split",
     ownerTitle: "Owner Dashboard",
     ownerDesc: "Summary across all stores in your business",
     ownerTotalRevenue: "Total Revenue",
@@ -1503,6 +1525,7 @@ export const en = {
       anonymousOrders: "Anonymous Orders",
       revenueTrend: "Revenue Trend",
       ordersByStatus: "Orders by Status",
+      departmentSplit: "Department Split",
       topProducts: "Top Products",
       topCustomers: "Top Customers",
       noData: "No data for this period",
@@ -1529,6 +1552,14 @@ export const en = {
       stockLevel: "Stock Level",
       current: "Current",
       unknownMaterial: "Unknown Raw Material",
+    },
+    newOrders: {
+      title: "New Orders",
+      description: "Orders waiting for confirmation",
+      empty: "No new orders — all caught up",
+      pendingCount: "{count} order(s) waiting for confirmation",
+      pendingWithStorefront: "{count} order(s) waiting ({storefrontCount} from storefront)",
+      viewQueue: "Order Queue",
     },
     trackingCard: {
       title: "Stock Levels",
@@ -1741,6 +1772,22 @@ export const en = {
         description:
           "Are you sure you want to delete {count} material(s)? This action cannot be undone.",
       },
+      manageCategories: {
+        button: "Manage Categories",
+        title: "Manage Categories",
+        description:
+          "Delete a category to remove it from every raw material that uses it, or delete the raw materials in it entirely.",
+        empty: "No categories yet.",
+        itemCount: "{count} material(s)",
+        confirmTitle: 'Delete category "{category}"?',
+        uncategorizeLabel: "Move to Uncategorized",
+        uncategorizeDescription: "Keep {count} raw material(s) — just remove this category tag.",
+        deleteLabel: "Delete all materials in this category",
+        deleteDescription:
+          "Permanently delete {count} raw material(s) in this category. This cannot be undone.",
+        deleted: "Category deleted",
+        deleteFailed: "Failed to delete category",
+      },
     },
 
     // Recipes section
@@ -1947,6 +1994,22 @@ export const en = {
         description:
           "Are you sure you want to delete {count} recipe(s)? This action cannot be undone.",
       },
+      manageCategories: {
+        button: "Manage Categories",
+        title: "Manage Categories",
+        description:
+          "Delete a category to remove it from every recipe that uses it, or delete the recipes in it entirely.",
+        empty: "No categories yet.",
+        itemCount: "{count} recipe(s)",
+        confirmTitle: 'Delete category "{category}"?',
+        uncategorizeLabel: "Move to Uncategorized",
+        uncategorizeDescription: "Keep {count} recipe(s) — just remove this category tag.",
+        deleteLabel: "Delete all recipes in this category",
+        deleteDescription:
+          "Permanently delete {count} recipe(s) in this category. This cannot be undone.",
+        deleted: "Category deleted",
+        deleteFailed: "Failed to delete category",
+      },
 
       // Details section
       details: {
@@ -1994,6 +2057,7 @@ export const en = {
         basicInfo: "Basic Information",
         pricing: "Pricing",
         stockManagement: "Stock Management",
+        options: "Options",
       },
 
       // Form fields
@@ -2053,6 +2117,24 @@ export const en = {
         box: "Box",
         kg: "Kilogram",
         g: "Gram",
+      },
+
+      // Product option groups (variants like Size or Sugar Level)
+      options: {
+        description:
+          "Variants like Size or Sugar Level. Link an option to a Material to deduct extra stock accurately when it's chosen.",
+        groupNamePlaceholder: "e.g. Size",
+        required: "Required",
+        maxSelections: "Max selections",
+        optionNameLabel: "Option name",
+        optionNamePlaceholder: "e.g. Large",
+        priceAddOnLabel: "Price add-on",
+        linkMaterialLabel: "Material",
+        linkMaterial: "Link material",
+        noMaterial: "No stock impact",
+        stockReductionLabel: "Stock reduction qty",
+        addOption: "Add option",
+        addGroup: "Add option group",
       },
 
       // Pricing suggestions
@@ -2136,6 +2218,22 @@ export const en = {
         title: "Delete Multiple Products",
         description:
           "Are you sure you want to delete {count} product(s)? This action cannot be undone.",
+      },
+      manageCategories: {
+        button: "Manage Categories",
+        title: "Manage Categories",
+        description:
+          "Delete a category to remove it from every product that uses it, or delete the products in it entirely.",
+        empty: "No categories yet.",
+        itemCount: "{count} product(s)",
+        confirmTitle: 'Delete category "{category}"?',
+        uncategorizeLabel: "Move to Uncategorized",
+        uncategorizeDescription: "Keep {count} product(s) — just remove this category tag.",
+        deleteLabel: "Delete all products in this category",
+        deleteDescription:
+          "Permanently delete {count} product(s) in this category. This cannot be undone.",
+        deleted: "Category deleted",
+        deleteFailed: "Failed to delete category",
       },
       warnings: {
         noRecipes: {
@@ -2263,6 +2361,8 @@ export const en = {
     critical: "Critical",
     overstocked: "Overstocked",
     allCategories: "All Categories",
+    allDepartments: "All Departments",
+    allStaff: "All Staff",
     allTerms: "All Terms",
     allRatings: "All Ratings",
     placeholderCategory: "Category",
@@ -2595,6 +2695,37 @@ export const en = {
       addBusinessInfo: "Add Business Information",
     },
 
+    // Fees & Taxes
+    feesAndTaxes: {
+      title: "Fees & Taxes",
+      enabled: "Enabled",
+      disabled: "Disabled",
+      notConfigured: "Not set up yet",
+      appliesToNewOrdersOnly: "Changes apply to new orders only.",
+      tax: {
+        enabled: "Tax",
+        rate: "Tax Rate",
+        label: "Tax Label",
+        mode: "Tax Mode",
+        inclusive: "Already included in menu prices",
+        exclusive: "Added on top of menu prices",
+      },
+      serviceCharge: {
+        enabled: "Service Charge",
+        rate: "Service Charge Rate",
+      },
+      processingFee: {
+        title: "Payment Processing Fee",
+        enabled: "Payment Processing Fee",
+        perMethod: "{count} payment methods configured",
+        percent: "Percent (%)",
+        flat: "Flat (Rp)",
+        resetDefaults: "Reset to Defaults",
+        estimateDisclaimer:
+          "An estimate based on the rates you set — not a direct reconciliation with Xendit/Stripe.",
+      },
+    },
+
     // Subscription
     subscription: {
       title: "Subscription",
@@ -2703,6 +2834,9 @@ export const en = {
       editBusinessInfo: "Edit Business Information",
       editBusinessInfoDescription: "Update your business contact information and details",
       addBusinessInfoDescription: "Add your business information to complete your profile",
+      editFeesAndTaxes: "Edit Fees & Taxes",
+      editFeesAndTaxesDescription:
+        "Set the tax rate, service charge, and payment processing fees for this store",
       editAvatar: "Edit Profile Picture",
       editAvatarDescription: "Upload a new profile picture or remove the current one.",
       cropAvatarDescription: "Crop and adjust your profile picture.",
@@ -2740,6 +2874,8 @@ export const en = {
     errors: {
       updateFailed: "Failed to update profile. Please try again.",
       businessUpdateFailed: "Failed to update business information. Please try again.",
+      feesAndTaxesUpdateFailed: "Failed to update fees & taxes. Please try again.",
+      feesAndTaxesLoadFailed: "Failed to load fees & taxes settings.",
       loadImageFailed: "Failed to load image",
       uploadFailed: "Upload failed",
     },
@@ -2757,6 +2893,10 @@ export const en = {
       businessCreated: {
         title: "Business Info Added",
         description: "Business information added successfully.",
+      },
+      feesAndTaxesUpdated: {
+        title: "Fees & Taxes Updated",
+        description: "Fees & taxes settings saved successfully.",
       },
       avatarUpdated: {
         title: "Avatar Updated",
@@ -4311,6 +4451,8 @@ export const en = {
       addToCart: "Add to Cart",
       addToCartShort: "Add to Cart",
       selectOptionAlert: "Please select an option for",
+      noteLabel: "Note",
+      notePlaceholder: "e.g. no ice, extra napkins...",
     },
     myOrders: {
       title: "My Orders",
@@ -4381,12 +4523,18 @@ export const en = {
       emptyDesc: "Tap an item from the menu to add it to the order",
       subtotal: "Subtotal",
       tax: "Tax",
+      serviceCharge: "Service Charge",
       total: "Total",
       pay: "Pay",
       clear: "Clear All",
       items: "items",
       hold: "Hold order",
       holdOffline: "Can't hold an order while offline",
+    },
+    options: {
+      dialogDesc: "Choose options for this item",
+      addToCart: "Add to cart",
+      notesPlaceholder: "e.g. no ice, extra napkins...",
     },
     checkout: {
       title: "Confirm Payment",
@@ -4536,7 +4684,7 @@ export const en = {
       holdSuccess: "Order held",
       holdFailed: "Failed to hold order",
       resumedBanner:
-        "Resumed from a held order — modifiers couldn't be restored and prices reflect current menu rates. Please re-check items before charging.",
+        "Resumed from a held order — prices reflect current menu rates. Please re-check items before charging.",
     },
     hold: {
       title: "Hold order",
@@ -5157,7 +5305,12 @@ export const en = {
       addCategory: "Add Category",
       addCategoryPlaceholder: "New Category Name (e.g: Cold Drinks)",
       addItem: "Add Menu Item",
-      deleteConfirm: "Delete this category and all its items?",
+      deleteConfirm: 'Delete category "{category}"?',
+      deleteMoveLabel: "Move items to Uncategorized",
+      deleteMoveDescription: "Keep {count} item(s) — just remove this category label.",
+      deleteItemsLabel: "Delete all items in this category",
+      deleteItemsDescription:
+        "Permanently delete {count} item(s) in this category. This cannot be undone.",
       categoryAdded: "Category added",
       categoryAddFailed: "Failed to add category",
       categoryDeleted: "Category deleted",
@@ -5188,6 +5341,10 @@ export const en = {
       itemDeleteFailed: "Failed to delete item",
       freeHint:
         "Visitors can browse this menu — upgrade to POS to accept online orders and sell it through the POS Cashier.",
+      modifiers: "Modifiers",
+      modifiersDesc: "Optional add-ons like Ice Level, priced per option.",
+      inheritsProductOptions:
+        "This item is linked to a product — its option groups appear automatically in POS/Storefront, in addition to the modifiers below.",
     },
     analytics: {
       totalVisitors: "Total Visitors",

@@ -140,9 +140,10 @@ export class ApiClient {
   /**
    * DELETE request
    */
-  async delete<T>(endpoint: string): Promise<T> {
+  async delete<T>(endpoint: string, body?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "DELETE",
+      body: body ? JSON.stringify(body) : undefined,
     });
   }
 }

@@ -85,6 +85,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
       name: "",
       description: "",
       category: "",
+      department: undefined,
       yieldQuantity: undefined,
       yieldUnit: "",
       productionTimeMinutes: undefined,
@@ -114,6 +115,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
         name: recipe.name,
         description: recipe.description || "",
         category: recipe.category || "",
+        department: recipe.department ?? undefined,
         yieldQuantity: yieldQuantity > 0 ? yieldQuantity : undefined,
         yieldUnit: recipe.yieldUnit,
         productionTimeMinutes: productionTimeMinutes > 0 ? productionTimeMinutes : undefined,
@@ -317,6 +319,32 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                             {getTranslatedCategory(category, t)}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("common.department")}</FormLabel>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">—</SelectItem>
+                        <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
+                        <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

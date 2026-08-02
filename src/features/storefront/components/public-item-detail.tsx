@@ -5,12 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Minus, Check, ShoppingCart, Utensils } from "lucide-react";
 import { getPremiumTheme } from "@/lib/utils/color";
+import { formatCurrency } from "@/lib/utils/formatting";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
+import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
 
 interface ModifierOption {
   name: string;
   priceAdd: number;
+  materialId?: string;
+  materialQty?: number;
 }
 
 interface ModifierGroup {
@@ -30,7 +34,36 @@ interface MenuItem {
   isAvailable: boolean;
   isFeatured: boolean;
   modifiers: any;
+  product?: {
+    optionGroups?: Array<{
+      name: string;
+      isRequired: boolean;
+      maxSelections: number;
+      options: Array<{
+        name: string;
+        priceAdjustment: number | string;
+        materialId?: string | null;
+        materialQty?: number | string | null;
+      }>;
+    }>;
+  } | null;
 }
+
+/** Same conversion as public-menu.tsx's getItemModifierGroups — kept local
+ * rather than shared since the two files' ModifierGroup shapes are declared
+ * independently. */
+const getItemModifierGroups = (item: MenuItem): ModifierGroup[] =>
+  getMergedOptionGroups(item, item.product).map((group) => ({
+    name: group.name,
+    isRequired: group.isRequired,
+    maxSelections: group.maxSelections,
+    options: group.options.map((option) => ({
+      name: option.name,
+      priceAdd: option.priceAdjustment,
+      materialId: option.materialId,
+      materialQty: option.materialQty,
+    })),
+  }));
 
 interface PublicItemDetailProps {
   storefront: {
@@ -53,6 +86,7 @@ interface CartItem {
     groupName: string;
     options: ModifierOption[];
   }[];
+  notes?: string;
 }
 
 export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
@@ -60,6 +94,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   const { t } = useI18n();
   const [quantity, setQuantity] = useState(1);
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, ModifierOption[]>>({});
+  const [noteText, setNoteText] = useState("");
 
   // Theme styling
   const safeTheme = getPremiumTheme(storefront.themeColor || "#FF6B35");
@@ -70,23 +105,17 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   } as React.CSSProperties;
 
   // Format price
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
+  const formatPrice = (price: number) => formatCurrency(price, item.currency);
 
   // Initialize modifiers
   useEffect(() => {
     const initialModifiers: Record<string, ModifierOption[]> = {};
-    const modGroups = (item.modifiers as ModifierGroup[]) || [];
+    const modGroups = getItemModifierGroups(item);
     modGroups.forEach((group) => {
       initialModifiers[group.name] = [];
     });
     setSelectedModifiers(initialModifiers);
+    setNoteText("");
   }, [item]);
 
   // Handle modifier selection
@@ -124,7 +153,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
   // Add to cart and save to localStorage
   const handleAddToCart = () => {
     // Check if required modifiers are selected
-    const modGroups = (item.modifiers as ModifierGroup[]) || [];
+    const modGroups = getItemModifierGroups(item);
     for (const group of modGroups) {
       if (
         group.isRequired &&
@@ -154,7 +183,8 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
       )
       .sort()
       .join("|");
-    const uniqueId = `${item.id}-${modifierKey}`;
+    const trimmedNote = noteText.trim();
+    const uniqueId = `${item.id}-${modifierKey}-note:${trimmedNote}`;
 
     // Read cart from localStorage
     let localCart: CartItem[] = [];
@@ -179,6 +209,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
         price: Number(item.price),
         quantity: quantity,
         selectedModifiers: formattedModifiers,
+        notes: trimmedNote || undefined,
       };
       localCart.push(newItem);
     }
@@ -242,7 +273,7 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
 
       {/* Modifiers Selection */}
       <div className="bg-muted/50 flex-1 space-y-6 p-4">
-        {((item.modifiers as ModifierGroup[]) || []).map((group, groupIdx) => (
+        {getItemModifierGroups(item).map((group, groupIdx) => (
           <div key={groupIdx} className="space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="text-foreground text-sm font-bold">
@@ -295,6 +326,19 @@ export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
             </div>
           </div>
         ))}
+
+        <div className="space-y-1.5">
+          <label className="text-foreground text-sm font-bold">
+            {t("publicOrder.itemDetail.noteLabel")}
+          </label>
+          <textarea
+            placeholder={t("publicOrder.itemDetail.notePlaceholder")}
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            rows={2}
+            className="bg-card border-border w-full resize-none rounded-xl border p-3 text-sm transition-all focus:ring-2 focus:ring-[var(--store-theme)] focus:outline-none"
+          />
+        </div>
       </div>
 
       {/* Floating purchase action bar */}

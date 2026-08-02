@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { storefrontApi } from "@/lib/api";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
@@ -10,6 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Plus, GripVertical, Settings2, Trash2, ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { ImageUpload } from "@/components/shared/image-upload";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
@@ -17,6 +26,13 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
+import { CategoryDeleteDialog, type CategoryDeleteMode } from "@/components/ui/category-delete-dialog";
+import { OptionGroupsEditor } from "@/components/shared/option-groups-editor";
+import {
+  modifiersJsonToOptionGroups,
+  optionGroupsToModifiersJson,
+} from "@/lib/utils/menu-item-options";
+import type { ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
 
 interface Product {
   id: string;
@@ -37,8 +53,26 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   const { confirm, confirmDialog } = useConfirm();
   const { currency, formatPrice } = useCurrency();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  // Categories/items edited here (name, price, availability, modifiers) are
+  // what POS Cashier reads via usePosMenu — invalidate that cache on every
+  // successful mutation so a cashier on another tab/device sees the change
+  // on their next poll instead of only after usePosMenu's 5s interval fires
+  // on its own, or worse, only after a manual page refresh.
+  const refreshMenu = () => {
+    onSuccess();
+    queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId], exact: false });
+  };
+
   const [newCatName, setNewCatName] = useState("");
   const [isAddingCat, setIsAddingCat] = useState(false);
+  const [pendingDeleteCategory, setPendingDeleteCategory] = useState<{
+    id: string;
+    name: string;
+    itemCount: number;
+  } | null>(null);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
 
   // Add item dialog state
   const [addItemDialog, setAddItemDialog] = useState<{ open: boolean; categoryId: string } | null>(
@@ -47,7 +81,11 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   const [newItemName, setNewItemName] = useState("");
   const [newItemDescription, setNewItemDescription] = useState("");
   const [newItemPrice, setNewItemPrice] = useState<number | undefined>(undefined);
+  const [newItemDepartment, setNewItemDepartment] = useState<"KITCHEN" | "BAR" | undefined>(
+    undefined
+  );
   const [newItemImageUrl, setNewItemImageUrl] = useState<string | undefined>(undefined);
+  const [newItemModifiers, setNewItemModifiers] = useState<ProductOptionGroupInput[]>([]);
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
 
   // Edit item dialog state
@@ -55,7 +93,11 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   const [editItemName, setEditItemName] = useState("");
   const [editItemDescription, setEditItemDescription] = useState("");
   const [editItemPrice, setEditItemPrice] = useState<number | undefined>(undefined);
+  const [editItemDepartment, setEditItemDepartment] = useState<"KITCHEN" | "BAR" | undefined>(
+    undefined
+  );
   const [editItemImageUrl, setEditItemImageUrl] = useState<string | undefined>(undefined);
+  const [editItemModifiers, setEditItemModifiers] = useState<ProductOptionGroupInput[]>([]);
   const [isSubmittingEditItem, setIsSubmittingEditItem] = useState(false);
 
   const handleAddCategory = async () => {
@@ -64,7 +106,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     try {
       await storefrontApi.createCategory(storeId, { name: newCatName, displayOrder: 0 });
       setNewCatName("");
-      onSuccess();
+      refreshMenu();
       toast.success(t("storefront.menu.categoryAdded"));
     } catch {
       toast.error(t("storefront.menu.categoryAddFailed"));
@@ -73,21 +115,26 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     }
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    const ok = await confirm({
-      title: t("storefront.menu.deleteConfirm"),
-      description: t("storefront.menu.title"),
-      variant: "destructive",
-      confirmText: t("actions.delete"),
-      cancelText: t("actions.cancel"),
+  const handleDeleteCategoryClick = (category: { id: string; name: string; items?: any[] }) => {
+    setPendingDeleteCategory({
+      id: category.id,
+      name: category.name,
+      itemCount: category.items?.length || 0,
     });
-    if (!ok) return;
+  };
+
+  const handleConfirmDeleteCategory = async (mode: CategoryDeleteMode) => {
+    if (!pendingDeleteCategory) return;
+    setIsDeletingCategory(true);
     try {
-      await storefrontApi.deleteCategory(storeId, categoryId);
-      onSuccess();
+      await storefrontApi.deleteCategory(storeId, pendingDeleteCategory.id, mode);
+      refreshMenu();
       toast.success(t("storefront.menu.categoryDeleted"));
+      setPendingDeleteCategory(null);
     } catch {
       toast.error(t("storefront.menu.categoryDeleteFailed"));
+    } finally {
+      setIsDeletingCategory(false);
     }
   };
 
@@ -96,6 +143,8 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     setNewItemDescription("");
     setNewItemPrice(undefined);
     setNewItemImageUrl(undefined);
+    setNewItemModifiers([]);
+    setNewItemDepartment(undefined);
     setAddItemDialog({ open: true, categoryId });
   };
 
@@ -108,10 +157,12 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
         description: newItemDescription || undefined,
         price: newItemPrice,
         categoryId: addItemDialog.categoryId,
+        department: newItemDepartment,
         imageUrl: newItemImageUrl || "",
         isAvailable: true,
+        modifiers: optionGroupsToModifiersJson(newItemModifiers),
       } as any);
-      onSuccess();
+      refreshMenu();
       toast.success(`"${newItemName}" added to menu`);
       setAddItemDialog(null);
     } catch {
@@ -126,6 +177,8 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     setEditItemDescription(item.description || "");
     setEditItemPrice(Number(item.price));
     setEditItemImageUrl(item.imageUrl || undefined);
+    setEditItemModifiers(modifiersJsonToOptionGroups(item.modifiers));
+    setEditItemDepartment(item.department ?? undefined);
     setEditItemDialog({ open: true, item });
   };
 
@@ -137,9 +190,11 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
         name: editItemName,
         description: editItemDescription || "",
         price: editItemPrice,
+        department: editItemDepartment ?? null,
         imageUrl: editItemImageUrl || "",
+        modifiers: optionGroupsToModifiersJson(editItemModifiers),
       });
-      onSuccess();
+      refreshMenu();
       toast.success(t("storefront.menu.itemUpdated"));
       setEditItemDialog(null);
     } catch {
@@ -160,7 +215,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     if (!ok) return;
     try {
       await storefrontApi.deleteItem(storeId, item.id);
-      onSuccess();
+      refreshMenu();
       toast.success(t("storefront.menu.itemDeleted"));
     } catch {
       toast.error(t("storefront.menu.itemDeleteFailed"));
@@ -215,7 +270,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                         variant="ghost"
                         size="icon"
                         className="text-muted-foreground h-8 w-8 hover:text-red-500"
-                        onClick={() => handleDeleteCategory(category.id)}
+                        onClick={() => handleDeleteCategoryClick(category)}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -271,6 +326,20 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                                     <span className="text-rose-500">
                                       {t("storefront.menu.unavailable")}
                                     </span>
+                                  )}
+                                  {item.department && (
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-[10px] ${
+                                        item.department === "KITCHEN"
+                                          ? "text-amber-600"
+                                          : "text-blue-600"
+                                      }`}
+                                    >
+                                      {item.department === "KITCHEN"
+                                        ? t("common.departmentKitchen")
+                                        : t("common.departmentBar")}
+                                    </Badge>
                                   )}
                                 </div>
                               </div>
@@ -408,6 +477,37 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium">{t("common.department")}</label>
+              <Select
+                value={newItemDepartment ?? "none"}
+                onValueChange={(v) =>
+                  setNewItemDepartment(v === "none" ? undefined : (v as "KITCHEN" | "BAR"))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
+                  <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium">
+                {t("storefront.menu.modifiers")}
+              </label>
+              <p className="text-muted-foreground text-xs">{t("storefront.menu.modifiersDesc")}</p>
+              <OptionGroupsEditor
+                storeId={storeId}
+                value={newItemModifiers}
+                onChange={setNewItemModifiers}
+              />
+            </div>
           </div>
         </FormDialogLayout>
       </Dialog>
@@ -504,9 +604,81 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                 />
               </div>
             </div>
+
+            {editItemDialog?.item?.productId && (
+              <p className="bg-muted/50 text-muted-foreground rounded-md border p-2 text-xs">
+                {t("storefront.menu.inheritsProductOptions")}
+              </p>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium">{t("common.department")}</label>
+              <Select
+                value={editItemDepartment ?? "none"}
+                onValueChange={(v) =>
+                  setEditItemDepartment(v === "none" ? undefined : (v as "KITCHEN" | "BAR"))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
+                  <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm leading-none font-medium">
+                {t("storefront.menu.modifiers")}
+              </label>
+              <p className="text-muted-foreground text-xs">{t("storefront.menu.modifiersDesc")}</p>
+              <OptionGroupsEditor
+                storeId={storeId}
+                value={editItemModifiers}
+                onChange={setEditItemModifiers}
+              />
+            </div>
           </div>
         </FormDialogLayout>
       </Dialog>
+
+      {/* Delete Category Dialog */}
+      <CategoryDeleteDialog
+        // Remount per category so the destructive "delete" choice never carries
+        // over as the default when the user moves on to a different category.
+        key={pendingDeleteCategory?.id}
+        open={pendingDeleteCategory !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteCategory(null);
+        }}
+        title={
+          t("storefront.menu.deleteConfirm")?.replace(
+            "{category}",
+            pendingDeleteCategory?.name ?? ""
+          ) || t("storefront.menu.deleteConfirm")
+        }
+        onConfirm={handleConfirmDeleteCategory}
+        isSubmitting={isDeletingCategory}
+        uncategorizeLabel={t("storefront.menu.deleteMoveLabel")}
+        uncategorizeDescription={
+          t("storefront.menu.deleteMoveDescription")?.replace(
+            "{count}",
+            String(pendingDeleteCategory?.itemCount ?? 0)
+          ) || ""
+        }
+        deleteLabel={t("storefront.menu.deleteItemsLabel")}
+        deleteDescription={
+          t("storefront.menu.deleteItemsDescription")?.replace(
+            "{count}",
+            String(pendingDeleteCategory?.itemCount ?? 0)
+          ) || ""
+        }
+        confirmText={t("actions.delete")}
+        cancelText={t("actions.cancel")}
+      />
       {confirmDialog}
     </div>
   );

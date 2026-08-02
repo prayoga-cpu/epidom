@@ -108,11 +108,21 @@ export function KdsOrderCard({ order, storeId }: KdsOrderCardProps) {
                 ITEM_STATUS_COLORS[item.status] ?? ITEM_STATUS_COLORS.PENDING
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">{item.quantity}×</span>
-                <span className="leading-tight font-medium">
-                  {item.menuItem?.name ?? item.name}
-                </span>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{item.quantity}×</span>
+                  <span className="leading-tight font-medium">
+                    {item.menuItem?.name ?? item.name}
+                  </span>
+                </div>
+                {item.selectedOptions?.length > 0 && (
+                  <span className="pl-6 text-xs opacity-80">
+                    {item.selectedOptions.map((o: any) => o.optionName).join(", ")}
+                  </span>
+                )}
+                {item.notes && (
+                  <span className="pl-6 text-xs italic opacity-80">“{item.notes}”</span>
+                )}
               </div>
               <span className="text-xs font-semibold tracking-wide uppercase">
                 {item.status === "PENDING"

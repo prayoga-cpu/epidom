@@ -13,8 +13,11 @@ import type {
 // ─── POS Cart ────────────────────────────────────────────────────────────────
 
 export interface CartModifier {
-  name: string;
-  priceAdd: number;
+  groupName: string;
+  optionName: string;
+  priceAdjustment: number;
+  materialId?: string;
+  materialQty?: number;
 }
 
 export interface CartItem {
@@ -24,6 +27,7 @@ export interface CartItem {
   unitPrice: number; // base price
   quantity: number;
   modifiers: CartModifier[];
+  notes?: string;
   lineTotal: number; // (unitPrice + sum(modifiers)) * quantity
   imageUrl?: string | null;
 }
@@ -45,6 +49,8 @@ export interface PosOrderItemDisplay {
   unitPrice: number;
   total: number;
   status: OrderItemStatus;
+  notes?: string | null;
+  selectedOptions?: CartModifier[] | null;
   menuItem?: { name: string } | null;
 }
 
@@ -77,6 +83,21 @@ export interface PosMenuItem {
   imageUrl?: string | null;
   isAvailable: boolean;
   category?: string | null;
+  department?: "KITCHEN" | "BAR" | null;
+  modifiers?: unknown;
+  product?: {
+    optionGroups?: Array<{
+      name: string;
+      isRequired: boolean;
+      maxSelections: number;
+      options: Array<{
+        name: string;
+        priceAdjustment: number | string;
+        materialId?: string | null;
+        materialQty?: number | string | null;
+      }>;
+    }>;
+  } | null;
 }
 
 export interface PosMenuCategory {
