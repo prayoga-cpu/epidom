@@ -33,19 +33,19 @@ export function RevenueTrendChart({ data }: RevenueTrendChartProps) {
         />
         <XAxis
           dataKey="date"
-          tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
           stroke="var(--chart-axis)"
           tickFormatter={(value: string) => value.slice(5)}
         />
         <YAxis
-          tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
           stroke="var(--chart-axis)"
           width={48}
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: "hsl(var(--card))",
-            border: "1px solid hsl(var(--border))",
+            backgroundColor: "var(--card)",
+            border: "1px solid var(--border)",
             borderRadius: "0.5rem",
           }}
         />

@@ -19,20 +19,20 @@ export function OrdersBreakdownChart({ data }: OrdersBreakdownChartProps) {
         />
         <XAxis
           dataKey="status"
-          tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
           stroke="var(--chart-axis)"
         />
         <YAxis
           allowDecimals={false}
-          tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
           stroke="var(--chart-axis)"
           width={30}
         />
         <Tooltip
           cursor={{ fill: "var(--chart-grid)", opacity: 0.2 }}
           contentStyle={{
-            backgroundColor: "hsl(var(--card))",
-            border: "1px solid hsl(var(--border))",
+            backgroundColor: "var(--card)",
+            border: "1px solid var(--border)",
             borderRadius: "0.5rem",
           }}
         />
