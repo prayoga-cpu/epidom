@@ -1560,6 +1560,9 @@ export const en = {
       pendingCount: "{count} order(s) waiting for confirmation",
       pendingWithStorefront: "{count} order(s) waiting ({storefrontCount} from storefront)",
       viewQueue: "Order Queue",
+      errorDescription: "Couldn't load orders",
+      errorBody: "Something went wrong loading new orders. Try refreshing, or check the Order Queue directly.",
+      andMore: "+{count} more — view all in Order Queue",
     },
     trackingCard: {
       title: "Stock Levels",

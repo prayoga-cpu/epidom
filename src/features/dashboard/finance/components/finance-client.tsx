@@ -421,7 +421,14 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
             className="w-40"
           />
         </div>
-        <DateRangeLabel from={from} to={to} />
+        <DateRangeLabel
+          from={from}
+          to={to}
+          onChange={(nextFrom, nextTo) => {
+            setFrom(nextFrom);
+            setTo(nextTo);
+          }}
+        />
         <div className="space-y-1">
           <Label>{t("pages.financeStaff")}</Label>
           <Select value={staffId} onValueChange={setStaffId}>

@@ -226,7 +226,14 @@ export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
             className="w-40"
           />
         </div>
-        <DateRangeLabel from={from} to={to} />
+        <DateRangeLabel
+          from={from}
+          to={to}
+          onChange={(nextFrom, nextTo) => {
+            setFrom(nextFrom);
+            setTo(nextTo);
+          }}
+        />
       </div>
 
       {isLoading ? (

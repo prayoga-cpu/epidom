@@ -1590,6 +1590,9 @@ export const id = {
       pendingCount: "{count} pesanan menunggu konfirmasi",
       pendingWithStorefront: "{count} pesanan menunggu ({storefrontCount} dari storefront)",
       viewQueue: "Antrean Pesanan",
+      errorDescription: "Gagal memuat pesanan",
+      errorBody: "Terjadi kesalahan saat memuat pesanan baru. Coba muat ulang, atau buka Antrean Pesanan langsung.",
+      andMore: "+{count} lainnya — lihat semua di Antrean Pesanan",
     },
     trackingCard: {
       title: "Tingkat Stok",

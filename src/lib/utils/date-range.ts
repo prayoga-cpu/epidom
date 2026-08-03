@@ -55,3 +55,33 @@ export function describeDateRange(from: string, to: string): DateRangeLabelKey {
 
   return "custom";
 }
+
+export type DateRangePreset = Exclude<DateRangeLabelKey, "custom">;
+
+export const DATE_RANGE_PRESETS: DateRangePreset[] = [
+  "today",
+  "yesterday",
+  "last7Days",
+  "last30Days",
+  "thisMonth",
+];
+
+/** The inverse of `describeDateRange` — the concrete from/to for a given preset. */
+export function resolveDateRangePreset(preset: DateRangePreset): { from: string; to: string } {
+  const today = todayLocalISO();
+
+  switch (preset) {
+    case "today":
+      return { from: today, to: today };
+    case "yesterday": {
+      const yesterday = addDaysLocalISO(today, -1);
+      return { from: yesterday, to: yesterday };
+    }
+    case "last7Days":
+      return { from: addDaysLocalISO(today, -6), to: today };
+    case "last30Days":
+      return { from: addDaysLocalISO(today, -29), to: today };
+    case "thisMonth":
+      return { from: startOfMonthLocalISO(), to: today };
+  }
+}
