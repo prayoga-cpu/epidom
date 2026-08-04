@@ -31,37 +31,59 @@ export const paymentFeeOverridesSchema = z
     SHOPEEPAY: paymentFeeRateSchema.optional(),
     BANK_TRANSFER: paymentFeeRateSchema.optional(),
     STRIPE_CARD: paymentFeeRateSchema.optional(),
+    PAY_LATER: paymentFeeRateSchema.optional(),
   })
   .strict();
 
 export type PaymentFeeOverridesInput = z.infer<typeof paymentFeeOverridesSchema>;
 
-export const updateFinanceSettingsSchema = z
-  .object({
-    taxEnabled: z.boolean().optional(),
-    taxRate: rateSchema.optional(),
-    taxLabel: z.string().max(50, "Tax label is too long").optional(),
-    taxInclusive: z.boolean().optional(),
-    serviceChargeEnabled: z.boolean().optional(),
-    serviceChargeRate: rateSchema.optional(),
-    processingFeeEnabled: z.boolean().optional(),
-    processingFeeOverrides: paymentFeeOverridesSchema.optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.taxEnabled && !data.taxRate) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["taxRate"],
-        message: "Tax rate must be greater than 0 when tax is enabled",
-      });
-    }
-    if (data.serviceChargeEnabled && !data.serviceChargeRate) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["serviceChargeRate"],
-        message: "Service charge rate must be greater than 0 when enabled",
-      });
-    }
-  });
+const financeSettingsFieldsSchema = z.object({
+  taxEnabled: z.boolean().optional(),
+  taxRate: rateSchema.optional(),
+  taxLabel: z.string().max(50, "Tax label is too long").optional(),
+  taxInclusive: z.boolean().optional(),
+  serviceChargeEnabled: z.boolean().optional(),
+  serviceChargeRate: rateSchema.optional(),
+  processingFeeEnabled: z.boolean().optional(),
+  processingFeeOverrides: paymentFeeOverridesSchema.optional(),
+});
+
+function refineFinanceSettingsFields(
+  data: z.infer<typeof financeSettingsFieldsSchema>,
+  ctx: z.RefinementCtx
+) {
+  if (data.taxEnabled && !data.taxRate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["taxRate"],
+      message: "Tax rate must be greater than 0 when tax is enabled",
+    });
+  }
+  if (data.serviceChargeEnabled && !data.serviceChargeRate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["serviceChargeRate"],
+      message: "Service charge rate must be greater than 0 when enabled",
+    });
+  }
+}
+
+// Business-level (shared/profile-wide) settings — no sync flag, since a
+// Business is the sync *target*, not something that can itself sync.
+export const updateFinanceSettingsSchema =
+  financeSettingsFieldsSchema.superRefine(refineFinanceSettingsFields);
 
 export type UpdateFinanceSettingsInput = z.infer<typeof updateFinanceSettingsSchema>;
+
+// Store-level settings — adds the toggle for following the Business's shared
+// settings instead of this store's own row, plus payLaterEnabled, which lives
+// directly on Store (not synced with the business — a chain may want tabs
+// allowed at one outlet but not another).
+export const updateStoreFinanceSettingsSchema = financeSettingsFieldsSchema
+  .extend({
+    syncFinanceWithBusiness: z.boolean().optional(),
+    payLaterEnabled: z.boolean().optional(),
+  })
+  .superRefine(refineFinanceSettingsFields);
+
+export type UpdateStoreFinanceSettingsInput = z.infer<typeof updateStoreFinanceSettingsSchema>;

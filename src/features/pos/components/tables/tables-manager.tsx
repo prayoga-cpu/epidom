@@ -112,6 +112,11 @@ export function TablesManager({ storeId }: TablesManagerProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["tables", storeId],
     queryFn: async () => apiClient.get<TableData[]>(`/stores/${storeId}/tables`),
+    // Multiple staff on different terminals can seat/free tables concurrently —
+    // without polling, one terminal can show a table as "available" for
+    // minutes after another terminal already occupied it, risking a double-seat.
+    staleTime: 3 * 1000,
+    refetchInterval: 10 * 1000,
   });
 
   const tables: TableData[] = data ?? [];
@@ -175,6 +180,7 @@ export function TablesManager({ storeId }: TablesManagerProps) {
         `/stores/${storeId}/reservations${reservationsTable ? `?tableId=${reservationsTable.id}` : ""}`
       ),
     enabled: !!reservationsTable,
+    refetchInterval: 15 * 1000,
   });
 
   const reservations = resData?.reservations ?? [];

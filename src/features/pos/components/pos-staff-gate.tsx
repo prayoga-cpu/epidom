@@ -28,14 +28,20 @@ const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"] a
 
 export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const { isActive, storeId: sessionStoreId, login } = usePosSession();
+  const { isActive, storeId: sessionStoreId, login, checkStale } = usePosSession();
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [pin, setPin] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [shake, setShake] = useState(false);
 
   React.useEffect(() => {
+    // A persona left logged in from a previous day must be cleared before
+    // anything below reads isActive, or it'd trust a session that should
+    // already be gone (real enforcement is the server-side StaffSession
+    // expiry — this just keeps this gate's own render honest immediately).
+    checkStale();
     setIsMounted(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   React.useEffect(() => {
@@ -56,7 +62,9 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
     enabled: !(isActive && sessionStoreId === storeId),
   });
 
-  const activeStaff = data?.staff.filter((s) => s.isActive) ?? [];
+  // Exclude role OWNER — that persona is functionally the account owner
+  // already (e.g. seeded rows), not a restrictable sub-account to pick.
+  const activeStaff = data?.staff.filter((s) => s.isActive && s.role !== "OWNER") ?? [];
   const autoLoginAttempted = React.useRef(false);
 
   React.useEffect(() => {
@@ -101,6 +109,7 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
         staffName: staff.name,
         staffRole: staff.role,
         shiftId: shift?.id ?? null,
+        allowedPages: staff.allowedPages ?? null,
       });
 
       if (!shift) {
@@ -202,6 +211,29 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
                 ))}
               </div>
             )}
+
+            {/* The account owner should never be stuck behind a staff PIN
+                pick just to use POS themselves. */}
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground text-xs"
+                onClick={() =>
+                  login({
+                    storeId,
+                    staffId: "owner",
+                    staffName: "Owner",
+                    staffRole: "OWNER",
+                    shiftId: null,
+                    allowedPages: null,
+                  })
+                }
+              >
+                Continue as Owner
+              </Button>
+            </div>
           </>
         ) : (
           <div className="mx-auto flex w-full flex-col items-center">

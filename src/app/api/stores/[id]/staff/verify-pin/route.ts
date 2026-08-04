@@ -4,6 +4,8 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { withApiHandler } from "@/lib/api-handler";
 import { compare } from "bcryptjs";
 import { verifyStaffPinSchema } from "@/lib/validation/operations.schemas";
+import { createStaffSession } from "@/lib/staff-session";
+import { resolveStaffAllowedPages } from "@/config/staff-permissions.config";
 
 /**
  * POST /api/stores/[id]/staff/verify-pin
@@ -29,7 +31,15 @@ export const POST = withApiHandler(
 
     const staff = await prisma.staffMember.findUnique({
       where: { id: staffId },
-      select: { id: true, name: true, role: true, pin: true, storeId: true, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        pin: true,
+        storeId: true,
+        isActive: true,
+        allowedPages: true,
+      },
     });
 
     if (!staff || staff.storeId !== storeId || !staff.isActive) {
@@ -59,9 +69,20 @@ export const POST = withApiHandler(
       select: { id: true },
     });
 
+    // Establishes the real, server-verified "acting as this staff member"
+    // session — not just the client-side display label — so owner-only
+    // pages (Profile, Billing, Staff) can actually block a restricted
+    // persona instead of merely hiding UI.
+    await createStaffSession(storeId!, staff.id);
+
     return NextResponse.json(
       createSuccessResponse({
-        staff: { id: staff.id, name: staff.name, role: staff.role },
+        staff: {
+          id: staff.id,
+          name: staff.name,
+          role: staff.role,
+          allowedPages: resolveStaffAllowedPages(staff.role, staff.allowedPages),
+        },
         shift: openShift ?? null,
       })
     );

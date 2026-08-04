@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { StorefrontEditorClient } from "@/features/storefront/editor/components/storefront-editor-client";
+import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 export const metadata: Metadata = {
   title: "Storefront - Epidom",
@@ -8,5 +9,6 @@ export const metadata: Metadata = {
 
 export default async function StorefrontPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
+  await requireStaffPageAccess(storeId, "/storefront");
   return <StorefrontEditorClient storeId={storeId} />;
 }

@@ -3,15 +3,17 @@
 import { useI18n } from "@/components/lang/i18n-provider";
 import { KdsOrderCard } from "./kds-order-card";
 import type { PosOrderDisplay } from "../../types/pos.types";
+import type { KdsDepartment } from "./kds-department";
 
 interface KdsColumnProps {
   title: string;
   orders: PosOrderDisplay[];
   storeId: string;
+  department: KdsDepartment | null;
   emptyLabel?: string;
 }
 
-export function KdsColumn({ title, orders, storeId, emptyLabel }: KdsColumnProps) {
+export function KdsColumn({ title, orders, storeId, department, emptyLabel }: KdsColumnProps) {
   const { t } = useI18n();
 
   return (
@@ -28,7 +30,9 @@ export function KdsColumn({ title, orders, storeId, emptyLabel }: KdsColumnProps
             {emptyLabel ?? t("pos.kds.emptyDefault")}
           </div>
         ) : (
-          orders.map((order) => <KdsOrderCard key={order.id} order={order} storeId={storeId} />)
+          orders.map((order) => (
+            <KdsOrderCard key={order.id} order={order} storeId={storeId} department={department} />
+          ))
         )}
       </div>
     </div>

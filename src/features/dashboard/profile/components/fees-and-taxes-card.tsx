@@ -33,7 +33,16 @@ export function FeesAndTaxesCard({ storeId, storeName }: FeesAndTaxesCardProps) 
       <Card className="border-2">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <CardTitle className="text-xl font-bold">{t("profile.feesAndTaxes.title")}</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-xl font-bold">{t("profile.feesAndTaxes.title")}</CardTitle>
+              {settings && (
+                <Badge variant={settings.syncFinanceWithBusiness ? "default" : "outline"}>
+                  {settings.syncFinanceWithBusiness
+                    ? t("profile.feesAndTaxes.scope.integrated")
+                    : t("profile.feesAndTaxes.scope.storeOnly")}
+                </Badge>
+              )}
+            </div>
             {storeName && <p className="text-muted-foreground text-sm">{storeName}</p>}
           </div>
           <Button
@@ -107,6 +116,17 @@ export function FeesAndTaxesCard({ storeId, storeName }: FeesAndTaxesCardProps) 
                 </div>
               </div>
 
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-sm font-medium">
+                  {t("profile.feesAndTaxes.payLater.title")}
+                </p>
+                <Badge variant={settings.payLaterEnabled ? "default" : "secondary"}>
+                  {settings.payLaterEnabled
+                    ? t("profile.feesAndTaxes.enabled")
+                    : t("profile.feesAndTaxes.disabled")}
+                </Badge>
+              </div>
+
               <div className="space-y-1 sm:col-span-2">
                 <p className="text-muted-foreground text-sm font-medium">
                   {t("profile.feesAndTaxes.processingFee.title")}
@@ -141,7 +161,9 @@ export function FeesAndTaxesCard({ storeId, storeName }: FeesAndTaxesCardProps) 
           open={editOpen}
           onOpenChange={setEditOpen}
           storeId={storeId}
+          syncedWithBusiness={settings.syncFinanceWithBusiness}
           settings={settings}
+          payLaterEnabled={settings.payLaterEnabled}
         />
       )}
     </>

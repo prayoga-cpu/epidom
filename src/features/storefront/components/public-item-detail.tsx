@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Minus, Check, ShoppingCart, Utensils } from "lucide-react";
@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils/formatting";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
 import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
+import { usePublicStorefrontMenu, type PublicMenuItem } from "../hooks/use-public-menu";
 
 interface ModifierOption {
   name: string;
@@ -24,30 +25,9 @@ interface ModifierGroup {
   options: ModifierOption[];
 }
 
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string | null;
-  price: any;
-  currency: string;
-  imageUrl: string | null;
-  isAvailable: boolean;
-  isFeatured: boolean;
-  modifiers: any;
-  product?: {
-    optionGroups?: Array<{
-      name: string;
-      isRequired: boolean;
-      maxSelections: number;
-      options: Array<{
-        name: string;
-        priceAdjustment: number | string;
-        materialId?: string | null;
-        materialQty?: number | string | null;
-      }>;
-    }>;
-  } | null;
-}
+// Reuses the polling hook's shape exactly — see public-menu.tsx's identical
+// choice, and usePublicStorefrontMenu's own doc comment.
+type MenuItem = PublicMenuItem;
 
 /** Same conversion as public-menu.tsx's getItemModifierGroups — kept local
  * rather than shared since the two files' ModifierGroup shapes are declared
@@ -89,9 +69,17 @@ interface CartItem {
   notes?: string;
 }
 
-export function PublicItemDetail({ storefront, item }: PublicItemDetailProps) {
+export function PublicItemDetail({ storefront, item: initialItem }: PublicItemDetailProps) {
   const router = useRouter();
   const { t } = useI18n();
+  // Polls the live menu (shared with public-menu.tsx) and swaps in this
+  // item's fresh price/availability/options once loaded, so a merchant's
+  // change shows up while a customer already has this page open.
+  const { data: menuCategories } = usePublicStorefrontMenu(storefront.slug);
+  const item = useMemo(() => {
+    const live = menuCategories?.flatMap((c) => c.items).find((i) => i.id === initialItem.id);
+    return live ?? initialItem;
+  }, [menuCategories, initialItem]);
   const [quantity, setQuantity] = useState(1);
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, ModifierOption[]>>({});
   const [noteText, setNoteText] = useState("");

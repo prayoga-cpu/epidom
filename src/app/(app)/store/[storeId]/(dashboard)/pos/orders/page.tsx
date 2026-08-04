@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { PosOrdersTabs } from "@/features/pos/components/pos-orders-tabs";
 import { PosOrdersPageHeader } from "@/features/pos/components/pos-page-headers";
+import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 export default async function PosOrdersPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
@@ -13,6 +14,7 @@ export default async function PosOrdersPage({ params }: { params: Promise<{ stor
   }
 
   await verifyStoreOwnership(storeId, session.user.id);
+  await requireStaffPageAccess(storeId, "/pos/orders");
 
   return (
     <div className="flex h-full flex-1 flex-col">

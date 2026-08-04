@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { type LowStockAlert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { useCreateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { ShoppingCart, Loader2, Package, Phone } from "lucide-react";
@@ -54,7 +54,7 @@ type PlaceOrderFormData = z.infer<typeof placeOrderSchema>;
 interface PlaceOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  alert?: Alert | null;
+  alert?: LowStockAlert | null;
 }
 
 export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialogProps) {

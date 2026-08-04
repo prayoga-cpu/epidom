@@ -25,6 +25,11 @@ export function buildOrderHistoryParams(
   if (filters.source && filters.source !== "ALL") params.set("source", filters.source);
   if (filters.from) params.set("from", `${filters.from}T00:00:00Z`);
   if (filters.to) params.set("to", `${filters.to}T23:59:59Z`);
+  if (filters.unpaidOnly) params.set("unpaid", "1");
+  if (filters.productId && filters.productId !== "ALL") params.set("productId", filters.productId);
+  if (filters.department && filters.department !== "ALL")
+    params.set("department", filters.department);
+  if (filters.staffId && filters.staffId !== "ALL") params.set("staffId", filters.staffId);
   if (cursor) params.set("cursor", cursor);
   return params;
 }

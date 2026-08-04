@@ -5,6 +5,12 @@ import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
 import { inngest } from "@/lib/inngest/client";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
+// This webhook only ever fires for methods that skip straight to PENDING
+// pre-payment (skipsOnlinePayment() === false), so the CASH/PAY_LATER
+// immediate-delivery path in pos-order-builder.ts never applies here — but a
+// store with kitchenDisplayEnabled: false still wants ANY payment method,
+// online ones included, to land on DELIVERED once paid rather than CONFIRMED.
+
 function verifyXenditToken(request: Request): boolean {
   const callbackToken = process.env.XENDIT_WEBHOOK_TOKEN;
   if (!callbackToken) return true; // Allow if not configured (dev mode)
@@ -38,6 +44,9 @@ export async function POST(request: Request) {
       where: {
         id: orderId,
       },
+      include: {
+        store: { select: { kitchenDisplayEnabled: true } },
+      },
     });
 
     const providerRef = (payload as any).data?.id || (payload as any).id || "xendit";
@@ -46,6 +55,8 @@ export async function POST(request: Request) {
       return NextResponse.json(createSuccessResponse({ acknowledged: true }));
     }
 
+    const settledStatus = order.store.kitchenDisplayEnabled ? "CONFIRMED" : "DELIVERED";
+
     if (paid) {
       // Flip to PAID once. Guarded so a retry doesn't re-fire the Inngest event.
       if (order.paymentStatus !== "PAID") {
@@ -53,9 +64,19 @@ export async function POST(request: Request) {
           where: { id: orderId },
           data: {
             paymentStatus: "PAID",
-            status: "CONFIRMED",
+            status: settledStatus,
+            ...(settledStatus === "DELIVERED" && { deliveredDate: new Date() }),
           },
         });
+
+        // No kitchen/bar to route through — same table hand-back the manual
+        // "mark delivered" action does, since there's no service period left to track.
+        if (settledStatus === "DELIVERED" && order.tableId) {
+          await prisma.table.update({
+            where: { id: order.tableId },
+            data: { status: "AVAILABLE" },
+          });
+        }
 
         await inngest.send({
           name: "order/payment.confirmed",

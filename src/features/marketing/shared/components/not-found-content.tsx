@@ -33,19 +33,19 @@ export function NotFoundContent({ showDashboardButton = false }: NotFoundContent
       <div className="flex min-h-[60vh] flex-col items-center justify-center py-12 text-center md:py-16">
         <div className="w-full max-w-lg space-y-8">
           {/* 404 Icon */}
-          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 md:h-28 md:w-28">
-            <FileQuestion className="text-brand-primary h-12 w-12 md:h-14 md:w-14" />
+          <div className="bg-muted mx-auto flex h-24 w-24 items-center justify-center rounded-full md:h-28 md:w-28">
+            <FileQuestion className="text-muted-foreground h-12 w-12 md:h-14 md:w-14" />
           </div>
 
           {/* Heading */}
           <div className="space-y-3">
-            <h1 className="text-brand-primary text-7xl font-bold tracking-tight md:text-8xl lg:text-9xl">
+            <h1 className="text-foreground text-7xl font-bold tracking-tight md:text-8xl lg:text-9xl">
               404
             </h1>
-            <h2 className="text-brand-primary text-2xl font-semibold md:text-3xl lg:text-4xl">
+            <h2 className="text-foreground text-2xl font-semibold md:text-3xl lg:text-4xl">
               {t("notFound.title")}
             </h2>
-            <p className="mx-auto max-w-md text-base leading-relaxed text-gray-600 md:text-lg">
+            <p className="text-muted-foreground mx-auto max-w-md text-base leading-relaxed md:text-lg">
               {t("notFound.description")}
             </p>
           </div>
@@ -54,17 +54,14 @@ export function NotFoundContent({ showDashboardButton = false }: NotFoundContent
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             {showDashboardButton && (
               <Link href={dashboardHref} className="flex-1 sm:flex-auto">
-                <Button
-                  variant="outline"
-                  className="border-brand-primary text-brand-primary w-full gap-2 border-2"
-                >
+                <Button variant="outline" className="w-full gap-2">
                   <Home className="h-4 w-4" />
                   {t("notFound.goToDashboard")}
                 </Button>
               </Link>
             )}
             <Link href="/" className="flex-1 sm:flex-auto">
-              <Button className="bg-brand-primary w-full gap-2 text-white">
+              <Button className="w-full gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 {t("notFound.backToHome")}
               </Button>
@@ -72,12 +69,12 @@ export function NotFoundContent({ showDashboardButton = false }: NotFoundContent
           </div>
 
           {/* Additional Help */}
-          <div className="mx-auto max-w-md rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm md:p-6">
-            <p className="text-gray-600">
+          <div className="bg-muted/30 mx-auto max-w-md rounded-lg border p-4 text-sm md:p-6">
+            <p className="text-muted-foreground">
               {t("notFound.helpText")}{" "}
               <Link
                 href="/contact"
-                className="text-brand-primary font-medium underline transition-colors hover:no-underline"
+                className="text-primary font-medium underline transition-colors hover:no-underline"
               >
                 {t("notFound.contactSupport")}
               </Link>

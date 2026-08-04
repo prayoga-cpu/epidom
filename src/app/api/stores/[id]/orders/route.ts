@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { OrderStatus, OrderSource } from "@prisma/client";
 import { serializePosOrders } from "@/lib/server/serialize";
+import { buildOrderHistoryWhere } from "@/lib/services/order-history-query";
 
 /**
  * GET /api/stores/[id]/orders
@@ -14,6 +14,10 @@ import { serializePosOrders } from "@/lib/server/serialize";
  *   source — OrderSource filter (ignored if "all" or invalid)
  *   from/to — ISO datetime range applied to orderDate
  *   q — matches orderNumber or customerName (case-insensitive)
+ *   unpaid — "1" filters to paymentStatus PENDING only
+ *   productId — menu item id, order must contain a line for it
+ *   department — "KITCHEN" | "BAR", order must contain an item from it
+ *   staffId — StaffMember id, order's shift must belong to them
  *   take — page size (default 25, max 100)
  *   cursor — order id for cursor pagination
  */
@@ -26,39 +30,37 @@ export const GET = withApiHandler(
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const q = searchParams.get("q");
+    const unpaid = searchParams.get("unpaid") === "1";
+    const productId = searchParams.get("productId");
+    const department = searchParams.get("department");
+    const staffId = searchParams.get("staffId");
     const cursor = searchParams.get("cursor");
     const take = Math.min(Math.max(parseInt(searchParams.get("take") ?? "25", 10) || 25, 1), 100);
 
-    const where: Record<string, unknown> = { storeId };
-
-    if (status && (Object.values(OrderStatus) as string[]).includes(status)) {
-      where.status = status;
+    if (from && isNaN(new Date(from).getTime())) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Invalid date range"),
+        { status: 400 }
+      );
+    }
+    if (to && isNaN(new Date(to).getTime())) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Invalid date range"),
+        { status: 400 }
+      );
     }
 
-    if (source && (Object.values(OrderSource) as string[]).includes(source)) {
-      where.source = source;
-    }
-
-    if (from || to) {
-      const fromDate = from ? new Date(from) : null;
-      const toDate = to ? new Date(to) : null;
-      if ((fromDate && isNaN(fromDate.getTime())) || (toDate && isNaN(toDate.getTime()))) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.INVALID_INPUT, "Invalid date range"),
-          { status: 400 }
-        );
-      }
-      where.orderDate = {} as Record<string, Date>;
-      if (fromDate) (where.orderDate as Record<string, Date>).gte = fromDate;
-      if (toDate) (where.orderDate as Record<string, Date>).lte = toDate;
-    }
-
-    if (q) {
-      where.OR = [
-        { orderNumber: { contains: q, mode: "insensitive" } },
-        { customerName: { contains: q, mode: "insensitive" } },
-      ];
-    }
+    const where = buildOrderHistoryWhere(storeId!, {
+      status,
+      source,
+      from,
+      to,
+      q,
+      unpaid,
+      productId,
+      department,
+      staffId,
+    });
 
     const [rows, totalCount] = await Promise.all([
       prisma.order.findMany({

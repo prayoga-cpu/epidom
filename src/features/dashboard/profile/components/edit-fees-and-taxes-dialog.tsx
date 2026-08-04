@@ -22,7 +22,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { toast } from "sonner";
 import {
   useUpdateFinanceSettings,
-  type FinanceSettingsData,
+  useUpdateBusinessFinanceSettings,
+  type FinanceSettingsFields,
 } from "../hooks/use-finance-settings";
 import { PAYMENT_FEE_DEFAULTS, PAYMENT_METHOD_LABELS } from "@/config/payment-fees.config";
 
@@ -30,7 +31,12 @@ interface EditFeesAndTaxesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   storeId: string;
-  settings: FinanceSettingsData;
+  /** Whether this store currently follows the shared business-wide config. */
+  syncedWithBusiness: boolean;
+  /** Effective values — already resolved from the business config when synced. */
+  settings: FinanceSettingsFields;
+  /** Owner-only Pay Later toggle — always store-specific, never resolved from the business config. */
+  payLaterEnabled: boolean;
 }
 
 const PAYMENT_METHODS = Object.keys(PAYMENT_FEE_DEFAULTS) as PaymentMethod[];
@@ -41,6 +47,8 @@ interface FeeRow {
 }
 
 interface FormValues {
+  syncFinanceWithBusiness: boolean;
+  payLaterEnabled: boolean;
   taxEnabled: boolean;
   taxRate: string; // whole-number percent, e.g. "11"
   taxLabel: string;
@@ -51,19 +59,38 @@ interface FormValues {
   feeRows: Record<PaymentMethod, FeeRow>;
 }
 
-function toFormValues(settings: FinanceSettingsData): FormValues {
+// Rates are stored server-side with up to 4 decimal places, so as a whole-number
+// percent they need at most 2 — .toFixed(4) + Number() rounds away binary-float
+// noise (0.007 * 100 === 0.7000000000000001) instead of displaying/round-tripping it.
+function rateToPercentString(rate: number): string {
+  return String(Number((rate * 100).toFixed(4)));
+}
+
+// Inverse of rateToPercentString: rounds to the schema's 4-decimal-place grain so
+// the value we send back is an exact multiple of 0.0001, not a float with drift.
+function percentStringToRate(percent: string): number {
+  return Number(((parseFloat(percent) || 0) / 100).toFixed(4));
+}
+
+function toFormValues(
+  settings: FinanceSettingsFields,
+  syncedWithBusiness: boolean,
+  payLaterEnabled: boolean
+): FormValues {
   const feeRows = {} as Record<PaymentMethod, FeeRow>;
   for (const method of PAYMENT_METHODS) {
     const rate = settings.feeRates[method] ?? PAYMENT_FEE_DEFAULTS[method];
-    feeRows[method] = { percent: String(rate.percent * 100), flat: String(rate.flat) };
+    feeRows[method] = { percent: rateToPercentString(rate.percent), flat: String(rate.flat) };
   }
   return {
+    syncFinanceWithBusiness: syncedWithBusiness,
+    payLaterEnabled,
     taxEnabled: settings.taxEnabled,
-    taxRate: String(settings.taxRate * 100),
+    taxRate: rateToPercentString(settings.taxRate),
     taxLabel: settings.taxLabel ?? "",
     taxInclusive: settings.taxInclusive ? "inclusive" : "exclusive",
     serviceChargeEnabled: settings.serviceChargeEnabled,
-    serviceChargeRate: String(settings.serviceChargeRate * 100),
+    serviceChargeRate: rateToPercentString(settings.serviceChargeRate),
     processingFeeEnabled: settings.processingFeeEnabled,
     feeRows,
   };
@@ -73,7 +100,7 @@ function defaultFeeRows(): Record<PaymentMethod, FeeRow> {
   const feeRows = {} as Record<PaymentMethod, FeeRow>;
   for (const method of PAYMENT_METHODS) {
     feeRows[method] = {
-      percent: String(PAYMENT_FEE_DEFAULTS[method].percent * 100),
+      percent: rateToPercentString(PAYMENT_FEE_DEFAULTS[method].percent),
       flat: String(PAYMENT_FEE_DEFAULTS[method].flat),
     };
   }
@@ -84,19 +111,25 @@ export function EditFeesAndTaxesDialog({
   open,
   onOpenChange,
   storeId,
+  syncedWithBusiness,
   settings,
+  payLaterEnabled,
 }: EditFeesAndTaxesDialogProps) {
   const { t } = useI18n();
-  const updateSettings = useUpdateFinanceSettings(storeId);
+  const updateStoreSettings = useUpdateFinanceSettings(storeId);
+  const updateBusinessSettings = useUpdateBusinessFinanceSettings();
+  const isPending = updateStoreSettings.isPending || updateBusinessSettings.isPending;
 
-  const form = useForm<FormValues>({ defaultValues: toFormValues(settings) });
+  const form = useForm<FormValues>({
+    defaultValues: toFormValues(settings, syncedWithBusiness, payLaterEnabled),
+  });
 
   useEffect(() => {
     if (open) {
-      form.reset(toFormValues(settings));
+      form.reset(toFormValues(settings, syncedWithBusiness, payLaterEnabled));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, settings]);
+  }, [open, settings, syncedWithBusiness, payLaterEnabled]);
 
   async function onSubmit(data: FormValues) {
     try {
@@ -104,7 +137,7 @@ export function EditFeesAndTaxesDialog({
         (acc, method) => {
           const row = data.feeRows[method];
           acc[method] = {
-            percent: (parseFloat(row.percent) || 0) / 100,
+            percent: percentStringToRate(row.percent),
             flat: parseFloat(row.flat) || 0,
           };
           return acc;
@@ -112,16 +145,33 @@ export function EditFeesAndTaxesDialog({
         {} as Record<PaymentMethod, { percent: number; flat: number }>
       );
 
-      await updateSettings.mutateAsync({
+      const fields = {
         taxEnabled: data.taxEnabled,
-        taxRate: (parseFloat(data.taxRate) || 0) / 100,
+        taxRate: percentStringToRate(data.taxRate),
         taxLabel: data.taxLabel || undefined,
         taxInclusive: data.taxInclusive === "inclusive",
         serviceChargeEnabled: data.serviceChargeEnabled,
-        serviceChargeRate: (parseFloat(data.serviceChargeRate) || 0) / 100,
+        serviceChargeRate: percentStringToRate(data.serviceChargeRate),
         processingFeeEnabled: data.processingFeeEnabled,
         processingFeeOverrides,
-      });
+      };
+
+      if (data.syncFinanceWithBusiness) {
+        // Integrated mode: this store just follows the shared config, and the
+        // values entered here are the shared config — write both. Pay Later
+        // isn't part of the shared config, so it always goes to the store.
+        await updateStoreSettings.mutateAsync({
+          syncFinanceWithBusiness: true,
+          payLaterEnabled: data.payLaterEnabled,
+        });
+        await updateBusinessSettings.mutateAsync(fields);
+      } else {
+        await updateStoreSettings.mutateAsync({
+          ...fields,
+          syncFinanceWithBusiness: false,
+          payLaterEnabled: data.payLaterEnabled,
+        });
+      }
 
       toast.success(t("profile.toasts.feesAndTaxesUpdated.title"), {
         description: t("profile.toasts.feesAndTaxesUpdated.description"),
@@ -135,6 +185,8 @@ export function EditFeesAndTaxesDialog({
     }
   }
 
+  const syncFinanceWithBusiness = form.watch("syncFinanceWithBusiness");
+  const payLaterEnabledValue = form.watch("payLaterEnabled");
   const taxEnabled = form.watch("taxEnabled");
   const serviceChargeEnabled = form.watch("serviceChargeEnabled");
   const processingFeeEnabled = form.watch("processingFeeEnabled");
@@ -150,7 +202,7 @@ export function EditFeesAndTaxesDialog({
             formId="edit-fees-and-taxes-form"
             onCancel={() => onOpenChange(false)}
             submitText={t("profile.actions.save")}
-            isPending={updateSettings.isPending}
+            isPending={isPending}
             variant="full-width"
           />
         }
@@ -163,6 +215,52 @@ export function EditFeesAndTaxesDialog({
           <p className="text-muted-foreground text-xs">
             {t("profile.feesAndTaxes.appliesToNewOrdersOnly")}
           </p>
+
+          <section className="bg-muted/30 space-y-1 rounded-lg border p-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label htmlFor="syncFinanceWithBusiness" className="text-base font-semibold">
+                  {t("profile.feesAndTaxes.sync.title")}
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  {t("profile.feesAndTaxes.sync.description")}
+                </p>
+              </div>
+              <Switch
+                id="syncFinanceWithBusiness"
+                checked={syncFinanceWithBusiness}
+                onCheckedChange={(checked) => form.setValue("syncFinanceWithBusiness", checked)}
+              />
+            </div>
+            {syncFinanceWithBusiness && (
+              <p className="text-muted-foreground pt-1 text-xs">
+                {t("profile.feesAndTaxes.sync.activeNote")}
+              </p>
+            )}
+          </section>
+
+          <Separator />
+
+          {/* Pay Later */}
+          <section className="space-y-1">
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div>
+                <Label htmlFor="payLaterEnabled" className="text-base font-semibold">
+                  {t("profile.feesAndTaxes.payLater.enabled")}
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  {t("profile.feesAndTaxes.payLater.description")}
+                </p>
+              </div>
+              <Switch
+                id="payLaterEnabled"
+                checked={payLaterEnabledValue}
+                onCheckedChange={(checked) => form.setValue("payLaterEnabled", checked)}
+              />
+            </div>
+          </section>
+
+          <Separator />
 
           {/* Tax */}
           <section className="space-y-3">

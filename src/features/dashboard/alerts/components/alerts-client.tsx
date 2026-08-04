@@ -5,9 +5,15 @@ import { Button } from "@/components/ui/button";
 import { AlertsTable } from "./alerts-table";
 import { PlaceOrderDialog } from "./place-order-dialog";
 import { OrdersView } from "./orders-view";
+import { UnpaidOrdersCard } from "./unpaid-orders-card";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useAlerts, type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import {
+  useAlerts,
+  type Alert,
+  type LowStockAlert,
+  type UnpaidOrderAlert,
+} from "@/features/dashboard/tracking/hooks/use-alerts";
 
 interface AlertsClientProps {
   initialAlerts: Alert[];
@@ -30,8 +36,16 @@ export function AlertsClient({ initialAlerts, storeId }: AlertsClientProps) {
   const alertsCount = alertsData?.alerts?.length || initialAlerts.length;
 
   // Dialog states
-  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<LowStockAlert | null>(null);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+
+  const allAlerts = alertsData?.alerts ?? initialAlerts;
+  const lowStockAlerts = allAlerts.filter(
+    (a): a is LowStockAlert => a.type === "LOW_STOCK"
+  );
+  const unpaidOrderAlerts = allAlerts.filter(
+    (a): a is UnpaidOrderAlert => a.type === "UNPAID_ORDER"
+  );
 
   const handleToggle = useCallback(() => {
     const params = new URLSearchParams(searchParams);
@@ -44,7 +58,7 @@ export function AlertsClient({ initialAlerts, storeId }: AlertsClientProps) {
   }, [isOrders, pathname, router, searchParams]);
 
   // Handle create order from alert
-  const handleCreateOrder = (alert: Alert) => {
+  const handleCreateOrder = (alert: LowStockAlert) => {
     setSelectedAlert(alert);
     setIsOrderDialogOpen(true);
   };
@@ -85,10 +99,12 @@ export function AlertsClient({ initialAlerts, storeId }: AlertsClientProps) {
         {isOrders ? (
           <OrdersView />
         ) : (
-          <AlertsTable
-            alerts={alertsData?.alerts ?? initialAlerts}
-            onCreateOrder={handleCreateOrder}
-          />
+          <div className="space-y-6">
+            <UnpaidOrdersCard alerts={unpaidOrderAlerts} storeId={storeId} />
+            {(lowStockAlerts.length > 0 || unpaidOrderAlerts.length === 0) && (
+              <AlertsTable alerts={lowStockAlerts} onCreateOrder={handleCreateOrder} />
+            )}
+          </div>
         )}
       </div>
 

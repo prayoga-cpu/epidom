@@ -16,7 +16,7 @@ export const metadata = genMeta({
 export default function NotFound() {
   return (
     <I18nProvider>
-      <main className="min-h-screen bg-white" style={{ color: "var(--color-brand-primary)" }}>
+      <main className="bg-background text-foreground min-h-screen">
         <NotFoundContent showDashboardButton={true} />
       </main>
     </I18nProvider>

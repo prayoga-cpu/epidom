@@ -5,6 +5,13 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { withApiHandler } from "@/lib/api-handler";
 import { hash, compare } from "bcryptjs";
 import { sendStaffPinEmail } from "@/lib/services/email.service";
+import { ALL_STAFF_PAGES } from "@/config/staff-permissions.config";
+
+const OWNER_ONLY_PAGES = new Set(["/profile", "/billing", "/staff"]);
+function sanitizeAllowedPages(pages: string[] | undefined): string[] | undefined {
+  if (!pages) return undefined;
+  return pages.filter((p) => ALL_STAFF_PAGES.includes(p) && !OWNER_ONLY_PAGES.has(p));
+}
 
 export const dynamic = "force-dynamic";
 
@@ -33,11 +40,44 @@ export const PATCH = withApiHandler(
       );
     }
 
-    const { pin, email, sendPinEmail, ...rest } = parsed.data;
+    const {
+      pin,
+      email,
+      whatsapp,
+      username,
+      customRoleLabel,
+      allowedPages,
+      sendPinEmail,
+      ...rest
+    } = parsed.data;
     const updateData: Record<string, unknown> = { ...rest };
 
+    if (customRoleLabel !== undefined) {
+      updateData.customRoleLabel = customRoleLabel.trim() !== "" ? customRoleLabel.trim() : null;
+    }
+    if (allowedPages !== undefined) {
+      updateData.allowedPages = sanitizeAllowedPages(allowedPages) ?? [];
+    }
+    if (username !== undefined) {
+      const usernameTaken = await prisma.staffMember.findFirst({
+        where: { storeId: storeId!, username, NOT: { id: staffId } },
+        select: { id: true },
+      });
+      if (usernameTaken) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.CONFLICT, "Username is already taken", {
+            fieldErrors: { username: ["Username is already taken"] },
+          }),
+          { status: 409 }
+        );
+      }
+      updateData.username = username;
+    }
     if (email !== undefined) {
       updateData.email = email && email.trim() !== "" ? email.trim() : null;
+    }
+    if (whatsapp !== undefined) {
+      updateData.whatsapp = whatsapp && whatsapp !== "" ? whatsapp : null;
     }
     if (pin !== undefined) {
       if (pin === "") {
@@ -58,8 +98,12 @@ export const PATCH = withApiHandler(
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
+        whatsapp: true,
         role: true,
+        customRoleLabel: true,
+        allowedPages: true,
         isActive: true,
         inviteStatus: true,
         updatedAt: true,

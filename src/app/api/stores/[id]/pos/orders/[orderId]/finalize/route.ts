@@ -9,6 +9,9 @@ import { inngest } from "@/lib/inngest/client";
 import { initiatePayment } from "@/lib/payments";
 import {
   validateAndBuildOrderItems,
+  skipsOnlinePayment,
+  resolveSettledOrderStatus,
+  deliverOrderImmediately,
   OrderBuildError,
   type BuiltOrderItem,
 } from "@/lib/services/pos-order-builder";
@@ -58,6 +61,16 @@ export async function POST(
     }
 
     const input = parsed.data;
+
+    // Defense in depth — the client only shows "Pay Later" as a checkout
+    // option when the store has enabled it, but never trust that a request
+    // actually came from a client that enforced it.
+    if (input.paymentMethod === "PAY_LATER" && !store.payLaterEnabled) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Pay Later is not enabled for this store"),
+        { status: 422 }
+      );
+    }
 
     const existing = await prisma.order.findFirst({ where: { id: orderId, storeId } });
     if (!existing) {
@@ -109,6 +122,12 @@ export async function POST(
       );
     }
 
+    const settledStatus = resolveSettledOrderStatus(
+      input.paymentMethod as PaymentMethod,
+      store.kitchenDisplayEnabled
+    );
+    const immediatelyDelivered = settledStatus === "DELIVERED";
+
     const order = await prisma.$transaction(async (tx) => {
       await tx.orderItem.deleteMany({ where: { orderId: existing.id } });
 
@@ -123,7 +142,8 @@ export async function POST(
           shiftId: input.shiftId ?? existing.shiftId,
           paymentMethod: input.paymentMethod as PaymentMethod,
           paymentStatus: input.paymentMethod === "CASH" ? "PAID" : "PENDING",
-          status: input.paymentMethod === "CASH" ? "CONFIRMED" : "PENDING",
+          status: settledStatus,
+          ...(immediatelyDelivered && { deliveredDate: new Date() }),
           notes: input.notes,
           subtotal: new Prisma.Decimal(charges.subtotal),
           tax: new Prisma.Decimal(charges.tax),
@@ -151,8 +171,9 @@ export async function POST(
         include: { items: true },
       });
 
-      // If table is assigned, mark it as OCCUPIED (parity with create).
-      if (input.tableId && input.orderType === "DINE_IN") {
+      // If table is assigned, mark it as OCCUPIED (parity with create) —
+      // skipped when immediately delivered, same as create.
+      if (input.tableId && input.orderType === "DINE_IN" && !immediatelyDelivered) {
         await tx.table.update({
           where: { id: input.tableId },
           data: { status: "OCCUPIED" },
@@ -161,6 +182,10 @@ export async function POST(
 
       return updated;
     });
+
+    if (immediatelyDelivered) {
+      await deliverOrderImmediately(order.id, storeId);
+    }
 
     // Fire background notification via Inngest — the true, one-time
     // placement moment for this order (never fired at hold time).
@@ -191,11 +216,11 @@ export async function POST(
         ? Math.max(0, input.amountTendered - charges.total)
         : null;
 
-    // Initiate payment for non-CASH methods
+    // Initiate payment for methods that actually need an online payment step
     let qrString: string | null = null;
     let paymentProviderRef: string | null = null;
 
-    if (input.paymentMethod !== "CASH") {
+    if (!skipsOnlinePayment(input.paymentMethod as PaymentMethod)) {
       try {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const payment = await initiatePayment({

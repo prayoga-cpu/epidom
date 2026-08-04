@@ -38,7 +38,7 @@ export async function PATCH(
       );
     }
 
-    const { status } = parsed.data;
+    const { status, paymentStatus } = parsed.data;
 
     // Verify order belongs to this store
     const existing = await prisma.order.findFirst({
@@ -59,7 +59,9 @@ export async function PATCH(
       );
     }
 
-    const updateData: Record<string, unknown> = { status };
+    const updateData: Record<string, unknown> = {};
+    if (status !== undefined) updateData.status = status;
+    if (paymentStatus !== undefined) updateData.paymentStatus = paymentStatus;
 
     // When delivering, mark timestamp and free up the table
     if (status === "DELIVERED") {
@@ -102,7 +104,13 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json(createSuccessResponse({ id: updated.id, status: updated.status }));
+    return NextResponse.json(
+      createSuccessResponse({
+        id: updated.id,
+        status: updated.status,
+        paymentStatus: updated.paymentStatus,
+      })
+    );
   } catch (error) {
     console.error("[POS_ORDER_PATCH]", error);
     return NextResponse.json(

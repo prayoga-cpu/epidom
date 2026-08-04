@@ -23,7 +23,7 @@ export function PosDepartmentBar({
   const { t } = useI18n();
 
   return (
-    <div className="bg-background flex items-center gap-2 border-b px-4 pb-3">
+    <div className="bg-background flex items-center gap-2 border-b px-4 py-3">
       <Button
         size="sm"
         variant={selectedDepartment === null ? "default" : "outline"}

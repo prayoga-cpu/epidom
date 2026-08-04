@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Alert, useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { Alert, LowStockAlert, useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { DashboardCard } from "../components/dashboard-card";
 
@@ -19,7 +19,11 @@ export function AlertsCard({ initialAlerts, storeId }: AlertsCardProps) {
   // This uses the optimized DB query (prisma.$queryRaw) instead of client-side filtering
   const { data, isLoading, error } = useAlerts(storeId, { alerts: initialAlerts });
 
-  const alerts = data?.alerts || [];
+  // This card only shows low-stock materials — filter out other alert types
+  // (e.g. unpaid Pay Later orders, surfaced on the main Alerts page instead).
+  const alerts: LowStockAlert[] = (data?.alerts || []).filter(
+    (a): a is LowStockAlert => a.type === "LOW_STOCK"
+  );
 
   const cardContent = (
     <div className="flex min-h-[300px] flex-1 flex-col">

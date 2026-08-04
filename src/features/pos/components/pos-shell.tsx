@@ -9,8 +9,10 @@ import { PosItemGrid } from "./pos-item-grid";
 import { PosCart } from "./pos-cart";
 import { PosMobileCart } from "./pos-mobile-cart";
 import { PosOfflineBanner } from "./pos-offline-banner";
+import { PosUnpaidAlert } from "./pos-unpaid-alert";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosCart } from "../hooks/use-pos-cart";
+import { usePosOrders } from "../hooks/use-pos-orders";
 import { PosStaffGate } from "./pos-staff-gate";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -37,6 +39,8 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   const cart = usePosCart();
 
   const { data: menuData, isLoading } = usePosMenu(store.id);
+  const { data: orders } = usePosOrders(store.id);
+  const unpaidCount = orders?.filter((o) => o.paymentStatus === "PENDING").length ?? 0;
 
   const handleItemClick = (item: PosMenuItem) => {
     const groups = getMergedOptionGroups(item, item.product);
@@ -52,6 +56,7 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
       <div className="bg-muted/10 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl">
         <PosHeader store={store} onCartClick={() => setMobileCartOpen(true)} />
         <PosOfflineBanner storeId={store.id} />
+        <PosUnpaidAlert storeId={store.id} unpaidCount={unpaidCount} />
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Left pane: Menu Grid. min-w-0 stops this pane's content from

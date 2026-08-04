@@ -7,7 +7,7 @@
  */
 import { NextResponse } from "next/server";
 import { getFinanceSettings, updateFinanceSettings } from "@/lib/services";
-import { updateFinanceSettingsSchema } from "@/lib/validation/finance-settings.schemas";
+import { updateStoreFinanceSettingsSchema } from "@/lib/validation/finance-settings.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 
@@ -24,7 +24,7 @@ export const GET = withApiHandler(
 export const PATCH = withApiHandler(
   async (request, { storeId }) => {
     const body = await request.json();
-    const parsed = updateFinanceSettingsSchema.safeParse(body);
+    const parsed = updateStoreFinanceSettingsSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -33,8 +33,19 @@ export const PATCH = withApiHandler(
       );
     }
 
-    const settings = await updateFinanceSettings(storeId!, parsed.data);
-    return NextResponse.json(createSuccessResponse(settings));
+    try {
+      const settings = await updateFinanceSettings(storeId!, parsed.data);
+      return NextResponse.json(createSuccessResponse(settings));
+    } catch (error) {
+      // Domain conflict (e.g. editing fields while synced to business settings) —
+      // distinct from validation errors, so it gets its own status/message.
+      if (error instanceof Error && error.message.includes("synced")) {
+        return NextResponse.json(createErrorResponse(ApiErrorCode.CONFLICT, error.message), {
+          status: 409,
+        });
+      }
+      throw error;
+    }
   },
   { rateLimitEndpoint: "/api/stores/[id]/finance/settings", requireStoreAuth: true }
 );

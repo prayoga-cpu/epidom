@@ -63,8 +63,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
             table: { select: { label: true } },
             items: {
               include: {
-                menuItem: { select: { name: true } },
+                menuItem: { select: { name: true, department: true } },
                 product: { select: { name: true } },
+              },
+            },
+            shift: {
+              select: {
+                staffMember: { select: { id: true, name: true } },
               },
             },
           },

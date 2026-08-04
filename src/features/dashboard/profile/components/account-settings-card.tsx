@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
@@ -18,14 +18,24 @@ import {
   ShoppingCart,
   Users,
   Key,
+  KeyRound,
   Trash2,
   Link2,
   Loader2,
   ShieldCheck,
+  Monitor,
+  Smartphone,
+  Tablet,
+  MapPin,
+  LogOut,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { signOut } from "@/lib/auth-client";
 import { formatDate } from "@/lib/utils/format-date";
+import { useOwnerPinStatus } from "@/features/dashboard/shared/hooks/use-owner-pin";
+import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
+import { useConfirm } from "@/components/ui/use-confirm";
 
 interface AccountData {
   createdAt: string;
@@ -41,7 +51,24 @@ interface AccountData {
     connectedAt: string;
   }>;
   hasPasswordAccount: boolean;
+  sessions: Array<{
+    id: string;
+    isCurrent: boolean;
+    device: "Mobile" | "Tablet" | "Desktop";
+    os: string;
+    browser: string;
+    ipAddress: string | null;
+    location: string | null;
+    lastActive: string;
+    createdAt: string;
+  }>;
 }
+
+const DEVICE_ICONS: Record<string, React.ElementType> = {
+  Mobile: Smartphone,
+  Tablet: Tablet,
+  Desktop: Monitor,
+};
 
 const PROVIDER_LABELS: Record<string, string> = {
   google: "Google",
@@ -75,16 +102,22 @@ async function postAccountAction(body: Record<string, unknown>) {
 
 export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["account-settings"],
     queryFn: fetchAccountSettings,
   });
+  const { data: pinStatus } = useOwnerPinStatus();
+  const { confirm, confirmDialog } = useConfirm();
 
   // Change password dialog
   const [pwDialog, setPwDialog] = useState(false);
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
+
+  // Owner PIN dialog
+  const [pinDialog, setPinDialog] = useState(false);
 
   // Delete account dialog
   const [deleteDialog, setDeleteDialog] = useState(false);
@@ -103,6 +136,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
       setCurrentPw("");
       setNewPw("");
       setConfirmPw("");
+      queryClient.invalidateQueries({ queryKey: ["account-settings"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -117,6 +151,57 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const revokeSessionMutation = useMutation({
+    mutationFn: (sessionId: string) => postAccountAction({ action: "revoke-session", sessionId }),
+    onSuccess: () => {
+      toast.success("Device signed out");
+      queryClient.invalidateQueries({ queryKey: ["account-settings"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const revokeOtherSessionsMutation = useMutation({
+    mutationFn: () => postAccountAction({ action: "revoke-other-sessions" }),
+    onSuccess: (result: { revokedCount: number }) => {
+      toast.success(
+        result.revokedCount > 0
+          ? `Signed out ${result.revokedCount} other device${result.revokedCount === 1 ? "" : "s"}`
+          : "No other devices to sign out"
+      );
+      queryClient.invalidateQueries({ queryKey: ["account-settings"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const handleRevokeSession = async (sessionId: string, label: string) => {
+    if (
+      !(await confirm({
+        title: "Sign out this device?",
+        description: `${label} will be signed out immediately and will need to log in again.`,
+        confirmText: "Sign out",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
+    revokeSessionMutation.mutate(sessionId);
+  };
+
+  const handleRevokeOtherSessions = async () => {
+    if (
+      !(await confirm({
+        title: "Log out all other devices?",
+        description:
+          "Every other device currently signed in to this account will be logged out immediately. This device stays signed in.",
+        confirmText: "Log out other devices",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
+    revokeOtherSessionsMutation.mutate();
+  };
 
   const handleChangePw = () => {
     if (newPw !== confirmPw) {
@@ -198,6 +283,12 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                   <Link2 className="h-4 w-4" />
                   {t("profile.accountSettings.linkedAccounts")}
                 </p>
+                {!data?.hasPasswordAccount && (
+                  <p className="text-muted-foreground bg-muted/30 rounded-lg border px-3 py-2 text-xs">
+                    The password hasn&apos;t been set up for this account — you can only sign in
+                    via the linked account(s) below until you set one.
+                  </p>
+                )}
                 {data?.linkedAccounts.length === 0 ? (
                   <p className="text-muted-foreground text-sm">
                     {t("profile.accountSettings.noLinkedAccounts")}
@@ -237,18 +328,111 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
 
               <Separator />
 
+              {/* Connected Devices */}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-muted-foreground flex items-center gap-2 text-sm font-semibold tracking-wide uppercase">
+                    <Monitor className="h-4 w-4" />
+                    Connected Devices
+                  </p>
+                  {(data?.sessions.length ?? 0) > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive h-auto gap-1.5 px-2 py-1 text-xs"
+                      onClick={handleRevokeOtherSessions}
+                      disabled={revokeOtherSessionsMutation.isPending}
+                    >
+                      {revokeOtherSessionsMutation.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <LogOut className="h-3.5 w-3.5" />
+                      )}
+                      Log out all other devices
+                    </Button>
+                  )}
+                </div>
+                {!data?.sessions.length ? (
+                  <p className="text-muted-foreground text-sm">No active sessions found.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {data.sessions.map((s) => {
+                      const DeviceIcon = DEVICE_ICONS[s.device] ?? Monitor;
+                      const label = `${s.browser} on ${s.os}`;
+                      const isRevoking =
+                        revokeSessionMutation.isPending &&
+                        revokeSessionMutation.variables === s.id;
+                      return (
+                        <div
+                          key={s.id}
+                          className="bg-muted/30 flex items-center gap-3 rounded-lg border px-3 py-2.5"
+                        >
+                          <span className="bg-background flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
+                            <DeviceIcon className="text-muted-foreground h-4 w-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">
+                              {label}
+                              <span className="text-muted-foreground font-normal"> · {s.device}</span>
+                            </p>
+                            <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
+                              <span>Last active {formatDate(new Date(s.lastActive))}</span>
+                              {s.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  {s.location}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          {s.isCurrent ? (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 border-emerald-400 text-xs text-emerald-600"
+                            >
+                              This device
+                            </Badge>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 shrink-0"
+                              aria-label="Sign out this device"
+                              onClick={() => handleRevokeSession(s.id, label)}
+                              disabled={isRevoking}
+                            >
+                              {isRevoking ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <X className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
               {/* Actions */}
               <div className="space-y-3">
                 <p className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
                   {t("profile.accountSettings.security")}
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  {data?.hasPasswordAccount && (
-                    <Button variant="outline" className="gap-2" onClick={() => setPwDialog(true)}>
-                      <Key className="h-4 w-4" />
-                      {t("profile.accountSettings.changePassword")}
-                    </Button>
-                  )}
+                  <Button variant="outline" className="gap-2" onClick={() => setPwDialog(true)}>
+                    <Key className="h-4 w-4" />
+                    {data?.hasPasswordAccount
+                      ? t("profile.accountSettings.changePassword")
+                      : "Set Password"}
+                  </Button>
+                  <Button variant="outline" className="gap-2" onClick={() => setPinDialog(true)}>
+                    <KeyRound className="h-4 w-4" />
+                    {pinStatus?.hasPin ? "Change Owner PIN" : "Set Owner PIN"}
+                  </Button>
                   <Button
                     variant="outline"
                     className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive gap-2"
@@ -264,11 +448,17 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
         </CardContent>
       </Card>
 
-      {/* Change Password Dialog */}
+      {/* Change/Set Password Dialog */}
       <Dialog open={pwDialog} onOpenChange={setPwDialog}>
         <FormDialogLayout
-          title={t("profile.accountSettings.changePassword")}
-          description={t("profile.accountSettings.changePasswordDescription")}
+          title={
+            data?.hasPasswordAccount ? t("profile.accountSettings.changePassword") : "Set Password"
+          }
+          description={
+            data?.hasPasswordAccount
+              ? t("profile.accountSettings.changePasswordDescription")
+              : "Add a password so you can also sign in with email + password, not just your linked account."
+          }
           footer={
             <>
               <Button variant="outline" onClick={() => setPwDialog(false)}>
@@ -285,15 +475,17 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
           }
         >
           <div className="space-y-4">
-            <div className="space-y-1">
-              <Label>{t("profile.accountSettings.currentPassword")}</Label>
-              <Input
-                type="password"
-                value={currentPw}
-                onChange={(e) => setCurrentPw(e.target.value)}
-                placeholder={t("profile.accountSettings.currentPassword")}
-              />
-            </div>
+            {data?.hasPasswordAccount && (
+              <div className="space-y-1">
+                <Label>{t("profile.accountSettings.currentPassword")}</Label>
+                <Input
+                  type="password"
+                  value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)}
+                  placeholder={t("profile.accountSettings.currentPassword")}
+                />
+              </div>
+            )}
             <div className="space-y-1">
               <Label>{t("profile.accountSettings.newPassword")}</Label>
               <Input
@@ -352,6 +544,9 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
           </div>
         </FormDialogLayout>
       </Dialog>
+
+      <SetOwnerPinDialog open={pinDialog} onOpenChange={setPinDialog} />
+      {confirmDialog}
     </>
   );
 }

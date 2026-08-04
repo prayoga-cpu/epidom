@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-export interface Alert {
+export interface LowStockAlert {
   id: string;
   type: "LOW_STOCK";
   severity: "critical" | "warning";
@@ -20,6 +20,21 @@ export interface Alert {
   }>;
   createdAt: string;
 }
+
+/** A Pay Later order that was delivered but never settled. */
+export interface UnpaidOrderAlert {
+  id: string;
+  type: "UNPAID_ORDER";
+  severity: "warning";
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  total: number;
+  deliveredAt: string;
+  createdAt: string;
+}
+
+export type Alert = LowStockAlert | UnpaidOrderAlert;
 
 export interface AlertsResponse {
   alerts: Alert[];

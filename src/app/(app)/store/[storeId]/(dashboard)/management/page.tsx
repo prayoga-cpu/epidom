@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { fetchSupplierOrdersForPage } from "@/lib/server/data-fetchers";
 import { ManagementClient } from "@/features/dashboard/management/components/management-client";
+import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 export default async function ManagementPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
@@ -10,6 +11,7 @@ export default async function ManagementPage({ params }: { params: Promise<{ sto
   if (!session?.user?.id) {
     redirect("/login");
   }
+  await requireStaffPageAccess(storeId, "/management");
 
   // Fetch initial supplier orders
   // Optimize: Only fetch PLACED (active) and RECEIVED orders for the deliveries tab

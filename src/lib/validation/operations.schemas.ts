@@ -1,11 +1,34 @@
 import { z } from "zod";
+import { phoneSchema } from "./common.schemas";
+import { ALL_STAFF_PAGES } from "@/config/staff-permissions.config";
 
 // ── Staff ────────────────────────────────────────────────────────────────────
 
+// Login identity for the staff PIN gate — unique per store (enforced at the
+// API layer, not just DB), not an email/contact field.
+const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "Username must be at least 3 characters")
+  .max(20, "Username must be at most 20 characters")
+  .regex(/^[a-z0-9_.]+$/, "Only lowercase letters, numbers, underscore, and dot are allowed");
+
+// Dashboard nav item hrefs a staff member can be granted — validated
+// against the actual page universe (staff-permissions.config.ts), so this
+// can't drift out of sync with navigation.config.ts or accept junk values.
+const allowedPagesSchema = z
+  .array(z.string().refine((page) => ALL_STAFF_PAGES.includes(page), "Unknown page"))
+  .optional();
+
 export const createStaffSchema = z.object({
   name: z.string().min(1).max(100),
+  username: usernameSchema,
   email: z.string().email().optional().or(z.literal("")),
+  whatsapp: phoneSchema,
   role: z.enum(["OWNER", "MANAGER", "CASHIER", "KITCHEN"]),
+  customRoleLabel: z.string().max(40).optional().or(z.literal("")),
+  allowedPages: allowedPagesSchema,
   pin: z
     .string()
     .length(4)
@@ -18,8 +41,12 @@ export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 
 export const updateStaffSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  username: usernameSchema.optional(),
   email: z.string().email().optional().or(z.literal("")),
+  whatsapp: phoneSchema,
   role: z.enum(["OWNER", "MANAGER", "CASHIER", "KITCHEN"]).optional(),
+  customRoleLabel: z.string().max(40).optional().or(z.literal("")),
+  allowedPages: allowedPagesSchema,
   pin: z
     .string()
     .length(4)

@@ -104,6 +104,16 @@ export function OrderHistoryDetailDialog({
     }
   };
 
+  const handleMarkPaid = async () => {
+    if (!order) return;
+    try {
+      await updateStatus.mutateAsync({ orderId: order.id, paymentStatus: "PAID" });
+      toast.success(t("pos.orderCard.markPaidSuccess"));
+    } catch {
+      toast.error(t("pos.queue.updateFailed"));
+    }
+  };
+
   const mapStatusLabel = (s: string) => {
     const key = s === "IN_PRODUCTION" ? "inProduction" : s.toLowerCase();
     return t(`pos.status.${key}`);
@@ -239,6 +249,15 @@ export function OrderHistoryDetailDialog({
 
             {order.status !== "CANCELLED" && (
               <DialogFooter>
+                {order.paymentStatus === "PENDING" && (
+                  <Button
+                    variant="outline"
+                    disabled={updateStatus.isPending}
+                    onClick={handleMarkPaid}
+                  >
+                    {t("pos.orderCard.markPaid")}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"

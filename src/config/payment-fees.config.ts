@@ -26,6 +26,8 @@ export const PAYMENT_FEE_DEFAULTS: Record<PaymentMethod, PaymentFeeRate> = {
   SHOPEEPAY: { percent: 0.02, flat: 0 },
   BANK_TRANSFER: { percent: 0, flat: 4400 },
   STRIPE_CARD: { percent: 0.029, flat: 2000 },
+  // No processing fee — payment hasn't actually happened yet at order time.
+  PAY_LATER: { percent: 0, flat: 0 },
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -37,6 +39,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   SHOPEEPAY: "ShopeePay",
   BANK_TRANSFER: "Bank Transfer",
   STRIPE_CARD: "Card (Stripe)",
+  PAY_LATER: "Pay Later",
 };
 
 /** Partial per-method overrides a merchant has explicitly customized. */

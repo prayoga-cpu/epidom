@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { fetchAlertsForPage } from "@/lib/server/data-fetchers";
 import { AlertsClient } from "@/features/dashboard/alerts/components/alerts-client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 function AlertsSkeleton() {
   return (
@@ -28,6 +29,7 @@ export default async function AlertsPage({ params }: { params: Promise<{ storeId
   if (!session?.user?.id) {
     redirect("/login");
   }
+  await requireStaffPageAccess(storeId, "/alerts");
 
   // Fetch initial alerts data
   const alertsResult = await fetchAlertsForPage(storeId);

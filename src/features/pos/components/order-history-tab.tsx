@@ -1,20 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateTime } from "@/lib/utils/formatting";
-import { apiClient } from "@/lib/api/client";
 import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
 import {
   buildOrderHistoryParams,
   useDebouncedValue,
   useOrderHistory,
 } from "../hooks/use-order-history";
-import type { OrderHistoryFilters, OrderHistoryItem, OrderHistoryPage } from "../types/pos.types";
+import { usePosMenu } from "../hooks/use-pos-menu";
+import { usePosStaffList } from "../hooks/use-pos-staff-list";
+import { usePersistedState } from "../hooks/use-persisted-state";
+import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
+import {
+  DATE_RANGE_PRESETS,
+  resolveDateRangePreset,
+  type DateRangePreset,
+} from "../lib/date-range-presets";
+import type { OrderHistoryFilters, OrderHistoryItem } from "../types/pos.types";
 import { OrderHistoryDetailDialog } from "./order-history-detail-dialog";
+import { UnpaidFilterToggle } from "./unpaid-filter-toggle";
+import { AddFilterMenu } from "./add-filter-menu";
+import { RemovableFilter } from "./removable-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -32,9 +44,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Loader2, Search } from "lucide-react";
+import { useConfirm } from "@/components/ui/use-confirm";
+import { FileText, Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 
 const ORDER_STATUSES = [
   "PENDING",
@@ -46,7 +58,78 @@ const ORDER_STATUSES = [
   "HELD",
 ] as const;
 
-const EXPORT_ROW_CAP = 5000;
+const DEPARTMENT_VALUES = ["ALL", "KITCHEN", "BAR"] as const;
+const DATE_PRESET_VALUES: DateRangePreset[] = [...DATE_RANGE_PRESETS, "custom"];
+
+// The optional filter dropdowns hidden by default behind "+ Add filter".
+const HISTORY_FILTER_KEYS = ["status", "source", "department", "product", "staff", "dateRange"] as const;
+type HistoryFilterKey = (typeof HISTORY_FILTER_KEYS)[number];
+
+interface HistoryFiltersState {
+  status: string;
+  source: string;
+  from: string;
+  to: string;
+  datePreset: DateRangePreset;
+  unpaidOnly: boolean;
+  productId: string;
+  department: string;
+  staffId: string;
+  activeFilterKeys: HistoryFilterKey[];
+}
+
+const HISTORY_FILTERS_DEFAULTS: HistoryFiltersState = {
+  status: "ALL",
+  source: "ALL",
+  from: "",
+  to: "",
+  datePreset: "all",
+  unpaidOnly: false,
+  productId: "ALL",
+  department: "ALL",
+  staffId: "ALL",
+  activeFilterKeys: [],
+};
+
+// The reset applied to a filter's own value when it's removed from view —
+// hiding a filter also clears it, so it can never keep narrowing results silently.
+const HISTORY_FILTER_RESET: Record<HistoryFilterKey, Partial<HistoryFiltersState>> = {
+  status: { status: "ALL" },
+  source: { source: "ALL" },
+  department: { department: "ALL" },
+  product: { productId: "ALL" },
+  staff: { staffId: "ALL" },
+  dateRange: { datePreset: "all", from: "", to: "" },
+};
+
+function pick<T>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function sanitizeHistoryFilters(
+  raw: unknown,
+  defaults: HistoryFiltersState
+): HistoryFiltersState {
+  if (!raw || typeof raw !== "object") return defaults;
+  const r = raw as Partial<Record<keyof HistoryFiltersState, unknown>>;
+  const activeFilterKeys = Array.isArray(r.activeFilterKeys)
+    ? r.activeFilterKeys.filter((k): k is HistoryFilterKey =>
+        (HISTORY_FILTER_KEYS as readonly string[]).includes(k)
+      )
+    : defaults.activeFilterKeys;
+  return {
+    status: typeof r.status === "string" ? r.status : defaults.status,
+    source: typeof r.source === "string" ? r.source : defaults.source,
+    from: typeof r.from === "string" ? r.from : defaults.from,
+    to: typeof r.to === "string" ? r.to : defaults.to,
+    datePreset: pick(r.datePreset, DATE_PRESET_VALUES, defaults.datePreset),
+    unpaidOnly: typeof r.unpaidOnly === "boolean" ? r.unpaidOnly : defaults.unpaidOnly,
+    productId: typeof r.productId === "string" ? r.productId : defaults.productId,
+    department: pick(r.department, DEPARTMENT_VALUES, defaults.department),
+    staffId: typeof r.staffId === "string" ? r.staffId : defaults.staffId,
+    activeFilterKeys,
+  };
+}
 
 function getSourceBadgeVariant(source: string) {
   switch (source) {
@@ -108,15 +191,76 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   const { formatPrice } = useCurrency();
 
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("ALL");
-  const [source, setSource] = useState("ALL");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
   const [selected, setSelected] = useState<OrderHistoryItem | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+
+  const [filterState, setFilterState] = usePersistedState(
+    `epidom-pos-history-filters-${storeId}`,
+    HISTORY_FILTERS_DEFAULTS,
+    sanitizeHistoryFilters
+  );
+  const {
+    status,
+    source,
+    from,
+    to,
+    datePreset,
+    unpaidOnly,
+    productId,
+    department,
+    staffId,
+    activeFilterKeys,
+  } = filterState;
+  const patchFilters = (patch: Partial<HistoryFiltersState>) =>
+    setFilterState((prev) => ({ ...prev, ...patch }));
+
+  const addFilter = (key: HistoryFilterKey) => {
+    if (activeFilterKeys.includes(key)) return;
+    patchFilters({ activeFilterKeys: [...activeFilterKeys, key] });
+  };
+
+  const removeFilter = (key: HistoryFilterKey) => {
+    setFilterState((prev) => ({
+      ...prev,
+      ...HISTORY_FILTER_RESET[key],
+      activeFilterKeys: prev.activeFilterKeys.filter((k) => k !== key),
+    }));
+  };
+
+  const { data: menuData } = usePosMenu(storeId);
+  const productOptions = useMemo(() => {
+    const items = menuData?.categories.flatMap((c) => c.items) ?? [];
+    return items
+      .map((i) => ({ id: i.id, name: i.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [menuData]);
+
+  const { data: staffList } = usePosStaffList(storeId);
+  const staffOptions = useMemo(
+    () => (staffList ?? []).filter((s) => s.isActive).sort((a, b) => a.name.localeCompare(b.name)),
+    [staffList]
+  );
+
+  const handlePresetChange = (preset: DateRangePreset) => {
+    if (preset === "custom") {
+      patchFilters({ datePreset: preset });
+      return;
+    }
+    const range = resolveDateRangePreset(preset);
+    patchFilters({ datePreset: preset, from: range?.from ?? "", to: range?.to ?? "" });
+  };
 
   const debouncedSearch = useDebouncedValue(search, 300);
-  const filters: OrderHistoryFilters = { q: debouncedSearch, status, source, from, to };
+  const filters: OrderHistoryFilters = {
+    q: debouncedSearch,
+    status,
+    source,
+    from,
+    to,
+    unpaidOnly,
+    productId,
+    department,
+    staffId,
+  };
 
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useOrderHistory(
     storeId,
@@ -125,6 +269,106 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
 
   const orders = data?.pages.flatMap((p) => p.orders) ?? [];
   const totalCount = data?.pages[0]?.totalCount ?? 0;
+
+  // --- Bulk selection & actions -------------------------------------------
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const updateStatus = useUpdateOrderStatus(storeId);
+  const { confirm, confirmDialog: bulkConfirmDialog } = useConfirm();
+
+  // A fresh query (any filter change) invalidates which rows are even on
+  // screen — drop the selection rather than let it silently reference
+  // orders the cashier can no longer see.
+  useEffect(() => {
+    setSelectedIds(new Set());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, source, from, to, unpaidOnly, productId, department, staffId, debouncedSearch]);
+
+  const selectedOrders = orders.filter((o) => selectedIds.has(o.id));
+  const markPaidIds = selectedOrders.filter((o) => o.paymentStatus === "PENDING").map((o) => o.id);
+  const cancelIds = selectedOrders.filter((o) => o.status !== "CANCELLED").map((o) => o.id);
+
+  const toggleOrder = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleAll = (checked: boolean) => {
+    setSelectedIds(checked ? new Set(orders.map((o) => o.id)) : new Set());
+  };
+
+  async function runBulkUpdate(ids: string[], patch: { status?: string; paymentStatus?: "PAID" }) {
+    const results = await Promise.allSettled(
+      ids.map((orderId) => updateStatus.mutateAsync({ orderId, ...patch }))
+    );
+    const failed = results.filter((r) => r.status === "rejected").length;
+    return { succeeded: ids.length - failed, failed };
+  }
+
+  async function handleBulkMarkPaid() {
+    if (markPaidIds.length === 0 || isBulkProcessing) return;
+    const ok = await confirm({
+      title: t("pos.history.bulk.markPaidConfirmTitle"),
+      description: t("pos.history.bulk.markPaidConfirmDesc").replace(
+        "{n}",
+        String(markPaidIds.length)
+      ),
+      confirmText: t("pos.history.bulk.markPaid"),
+    });
+    if (!ok) return;
+
+    setIsBulkProcessing(true);
+    try {
+      const { succeeded, failed } = await runBulkUpdate(markPaidIds, { paymentStatus: "PAID" });
+      if (failed === 0) {
+        toast.success(t("pos.history.bulk.markPaidSuccess").replace("{n}", String(succeeded)));
+      } else {
+        toast.error(
+          t("pos.history.bulk.partialFailure").replace("{ok}", String(succeeded)).replace(
+            "{fail}",
+            String(failed)
+          )
+        );
+      }
+      setSelectedIds(new Set());
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  }
+
+  async function handleBulkCancel() {
+    if (cancelIds.length === 0 || isBulkProcessing) return;
+    const ok = await confirm({
+      title: t("pos.history.bulk.cancelConfirmTitle"),
+      description: t("pos.history.bulk.cancelConfirmDesc").replace("{n}", String(cancelIds.length)),
+      confirmText: t("pos.history.bulk.cancel"),
+      variant: "destructive",
+    });
+    if (!ok) return;
+
+    setIsBulkProcessing(true);
+    try {
+      const { succeeded, failed } = await runBulkUpdate(cancelIds, { status: "CANCELLED" });
+      if (failed === 0) {
+        toast.success(t("pos.history.bulk.cancelSuccess").replace("{n}", String(succeeded)));
+      } else {
+        toast.error(
+          t("pos.history.bulk.partialFailure").replace("{ok}", String(succeeded)).replace(
+            "{fail}",
+            String(failed)
+          )
+        );
+      }
+      setSelectedIds(new Set());
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  }
+  // -------------------------------------------------------------------------
 
   const mapStatusLabel = (s: string) => {
     const key = s === "IN_PRODUCTION" ? "inProduction" : s.toLowerCase();
@@ -172,70 +416,10 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     }
   };
 
-  async function exportXlsx() {
-    if (isExporting) return;
-    setIsExporting(true);
-    try {
-      const all: OrderHistoryItem[] = [];
-      let cursor: string | null = null;
-      do {
-        const params = buildOrderHistoryParams(filters, 100, cursor);
-        const page = await apiClient.get<OrderHistoryPage>(
-          `/stores/${storeId}/orders?${params.toString()}`
-        );
-        all.push(...page.orders);
-        cursor = page.nextCursor;
-      } while (cursor && all.length < EXPORT_ROW_CAP);
-
-      if (all.length === 0) {
-        toast.info(t("messages.noDataToExport"));
-        return;
-      }
-
-      const wb = XLSX.utils.book_new();
-      const header = [
-        t("pos.history.colDate"),
-        t("pos.history.colOrder"),
-        t("pos.history.colSource"),
-        t("pos.history.colType"),
-        t("pos.history.colCustomer"),
-        t("common.phone"),
-        t("pos.history.colItems"),
-        t("pos.cart.subtotal"),
-        t("pos.cart.tax"),
-        t("pos.history.delivery"),
-        t("pos.history.colTotal"),
-        t("pos.checkout.paymentMethod"),
-        t("pos.history.colPayment"),
-        t("pos.history.colStatus"),
-        t("pos.history.detailNotes"),
-      ];
-      const rows = all
-        .slice(0, EXPORT_ROW_CAP)
-        .map((o) => [
-          formatDateTime(o.orderDate),
-          o.orderNumber,
-          o.source,
-          o.orderType,
-          o.customerName,
-          o.customerPhone ?? "",
-          o.items.map(itemLine).join(", "),
-          Number(o.subtotal),
-          Number(o.tax),
-          Number(o.delivery),
-          Number(o.total),
-          o.paymentMethod,
-          o.paymentStatus,
-          o.status,
-          o.notes ?? "",
-        ]);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), "Orders");
-      XLSX.writeFile(wb, `orders-history-${filters.from || "all"}-${filters.to || "all"}.xlsx`);
-    } catch {
-      toast.error(t("messages.exportFailed"));
-    } finally {
-      setIsExporting(false);
-    }
+  function openPrintReport() {
+    const params = buildOrderHistoryParams(filters, 0);
+    params.delete("take");
+    window.open(`/store/${storeId}/pos/orders/print?${params.toString()}`, "_blank");
   }
 
   return (
@@ -251,76 +435,195 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
             className="pl-9"
           />
         </div>
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-full lg:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">{t("pos.history.allStatuses")}</SelectItem>
-            {ORDER_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {mapStatusLabel(s)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={source} onValueChange={setSource}>
-          <SelectTrigger className="w-full lg:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">{t("pos.history.allSources")}</SelectItem>
-            <SelectItem value="MANUAL">{t("pos.history.sourceManual")}</SelectItem>
-            <SelectItem value="STOREFRONT">{t("pos.history.sourceStorefront")}</SelectItem>
-            <SelectItem value="POS">{t("pos.history.sourcePos")}</SelectItem>
-            {Object.entries(AGGREGATOR_LABELS).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="history-from" className="text-xs">
-              {t("pos.history.from")}
-            </Label>
-            <Input
-              id="history-from"
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="w-36"
-            />
+        <UnpaidFilterToggle
+          active={unpaidOnly}
+          onToggle={() => patchFilters({ unpaidOnly: !unpaidOnly })}
+        />
+        {activeFilterKeys.includes("status") && (
+          <RemovableFilter onRemove={() => removeFilter("status")}>
+            <Select value={status} onValueChange={(v) => patchFilters({ status: v })}>
+              <SelectTrigger className="w-full lg:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("pos.history.allStatuses")}</SelectItem>
+                {ORDER_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {mapStatusLabel(s)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </RemovableFilter>
+        )}
+        {activeFilterKeys.includes("source") && (
+          <RemovableFilter onRemove={() => removeFilter("source")}>
+            <Select value={source} onValueChange={(v) => patchFilters({ source: v })}>
+              <SelectTrigger className="w-full lg:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("pos.history.allSources")}</SelectItem>
+                <SelectItem value="MANUAL">{t("pos.history.sourceManual")}</SelectItem>
+                <SelectItem value="STOREFRONT">{t("pos.history.sourceStorefront")}</SelectItem>
+                <SelectItem value="POS">{t("pos.history.sourcePos")}</SelectItem>
+                {Object.entries(AGGREGATOR_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </RemovableFilter>
+        )}
+        {activeFilterKeys.includes("department") && (
+          <RemovableFilter onRemove={() => removeFilter("department")}>
+            <Select value={department} onValueChange={(v) => patchFilters({ department: v })}>
+              <SelectTrigger className="w-full lg:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("common.department")}</SelectItem>
+                <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
+                <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </RemovableFilter>
+        )}
+        {activeFilterKeys.includes("product") && productOptions.length > 0 && (
+          <RemovableFilter onRemove={() => removeFilter("product")}>
+            <Select value={productId} onValueChange={(v) => patchFilters({ productId: v })}>
+              <SelectTrigger className="w-full lg:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("pos.queue.filterAllProducts")}</SelectItem>
+                {productOptions.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </RemovableFilter>
+        )}
+        {activeFilterKeys.includes("staff") && staffOptions.length > 0 && (
+          <RemovableFilter onRemove={() => removeFilter("staff")}>
+            <Select value={staffId} onValueChange={(v) => patchFilters({ staffId: v })}>
+              <SelectTrigger className="w-full lg:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("pos.queue.filterAllStaff")}</SelectItem>
+                {staffOptions.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </RemovableFilter>
+        )}
+        {activeFilterKeys.includes("dateRange") && (
+          <RemovableFilter onRemove={() => removeFilter("dateRange")}>
+            <Select
+              value={datePreset}
+              onValueChange={(v) => handlePresetChange(v as DateRangePreset)}
+            >
+              <SelectTrigger className="w-full lg:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DATE_RANGE_PRESETS.map((preset) => (
+                  <SelectItem key={preset} value={preset}>
+                    {t(`pos.history.dateRange.${preset}`)}
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom">{t("pos.history.dateRange.custom")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </RemovableFilter>
+        )}
+        {activeFilterKeys.includes("dateRange") && datePreset === "custom" && (
+          <div className="flex gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="history-from" className="text-xs">
+                {t("pos.history.from")}
+              </Label>
+              <Input
+                id="history-from"
+                type="date"
+                value={from}
+                onChange={(e) => patchFilters({ from: e.target.value })}
+                className="w-36"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="history-to" className="text-xs">
+                {t("pos.history.to")}
+              </Label>
+              <Input
+                id="history-to"
+                type="date"
+                value={to}
+                onChange={(e) => patchFilters({ to: e.target.value })}
+                className="w-36"
+              />
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="history-to" className="text-xs">
-              {t("pos.history.to")}
-            </Label>
-            <Input
-              id="history-to"
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="w-36"
-            />
-          </div>
-        </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={exportXlsx}
-          disabled={isExporting}
-          className="shrink-0"
-        >
-          {isExporting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
-          )}
-          {t("common.actions.exportAsExcel")}
+        )}
+        <AddFilterMenu
+          options={HISTORY_FILTER_KEYS.filter((k) => !activeFilterKeys.includes(k)).map((k) => ({
+            key: k,
+            label: t(`pos.filters.${k}`),
+          }))}
+          onAdd={(k) => addFilter(k as HistoryFilterKey)}
+        />
+        <Button variant="outline" onClick={openPrintReport} className="h-9 shrink-0">
+          <FileText className="mr-2 h-4 w-4" />
+          {t("pos.history.exportPdf")}
         </Button>
       </div>
+
+      {/* Bulk action bar — appears once at least one order is selected */}
+      {selectedIds.size > 0 && (
+        <div className="bg-primary/5 border-primary/20 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-2.5">
+          <span className="text-sm font-medium">
+            {t("pos.history.bulk.selectedCount").replace("{n}", String(selectedIds.size))}
+          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleBulkMarkPaid}
+              disabled={isBulkProcessing || markPaidIds.length === 0}
+            >
+              {isBulkProcessing && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              {t("pos.history.bulk.markPaid")}
+              {markPaidIds.length > 0 && ` (${markPaidIds.length})`}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={handleBulkCancel}
+              disabled={isBulkProcessing || cancelIds.length === 0}
+            >
+              {t("pos.history.bulk.cancel")}
+              {cancelIds.length > 0 && ` (${cancelIds.length})`}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+              disabled={isBulkProcessing}
+            >
+              <X className="mr-1 h-3.5 w-3.5" />
+              {t("pos.history.bulk.clearSelection")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Orders table */}
       {isLoading ? (
@@ -339,6 +642,13 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={orders.length > 0 && selectedIds.size === orders.length}
+                        onCheckedChange={(checked) => toggleAll(checked === true)}
+                        aria-label={t("pos.history.bulk.selectAll")}
+                      />
+                    </TableHead>
                     <TableHead>{t("pos.history.colDate")}</TableHead>
                     <TableHead>{t("pos.history.colOrder")}</TableHead>
                     <TableHead>{t("pos.history.colSource")}</TableHead>
@@ -357,6 +667,13 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                       className="cursor-pointer"
                       onClick={() => setSelected(order)}
                     >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(order.id)}
+                          onCheckedChange={(checked) => toggleOrder(order.id, checked === true)}
+                          aria-label={order.orderNumber}
+                        />
+                      </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {formatDateTime(order.orderDate)}
                       </TableCell>
@@ -426,6 +743,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
           if (!open) setSelected(null);
         }}
       />
+      {bulkConfirmDialog}
     </div>
   );
 }

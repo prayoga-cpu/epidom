@@ -51,7 +51,7 @@ export interface PosOrderItemDisplay {
   status: OrderItemStatus;
   notes?: string | null;
   selectedOptions?: CartModifier[] | null;
-  menuItem?: { name: string } | null;
+  menuItem?: { name: string; department?: "KITCHEN" | "BAR" | null } | null;
 }
 
 export interface PosOrderDisplay {
@@ -71,6 +71,9 @@ export interface PosOrderDisplay {
   total: number;
   items: PosOrderItemDisplay[];
   createdAt: string; // ISO string (serialised from Date)
+  // Set only when the order was placed during a tracked shift — many orders
+  // (esp. online/storefront) never have one, so cashier attribution is best-effort.
+  shift?: { staffMember: { id: string; name: string } } | null;
 }
 
 // ─── POS Menu ────────────────────────────────────────────────────────────────
@@ -178,4 +181,8 @@ export interface OrderHistoryFilters {
   source: string;
   from: string;
   to: string;
+  unpaidOnly: boolean;
+  productId: string;
+  department: string;
+  staffId: string;
 }

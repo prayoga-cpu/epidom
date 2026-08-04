@@ -80,10 +80,12 @@ Table businesses {
   currency String [not null, default: 'IDR']
   timezone String [not null, default: 'Asia/Jakarta']
   locale String [not null, default: 'id']
+  ownerPin String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   user user [not null]
   stores stores [not null]
+  financeSettings business_finance_settings
 }
 
 Table stores {
@@ -116,6 +118,10 @@ Table stores {
   aggregatorConnections aggregator_connections [not null]
   aggregatorEmails aggregator_emails [not null]
   financeSettings store_finance_settings
+  staffSessions staff_sessions [not null]
+  syncFinanceWithBusiness Boolean [not null, default: false]
+  payLaterEnabled Boolean [not null, default: false]
+  kitchenDisplayEnabled Boolean [not null, default: true]
 }
 
 Table store_finance_settings {
@@ -132,6 +138,26 @@ Table store_finance_settings {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   store stores [not null]
+}
+
+Table business_finance_settings {
+  id String [pk]
+  businessId String [unique, not null]
+  taxEnabled Boolean [not null, default: false]
+  taxRate Decimal [not null, default: 0]
+  taxLabel String
+  taxInclusive Boolean [not null, default: true]
+  serviceChargeEnabled Boolean [not null, default: false]
+  serviceChargeRate Decimal [not null, default: 0]
+  processingFeeEnabled Boolean [not null, default: true]
+  processingFeeOverrides Json
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  business businesses [not null]
+
+  Note: 'Shared fees & taxes config for a Business, used by any Store with
+syncFinanceWithBusiness = true (the "one integrated tax config across all
+stores" option — see StoreFinanceSettings for the per-store equivalent).'
 }
 
 Table subscriptions {
@@ -561,8 +587,12 @@ Table staff_members {
   id String [pk]
   storeId String [not null]
   name String [not null]
+  username String
   email String
+  whatsapp String
   role StaffRole [not null, default: 'CASHIER']
+  customRoleLabel String
+  allowedPages String[] [not null]
   pin String
   isActive Boolean [not null, default: true]
   inviteStatus String
@@ -570,6 +600,28 @@ Table staff_members {
   updatedAt DateTime [not null]
   store stores [not null]
   shifts shifts [not null]
+  sessions staff_sessions [not null]
+
+  indexes {
+    (storeId, username) [unique]
+  }
+}
+
+Table staff_sessions {
+  id String [pk]
+  storeId String [not null]
+  staffMemberId String [not null]
+  token String [unique, not null]
+  expiresAt DateTime [not null]
+  createdAt DateTime [default: `now()`, not null]
+  store stores [not null]
+  staffMember staff_members [not null]
+
+  Note: 'A server-verified "this browser is currently operating as this staff
+member" session, established when a staff PIN is verified. Distinct from
+better-auth\'s Session (which always belongs to the account owner) — this
+is what lets owner-only pages (Profile, Billing, Staff) tell a restricted
+staff persona apart from the real owner and block access server-side.'
 }
 
 Table shifts {
@@ -821,6 +873,7 @@ Enum PaymentMethod {
   SHOPEEPAY
   BANK_TRANSFER
   STRIPE_CARD
+  PAY_LATER
 }
 
 Enum PaymentStatus {
@@ -891,6 +944,8 @@ Ref: businesses.userId - user.id [delete: Cascade]
 Ref: stores.businessId > businesses.id [delete: Cascade]
 
 Ref: store_finance_settings.storeId - stores.id [delete: Cascade]
+
+Ref: business_finance_settings.businessId - businesses.id [delete: Cascade]
 
 Ref: subscriptions.userId - user.id [delete: Cascade]
 
@@ -967,6 +1022,10 @@ Ref: reservations.storeId > stores.id [delete: Cascade]
 Ref: reservations.tableId > tables.id [delete: Set Null]
 
 Ref: staff_members.storeId > stores.id [delete: Cascade]
+
+Ref: staff_sessions.storeId > stores.id [delete: Cascade]
+
+Ref: staff_sessions.staffMemberId > staff_members.id [delete: Cascade]
 
 Ref: shifts.storeId > stores.id [delete: Cascade]
 

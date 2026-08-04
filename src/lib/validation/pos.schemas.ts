@@ -37,6 +37,7 @@ export const createPosOrderSchema = z.object({
     "SHOPEEPAY",
     "BANK_TRANSFER",
     "STRIPE_CARD",
+    "PAY_LATER",
   ]),
   orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
   tableId: z.string().cuid().optional(),
@@ -70,9 +71,19 @@ export const createHoldOrderSchema = z.object({
 
 export type CreateHoldOrderInput = z.infer<typeof createHoldOrderSchema>;
 
-export const updateOrderStatusSchema = z.object({
-  status: z.enum(["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED", "CANCELLED"]),
-});
+export const updateOrderStatusSchema = z
+  .object({
+    status: z
+      .enum(["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED", "CANCELLED"])
+      .optional(),
+    // Manual settle-up for orders stuck at PENDING (Pay Later, or a payment
+    // that was actually collected outside the online flow) — deliberately
+    // narrowed to "mark paid" only, not a general paymentStatus setter.
+    paymentStatus: z.literal("PAID").optional(),
+  })
+  .refine((data) => data.status !== undefined || data.paymentStatus !== undefined, {
+    message: "Either status or paymentStatus is required",
+  });
 
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 

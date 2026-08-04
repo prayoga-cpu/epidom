@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
+import { parseUserAgent, geolocateIp } from "@/lib/utils/user-agent";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,8 @@ export const dynamic = "force-dynamic";
  * Returns data usage stats + linked OAuth accounts
  */
 export const GET = withApiHandler(
-  async (_req, { userId }) => {
-    const [user, accounts, storeStats] = await Promise.all([
+  async (_req, { userId, session }) => {
+    const [user, accounts, storeStats, sessions] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         select: { createdAt: true, email: true },
@@ -30,6 +31,11 @@ export const GET = withApiHandler(
           staffMembers: { select: { id: true } },
         },
       }),
+      prisma.session.findMany({
+        where: { userId },
+        select: { id: true, ipAddress: true, userAgent: true, createdAt: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+      }),
     ]);
 
     const totalStores = storeStats.length;
@@ -45,12 +51,29 @@ export const GET = withApiHandler(
 
     const hasPasswordAccount = accounts.some((a) => a.providerId === "credential");
 
+    // Cap how many sessions get a live geolocation lookup — most users have
+    // a handful of devices; this keeps the page from stalling behind dozens
+    // of third-party calls if a stale session table ever grows large.
+    const sessionsToLocate = sessions.slice(0, 10);
+    const locations = await Promise.all(sessionsToLocate.map((s) => geolocateIp(s.ipAddress)));
+
+    const deviceSessions = sessionsToLocate.map((s, i) => ({
+      id: s.id,
+      isCurrent: s.id === session.session.id,
+      ...parseUserAgent(s.userAgent),
+      ipAddress: s.ipAddress,
+      location: locations[i],
+      lastActive: s.updatedAt,
+      createdAt: s.createdAt,
+    }));
+
     return NextResponse.json(
       createSuccessResponse({
         createdAt: user?.createdAt,
         dataUsage: { totalStores, totalProducts, totalOrders, totalStaff },
         linkedAccounts,
         hasPasswordAccount,
+        sessions: deviceSessions,
       })
     );
   },
@@ -62,9 +85,44 @@ export const GET = withApiHandler(
  * action: "change-password" | "delete-account"
  */
 export const POST = withApiHandler(
-  async (request, { userId }) => {
+  async (request, { userId, session }) => {
     const body = await request.json();
     const { action } = body;
+
+    if (action === "revoke-session") {
+      const { sessionId } = body;
+      if (!sessionId || typeof sessionId !== "string") {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.INVALID_INPUT, "sessionId is required"),
+          { status: 400 }
+        );
+      }
+      if (sessionId === session.session.id) {
+        return NextResponse.json(
+          createErrorResponse(
+            ApiErrorCode.INVALID_INPUT,
+            "Cannot sign out the device you're currently using — log out instead"
+          ),
+          { status: 400 }
+        );
+      }
+      // Scope the delete to this user so one account can never revoke another's session.
+      const { count } = await prisma.session.deleteMany({ where: { id: sessionId, userId } });
+      if (count === 0) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.NOT_FOUND, "Session not found"),
+          { status: 404 }
+        );
+      }
+      return NextResponse.json(createSuccessResponse({ revoked: true }));
+    }
+
+    if (action === "revoke-other-sessions") {
+      const { count } = await prisma.session.deleteMany({
+        where: { userId, id: { not: session.session.id } },
+      });
+      return NextResponse.json(createSuccessResponse({ revokedCount: count }));
+    }
 
     if (action === "change-password") {
       const { currentPassword, newPassword } = body;
@@ -81,21 +139,33 @@ export const POST = withApiHandler(
 
       const account = await prisma.account.findFirst({
         where: { userId, providerId: "credential" },
-        select: { password: true },
+        select: { id: true, password: true },
       });
 
-      if (!account?.password) {
-        return NextResponse.json(
-          createErrorResponse(
-            ApiErrorCode.INVALID_INPUT,
-            "No password set on this account. Use a social login."
-          ),
-          { status: 400 }
-        );
+      // No credential account yet (e.g. signed up via Google only) — this is
+      // a first-time password *set*, not a change, so there's nothing to
+      // verify currentPassword against.
+      if (!account) {
+        const newHash = await hashPassword(newPassword);
+        const now = new Date();
+        await prisma.account.create({
+          data: {
+            accountId: userId,
+            providerId: "credential",
+            userId,
+            password: newHash,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
+        return NextResponse.json(createSuccessResponse({ changed: true }));
       }
 
       if (currentPassword) {
-        const valid = await verifyPassword({ hash: account.password, password: currentPassword });
+        const valid = await verifyPassword({
+          hash: account.password!,
+          password: currentPassword,
+        });
         if (!valid) {
           return NextResponse.json(
             createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Current password is incorrect"),
@@ -105,8 +175,8 @@ export const POST = withApiHandler(
       }
 
       const newHash = await hashPassword(newPassword);
-      await prisma.account.updateMany({
-        where: { userId, providerId: "credential" },
+      await prisma.account.update({
+        where: { id: account.id },
         data: { password: newHash },
       });
 

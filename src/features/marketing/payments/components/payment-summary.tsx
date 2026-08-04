@@ -32,7 +32,7 @@ export function PaymentSummary({ plan }: PaymentSummaryProps) {
   const planDetails = {
     starter: {
       title: t("pricing.plans.starter.title"),
-      price: "€29",
+      price: t("pricing.plans.starter.price"),
       period: t("pricing.plans.starter.billing"),
       features: [
         t("pricing.plans.starter.f1"),
@@ -42,7 +42,7 @@ export function PaymentSummary({ plan }: PaymentSummaryProps) {
     },
     pro: {
       title: t("pricing.plans.pro.title"),
-      price: "€79",
+      price: t("pricing.plans.pro.price"),
       period: t("pricing.plans.pro.billing"),
       features: [
         t("pricing.plans.pro.f1"),

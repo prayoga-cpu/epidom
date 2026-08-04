@@ -4,6 +4,7 @@ import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { TablesManager } from "@/features/pos/components/tables/tables-manager";
 import { ReservationList } from "@/features/pos/components/tables/reservation-list";
 import { TablesPageHeader } from "@/features/pos/components/pos-page-headers";
+import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 export const metadata = { title: "Tables | Epidom" };
 
@@ -12,6 +13,7 @@ export default async function TablesPage({ params }: { params: Promise<{ storeId
   const session = await getSession();
   if (!session?.user?.id) redirect("/login");
   await verifyStoreOwnership(storeId, session.user.id);
+  await requireStaffPageAccess(storeId, "/tables");
 
   return (
     <div className="flex h-full flex-1 flex-col">

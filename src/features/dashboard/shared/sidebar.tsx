@@ -25,6 +25,7 @@ import { FeedbackButton } from "@/features/dashboard/feedback/components/feedbac
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { APP_VERSION } from "@/lib/version";
 import { planRank, PLAN_LABELS, upgradeHrefFor } from "@/lib/plans/entitlements";
+import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 
 interface SidebarProps {
   mode?: "desktop" | "mobile";
@@ -38,12 +39,22 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
 
   const alertsCount = useAlertsCount();
   const { data: subData } = useSubscriptionStatus();
+  const posSession = usePosSession();
 
   const currentPlan: PlanTier = (subData?.subscription?.plan as PlanTier) ?? "FREE";
 
-  function hasAccess(requiredPlan?: PlanTier): boolean {
-    if (!requiredPlan) return true;
-    return planRank(currentPlan) >= planRank(requiredPlan);
+  // Role-based, not ID-based: a StaffMember row can itself have role "OWNER"
+  // (e.g. seeded accounts) and is functionally unrestricted, same as the
+  // synthetic "owner" bypass login.
+  const staffAllowedPages =
+    posSession.isActive && posSession.storeId === storeId && posSession.staffRole !== "OWNER"
+      ? posSession.allowedPages
+      : null;
+
+  function hasAccess(requiredPlan: PlanTier | undefined, href: string): boolean {
+    if (requiredPlan && planRank(currentPlan) < planRank(requiredPlan)) return false;
+    if (staffAllowedPages && !staffAllowedPages.includes(href)) return false;
+    return true;
   }
 
   const getBadgeCount = (badgeKey?: string): number | null => {
@@ -82,7 +93,15 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
           </div>
         )}
         <nav className="flex-1 p-3">
-          {navigation.map((section, sectionIndex) => (
+          {navigation.map((section, sectionIndex) => {
+            // A staff persona with none of this section's pages granted
+            // shouldn't see a dangling section title with nothing under it.
+            const sectionHasVisibleItem =
+              staffAllowedPages === null ||
+              section.items.some((item) => staffAllowedPages.includes(item.href));
+            if (!sectionHasVisibleItem) return null;
+
+            return (
             <div key={sectionIndex} className={sectionIndex > 0 ? "mt-4" : ""}>
               {section.title && (
                 <h3 className="text-muted-foreground mb-2 px-3 text-xs font-semibold tracking-wider uppercase">
@@ -96,10 +115,16 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                   const label = t(item.labelKey);
                   const Icon = item.icon;
                   const badge = getBadgeCount(item.badgeKey);
-                  const locked = !hasAccess(item.requiredPlan);
+                  const staffRestricted =
+                    staffAllowedPages !== null && !staffAllowedPages.includes(item.href);
+                  const locked = !hasAccess(item.requiredPlan, item.href);
                   const upgradeLabel = item.requiredPlan
                     ? `Upgrade to ${PLAN_LABELS[item.requiredPlan]}`
                     : undefined;
+
+                  // A staff persona without access to this page just never sees
+                  // it — unlike a plan-tier lock, there's no upgrade path to show.
+                  if (staffRestricted) return null;
 
                   if (locked) {
                     // Locked items route to the pricing/upgrade flow (POS → trial promo),
@@ -158,7 +183,8 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                 })}
               </ul>
             </div>
-          ))}
+            );
+          })}
         </nav>
         {mode === "mobile" && (
           <div className="space-y-3 border-t p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">

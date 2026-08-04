@@ -827,7 +827,7 @@ export const fr = {
       starter: {
         title: "CAISSE",
         description: "Pour les cafés et restaurants prêts pour une vraie caisse",
-        price: "9,99 €",
+        price: "19 €",
         billing: "par mois",
         select: "Commencer",
         f1: "Tout du GRATUIT",
@@ -837,7 +837,7 @@ export const fr = {
       pro: {
         title: "OPÉRATIONS",
         description: "Gestion complète pour les établissements en croissance",
-        price: "24,99 €",
+        price: "49 €",
         billing: "par mois",
         select: "Commencer",
         recommended: "Le Plus Populaire",
@@ -1442,7 +1442,7 @@ export const fr = {
     pos: "Caisse",
     posOrders: "File de Commandes",
     posTables: "Tables",
-    posKds: "Affichage Cuisine",
+    posKds: "Cuisine & Bar",
     staff: "Personnel",
     shifts: "Quarts de Travail",
     finance: "Rapports Financiers",
@@ -1535,8 +1535,8 @@ export const fr = {
     staffActive: "Actif",
     staffInactive: "Inactif",
     posOrdersDesc: "Gérez les commandes de votre boutique en ligne et de la caisse en temps réel.",
-    kdsTitle: "Système d'Affichage Cuisine",
-    kdsDesc: "Vue cuisine en temps réel · Appuyez sur les articles pour mettre à jour le statut",
+    kdsTitle: "Cuisine & Bar",
+    kdsDesc: "Vue cuisine & bar en temps réel · Appuyez sur les articles pour mettre à jour le statut",
     tablesDesc: "Surveillez le statut des tables en temps réel",
   },
   dashboard: {
@@ -1679,6 +1679,10 @@ export const fr = {
       processing: "Traitement en cours...",
       success: "Commande créée avec succès !",
       orderFailed: "Échec de la création de la commande. Veuillez réessayer.",
+      payLater: "Paiement Différé",
+      payLaterNoteTitle: "Le client paie après la livraison",
+      payLaterNoteDesc:
+        "Cette commande sera envoyée en cuisine maintenant. Elle apparaîtra comme en attente de paiement jusqu'à ce que quelqu'un la marque comme payée.",
     },
     queue: {
       title: "File d'Attente",
@@ -1690,6 +1694,36 @@ export const fr = {
       ago: "il y a",
       justNow: "À l'instant",
       updateFailed: "Échec de la mise à jour du statut de la commande",
+      searchPlaceholder: "Rechercher n° commande, client, table...",
+      viewGrid: "Grille",
+      viewCompact: "Compact",
+      viewBoard: "Tableau",
+      sortLabel: "Trier",
+      sortNewest: "Plus récent d'abord",
+      sortOldest: "Plus ancien d'abord",
+      sortTotalDesc: "Total : décroissant",
+      sortTotalAsc: "Total : croissant",
+      filterAllTypes: "Tous les types",
+      filterAllSources: "Toutes les sources",
+      clearFilters: "Effacer les filtres",
+      noMatches: "Aucune commande ne correspond à vos filtres",
+      noMatchesDesc: "Essayez une autre recherche ou effacez vos filtres.",
+      resultsCount: "{n} sur {m} commandes",
+      itemsShort: "articles",
+      unpaidOnly: "Non payé",
+      filterAllProducts: "Tous les produits",
+      filterAllStaff: "Tout le personnel",
+    },
+    filters: {
+      addFilter: "Ajouter un filtre",
+      removeFilter: "Supprimer le filtre",
+      source: "Source",
+      type: "Type",
+      department: "Département",
+      product: "Produit",
+      staff: "Personnel",
+      status: "Statut",
+      dateRange: "Période",
     },
     status: {
       pending: "En attente",
@@ -1742,7 +1776,18 @@ export const fr = {
       saveFailed: "Échec de l'enregistrement de la table",
     },
     kds: {
-      title: "Écran Cuisine",
+      title: "Cuisine & Bar",
+      tabKitchen: "Cuisine",
+      tabBar: "Bar",
+      enabledLabel: "Affichage Cuisine & Bar",
+      enabledToast: "Affichage Cuisine & Bar activé",
+      disabledToast:
+        "Affichage Cuisine & Bar désactivé — les nouvelles commandes passent directement à livré",
+      settingsUpdateFailed: "Échec de la mise à jour du paramètre",
+      disabledTitle: "L'affichage Cuisine & Bar est désactivé",
+      disabledDesc:
+        "Les commandes ignorent la file cuisine/bar et sont marquées livrées dès que le paiement est enregistré. Réactivez ci-dessus si vous devez suivre l'état de préparation.",
+      waitingOtherDepartment: "En attente de l'autre poste",
       preparing: "En préparation",
       ready: "Prêt à servir",
       markReady: "Marquer Prêt",
@@ -1787,6 +1832,9 @@ export const fr = {
       confirm: "Confirmer",
       startProcess: "Démarrer",
       complete: "Terminer",
+      unpaid: "Non payé",
+      markPaid: "Marquer comme payé",
+      markPaidSuccess: "Commande marquée comme payée",
     },
     print: {
       title: "Imprimer le Reçu",
@@ -1812,6 +1860,17 @@ export const fr = {
       sourcePos: "Caisse",
       from: "Du",
       to: "Au",
+      exportPdf: "Exporter en PDF",
+      dateRange: {
+        all: "Toute la période",
+        today: "Aujourd'hui",
+        yesterday: "Hier",
+        last7: "7 derniers jours",
+        last30: "30 derniers jours",
+        thisMonth: "Ce mois-ci",
+        lastMonth: "Le mois dernier",
+        custom: "Période personnalisée",
+      },
       colDate: "Date",
       colOrder: "N° commande",
       colSource: "Source",
@@ -1835,6 +1894,40 @@ export const fr = {
       detailTitle: "Détails de la commande",
       detailNotes: "Notes",
       detailDelivered: "Livrée le",
+      bulk: {
+        selectedCount: "{n} sélectionnée(s)",
+        selectAll: "Tout sélectionner",
+        markPaid: "Marquer comme payé",
+        markPaidConfirmTitle: "Marquer les commandes comme payées ?",
+        markPaidConfirmDesc: "Marquer {n} commandes comme payées.",
+        markPaidSuccess: "{n} commandes marquées comme payées",
+        cancel: "Annuler les commandes",
+        cancelConfirmTitle: "Annuler ces commandes ?",
+        cancelConfirmDesc:
+          "Annuler {n} commandes. Cette action est irréversible — le stock des commandes déjà livrées sera automatiquement réajouté.",
+        cancelSuccess: "{n} commandes annulées",
+        partialFailure: "{ok} réussies, {fail} échouées",
+        clearSelection: "Effacer la sélection",
+      },
+    },
+    printReport: {
+      title: "Rapport d'historique des commandes",
+      generatedAt: "Généré le",
+      storeLabel: "Boutique",
+      accountLabel: "Compte",
+      filtersApplied: "Filtres appliqués",
+      noFilters: "Aucun — affichage de toutes les commandes",
+      filterDateRange: "Période",
+      filterSearch: "Recherche",
+      filterProduct: "Produit",
+      filterStaff: "Personnel",
+      noOrders: "Aucune commande ne correspond à ces filtres.",
+      rowCapNotice:
+        "Affichage des {shown} premières commandes sur {total} — affinez vos filtres pour un rapport complet.",
+      systemBy: "Système de caisse par Epidom",
+      poweredBy: "epidom.fr",
+      toolbarHint: "Ce rapport ouvrira automatiquement la boîte de dialogue d'impression de votre navigateur.",
+      printAgain: "Imprimer",
     },
   },
   data: {
@@ -2698,6 +2791,16 @@ export const fr = {
     showing: "Affichage de",
     activeAlerts: "alertes actives",
 
+    // Commandes en paiement différé non réglées
+    unpaidOrders: {
+      title: "En Attente de Paiement",
+      badge: "{n} non payées",
+      deliveredAgo: "Livrée {time}",
+      markPaid: "Marquer comme payé",
+      markPaidSuccess: "Commande marquée comme payée",
+      markPaidFailed: "Échec de la mise à jour de la commande",
+    },
+
     // Table headers
     table: {
       material: "Matière Première",
@@ -2868,6 +2971,54 @@ export const fr = {
       addBusinessInfo: "Ajouter les Informations d'Entreprise",
     },
 
+    // Frais & Taxes
+    feesAndTaxes: {
+      title: "Frais & Taxes",
+      enabled: "Activé",
+      disabled: "Désactivé",
+      notConfigured: "Pas encore configuré",
+      appliesToNewOrdersOnly: "Les modifications s'appliquent uniquement aux nouvelles commandes.",
+      tax: {
+        enabled: "Taxe",
+        rate: "Taux de Taxe",
+        label: "Libellé de la Taxe",
+        mode: "Mode de Taxe",
+        inclusive: "Déjà incluse dans les prix du menu",
+        exclusive: "Ajoutée en plus des prix du menu",
+      },
+      serviceCharge: {
+        enabled: "Frais de Service",
+        rate: "Taux des Frais de Service",
+      },
+      processingFee: {
+        title: "Frais de Traitement des Paiements",
+        enabled: "Frais de Traitement des Paiements",
+        perMethod: "{count} méthodes de paiement configurées",
+        percent: "Pourcentage (%)",
+        flat: "Fixe (Rp)",
+        resetDefaults: "Réinitialiser par Défaut",
+        estimateDisclaimer:
+          "Une estimation basée sur les taux que vous définissez — pas une réconciliation directe avec Xendit/Stripe.",
+      },
+      sync: {
+        title: "Utiliser les paramètres partagés de l'entreprise",
+        description:
+          "Partagez cette configuration entre chaque magasin l'ayant activée. Modifier les valeurs ci-dessous la met à jour pour tous.",
+        activeNote:
+          "Vous modifiez les paramètres partagés — les changements s'appliquent à chaque magasin synchronisé.",
+      },
+      scope: {
+        integrated: "Intégré",
+        storeOnly: "Ce magasin uniquement",
+      },
+      payLater: {
+        title: "Paiement Différé",
+        enabled: "Autoriser le paiement différé en caisse",
+        description:
+          "Permet aux caissiers de servir une commande maintenant et d'encaisser le paiement après la livraison. Réservé au propriétaire — le personnel ne peut pas l'activer ou le désactiver.",
+      },
+    },
+
     // Abonnement
     subscription: {
       title: "Abonnement",
@@ -2896,8 +3047,8 @@ export const fr = {
         pos: "POS",
       },
       pricing: {
-        starter: "29€/mois",
-        pro: "79€/mois",
+        starter: "Rp 99.000/mois",
+        pro: "Rp 249.000/mois",
         enterprise: "Sur mesure",
       },
       status: {
@@ -2980,6 +3131,9 @@ export const fr = {
         "Mettez à jour les informations de contact et les détails de votre entreprise",
       addBusinessInfoDescription:
         "Ajoutez les informations de votre entreprise pour compléter votre profil",
+      editFeesAndTaxes: "Modifier les Frais & Taxes",
+      editFeesAndTaxesDescription:
+        "Définissez le taux de taxe, les frais de service et les frais de traitement des paiements pour ce magasin",
       editAvatar: "Modifier la Photo de Profil",
       editAvatarDescription:
         "Téléchargez une nouvelle photo de profil ou supprimez celle en cours.",
@@ -3018,6 +3172,8 @@ export const fr = {
       updateFailed: "Échec de la mise à jour du profil. Veuillez réessayer.",
       businessUpdateFailed:
         "Échec de la mise à jour des informations d'entreprise. Veuillez réessayer.",
+      feesAndTaxesUpdateFailed: "Échec de la mise à jour des frais & taxes. Veuillez réessayer.",
+      feesAndTaxesLoadFailed: "Échec du chargement des paramètres de frais & taxes.",
       loadImageFailed: "Échec du chargement de l'image",
       uploadFailed: "Échec du téléchargement",
     },
@@ -3035,6 +3191,10 @@ export const fr = {
       businessCreated: {
         title: "Infos Entreprise Ajoutées",
         description: "Les informations d'entreprise ont été ajoutées avec succès.",
+      },
+      feesAndTaxesUpdated: {
+        title: "Frais & Taxes Mis à Jour",
+        description: "Les paramètres de frais & taxes ont été mis à jour avec succès.",
       },
       avatarUpdated: {
         title: "Avatar Mis à Jour",
@@ -4015,7 +4175,7 @@ export const fr = {
     managePayment: "Gérer les Modes de Paiement",
     cancelSubscription: "Annuler l'Abonnement",
     notStripeManaged:
-      "Vous êtes sur l'offre gratuite — aucun moyen de paiement ni abonnement à gérer. Passez à une offre payante pour débloquer les fonctionnalités.",
+      "Vous êtes sur l'offre {plan} — aucun moyen de paiement ni abonnement à gérer. Passez à une offre payante pour débloquer les fonctionnalités.",
     betaAccount:
       "Compte BETA — accès accordé par l'administrateur, sans moyen de paiement. Changez de plan instantanément.",
     betaFreestyle: "BETA — changez de plan, sans paiement",
@@ -4685,12 +4845,12 @@ export const fr = {
       t1desc: "Page menu + commandes en ligne + QR — 1 établissement.",
       t2tag: "Sur place",
       t2name: "POS",
-      t2price: "13,99 €",
+      t2price: "19 €",
       t2period: "par mois",
       t2desc: "Ajoutez caisse, KDS, gestion de tables, tickets thermiques.",
       t3tag: "Populaire",
       t3name: "Opérations",
-      t3price: "27,99 €",
+      t3price: "49 €",
       t3period: "par mois",
       t3desc: "Ajoutez staff, recettes, alertes stock automatiques, rapports journaliers.",
       t4tag: "Multi-site",
@@ -4820,14 +4980,14 @@ export const fr = {
       t2tag: "Sur place",
       t2name: "POS",
       t2tagline: "Pour les cafés et restaurants avec service en salle.",
-      t2price_mo: "13,99 €",
-      t2price_yr: "11,49 €",
+      t2price_mo: "19 €",
+      t2price_yr: "15,83 €",
       t2cta: "Essai gratuit",
       t3tag: "Populaire",
       t3name: "Opérations",
       t3tagline: "Pour les établissements avec staff, recettes et ambitions de croissance.",
-      t3price_mo: "27,99 €",
-      t3price_yr: "23,49 €",
+      t3price_mo: "49 €",
+      t3price_yr: "40,83 €",
       t3cta: "Essai gratuit",
       t4tag: "Multi-site",
       t4name: "Entreprise",
@@ -4934,6 +5094,7 @@ export const fr = {
       SHOPEEPAY: "ShopeePay",
       BANK_TRANSFER: "Virement bancaire",
       STRIPE_CARD: "Carte de crédit/débit",
+      PAY_LATER: "Paiement différé",
     },
     orderStatus: {
       title: "Statut de la commande",

@@ -1,10 +1,12 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
+import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePosCart } from "../hooks/use-pos-cart";
+import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
 import { createPosOrderSchema, type CreatePosOrderInput } from "@/lib/validation/pos.schemas";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -33,7 +35,7 @@ import { DecimalInput } from "@/components/shared/decimal-input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Printer, WifiOff, Loader2 } from "lucide-react";
+import { Printer, WifiOff, Loader2, Clock } from "lucide-react";
 import { enqueueOrder } from "@/lib/pwa/offline-queue";
 import {
   isBluetoothSupported,
@@ -62,6 +64,7 @@ export function PosCheckoutDialog({
   const { t, locale } = useI18n();
   const { currency, formatPrice, convertToBase } = useCurrency();
   const cart = usePosCart();
+  const { data: financeSettings } = useFinanceSettings(storeId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
@@ -394,7 +397,7 @@ export function PosCheckoutDialog({
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value === "PAY_LATER" ? "" : field.value}
                           className="flex flex-col space-y-1"
                         >
                           <FormItem className="flex items-center space-y-0 space-x-3">
@@ -447,10 +450,34 @@ export function PosCheckoutDialog({
                           </FormItem>
                         </RadioGroup>
                       </FormControl>
+                      {financeSettings?.payLaterEnabled && (
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("PAY_LATER")}
+                          className={cn(
+                            "flex w-full items-center justify-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm font-medium transition-colors",
+                            field.value === "PAY_LATER"
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+                          )}
+                        >
+                          <Clock className="h-4 w-4" />
+                          {t("pos.checkout.payLater")}
+                        </button>
+                      )}
                     </FormItem>
                   )}
                 />
               </div>
+
+              {paymentMethod === "PAY_LATER" && (
+                <div className="bg-muted/20 space-y-1 rounded-md border p-4">
+                  <p className="text-sm font-medium">{t("pos.checkout.payLaterNoteTitle")}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("pos.checkout.payLaterNoteDesc")}
+                  </p>
+                </div>
+              )}
 
               {paymentMethod === "CASH" && (
                 <div className="bg-muted/20 space-y-4 rounded-md border p-4">

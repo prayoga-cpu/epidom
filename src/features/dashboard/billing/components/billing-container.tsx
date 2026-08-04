@@ -124,6 +124,15 @@ export function BillingContainer() {
   // Admin-granted (BETA) accounts switch plans freestyle, with no Stripe billing.
   const isBeta = !!subscription?.isBeta;
 
+  const planName =
+    subscription?.plan === "FREE"
+      ? "Free"
+      : subscription?.plan === "POS"
+        ? t("profile.subscription.plans.starter")
+        : subscription?.plan === "OPERATIONS"
+          ? t("profile.subscription.plans.pro")
+          : t("profile.subscription.plans.enterprise");
+
   return (
     <div className="container mx-auto max-w-4xl space-y-6 py-8">
       {/* Success Alert */}
@@ -172,15 +181,7 @@ export function BillingContainer() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-3">
-                <h3 className="text-2xl font-bold">
-                  {subscription?.plan === "FREE"
-                    ? "Free"
-                    : subscription?.plan === "POS"
-                      ? t("profile.subscription.plans.starter")
-                      : subscription?.plan === "OPERATIONS"
-                        ? t("profile.subscription.plans.pro")
-                        : t("profile.subscription.plans.enterprise")}
-                </h3>
+                <h3 className="text-2xl font-bold">{planName}</h3>
                 <Badge className={getStatusColor(subscription?.status)}>
                   {getStatusLabel(subscription?.status, t)}
                 </Badge>
@@ -291,7 +292,10 @@ export function BillingContainer() {
             </div>
           ) : (
             <div className="space-y-3 border-t pt-6">
-              <p className="text-muted-foreground text-sm">{t("billing.notStripeManaged")}</p>
+              <p className="text-muted-foreground text-sm">
+                {t("billing.notStripeManaged")?.replace("{plan}", planName) ||
+                  `You're on the ${planName} plan — there's no payment method or subscription to manage. Upgrade to unlock paid features.`}
+              </p>
               {(subscription?.plan === "FREE" || subscription?.plan === "POS") && (
                 <Button onClick={handleUpgrade} className="gap-2">
                   <ArrowUpCircle className="h-4 w-4" />

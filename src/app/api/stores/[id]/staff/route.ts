@@ -5,6 +5,13 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { withApiHandler } from "@/lib/api-handler";
 import { hash } from "bcryptjs";
 import { sendStaffPinEmail } from "@/lib/services/email.service";
+import { ALL_STAFF_PAGES } from "@/config/staff-permissions.config";
+
+const OWNER_ONLY_PAGES = new Set(["/profile", "/billing", "/staff"]);
+function sanitizeAllowedPages(pages: string[] | undefined): string[] | undefined {
+  if (!pages) return undefined;
+  return pages.filter((p) => ALL_STAFF_PAGES.includes(p) && !OWNER_ONLY_PAGES.has(p));
+}
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +22,12 @@ export const GET = withApiHandler(
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
+        whatsapp: true,
         role: true,
+        customRoleLabel: true,
+        allowedPages: true,
         isActive: true,
         inviteStatus: true,
         createdAt: true,
@@ -51,9 +62,26 @@ export const POST = withApiHandler(
       );
     }
 
-    const { name, email, role, pin, sendInvite } = parsed.data;
+    const { name, username, email, whatsapp, role, customRoleLabel, allowedPages, pin, sendInvite } =
+      parsed.data;
     const pinHash = pin && pin !== "" ? await hash(pin, 10) : null;
     const emailVal = email && email.trim() !== "" ? email.trim() : undefined;
+    const whatsappVal = whatsapp && whatsapp !== "" ? whatsapp : undefined;
+    const customRoleLabelVal =
+      customRoleLabel && customRoleLabel.trim() !== "" ? customRoleLabel.trim() : undefined;
+
+    const usernameTaken = await prisma.staffMember.findFirst({
+      where: { storeId: storeId!, username },
+      select: { id: true },
+    });
+    if (usernameTaken) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.CONFLICT, "Username is already taken", {
+          fieldErrors: { username: ["Username is already taken"] },
+        }),
+        { status: 409 }
+      );
+    }
 
     const store = await prisma.store.findUnique({
       where: { id: storeId! },
@@ -64,16 +92,24 @@ export const POST = withApiHandler(
       data: {
         storeId: storeId!,
         name,
+        username,
         email: emailVal,
+        whatsapp: whatsappVal,
         role,
+        customRoleLabel: customRoleLabelVal,
+        allowedPages: sanitizeAllowedPages(allowedPages) ?? [],
         pin: pinHash,
         inviteStatus: emailVal && sendInvite ? "pending" : null,
       },
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
+        whatsapp: true,
         role: true,
+        customRoleLabel: true,
+        allowedPages: true,
         isActive: true,
         inviteStatus: true,
         createdAt: true,

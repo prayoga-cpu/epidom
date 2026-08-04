@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Metadata } from "next";
 import { BillingContainer } from "@/features/dashboard/billing/components/billing-container";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireOwnerOnly } from "@/lib/auth/require-owner-only";
 
 export const metadata: Metadata = {
   title: "Billing & Subscription | Epidom",
@@ -34,7 +35,14 @@ function BillingSkeleton() {
  * - Cancel subscription
  * - Manage payment methods via Stripe Customer Portal
  */
-export default function BillingPage() {
+export default async function BillingPage({
+  params,
+}: {
+  params: Promise<{ storeId: string }>;
+}) {
+  const { storeId } = await params;
+  await requireOwnerOnly(storeId);
+
   return (
     <Suspense fallback={<BillingSkeleton />}>
       <BillingContainer />

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { userService, businessService } from "@/lib/services";
 import { ProfileClient } from "@/features/dashboard/profile/components/profile-client";
 import type { ProfileData } from "@/features/dashboard/profile/types";
+import { requireOwnerOnly } from "@/lib/auth/require-owner-only";
 
 export default async function ProfilePage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
@@ -11,6 +12,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ storeI
   if (!session?.user?.id) {
     redirect("/login");
   }
+
+  // Profile holds Account Settings (incl. the Owner PIN itself) — a
+  // restricted staff persona must never reach it.
+  await requireOwnerOnly(storeId);
 
   // Fetch user profile
   const profileDto = await userService.getProfile(session.user.id);

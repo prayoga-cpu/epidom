@@ -2,8 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PaymentMethod } from "@prisma/client";
 import type { PaymentFeeRate } from "@/config/payment-fees.config";
 
-export interface FinanceSettingsData {
-  storeId: string;
+export interface FinanceSettingsFields {
   taxEnabled: boolean;
   taxRate: number;
   taxLabel: string | null;
@@ -15,7 +14,19 @@ export interface FinanceSettingsData {
   feeRates: Record<PaymentMethod, PaymentFeeRate>;
 }
 
-export interface UpdateFinanceSettingsPayload {
+export interface FinanceSettingsData extends FinanceSettingsFields {
+  storeId: string;
+  /** True when this store follows BusinessFinanceSettings instead of its own row. */
+  syncFinanceWithBusiness: boolean;
+  /** Owner-only toggle for the "Pay Later" checkout option — always store-specific, never synced. */
+  payLaterEnabled: boolean;
+}
+
+export interface BusinessFinanceSettingsData extends FinanceSettingsFields {
+  businessId: string;
+}
+
+interface UpdateFinanceSettingsFields {
   taxEnabled?: boolean;
   taxRate?: number;
   taxLabel?: string;
@@ -26,16 +37,30 @@ export interface UpdateFinanceSettingsPayload {
   processingFeeOverrides?: Partial<Record<PaymentMethod, PaymentFeeRate>>;
 }
 
+export type UpdateFinanceSettingsPayload = UpdateFinanceSettingsFields & {
+  syncFinanceWithBusiness?: boolean;
+  payLaterEnabled?: boolean;
+};
+
+export type UpdateBusinessFinanceSettingsPayload = UpdateFinanceSettingsFields;
+
+async function parseFinanceSettingsResponse<T>(
+  response: Response,
+  fallbackMessage: string
+): Promise<T> {
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result?.success) {
+    throw new Error(result?.error?.message || fallbackMessage);
+  }
+  return result.data as T;
+}
+
 const fetchFinanceSettings = async (storeId: string): Promise<FinanceSettingsData> => {
   const response = await fetch(`/api/stores/${storeId}/finance/settings`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch finance settings");
-  }
-  const result = await response.json();
-  if (result.success && result.data) {
-    return result.data;
-  }
-  throw new Error(result.error?.message || "Failed to fetch finance settings");
+  return parseFinanceSettingsResponse<FinanceSettingsData>(
+    response,
+    "Failed to fetch finance settings"
+  );
 };
 
 const updateFinanceSettingsRequest = async (
@@ -47,14 +72,24 @@ const updateFinanceSettingsRequest = async (
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!response.ok) {
-    throw new Error("Failed to update finance settings");
-  }
-  const result = await response.json();
-  if (result.success && result.data) {
-    return result.data;
-  }
-  throw new Error(result.error?.message || "Failed to update finance settings");
+  return parseFinanceSettingsResponse<FinanceSettingsData>(
+    response,
+    "Failed to update finance settings"
+  );
+};
+
+const updateBusinessFinanceSettingsRequest = async (
+  payload: UpdateBusinessFinanceSettingsPayload
+): Promise<BusinessFinanceSettingsData> => {
+  const response = await fetch("/api/user/business/finance-settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseFinanceSettingsResponse<BusinessFinanceSettingsData>(
+    response,
+    "Failed to update business finance settings"
+  );
 };
 
 export const useFinanceSettings = (storeId: string | undefined) => {
@@ -75,6 +110,19 @@ export const useUpdateFinanceSettings = (storeId: string | undefined) => {
       updateFinanceSettingsRequest(storeId!, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["finance-settings", storeId] });
+    },
+  });
+};
+
+export const useUpdateBusinessFinanceSettings = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateBusinessFinanceSettingsRequest,
+    onSuccess: async () => {
+      // Every store reads its effective values through ["finance-settings", storeId] —
+      // synced stores resolve from this same business config, so invalidate both.
+      await queryClient.invalidateQueries({ queryKey: ["finance-settings"] });
     },
   });
 };

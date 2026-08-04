@@ -343,36 +343,32 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
     LIMIT 100
   `;
 
-  // If no low stock items, return empty early
-  if (!lowStockIds.length) {
-    return { alerts: [] };
-  }
-
-  // Fetch full details only for the filtered items
-  const lowStockMaterials = await prisma.material.findMany({
-    where: {
-      id: {
-        in: lowStockIds.map((row) => row.id),
-      },
-    },
-    include: {
-      materialSuppliers: {
+  // Fetch full details only for the filtered items (skipped entirely when
+  // there are none — this early-out is why unpaid orders below are fetched
+  // unconditionally rather than being chained after this block).
+  const lowStockMaterials = lowStockIds.length
+    ? await prisma.material.findMany({
+        where: {
+          id: {
+            in: lowStockIds.map((row) => row.id),
+          },
+        },
         include: {
-          supplier: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-              email: true,
+          materialSuppliers: {
+            include: {
+              supplier: {
+                select: {
+                  id: true,
+                  name: true,
+                  phone: true,
+                  email: true,
+                },
+              },
             },
           },
         },
-      },
-    },
-    // Maintain the sort order from the raw query effectively by sorting in memory
-    // or we can trust the ID order if we map carefully, but explicit sort is safer here
-    // since we want most critical (lowest stock %) first
-  });
+      })
+    : [];
 
   // Sort by severity (stock percentage) logic
   lowStockMaterials.sort((a, b) => {
@@ -417,7 +413,34 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
     };
   });
 
-  return { alerts };
+  // Pay Later orders delivered but never settled — small/rare enough that a
+  // plain findMany (unlike the raw-SQL low-stock query above) is plenty fast.
+  const unpaidOrders = await prisma.order.findMany({
+    where: { storeId, paymentMethod: "PAY_LATER", paymentStatus: "PENDING", status: "DELIVERED" },
+    orderBy: { deliveredDate: "asc" },
+    select: {
+      id: true,
+      orderNumber: true,
+      customerName: true,
+      total: true,
+      deliveredDate: true,
+      createdAt: true,
+    },
+  });
+
+  const unpaidOrderAlerts: Alert[] = unpaidOrders.map((order) => ({
+    id: order.id,
+    type: "UNPAID_ORDER" as const,
+    severity: "warning" as const,
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    customerName: order.customerName,
+    total: Number(order.total),
+    deliveredAt: (order.deliveredDate ?? order.createdAt).toISOString(),
+    createdAt: order.createdAt.toISOString(),
+  }));
+
+  return { alerts: [...alerts, ...unpaidOrderAlerts] };
 }
 
 /**

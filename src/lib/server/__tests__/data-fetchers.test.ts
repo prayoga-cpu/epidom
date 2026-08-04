@@ -8,6 +8,9 @@ vi.mock("@/lib/prisma", () => ({
     material: {
       findMany: vi.fn(),
     },
+    order: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
   },
 }));
 

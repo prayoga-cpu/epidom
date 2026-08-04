@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -30,8 +31,7 @@ interface ServerOrderSummary {
 export function MyOrdersClient({ storefront }: MyOrdersClientProps) {
   const { t } = useI18n();
   const [refs, setRefs] = useState<LocalOrderRef[]>([]);
-  const [serverOrders, setServerOrders] = useState<Record<string, ServerOrderSummary>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasReadLocalRefs, setHasReadLocalRefs] = useState(false);
 
   const themeStyle = {
     "--store-theme": storefront.themeColor,
@@ -50,52 +50,58 @@ export function MyOrdersClient({ storefront }: MyOrdersClientProps) {
       timeStyle: "short",
     }).format(new Date(iso));
 
-  // Read local refs on mount, then hydrate statuses from the server
+  // Read the locally-remembered order refs once on mount (client-only, not
+  // derivable from props/SSR).
   useEffect(() => {
-    const localRefs = readLocalOrders(storefront.slug);
-    setRefs(localRefs);
-
-    if (localRefs.length === 0) {
-      setIsLoading(false);
-      return;
-    }
-
-    const lookup = async () => {
-      try {
-        const res = await fetch("/api/public/orders/lookup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            storefrontSlug: storefront.slug,
-            orderIds: localRefs.slice(0, 20).map((r) => r.orderId),
-          }),
-        });
-
-        if (!res.ok) return;
-
-        const data = await res.json();
-        const orders: ServerOrderSummary[] = data?.data?.orders ?? [];
-        const byId: Record<string, ServerOrderSummary> = {};
-        orders.forEach((o) => {
-          byId[o.id] = o;
-        });
-        setServerOrders(byId);
-
-        // Prune refs the server no longer knows about
-        const pruned = localRefs.filter((r) => byId[r.orderId]);
-        if (pruned.length !== localRefs.length) {
-          setRefs(pruned);
-          writeLocalOrders(storefront.slug, pruned);
-        }
-      } catch {
-        // Keep local refs; statuses render as unavailable
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    lookup();
+    setRefs(readLocalOrders(storefront.slug));
+    setHasReadLocalRefs(true);
   }, [storefront.slug]);
+
+  const orderIds = useMemo(() => refs.slice(0, 20).map((r) => r.orderId), [refs]);
+
+  // A customer revisiting this list wants to see status changes without a
+  // manual reload — inherits the app's default 30s staleTime + refetch-on-
+  // focus/reconnect (see query-provider.tsx) rather than active polling: this
+  // is a glance-at-history view, the individual order page (which does poll
+  // every 2s) is where a customer actually watches a live order.
+  const { data: lookupOrders, isLoading: isLookupLoading } = useQuery({
+    queryKey: ["public-orders-lookup", storefront.slug, orderIds],
+    queryFn: async () => {
+      const res = await fetch("/api/public/orders/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storefrontSlug: storefront.slug, orderIds }),
+      });
+      if (!res.ok) throw new Error("Failed to look up orders");
+      const data = await res.json();
+      return (data?.data?.orders ?? []) as ServerOrderSummary[];
+    },
+    enabled: orderIds.length > 0,
+  });
+
+  const serverOrders = useMemo(() => {
+    const byId: Record<string, ServerOrderSummary> = {};
+    (lookupOrders ?? []).forEach((o) => {
+      byId[o.id] = o;
+    });
+    return byId;
+  }, [lookupOrders]);
+
+  // Prune refs the server no longer knows about (e.g. order was removed).
+  useEffect(() => {
+    if (!lookupOrders) return;
+    const known = new Set(lookupOrders.map((o) => o.id));
+    setRefs((current) => {
+      const pruned = current.filter((r) => known.has(r.orderId));
+      if (pruned.length !== current.length) {
+        writeLocalOrders(storefront.slug, pruned);
+        return pruned;
+      }
+      return current;
+    });
+  }, [lookupOrders, storefront.slug]);
+
+  const isLoading = !hasReadLocalRefs || (orderIds.length > 0 && isLookupLoading);
 
   return (
     <div className="bg-muted flex min-h-screen flex-col" style={themeStyle}>

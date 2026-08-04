@@ -92,7 +92,40 @@ export const GET = withApiHandler(
       };
     });
 
-    return NextResponse.json(createSuccessResponse({ alerts }));
+    // Pay Later orders that were delivered but never settled — computed live
+    // from Order the same way low stock is computed live from Material,
+    // rather than a persisted Alert row, so it can never go stale.
+    const unpaidOrders = await prisma.order.findMany({
+      where: {
+        storeId,
+        paymentMethod: "PAY_LATER",
+        paymentStatus: "PENDING",
+        status: "DELIVERED",
+      },
+      orderBy: { deliveredDate: "asc" },
+      select: {
+        id: true,
+        orderNumber: true,
+        customerName: true,
+        total: true,
+        deliveredDate: true,
+        createdAt: true,
+      },
+    });
+
+    const unpaidOrderAlerts = unpaidOrders.map((order) => ({
+      id: order.id,
+      type: "UNPAID_ORDER" as const,
+      severity: "warning" as const,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      total: order.total,
+      deliveredAt: (order.deliveredDate ?? order.createdAt).toISOString(),
+      createdAt: order.createdAt.toISOString(),
+    }));
+
+    return NextResponse.json(createSuccessResponse({ alerts: [...alerts, ...unpaidOrderAlerts] }));
   },
   {
     // Apply standard rate limiting for dashboard widgets

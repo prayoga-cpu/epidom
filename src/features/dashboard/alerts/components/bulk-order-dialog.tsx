@@ -24,7 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { type LowStockAlert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { useCreateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
 import { ShoppingCart, Loader2, Package, AlertCircle } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -64,7 +64,7 @@ type BulkOrderFormData = z.infer<typeof bulkOrderSchema>;
 interface BulkOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  alerts: Alert[];
+  alerts: LowStockAlert[];
   supplierName: string;
   supplierId: string;
 }

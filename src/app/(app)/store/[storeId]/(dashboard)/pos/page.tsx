@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { PosShell } from "@/features/pos/components/pos-shell";
 import { subscriptionRepository } from "@/lib/repositories/subscription.repository";
+import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 export default async function PosPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
@@ -13,6 +14,7 @@ export default async function PosPage({ params }: { params: Promise<{ storeId: s
   }
 
   const store = await verifyStoreOwnership(storeId, session.user.id);
+  await requireStaffPageAccess(storeId, "/pos");
   const subscription = await subscriptionRepository.findByUserId(session.user.id);
 
   // If plan is FREE or POS, they don't have access to staff management (OPERATIONS/ENTERPRISE feature).

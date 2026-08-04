@@ -11,6 +11,9 @@ import { initiatePayment } from "@/lib/payments";
 import { ACTIVE_POS_STATUSES } from "@/lib/constants/order-status";
 import {
   validateAndBuildOrderItems,
+  skipsOnlinePayment,
+  resolveSettledOrderStatus,
+  deliverOrderImmediately,
   OrderBuildError,
   type BuiltOrderItem,
 } from "@/lib/services/pos-order-builder";
@@ -53,7 +56,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         table: { select: { label: true } },
         items: {
           include: {
-            menuItem: { select: { name: true } },
+            menuItem: { select: { name: true, department: true } },
+          },
+        },
+        shift: {
+          select: {
+            staffMember: { select: { id: true, name: true } },
           },
         },
       },
@@ -104,6 +112,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const input = parsed.data;
 
+    // Defense in depth — the client only shows "Pay Later" as a checkout
+    // option when the store has enabled it, but never trust that a request
+    // actually came from a client that enforced it.
+    if (input.paymentMethod === "PAY_LATER" && !store.payLaterEnabled) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Pay Later is not enabled for this store"),
+        { status: 422 }
+      );
+    }
+
     let orderItems: BuiltOrderItem[];
     let subtotal: number;
     try {
@@ -142,6 +160,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const orderNumber = generateOrderNumber();
+    const settledStatus = resolveSettledOrderStatus(
+      input.paymentMethod as PaymentMethod,
+      store.kitchenDisplayEnabled
+    );
+    const immediatelyDelivered = settledStatus === "DELIVERED";
 
     const order = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
@@ -156,7 +179,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           shiftId: input.shiftId,
           paymentMethod: input.paymentMethod as PaymentMethod,
           paymentStatus: input.paymentMethod === "CASH" ? "PAID" : "PENDING",
-          status: input.paymentMethod === "CASH" ? "CONFIRMED" : "PENDING",
+          status: settledStatus,
+          ...(immediatelyDelivered && { deliveredDate: new Date() }),
           source: "POS",
           notes: input.notes,
           subtotal: new Prisma.Decimal(charges.subtotal),
@@ -188,8 +212,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         },
       });
 
-      // If table is assigned, mark it as OCCUPIED
-      if (input.tableId && input.orderType === "DINE_IN") {
+      // If table is assigned, mark it as OCCUPIED — skipped when the order is
+      // already being delivered immediately (no dine-in service period to track).
+      if (input.tableId && input.orderType === "DINE_IN" && !immediatelyDelivered) {
         await tx.table.update({
           where: { id: input.tableId },
           data: { status: "OCCUPIED" },
@@ -198,6 +223,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
       return created;
     });
+
+    // Kitchen display is off for this store — the order skipped straight to
+    // DELIVERED above, so run the side effects a normal KDS hand-off would
+    // otherwise trigger later (deductStockForOrder is idempotent).
+    if (immediatelyDelivered) {
+      await deliverOrderImmediately(order.id, storeId);
+    }
 
     // Fire background notification via Inngest (non-blocking)
     try {
@@ -227,11 +259,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         ? Math.max(0, input.amountTendered - charges.total)
         : null;
 
-    // Initiate payment for non-CASH methods
+    // Initiate payment for methods that actually need an online payment step
     let qrString: string | null = null;
     let paymentProviderRef: string | null = null;
 
-    if (input.paymentMethod !== "CASH") {
+    if (!skipsOnlinePayment(input.paymentMethod as PaymentMethod)) {
       try {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const payment = await initiatePayment({

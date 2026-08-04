@@ -29,6 +29,11 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
 import { appendLocalOrder } from "../lib/local-orders";
 import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
+import {
+  usePublicStorefrontMenu,
+  type PublicMenuCategory,
+  type PublicMenuItem,
+} from "../hooks/use-public-menu";
 
 interface ModifierOption {
   name: string;
@@ -44,30 +49,10 @@ interface ModifierGroup {
   options: ModifierOption[];
 }
 
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string | null;
-  price: any; // Decimal
-  currency: string;
-  imageUrl: string | null;
-  isAvailable: boolean;
-  isFeatured: boolean;
-  modifiers: any; // ModifierGroup[]
-  product?: {
-    optionGroups?: Array<{
-      name: string;
-      isRequired: boolean;
-      maxSelections: number;
-      options: Array<{
-        name: string;
-        priceAdjustment: number | string;
-        materialId?: string | null;
-        materialQty?: number | string | null;
-      }>;
-    }>;
-  } | null;
-}
+// Reuses the polling hook's shape exactly (rather than a parallel local
+// interface) so the server-rendered initial props and the polled data are
+// always structurally identical — see usePublicStorefrontMenu.
+type MenuItem = PublicMenuItem;
 
 /** Merges a menu item's own modifiers with its linked product's
  * material-aware option groups, then converts back to this file's local
@@ -86,11 +71,7 @@ const getItemModifierGroups = (item: MenuItem): ModifierGroup[] =>
     })),
   }));
 
-interface MenuCategory {
-  id: string;
-  name: string;
-  items: MenuItem[];
-}
+type MenuCategory = PublicMenuCategory;
 
 interface PublicMenuProps {
   storefront: {
@@ -204,8 +185,14 @@ const VA_BANKS: { code: VABankCode; label: string; color: string }[] = [
   { code: "PERMATA", label: "Permata", color: "#E31E25" },
 ];
 
-export function PublicMenu({ storefront, menuCategories }: PublicMenuProps) {
+export function PublicMenu({ storefront, menuCategories: initialMenuCategories }: PublicMenuProps) {
   const { t } = useI18n();
+  // Polls the live menu so a merchant's price/availability/option change
+  // shows up while a customer already has this page open, without a reload.
+  const { data: menuCategories = initialMenuCategories } = usePublicStorefrontMenu(
+    storefront.slug,
+    initialMenuCategories
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 

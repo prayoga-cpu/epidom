@@ -328,6 +328,58 @@ export async function sendStaffPinEmail(
   }
 }
 
+/**
+ * Send a one-time code to reset the owner's PIN (shared-device "switch back
+ * to Owner" gate). Mirrors sendStaffPinEmail's structure/format.
+ */
+export async function sendOwnerPinResetOtpEmail(
+  email: string,
+  name: string | null,
+  otp: string
+): Promise<SendEmailResult> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🔐 [DEV] Owner PIN Reset OTP Email");
+    console.log("To:", email);
+    console.log("Code:", otp);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const greeting = name ? `Hi ${name},` : "Hi,";
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: email,
+      subject: `Your ${APP_NAME} PIN reset code`,
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #444;">${greeting}</h2>
+  <p>Use this code to reset your Owner PIN on <strong>${APP_NAME}</strong>:</p>
+  <div style="text-align: center; margin: 30px 0;">
+    <span style="font-size: 40px; font-weight: bold; letter-spacing: 12px; color: #444; background: #f5f5f5; padding: 20px 30px; border-radius: 8px; display: inline-block;">${otp}</span>
+  </div>
+  <p style="color: #888; font-size: 13px;">This code expires in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
 // Recipients for internal feedback notifications
 const FEEDBACK_NOTIFICATION_RECIPIENTS = [
   "cro@prionation.io",

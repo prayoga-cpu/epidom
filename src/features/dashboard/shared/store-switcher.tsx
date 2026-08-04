@@ -20,6 +20,7 @@ import { useStores } from "@/features/stores/stores/hooks/use-stores";
 import { useCurrentStore } from "./hooks/use-current-store";
 import { useDefaultLanding } from "@/features/dashboard/profile/hooks/use-default-landing";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 
 /**
  * Store Switcher Component
@@ -43,6 +44,7 @@ export function StoreSwitcher() {
   const { store: currentStore, storeId } = useCurrentStore();
   const { data: stores, isLoading } = useStores();
   const defaultLanding = useDefaultLanding();
+  const posSession = usePosSession();
 
   const handleSelectStore = (selectedStoreId: string) => {
     setOpen(false);
@@ -53,6 +55,20 @@ export function StoreSwitcher() {
     setOpen(false);
     router.push("/stores");
   };
+
+  // A restricted staff persona is scoped to the store they logged into —
+  // switching stores (and seeing the rest of the business's store list) is
+  // an owner-level capability, so show a plain, non-interactive label instead.
+  const isRestrictedStaff =
+    posSession.isActive && posSession.storeId === storeId && posSession.staffRole !== "OWNER";
+  if (isRestrictedStaff) {
+    return (
+      <div className="text-foreground flex h-9 w-[140px] items-center gap-1.5 truncate rounded-2xl px-3 text-xs sm:w-[160px] sm:gap-2 sm:text-sm lg:w-[180px] lg:text-sm">
+        <Store className="text-muted-foreground h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+        <span className="truncate">{currentStore?.name}</span>
+      </div>
+    );
+  }
 
   // Loading state
   if (isLoading) {

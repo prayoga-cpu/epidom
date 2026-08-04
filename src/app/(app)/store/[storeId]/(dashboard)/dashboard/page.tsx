@@ -18,6 +18,7 @@ import type { MaterialWithSuppliers } from "@/lib/repositories/material.reposito
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
 import type { Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 /**
  * Dashboard Page Component
@@ -33,6 +34,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ stor
   if (!session?.user?.id) {
     redirect("/login");
   }
+  await requireStaffPageAccess(storeId, "/dashboard");
 
   // Fetch all initial data in parallel for optimal performance
   const [stockLevelsResult, suppliersResult, productionBatchesResult, alertsResult] =

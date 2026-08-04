@@ -6,15 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { type Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { type LowStockAlert } from "@/features/dashboard/tracking/hooks/use-alerts";
 import { AlertCircle, ShoppingCart, Package2 } from "lucide-react";
 import { BulkOrderDialog } from "./bulk-order-dialog";
 import { formatDate } from "@/lib/utils/format-date";
 
 interface AlertsTableProps {
-  alerts: Alert[];
-  onViewDetails?: (alert: Alert) => void;
-  onCreateOrder: (alert: Alert) => void;
+  alerts: LowStockAlert[];
+  onViewDetails?: (alert: LowStockAlert) => void;
+  onCreateOrder: (alert: LowStockAlert) => void;
 }
 
 export function AlertsTable({ alerts, onViewDetails, onCreateOrder }: AlertsTableProps) {
@@ -24,13 +24,13 @@ export function AlertsTable({ alerts, onViewDetails, onCreateOrder }: AlertsTabl
   const [isBulkOrderOpen, setIsBulkOrderOpen] = useState(false);
   const [selectedSupplierGroup, setSelectedSupplierGroup] = useState<{
     supplier: { id: string; name: string };
-    items: Alert[];
+    items: LowStockAlert[];
   } | null>(null);
 
   // Handle bulk order
   const handleBulkOrder = (supplierGroup: {
     supplier: { id: string; name: string };
-    items: Alert[];
+    items: LowStockAlert[];
   }) => {
     setSelectedSupplierGroup(supplierGroup);
     setIsBulkOrderOpen(true);
@@ -40,8 +40,8 @@ export function AlertsTable({ alerts, onViewDetails, onCreateOrder }: AlertsTabl
   const alertsBySupplier = useMemo(() => {
     if (!alerts || alerts.length === 0) return [];
 
-    const grouped = new Map<string, Array<Alert>>();
-    const noSupplierAlerts: Alert[] = [];
+    const grouped = new Map<string, Array<LowStockAlert>>();
+    const noSupplierAlerts: LowStockAlert[] = [];
 
     alerts.forEach((alert) => {
       // Check if alert has suppliers

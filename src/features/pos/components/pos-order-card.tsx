@@ -1,17 +1,23 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { cn } from "@/lib/utils";
 import type { PosOrderDisplay } from "../types/pos.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { id, enUS, fr } from "date-fns/locale";
-import { useConfirm } from "@/components/ui/use-confirm";
-import { usePosCart } from "../hooks/use-pos-cart";
-import { toast } from "sonner";
+import { useOrderQueueActions } from "../hooks/use-order-queue-actions";
+import { PosOrderPrimaryAction } from "./pos-order-primary-action";
+import {
+  getOrderSourceBadgeVariant,
+  getOrderStatusAccentClass,
+  getOrderStatusBadgeVariant,
+  isAwaitingPayment,
+  mapOrderStatusLabel,
+} from "../lib/order-status-display";
 
 interface PosOrderCardProps {
   order: PosOrderDisplay;
@@ -22,49 +28,11 @@ interface PosOrderCardProps {
 export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardProps) {
   const { t, locale } = useI18n();
   const { formatPrice } = useCurrency();
-  const { confirm, confirmDialog } = useConfirm();
-  const router = useRouter();
-  const cart = usePosCart();
-
-  const handleCancel = async () => {
-    const ok = await confirm({
-      title: t("pos.orderCard.cancelConfirmTitle"),
-      description: t("pos.orderCard.cancelConfirmDesc"),
-      confirmText: t("pos.orderCard.cancel"),
-      variant: "destructive",
-    });
-    if (ok) onUpdateStatus(order.id, "CANCELLED");
-  };
-
-  const handleResume = async () => {
-    if (cart.items.length > 0) {
-      const ok = await confirm({
-        title: t("pos.orderCard.resumeConfirmTitle"),
-        description: t("pos.orderCard.resumeConfirmDesc"),
-        confirmText: t("pos.orderCard.resume"),
-      });
-      if (!ok) return;
-    }
-
-    const mapped = order.items.map((item) => ({
-      id: item.id,
-      menuItemId: item.menuItemId ?? "",
-      name: item.menuItem?.name ?? item.name,
-      // Number(...) defensively: these should already be plain numbers from
-      // the API, but a Prisma Decimal that slips through unconverted
-      // serializes as a *string*, which would silently turn every total
-      // calculation downstream into string concatenation instead of addition.
-      unitPrice: Number(item.unitPrice),
-      quantity: Number(item.quantity),
-      modifiers: item.selectedOptions ?? [],
-      notes: item.notes ?? undefined,
-      lineTotal: Number(item.total),
-    }));
-
-    cart.hydrateFromOrder(mapped, order.id);
-    toast.success(t("pos.orderCard.resumeSuccess"));
-    router.push(`/store/${storeId}/pos`);
-  };
+  const { handleCancel, handleResume, confirmDialog } = useOrderQueueActions(
+    order,
+    storeId,
+    onUpdateStatus
+  );
 
   const dateLocaleMap = { en: enUS, id, fr };
   const dateLocale = dateLocaleMap[locale] ?? id;
@@ -74,53 +42,28 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
     locale: dateLocale,
   });
 
-  const getSourceBadgeVariant = (source: string) => {
-    switch (source) {
-      case "POS":
-        return "default";
-      case "STOREFRONT":
-        return "secondary";
-      default:
-        return "outline";
-    }
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "secondary";
-      case "CONFIRMED":
-        return "default";
-      case "IN_PRODUCTION":
-        return "outline";
-      case "READY":
-        return "default";
-      case "HELD":
-        return "secondary";
-      default:
-        return "outline";
-    }
-  };
-
-  const mapStatusLabel = (status: string) => {
-    const key = status === "IN_PRODUCTION" ? "inProduction" : status.toLowerCase();
-    return t(`pos.status.${key}`);
-  };
-
   return (
-    <div className="bg-card text-card-foreground flex flex-col gap-3 rounded-lg border p-4 shadow-sm">
+    <div
+      className={cn(
+        "bg-card text-card-foreground flex flex-col gap-3 rounded-lg border p-4 shadow-sm",
+        getOrderStatusAccentClass(order.status)
+      )}
+    >
       <div className="flex items-start justify-between border-b pb-3">
         <div className="flex flex-col gap-1">
           <span className="font-semibold">{order.orderNumber}</span>
           <span className="text-muted-foreground text-xs">{timeAgo}</span>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <Badge variant={getStatusBadgeVariant(order.status)} className="px-2 py-1">
-            {mapStatusLabel(order.status)}
+          <Badge variant={getOrderStatusBadgeVariant(order.status)} className="px-2 py-1">
+            {mapOrderStatusLabel(t, order.status)}
           </Badge>
-          <Badge variant={getSourceBadgeVariant(order.source)}>
+          <Badge variant={getOrderSourceBadgeVariant(order.source)}>
             {order.source === "POS" ? t("pos.source.walkIn") : t("pos.source.online")}
           </Badge>
+          {isAwaitingPayment(order) && (
+            <Badge variant="destructive">{t("pos.orderCard.unpaid")}</Badge>
+          )}
         </div>
       </div>
 
@@ -178,39 +121,12 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
       </div>
 
       <div className="mt-4 flex gap-2">
-        {order.status === "PENDING" && (
-          <Button
-            className="min-w-0 flex-1"
-            size="sm"
-            onClick={() => onUpdateStatus(order.id, "CONFIRMED")}
-          >
-            {t("pos.orderCard.confirm")}
-          </Button>
-        )}
-        {order.status === "CONFIRMED" && (
-          <Button
-            className="min-w-0 flex-1"
-            size="sm"
-            variant="outline"
-            onClick={() => onUpdateStatus(order.id, "IN_PRODUCTION")}
-          >
-            {t("pos.orderCard.startProcess")}
-          </Button>
-        )}
-        {order.status === "READY" && (
-          <Button
-            className="min-w-0 flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
-            size="sm"
-            onClick={() => onUpdateStatus(order.id, "DELIVERED")}
-          >
-            {t("pos.orderCard.complete")}
-          </Button>
-        )}
-        {order.status === "HELD" && (
-          <Button className="min-w-0 flex-1" size="sm" onClick={handleResume}>
-            {t("pos.orderCard.resume")}
-          </Button>
-        )}
+        <PosOrderPrimaryAction
+          order={order}
+          className="flex-1"
+          onUpdateStatus={onUpdateStatus}
+          onResume={handleResume}
+        />
         <Button
           size="sm"
           variant="outline"

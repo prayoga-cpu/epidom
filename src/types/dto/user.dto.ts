@@ -65,6 +65,9 @@ export interface StoreDto {
   // isActive: boolean; // Removed: Not in DB schema
   createdAt: Date;
   updatedAt: Date;
+  syncFinanceWithBusiness: boolean;
+  payLaterEnabled: boolean;
+  kitchenDisplayEnabled: boolean;
 }
 
 // Subscription DTO

@@ -24,7 +24,8 @@ type PaymentMethod =
   | "DANA"
   | "SHOPEEPAY"
   | "BANK_TRANSFER"
-  | "STRIPE_CARD";
+  | "STRIPE_CARD"
+  | "PAY_LATER";
 
 interface OrderItem {
   id: string;

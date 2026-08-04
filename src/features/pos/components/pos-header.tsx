@@ -2,22 +2,19 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { format } from "date-fns";
-import { Wifi, WifiOff, LogOut, UserCircle2, ShoppingBag } from "lucide-react";
+import { Wifi, WifiOff, UserCircle2, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Store } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePosSession } from "../hooks/use-pos-session";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { toast } from "sonner";
 
 interface PosHeaderProps {
   store: Pick<Store, "name">;
@@ -33,7 +30,7 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
   const cart = usePosCart();
   const [time, setTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(true);
-  const { staffName, staffRole, logout } = usePosSession();
+  const { staffName, staffRole } = usePosSession();
   const totalItems = cart.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
 
   useEffect(() => {
@@ -52,11 +49,6 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
-
-  const handleLogout = () => {
-    logout();
-    toast.info("Staff session ended.");
-  };
 
   return (
     <header className="bg-background flex h-14 items-center justify-between gap-2 border-b px-3 md:px-6">
@@ -92,14 +84,6 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
                 {staffRole && ` · ${staffRole}`}
               </DropdownMenuLabel>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleLogout}
-              className="text-destructive focus:text-destructive"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign out
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -144,21 +128,10 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
         </div>
 
         {staffName && (
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/10 text-primary flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
-              <UserCircle2 className="h-3.5 w-3.5" />
-              <span>{staffName}</span>
-              {staffRole && <span className="text-primary/60">· {staffRole}</span>}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-destructive h-10 w-10 touch-manipulation"
-              onClick={handleLogout}
-              title="Switch staff"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+          <div className="bg-primary/10 text-primary flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
+            <UserCircle2 className="h-3.5 w-3.5" />
+            <span>{staffName}</span>
+            {staffRole && <span className="text-primary/60">· {staffRole}</span>}
           </div>
         )}
       </div>

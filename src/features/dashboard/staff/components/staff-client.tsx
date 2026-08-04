@@ -32,12 +32,20 @@ import { apiClient } from "@/lib/api/client";
 import { UserRound, Plus, Pencil, UserX, Crown, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { StaffRole } from "@prisma/client";
+import { useOwnerPinStatus } from "@/features/dashboard/shared/hooks/use-owner-pin";
+import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
+import { PageAccessChecklist } from "./page-access-checklist";
+import { ROLE_DEFAULT_PAGES } from "@/config/staff-permissions.config";
 
 interface StaffMember {
   id: string;
   name: string;
+  username: string | null;
   email: string | null;
+  whatsapp: string | null;
   role: StaffRole;
+  customRoleLabel: string | null;
+  allowedPages: string[];
   isActive: boolean;
   inviteStatus: string | null;
   createdAt: string;
@@ -70,11 +78,17 @@ export function StaffClient({
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
+  const [setPinOpen, setSetPinOpen] = useState(false);
+  const { data: pinStatus } = useOwnerPinStatus();
 
   // Edit form state
   const [editName, setEditName] = useState("");
+  const [editUsername, setEditUsername] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editWhatsapp, setEditWhatsapp] = useState("");
   const [editRole, setEditRole] = useState<StaffRole>("CASHIER");
+  const [editCustomRoleLabel, setEditCustomRoleLabel] = useState("");
+  const [editAllowedPages, setEditAllowedPages] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
   const [editPin, setEditPin] = useState("");
   const [editSendPin, setEditSendPin] = useState(false);
@@ -98,11 +112,17 @@ export function StaffClient({
     formState: { errors, isSubmitting },
   } = useForm<CreateStaffInput & { email?: string; sendInvite?: boolean }>({
     resolver: zodResolver(createStaffSchema) as never,
-    defaultValues: { role: "CASHIER", sendInvite: false },
+    defaultValues: {
+      role: "CASHIER",
+      sendInvite: false,
+      allowedPages: ROLE_DEFAULT_PAGES.CASHIER,
+    },
   });
 
   const watchEmail = watch("email" as never);
   const watchSendInvite = watch("sendInvite" as never);
+  const watchRole = watch("role");
+  const watchAllowedPages = watch("allowedPages" as never) as string[] | undefined;
 
   const addMutation = useMutation({
     mutationFn: (body: CreateStaffInput & { email?: string; sendInvite?: boolean }) =>
@@ -128,8 +148,14 @@ export function StaffClient({
   const openEdit = (member: StaffMember) => {
     setEditTarget(member);
     setEditName(member.name);
+    setEditUsername(member.username ?? "");
     setEditEmail(member.email ?? "");
+    setEditWhatsapp(member.whatsapp ?? "");
     setEditRole(member.role);
+    setEditCustomRoleLabel(member.customRoleLabel ?? "");
+    setEditAllowedPages(
+      member.allowedPages.length > 0 ? member.allowedPages : ROLE_DEFAULT_PAGES[member.role]
+    );
     setEditIsActive(member.isActive);
     setEditPin("");
     setEditSendPin(false);
@@ -142,8 +168,12 @@ export function StaffClient({
     try {
       const body: Record<string, unknown> = {
         name: editName,
+        username: editUsername,
         email: editEmail,
+        whatsapp: editWhatsapp,
         role: editRole,
+        customRoleLabel: editCustomRoleLabel,
+        allowedPages: editAllowedPages,
         isActive: editIsActive,
       };
       if (editRemovePin) {
@@ -173,10 +203,26 @@ export function StaffClient({
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("pages.staffTitle")}</h1>
           <p className="text-muted-foreground text-sm">{t("pages.staffDesc")}</p>
         </div>
-        <Button size="sm" onClick={() => setAddOpen(true)} className="shrink-0">
+        <Button
+          size="sm"
+          onClick={() => {
+            // Require an Owner PIN before the first staff account exists —
+            // it's what lets a shared device gate "switch back to Owner".
+            if (!pinStatus?.hasPin) setSetPinOpen(true);
+            else setAddOpen(true);
+          }}
+          className="shrink-0"
+        >
           <Plus className="mr-2 h-4 w-4" />
           {t("pages.addStaff")}
         </Button>
+      </div>
+
+      <div className="bg-muted/20 text-muted-foreground rounded-lg border p-3 text-xs leading-normal">
+        For security, every PIN session on a device (staff or Owner) automatically logs out at
+        midnight — whoever picks up the device the next day must choose an account and enter its
+        PIN again. If the Owner forgets their PIN, a one-time code is sent only to the account&apos;s
+        registered email — never to a staff member.
       </div>
 
       {/* Owner account row */}
@@ -211,10 +257,9 @@ export function StaffClient({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{member.name}</p>
-                  {member.email ? (
+                  {member.username ? (
                     <span className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[8px] sm:text-xs">
-                      <Mail className="h-3 w-3" />
-                      {member.email}
+                      @{member.username}
                     </span>
                   ) : (
                     <span className="text-muted-foreground/50 text-[8px] sm:text-xs">—</span>
@@ -281,7 +326,7 @@ export function StaffClient({
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.name")}</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>Username</TableHead>
                 <TableHead>{t("pages.staffRole")}</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -310,12 +355,7 @@ export function StaffClient({
                   <TableRow key={member.id}>
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {member.email ? (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {member.email}
-                        </span>
-                      ) : (
+                      {member.username ? `@${member.username}` : (
                         <span className="text-muted-foreground/50">—</span>
                       )}
                     </TableCell>
@@ -430,21 +470,26 @@ export function StaffClient({
               {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="add-email">
-                Email <span className="text-muted-foreground text-xs">(optional)</span>
-              </Label>
+              <Label htmlFor="add-username">Username</Label>
               <Input
-                id="add-email"
-                type="email"
-                {...register("email" as never)}
-                placeholder="staff@example.com"
+                id="add-username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                placeholder="e.g. jdoe"
+                {...register("username")}
               />
+              {errors.username && (
+                <p className="text-destructive text-xs">{errors.username.message}</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label>{t("pages.staffRole")}</Label>
               <Select
                 defaultValue="CASHIER"
-                onValueChange={(v) => setValue("role", v as StaffRole)}
+                onValueChange={(v) => {
+                  setValue("role", v as StaffRole);
+                  setValue("allowedPages" as never, ROLE_DEFAULT_PAGES[v as StaffRole] as never);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -458,6 +503,21 @@ export function StaffClient({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1">
+              <Label htmlFor="add-custom-role">
+                Custom role label <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
+              <Input
+                id="add-custom-role"
+                placeholder="e.g. Assistant Manager"
+                {...register("customRoleLabel" as never)}
+              />
+            </div>
+            <PageAccessChecklist
+              role={watchRole}
+              value={watchAllowedPages ?? []}
+              onChange={(pages) => setValue("allowedPages" as never, pages as never)}
+            />
             <div className="space-y-1">
               <Label htmlFor="pin">
                 {t("pages.staffPin")}{" "}
@@ -473,6 +533,31 @@ export function StaffClient({
               />
               {errors.pin && <p className="text-destructive text-xs">{errors.pin.message}</p>}
             </div>
+
+            <div className="space-y-3 rounded-lg border p-3">
+              <p className="text-muted-foreground text-xs font-semibold">
+                Contact Details <span className="font-normal">(optional)</span>
+              </p>
+              <div className="space-y-1">
+                <Label htmlFor="add-email">Email</Label>
+                <Input
+                  id="add-email"
+                  type="email"
+                  {...register("email" as never)}
+                  placeholder="staff@example.com"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="add-whatsapp">WhatsApp Number</Label>
+                <Input
+                  id="add-whatsapp"
+                  type="tel"
+                  {...register("whatsapp" as never)}
+                  placeholder="+62 812 3456 7890"
+                />
+              </div>
+            </div>
+
             {watchEmail && (
               <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
                 <input type="checkbox" className="rounded" {...register("sendInvite" as never)} />
@@ -512,21 +597,23 @@ export function StaffClient({
                 <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
               </div>
               <div className="space-y-1">
-                <Label>
-                  Email <span className="text-muted-foreground text-xs">(optional)</span>
-                </Label>
+                <Label>Username</Label>
                 <Input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  placeholder="staff@example.com"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  placeholder="e.g. jdoe"
                 />
               </div>
               <div className="space-y-1">
                 <Label>Role</Label>
                 <Select
                   value={editRole}
-                  onValueChange={(v) => setEditRole(v as StaffRole)}
+                  onValueChange={(v) => {
+                    setEditRole(v as StaffRole);
+                    setEditAllowedPages(ROLE_DEFAULT_PAGES[v as StaffRole]);
+                  }}
                   disabled={editTarget.role === "OWNER"}
                 >
                   <SelectTrigger>
@@ -550,36 +637,47 @@ export function StaffClient({
                 )}
               </div>
 
-              {/* Detail of access for each role */}
-              <div className="rounded-lg border bg-muted/20 p-3 text-xs space-y-2.5">
-                <p className="font-semibold text-muted-foreground">Role Access Details:</p>
-                <div className="grid gap-2">
-                  <div>
-                    <span className="font-semibold text-amber-500">Owner:</span>
-                    <p className="text-muted-foreground text-[11px] mt-0.5 leading-normal">
-                      Full administrative access: manage billing plans, view financial summaries/reports, configure store settings, and manage all staff.
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-foreground">Manager:</span>
-                    <p className="text-muted-foreground text-[11px] mt-0.5 leading-normal">
-                      Operations manager access: configure menu items/inventory/recipes, manage staff shifts, use KDS, and log in to POS Cashier. Cannot view Billing or general store settings.
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-foreground">Cashier:</span>
-                    <p className="text-muted-foreground text-[11px] mt-0.5 leading-normal">
-                      POS access only: open/close cashier shifts, create/hold/pay orders, view active order queue, and issue cash/QRIS checkouts.
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-foreground">Kitchen:</span>
-                    <p className="text-muted-foreground text-[11px] mt-0.5 leading-normal">
-                      KDS access only: view, prioritize, and mark active food and beverage orders as prepared.
-                    </p>
-                  </div>
+              <div className="space-y-1">
+                <Label>
+                  Custom role label{" "}
+                  <span className="text-muted-foreground text-xs">(optional)</span>
+                </Label>
+                <Input
+                  value={editCustomRoleLabel}
+                  onChange={(e) => setEditCustomRoleLabel(e.target.value)}
+                  placeholder="e.g. Assistant Manager"
+                />
+              </div>
+
+              <div className="space-y-3 rounded-lg border p-3">
+                <p className="text-muted-foreground text-xs font-semibold">
+                  Contact Details <span className="font-normal">(optional)</span>
+                </p>
+                <div className="space-y-1">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="staff@example.com"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>WhatsApp Number</Label>
+                  <Input
+                    type="tel"
+                    value={editWhatsapp}
+                    onChange={(e) => setEditWhatsapp(e.target.value)}
+                    placeholder="+62 812 3456 7890"
+                  />
                 </div>
               </div>
+
+              <PageAccessChecklist
+                role={editRole}
+                value={editAllowedPages}
+                onChange={setEditAllowedPages}
+              />
 
               <div className="space-y-1">
                 <Label>Status</Label>
@@ -654,6 +752,13 @@ export function StaffClient({
           </FormDialogLayout>
         </Dialog>
       )}
+      <SetOwnerPinDialog
+        open={setPinOpen}
+        onOpenChange={setSetPinOpen}
+        title="Set your Owner PIN first"
+        description="Adding staff means someone else may use this device. Set a PIN so you can securely switch back to your Owner account."
+        onSuccess={() => setAddOpen(true)}
+      />
       {confirmDialog}
     </div>
   );

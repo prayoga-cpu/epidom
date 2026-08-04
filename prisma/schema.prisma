@@ -104,10 +104,15 @@ model Business {
   currency  String   @default("IDR")
   timezone  String   @default("Asia/Jakarta")
   locale    String   @default("id")
+  // bcrypt hash of the owner's 4-digit PIN. Required once any StaffMember
+  // exists, so a shared device can gate "switch back to Owner" behind
+  // something only the real owner knows (staff never see this PIN).
+  ownerPin  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   stores    Store[]
+  financeSettings BusinessFinanceSettings?
 
   @@map("businesses")
 }
@@ -142,6 +147,21 @@ model Store {
   aggregatorConnections AggregatorConnection[]
   aggregatorEmails      AggregatorEmail[]
   financeSettings       StoreFinanceSettings?
+  staffSessions         StaffSession[]
+  // When true, this store's fees & taxes are read from Business.financeSettings
+  // instead of its own StoreFinanceSettings row (a shared, profile-wide config).
+  syncFinanceWithBusiness Boolean @default(false)
+  // Owner-only toggle: when true, cashiers can select "Pay Later" at checkout
+  // so an order is served now and settled after delivery. Deliberately a
+  // plain per-store flag (not part of the finance sync above) — a business
+  // may want tabs allowed at one outlet but not another.
+  payLaterEnabled Boolean @default(false)
+  // Owner-only toggle, defaults on (existing stores keep today's behavior).
+  // When false, orders skip the kitchen/bar production stages entirely —
+  // once payment is recorded they go straight to DELIVERED, for small
+  // operations (e.g. a counter-only coffee stand) that have no kitchen
+  // workflow to track.
+  kitchenDisplayEnabled Boolean @default(true)
 
   @@index([businessId])
   @@map("stores")
@@ -167,6 +187,31 @@ model StoreFinanceSettings {
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@map("store_finance_settings")
+}
+
+/// Shared fees & taxes config for a Business, used by any Store with
+/// syncFinanceWithBusiness = true (the "one integrated tax config across all
+/// stores" option — see StoreFinanceSettings for the per-store equivalent).
+model BusinessFinanceSettings {
+  id         String @id @default(cuid())
+  businessId String @unique
+
+  taxEnabled   Boolean @default(false)
+  taxRate      Decimal @default(0) @db.Decimal(6, 4) // 0.1100 = 11%
+  taxLabel     String?
+  taxInclusive Boolean @default(true)
+
+  serviceChargeEnabled Boolean @default(false)
+  serviceChargeRate    Decimal @default(0) @db.Decimal(6, 4)
+
+  processingFeeEnabled   Boolean @default(true)
+  processingFeeOverrides Json? // partial Record<PaymentMethod, { percent, flat }>
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business  Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("business_finance_settings")
 }
 
 model Subscription {
@@ -761,6 +806,7 @@ enum PaymentMethod {
   SHOPEEPAY
   BANK_TRANSFER
   STRIPE_CARD
+  PAY_LATER
 }
 
 enum PaymentStatus {
@@ -870,8 +916,23 @@ model StaffMember {
   id           String    @id @default(cuid())
   storeId      String
   name         String
+  // Login identity for the staff PIN gate — unique per store (not globally),
+  // nullable so existing rows created before this field don't need backfilling.
+  username     String?
+  // Contact details only — no longer used as a login identifier.
   email        String?
+  whatsapp     String?
   role         StaffRole @default(CASHIER)
+  // Optional display label shown instead of the role's default title (e.g.
+  // "Assistant Manager") — the `role` field still drives the default page
+  // template below; the owner refines actual access via allowedPages.
+  customRoleLabel String?
+  // Which dashboard pages (nav item hrefs, e.g. "/pos", "/staff") this staff
+  // member can reach. Empty = inherit the role's default template (see
+  // ROLE_DEFAULT_PAGES in staff-permissions.config.ts) — resolved dynamically
+  // so existing rows don't need backfilling and stay in sync if a role
+  // template default ever changes.
+  allowedPages String[] @default([])
   pin          String? // bcrypt hash — optional
   isActive     Boolean   @default(true)
   inviteStatus String? // "pending" | "accepted" | null
@@ -879,9 +940,31 @@ model StaffMember {
   updatedAt    DateTime  @updatedAt
   store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
   shifts       Shift[]
+  sessions     StaffSession[]
 
+  @@unique([storeId, username])
   @@index([storeId])
   @@map("staff_members")
+}
+
+/// A server-verified "this browser is currently operating as this staff
+/// member" session, established when a staff PIN is verified. Distinct from
+/// better-auth's Session (which always belongs to the account owner) — this
+/// is what lets owner-only pages (Profile, Billing, Staff) tell a restricted
+/// staff persona apart from the real owner and block access server-side.
+model StaffSession {
+  id            String      @id @default(cuid())
+  storeId       String
+  staffMemberId String
+  token         String      @unique
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+  store         Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember   StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([staffMemberId])
+  @@map("staff_sessions")
 }
 
 model Shift {
