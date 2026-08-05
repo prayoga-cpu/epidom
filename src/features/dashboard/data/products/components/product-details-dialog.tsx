@@ -131,7 +131,7 @@ export function ProductDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl [&>button]:hidden">
+      <DialogContent className="max-h-[90dvh] overflow-x-hidden overflow-y-auto sm:max-w-3xl [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -401,30 +401,28 @@ export function ProductDetailsDialog({
                             return (
                               <div
                                 key={option.id}
-                                className="bg-background flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm"
+                                className="bg-background min-w-0 space-y-1 rounded-md border p-2 text-sm"
                               >
-                                <span className="font-medium">{option.name}</span>
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                                  <span className="min-w-0 font-medium break-words">
+                                    {option.name}
+                                  </span>
                                   {priceAdjustment !== 0 && (
-                                    <span className="text-muted-foreground text-xs">
+                                    <span className="text-muted-foreground shrink-0 text-xs">
                                       +{formatPrice(priceAdjustment)}
                                     </span>
                                   )}
-                                  {material ? (
-                                    <Badge variant="outline" className="text-xs font-normal">
-                                      {material.name} −
-                                      {formatNumber(Number(option.materialQty) || 0)}{" "}
-                                      {material.unit}
-                                    </Badge>
-                                  ) : (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-muted-foreground text-xs font-normal"
-                                    >
-                                      {t("data.products.options.noMaterial")}
-                                    </Badge>
-                                  )}
                                 </div>
+                                {material ? (
+                                  <p className="text-muted-foreground min-w-0 text-xs break-words">
+                                    {material.name} −{formatNumber(Number(option.materialQty) || 0)}{" "}
+                                    {material.unit}
+                                  </p>
+                                ) : (
+                                  <p className="text-muted-foreground text-xs">
+                                    {t("data.products.options.noMaterial")}
+                                  </p>
+                                )}
                               </div>
                             );
                           })}
