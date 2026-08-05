@@ -118,12 +118,15 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   );
 
   // A ?unpaid=1 link (e.g. the POS unpaid-orders alert) should always win
-  // over whatever filter was previously saved — runs after the persisted-
+  // over whatever filters were previously saved — runs after the persisted-
   // state load effect above (registered first, so it fires first on mount).
+  // Forces statusFilter back to "ALL" too: unpaid orders can sit in any
+  // status (Pending, Confirmed, Held, ...), so a stale non-ALL status tile
+  // left selected from a prior visit would silently hide some of them.
   const searchParams = useSearchParams();
   useEffect(() => {
     if (searchParams.get("unpaid") === "1") {
-      setFilters((prev) => ({ ...prev, unpaidOnly: true }));
+      setFilters((prev) => ({ ...prev, unpaidOnly: true, statusFilter: "ALL" }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -164,11 +167,17 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     // Optimistic update
     queryClient.setQueryData(["pos", "orders", storeId], (oldData: any[]) => {
       if (!oldData) return [];
-      // If completed, remove from active queue
-      if (status === "DELIVERED" || status === "CANCELLED") {
-        return oldData.filter((o) => o.id !== orderId);
+      const updated = oldData.map((o) => (o.id === orderId ? { ...o, status } : o));
+      // Cancelled orders leave the active queue outright. Delivered orders
+      // leave too, unless payment is still pending — those stay visible for
+      // follow-up (see ACTIVE_POS_QUEUE_FILTER on the server).
+      if (status === "CANCELLED") {
+        return updated.filter((o) => o.id !== orderId);
       }
-      return oldData.map((o) => (o.id === orderId ? { ...o, status } : o));
+      if (status === "DELIVERED") {
+        return updated.filter((o) => o.id !== orderId || o.paymentStatus === "PENDING");
+      }
+      return updated;
     });
 
     try {

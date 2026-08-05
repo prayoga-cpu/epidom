@@ -15,15 +15,13 @@ import {
   LayoutDashboard,
   UserRound,
   Boxes,
-  PackageSearch,
   Database,
-  Bell,
+  AlertTriangle,
   Package,
   UtensilsCrossed,
   ShoppingCart,
   Store,
   FileText,
-  TrendingUp,
   Settings,
 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -92,14 +90,6 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         category: t("search.categories.navigation"),
       },
       {
-        id: "tracking",
-        title: t("nav.tracking"),
-        description: t("tracking.title"),
-        href: `/store/${storeId}/tracking`,
-        icon: <PackageSearch className="size-4" />,
-        category: t("search.categories.navigation"),
-      },
-      {
         id: "data",
         title: t("nav.data"),
         description: t("data.materials.pageTitle"),
@@ -112,7 +102,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         title: t("nav.alerts"),
         description: t("alerts.title"),
         href: `/store/${storeId}/alerts`,
-        icon: <Bell className="size-4" />,
+        icon: <AlertTriangle className="size-4" />,
         category: t("search.categories.navigation"),
       },
 
@@ -132,24 +122,6 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         href: `/store/${storeId}/management/recipe-production`,
         icon: <UtensilsCrossed className="size-4" />,
         category: t("search.categories.management"),
-      },
-
-      // Tracking Section
-      {
-        id: "stock-levels",
-        title: t("tracking.stockLevels"),
-        description: t("tracking.stockLevelsDesc"),
-        href: `/store/${storeId}/tracking/stock-levels`,
-        icon: <TrendingUp className="size-4" />,
-        category: t("search.categories.tracking"),
-      },
-      {
-        id: "stock-movements",
-        title: t("tracking.stockMovements.title"),
-        description: t("tracking.stockMovements.description"),
-        href: `/store/${storeId}/tracking/stock-movements`,
-        icon: <PackageSearch className="size-4" />,
-        category: t("search.categories.tracking"),
       },
     ];
   }, [t, storeId]);

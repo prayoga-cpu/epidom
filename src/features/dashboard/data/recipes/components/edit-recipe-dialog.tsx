@@ -85,7 +85,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
       name: "",
       description: "",
       category: "",
-      department: undefined,
+      department: "KITCHEN",
       yieldQuantity: undefined,
       yieldUnit: "",
       productionTimeMinutes: undefined,
@@ -115,7 +115,9 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
         name: recipe.name,
         description: recipe.description || "",
         category: recipe.category || "",
-        department: recipe.department ?? undefined,
+        // Recipe.department is drawn from the shared Department enum but,
+        // unlike Material, a recipe is never assigned "BOTH".
+        department: (recipe.department as "KITCHEN" | "BAR" | undefined) ?? "KITCHEN",
         yieldQuantity: yieldQuantity > 0 ? yieldQuantity : undefined,
         yieldUnit: recipe.yieldUnit,
         productionTimeMinutes: productionTimeMinutes > 0 ? productionTimeMinutes : undefined,
@@ -332,19 +334,15 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                 render={({ field }) => (
                   <FormItem className="space-y-0.5">
                     <FormLabel className="text-sm">{t("common.department")}</FormLabel>
-                    <Select
-                      value={field.value ?? "none"}
-                      onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">—</SelectItem>
-                        <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
-                        <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                        <SelectItem value="KITCHEN">{t("common.departmentKitchenDetailed")}</SelectItem>
+                        <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

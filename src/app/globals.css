@@ -872,6 +872,20 @@ body.dialog-open {
   color: rgba(251, 249, 228, 0.4) !important;
 }
 
+/* The order history print/PDF report always renders on a white page, even
+   when the dashboard theme is dark, so it must not inherit the cream
+   dark-mode text overrides above (they made the report unreadable). */
+.dark .print-report.text-black,
+.dark .print-report .text-black,
+.dark .print-report .text-gray-700,
+.dark .print-report .text-gray-800 {
+  color: #1f2937 !important;
+}
+
+.dark .print-report .text-gray-500 {
+  color: #6b7280 !important;
+}
+
 /* ========================================
    COMPONENT STYLES
    ======================================== */

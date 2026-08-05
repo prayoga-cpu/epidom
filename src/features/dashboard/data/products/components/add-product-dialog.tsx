@@ -58,7 +58,7 @@ function createProductSchema(t: (key: string) => string) {
     sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
-    department: z.enum(["KITCHEN", "BAR"]).optional(),
+    department: z.enum(["KITCHEN", "BAR"]),
     retailPrice: z.union([
       z.number().positive(t("common.validation.pricePositive")),
       z.undefined(),
@@ -499,19 +499,17 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                 render={({ field }) => (
                   <FormItem className="space-y-0.5">
                     <FormLabel className="text-sm">{t("common.department")}</FormLabel>
-                    <Select
-                      value={field.value ?? "none"}
-                      onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">—</SelectItem>
-                        <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
-                        <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                        <SelectItem value="KITCHEN">
+                          {t("common.departmentKitchenDetailed")}
+                        </SelectItem>
+                        <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

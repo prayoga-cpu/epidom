@@ -19,7 +19,7 @@ const mockMaterial: MaterialWithSuppliers = {
   name: "Test Material",
   description: "Test description",
   category: "Test Category",
-  department: null,
+  department: "BOTH",
   unit: "kg",
   unitCost: new Prisma.Decimal(10.0),
   purchaseQuantity: new Prisma.Decimal(1),

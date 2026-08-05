@@ -70,7 +70,7 @@ function createProductSchema(t: (key: string) => string) {
     sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
-    department: z.enum(["KITCHEN", "BAR"]).optional(),
+    department: z.enum(["KITCHEN", "BAR"]),
     retailPrice: z.union([
       z.number().positive(t("common.validation.pricePositive")),
       z.undefined(),
@@ -164,7 +164,7 @@ export function EditProductDialog({
       sku: "",
       description: "",
       category: "",
-      department: undefined,
+      department: "KITCHEN",
       retailPrice: undefined,
       costPrice: undefined,
       unit: "piece",
@@ -217,7 +217,10 @@ export function EditProductDialog({
         sku: product.sku || "",
         description: product.description || "",
         category: product.category || "",
-        department: product.department ?? undefined,
+        // Product.department is drawn from the shared Department enum but,
+        // unlike Material, a product is never assigned "BOTH" — it always
+        // routes to exactly one KDS station (enforced by createProductSchema).
+        department: (product.department as "KITCHEN" | "BAR" | undefined) ?? "KITCHEN",
         retailPrice: sellingPrice > 0 ? convertPrice(sellingPrice) : undefined, // Convert to user's currency, undefined if 0
         costPrice: costPrice > 0 ? convertPrice(costPrice) : undefined, // Convert to user's currency, undefined if 0
         unit: product.unit || "piece",
@@ -337,7 +340,7 @@ export function EditProductDialog({
         name: data.name,
         description: data.description,
         category: data.category,
-        department: data.department ?? null,
+        department: data.department,
         costPrice: convertToBase(costPrice), // Convert back to EUR
         sellingPrice: convertToBase(retailPrice), // Convert back to EUR
         currentStock: currentStock,
@@ -526,19 +529,17 @@ export function EditProductDialog({
                 render={({ field }) => (
                   <FormItem className="space-y-0.5">
                     <FormLabel className="text-sm">{t("common.department")}</FormLabel>
-                    <Select
-                      value={field.value ?? "none"}
-                      onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">—</SelectItem>
-                        <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
-                        <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                        <SelectItem value="KITCHEN">
+                          {t("common.departmentKitchenDetailed")}
+                        </SelectItem>
+                        <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

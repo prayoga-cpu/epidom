@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { prisma } from "@/lib/prisma";
-import { ACTIVE_POS_STATUSES } from "@/lib/constants/order-status";
+import { ACTIVE_POS_QUEUE_FILTER } from "@/lib/constants/order-status";
 import { serializePosOrders } from "@/lib/server/serialize";
 
 // SSE endpoint for real-time order updates.
@@ -55,7 +55,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           where: {
             storeId,
             // Phase 3: include POS + STOREFRONT orders (not just STOREFRONT)
-            status: { in: ACTIVE_POS_STATUSES },
+            ...ACTIVE_POS_QUEUE_FILTER,
           },
           orderBy: { createdAt: "desc" },
           take: 50,

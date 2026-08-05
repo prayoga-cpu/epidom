@@ -33,4 +33,17 @@ export type FeedbackSubmittedEventData = {
   storeName: string | null;
 };
 
+export type CustomDevelopmentSubmittedEventData = {
+  requestId: string;
+  description: string;
+  company: string | null;
+  phone: string | null;
+  budget: string | null;
+  timeline: string | null;
+  userName: string;
+  userEmail: string;
+  storeId: string | null;
+  storeName: string | null;
+};
+
 export const inngest = new Inngest({ id: "epidom" });

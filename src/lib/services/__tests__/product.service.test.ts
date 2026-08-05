@@ -256,19 +256,6 @@ describe("ProductService", () => {
         data: { department: "KITCHEN" },
       });
     });
-
-    it("should clear the linked MenuItem's department when set back to null", async () => {
-      mockedProductRepo.findById.mockResolvedValue({ ...mockProduct, department: "KITCHEN" });
-      const updated = { ...mockProduct, department: null };
-      mockedProductRepo.update.mockResolvedValue(updated);
-
-      await service.updateProduct("prod-1", "store-1", { department: null });
-
-      expect(prisma.menuItem.updateMany).toHaveBeenCalledWith({
-        where: { productId: "prod-1" },
-        data: { department: null },
-      });
-    });
   });
 
   describe("deleteProduct", () => {

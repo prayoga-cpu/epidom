@@ -9,7 +9,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { formatRelativeTime } from "@/lib/utils/format-date";
 import { useUpdateOrderStatus } from "@/features/pos/hooks/use-update-order-status";
 import { toast } from "sonner";
-import type { UnpaidOrderAlert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import type { UnpaidOrderAlert } from "@/features/dashboard/shared/hooks/use-alerts";
 
 interface UnpaidOrdersCardProps {
   alerts: UnpaidOrderAlert[];

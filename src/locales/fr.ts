@@ -58,6 +58,14 @@ export const fr = {
     stock: "Stock",
     cost: "Coût",
     category: "Catégorie",
+    department: "Département",
+    departmentKitchen: "Cuisine",
+    departmentBar: "Bar",
+    departmentKitchenDetailed: "Cuisine / Nourriture",
+    departmentBarDetailed: "Bar / Boisson",
+    departmentBoth: "Les deux",
+    departmentBothDetailed: "Les deux (Cuisine & Bar)",
+    departmentUnassigned: "Non assigné",
     recipe: "Recette",
     price: "Prix",
     profit: "Bénéfice",
@@ -1713,6 +1721,7 @@ export const fr = {
       unpaidOnly: "Non payé",
       filterAllProducts: "Tous les produits",
       filterAllStaff: "Tout le personnel",
+      awaitingPaymentColumn: "Livré — En attente de paiement",
     },
     filters: {
       addFilter: "Ajouter un filtre",
@@ -1720,6 +1729,7 @@ export const fr = {
       source: "Source",
       type: "Type",
       department: "Département",
+      category: "Catégorie",
       product: "Produit",
       staff: "Personnel",
       status: "Statut",
@@ -1848,6 +1858,15 @@ export const fr = {
         "Ce navigateur ne prend pas en charge l'impression Bluetooth. Utilisez Chrome sur Android/Bureau.",
       connectFailed:
         "Impossible de se connecter à l'imprimante. Assurez-vous que l'imprimante Bluetooth est allumée.",
+      settingsTitle: "Imprimante de Reçus",
+      autoPrint: "Impression automatique du reçu",
+      autoPrintDesc: "Imprimer automatiquement dès qu'une commande est payée",
+      connected: "Connectée",
+      notConnected: "Non connectée",
+      connect: "Connecter l'imprimante",
+      connecting: "Connexion...",
+      disconnect: "Déconnecter",
+      disconnected: "Imprimante déconnectée",
     },
     history: {
       activeTab: "En cours",
@@ -2777,8 +2796,9 @@ export const fr = {
   },
   alerts: {
     // Page titles
-    title: "Alertes de Stock",
-    description: "Surveillez les niveaux de stock faibles et agissez pour éviter les ruptures",
+    title: "Alertes",
+    description:
+      "Stock faible, commandes impayées, et tout ce qui nécessite votre attention",
     ordersToPlace: "Commandes à Passer",
     ordersToPlaceDescription:
       "Contacter les fournisseurs pour réapprovisionner les articles en faible stock",
@@ -3429,48 +3449,33 @@ export const fr = {
           contactPerson: "Personne de Contact",
           printedOn: "Imprimé le",
           generatedBy: "Généré par : Système de Gestion EPIDOM",
-          pdfNotImplemented:
-            "La fonctionnalité d'export PDF sera implémentée avec une bibliothèque PDF",
         },
         addEditDelivery: {
-          addTitle: "Ajouter une Nouvelle Livraison",
           editTitle: "Modifier la Livraison",
-          addDescription: "Créer un nouvel enregistrement de livraison fournisseur",
           editDescription: "Mettre à jour la livraison {reference}",
           deliveryReference: "Référence de Livraison",
           supplier: "Fournisseur",
-          selectSupplier: "Sélectionner un fournisseur",
           deliveryType: "Type de Livraison",
           status: "Statut",
           expectedDate: "Date Prévue",
           selectExpectedDate: "Sélectionner la date prévue",
           items: "Articles",
-          addItem: "Ajouter un Article",
           noItemsYet:
             'Aucun article ajouté. Cliquez sur "Ajouter un Article" pour ajouter des matières.',
           material: "Matière",
-          selectMaterial: "Sélectionner une matière",
           quantity: "Quantité",
           unit: "Unité",
           notes: "Notes",
           optionalNotes: "Notes facultatives",
           additionalNotes: "Notes supplémentaires sur cette livraison...",
           cancel: "Annuler",
-          createDelivery: "Créer la Livraison",
           updateDelivery: "Mettre à Jour la Livraison",
           creating: "Création...",
           updating: "Mise à jour...",
           successCreated: "Livraison créée avec succès",
           successUpdated: "Livraison mise à jour avec succès",
           validation: {
-            referenceRequired: "La référence de livraison est requise",
-            supplierRequired: "Veuillez sélectionner un fournisseur",
             expectedDateRequired: "La date prévue est requise",
-            atLeastOneItem: "Veuillez ajouter au moins un article",
-            itemsMustHaveMaterial:
-              "Tous les articles doivent avoir une matière et une quantité supérieure à 0",
-            addModeNotImplemented:
-              "Le mode d'ajout n'est pas encore implémenté. Les commandes doivent être créées à partir des alertes.",
           },
           toasts: {
             created: {

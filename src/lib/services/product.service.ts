@@ -55,7 +55,7 @@ export class ProductService {
     unit?: string;
     minStock?: number;
     maxStock?: number;
-    department?: Department | null;
+    department?: Department;
     recipeIds?: string[]; // Changed from recipeId to recipeIds (array)
     productionTime?: number;
     shelfLife?: number;
@@ -85,7 +85,7 @@ export class ProductService {
       name: data.name,
       description: data.description,
       category: data.category,
-      department: data.department,
+      department: data.department ?? "KITCHEN",
       costPrice: data.costPrice,
       sellingPrice: data.sellingPrice,
       currentStock: data.currentStock ?? 0,
@@ -147,7 +147,7 @@ export class ProductService {
       name?: string;
       description?: string;
       category?: string;
-      department?: Department | null;
+      department?: Department;
       costPrice?: number;
       sellingPrice?: number;
       currentStock?: number;

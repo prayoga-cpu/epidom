@@ -36,13 +36,14 @@ export function categoryFilter(category: string | null): Prisma.OrderItemWhereIn
 
 /**
  * `OrderItem` where-clause fragment for the Kitchen/Bar department filter —
- * same "none" sentinel convention as `categoryFilter`, for items with no
- * menuItem (aggregator orders) or a menuItem with no department set.
+ * same "none" sentinel convention as `categoryFilter`. `MenuItem.department`
+ * is a required field (defaults to Kitchen), so the only way an item has no
+ * department is having no linked menuItem at all (aggregator orders).
  */
 export function departmentFilter(department: string | null): Prisma.OrderItemWhereInput {
   if (!department) return {};
   if (department === UNCATEGORIZED) {
-    return { OR: [{ menuItemId: null }, { menuItem: { department: null } }] };
+    return { menuItemId: null };
   }
   return { menuItem: { department: department as Department } };
 }

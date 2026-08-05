@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PosOrderQueue } from "./pos-order-queue";
@@ -29,6 +31,20 @@ export function PosOrdersTabs({ storeId }: PosOrdersTabsProps) {
     ORDERS_TAB_DEFAULTS,
     sanitizeOrdersTab
   );
+
+  // A ?unpaid=1 link (the POS unpaid-orders alert) should always land on the
+  // Active queue — that's the only tab PosOrderQueue's own unpaid filter
+  // applies to. Without this, a cashier who last left the History tab open
+  // gets stranded there since usePersistedState's saved tab wins by default.
+  // Runs after that load effect (registered first, so it fires first on
+  // mount), so this write overrides it rather than the other way around.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("unpaid") === "1") {
+      setTabState({ tab: "active" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Tabs

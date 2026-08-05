@@ -18,7 +18,7 @@ const updateRecipeSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long").optional(),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
-  department: z.enum(["KITCHEN", "BAR"]).nullable().optional(),
+  department: z.enum(["KITCHEN", "BAR"]).optional(),
   yieldQuantity: z.number().positive("Yield quantity must be positive").optional(),
   yieldUnit: z
     .string()

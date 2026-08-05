@@ -115,7 +115,7 @@ export const createMenuItemSchema = z.object({
   name: z.string().min(1, "Item name is required").max(100, "Item name is too long"),
   categoryId: z.string().nullable().optional(),
   productId: z.string().nullable().optional(),
-  department: z.enum(["KITCHEN", "BAR"]).nullable().optional(),
+  department: z.enum(["KITCHEN", "BAR"]).default("KITCHEN"),
   description: z.string().max(300, "Description is too long").optional().or(z.literal("")),
   price: priceSchema,
   currency: z.string().optional(),

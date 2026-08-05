@@ -32,9 +32,17 @@ export function PageShell({ children }: { children: React.ReactNode }) {
                 ancestor — lets content grow past the available space
                 instead of this div's own overflow-y-auto ever kicking in,
                 silently clipping the bottom (e.g. a page with a fixed
-                footer button) with no way to scroll to it. */}
-            <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto p-2 md:p-6">
-              <UpgradeGateProvider>{children}</UpgradeGateProvider>
+                footer button) with no way to scroll to it.
+
+                The padding lives on the INNER div, not this one: a single
+                element that's simultaneously `flex flex-col` + `overflow-y-
+                auto` + padded clips its own bottom padding once scrolled to
+                the end (a longstanding Chromium flexbox/overflow quirk) —
+                splitting scroll and padding across two elements avoids it. */}
+            <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
+              <div className="flex flex-col p-2 md:p-6">
+                <UpgradeGateProvider>{children}</UpgradeGateProvider>
+              </div>
             </div>
           </main>
         </div>

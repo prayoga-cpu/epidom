@@ -72,6 +72,60 @@ describe("deductStockForOrder — option-driven material consumption", () => {
     expect(Number(movementCall[0].data.quantity)).toBe(-10);
   });
 
+  it("skips a CANCELLED order item's stock deduction even though the order was delivered", async () => {
+    prismaMock.stockMovement.findFirst.mockResolvedValue(null); // not already deducted
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: "order-2",
+      orderNumber: "POS-2",
+      storeId: "store-1",
+      store: { business: { userId: "user-1" } },
+      items: [
+        {
+          id: "item-active",
+          quantity: 2,
+          status: "PENDING",
+          product: {
+            id: "prod-active",
+            name: "Widget",
+            unit: "pcs",
+            minStock: 0,
+            currentStock: 50,
+            recipeProducts: [],
+          },
+          menuItem: null,
+          selectedOptions: null,
+        },
+        {
+          id: "item-cancelled",
+          quantity: 3,
+          status: "CANCELLED",
+          product: {
+            id: "prod-cancelled",
+            name: "Gadget",
+            unit: "pcs",
+            minStock: 0,
+            currentStock: 20,
+            recipeProducts: [],
+          },
+          menuItem: null,
+          selectedOptions: null,
+        },
+      ],
+    });
+
+    const result = await deductStockForOrder("order-2", "store-1");
+
+    expect(result.deducted).toBe(1);
+    expect(capturedTx.product.update).toHaveBeenCalledTimes(1);
+    const [updateCall] = capturedTx.product.update.mock.calls;
+    expect(updateCall[0].where).toEqual({ id: "prod-active" });
+    expect(Number(updateCall[0].data.currentStock)).toBe(48);
+
+    expect(capturedTx.stockMovement.create).toHaveBeenCalledTimes(1);
+    const [movementCall] = capturedTx.stockMovement.create.mock.calls;
+    expect(movementCall[0].data.productId).toBe("prod-active");
+  });
+
   it("is idempotent — a second call for the same order is a no-op", async () => {
     prismaMock.stockMovement.findFirst.mockResolvedValue({ id: "existing-movement" });
 

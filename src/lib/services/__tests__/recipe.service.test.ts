@@ -37,17 +37,17 @@ vi.mock("@/lib/repositories/material.repository", () => ({
 
 // Import after mocking
 import { RecipeService } from "../recipe.service";
-import { recipeRepository } from "@/lib/repositories/recipe.repository";
+import { recipeRepository, type RecipeWithIngredients } from "@/lib/repositories/recipe.repository";
 import { materialRepository } from "@/lib/repositories/material.repository";
 
 // Mock recipe data
-const mockRecipe = {
+const mockRecipe: RecipeWithIngredients = {
   id: "recipe-1",
   storeId: "store-1",
   name: "Chocolate Cake",
   description: "Delicious chocolate cake",
   category: "Cakes",
-  department: null,
+  department: "KITCHEN",
   yieldQuantity: new Prisma.Decimal(1),
   yieldUnit: "piece",
   productionTimeMinutes: 60,

@@ -14,7 +14,7 @@ import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { shiftFilter } from "@/lib/finance/report-filters";
-import { bucketItemsByDepartment } from "@/lib/finance/report-aggregation";
+import { bucketItemsByDepartment, type DepartmentValue } from "@/lib/finance/report-aggregation";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +48,12 @@ export const GET = withApiHandler(
       items.map((item) => ({
         total: Number(item.total),
         quantity: Number(item.quantity),
-        menuItem: item.menuItem,
+        // MenuItem.department is drawn from the shared Department enum but,
+        // unlike Material, a MenuItem is never assigned "BOTH" — it always
+        // routes to exactly one KDS station.
+        menuItem: item.menuItem
+          ? { department: item.menuItem.department as DepartmentValue }
+          : null,
       }))
     );
 

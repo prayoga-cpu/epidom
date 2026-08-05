@@ -66,9 +66,7 @@ describe("departmentFilter", () => {
     expect(departmentFilter("KITCHEN")).toEqual({ menuItem: { department: "KITCHEN" } });
   });
 
-  it("the unassigned sentinel matches items with no menuItem or no department", () => {
-    expect(departmentFilter("none")).toEqual({
-      OR: [{ menuItemId: null }, { menuItem: { department: null } }],
-    });
+  it("the unassigned sentinel matches items with no menuItem (department is a required field)", () => {
+    expect(departmentFilter("none")).toEqual({ menuItemId: null });
   });
 });

@@ -9,6 +9,16 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.14.13] - 2026-08-05 · feat
+
+- **Enterprise "Custom Development" page.** Under the dashboard's Enterprise section, request a custom feature or website build — describe your requirements, budget, and timeline. Submissions notify the founder/CRO team by email and appear in a new admin triage queue at `/admin/custom-development`. Users can edit or delete their own submitted requests.
+- **Admin panel: Custom Development link + pending-request badges.** The Master Admin Panel header now links to the Custom Development queue, and both it and the Feedback button show a live count badge for open/new items awaiting a first look.
+- **Consolidated Tracking into Management.** The Tracking page's unique stock-movement ledger is now a "Movements" tab inside Management; its redundant Stock Levels view (already covered by the Data page) was dropped, along with the separate Tracking nav item.
+- **Fixed a tracking-page crash** (`Value 'BOTH' not found in enum 'Department'`) caused by an out-of-sync generated Prisma Client after the Material `department` field's `BOTH` option was added.
+- Delivery print dialog's "Export PDF" now actually exports a PDF (previously a stub); removed the dead, unreachable "Add Delivery" form mode.
+- Stock deduction now skips line items a KDS operator cancelled, so a cancelled item's ingredients/stock are no longer deducted when the rest of the order is delivered.
+- Fixed the pricing page's plan cards: CTA buttons, dividers, and feature lists across the four tiers weren't level with each other because the header tagline and price block varied in height per tier — now consistently aligned.
+
 ## [2.14.12] - 2026-08-02 · feat
 
 - **Finance reports: filter/breakdown by category, department, and staff shift.** The Finance page now has Staff and Category (menu category) filters, plus new "By Category," "By Shift," and "By Department" report tabs/cards — the last answering "how much did Kitchen sell vs. Bar today." All tables gained sortable column headers.

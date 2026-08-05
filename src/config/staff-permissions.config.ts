@@ -20,7 +20,6 @@ export const ROLE_DEFAULT_PAGES: Record<StaffRole, string[]> = {
     "/tables",
     "/menu",
     "/management",
-    "/tracking",
     "/data",
     "/alerts",
     "/shifts",

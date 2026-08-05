@@ -16,6 +16,11 @@ import {
 // field — shared across Product/Material/Recipe.
 export const departmentSchema = z.enum(["KITCHEN", "BAR"]);
 
+// Materials are raw ingredients, not a single station's preparation — a
+// shared ingredient (sugar, ice) can genuinely serve both Kitchen and Bar,
+// so materials get a third "Both" option that Product/Recipe/MenuItem don't.
+export const materialDepartmentSchema = z.enum(["KITCHEN", "BAR", "BOTH"]);
+
 // Product option schemas — variant groups editable on a Product (e.g.
 // "Size"), each option optionally linked to a Material with a custom
 // stock-deduction quantity (e.g. "Large" consumes +5g of Sugar per sale).
@@ -43,7 +48,7 @@ const baseProductSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
-  department: departmentSchema.nullable().optional(),
+  department: departmentSchema.default("KITCHEN"),
   costPrice: priceSchema,
   sellingPrice: priceSchema,
   currentStock: decimalSchema.default(0),
@@ -85,7 +90,7 @@ const baseIngredientSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
-  department: departmentSchema.nullable().optional(),
+  department: materialDepartmentSchema.default("BOTH"),
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").default("kg"),
   unitCost: derivedUnitCostSchema,
   purchaseQuantity: purchaseQuantitySchema.default(1),
@@ -123,7 +128,12 @@ const baseIngredientFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
-  department: departmentSchema.nullable().optional(),
+  // No .default() here (unlike the server-side schema above): the client
+  // form always has a concrete value via FORM_DEFAULTS, and zodResolver
+  // infers useForm's field-values type from the schema's *input* type, which
+  // .default() would make optional and desync from CreateIngredientFormInput
+  // (the output type used for the form's TS generic).
+  department: materialDepartmentSchema,
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").optional(),
   unitCost: derivedUnitCostSchema,
   purchaseQuantity: purchaseQuantitySchema.optional(),
@@ -191,7 +201,7 @@ export type UpdateIngredientFormInput = z.infer<typeof updateIngredientFormSchem
 export const materialFilterSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
-  department: departmentSchema.optional(),
+  department: materialDepartmentSchema.optional(),
   supplierId: cuidSchema.optional(),
   stockStatus: z.enum(["in_stock", "low_stock", "out_of_stock", "overstocked"]).optional(),
   sortBy: z
@@ -250,7 +260,7 @@ const baseRecipeSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
-  department: departmentSchema.nullable().optional(),
+  department: departmentSchema.default("KITCHEN"),
   yieldQuantity: z.number().positive("Yield quantity must be positive"),
   yieldUnit: z.string().min(1, "Yield unit is required").max(20, "Yield unit is too long"),
   productionTimeMinutes: z
@@ -277,7 +287,8 @@ const baseRecipeFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
-  department: departmentSchema.nullable().optional(),
+  // No .default() (see baseIngredientFormSchema's department comment above).
+  department: departmentSchema,
   yieldQuantity: z.number().positive("Yield quantity must be positive").optional(),
   yieldUnit: z.string().min(1, "Yield unit is required").max(20, "Yield unit is too long"),
   productionTimeMinutes: z

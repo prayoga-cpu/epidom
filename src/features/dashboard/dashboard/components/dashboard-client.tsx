@@ -13,7 +13,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
-import type { Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import type { Alert } from "@/features/dashboard/shared/hooks/use-alerts";
 
 // Lazy load heavy chart component to reduce initial bundle size (~200KB savings)
 // Use Next.js dynamic with ssr: false to prevent hydration mismatch

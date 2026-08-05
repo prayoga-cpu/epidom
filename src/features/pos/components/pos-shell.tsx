@@ -10,6 +10,8 @@ import { PosCart } from "./pos-cart";
 import { PosMobileCart } from "./pos-mobile-cart";
 import { PosOfflineBanner } from "./pos-offline-banner";
 import { PosUnpaidAlert } from "./pos-unpaid-alert";
+import { AddFilterMenu } from "./add-filter-menu";
+import { RemovableFilter } from "./removable-filter";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { usePosOrders } from "../hooks/use-pos-orders";
@@ -23,6 +25,12 @@ import { MenuItemOptionsDialog } from "@/components/shared/menu-item-options-dia
 import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
 import type { PosMenuItem } from "../types/pos.types";
 
+// Hidden by default behind "+ Add filter" — same Notion-chip pattern as the
+// order queue/history toolbars, so the search bar isn't crowded with
+// dimensions the cashier isn't actively narrowing by.
+const POS_FILTER_KEYS = ["department", "category"] as const;
+type PosFilterKey = (typeof POS_FILTER_KEYS)[number];
+
 interface PosShellProps {
   store: Pick<Store, "id" | "name">;
   bypassStaffGate?: boolean;
@@ -33,6 +41,7 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   const { formatPrice } = useCurrency();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<"KITCHEN" | "BAR" | null>(null);
+  const [activeFilterKeys, setActiveFilterKeys] = useState<PosFilterKey[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [configuringItem, setConfiguringItem] = useState<PosMenuItem | null>(null);
@@ -41,6 +50,17 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   const { data: menuData, isLoading } = usePosMenu(store.id);
   const { data: orders } = usePosOrders(store.id);
   const unpaidCount = orders?.filter((o) => o.paymentStatus === "PENDING").length ?? 0;
+  const categoryNames = menuData?.categories.map((c: any) => c.name) ?? [];
+
+  const addFilter = (key: PosFilterKey) => {
+    setActiveFilterKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+  };
+
+  const removeFilter = (key: PosFilterKey) => {
+    setActiveFilterKeys((prev) => prev.filter((k) => k !== key));
+    if (key === "department") setSelectedDepartment(null);
+    if (key === "category") setSelectedCategory(null);
+  };
 
   const handleItemClick = (item: PosMenuItem) => {
     const groups = getMergedOptionGroups(item, item.product);
@@ -63,8 +83,8 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
               refusing to shrink below its natural width (the flex-item
               default) and squeezing the fixed-width cart pane next to it. */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="bg-background flex items-center gap-4 border-b p-4">
-              <div className="relative max-w-md flex-1">
+            <div className="bg-background flex items-center gap-3 border-b p-4">
+              <div className="relative w-full max-w-[200px] shrink-0 sm:max-w-xs">
                 <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
                 <Input
                   type="search"
@@ -74,18 +94,37 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+
+              {/* Filters sit beside the search bar and scroll horizontally
+                  as a single strip instead of wrapping — the search input
+                  keeps its width, this row absorbs the overflow. */}
+              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+                {activeFilterKeys.includes("department") && (
+                  <RemovableFilter onRemove={() => removeFilter("department")}>
+                    <PosDepartmentBar
+                      selectedDepartment={selectedDepartment}
+                      onSelectDepartment={setSelectedDepartment}
+                    />
+                  </RemovableFilter>
+                )}
+                {activeFilterKeys.includes("category") && categoryNames.length > 0 && (
+                  <RemovableFilter onRemove={() => removeFilter("category")}>
+                    <PosCategoryBar
+                      categories={categoryNames}
+                      selectedCategory={selectedCategory}
+                      onSelectCategory={setSelectedCategory}
+                    />
+                  </RemovableFilter>
+                )}
+                <AddFilterMenu
+                  options={POS_FILTER_KEYS.filter(
+                    (k) =>
+                      !activeFilterKeys.includes(k) && (k !== "category" || categoryNames.length > 0)
+                  ).map((k) => ({ key: k, label: t(`pos.filters.${k}`) }))}
+                  onAdd={(k) => addFilter(k as PosFilterKey)}
+                />
+              </div>
             </div>
-
-            <PosDepartmentBar
-              selectedDepartment={selectedDepartment}
-              onSelectDepartment={setSelectedDepartment}
-            />
-
-            <PosCategoryBar
-              categories={menuData?.categories.map((c: any) => c.name) ?? []}
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-            />
 
             {isLoading ? (
               <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3 xl:grid-cols-4">

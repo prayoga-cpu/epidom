@@ -13,7 +13,7 @@
  */
 
 import { Resend } from "resend";
-import type { FeedbackSubmittedEventData } from "@/lib/inngest/client";
+import type { FeedbackSubmittedEventData, CustomDevelopmentSubmittedEventData } from "@/lib/inngest/client";
 
 // Lazy-initialized Resend client to avoid build errors when API key is not set
 let resendClient: Resend | null = null;
@@ -505,6 +505,141 @@ function generateFeedbackNotificationEmailHtml(
 
     <div style="text-align: center; margin: 40px 0 10px;">
       <a href="${APP_URL}/admin/feedback"
+         style="background-color: #444444;
+                color: #ffffff;
+                padding: 16px 40px;
+                text-decoration: none;
+                border-radius: 6px;
+                font-weight: 700;
+                display: inline-block;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-size: 14px;">
+        View in Admin
+      </a>
+    </div>
+  </div>
+
+  <div style="text-align: center; padding: 30px; color: #999999; font-size: 11px; letter-spacing: 0.5px;">
+    <p style="margin: 0; text-transform: uppercase;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+    <p style="margin: 8px 0 0 0;">
+      <a href="${APP_URL}" style="color: #444444; text-decoration: underline;">Visit our website</a>
+    </p>
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+/**
+ * Send custom development request notification email to the team
+ */
+export async function sendCustomDevelopmentNotificationEmail(
+  payload: CustomDevelopmentSubmittedEventData
+): Promise<SendEmailResult> {
+  const reference = payload.requestId.slice(-8).toUpperCase();
+  const subject = `[${APP_NAME} Custom Dev] New request from ${payload.userName} (#${reference})`;
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🛠️  [DEV] Custom Development Notification Email");
+    console.log("To:", FEEDBACK_NOTIFICATION_RECIPIENTS.join(", "));
+    console.log("Subject:", subject);
+    console.log("Requester:", `${payload.userName} <${payload.userEmail}>`);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: FEEDBACK_NOTIFICATION_RECIPIENTS,
+      subject,
+      html: generateCustomDevelopmentNotificationEmailHtml(payload, reference),
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send custom development notification email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("[Email] Custom development notification email error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Generate HTML for custom development request notification email
+ */
+function generateCustomDevelopmentNotificationEmailHtml(
+  payload: CustomDevelopmentSubmittedEventData,
+  reference: string
+): string {
+  const store = payload.storeName ?? payload.storeId;
+
+  const rows: Array<[string, string]> = [
+    ["Description", escapeHtml(payload.description).replace(/\n/g, "<br>")],
+    ["Requester", `${escapeHtml(payload.userName)} (${escapeHtml(payload.userEmail)})`],
+  ];
+
+  if (payload.company) {
+    rows.push(["Company", escapeHtml(payload.company)]);
+  }
+  if (payload.phone) {
+    rows.push(["Phone", escapeHtml(payload.phone)]);
+  }
+  if (payload.budget) {
+    rows.push(["Budget", escapeHtml(payload.budget)]);
+  }
+  if (payload.timeline) {
+    rows.push(["Timeline", escapeHtml(payload.timeline)]);
+  }
+  if (store) {
+    rows.push(["Store", escapeHtml(store)]);
+  }
+
+  rows.push(["Reference", `#${reference}`]);
+
+  const rowsHtml = rows
+    .map(
+      ([label, value]) => `
+      <tr>
+        <td style="padding: 12px 16px; border-bottom: 1px solid #eeeeee; color: #888888; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top; white-space: nowrap;">${label}</td>
+        <td style="padding: 12px 16px; border-bottom: 1px solid #eeeeee; color: #333333; font-size: 14px; vertical-align: top; word-break: break-word;">${value}</td>
+      </tr>`
+    )
+    .join("");
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New custom development request</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+  <div style="background-color: #444444; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 32px; letter-spacing: 2px; font-weight: 800;">${APP_NAME}</h1>
+  </div>
+
+  <div style="background: #ffffff; padding: 40px 35px; border: 1px solid #eeeeee; border-top: none; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+    <h2 style="color: #111111; margin-top: 0; font-size: 24px; font-weight: 700;">New custom development request</h2>
+
+    <table style="width: 100%; border-collapse: collapse; margin: 25px 0; border: 1px solid #eeeeee; border-radius: 8px;">
+      ${rowsHtml}
+    </table>
+
+    <div style="text-align: center; margin: 40px 0 10px;">
+      <a href="${APP_URL}/admin/custom-development"
          style="background-color: #444444;
                 color: #ffffff;
                 padding: 16px 40px;

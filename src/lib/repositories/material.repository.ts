@@ -244,7 +244,7 @@ export class MaterialRepository extends BaseRepository {
     name: string;
     description?: string;
     category?: string;
-    department?: Department | null;
+    department?: Department;
     unit: string;
     unitCost: number;
     purchaseQuantity?: number;

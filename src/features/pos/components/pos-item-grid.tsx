@@ -3,6 +3,7 @@
 import { useI18n } from "@/components/lang/i18n-provider";
 import type { PosMenuItem, PosMenuCategory } from "../types/pos.types";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
 import Image from "next/image";
 
 interface PosItemGridProps {
@@ -52,7 +53,9 @@ export function PosItemGrid({
     <div className="min-h-0 flex-1 overflow-auto pt-2 pb-24 sm:p-4 lg:pb-4">
       {filteredCategories.map((category) => (
         <div key={category.name} className="mb-6 last:mb-0 sm:mb-8">
-          <h2 className="mb-3 text-lg font-semibold tracking-tight sm:mb-4">{category.name}</h2>
+          <h2 className="mb-3 text-lg font-semibold tracking-tight sm:mb-4">
+            {category.name === UNCATEGORIZED_CATEGORY ? t("common.uncategorized") : category.name}
+          </h2>
           <div className="grid grid-cols-2 gap-0 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5">
             {category.items.map((item) => (
               <button

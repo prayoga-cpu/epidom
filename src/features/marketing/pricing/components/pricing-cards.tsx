@@ -279,13 +279,17 @@ export function PricingCards({
                       fontSize: 13,
                       marginTop: 8,
                       lineHeight: 1.5,
+                      // Reserve 2 lines' worth of height so a short tagline (1 line)
+                      // doesn't leave the CTA button sitting higher than cards whose
+                      // tagline wraps to 2 lines.
+                      minHeight: 39,
                     }}
                   >
                     {t(`redesign.pricingPage.${key}tagline` as const)}
                   </div>
                 </div>
 
-                <div>
+                <div style={{ minHeight: 115 }}>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                     <span
                       className="epi-display"

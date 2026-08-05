@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
 
 /**
  * GET /api/stores/[id]/pos/menu
@@ -65,7 +66,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     // Group by category
     const categoryMap = new Map<string, typeof menuItems>();
     for (const item of menuItems) {
-      const cat = item.category?.name ?? "Lainnya";
+      const cat = item.category?.name ?? UNCATEGORIZED_CATEGORY;
       if (!categoryMap.has(cat)) categoryMap.set(cat, []);
       categoryMap.get(cat)!.push(item);
     }

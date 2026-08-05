@@ -17,7 +17,7 @@ import { DashboardClient } from "@/features/dashboard/dashboard/components/dashb
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
-import type { Alert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import type { Alert } from "@/features/dashboard/shared/hooks/use-alerts";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 /**

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { type LowStockAlert } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { type LowStockAlert } from "@/features/dashboard/shared/hooks/use-alerts";
 import { AlertCircle, ShoppingCart, Package2 } from "lucide-react";
 import { BulkOrderDialog } from "./bulk-order-dialog";
 import { formatDate } from "@/lib/utils/format-date";

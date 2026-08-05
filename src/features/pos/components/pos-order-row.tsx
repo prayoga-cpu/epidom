@@ -93,19 +93,22 @@ export function PosOrderRow({ order, storeId, onUpdateStatus }: PosOrderRowProps
       <div className="flex shrink-0 gap-2">
         <PosOrderPrimaryAction
           order={order}
+          storeId={storeId}
           className="h-7 px-3 text-xs"
           onUpdateStatus={onUpdateStatus}
           onResume={handleResume}
         />
-        <Button
-          size="sm"
-          variant="outline"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 shrink-0 px-2"
-          onClick={handleCancel}
-          title={t("pos.orderCard.cancel")}
-        >
-          <X className="h-3.5 w-3.5" />
-        </Button>
+        {order.status !== "DELIVERED" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 shrink-0 px-2"
+            onClick={handleCancel}
+            title={t("pos.orderCard.cancel")}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </div>
 
       {confirmDialog}

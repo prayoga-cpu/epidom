@@ -28,7 +28,7 @@ export interface CreateMaterialInput {
   name: string;
   description?: string;
   category?: string;
-  department?: Department | null;
+  department?: Department;
   unit: string;
   unitCost: number;
   purchaseQuantity?: number;
@@ -48,7 +48,7 @@ export interface UpdateMaterialInput {
   name?: string;
   description?: string;
   category?: string;
-  department?: Department | null;
+  department?: Department;
   unit?: string;
   unitCost?: number;
   purchaseQuantity?: number;

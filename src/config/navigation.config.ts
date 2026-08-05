@@ -2,9 +2,8 @@ import {
   LayoutDashboard,
   UserRound,
   Boxes,
-  PackageSearch,
   Database,
-  Bell,
+  AlertTriangle,
   Home,
   Briefcase,
   CreditCard,
@@ -18,6 +17,7 @@ import {
   Clock,
   BarChart3,
   MenuSquare,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
@@ -128,13 +128,6 @@ export const dashboardNavigation: NavSection[] = [
         requiredPlan: "OPERATIONS",
       },
       {
-        href: "/tracking",
-        labelKey: "nav.tracking",
-        icon: PackageSearch,
-        showBadge: false,
-        requiredPlan: "OPERATIONS",
-      },
-      {
         href: "/data",
         labelKey: "nav.data",
         icon: Database,
@@ -144,7 +137,7 @@ export const dashboardNavigation: NavSection[] = [
       {
         href: "/alerts",
         labelKey: "nav.alerts",
-        icon: Bell,
+        icon: AlertTriangle,
         showBadge: true,
         badgeKey: "alerts",
         requiredPlan: "OPERATIONS",
@@ -172,6 +165,13 @@ export const dashboardNavigation: NavSection[] = [
         href: "/finance",
         labelKey: "nav.finance",
         icon: BarChart3,
+        showBadge: false,
+        requiredPlan: "ENTERPRISE",
+      },
+      {
+        href: "/custom-development",
+        labelKey: "nav.customDevelopment",
+        icon: Wrench,
         showBadge: false,
         requiredPlan: "ENTERPRISE",
       },

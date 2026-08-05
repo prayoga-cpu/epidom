@@ -1,5 +1,5 @@
 import { useParams } from "next/navigation";
-import { useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { useAlerts } from "@/features/dashboard/shared/hooks/use-alerts";
 
 /**
  * Custom hook to get alerts count

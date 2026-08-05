@@ -10,8 +10,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   useSupplierOrders,
   supplierOrderKeys,
-} from "@/features/dashboard/tracking/hooks/use-supplier-orders";
-import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
+} from "@/features/dashboard/shared/hooks/use-supplier-orders";
+import { alertKeys } from "@/features/dashboard/shared/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { materialKeys } from "@/features/dashboard/data/materials/hooks/use-materials";
 import {

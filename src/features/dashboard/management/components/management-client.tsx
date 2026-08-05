@@ -10,11 +10,12 @@ import { SupplierDeliveryDetails } from "../delivery/supplier-delivery-details";
 import { UpdateDeliveryStatusDialog } from "../delivery/update-delivery-status-dialog";
 import { PrintDeliveryDialog } from "../delivery/print-delivery-dialog";
 import { AddEditDeliveryDialog } from "../delivery/add-edit-delivery-dialog";
+import { MovementsTab } from "../movements/movements-tab";
 import { useI18n } from "@/components/lang/i18n-provider";
 import {
   useSupplierOrders,
   type SupplierOrder,
-} from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+} from "@/features/dashboard/shared/hooks/use-supplier-orders";
 import { useParams } from "next/navigation";
 import { SupplierDelivery, SupplierDeliveryStatus, DeliveryType } from "@/types/entities";
 
@@ -133,7 +134,7 @@ export function ManagementClient({ initialSupplierOrders, storeId }: ManagementC
   return (
     <div className="min-h-[calc(100vh-150px)] space-y-4">
       <Tabs defaultValue="deliveries" className="w-full">
-        <TabsList className="bg-muted/50 grid h-auto w-full max-w-full grid-cols-2 gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm md:inline-flex md:h-9 md:max-w-none md:grid-cols-none md:justify-start md:gap-0 md:p-1.5">
+        <TabsList className="bg-muted/50 grid h-auto w-full max-w-full grid-cols-3 gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm md:inline-flex md:h-9 md:max-w-none md:grid-cols-none md:justify-start md:gap-0 md:p-1.5">
           <TabsTrigger
             className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
             value="deliveries"
@@ -157,6 +158,12 @@ export function ManagementClient({ initialSupplierOrders, storeId }: ManagementC
             value="stock"
           >
             {t("management.stock")}
+          </TabsTrigger>
+          <TabsTrigger
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
+            value="movements"
+          >
+            {t("management.movements")}
           </TabsTrigger>
         </TabsList>
 
@@ -197,6 +204,10 @@ export function ManagementClient({ initialSupplierOrders, storeId }: ManagementC
         <TabsContent value="stock" className="space-y-4">
           <EditStockCard />
         </TabsContent>
+
+        <TabsContent value="movements" className="space-y-4">
+          <MovementsTab storeId={storeId} />
+        </TabsContent>
       </Tabs>
 
       {/* Dialogs */}
@@ -231,7 +242,6 @@ export function ManagementClient({ initialSupplierOrders, storeId }: ManagementC
             }
           }}
           delivery={deliveryToEdit}
-          mode="edit"
         />
       )}
     </div>

@@ -24,6 +24,7 @@ import {
   TrendingUp,
   MessageSquare,
   RotateCcw,
+  Wrench,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,6 +139,19 @@ function formatPeriodEnd(dateStr: string | null | undefined): string {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+/** Small count pill anchored to the top-right corner of a nav button. */
+function NavBadge({ count }: { count: number | undefined }) {
+  if (!count) return null;
+  return (
+    <span
+      className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-semibold text-white shadow-sm"
+      aria-label={`${count} pending`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 export function AdminDashboard() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -165,6 +179,12 @@ export function AdminDashboard() {
   const { data, isLoading } = useQuery<{ users: UserRow[] }>({
     queryKey: ["admin-users"],
     queryFn: () => fetch("/api/admin/users").then((r) => r.json()),
+  });
+
+  const { data: pendingCounts } = useQuery<{ feedback: number; customDevelopment: number }>({
+    queryKey: ["admin-pending-counts"],
+    queryFn: () => fetch("/api/admin/pending-counts").then((r) => r.json()),
+    refetchInterval: 60 * 1000,
   });
 
   const mutation = useMutation({
@@ -468,9 +488,25 @@ export function AdminDashboard() {
                 <TrendingUp className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Revenue Report</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => router.push("/admin/feedback")}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="relative"
+                onClick={() => router.push("/admin/feedback")}
+              >
                 <MessageSquare className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Feedback</span>
+                <NavBadge count={pendingCounts?.feedback} />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="relative"
+                onClick={() => router.push("/admin/custom-development")}
+              >
+                <Wrench className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Custom Development</span>
+                <NavBadge count={pendingCounts?.customDevelopment} />
               </Button>
               <Button variant="outline" size="sm" onClick={() => router.push("/stores")}>
                 ←<span className="hidden sm:inline"> Back</span>

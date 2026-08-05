@@ -35,12 +35,13 @@ model User {
   isAdmin                Boolean   @default(false)
   hasOnboarded           Boolean   @default(false)
 
-  sessions     Session[]
-  accounts     Account[]
-  alerts       Alert[]
-  feedback     Feedback[]
-  business     Business?
-  subscription Subscription?
+  sessions                  Session[]
+  accounts                  Account[]
+  alerts                    Alert[]
+  feedback                  Feedback[]
+  customDevelopmentRequests CustomDevelopmentRequest[]
+  business                  Business?
+  subscription              Subscription?
 
   @@map("user")
 }
@@ -91,77 +92,77 @@ model Verification {
 }
 
 model Business {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  name      String
-  address   String?
-  city      String?
-  country   String?
-  phone     String?
-  email     String?
-  logo      String?
-  website   String?
-  currency  String   @default("IDR")
-  timezone  String   @default("Asia/Jakarta")
-  locale    String   @default("id")
+  id              String                   @id @default(cuid())
+  userId          String                   @unique
+  name            String
+  address         String?
+  city            String?
+  country         String?
+  phone           String?
+  email           String?
+  logo            String?
+  website         String?
+  currency        String                   @default("IDR")
+  timezone        String                   @default("Asia/Jakarta")
+  locale          String                   @default("id")
   // bcrypt hash of the owner's 4-digit PIN. Required once any StaffMember
   // exists, so a shared device can gate "switch back to Owner" behind
   // something only the real owner knows (staff never see this PIN).
-  ownerPin  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stores    Store[]
+  ownerPin        String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stores          Store[]
   financeSettings BusinessFinanceSettings?
 
   @@map("businesses")
 }
 
 model Store {
-  id                    String                 @id @default(cuid())
-  businessId            String
-  name                  String
-  address               String?
-  city                  String?
-  country               String?
-  phone                 String?
-  email                 String?
-  image                 String?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  ingredients           Material[]
-  orders                Order[]
-  productionBatches     ProductionBatch[]
-  products              Product[]
-  recipes               Recipe[]
-  business              Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  supplierOrders        SupplierOrder[]
-  suppliers             Supplier[]
-  aiImportMemories      AIImportMemory[]
-  aiImportSessions      AIImportSession[]
-  storefront            Storefront?
-  tables                Table[]
-  staffMembers          StaffMember[]
-  shifts                Shift[]
-  reservations          Reservation[]
-  aggregatorConnections AggregatorConnection[]
-  aggregatorEmails      AggregatorEmail[]
-  financeSettings       StoreFinanceSettings?
-  staffSessions         StaffSession[]
+  id                      String                 @id @default(cuid())
+  businessId              String
+  name                    String
+  address                 String?
+  city                    String?
+  country                 String?
+  phone                   String?
+  email                   String?
+  image                   String?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  ingredients             Material[]
+  orders                  Order[]
+  productionBatches       ProductionBatch[]
+  products                Product[]
+  recipes                 Recipe[]
+  business                Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  supplierOrders          SupplierOrder[]
+  suppliers               Supplier[]
+  aiImportMemories        AIImportMemory[]
+  aiImportSessions        AIImportSession[]
+  storefront              Storefront?
+  tables                  Table[]
+  staffMembers            StaffMember[]
+  shifts                  Shift[]
+  reservations            Reservation[]
+  aggregatorConnections   AggregatorConnection[]
+  aggregatorEmails        AggregatorEmail[]
+  financeSettings         StoreFinanceSettings?
+  staffSessions           StaffSession[]
   // When true, this store's fees & taxes are read from Business.financeSettings
   // instead of its own StoreFinanceSettings row (a shared, profile-wide config).
-  syncFinanceWithBusiness Boolean @default(false)
+  syncFinanceWithBusiness Boolean                @default(false)
   // Owner-only toggle: when true, cashiers can select "Pay Later" at checkout
   // so an order is served now and settled after delivery. Deliberately a
   // plain per-store flag (not part of the finance sync above) — a business
   // may want tabs allowed at one outlet but not another.
-  payLaterEnabled Boolean @default(false)
+  payLaterEnabled         Boolean                @default(false)
   // Owner-only toggle, defaults on (existing stores keep today's behavior).
   // When false, orders skip the kitchen/bar production stages entirely —
   // once payment is recorded they go straight to DELIVERED, for small
   // operations (e.g. a counter-only coffee stand) that have no kitchen
   // workflow to track.
-  kitchenDisplayEnabled Boolean @default(true)
+  kitchenDisplayEnabled   Boolean                @default(true)
 
   @@index([businessId])
   @@map("stores")
@@ -234,26 +235,26 @@ model Subscription {
 }
 
 model Product {
-  id                String            @id @default(cuid())
+  id                String               @id @default(cuid())
   sku               String
   name              String
   description       String?
   category          String?
-  department        Department?
-  costPrice         Decimal           @db.Decimal(10, 2)
-  sellingPrice      Decimal           @db.Decimal(10, 2)
-  currentStock      Decimal           @default(0) @db.Decimal(10, 3)
-  unit              String            @default("piece")
+  department        Department           @default(KITCHEN)
+  costPrice         Decimal              @db.Decimal(10, 2)
+  sellingPrice      Decimal              @db.Decimal(10, 2)
+  currentStock      Decimal              @default(0) @db.Decimal(10, 3)
+  unit              String               @default("piece")
   productionTime    Int?
   shelfLife         Int?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
   storeId           String
-  maxStock          Decimal           @default(1000) @db.Decimal(10, 3)
-  minStock          Decimal           @default(0) @db.Decimal(10, 3)
+  maxStock          Decimal              @default(1000) @db.Decimal(10, 3)
+  minStock          Decimal              @default(0) @db.Decimal(10, 3)
   orderItems        OrderItem[]
   productionBatches ProductionBatch[]
-  store             Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store             Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
   recipeProducts    RecipeProduct[]
   stockMovements    StockMovement[]
   menuItems         MenuItem[]
@@ -314,7 +315,7 @@ model Material {
   name               String
   description        String?
   category           String?
-  department         Department?
+  department         Department          @default(BOTH)
   unit               String              @default("kg")
   // Cost per one `unit`, derived server-side as purchasePrice ÷ purchaseQuantity
   // rather than typed directly — see CreateMaterialInput. Needs more than 2
@@ -345,20 +346,20 @@ model Material {
 }
 
 model MaterialSupplier {
-  id          String   @id @default(cuid())
-  supplierId  String
+  id               String   @id @default(cuid())
+  supplierId       String
   // Cost per one Material.unit from this supplier, derived server-side the
   // same way as Material.unitCost (see purchaseQuantity below).
-  price       Decimal  @db.Decimal(14, 6)
+  price            Decimal  @db.Decimal(14, 6)
   // How many Material.unit`s come in one pack this supplier sells, e.g. 1000
   // if the material's unit is "g" and this supplier sells 1kg bags.
-  purchaseQuantity Decimal @default(1) @db.Decimal(10, 3)
-  isPreferred Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  materialId  String
-  material    Material @relation("MaterialToSuppliers", fields: [materialId], references: [id], onDelete: Cascade)
-  supplier    Supplier @relation("SupplierToMaterials", fields: [supplierId], references: [id], onDelete: Cascade)
+  purchaseQuantity Decimal  @default(1) @db.Decimal(10, 3)
+  isPreferred      Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  materialId       String
+  material         Material @relation("MaterialToSuppliers", fields: [materialId], references: [id], onDelete: Cascade)
+  supplier         Supplier @relation("SupplierToMaterials", fields: [supplierId], references: [id], onDelete: Cascade)
 
   @@unique([materialId, supplierId])
   @@index([materialId])
@@ -373,7 +374,7 @@ model Recipe {
   updatedAt             DateTime           @updatedAt
   storeId               String
   category              String?
-  department            Department?
+  department            Department         @default(KITCHEN)
   costPerBatch          Decimal            @default(0) @db.Decimal(10, 2)
   description           String?
   name                  String
@@ -602,18 +603,18 @@ model Order {
 }
 
 model OrderItem {
-  id         String          @id @default(cuid())
-  orderId    String
-  productId  String?
-  menuItemId String?
-  name       String          @default("")
-  quantity   Decimal         @db.Decimal(10, 2)
-  unit       String
-  unitPrice  Decimal         @db.Decimal(10, 2)
-  total      Decimal         @db.Decimal(10, 2)
+  id              String          @id @default(cuid())
+  orderId         String
+  productId       String?
+  menuItemId      String?
+  name            String          @default("")
+  quantity        Decimal         @db.Decimal(10, 2)
+  unit            String
+  unitPrice       Decimal         @db.Decimal(10, 2)
+  total           Decimal         @db.Decimal(10, 2)
   // Free-text instruction for this line (e.g. "no ice"), separate from the
   // order-level Order.notes.
-  notes      String?
+  notes           String?
   // Frozen snapshot of the chosen modifiers/options at order time —
   // [{groupName, optionName, priceAdjustment, materialId?, materialQty?}].
   // Snapshotted (not a live relation) so edits/deletes to the source
@@ -622,14 +623,14 @@ model OrderItem {
   // subtract even if the option is later changed.
   selectedOptions Json?
   // Phase 3: KDS workflow
-  status     OrderItemStatus @default(PENDING)
-  preparedAt DateTime?
-  servedAt   DateTime?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  order      Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product    Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  menuItem   MenuItem?       @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  status          OrderItemStatus @default(PENDING)
+  preparedAt      DateTime?
+  servedAt        DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  menuItem        MenuItem?       @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([productId])
@@ -669,7 +670,7 @@ model Feedback {
   screenshotUrl String?
   status        FeedbackStatus   @default(OPEN)
   priority      FeedbackPriority @default(MEDIUM)
-  devNote       String?          // Optional private developer/admin comment
+  devNote       String? // Optional private developer/admin comment
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -678,6 +679,28 @@ model Feedback {
   @@index([priority])
   @@index([createdAt])
   @@map("feedback")
+}
+
+model CustomDevelopmentRequest {
+  id          String                  @id @default(cuid())
+  userId      String?
+  userName    String
+  userEmail   String
+  storeId     String?
+  company     String?
+  phone       String?
+  budget      String?
+  timeline    String?
+  description String
+  status      CustomDevelopmentStatus @default(NEW)
+  devNote     String? // Optional private developer/admin comment
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  user        User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("custom_development_requests")
 }
 
 model Release {
@@ -788,6 +811,15 @@ enum FeedbackPriority {
   HIGH
   MEDIUM
   LOW
+}
+
+enum CustomDevelopmentStatus {
+  NEW
+  IN_REVIEW
+  QUOTED
+  IN_PROGRESS
+  COMPLETED
+  DECLINED
 }
 
 // Phase 2 enums
@@ -907,22 +939,26 @@ enum StaffRole {
 // Operational team split for reporting — deliberately separate from the
 // free-text `category` field (which stores use for arbitrary grouping like
 // supplier origin or menu display sections).
+// BOTH only applies to Material — a raw ingredient (e.g. sugar, ice) can be
+// consumed by both stations, unlike a Product/MenuItem/Recipe, each of which
+// is a single preparation routed to exactly one KDS station.
 enum Department {
   KITCHEN
   BAR
+  BOTH
 }
 
 model StaffMember {
-  id           String    @id @default(cuid())
-  storeId      String
-  name         String
+  id              String         @id @default(cuid())
+  storeId         String
+  name            String
   // Login identity for the staff PIN gate — unique per store (not globally),
   // nullable so existing rows created before this field don't need backfilling.
-  username     String?
+  username        String?
   // Contact details only — no longer used as a login identifier.
-  email        String?
-  whatsapp     String?
-  role         StaffRole @default(CASHIER)
+  email           String?
+  whatsapp        String?
+  role            StaffRole      @default(CASHIER)
   // Optional display label shown instead of the role's default title (e.g.
   // "Assistant Manager") — the `role` field still drives the default page
   // template below; the owner refines actual access via allowedPages.
@@ -932,15 +968,15 @@ model StaffMember {
   // ROLE_DEFAULT_PAGES in staff-permissions.config.ts) — resolved dynamically
   // so existing rows don't need backfilling and stay in sync if a role
   // template default ever changes.
-  allowedPages String[] @default([])
-  pin          String? // bcrypt hash — optional
-  isActive     Boolean   @default(true)
-  inviteStatus String? // "pending" | "accepted" | null
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  shifts       Shift[]
-  sessions     StaffSession[]
+  allowedPages    String[]       @default([])
+  pin             String? // bcrypt hash — optional
+  isActive        Boolean        @default(true)
+  inviteStatus    String? // "pending" | "accepted" | null
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  store           Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shifts          Shift[]
+  sessions        StaffSession[]
 
   @@unique([storeId, username])
   @@index([storeId])
@@ -1139,19 +1175,19 @@ model MenuCategory {
 }
 
 model MenuItem {
-  id           String  @id @default(cuid())
+  id           String     @id @default(cuid())
   storefrontId String
   categoryId   String?
   productId    String? // optional link to Product for inventory deduction
-  department   Department? // synced from the linked Product on create/update; settable directly otherwise
+  department   Department @default(KITCHEN) // synced from the linked Product on create/update; settable directly otherwise
   name         String
   description  String?
-  price        Decimal @db.Decimal(12, 2)
-  currency     String  @default("IDR")
+  price        Decimal    @db.Decimal(12, 2)
+  currency     String     @default("IDR")
   imageUrl     String?
-  isAvailable  Boolean @default(true)
-  isFeatured   Boolean @default(false)
-  displayOrder Int     @default(0)
+  isAvailable  Boolean    @default(true)
+  isFeatured   Boolean    @default(false)
+  displayOrder Int        @default(0)
   modifiers    Json? // [{name, options: [{name, priceAdd}]}]
 
   storefront Storefront    @relation(fields: [storefrontId], references: [id], onDelete: Cascade)

@@ -8,7 +8,7 @@ import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
 import { inngest } from "@/lib/inngest/client";
 import { initiatePayment } from "@/lib/payments";
-import { ACTIVE_POS_STATUSES } from "@/lib/constants/order-status";
+import { ACTIVE_POS_QUEUE_FILTER } from "@/lib/constants/order-status";
 import {
   validateAndBuildOrderItems,
   skipsOnlinePayment,
@@ -48,7 +48,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const orders = await prisma.order.findMany({
       where: {
         storeId,
-        status: { in: ACTIVE_POS_STATUSES },
+        ...ACTIVE_POS_QUEUE_FILTER,
       },
       orderBy: { createdAt: "desc" },
       take: 100,

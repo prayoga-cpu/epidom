@@ -22,6 +22,11 @@ export function PosOrderBoard({
 }: PosOrderBoardProps) {
   const { t } = useI18n();
 
+  // Delivered orders only ever reach this feed while still unpaid (see
+  // ACTIVE_POS_QUEUE_FILTER) — none of the QUEUE_STATUSES columns below match
+  // "DELIVERED", so without this they'd be silently invisible in board view.
+  const awaitingPaymentOrders = orders.filter((o) => o.status === "DELIVERED");
+
   return (
     <div className="flex flex-1 gap-4 overflow-x-auto pb-2">
       {QUEUE_STATUSES.map((status) => {
@@ -67,6 +72,33 @@ export function PosOrderBoard({
           </div>
         );
       })}
+      {awaitingPaymentOrders.length > 0 && (
+        <div className="flex min-w-[300px] max-w-sm flex-1 flex-col gap-3">
+          <div
+            className={cn(
+              "flex items-center justify-between rounded-lg border px-3 py-2",
+              getOrderStatusAccentClass("DELIVERED")
+            )}
+          >
+            <h3 className="text-sm font-semibold tracking-tight">
+              {t("pos.queue.awaitingPaymentColumn")}
+            </h3>
+            <span className="bg-background flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold">
+              {awaitingPaymentOrders.length}
+            </span>
+          </div>
+          <div className="flex flex-col gap-3 overflow-y-auto pb-4">
+            {awaitingPaymentOrders.map((order) => (
+              <PosOrderCard
+                key={order.id}
+                order={order}
+                storeId={storeId}
+                onUpdateStatus={onUpdateStatus}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

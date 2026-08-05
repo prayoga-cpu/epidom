@@ -391,7 +391,7 @@ export class StorefrontService {
       name: string;
       sellingPrice: number | string;
       category?: string | null;
-      department?: Department | null;
+      department?: Department;
     }
   ): Promise<void> {
     try {
@@ -435,7 +435,7 @@ export class StorefrontService {
           categoryId,
           productId: product.id,
           name: product.name,
-          department: product.department,
+          department: product.department ?? "KITCHEN",
           price: new Prisma.Decimal(Number(product.sellingPrice)),
           isAvailable: true,
           displayOrder: (maxItemOrder._max.displayOrder ?? -1) + 1,

@@ -184,7 +184,7 @@ export class RecipeRepository extends BaseRepository {
     name: string;
     description?: string;
     category?: string;
-    department?: Department | null;
+    department?: Department;
     yieldQuantity: number;
     yieldUnit: string;
     productionTimeMinutes: number;
@@ -282,7 +282,7 @@ export class RecipeRepository extends BaseRepository {
       name?: string;
       description?: string;
       category?: string;
-      department?: Department | null;
+      department?: Department;
       yieldQuantity?: number;
       yieldUnit?: string;
       productionTimeMinutes?: number;

@@ -15,6 +15,7 @@ import {
 import { usePosSession } from "../hooks/use-pos-session";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { PosPrinterMenu } from "./pos-printer-menu";
 
 interface PosHeaderProps {
   store: Pick<Store, "name">;
@@ -87,15 +88,18 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button
-          onClick={onCartClick}
-          size="sm"
-          className="h-10 touch-manipulation gap-1.5 rounded-full px-3"
-        >
-          <ShoppingBag className="h-4 w-4" />
-          {totalItems > 0 && <span className="font-semibold">{totalItems}</span>}
-          {cart.total > 0 && <span className="font-bold">{formatPrice(cart.total)}</span>}
-        </Button>
+        <div className="flex items-center gap-1">
+          <PosPrinterMenu />
+          <Button
+            onClick={onCartClick}
+            size="sm"
+            className="h-10 touch-manipulation gap-1.5 rounded-full px-3"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            {totalItems > 0 && <span className="font-semibold">{totalItems}</span>}
+            {cart.total > 0 && <span className="font-bold">{formatPrice(cart.total)}</span>}
+          </Button>
+        </div>
       </div>
 
       {/* Desktop (md and up): unchanged from before. */}
@@ -123,6 +127,8 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
       </div>
 
       <div className="hidden shrink-0 items-center gap-2 sm:gap-4 md:flex">
+        <PosPrinterMenu />
+
         <div className="text-muted-foreground text-sm font-medium">
           {format(time, "dd MMM yyyy • HH:mm")}
         </div>

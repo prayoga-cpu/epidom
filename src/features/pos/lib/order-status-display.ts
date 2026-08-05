@@ -33,9 +33,15 @@ export function mapOrderStatusLabel(t: (key: string) => string, status: string):
   return t(`pos.status.${key}`);
 }
 
-/** A Pay Later order that hasn't been settled yet — the case the "Unpaid" badge and payment alerts key off. */
-export function isAwaitingPayment(order: { paymentMethod: string; paymentStatus: string }): boolean {
-  return order.paymentMethod === "PAY_LATER" && order.paymentStatus === "PENDING";
+/**
+ * An order that hasn't been settled yet — the case the "Unpaid" badge,
+ * payment alerts, and the active-queue payment follow-up (delivered orders
+ * stay on the Active tab while this is true) all key off. Not limited to Pay
+ * Later — any payment method can end up stuck at PENDING (e.g. an online
+ * payment that never confirmed).
+ */
+export function isAwaitingPayment(order: { paymentStatus: string }): boolean {
+  return order.paymentStatus === "PENDING";
 }
 
 // Low-opacity left-border accent so a busy queue can be scanned by status at
@@ -52,6 +58,11 @@ export function getOrderStatusAccentClass(status: string): string {
       return "border-l-2 border-l-emerald-500 bg-emerald-500/[0.04]";
     case "HELD":
       return "border-l-2 border-l-slate-500 bg-slate-500/[0.04]";
+    case "DELIVERED":
+      // Only delivered-but-unpaid orders reach the queue at all, so this
+      // reads as an urgent "needs payment follow-up" accent, not a generic
+      // "done" one.
+      return "border-l-2 border-l-destructive bg-destructive/[0.04]";
     default:
       return "";
   }

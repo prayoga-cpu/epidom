@@ -46,7 +46,7 @@ export function isBluetoothSupported(): boolean {
   return typeof navigator !== "undefined" && "bluetooth" in navigator;
 }
 
-export async function connectPrinter(): Promise<boolean> {
+export async function connectPrinter(onDisconnected?: () => void): Promise<boolean> {
   if (!isBluetoothSupported()) return false;
 
   try {
@@ -70,6 +70,7 @@ export async function connectPrinter(): Promise<boolean> {
         device.addEventListener("gattserverdisconnected", () => {
           activeDevice = null;
           activeCharacteristic = null;
+          onDisconnected?.();
         });
 
         return true;

@@ -169,7 +169,7 @@ These five bug classes have each caused real, shipped breakage on iPad Safari. C
 
 1. Do not reintroduce cookie-bar-only language in marketing copy.
 2. Do not add new French (`fr`) strings.
-3. Do not delete code in `src/app/(app)/store/[storeId]/(dashboard)/{management,data,tracking,alerts}/`. These are paused, not abandoned. They return in Phase 4.
+3. `management`, `data`, and `alerts` under `src/app/(app)/store/[storeId]/(dashboard)/` are active, maintained, monetized (OPERATIONS-plan) features — treat them like any other live surface, not as paused code. (Historical note: a `tracking` page/nav item used to exist alongside these; as of 2026-08-05 it was consolidated into `management` — its unique Movements ledger became a Management tab, its redundant Stock Levels view was dropped in favor of the Data page. There is no separate `tracking` route anymore.)
 4. Do not couple the public storefront to internal inventory. `MenuItem.productId` is optional on purpose.
 5. Do not put Stripe and Xendit logic in the same module. They serve different flows (SaaS billing vs customer payments).
 6. Do not commit any `.env*` file other than `.env.example`.

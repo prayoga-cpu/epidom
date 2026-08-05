@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { MovementType, AlertType, AlertSeverity } from "@prisma/client";
+import { MovementType, AlertType, AlertSeverity, OrderItemStatus } from "@prisma/client";
 import { toDecimal } from "@/lib/utils/types.server";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 
@@ -88,6 +88,10 @@ export async function deductStockForOrder(
 
   const userId = order.store.business.userId;
 
+  // A line item cancelled via KDS (e.g. "out of stock", kitchen mistake) must not
+  // consume stock even though the order as a whole still reaches DELIVERED.
+  const activeItems = order.items.filter((item) => item.status !== OrderItemStatus.CANCELLED);
+
   // Pre-compute deductions outside the transaction so we can log skips first.
   type ProductDeduction = {
     productId: string;
@@ -129,7 +133,7 @@ export async function deductStockForOrder(
   >();
   let skipped = 0;
 
-  for (const item of order.items) {
+  for (const item of activeItems) {
     const product = item.product ?? item.menuItem?.product;
     if (!product) {
       console.warn(
@@ -200,7 +204,7 @@ export async function deductStockForOrder(
   // so no unit conversion is needed here.
   type SelectedOption = { materialId?: string; materialQty?: number };
   const optionMaterialNeed = new Map<string, number>();
-  for (const item of order.items) {
+  for (const item of activeItems) {
     const orderedQty = Number(item.quantity);
     const selected = (item.selectedOptions as SelectedOption[] | null) ?? [];
     for (const opt of selected) {

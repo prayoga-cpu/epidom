@@ -23,11 +23,11 @@ export function PosDepartmentBar({
   const { t } = useI18n();
 
   return (
-    <div className="bg-background flex items-center gap-2 border-b px-4 py-3">
+    <div className="flex shrink-0 items-center gap-2">
       <Button
         size="sm"
         variant={selectedDepartment === null ? "default" : "outline"}
-        className="rounded-full"
+        className="shrink-0 rounded-full"
         onClick={() => onSelectDepartment(null)}
       >
         {t("filters.allDepartments")}
@@ -35,7 +35,7 @@ export function PosDepartmentBar({
       <Button
         size="sm"
         variant={selectedDepartment === "KITCHEN" ? "default" : "outline"}
-        className="rounded-full"
+        className="shrink-0 rounded-full"
         onClick={() => onSelectDepartment(selectedDepartment === "KITCHEN" ? null : "KITCHEN")}
       >
         {t("common.departmentKitchen")}
@@ -43,7 +43,7 @@ export function PosDepartmentBar({
       <Button
         size="sm"
         variant={selectedDepartment === "BAR" ? "default" : "outline"}
-        className="rounded-full"
+        className="shrink-0 rounded-full"
         onClick={() => onSelectDepartment(selectedDepartment === "BAR" ? null : "BAR")}
       >
         {t("common.departmentBar")}

@@ -6,7 +6,7 @@ import {
   CompleteProductionInput,
   CancelProductionInput,
 } from "@/lib/validation/production.schemas";
-import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { alertKeys } from "@/features/dashboard/shared/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { trackEvent } from "@/lib/analytics";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";

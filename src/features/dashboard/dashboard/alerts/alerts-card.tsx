@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Alert, LowStockAlert, useAlerts } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { Alert, LowStockAlert, useAlerts } from "@/features/dashboard/shared/hooks/use-alerts";
 import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { DashboardCard } from "../components/dashboard-card";
 

@@ -13,7 +13,7 @@ import {
   type Alert,
   type LowStockAlert,
   type UnpaidOrderAlert,
-} from "@/features/dashboard/tracking/hooks/use-alerts";
+} from "@/features/dashboard/shared/hooks/use-alerts";
 
 interface AlertsClientProps {
   initialAlerts: Alert[];

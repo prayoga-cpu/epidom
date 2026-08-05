@@ -132,6 +132,13 @@ export class FeedbackService {
   }
 
   /**
+   * Count feedback entries still awaiting a first admin look (admin badge count)
+   */
+  async getOpenFeedbackCount(): Promise<number> {
+    return prisma.feedback.count({ where: { status: FeedbackStatus.OPEN } });
+  }
+
+  /**
    * Get all feedback entries (admin view)
    */
   async getAllFeedback() {

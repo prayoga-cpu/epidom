@@ -39,7 +39,7 @@ export class RecipeService {
     name: string;
     description?: string;
     category?: string;
-    department?: Department | null;
+    department?: Department;
     yieldQuantity: number;
     yieldUnit: string;
     productionTimeMinutes: number;
@@ -86,7 +86,7 @@ export class RecipeService {
       name?: string;
       description?: string;
       category?: string;
-      department?: Department | null;
+      department?: Department;
       yieldQuantity?: number;
       yieldUnit?: string;
       productionTimeMinutes?: number;

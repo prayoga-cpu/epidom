@@ -103,7 +103,7 @@ export function TrackingCard({ stockLevels }: TrackingCardProps) {
   );
 
   const cardOther = (
-    <Link href={`/store/${storeId}/tracking`}>
+    <Link href={`/store/${storeId}/data`}>
       <Button variant="ghost" size="sm" className="h-8 gap-1">
         {t("dashboard.trackingCard.viewAll")}
         <ArrowRight className="h-3 w-3" />

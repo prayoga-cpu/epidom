@@ -123,19 +123,22 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
       <div className="mt-4 flex gap-2">
         <PosOrderPrimaryAction
           order={order}
+          storeId={storeId}
           className="flex-1"
           onUpdateStatus={onUpdateStatus}
           onResume={handleResume}
         />
-        <Button
-          size="sm"
-          variant="outline"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 px-2.5"
-          onClick={handleCancel}
-          title={t("pos.orderCard.cancel")}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {order.status !== "DELIVERED" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 px-2.5"
+            onClick={handleCancel}
+            title={t("pos.orderCard.cancel")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {confirmDialog}

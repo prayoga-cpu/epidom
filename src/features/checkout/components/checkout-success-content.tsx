@@ -6,7 +6,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { supplierOrderKeys } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+import { supplierOrderKeys } from "@/features/dashboard/shared/hooks/use-supplier-orders";
 import { useSession } from "@/lib/auth-client";
 import { trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 

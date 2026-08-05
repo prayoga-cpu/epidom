@@ -24,7 +24,7 @@ import { formatDate } from "@/lib/utils/formatting";
 import { CalendarIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import { toast as sonnerToast } from "sonner";
-import { useUpdateSupplierOrder } from "@/features/dashboard/tracking/hooks/use-supplier-orders";
+import { useUpdateSupplierOrder } from "@/features/dashboard/shared/hooks/use-supplier-orders";
 
 interface UpdateDeliveryStatusDialogProps {
   open: boolean;

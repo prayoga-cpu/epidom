@@ -504,6 +504,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                   { value: "all", label: t("filters.allDepartments") },
                   { value: "KITCHEN", label: t("common.departmentKitchen") },
                   { value: "BAR", label: t("common.departmentBar") },
+                  { value: "BOTH", label: t("common.departmentBoth") },
                 ],
               },
               {
@@ -603,12 +604,18 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                         <Badge
                           variant="outline"
                           className={
-                            material.department === "KITCHEN" ? "text-amber-600" : "text-blue-600"
+                            material.department === "KITCHEN"
+                              ? "text-amber-600"
+                              : material.department === "BAR"
+                                ? "text-blue-600"
+                                : "text-purple-600"
                           }
                         >
                           {material.department === "KITCHEN"
                             ? t("common.departmentKitchen")
-                            : t("common.departmentBar")}
+                            : material.department === "BAR"
+                              ? t("common.departmentBar")
+                              : t("common.departmentBoth")}
                         </Badge>
                       </div>
                     )}

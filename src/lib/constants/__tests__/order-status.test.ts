@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ACTIVE_POS_STATUSES, NON_REVENUE_STATUSES } from "../order-status";
+import { ACTIVE_POS_STATUSES, ACTIVE_POS_QUEUE_FILTER, NON_REVENUE_STATUSES } from "../order-status";
 
 /**
  * These two constants are the single source of truth for which order
@@ -21,6 +21,23 @@ describe("ACTIVE_POS_STATUSES", () => {
   it("excludes terminal statuses", () => {
     expect(ACTIVE_POS_STATUSES).not.toContain("DELIVERED");
     expect(ACTIVE_POS_STATUSES).not.toContain("CANCELLED");
+  });
+});
+
+describe("ACTIVE_POS_QUEUE_FILTER", () => {
+  it("includes every active status via the OR branch", () => {
+    expect(ACTIVE_POS_QUEUE_FILTER).toEqual({
+      OR: [
+        { status: { in: ACTIVE_POS_STATUSES } },
+        { status: "DELIVERED", paymentStatus: "PENDING" },
+      ],
+    });
+  });
+
+  it("also admits delivered-but-unpaid orders, so they stay visible for follow-up", () => {
+    const orBranches = ACTIVE_POS_QUEUE_FILTER.OR as Array<Record<string, unknown>>;
+    const deliveredBranch = orBranches.find((b) => b.status === "DELIVERED");
+    expect(deliveredBranch).toEqual({ status: "DELIVERED", paymentStatus: "PENDING" });
   });
 });
 

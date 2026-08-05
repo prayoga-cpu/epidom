@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { alertKeys, type AlertsResponse } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { alertKeys, type AlertsResponse } from "@/features/dashboard/shared/hooks/use-alerts";
 
 /**
  * AlertsPrefetch Component

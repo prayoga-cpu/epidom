@@ -31,8 +31,8 @@ import { prisma } from "@/lib/prisma";
 import type {
   SupplierOrder,
   SupplierOrdersResponse,
-} from "@/features/dashboard/tracking/hooks/use-supplier-orders";
-import type { Alert, AlertsResponse } from "@/features/dashboard/tracking/hooks/use-alerts";
+} from "@/features/dashboard/shared/hooks/use-supplier-orders";
+import type { Alert, AlertsResponse } from "@/features/dashboard/shared/hooks/use-alerts";
 import {
   serializeMaterials,
   serializeSuppliers,

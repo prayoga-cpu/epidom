@@ -40,10 +40,10 @@ import { enqueueOrder } from "@/lib/pwa/offline-queue";
 import {
   isBluetoothSupported,
   isPrinterConnected,
-  connectPrinter,
   printReceipt,
   type ReceiptData,
 } from "@/lib/pwa/thermal-printer";
+import { usePrinterSettings } from "../hooks/use-printer-settings";
 interface PosCheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -65,6 +65,7 @@ export function PosCheckoutDialog({
   const { currency, formatPrice, convertToBase } = useCurrency();
   const cart = usePosCart();
   const { data: financeSettings } = useFinanceSettings(storeId);
+  const autoPrint = usePrinterSettings((s) => s.autoPrint);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
@@ -140,7 +141,11 @@ export function PosCheckoutDialog({
         if (data?.paymentStatus === "PAID") {
           setIsPollingPayment(false);
           setShowPaymentQr(false);
-          setShowPrint(true);
+          if (lastReceipt) {
+            finishWithReceipt(lastReceipt);
+          } else {
+            setShowPrint(true);
+          }
           toast.success(t("pos.checkout.success"));
           if (pendingPurchaseRef.current) {
             trackEvent("purchase", {
@@ -193,7 +198,11 @@ export function PosCheckoutDialog({
     setIsPrinting(true);
     try {
       if (!isPrinterConnected()) {
-        const connected = await connectPrinter();
+        // Routed through the printer-settings store (not connectPrinter()
+        // directly) so a pairing done from this dialog also updates the
+        // header's connected badge — otherwise that badge would stay stuck
+        // on "Not connected" until the cashier happened to open it.
+        const connected = await usePrinterSettings.getState().connect();
         if (!connected) {
           toast.error(t("pos.print.connectFailed"));
           return;
@@ -205,6 +214,21 @@ export function PosCheckoutDialog({
       toast.error(err?.message ?? t("pos.print.failed"));
     } finally {
       setIsPrinting(false);
+    }
+  };
+
+  // Called on every successful order (cash, confirmed QRIS/e-wallet, offline
+  // queue). Silently auto-prints when the cashier has both opted in and
+  // already paired a printer this session — pairing itself needs a live
+  // click (Web Bluetooth's requestDevice requires user activation), so it
+  // can't be triggered from here. Anything short of that falls back to the
+  // manual print-or-skip prompt.
+  const finishWithReceipt = (receipt: ReceiptData) => {
+    setLastReceipt(receipt);
+    if (autoPrint && isPrinterConnected()) {
+      handlePrint(receipt);
+    } else {
+      setShowPrint(true);
     }
   };
 
@@ -237,8 +261,7 @@ export function PosCheckoutDialog({
 
         const localId = await enqueueOrder(storeId, submitData);
         const receipt = buildReceipt(submitData, `OFFLINE-${localId.slice(0, 8).toUpperCase()}`);
-        setLastReceipt(receipt);
-        setShowPrint(true);
+        finishWithReceipt(receipt);
         toast(t("pos.offline.queued"), {
           description: t("pos.offline.queuedDesc"),
           icon: <WifiOff className="h-4 w-4" />,
@@ -287,7 +310,7 @@ export function PosCheckoutDialog({
         setCurrentOrderId(orderId);
         setShowPaymentQr(true);
       } else {
-        setShowPrint(true);
+        finishWithReceipt(receipt);
         toast.success(t("pos.checkout.success"));
         if (pendingPurchaseRef.current) {
           trackEvent("purchase", { event_category: "pos_order", ...pendingPurchaseRef.current });

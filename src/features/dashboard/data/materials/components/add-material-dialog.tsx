@@ -458,19 +458,18 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
                 render={({ field }) => (
                   <FormItem className="space-y-0.5">
                     <FormLabel className="text-sm">{t("common.department")}</FormLabel>
-                    <Select
-                      value={field.value ?? "none"}
-                      onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">—</SelectItem>
-                        <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
-                        <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                        <SelectItem value="KITCHEN">
+                          {t("common.departmentKitchenDetailed")}
+                        </SelectItem>
+                        <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
+                        <SelectItem value="BOTH">{t("common.departmentBothDetailed")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

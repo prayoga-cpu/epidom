@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { alertKeys } from "@/features/dashboard/tracking/hooks/use-alerts";
+import { alertKeys } from "@/features/dashboard/shared/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { logger } from "@/lib/logger";
 

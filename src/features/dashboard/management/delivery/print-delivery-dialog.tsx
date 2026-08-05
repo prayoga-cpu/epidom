@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { SupplierDelivery } from "@/types/entities";
 import { formatDate } from "@/lib/utils/formatting";
+import { exportToPDF } from "@/lib/utils/export";
 import { Printer, Download } from "lucide-react";
 
 interface PrintDeliveryDialogProps {
@@ -130,8 +131,30 @@ export function PrintDeliveryDialog({ open, onOpenChange, delivery }: PrintDeliv
   };
 
   const handleExportPDF = () => {
-    // TODO: Implement PDF export functionality
-    alert(t("management.delivery.dialogs.printDelivery.pdfNotImplemented"));
+    if (!delivery) return;
+
+    const rows = delivery.items.map((item, index) => ({
+      no: index + 1,
+      material: item.material?.name || t("management.delivery.details.unknownMaterial"),
+      sku: item.material?.sku || "-",
+      quantity: item.quantity,
+      unit: item.unit,
+      notes: item.notes || "-",
+    }));
+
+    exportToPDF(
+      rows,
+      `delivery-${delivery.deliveryReference}`,
+      [
+        { key: "no", header: "#" },
+        { key: "material", header: t("management.delivery.details.material") },
+        { key: "sku", header: t("common.sku") },
+        { key: "quantity", header: t("management.delivery.details.quantity") },
+        { key: "unit", header: t("management.delivery.details.unit") },
+        { key: "notes", header: t("management.delivery.details.notes") },
+      ],
+      `${t("management.delivery.dialogs.printDelivery.supplierDeliveryNote")} - ${delivery.deliveryReference}`
+    );
   };
 
   // Helper functions for translations

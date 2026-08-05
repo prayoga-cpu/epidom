@@ -81,9 +81,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   const [newItemName, setNewItemName] = useState("");
   const [newItemDescription, setNewItemDescription] = useState("");
   const [newItemPrice, setNewItemPrice] = useState<number | undefined>(undefined);
-  const [newItemDepartment, setNewItemDepartment] = useState<"KITCHEN" | "BAR" | undefined>(
-    undefined
-  );
+  const [newItemDepartment, setNewItemDepartment] = useState<"KITCHEN" | "BAR">("KITCHEN");
   const [newItemImageUrl, setNewItemImageUrl] = useState<string | undefined>(undefined);
   const [newItemModifiers, setNewItemModifiers] = useState<ProductOptionGroupInput[]>([]);
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
@@ -93,9 +91,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   const [editItemName, setEditItemName] = useState("");
   const [editItemDescription, setEditItemDescription] = useState("");
   const [editItemPrice, setEditItemPrice] = useState<number | undefined>(undefined);
-  const [editItemDepartment, setEditItemDepartment] = useState<"KITCHEN" | "BAR" | undefined>(
-    undefined
-  );
+  const [editItemDepartment, setEditItemDepartment] = useState<"KITCHEN" | "BAR">("KITCHEN");
   const [editItemImageUrl, setEditItemImageUrl] = useState<string | undefined>(undefined);
   const [editItemModifiers, setEditItemModifiers] = useState<ProductOptionGroupInput[]>([]);
   const [isSubmittingEditItem, setIsSubmittingEditItem] = useState(false);
@@ -144,7 +140,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     setNewItemPrice(undefined);
     setNewItemImageUrl(undefined);
     setNewItemModifiers([]);
-    setNewItemDepartment(undefined);
+    setNewItemDepartment("KITCHEN");
     setAddItemDialog({ open: true, categoryId });
   };
 
@@ -178,7 +174,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     setEditItemPrice(Number(item.price));
     setEditItemImageUrl(item.imageUrl || undefined);
     setEditItemModifiers(modifiersJsonToOptionGroups(item.modifiers));
-    setEditItemDepartment(item.department ?? undefined);
+    setEditItemDepartment(item.department ?? "KITCHEN");
     setEditItemDialog({ open: true, item });
   };
 
@@ -190,7 +186,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
         name: editItemName,
         description: editItemDescription || "",
         price: editItemPrice,
-        department: editItemDepartment ?? null,
+        department: editItemDepartment,
         imageUrl: editItemImageUrl || "",
         modifiers: optionGroupsToModifiersJson(editItemModifiers),
       });
@@ -481,18 +477,15 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
             <div className="space-y-2">
               <label className="text-sm leading-none font-medium">{t("common.department")}</label>
               <Select
-                value={newItemDepartment ?? "none"}
-                onValueChange={(v) =>
-                  setNewItemDepartment(v === "none" ? undefined : (v as "KITCHEN" | "BAR"))
-                }
+                value={newItemDepartment}
+                onValueChange={(v) => setNewItemDepartment(v as "KITCHEN" | "BAR")}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">—</SelectItem>
-                  <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
-                  <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                  <SelectItem value="KITCHEN">{t("common.departmentKitchenDetailed")}</SelectItem>
+                  <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -614,18 +607,15 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
             <div className="space-y-2">
               <label className="text-sm leading-none font-medium">{t("common.department")}</label>
               <Select
-                value={editItemDepartment ?? "none"}
-                onValueChange={(v) =>
-                  setEditItemDepartment(v === "none" ? undefined : (v as "KITCHEN" | "BAR"))
-                }
+                value={editItemDepartment}
+                onValueChange={(v) => setEditItemDepartment(v as "KITCHEN" | "BAR")}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">—</SelectItem>
-                  <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
-                  <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                  <SelectItem value="KITCHEN">{t("common.departmentKitchenDetailed")}</SelectItem>
+                  <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

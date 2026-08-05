@@ -24,6 +24,7 @@ Table user {
   accounts account [not null]
   alerts alerts [not null]
   feedback feedback [not null]
+  customDevelopmentRequests custom_development_requests [not null]
   business businesses
   subscription subscriptions
 }
@@ -183,7 +184,7 @@ Table products {
   name String [not null]
   description String
   category String
-  department Department
+  department Department [not null, default: 'KITCHEN']
   costPrice Decimal [not null]
   sellingPrice Decimal [not null]
   currentStock Decimal [not null, default: 0]
@@ -241,7 +242,7 @@ Table ingredients {
   name String [not null]
   description String
   category String
-  department Department
+  department Department [not null, default: 'BOTH']
   unit String [not null, default: 'kg']
   unitCost Decimal [not null]
   purchaseQuantity Decimal [not null, default: 1]
@@ -287,7 +288,7 @@ Table recipes {
   updatedAt DateTime [not null]
   storeId String [not null]
   category String
-  department Department
+  department Department [not null, default: 'KITCHEN']
   costPerBatch Decimal [not null, default: 0]
   description String
   name String [not null]
@@ -516,6 +517,24 @@ Table feedback {
   screenshotUrl String
   status FeedbackStatus [not null, default: 'OPEN']
   priority FeedbackPriority [not null, default: 'MEDIUM']
+  devNote String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  user user
+}
+
+Table custom_development_requests {
+  id String [pk]
+  userId String
+  userName String [not null]
+  userEmail String [not null]
+  storeId String
+  company String
+  phone String
+  budget String
+  timeline String
+  description String [not null]
+  status CustomDevelopmentStatus [not null, default: 'NEW']
   devNote String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -759,7 +778,7 @@ Table menu_items {
   storefrontId String [not null]
   categoryId String
   productId String
-  department Department
+  department Department [not null, default: 'KITCHEN']
   name String [not null]
   description String
   price Decimal [not null]
@@ -858,6 +877,15 @@ Enum FeedbackPriority {
   LOW
 }
 
+Enum CustomDevelopmentStatus {
+  NEW
+  IN_REVIEW
+  QUOTED
+  IN_PROGRESS
+  COMPLETED
+  DECLINED
+}
+
 Enum OrderType {
   DINE_IN
   TAKEAWAY
@@ -926,6 +954,7 @@ Enum StaffRole {
 Enum Department {
   KITCHEN
   BAR
+  BOTH
 }
 
 Enum AggregatorPlatform {
@@ -1014,6 +1043,8 @@ Ref: order_items.menuItemId > menu_items.id [delete: Set Null]
 Ref: alerts.userId > user.id [delete: Cascade]
 
 Ref: feedback.userId > user.id [delete: Set Null]
+
+Ref: custom_development_requests.userId > user.id [delete: Set Null]
 
 Ref: tables.storeId > stores.id [delete: Cascade]
 
