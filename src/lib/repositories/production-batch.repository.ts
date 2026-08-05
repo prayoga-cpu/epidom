@@ -41,6 +41,7 @@ export type ProductionBatchWithRelations = ProductionBatch & {
     unit: string;
     createdAt: Date;
   }>;
+  orderItems: Array<{ order: { orderNumber: string } }>;
 };
 
 export interface ProductionBatchFilters {
@@ -153,6 +154,14 @@ export class ProductionBatchRepository extends BaseRepository {
             },
             orderBy: { createdAt: "desc" },
           },
+          // Only relevant for ORDER_SHORTFALL batches (see triggerType) — a
+          // batch links to every OrderItem it covers, which all belong to
+          // the same order in practice, so the first is enough to display
+          // "From Order #X".
+          orderItems: {
+            take: 1,
+            select: { order: { select: { orderNumber: true } } },
+          },
         },
         orderBy,
         skip,
@@ -211,6 +220,10 @@ export class ProductionBatchRepository extends BaseRepository {
             createdAt: true,
           },
           orderBy: { createdAt: "desc" },
+        },
+        orderItems: {
+          take: 1,
+          select: { order: { select: { orderNumber: true } } },
         },
       },
     });

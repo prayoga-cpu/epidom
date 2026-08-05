@@ -604,7 +604,7 @@ export function PosCheckoutDialog({
                     <FormItem>
                       <FormLabel>{t("pos.checkout.customerName")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <Input placeholder={t("pos.checkout.customerNamePlaceholder")} {...field} />
                       </FormControl>
                     </FormItem>
                   )}

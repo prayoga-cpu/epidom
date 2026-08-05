@@ -34,7 +34,7 @@ const TYPE_COLORS: Record<string, string> = {
   PRODUCTION: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   ADJUSTMENT: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
   PURCHASE: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
-  LOSS: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  WASTE: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
   RETURN: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
 };
 

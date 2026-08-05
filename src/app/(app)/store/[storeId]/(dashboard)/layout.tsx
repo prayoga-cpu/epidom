@@ -1,7 +1,9 @@
 import type React from "react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { getSession } from "@/lib/auth";
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { I18nProvider } from "@/components/lang/i18n-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -17,11 +19,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Layout({
+export default async function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
+  if (session?.user?.deactivatedAt) {
+    redirect("/profile");
+  }
+
   return (
     <div className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
       {/* Skip link for keyboard accessibility */}

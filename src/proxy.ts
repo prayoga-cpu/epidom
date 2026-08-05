@@ -44,6 +44,7 @@ export default async function proxy(req: NextRequest) {
     "/contact",
     "/payments",
     "/terms",
+    "/privacy",
     "/refund-policy",
     "/login",
     "/register",

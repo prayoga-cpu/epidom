@@ -67,7 +67,7 @@ const CATEGORIES = [
       {
         labelKey: "redesign.pricingPage.cmp_ai_import",
         free: false,
-        pos: true,
+        pos: false,
         ops: true,
         ent: true,
       },
@@ -79,15 +79,21 @@ const CATEGORIES = [
         ent: true,
       },
       { labelKey: "redesign.pricingPage.cmp_stock", free: false, pos: false, ops: true, ent: true },
-      { labelKey: "redesign.pricingPage.cmp_daily", free: false, pos: false, ops: true, ent: true },
+      { labelKey: "redesign.pricingPage.cmp_waste", free: false, pos: false, ops: true, ent: true },
       {
-        labelKey: "redesign.pricingPage.cmp_multi",
+        labelKey: "redesign.pricingPage.cmp_owner_dashboard",
         free: false,
         pos: false,
         ops: false,
         ent: true,
       },
-      { labelKey: "redesign.pricingPage.cmp_api", free: false, pos: false, ops: false, ent: true },
+      {
+        labelKey: "redesign.pricingPage.cmp_finance",
+        free: false,
+        pos: false,
+        ops: false,
+        ent: true,
+      },
     ],
   },
 ] as const;

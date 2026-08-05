@@ -1,3 +1,5 @@
+import Script from "next/script";
+
 // Meta Pixel IDs aren't secret — they're visible in every page's source and
 // network requests. Hardcoded as a fallback so this works even if the env var
 // isn't configured in the hosting provider's dashboard (.env is gitignored and
@@ -7,15 +9,16 @@ const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1821676715464709
 /**
  * Meta (Facebook) Pixel base code.
  *
- * Uses a plain native <script> tag (dangerouslySetInnerHTML), not
- * next/script — next/script's content (even with strategy="beforeInteractive")
- * is streamed through Next's RSC hydration payload and only turned into a real
- * <script> element by client-side JS, so it never appears as literal markup in
- * the server-rendered HTML. Meta's install check and crawlers that read raw
- * HTML need an actual <script> tag physically inside <head>, which only a
- * native tag guarantees. The content here is a static, developer-authored
- * literal (only the pixel ID is interpolated, not user input), so
- * dangerouslySetInnerHTML carries no injection risk.
+ * Uses next/script with strategy="beforeInteractive" rather than a plain
+ * native <script> tag: React 19 warns/errors on <script> rendered directly
+ * in a component tree (it's never executed by React on the client). Next.js
+ * injects beforeInteractive scripts into <head> of the actual server-rendered
+ * HTML — before hydration — so Meta's install check and crawlers reading raw
+ * HTML still see a literal <script> tag; only later strategies
+ * (afterInteractive/lazyOnload) defer to a client-side-only insert. The
+ * content here is a static, developer-authored literal (only the pixel ID is
+ * interpolated, not user input), so dangerouslySetInnerHTML carries no
+ * injection risk.
  *
  * Consent is still respected: the inline script only reads the same
  * localStorage consent record the cookie-consent bar writes to, and only
@@ -27,8 +30,9 @@ const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1821676715464709
 export function MetaPixelScript() {
   return (
     <>
-      <script
+      <Script
         id="meta-pixel-base"
+        strategy="beforeInteractive"
         dangerouslySetInnerHTML={{
           __html: `
             !function(f,b,e,v,n,t,s)

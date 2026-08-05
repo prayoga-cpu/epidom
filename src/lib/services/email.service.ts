@@ -278,6 +278,115 @@ function generatePasswordResetEmailHtml(name: string | null, resetUrl: string): 
 }
 
 /**
+ * Send account deactivation confirmation email.
+ * Explains the self-service reactivation window (log back in) and that data
+ * stays safe in the meantime.
+ */
+export async function sendAccountDeactivatedEmail(
+  email: string,
+  name: string | null,
+  reactivationDeadline: Date
+): Promise<SendEmailResult> {
+  const daysLeft = Math.max(
+    1,
+    Math.ceil((reactivationDeadline.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+  );
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🛑 [DEV] Account Deactivated Email");
+    console.log("To:", email);
+    console.log("Reactivation deadline:", reactivationDeadline.toISOString());
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const greeting = name ? `Hi ${name},` : "Hi,";
+  const deadlineLabel = reactivationDeadline.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: email,
+      subject: `Your ${APP_NAME} account has been deactivated`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account deactivated</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+  <div style="background-color: #444444; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 32px; letter-spacing: 2px; font-weight: 800;">${APP_NAME}</h1>
+  </div>
+
+  <div style="background: #ffffff; padding: 40px 35px; border: 1px solid #eeeeee; border-top: none; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+    <h2 style="color: #111111; margin-top: 0; font-size: 24px; font-weight: 700;">Your account has been deactivated</h2>
+
+    <p style="color: #555555; font-size: 16px;">${greeting}</p>
+
+    <p style="color: #555555; font-size: 16px;">
+      Your ${APP_NAME} account was just deactivated. Your data — stores, products, orders, and settings — is safe and untouched.
+    </p>
+
+    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin: 30px 0;">
+      <p style="color: #92400e; margin: 0; font-size: 14px; line-height: 1.5;">
+        <strong>Changed your mind?</strong> Just log back in any time before <strong>${deadlineLabel}</strong> (${daysLeft} day${daysLeft === 1 ? "" : "s"} from now) and you'll be offered a one-click "Reactivate My Account" button that instantly restores full access.
+      </p>
+    </div>
+
+    <p style="color: #555555; font-size: 16px;">
+      After that window, your data stays on file for up to 12 months total. Recovering it at that point means contacting our support team, who will assess and quote a one-time recovery fee before manually restoring your account.
+    </p>
+
+    <p style="color: #888888; font-size: 13px;">
+      If you didn't request this, contact us immediately at
+      <a href="mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io" style="color: #444444;">cro@prionation.io</a>.
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #eeeeee; margin: 40px 0;">
+
+    <p style="color: #999999; font-size: 12px; margin: 0; text-align: center;">
+      This is an automated notice — no action is needed unless you want to reactivate or cancel.
+    </p>
+  </div>
+
+  <div style="text-align: center; padding: 30px; color: #999999; font-size: 11px; letter-spacing: 0.5px;">
+    <p style="margin: 0; text-transform: uppercase;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+    <p style="margin: 8px 0 0 0;">
+      <a href="${APP_URL}" style="color: #444444; text-decoration: underline;">Visit our website</a>
+    </p>
+  </div>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send account deactivated email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("[Email] Account deactivated email error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
  * Send staff PIN invitation email
  */
 export async function sendStaffPinEmail(

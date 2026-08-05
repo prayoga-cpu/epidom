@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "./hooks/use-current-store";
+import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 
 interface SearchItem {
   id: string;
@@ -34,6 +35,9 @@ interface SearchItem {
   href: string;
   icon: React.ReactNode;
   category: string;
+  /** Nav-config href (e.g. "/management") this item's visibility is gated
+   * on for a staff persona — defaults to always visible when omitted. */
+  gateHref?: string;
 }
 
 interface GlobalSearchDialogProps {
@@ -45,7 +49,12 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
   const router = useRouter();
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
+  const posSession = usePosSession();
   const [searchQuery, setSearchQuery] = React.useState("");
+
+  const actingAsStaff =
+    posSession.isActive && posSession.storeId === storeId && posSession.staffRole !== "OWNER";
+  const staffAllowedPages = actingAsStaff ? (posSession.allowedPages ?? []) : null;
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -72,6 +81,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         href: `/store/${storeId}/dashboard`,
         icon: <LayoutDashboard className="size-4" />,
         category: t("search.categories.navigation"),
+        gateHref: "/dashboard",
       },
       {
         id: "profile",
@@ -80,6 +90,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         href: `/store/${storeId}/profile`,
         icon: <UserRound className="size-4" />,
         category: t("search.categories.navigation"),
+        gateHref: "/profile",
       },
       {
         id: "management",
@@ -88,6 +99,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         href: `/store/${storeId}/management`,
         icon: <Boxes className="size-4" />,
         category: t("search.categories.navigation"),
+        gateHref: "/management",
       },
       {
         id: "data",
@@ -96,6 +108,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         href: `/store/${storeId}/data`,
         icon: <Database className="size-4" />,
         category: t("search.categories.navigation"),
+        gateHref: "/data",
       },
       {
         id: "alerts",
@@ -104,6 +117,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         href: `/store/${storeId}/alerts`,
         icon: <AlertTriangle className="size-4" />,
         category: t("search.categories.navigation"),
+        gateHref: "/alerts",
       },
 
       // Management Section
@@ -114,6 +128,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         href: `/store/${storeId}/management/supplier-orders`,
         icon: <FileText className="size-4" />,
         category: t("search.categories.management"),
+        gateHref: "/management",
       },
       {
         id: "recipe-production",
@@ -122,19 +137,22 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         href: `/store/${storeId}/management/recipe-production`,
         icon: <UtensilsCrossed className="size-4" />,
         category: t("search.categories.management"),
+        gateHref: "/management",
       },
     ];
   }, [t, storeId]);
 
   // Filter items based on search query
   const filteredItems = React.useMemo(() => {
-    // Filter out items with undefined/invalid translations
+    // Filter out items with undefined/invalid translations, and any page a
+    // staff persona isn't granted access to.
     const validItems = searchItems.filter(
       (item) =>
         item.title &&
         item.category &&
         typeof item.title === "string" &&
-        typeof item.category === "string"
+        typeof item.category === "string" &&
+        (!staffAllowedPages || !item.gateHref || staffAllowedPages.includes(item.gateHref))
     );
 
     if (!searchQuery) return validItems;
@@ -146,7 +164,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         (item.description && item.description.toLowerCase().includes(query)) ||
         item.category.toLowerCase().includes(query)
     );
-  }, [searchQuery, searchItems]);
+  }, [searchQuery, searchItems, staffAllowedPages]);
 
   // Group filtered items by category
   const groupedItems = React.useMemo(() => {

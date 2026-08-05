@@ -5,11 +5,17 @@
  * Asia/Jakarta) during the first hours of the local day.
  */
 
-function toLocalISO(d: Date): string {
+export function toLocalISO(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/** Inverse of `toLocalISO` — parses as a local calendar day, not UTC midnight. */
+export function parseLocalISO(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 export function todayLocalISO(): string {

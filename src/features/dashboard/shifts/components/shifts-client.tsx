@@ -325,10 +325,10 @@ export function ShiftsClient({ storeId, staff }: ShiftsClientProps) {
             className="space-y-4"
           >
             <div className="space-y-1">
-              <Label>Staff</Label>
+              <Label>{t("pages.shiftsStaffLabel")}</Label>
               <Select onValueChange={(v) => openForm.setValue("staffId", v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select staff" />
+                  <SelectValue placeholder={t("pages.shiftsSelectStaffPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {staff.map((s) => (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useConfirm } from "@/components/ui/use-confirm";
@@ -56,13 +57,17 @@ interface StaffClientProps {
   currentUserId: string;
   currentUserName: string;
   currentUserEmail: string;
+  /** e.g. "GMT+7" — the store's business timezone, which is the clock the
+   * midnight PIN-session expiry (see src/lib/staff-session.ts) actually runs
+   * on, not the viewer's own browser timezone. */
+  storeTimeZoneLabel: string;
 }
 
-const ROLE_LABELS: Record<StaffRole, string> = {
-  OWNER: "Owner",
-  MANAGER: "Manager",
-  CASHIER: "Cashier",
-  KITCHEN: "Kitchen",
+const ROLE_LABEL_KEYS: Record<StaffRole, string> = {
+  OWNER: "pages.staffRoleOwner",
+  MANAGER: "pages.staffRoleManager",
+  CASHIER: "pages.staffRoleCashier",
+  KITCHEN: "pages.staffRoleKitchen",
 };
 
 const ROLES_FOR_SELECT: StaffRole[] = ["MANAGER", "CASHIER", "KITCHEN"];
@@ -72,8 +77,11 @@ export function StaffClient({
   currentUserId,
   currentUserName,
   currentUserEmail,
+  storeTimeZoneLabel,
 }: StaffClientProps) {
   const { t } = useI18n();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { confirm, confirmDialog } = useConfirm();
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
@@ -102,6 +110,7 @@ export function StaffClient({
 
   const staff = data?.staff ?? [];
   const activeCount = staff.filter((s) => s.isActive).length;
+  const roleLabel = (r: StaffRole) => t(ROLE_LABEL_KEYS[r]);
 
   const {
     register,
@@ -131,18 +140,18 @@ export function StaffClient({
       queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
       setAddOpen(false);
       reset();
-      toast.success("Staff member added");
+      toast.success(t("pages.staffAdded"));
     },
-    onError: (err: Error) => toast.error(err.message || "Failed to add staff"),
+    onError: (err: Error) => toast.error(err.message || t("pages.staffAddFailed")),
   });
 
   const deactivateMutation = useMutation({
     mutationFn: (staffId: string) => apiClient.delete(`/stores/${storeId}/staff/${staffId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
-      toast.success("Staff member deactivated");
+      toast.success(t("pages.staffDeactivated"));
     },
-    onError: (err: Error) => toast.error(err.message || "Failed to deactivate"),
+    onError: (err: Error) => toast.error(err.message || t("pages.staffDeactivateFailed")),
   });
 
   const openEdit = (member: StaffMember) => {
@@ -161,6 +170,24 @@ export function StaffClient({
     setEditSendPin(false);
     setEditRemovePin(false);
   };
+
+  // Deep link from the staff PIN switcher's "Forgot PIN? Edit it" — opens
+  // straight into that staff member's edit dialog (which is where PIN
+  // editing lives) instead of leaving the owner to hunt for them in the
+  // table.
+  const appliedEditParam = useRef(false);
+  useEffect(() => {
+    if (appliedEditParam.current) return;
+    const editStaffId = searchParams.get("editStaffId");
+    if (!editStaffId || staff.length === 0) return;
+    const member = staff.find((s) => s.id === editStaffId);
+    if (member) {
+      appliedEditParam.current = true;
+      openEdit(member);
+      router.replace(`/store/${storeId}/staff`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, staff]);
 
   const handleEditSave = async () => {
     if (!editTarget) return;
@@ -185,12 +212,12 @@ export function StaffClient({
       await apiClient.patch(`/stores/${storeId}/staff/${editTarget.id}`, body);
       queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
       setEditTarget(null);
-      toast.success("Staff member updated");
+      toast.success(t("pages.staffUpdated"));
       if (editPin.length === 4 && editSendPin && editEmail) {
-        toast.success("PIN sent to email");
+        toast.success(t("pages.staffPinSentToEmail"));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update staff");
+      toast.error(err instanceof Error ? err.message : t("pages.staffUpdateFailed"));
     } finally {
       setEditLoading(false);
     }
@@ -219,10 +246,7 @@ export function StaffClient({
       </div>
 
       <div className="bg-muted/20 text-muted-foreground rounded-lg border p-3 text-xs leading-normal">
-        For security, every PIN session on a device (staff or Owner) automatically logs out at
-        midnight — whoever picks up the device the next day must choose an account and enter its
-        PIN again. If the Owner forgets their PIN, a one-time code is sent only to the account&apos;s
-        registered email — never to a staff member.
+        {t("pages.staffSecurityNotice").replace("{time}", storeTimeZoneLabel)}
       </div>
 
       {/* Owner account row */}
@@ -233,20 +257,18 @@ export function StaffClient({
           {currentUserEmail && <p className="text-muted-foreground text-xs">{currentUserEmail}</p>}
         </div>
         <Badge variant="outline" className="border-amber-400 text-amber-600">
-          Owner
+          {t("pages.staffRoleOwner")}
         </Badge>
       </div>
 
       {/* Mobile/Tablet: Card Layout */}
       <div className="space-y-3 lg:hidden">
         {isLoading ? (
-          <p className="text-muted-foreground py-8 text-center text-sm">Loading...</p>
+          <p className="text-muted-foreground py-8 text-center text-sm">{t("common.loading")}</p>
         ) : staff.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <UserRound className="text-muted-foreground h-8 w-8" />
-            <p className="text-muted-foreground text-sm">
-              No staff yet. Add your first staff member.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("pages.staffNoStaffYet")}</p>
           </div>
         ) : (
           staff.map((member) => (
@@ -265,7 +287,7 @@ export function StaffClient({
                     <span className="text-muted-foreground/50 text-[8px] sm:text-xs">—</span>
                   )}
                 </div>
-                <Badge variant="secondary">{ROLE_LABELS[member.role]}</Badge>
+                <Badge variant="secondary">{roleLabel(member.role)}</Badge>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={member.isActive ? "default" : "outline"}>
@@ -273,12 +295,12 @@ export function StaffClient({
                 </Badge>
                 {member.inviteStatus === "pending" && (
                   <Badge variant="outline" className="border-amber-400 text-amber-600">
-                    Invite Pending
+                    {t("pages.staffInvitePending")}
                   </Badge>
                 )}
                 {member.inviteStatus === "accepted" && (
                   <Badge variant="outline" className="border-emerald-400 text-emerald-600">
-                    Invited
+                    {t("pages.staffInvited")}
                   </Badge>
                 )}
               </div>
@@ -290,7 +312,7 @@ export function StaffClient({
                   onClick={() => openEdit(member)}
                 >
                   <Pencil className="mr-2 h-4 w-4" />
-                  Edit
+                  {t("common.actions.edit")}
                 </Button>
                 {member.isActive && (
                   <Button
@@ -300,17 +322,17 @@ export function StaffClient({
                     disabled={activeCount <= 1 || member.role === "OWNER"}
                     onClick={async () => {
                       const ok = await confirm({
-                        title: "Deactivate staff member?",
-                        description: `${member.name} will lose access until reactivated.`,
+                        title: t("pages.staffDeactivateTitle"),
+                        description: t("pages.staffDeactivateDesc").replace("{name}", member.name),
                         variant: "destructive",
-                        confirmText: "Deactivate",
+                        confirmText: t("pages.staffDeactivateConfirm"),
                         cancelText: t("actions.cancel"),
                       });
                       if (ok) deactivateMutation.mutate(member.id);
                     }}
                   >
                     <UserX className="mr-2 h-4 w-4" />
-                    Deactivate
+                    {t("pages.staffDeactivateConfirm")}
                   </Button>
                 )}
               </div>
@@ -326,17 +348,17 @@ export function StaffClient({
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.name")}</TableHead>
-                <TableHead>Username</TableHead>
+                <TableHead>{t("pages.staffUsername")}</TableHead>
                 <TableHead>{t("pages.staffRole")}</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("tables.status")}</TableHead>
+                <TableHead className="text-right">{t("tables.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
-                    Loading...
+                    {t("common.loading")}
                   </TableCell>
                 </TableRow>
               ) : staff.length === 0 ? (
@@ -344,9 +366,7 @@ export function StaffClient({
                   <TableCell colSpan={5} className="py-8 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <UserRound className="text-muted-foreground h-8 w-8" />
-                      <p className="text-muted-foreground text-sm">
-                        No staff yet. Add your first staff member.
-                      </p>
+                      <p className="text-muted-foreground text-sm">{t("pages.staffNoStaffYet")}</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -360,7 +380,7 @@ export function StaffClient({
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{ROLE_LABELS[member.role]}</Badge>
+                      <Badge variant="secondary">{roleLabel(member.role)}</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -369,12 +389,12 @@ export function StaffClient({
                         </Badge>
                         {member.inviteStatus === "pending" && (
                           <Badge variant="outline" className="border-amber-400 text-amber-600">
-                            Invite Pending
+                            {t("pages.staffInvitePending")}
                           </Badge>
                         )}
                         {member.inviteStatus === "accepted" && (
                           <Badge variant="outline" className="border-emerald-400 text-emerald-600">
-                            Invited
+                            {t("pages.staffInvited")}
                           </Badge>
                         )}
                       </div>
@@ -385,7 +405,7 @@ export function StaffClient({
                           variant="ghost"
                           size="sm"
                           onClick={() => openEdit(member)}
-                          aria-label="Edit"
+                          aria-label={t("common.actions.edit")}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -396,15 +416,18 @@ export function StaffClient({
                             disabled={activeCount <= 1 || member.role === "OWNER"}
                             onClick={async () => {
                               const ok = await confirm({
-                                title: "Deactivate staff member?",
-                                description: `${member.name} will lose access until reactivated.`,
+                                title: t("pages.staffDeactivateTitle"),
+                                description: t("pages.staffDeactivateDesc").replace(
+                                  "{name}",
+                                  member.name
+                                ),
                                 variant: "destructive",
-                                confirmText: "Deactivate",
+                                confirmText: t("pages.staffDeactivateConfirm"),
                                 cancelText: t("actions.cancel"),
                               });
                               if (ok) deactivateMutation.mutate(member.id);
                             }}
-                            aria-label="Deactivate"
+                            aria-label={t("pages.staffDeactivateConfirm")}
                           >
                             <UserX className="h-4 w-4" />
                           </Button>
@@ -470,12 +493,12 @@ export function StaffClient({
               {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="add-username">Username</Label>
+              <Label htmlFor="add-username">{t("pages.staffUsername")}</Label>
               <Input
                 id="add-username"
                 autoCapitalize="none"
                 autoCorrect="off"
-                placeholder="e.g. jdoe"
+                placeholder={t("pages.staffUsernamePlaceholder")}
                 {...register("username")}
               />
               {errors.username && (
@@ -497,7 +520,7 @@ export function StaffClient({
                 <SelectContent>
                   {ROLES_FOR_SELECT.map((r) => (
                     <SelectItem key={r} value={r}>
-                      {ROLE_LABELS[r]}
+                      {roleLabel(r)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -505,11 +528,12 @@ export function StaffClient({
             </div>
             <div className="space-y-1">
               <Label htmlFor="add-custom-role">
-                Custom role label <span className="text-muted-foreground text-xs">(optional)</span>
+                {t("pages.staffCustomRoleLabel")}{" "}
+                <span className="text-muted-foreground text-xs">{t("pages.staffOptional")}</span>
               </Label>
               <Input
                 id="add-custom-role"
-                placeholder="e.g. Assistant Manager"
+                placeholder={t("pages.staffCustomRoleLabelPlaceholder")}
                 {...register("customRoleLabel" as never)}
               />
             </div>
@@ -521,14 +545,14 @@ export function StaffClient({
             <div className="space-y-1">
               <Label htmlFor="pin">
                 {t("pages.staffPin")}{" "}
-                <span className="text-muted-foreground text-xs">(optional)</span>
+                <span className="text-muted-foreground text-xs">{t("pages.staffOptional")}</span>
               </Label>
               <Input
                 id="pin"
                 type="password"
                 maxLength={4}
                 inputMode="numeric"
-                placeholder="4-digit PIN"
+                placeholder={t("pages.staffPinPlaceholder")}
                 {...register("pin")}
               />
               {errors.pin && <p className="text-destructive text-xs">{errors.pin.message}</p>}
@@ -536,24 +560,25 @@ export function StaffClient({
 
             <div className="space-y-3 rounded-lg border p-3">
               <p className="text-muted-foreground text-xs font-semibold">
-                Contact Details <span className="font-normal">(optional)</span>
+                {t("pages.staffContactDetails")}{" "}
+                <span className="font-normal">{t("pages.staffOptional")}</span>
               </p>
               <div className="space-y-1">
-                <Label htmlFor="add-email">Email</Label>
+                <Label htmlFor="add-email">{t("tables.email")}</Label>
                 <Input
                   id="add-email"
                   type="email"
                   {...register("email" as never)}
-                  placeholder="staff@example.com"
+                  placeholder={t("pages.staffEmailPlaceholder")}
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="add-whatsapp">WhatsApp Number</Label>
+                <Label htmlFor="add-whatsapp">{t("pages.staffWhatsappNumber")}</Label>
                 <Input
                   id="add-whatsapp"
                   type="tel"
                   {...register("whatsapp" as never)}
-                  placeholder="+62 812 3456 7890"
+                  placeholder={t("pages.staffWhatsappPlaceholder")}
                 />
               </div>
             </div>
@@ -561,7 +586,7 @@ export function StaffClient({
             {watchEmail && (
               <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
                 <input type="checkbox" className="rounded" {...register("sendInvite" as never)} />
-                Send PIN to staff email
+                {t("pages.staffSendPinToEmail")}
               </label>
             )}
           </form>
@@ -572,7 +597,7 @@ export function StaffClient({
       {editTarget && (
         <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
           <FormDialogLayout
-            title={`Edit Staff — ${editTarget.name}`}
+            title={t("pages.staffEditTitle").replace("{name}", editTarget.name)}
             footer={
               <>
                 <Button variant="outline" onClick={() => setEditTarget(null)}>
@@ -593,21 +618,21 @@ export function StaffClient({
           >
             <div className="space-y-4">
               <div className="space-y-1">
-                <Label>Name</Label>
+                <Label>{t("common.name")}</Label>
                 <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
               </div>
               <div className="space-y-1">
-                <Label>Username</Label>
+                <Label>{t("pages.staffUsername")}</Label>
                 <Input
                   autoCapitalize="none"
                   autoCorrect="off"
                   value={editUsername}
                   onChange={(e) => setEditUsername(e.target.value)}
-                  placeholder="e.g. jdoe"
+                  placeholder={t("pages.staffUsernamePlaceholder")}
                 />
               </div>
               <div className="space-y-1">
-                <Label>Role</Label>
+                <Label>{t("pages.staffRole")}</Label>
                 <Select
                   value={editRole}
                   onValueChange={(v) => {
@@ -625,50 +650,51 @@ export function StaffClient({
                       : ROLES_FOR_SELECT
                     ).map((r) => (
                       <SelectItem key={r} value={r}>
-                        {ROLE_LABELS[r]}
+                        {roleLabel(r)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {editTarget.role === "OWNER" && (
                   <p className="text-muted-foreground text-[10px] mt-1">
-                    The owner role cannot be changed.
+                    {t("pages.staffOwnerRoleLocked")}
                   </p>
                 )}
               </div>
 
               <div className="space-y-1">
                 <Label>
-                  Custom role label{" "}
-                  <span className="text-muted-foreground text-xs">(optional)</span>
+                  {t("pages.staffCustomRoleLabel")}{" "}
+                  <span className="text-muted-foreground text-xs">{t("pages.staffOptional")}</span>
                 </Label>
                 <Input
                   value={editCustomRoleLabel}
                   onChange={(e) => setEditCustomRoleLabel(e.target.value)}
-                  placeholder="e.g. Assistant Manager"
+                  placeholder={t("pages.staffCustomRoleLabelPlaceholder")}
                 />
               </div>
 
               <div className="space-y-3 rounded-lg border p-3">
                 <p className="text-muted-foreground text-xs font-semibold">
-                  Contact Details <span className="font-normal">(optional)</span>
+                  {t("pages.staffContactDetails")}{" "}
+                  <span className="font-normal">{t("pages.staffOptional")}</span>
                 </p>
                 <div className="space-y-1">
-                  <Label>Email</Label>
+                  <Label>{t("tables.email")}</Label>
                   <Input
                     type="email"
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
-                    placeholder="staff@example.com"
+                    placeholder={t("pages.staffEmailPlaceholder")}
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label>WhatsApp Number</Label>
+                  <Label>{t("pages.staffWhatsappNumber")}</Label>
                   <Input
                     type="tel"
                     value={editWhatsapp}
                     onChange={(e) => setEditWhatsapp(e.target.value)}
-                    placeholder="+62 812 3456 7890"
+                    placeholder={t("pages.staffWhatsappPlaceholder")}
                   />
                 </div>
               </div>
@@ -680,7 +706,7 @@ export function StaffClient({
               />
 
               <div className="space-y-1">
-                <Label>Status</Label>
+                <Label>{t("tables.status")}</Label>
                 <Select
                   value={editIsActive ? "ACTIVE" : "INACTIVE"}
                   onValueChange={(v) => setEditIsActive(v === "ACTIVE")}
@@ -690,38 +716,38 @@ export function StaffClient({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ACTIVE">Active</SelectItem>
-                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                    <SelectItem value="ACTIVE">{t("pages.staffActive")}</SelectItem>
+                    <SelectItem value="INACTIVE">{t("pages.staffInactive")}</SelectItem>
                   </SelectContent>
                 </Select>
                 {editTarget.isActive && (activeCount <= 1 || editTarget.role === "OWNER") && (
                   <p className="text-amber-500/80 text-[10px] mt-1">
                     {editTarget.role === "OWNER"
-                      ? "The owner account access must remain active."
-                      : "At least one staff member must remain active to prevent locking yourself out."}
+                      ? t("pages.staffOwnerMustStayActive")
+                      : t("pages.staffMinOneActive")}
                   </p>
                 )}
               </div>
 
               <div className="space-y-1">
                 <Label>
-                  New PIN{" "}
+                  {t("pages.staffNewPin")}{" "}
                   <span className="text-muted-foreground text-xs">
-                    (leave blank to keep current)
+                    {t("pages.staffKeepCurrentPin")}
                   </span>
                 </Label>
                 <Input
                   type="password"
                   maxLength={4}
                   inputMode="numeric"
-                  placeholder="4-digit PIN"
+                  placeholder={t("pages.staffPinPlaceholder")}
                   value={editPin}
                   onChange={(e) => setEditPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   disabled={editRemovePin}
                 />
                 {editPin.length > 0 && editPin.length < 4 && (
                   <p className="text-destructive text-xs mt-1">
-                    PIN must be exactly 4 digits.
+                    {t("pages.staffPinLengthError")}
                   </p>
                 )}
               </div>
@@ -735,7 +761,7 @@ export function StaffClient({
                     if (e.target.checked) setEditPin("");
                   }}
                 />
-                Remove PIN (allow login without PIN)
+                {t("pages.staffRemovePin")}
               </label>
               {editPin.length === 4 && editEmail && (
                 <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
@@ -745,7 +771,7 @@ export function StaffClient({
                     checked={editSendPin}
                     onChange={(e) => setEditSendPin(e.target.checked)}
                   />
-                  Send new PIN to {editEmail}
+                  {t("pages.staffSendNewPinTo").replace("{email}", editEmail)}
                 </label>
               )}
             </div>
@@ -755,8 +781,8 @@ export function StaffClient({
       <SetOwnerPinDialog
         open={setPinOpen}
         onOpenChange={setSetPinOpen}
-        title="Set your Owner PIN first"
-        description="Adding staff means someone else may use this device. Set a PIN so you can securely switch back to your Owner account."
+        title={t("pages.staffSetPinFirstTitle")}
+        description={t("pages.staffSetPinFirstDesc")}
         onSuccess={() => setAddOpen(true)}
       />
       {confirmDialog}

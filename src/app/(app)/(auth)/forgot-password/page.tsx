@@ -8,8 +8,10 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 export default function ForgotPasswordPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [isSent, setIsSent] = useState(false);
@@ -27,10 +29,10 @@ export default function ForgotPasswordPage() {
         toast.error(error.message);
       } else {
         setIsSent(true);
-        toast.success("Password reset link sent to your email");
+        toast.success(t("pages.authForgotLinkSent"));
       }
     } catch (err) {
-      toast.error("Something went wrong");
+      toast.error(t("pages.authForgotSomethingWrong"));
     } finally {
       setIsPending(false);
     }
@@ -40,19 +42,28 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Forgot password</CardTitle>
-          <CardDescription>
-            Enter your email address and we will send you a link to reset your password.
-          </CardDescription>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            {t("pages.authForgotTitle")}
+          </CardTitle>
+          <CardDescription>{t("pages.authForgotDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           {isSent ? (
             <div className="space-y-4 text-center">
               <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700">
-                Check your email! We've sent a password reset link to <strong>{email}</strong>.
+                {(() => {
+                  const [before, after] = t("pages.authForgotCheckEmail").split("{email}");
+                  return (
+                    <>
+                      {before}
+                      <strong>{email}</strong>
+                      {after}
+                    </>
+                  );
+                })()}
               </div>
               <Button asChild className="w-full" variant="outline">
-                <Link href="/login">Back to Login</Link>
+                <Link href="/login">{t("pages.authForgotBackToLogin")}</Link>
               </Button>
             </div>
           ) : (
@@ -60,7 +71,7 @@ export default function ForgotPasswordPage() {
               <div className="space-y-2">
                 <Input
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder={t("pages.authForgotEmailPlaceholder")}
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -69,11 +80,11 @@ export default function ForgotPasswordPage() {
               </div>
               <Button type="submit" className="w-full" disabled={isPending}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Send Reset Link
+                {t("pages.authForgotSendLink")}
               </Button>
               <div className="text-center text-sm">
                 <Link href="/login" className="text-brand-primary hover:underline">
-                  Back to Login
+                  {t("pages.authForgotBackToLogin")}
                 </Link>
               </div>
             </form>

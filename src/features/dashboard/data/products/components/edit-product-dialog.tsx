@@ -598,10 +598,12 @@ export function EditProductDialog({
                     onValueChange={setMenuItemReassign}
                   >
                     <SelectTrigger className="text-sm">
-                      <SelectValue placeholder="Keep current association" />
+                      <SelectValue placeholder={t("data.products.form.keepCurrentAssociation")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="keep">Keep current association</SelectItem>
+                      <SelectItem value="keep">
+                        {t("data.products.form.keepCurrentAssociation")}
+                      </SelectItem>
                       {currentLinked && (
                         <SelectItem value="none">
                           ✕ Remove link from &quot;{currentLinked.name}&quot;

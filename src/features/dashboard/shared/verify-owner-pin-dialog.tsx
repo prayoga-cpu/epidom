@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { PinPad } from "@/components/ui/pin-pad";
 import { toast } from "sonner";
 import { useRequestOwnerPinOtp, useResetOwnerPin } from "./hooks/use-owner-pin";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface VerifyOwnerPinDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface VerifyOwnerPinDialogProps {
 
 /** PIN entry to switch a shared device back to the Owner. Includes a "Forgot PIN?" → email OTP recovery. */
 export function VerifyOwnerPinDialog({ open, onOpenChange, onVerified }: VerifyOwnerPinDialogProps) {
+  const { t } = useI18n();
   const [pin, setPin] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [shake, setShake] = useState(false);
@@ -53,14 +55,14 @@ export function VerifyOwnerPinDialog({ open, onOpenChange, onVerified }: VerifyO
           setShake(true);
           setTimeout(() => setShake(false), 500);
           setPin("");
-          toast.error("Incorrect PIN. Try again.");
+          toast.error(t("pages.staffAuthIncorrectPin"));
           return;
         }
         reset();
         onOpenChange(false);
         onVerified();
       } catch {
-        toast.error("Failed to verify PIN. Check your connection.");
+        toast.error(t("pages.staffAuthVerifyFailed"));
         setPin("");
       } finally {
         setIsVerifying(false);
@@ -87,27 +89,27 @@ export function VerifyOwnerPinDialog({ open, onOpenChange, onVerified }: VerifyO
       setOtpSentTo(result.email);
       setMode("otp");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send code");
+      toast.error(err instanceof Error ? err.message : t("pages.ownerPinSendCodeFailed"));
     }
   };
 
   const handleResetSubmit = async () => {
     if (newPin.length !== 4) {
-      toast.error("PIN must be exactly 4 digits");
+      toast.error(t("pages.staffPinLengthError"));
       return;
     }
     if (newPin !== confirmPin) {
-      toast.error("PINs do not match");
+      toast.error(t("pages.ownerPinMismatch"));
       return;
     }
     try {
       await resetPin.mutateAsync({ otp, newPin });
-      toast.success("Owner PIN reset");
+      toast.success(t("pages.ownerPinReset"));
       reset();
       onOpenChange(false);
       onVerified();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Invalid or expired code");
+      toast.error(err instanceof Error ? err.message : t("pages.ownerPinInvalidCode"));
     }
   };
 
@@ -123,8 +125,8 @@ export function VerifyOwnerPinDialog({ open, onOpenChange, onVerified }: VerifyO
         {mode === "pin" ? (
           <>
             <DialogHeader className="text-center">
-              <DialogTitle>Switch back to Owner</DialogTitle>
-              <DialogDescription>Enter your Owner PIN to continue</DialogDescription>
+              <DialogTitle>{t("pages.ownerPinSwitchBackTitle")}</DialogTitle>
+              <DialogDescription>{t("pages.ownerPinSwitchBackDesc")}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center py-2">
               <PinPad value={pin} onKey={handleKey} disabled={isVerifying} shake={shake} />
@@ -136,23 +138,23 @@ export function VerifyOwnerPinDialog({ open, onOpenChange, onVerified }: VerifyO
                 onClick={handleRequestOtp}
                 disabled={requestOtp.isPending}
               >
-                Forgot PIN?
+                {t("pages.ownerPinForgot")}
               </Button>
             </div>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Reset Owner PIN</DialogTitle>
+              <DialogTitle>{t("pages.ownerPinResetTitle")}</DialogTitle>
               <DialogDescription>
                 {otpSentTo
-                  ? `Enter the code sent to ${otpSentTo} and set a new PIN.`
-                  : "Enter the code sent to your email and set a new PIN."}
+                  ? t("pages.ownerPinResetDescWithEmail").replace("{email}", otpSentTo)
+                  : t("pages.ownerPinResetDescNoEmail")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-1">
-                <Label>6-digit code</Label>
+                <Label>{t("pages.ownerPinCodeLabel")}</Label>
                 <Input
                   inputMode="numeric"
                   maxLength={6}
@@ -162,30 +164,30 @@ export function VerifyOwnerPinDialog({ open, onOpenChange, onVerified }: VerifyO
                 />
               </div>
               <div className="space-y-1">
-                <Label>New PIN</Label>
+                <Label>{t("pages.staffNewPin")}</Label>
                 <Input
                   type="password"
                   inputMode="numeric"
                   maxLength={4}
-                  placeholder="4-digit PIN"
+                  placeholder={t("pages.staffPinPlaceholder")}
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                 />
               </div>
               <div className="space-y-1">
-                <Label>Confirm PIN</Label>
+                <Label>{t("pages.ownerPinConfirmLabel")}</Label>
                 <Input
                   type="password"
                   inputMode="numeric"
                   maxLength={4}
-                  placeholder="Re-enter PIN"
+                  placeholder={t("pages.ownerPinConfirmPlaceholder")}
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                 />
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setMode("pin")}>
-                  Back
+                  {t("common.actions.back")}
                 </Button>
                 <Button
                   type="button"
@@ -193,7 +195,7 @@ export function VerifyOwnerPinDialog({ open, onOpenChange, onVerified }: VerifyO
                   onClick={handleResetSubmit}
                   disabled={resetPin.isPending}
                 >
-                  Reset PIN
+                  {t("pages.ownerPinResetSubmit")}
                 </Button>
               </div>
             </div>

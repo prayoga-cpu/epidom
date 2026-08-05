@@ -156,12 +156,14 @@ For merchants with staff and ingredient cost concerns. Everything in POS, plus:
 - Cash drawer reconciliation
 - Discrepancy alerts
 - Shift handover notes
+- Staff roster/scheduling with manager publish + staff self-view (`/schedule`), selfie + geolocation attendance audit trail (`/attendance`), automatic overtime calculation — see `docs/roadmap.md`
 
 ### Staff and roles _(Phase 4)_
 
 - Add staff members with roles (Manager, Cashier, Kitchen, Waiter)
 - Per-role permissions
 - Hours tracking per shift
+- End-of-day transaction reports per named shift-block (Finance → By Shift Block) and per staff member (existing `/finance/by-shift?staffId=`) — see `docs/roadmap.md`
 
 ### Full Kitchen Display _(Phase 4)_
 

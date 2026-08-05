@@ -8,8 +8,10 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 function ResetPasswordForm() {
+  const { t } = useI18n();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isPending, setIsPending] = useState(false);
@@ -26,12 +28,12 @@ function ResetPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t("messages.passwordsDoNotMatch"));
       return;
     }
 
     if (!token) {
-      toast.error("Invalid or missing token");
+      toast.error(t("pages.authResetInvalidToken"));
       return;
     }
 
@@ -44,18 +46,20 @@ function ResetPasswordForm() {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success("Password reset successfully");
+        toast.success(t("pages.authResetSuccess"));
         router.push("/login");
       }
     } catch (err) {
-      toast.error("Something went wrong");
+      toast.error(t("pages.authForgotSomethingWrong"));
     } finally {
       setIsPending(false);
     }
   };
 
   if (!token) {
-    return <div className="text-center text-red-500">Invalid or missing reset token.</div>;
+    return (
+      <div className="text-center text-red-500">{t("pages.authResetInvalidTokenNotice")}</div>
+    );
   }
 
   return (
@@ -63,7 +67,7 @@ function ResetPasswordForm() {
       <div className="space-y-2">
         <Input
           type="password"
-          placeholder="New Password"
+          placeholder={t("pages.authResetNewPasswordPlaceholder")}
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -72,7 +76,7 @@ function ResetPasswordForm() {
         />
         <Input
           type="password"
-          placeholder="Confirm New Password"
+          placeholder={t("pages.authResetConfirmPasswordPlaceholder")}
           required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
@@ -82,19 +86,22 @@ function ResetPasswordForm() {
       </div>
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        Reset Password
+        {t("pages.authResetTitle")}
       </Button>
     </form>
   );
 }
 
 export default function ResetPasswordPage() {
+  const { t } = useI18n();
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Reset Password</CardTitle>
-          <CardDescription>Enter your new password below.</CardDescription>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            {t("pages.authResetTitle")}
+          </CardTitle>
+          <CardDescription>{t("pages.authResetDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Suspense

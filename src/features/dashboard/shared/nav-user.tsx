@@ -18,12 +18,13 @@ import { useCurrentStore } from "./hooks/use-current-store";
 import { useOwnerPinStatus } from "./hooks/use-owner-pin";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 import { isAdminEmail } from "@/lib/admin";
-import { Shield, TrendingUp, Users, KeyRound } from "lucide-react";
+import { Shield, TrendingUp, Users, KeyRound, Clock } from "lucide-react";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { apiClient } from "@/lib/api/client";
 import { StaffSwitcherDialog } from "./staff-switcher-dialog";
 import { VerifyOwnerPinDialog } from "./verify-owner-pin-dialog";
 import { SetOwnerPinDialog } from "./set-owner-pin-dialog";
+import { ClockInOutDialog } from "./clock-in-out-dialog";
 
 export function NavUser() {
   const router = useRouter();
@@ -48,6 +49,7 @@ export function NavUser() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [verifyOwnerOpen, setVerifyOwnerOpen] = useState(false);
   const [setOwnerPinOpen, setSetOwnerPinOpen] = useState(false);
+  const [clockInOutOpen, setClockInOutOpen] = useState(false);
 
   // Role-based, not ID-based: a StaffMember row can itself have role "OWNER"
   // (e.g. seeded accounts), and that persona is functionally the owner too —
@@ -55,6 +57,7 @@ export function NavUser() {
   // back to Owner" while already acting as the (real-row) owner.
   const actingAsStaff =
     posSession.isActive && posSession.storeId === storeId && posSession.staffRole !== "OWNER";
+  const staffAllowedPages = actingAsStaff ? (posSession.allowedPages ?? []) : null;
 
   const handleSwitchedBackToOwner = async () => {
     posSession.logout();
@@ -131,14 +134,23 @@ export function NavUser() {
             </DropdownMenuItem>
           )}
 
+          <DropdownMenuItem onClick={() => setClockInOutOpen(true)}>
+            <Clock className="mr-2 h-3.5 w-3.5" />
+            {t("clockInOut.dialogTitle")}
+          </DropdownMenuItem>
+
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => router.push(`/store/${storeId}/profile`)}>
-            {t("nav.profile")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/store/${storeId}/dashboard`)}>
-            {t("nav.dashboard")}
-          </DropdownMenuItem>
-          {(isAdminEmail(user?.email) || (profile as any)?.isAdmin) && (
+          {(!staffAllowedPages || staffAllowedPages.includes("/profile")) && (
+            <DropdownMenuItem onClick={() => router.push(`/store/${storeId}/profile`)}>
+              {t("nav.profile")}
+            </DropdownMenuItem>
+          )}
+          {(!staffAllowedPages || staffAllowedPages.includes("/dashboard")) && (
+            <DropdownMenuItem onClick={() => router.push(`/store/${storeId}/dashboard`)}>
+              {t("nav.dashboard")}
+            </DropdownMenuItem>
+          )}
+          {!actingAsStaff && (isAdminEmail(user?.email) || (profile as any)?.isAdmin) && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -162,6 +174,9 @@ export function NavUser() {
 
       {storeId && (
         <StaffSwitcherDialog open={switcherOpen} onOpenChange={setSwitcherOpen} storeId={storeId} />
+      )}
+      {storeId && (
+        <ClockInOutDialog open={clockInOutOpen} onOpenChange={setClockInOutOpen} storeId={storeId} />
       )}
       <VerifyOwnerPinDialog
         open={verifyOwnerOpen}

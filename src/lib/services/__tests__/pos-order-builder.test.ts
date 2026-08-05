@@ -104,6 +104,23 @@ describe("validateAndBuildOrderItems", () => {
     expect(subtotal).toBe(2 * 10000 + 3 * 5000);
   });
 
+  it("does not flag an available item as missing when it spans multiple cart lines", async () => {
+    // Prisma's `id: { in }` returns one row per unique id even when the
+    // filter array repeats an id — the cart can list the same menu item
+    // twice (e.g. same drink, different notes for different customers).
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      { id: "menu-1", name: "Latte", price: 20000 },
+    ]);
+
+    const { orderItems, subtotal } = await validateAndBuildOrderItems("store-1", [
+      { menuItemId: "menu-1", name: "Latte", quantity: 1, unitPrice: 1, notes: "no sugar" },
+      { menuItemId: "menu-1", name: "Latte", quantity: 1, unitPrice: 1, notes: "extra hot" },
+    ] as any);
+
+    expect(orderItems).toHaveLength(2);
+    expect(subtotal).toBe(40000);
+  });
+
   it("throws OrderBuildError when a menu item is missing or unavailable", async () => {
     prismaMock.menuItem.findMany.mockResolvedValue([]); // none matched (missing / unavailable)
 

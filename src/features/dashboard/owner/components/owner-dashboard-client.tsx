@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { apiClient } from "@/lib/api/client";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { DateRangeField } from "@/components/ui/date-range-field";
 import { Store, TrendingUp, ShoppingCart, Clock } from "lucide-react";
 
 interface StoreMetric {
@@ -83,23 +83,15 @@ export function OwnerDashboardClient() {
       {/* Date range */}
       <div className="flex flex-wrap gap-4">
         <div className="space-y-1">
-          <Label htmlFor="from">{t("common.datePicker.from")}</Label>
-          <Input
-            id="from"
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="w-40"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="to">{t("common.datePicker.to")}</Label>
-          <Input
-            id="to"
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="w-40"
+          <Label htmlFor="owner-date-range">{t("common.datePicker.dateRange")}</Label>
+          <DateRangeField
+            id="owner-date-range"
+            from={from}
+            to={to}
+            onChange={(nextFrom, nextTo) => {
+              setFrom(nextFrom);
+              setTo(nextTo);
+            }}
           />
         </div>
       </div>

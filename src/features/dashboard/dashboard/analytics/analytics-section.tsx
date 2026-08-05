@@ -8,7 +8,6 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +15,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ChartSkeleton } from "../components/chart-skeleton";
-import { DateRangeLabel } from "@/features/dashboard/shared/components/date-range-label";
+import { DateRangeField } from "@/components/ui/date-range-field";
 import { todayLocalISO } from "@/lib/utils/date-range";
 
 const RevenueTrendChart = dynamic(
@@ -207,33 +206,17 @@ export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
       {/* Date range */}
       <div className="flex flex-wrap gap-4">
         <div className="space-y-1">
-          <Label htmlFor="analytics-from">{t("common.datePicker.from")}</Label>
-          <Input
-            id="analytics-from"
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="w-40"
+          <Label htmlFor="analytics-date-range">{t("common.datePicker.dateRange")}</Label>
+          <DateRangeField
+            id="analytics-date-range"
+            from={from}
+            to={to}
+            onChange={(nextFrom, nextTo) => {
+              setFrom(nextFrom);
+              setTo(nextTo);
+            }}
           />
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="analytics-to">{t("common.datePicker.to")}</Label>
-          <Input
-            id="analytics-to"
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="w-40"
-          />
-        </div>
-        <DateRangeLabel
-          from={from}
-          to={to}
-          onChange={(nextFrom, nextTo) => {
-            setFrom(nextFrom);
-            setTo(nextTo);
-          }}
-        />
       </div>
 
       {isLoading ? (

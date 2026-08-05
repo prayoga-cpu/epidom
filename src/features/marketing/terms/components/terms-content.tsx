@@ -14,9 +14,10 @@ const SECTIONS = [
   { id: "s8", key: "section8" },
   { id: "s9", key: "section9" },
   { id: "s10", key: "section10" },
+  { id: "s11", key: "section11" },
 ] as const;
 
-const LIST_SECTIONS = new Set(["section3", "section4", "section5"]);
+const LIST_SECTIONS = new Set(["section3", "section4", "section5", "section11"]);
 
 export function TermsContent() {
   const { t } = useI18n();

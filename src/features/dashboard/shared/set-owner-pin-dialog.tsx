@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useSetOwnerPin } from "./hooks/use-owner-pin";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface SetOwnerPinDialogProps {
   open: boolean;
@@ -21,13 +22,16 @@ interface SetOwnerPinDialogProps {
 export function SetOwnerPinDialog({
   open,
   onOpenChange,
-  title = "Set Owner PIN",
-  description = "This PIN protects switching a shared device back to your Owner account once staff can log in.",
+  title,
+  description,
   onSuccess,
 }: SetOwnerPinDialogProps) {
+  const { t } = useI18n();
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const setOwnerPin = useSetOwnerPin();
+  const resolvedTitle = title ?? t("pages.ownerPinSetTitle");
+  const resolvedDescription = description ?? t("pages.ownerPinSetDesc");
 
   const reset = () => {
     setPin("");
@@ -36,21 +40,21 @@ export function SetOwnerPinDialog({
 
   const handleSave = async () => {
     if (pin.length !== 4) {
-      toast.error("PIN must be exactly 4 digits");
+      toast.error(t("pages.staffPinLengthError"));
       return;
     }
     if (pin !== confirmPin) {
-      toast.error("PINs do not match");
+      toast.error(t("pages.ownerPinMismatch"));
       return;
     }
     try {
       await setOwnerPin.mutateAsync(pin);
-      toast.success("Owner PIN set");
+      toast.success(t("pages.ownerPinSet"));
       reset();
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to set PIN");
+      toast.error(err instanceof Error ? err.message : t("pages.ownerPinSetFailed"));
     }
   };
 
@@ -63,14 +67,14 @@ export function SetOwnerPinDialog({
       }}
     >
       <FormDialogLayout
-        title={title}
-        description={description}
+        title={resolvedTitle}
+        description={resolvedDescription}
         footer={
           <>
             <FormDialogFooter
               formId="set-owner-pin-form"
               onCancel={() => onOpenChange(false)}
-              submitText="Save PIN"
+              submitText={t("pages.ownerPinSavePin")}
               isPending={setOwnerPin.isPending}
               variant="full-width"
             />
@@ -86,23 +90,23 @@ export function SetOwnerPinDialog({
           className="space-y-4"
         >
           <div className="space-y-1">
-            <Label>New PIN</Label>
+            <Label>{t("pages.staffNewPin")}</Label>
             <Input
               type="password"
               inputMode="numeric"
               maxLength={4}
-              placeholder="4-digit PIN"
+              placeholder={t("pages.staffPinPlaceholder")}
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
             />
           </div>
           <div className="space-y-1">
-            <Label>Confirm PIN</Label>
+            <Label>{t("pages.ownerPinConfirmLabel")}</Label>
             <Input
               type="password"
               inputMode="numeric"
               maxLength={4}
-              placeholder="Re-enter PIN"
+              placeholder={t("pages.ownerPinConfirmPlaceholder")}
               value={confirmPin}
               onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
             />

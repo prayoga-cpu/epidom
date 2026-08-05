@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { I18nProvider } from "@/components/lang/i18n-provider";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,16 @@ const makeReservation = (overrides = {}) => ({
   ...overrides,
 });
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function renderList(storeId = "store-1") {
+  return render(
+    <I18nProvider>
+      <ReservationList storeId={storeId} />
+    </I18nProvider>
+  );
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("ReservationList", () => {
@@ -63,19 +74,19 @@ describe("ReservationList", () => {
 
   it("renders empty state when data is undefined", () => {
     mockQueryData.mockReturnValue(undefined);
-    render(<ReservationList storeId="store-1" />);
+    renderList();
     // With undefined data, reservations defaults to [] → empty state shown
     expect(screen.getByText("No reservations found.")).toBeTruthy();
   });
 
   it("renders empty state when no reservations", () => {
     mockQueryData.mockReturnValue({ reservations: [] });
-    render(<ReservationList storeId="store-1" />);
+    renderList();
     expect(screen.getByText("No reservations found.")).toBeTruthy();
   });
 
   it("renders guest name and status badge", () => {
-    render(<ReservationList storeId="store-1" />);
+    renderList();
     expect(screen.getByText("Alice")).toBeTruthy();
     expect(screen.getByText("Pending")).toBeTruthy();
   });
@@ -87,7 +98,7 @@ describe("ReservationList", () => {
         makeReservation({ id: "r2", status: "PENDING" }),
       ],
     });
-    render(<ReservationList storeId="store-1" />);
+    renderList();
     expect(screen.getByText("2 pending")).toBeTruthy();
   });
 
@@ -98,7 +109,7 @@ describe("ReservationList", () => {
         makeReservation({ id: "r2", guestName: "Bob", status: "CONFIRMED" }),
       ],
     });
-    render(<ReservationList storeId="store-1" />);
+    renderList();
     // Each chip shows the count from the full dataset
     expect(screen.getByText("Pending (1)")).toBeTruthy();
     expect(screen.getByText("Confirmed (1)")).toBeTruthy();
@@ -111,7 +122,7 @@ describe("ReservationList", () => {
         makeReservation({ id: "r2", guestName: "Bob" }),
       ],
     });
-    render(<ReservationList storeId="store-1" />);
+    renderList();
     const input = screen.getByPlaceholderText(/search/i);
     fireEvent.change(input, { target: { value: "bob" } });
     expect(screen.queryByText("Alice")).toBeNull();
@@ -133,7 +144,7 @@ describe("ReservationList", () => {
         }),
       ],
     });
-    render(<ReservationList storeId="store-1" />);
+    renderList();
     fireEvent.change(screen.getByPlaceholderText(/search/i), { target: { value: "Table B" } });
     expect(screen.queryByText("Alice")).toBeNull();
     expect(screen.getByText("Bob")).toBeTruthy();
@@ -141,7 +152,7 @@ describe("ReservationList", () => {
 
   it("opens delete dialog and calls delete on confirm", async () => {
     const { apiClient } = await import("@/lib/api/client");
-    render(<ReservationList storeId="store-1" />);
+    renderList();
     const deleteBtn = screen.getByRole("button", { name: "" }); // trash icon btn
     fireEvent.click(deleteBtn);
     const confirmBtn = await screen.findByRole("button", { name: /delete/i });
@@ -152,7 +163,7 @@ describe("ReservationList", () => {
   });
 
   it("refresh button calls refetch", () => {
-    render(<ReservationList storeId="store-1" />);
+    renderList();
     fireEvent.click(screen.getByTitle("Refresh"));
     expect(mockRefetch).toHaveBeenCalled();
   });

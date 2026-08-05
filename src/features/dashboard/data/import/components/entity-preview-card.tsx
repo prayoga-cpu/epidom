@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, Trash2, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EntityType } from "@/lib/ai/import/types";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface EntityPreviewCardProps {
   entityType: EntityType;
@@ -29,59 +30,59 @@ interface EntityPreviewCardProps {
 // Field definitions for each entity type
 const ENTITY_FIELDS: Record<
   EntityType,
-  { key: string; label: string; type: "text" | "number" | "textarea" }[]
+  { key: string; labelKey: string; type: "text" | "number" | "textarea" }[]
 > = {
   material: [
-    { key: "name", label: "Nama", type: "text" },
-    { key: "sku", label: "SKU", type: "text" },
-    { key: "category", label: "Kategori", type: "text" },
-    { key: "unit", label: "Satuan", type: "text" },
-    { key: "unitCost", label: "Harga Beli", type: "number" },
-    { key: "currentStock", label: "Stok", type: "number" },
-    { key: "minStock", label: "Min Stok", type: "number" },
-    { key: "maxStock", label: "Max Stok", type: "number" },
-    { key: "supplierName", label: "Supplier", type: "text" },
-    { key: "notes", label: "Catatan", type: "textarea" },
+    { key: "name", labelKey: "common.name", type: "text" },
+    { key: "sku", labelKey: "common.sku", type: "text" },
+    { key: "category", labelKey: "common.category", type: "text" },
+    { key: "unit", labelKey: "pages.smartImportUnit", type: "text" },
+    { key: "unitCost", labelKey: "pages.smartImportUnitCost", type: "number" },
+    { key: "currentStock", labelKey: "pages.smartImportCurrentStock", type: "number" },
+    { key: "minStock", labelKey: "pages.smartImportMinStock", type: "number" },
+    { key: "maxStock", labelKey: "pages.smartImportMaxStock", type: "number" },
+    { key: "supplierName", labelKey: "pages.smartImportSupplier", type: "text" },
+    { key: "notes", labelKey: "common.notes", type: "textarea" },
   ],
   product: [
-    { key: "name", label: "Nama", type: "text" },
-    { key: "sku", label: "SKU", type: "text" },
-    { key: "category", label: "Kategori", type: "text" },
-    { key: "unit", label: "Satuan", type: "text" },
-    { key: "costPrice", label: "Harga Modal", type: "number" },
-    { key: "sellingPrice", label: "Harga Jual", type: "number" },
-    { key: "currentStock", label: "Stok", type: "number" },
-    { key: "minStock", label: "Min Stok", type: "number" },
-    { key: "maxStock", label: "Max Stok", type: "number" },
-    { key: "notes", label: "Catatan", type: "textarea" },
+    { key: "name", labelKey: "common.name", type: "text" },
+    { key: "sku", labelKey: "common.sku", type: "text" },
+    { key: "category", labelKey: "common.category", type: "text" },
+    { key: "unit", labelKey: "pages.smartImportUnit", type: "text" },
+    { key: "costPrice", labelKey: "pages.smartImportCostPrice", type: "number" },
+    { key: "sellingPrice", labelKey: "pages.smartImportRetailPrice", type: "number" },
+    { key: "currentStock", labelKey: "pages.smartImportCurrentStock", type: "number" },
+    { key: "minStock", labelKey: "pages.smartImportMinStock", type: "number" },
+    { key: "maxStock", labelKey: "pages.smartImportMaxStock", type: "number" },
+    { key: "notes", labelKey: "common.notes", type: "textarea" },
   ],
   recipe: [
-    { key: "name", label: "Nama Resep", type: "text" },
-    { key: "description", label: "Deskripsi", type: "textarea" },
-    { key: "yieldQuantity", label: "Hasil", type: "number" },
-    { key: "yieldUnit", label: "Satuan Hasil", type: "text" },
-    { key: "productionTimeMinutes", label: "Waktu Produksi (menit)", type: "number" },
-    { key: "costPerBatch", label: "Biaya per Batch", type: "number" },
-    { key: "instructions", label: "Instruksi", type: "textarea" },
+    { key: "name", labelKey: "pages.smartImportRecipeName", type: "text" },
+    { key: "description", labelKey: "pages.smartImportDescription", type: "textarea" },
+    { key: "yieldQuantity", labelKey: "pages.smartImportYieldQuantity", type: "number" },
+    { key: "yieldUnit", labelKey: "pages.smartImportYieldUnit", type: "text" },
+    { key: "productionTimeMinutes", labelKey: "pages.smartImportProductionTime", type: "number" },
+    { key: "costPerBatch", labelKey: "pages.entityPreviewCostPerBatch", type: "number" },
+    { key: "instructions", labelKey: "pages.smartImportInstructions", type: "textarea" },
   ],
   supplier: [
-    { key: "name", label: "Nama Supplier", type: "text" },
-    { key: "contactPerson", label: "Kontak Person", type: "text" },
-    { key: "phone", label: "Telepon", type: "text" },
-    { key: "email", label: "Email", type: "text" },
-    { key: "address", label: "Alamat", type: "textarea" },
-    { key: "city", label: "Kota", type: "text" },
-    { key: "country", label: "Negara", type: "text" },
-    { key: "notes", label: "Catatan", type: "textarea" },
+    { key: "name", labelKey: "pages.smartImportSupplierName", type: "text" },
+    { key: "contactPerson", labelKey: "pages.smartImportContactPerson", type: "text" },
+    { key: "phone", labelKey: "common.phone", type: "text" },
+    { key: "email", labelKey: "common.email", type: "text" },
+    { key: "address", labelKey: "common.address", type: "textarea" },
+    { key: "city", labelKey: "pages.smartImportCity", type: "text" },
+    { key: "country", labelKey: "pages.smartImportCountry", type: "text" },
+    { key: "notes", labelKey: "common.notes", type: "textarea" },
   ],
 };
 
 // Display labels for entity types
-const ENTITY_LABELS: Record<EntityType, string> = {
-  material: "Material",
-  product: "Produk",
-  recipe: "Resep",
-  supplier: "Supplier",
+const ENTITY_LABEL_KEYS: Record<EntityType, string> = {
+  material: "common.material",
+  product: "common.product",
+  recipe: "common.recipe",
+  supplier: "pages.entityPreviewSupplierLabel",
 };
 
 export function EntityPreviewCard({
@@ -93,6 +94,7 @@ export function EntityPreviewCard({
   onEdit,
   onRemove,
 }: EntityPreviewCardProps) {
+  const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [editData, setEditData] = useState<Record<string, unknown>>(data);
@@ -179,7 +181,7 @@ export function EntityPreviewCard({
         <div className="grid grid-cols-2 gap-2 text-sm">
           {primaryFields.map((field) => (
             <div key={field.key} className="flex justify-between gap-2">
-              <span className="text-muted-foreground truncate">{field.label}:</span>
+              <span className="text-muted-foreground truncate">{t(field.labelKey)}:</span>
               {isEditing ? (
                 <input
                   type={field.type === "number" ? "number" : "text"}
@@ -206,12 +208,15 @@ export function EntityPreviewCard({
               {isExpanded ? (
                 <>
                   <ChevronUp className="mr-1 h-3 w-3" />
-                  Sembunyikan Detail
+                  {t("pages.entityPreviewHideDetails")}
                 </>
               ) : (
                 <>
                   <ChevronDown className="mr-1 h-3 w-3" />
-                  Lihat Detail ({secondaryFields.length} field lagi)
+                  {t("pages.entityPreviewViewDetails").replace(
+                    "{count}",
+                    String(secondaryFields.length)
+                  )}
                 </>
               )}
             </Button>
@@ -226,7 +231,7 @@ export function EntityPreviewCard({
                       field.type === "textarea" && "col-span-2"
                     )}
                   >
-                    <span className="text-muted-foreground truncate">{field.label}:</span>
+                    <span className="text-muted-foreground truncate">{t(field.labelKey)}:</span>
                     {isEditing ? (
                       field.type === "textarea" ? (
                         <textarea
@@ -260,4 +265,4 @@ export function EntityPreviewCard({
   );
 }
 
-export { ENTITY_FIELDS, ENTITY_LABELS };
+export { ENTITY_FIELDS, ENTITY_LABEL_KEYS };

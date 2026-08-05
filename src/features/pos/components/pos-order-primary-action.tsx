@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
+import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
 import type { PosOrderDisplay } from "../types/pos.types";
 
 interface PosOrderPrimaryActionProps {
@@ -24,11 +26,18 @@ export function PosOrderPrimaryAction({
 }: PosOrderPrimaryActionProps) {
   const { t } = useI18n();
   const updateStatus = useUpdateOrderStatus(storeId);
+  const [showMarkPaid, setShowMarkPaid] = useState(false);
 
-  const handleMarkPaid = async () => {
+  const handleMarkPaid = async ({ paymentMethod, paymentNote }: MarkPaidConfirmData) => {
     try {
-      await updateStatus.mutateAsync({ orderId: order.id, paymentStatus: "PAID" });
+      await updateStatus.mutateAsync({
+        orderId: order.id,
+        paymentStatus: "PAID",
+        paymentMethod,
+        paymentNote,
+      });
       toast.success(t("pos.orderCard.markPaidSuccess"));
+      setShowMarkPaid(false);
     } catch {
       toast.error(t("pos.queue.updateFailed"));
     }
@@ -38,15 +47,24 @@ export function PosOrderPrimaryAction({
   // (see ACTIVE_POS_QUEUE_FILTER) — this is the follow-up action for that.
   if (order.status === "DELIVERED" && order.paymentStatus === "PENDING") {
     return (
-      <Button
-        className={cn("min-w-0", className)}
-        size="sm"
-        variant="outline"
-        disabled={updateStatus.isPending}
-        onClick={handleMarkPaid}
-      >
-        {t("pos.orderCard.markPaid")}
-      </Button>
+      <>
+        <Button
+          className={cn("min-w-0", className)}
+          size="sm"
+          variant="outline"
+          disabled={updateStatus.isPending}
+          onClick={() => setShowMarkPaid(true)}
+        >
+          {t("pos.orderCard.markPaid")}
+        </Button>
+        <MarkPaidDialog
+          open={showMarkPaid}
+          onOpenChange={setShowMarkPaid}
+          onConfirm={handleMarkPaid}
+          isSubmitting={updateStatus.isPending}
+          description={order.orderNumber}
+        />
+      </>
     );
   }
 

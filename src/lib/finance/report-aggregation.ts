@@ -91,6 +91,52 @@ export function bucketItemsByDepartment(items: DepartmentBucketInput[]): Departm
     .sort((a, b) => b.totalRevenue - a.totalRevenue);
 }
 
+export interface WasteBucketInput {
+  reason: string;
+  customReason: string | null;
+  quantity: number | string;
+  totalValue: number | string;
+}
+
+export interface WasteBucket {
+  reason: string;
+  label: string;
+  entryCount: number;
+  totalQuantity: number;
+  totalValue: number;
+}
+
+/**
+ * Buckets waste entries by reason. OTHER entries keep their customReason as
+ * the display label (falling back to "Other" if somehow blank) so distinct
+ * custom reasons don't get silently merged into one bucket, while all
+ * predefined reasons group normally by their enum value.
+ */
+export function bucketWasteByReason(entries: WasteBucketInput[]): WasteBucket[] {
+  const buckets = new Map<string, WasteBucket>();
+
+  for (const entry of entries) {
+    const isOther = entry.reason === "OTHER";
+    const label = isOther ? entry.customReason?.trim() || "Other" : entry.reason;
+    const key = isOther ? `OTHER:${label}` : entry.reason;
+    const bucket = buckets.get(key) ?? {
+      reason: entry.reason,
+      label,
+      entryCount: 0,
+      totalQuantity: 0,
+      totalValue: 0,
+    };
+    bucket.entryCount += 1;
+    bucket.totalQuantity += Number(entry.quantity);
+    bucket.totalValue += Number(entry.totalValue);
+    buckets.set(key, bucket);
+  }
+
+  return Array.from(buckets.values())
+    .map((b) => ({ ...b, totalValue: Math.round(b.totalValue * 100) / 100 }))
+    .sort((a, b) => b.totalValue - a.totalValue);
+}
+
 export interface ShiftGroupInput {
   shiftId: string | null;
   // `{ toString(): string }` (not just `number | string`) so a raw Prisma

@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ImportAnalysisResult, EntityType } from "@/lib/ai/import/types";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface ProcessedEntity {
   id: string;
@@ -51,60 +52,65 @@ interface PreviewStepProps {
   };
 }
 
-const ENTITY_TABS: { key: EntityType; label: string; icon: typeof Package }[] = [
-  { key: "material", label: "Materials", icon: Package },
-  { key: "product", label: "Products", icon: ShoppingCart },
-  { key: "recipe", label: "Recipes", icon: ChefHat },
-  { key: "supplier", label: "Suppliers", icon: Truck },
+const ENTITY_TABS: { key: EntityType; labelKey: string; icon: typeof Package }[] = [
+  { key: "material", labelKey: "pages.smartImportTabMaterials", icon: Package },
+  { key: "product", labelKey: "pages.smartImportTabProducts", icon: ShoppingCart },
+  { key: "recipe", labelKey: "pages.smartImportTabRecipes", icon: ChefHat },
+  { key: "supplier", labelKey: "pages.smartImportTabSuppliers", icon: Truck },
 ];
 
 const ENTITY_COLUMNS: Record<
   EntityType,
-  { key: string; label: string; width?: string; readOnly?: boolean }[]
+  { key: string; labelKey: string; width?: string; readOnly?: boolean }[]
 > = {
   material: [
-    { key: "name", label: "Name", width: "200px" },
-    { key: "sku", label: "SKU", width: "120px" },
-    { key: "category", label: "Category", width: "120px" },
-    { key: "unit", label: "Unit", width: "80px" },
-    { key: "unitCost", label: "Unit Cost", width: "100px" },
-    { key: "currentStock", label: "Current Stock", width: "100px" },
-    { key: "minStock", label: "Min Stock Level", width: "100px" },
-    { key: "maxStock", label: "Max Stock Level", width: "100px" },
-    { key: "description", label: "Description", width: "200px" },
-    { key: "supplierName", label: "Supplier", width: "150px" },
+    { key: "name", labelKey: "common.name", width: "200px" },
+    { key: "sku", labelKey: "common.sku", width: "120px" },
+    { key: "category", labelKey: "common.category", width: "120px" },
+    { key: "unit", labelKey: "pages.smartImportUnit", width: "80px" },
+    { key: "unitCost", labelKey: "pages.smartImportUnitCost", width: "100px" },
+    { key: "currentStock", labelKey: "pages.smartImportCurrentStock", width: "100px" },
+    { key: "minStock", labelKey: "pages.smartImportMinStockLevel", width: "100px" },
+    { key: "maxStock", labelKey: "pages.smartImportMaxStockLevel", width: "100px" },
+    { key: "description", labelKey: "pages.smartImportDescription", width: "200px" },
+    { key: "supplierName", labelKey: "pages.smartImportSupplier", width: "150px" },
   ],
   product: [
-    { key: "name", label: "Name", width: "200px" },
-    { key: "sku", label: "SKU", width: "120px" },
-    { key: "category", label: "Category", width: "120px" },
-    { key: "unit", label: "Unit", width: "80px" },
-    { key: "sellingPrice", label: "Retail Price", width: "100px" },
-    { key: "costPrice", label: "Cost Price", width: "100px" },
-    { key: "currentStock", label: "Current Stock", width: "100px" },
-    { key: "minStock", label: "Min Stock", width: "100px" },
-    { key: "maxStock", label: "Max Stock", width: "100px" },
-    { key: "description", label: "Description", width: "200px" },
+    { key: "name", labelKey: "common.name", width: "200px" },
+    { key: "sku", labelKey: "common.sku", width: "120px" },
+    { key: "category", labelKey: "common.category", width: "120px" },
+    { key: "unit", labelKey: "pages.smartImportUnit", width: "80px" },
+    { key: "sellingPrice", labelKey: "pages.smartImportRetailPrice", width: "100px" },
+    { key: "costPrice", labelKey: "pages.smartImportCostPrice", width: "100px" },
+    { key: "currentStock", labelKey: "pages.smartImportCurrentStock", width: "100px" },
+    { key: "minStock", labelKey: "pages.smartImportMinStock", width: "100px" },
+    { key: "maxStock", labelKey: "pages.smartImportMaxStock", width: "100px" },
+    { key: "description", labelKey: "pages.smartImportDescription", width: "200px" },
   ],
   recipe: [
-    { key: "name", label: "Recipe Name", width: "200px" },
-    { key: "category", label: "Category", width: "120px" },
-    { key: "yieldQuantity", label: "Yield Quantity", width: "100px" },
-    { key: "yieldUnit", label: "Yield Unit", width: "100px" },
-    { key: "productionTimeMinutes", label: "Production Time", width: "100px" },
-    { key: "ingredients_summary", label: "Ingredients (Summary)", width: "300px", readOnly: true },
-    { key: "description", label: "Description", width: "200px" },
-    { key: "instructions", label: "Instructions", width: "300px" },
+    { key: "name", labelKey: "pages.smartImportRecipeName", width: "200px" },
+    { key: "category", labelKey: "common.category", width: "120px" },
+    { key: "yieldQuantity", labelKey: "pages.smartImportYieldQuantity", width: "100px" },
+    { key: "yieldUnit", labelKey: "pages.smartImportYieldUnit", width: "100px" },
+    { key: "productionTimeMinutes", labelKey: "pages.smartImportProductionTime", width: "100px" },
+    {
+      key: "ingredients_summary",
+      labelKey: "pages.smartImportIngredientsSummary",
+      width: "300px",
+      readOnly: true,
+    },
+    { key: "description", labelKey: "pages.smartImportDescription", width: "200px" },
+    { key: "instructions", labelKey: "pages.smartImportInstructions", width: "300px" },
   ],
   supplier: [
-    { key: "name", label: "Supplier Name", width: "200px" },
-    { key: "contactPerson", label: "Contact Person", width: "150px" },
-    { key: "phone", label: "Phone", width: "120px" },
-    { key: "email", label: "Email", width: "180px" },
-    { key: "address", label: "Address", width: "200px" },
-    { key: "city", label: "City", width: "120px" },
-    { key: "country", label: "Country", width: "120px" },
-    { key: "notes", label: "Notes", width: "200px" },
+    { key: "name", labelKey: "pages.smartImportSupplierName", width: "200px" },
+    { key: "contactPerson", labelKey: "pages.smartImportContactPerson", width: "150px" },
+    { key: "phone", labelKey: "common.phone", width: "120px" },
+    { key: "email", labelKey: "common.email", width: "180px" },
+    { key: "address", labelKey: "common.address", width: "200px" },
+    { key: "city", labelKey: "pages.smartImportCity", width: "120px" },
+    { key: "country", labelKey: "pages.smartImportCountry", width: "120px" },
+    { key: "notes", labelKey: "common.notes", width: "200px" },
   ],
 };
 
@@ -264,6 +270,7 @@ function processRawData(rawData: Array<Record<string, string>>): ProcessedEntity
 }
 
 export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewStepProps) {
+  const { t } = useI18n();
   // Initialize View Model
   const [entities, setEntities] = useState<ProcessedEntity[]>(() => processRawData(data));
 
@@ -362,7 +369,7 @@ export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewSt
     return c;
   }, [entities]);
 
-  const firstTab = ENTITY_TABS.find((t) => grouped[t.key].length > 0)?.key || "material";
+  const firstTab = ENTITY_TABS.find((tab) => grouped[tab.key].length > 0)?.key || "material";
 
   return (
     <div className="space-y-4">
@@ -370,10 +377,13 @@ export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewSt
       <div className="bg-muted/50 flex items-center gap-4 rounded-lg p-4 text-sm">
         <div className="flex items-center gap-2 font-medium">
           <Wand2 className="text-primary h-4 w-4" />
-          Import Preview
+          {t("pages.smartImportPreviewLabel")}
         </div>
         <div className="text-muted-foreground">
-          {entities.filter((e) => e.selected).length} items selected
+          {t("pages.smartImportItemsSelected").replace(
+            "{count}",
+            String(entities.filter((e) => e.selected).length)
+          )}
         </div>
       </div>
 
@@ -391,7 +401,7 @@ export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewSt
                 className={cn("gap-2", !hasItems && "opacity-50")}
               >
                 <Icon className="h-4 w-4" />
-                {tab.label}
+                {t(tab.labelKey)}
                 {hasItems && (
                   <Badge variant="secondary" className="text-xs">
                     {count.selected}/{count.total}
@@ -426,7 +436,7 @@ export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewSt
                             style={{ width: col.width }}
                             className="whitespace-nowrap"
                           >
-                            {col.label}
+                            {t(col.labelKey)}
                           </TableHead>
                         ))}
                       </TableRow>
@@ -438,7 +448,7 @@ export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewSt
                             colSpan={cols.length + 1}
                             className="text-muted-foreground h-24 text-center"
                           >
-                            No items
+                            {t("pages.smartImportNoItems")}
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -475,10 +485,16 @@ export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewSt
                 </div>
                 <div className="bg-muted/50 text-muted-foreground flex justify-between border-t p-2 text-xs">
                   <span>
-                    Showing {items.length} {tab.label.toLowerCase()} (Ready to Import)
+                    {t("pages.smartImportShowingReady")
+                      .replace("{count}", String(items.length))
+                      .replace("{type}", t(tab.labelKey).toLowerCase())}
                   </span>
-                  {tab.key === "recipe" && <span>* Ingredients are merged for display</span>}
-                  {tab.key === "supplier" && <span>* Includes auto-generated suppliers</span>}
+                  {tab.key === "recipe" && (
+                    <span>{t("pages.smartImportIngredientsMergedNote")}</span>
+                  )}
+                  {tab.key === "supplier" && (
+                    <span>{t("pages.smartImportAutoSuppliersNote")}</span>
+                  )}
                 </div>
               </div>
             </TabsContent>

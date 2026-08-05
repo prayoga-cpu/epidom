@@ -6,7 +6,6 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -24,15 +23,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { apiClient } from "@/lib/api/client";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateTime } from "@/lib/utils/formatting";
-import { Download } from "lucide-react";
+import { Download, Pencil, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useSortable, sortRows } from "@/features/dashboard/shared/hooks/use-sortable";
 import { SortIcon } from "@/features/dashboard/shared/components/sort-icon";
-import { DateRangeLabel } from "@/features/dashboard/shared/components/date-range-label";
+import { DateRangeField } from "@/components/ui/date-range-field";
 import { todayLocalISO, startOfMonthLocalISO } from "@/lib/utils/date-range";
+import { WasteFormDialog } from "@/features/dashboard/management/waste/waste-form-dialog";
+import {
+  useWasteEntries,
+  useDeleteWasteEntry,
+  type WasteEntryWithRelations,
+} from "@/features/dashboard/management/waste/hooks/use-waste";
 
 interface SummaryData {
   from: string;
@@ -41,6 +56,7 @@ interface SummaryData {
   cogs: number;
   grossProfit: number;
   grossMarginPct: number;
+  wasteLoss: number;
   taxCollected: number;
   serviceCharge: number;
   processingFee: number;
@@ -48,6 +64,14 @@ interface SummaryData {
   netProfit: number;
   orderCount: number;
   buckets: { date: string; revenue: number }[];
+}
+
+interface WasteReasonRow {
+  reason: string;
+  label: string;
+  entryCount: number;
+  totalQuantity: number;
+  totalValue: number;
 }
 
 interface ChannelRow {
@@ -93,6 +117,16 @@ interface ShiftRow {
   isOpen: boolean;
   orderCount: number;
   revenue: number;
+}
+
+interface ScheduleShiftBucketRow {
+  scheduleShiftId: string;
+  name: string;
+  date: string;
+  orderCount: number;
+  revenue: number;
+  color: string | null;
+  staffOnDuty: { staffMemberId: string; name: string; department: string | null }[];
 }
 
 interface StaffOption {
@@ -196,6 +230,32 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
       apiClient.get<{ shifts: ShiftRow[] }>(`${base}/by-shift?${dateParams}${staffParam}`),
   });
 
+  const byScheduleShift = useQuery({
+    queryKey: ["finance-by-schedule-shift", storeId, from, to],
+    queryFn: () =>
+      apiClient.get<{ rows: ScheduleShiftBucketRow[] }>(
+        `${base}/by-schedule-shift?${dateParams}`
+      ),
+  });
+
+  // Waste has no shift/order linkage (v1) — not scoped by staffParam.
+  const wasteByReason = useQuery({
+    queryKey: ["finance-waste", storeId, from, to, "by-reason"],
+    queryFn: () =>
+      apiClient.get<{ reasons: WasteReasonRow[] }>(`${base}/by-waste-reason?${dateParams}`),
+  });
+
+  const wasteEntries = useWasteEntries(storeId, {
+    from: `${from}T00:00:00Z`,
+    to: `${to}T23:59:59Z`,
+    take: 100,
+  });
+
+  const deleteWasteEntry = useDeleteWasteEntry(storeId);
+  const [wasteDialogOpen, setWasteDialogOpen] = useState(false);
+  const [editingWasteEntry, setEditingWasteEntry] = useState<WasteEntryWithRelations | null>(null);
+  const [wasteDeleteTarget, setWasteDeleteTarget] = useState<WasteEntryWithRelations | null>(null);
+
   // Client-side sort, mirroring the pattern in shifts-client.tsx — small
   // enough result sets (a date-range's worth of channels/items/categories/
   // shifts) that sorting the already-fetched rows in the browser is simpler
@@ -259,6 +319,7 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
         [t("pages.financeServiceCharge"), s.serviceCharge],
         [t("pages.financeProcessingFee"), s.processingFee],
         [t("pages.financeNetRevenue"), s.netRevenue],
+        [t("pages.financeWasteLoss"), s.wasteLoss],
         [t("pages.financeNetProfit"), s.netProfit],
       ];
       XLSX.utils.book_append_sheet(
@@ -378,8 +439,72 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
       );
     }
 
+    if (byScheduleShift.data?.rows?.length) {
+      const header = [
+        t("pages.financeScheduleShiftBlock"),
+        t("common.date") || "Date",
+        t("pages.financeOrders"),
+        t("pages.financeRevenue"),
+        t("pages.financeStaffOnDuty"),
+      ];
+      const rows = byScheduleShift.data.rows.map((r) => [
+        r.name,
+        r.date,
+        r.orderCount,
+        r.revenue,
+        r.staffOnDuty.map((s) => s.name).join(", "),
+      ]);
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.aoa_to_sheet([header, ...rows]),
+        t("pages.financeScheduleShiftBlock")
+      );
+    }
+
+    if (wasteEntries.data?.entries?.length) {
+      const header = [
+        t("waste.table.date") || "Date",
+        t("waste.table.item") || "Item",
+        t("waste.table.reason") || "Reason",
+        t("waste.table.quantity") || "Quantity",
+        t("waste.table.unitCost") || "Unit cost",
+        t("waste.table.totalValue") || "Total value",
+        t("waste.table.notes") || "Notes",
+      ];
+      const rows = wasteEntries.data.entries.map((entry) => [
+        formatDateTime(entry.createdAt),
+        entry.material?.name ?? entry.product?.name ?? "—",
+        entry.reason === "OTHER" ? (entry.customReason ?? entry.reason) : entry.reason,
+        entry.quantity,
+        entry.unitCostSnapshot,
+        entry.totalValue,
+        entry.notes ?? "",
+      ]);
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.aoa_to_sheet([header, ...rows]),
+        t("pages.financeWaste") || "Waste"
+      );
+    }
+
     XLSX.writeFile(wb, `finance-report-${from}-${to}.xlsx`);
   }
+
+  const handleEditWaste = (entry: WasteEntryWithRelations) => {
+    setEditingWasteEntry(entry);
+    setWasteDialogOpen(true);
+  };
+
+  const handleDeleteWasteConfirm = async () => {
+    if (!wasteDeleteTarget) return;
+    try {
+      await deleteWasteEntry.mutateAsync(wasteDeleteTarget.id);
+      setWasteDeleteTarget(null);
+    } catch {
+      // Error surfaced via the mutation's own state; keep the dialog open so
+      // the user can retry rather than silently losing their delete intent.
+    }
+  };
 
   const s = summary.data;
 
@@ -402,33 +527,17 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
       {/* Filters */}
       <div className="flex flex-wrap gap-4">
         <div className="space-y-1">
-          <Label htmlFor="from">{t("common.from") ?? "Dari"}</Label>
-          <Input
-            id="from"
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="w-40"
+          <Label htmlFor="finance-date-range">{t("common.datePicker.dateRange")}</Label>
+          <DateRangeField
+            id="finance-date-range"
+            from={from}
+            to={to}
+            onChange={(nextFrom, nextTo) => {
+              setFrom(nextFrom);
+              setTo(nextTo);
+            }}
           />
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="to">{t("common.to") ?? "Sampai"}</Label>
-          <Input
-            id="to"
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="w-40"
-          />
-        </div>
-        <DateRangeLabel
-          from={from}
-          to={to}
-          onChange={(nextFrom, nextTo) => {
-            setFrom(nextFrom);
-            setTo(nextTo);
-          }}
-        />
         <div className="space-y-1">
           <Label>{t("pages.financeStaff")}</Label>
           <Select value={staffId} onValueChange={setStaffId}>
@@ -554,6 +663,26 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
               <p className="text-2xl font-bold">{formatPrice(s.netRevenue)}</p>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                {t("pages.financeWasteLoss")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-red-600">{formatPrice(s.wasteLoss)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                {t("pages.financeNetProfit")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{formatPrice(s.netProfit)}</p>
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -590,7 +719,9 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
           <TabsTrigger value="items">{t("pages.financeTopItems")}</TabsTrigger>
           <TabsTrigger value="category">{t("pages.financeByCategory")}</TabsTrigger>
           <TabsTrigger value="shift">{t("pages.financeByShift")}</TabsTrigger>
+            <TabsTrigger value="scheduleShift">{t("pages.financeScheduleShiftBlock")}</TabsTrigger>
           <TabsTrigger value="daily">{t("pages.financeDaily")}</TabsTrigger>
+          <TabsTrigger value="waste">{t("pages.financeWaste")}</TabsTrigger>
         </TabsList>
 
         {/* Channels tab */}
@@ -1004,6 +1135,70 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
           </div>
         </TabsContent>
 
+        {/* Revenue per named shift-block ("Shift 1", etc.) — a coverage-window
+            report, not a partition: blocks can overlap by design (staggered
+            handover coverage), so totals across rows are NOT expected to sum
+            to the grand total. */}
+        <TabsContent value="scheduleShift">
+          <p className="text-muted-foreground mb-3 text-xs">
+            {t("pages.financeScheduleShiftOverlapNote")}
+          </p>
+          <div className="-mx-4 overflow-x-auto sm:mx-0">
+            <div className="min-w-[640px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("pages.financeScheduleShiftBlock")}</TableHead>
+                    <TableHead>{t("common.date") || "Date"}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeOrders")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeRevenue")}</TableHead>
+                    <TableHead>{t("pages.financeStaffOnDuty")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {byScheduleShift.isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-muted-foreground text-center">
+                        {t("common.loading")}
+                      </TableCell>
+                    </TableRow>
+                  ) : (byScheduleShift.data?.rows.length ?? 0) === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-muted-foreground text-center">
+                        {t("common.noData")}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    byScheduleShift.data!.rows
+                      .filter((r) => r.orderCount > 0)
+                      .map((r, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="flex items-center gap-2 font-medium">
+                            {r.color && (
+                              <span
+                                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: r.color }}
+                              />
+                            )}
+                            {r.name}
+                          </TableCell>
+                          <TableCell>{r.date}</TableCell>
+                          <TableCell className="text-right">{r.orderCount}</TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {formatPrice(r.revenue)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
+                            {r.staffOnDuty.map((s) => s.name).join(", ") || "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </TabsContent>
+
         {/* Daily breakdown tab */}
         <TabsContent value="daily">
           <div className="space-y-3 lg:hidden">
@@ -1050,7 +1245,188 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
             </div>
           </div>
         </TabsContent>
+
+        {/* Waste tab — itemized loss with inline correction (edit/delete) */}
+        <TabsContent value="waste" className="space-y-4">
+          {(wasteByReason.data?.reasons.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {(wasteByReason.data?.reasons ?? []).map((r) => (
+                <Badge key={r.reason + r.label} variant="outline" className="gap-1.5 py-1.5">
+                  <span>{r.label}</span>
+                  <span className="text-muted-foreground">{formatPrice(r.totalValue)}</span>
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-3 lg:hidden">
+            {wasteEntries.isLoading ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">Loading...</p>
+            ) : (wasteEntries.data?.entries.length ?? 0) === 0 ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">
+                {t("waste.empty") || "No waste recorded for this period"}
+              </p>
+            ) : (
+              (wasteEntries.data?.entries ?? []).map((entry) => (
+                <div key={entry.id} className="bg-muted/50 space-y-2 rounded-lg border p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">
+                      {entry.material?.name ?? entry.product?.name ?? "—"}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {entry.reason === "OTHER" ? (entry.customReason ?? entry.reason) : entry.reason}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{t("waste.table.quantity")}</span>
+                    <span>
+                      {entry.quantity} {entry.unit}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span className="text-muted-foreground">{t("waste.table.totalValue")}</span>
+                    <span>{formatPrice(entry.totalValue)}</span>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button variant="outline" size="sm" onClick={() => handleEditWaste(entry)}>
+                      <Pencil className="mr-1 h-3.5 w-3.5" />
+                      {t("waste.actions.edit")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={() => setWasteDeleteTarget(entry)}
+                    >
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />
+                      {t("waste.actions.delete")}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
+            <div className="min-w-[760px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("waste.table.date")}</TableHead>
+                    <TableHead>{t("waste.table.item")}</TableHead>
+                    <TableHead>{t("waste.table.reason")}</TableHead>
+                    <TableHead className="text-right">{t("waste.table.quantity")}</TableHead>
+                    <TableHead className="text-right">{t("waste.table.unitCost")}</TableHead>
+                    <TableHead className="text-right">{t("waste.table.totalValue")}</TableHead>
+                    <TableHead className="text-right">{t("waste.table.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {wasteEntries.isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : (wasteEntries.data?.entries.length ?? 0) === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
+                        {t("waste.empty") || "No waste recorded for this period"}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    (wasteEntries.data?.entries ?? []).map((entry) => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {formatDateTime(entry.createdAt)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {entry.material?.name ?? entry.product?.name ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {entry.reason === "OTHER"
+                              ? (entry.customReason ?? entry.reason)
+                              : entry.reason}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {entry.quantity} {entry.unit}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatPrice(entry.unitCostSnapshot)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatPrice(entry.totalValue)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEditWaste(entry)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive h-8 w-8"
+                              onClick={() => setWasteDeleteTarget(entry)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
+
+      <WasteFormDialog
+        open={wasteDialogOpen}
+        onOpenChange={(open) => {
+          setWasteDialogOpen(open);
+          if (!open) setEditingWasteEntry(null);
+        }}
+        storeId={storeId}
+        mode="edit"
+        wasteEntry={editingWasteEntry}
+      />
+
+      <AlertDialog
+        open={!!wasteDeleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setWasteDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("waste.deleteConfirm.title") || "Delete waste entry?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("waste.deleteConfirm.description") ||
+                "This restores the recorded quantity back to current stock and removes the entry."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteWasteEntry.isPending}>
+              {t("common.actions.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteWasteConfirm}
+              disabled={deleteWasteEntry.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("waste.actions.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

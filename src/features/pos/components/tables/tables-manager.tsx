@@ -192,7 +192,7 @@ export function TablesManager({ storeId }: TablesManagerProps) {
       queryClient.invalidateQueries({ queryKey: ["reservations", storeId] });
       queryClient.invalidateQueries({ queryKey: ["tables", storeId] });
     },
-    onError: () => toast.error("Failed to update reservation"),
+    onError: () => toast.error(t("pos.tables.reservationUpdateFailed")),
   });
 
   const deleteReservationMutation = useMutation({
@@ -200,9 +200,9 @@ export function TablesManager({ storeId }: TablesManagerProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservations", storeId] });
       queryClient.invalidateQueries({ queryKey: ["tables", storeId] });
-      toast.success("Reservation removed");
+      toast.success(t("pos.tables.reservationRemoved"));
     },
-    onError: () => toast.error("Failed to remove reservation"),
+    onError: () => toast.error(t("pos.tables.reservationRemoveFailed")),
   });
 
   const handleStatusChange = async (table: TableData, status: TableStatus) => {
@@ -222,10 +222,12 @@ export function TablesManager({ storeId }: TablesManagerProps) {
       });
       queryClient.invalidateQueries({ queryKey: ["tables", storeId] });
       toast.success(
-        enabled ? `${table.label} accepts reservations` : `${table.label} reservations disabled`
+        `${table.label} ${
+          enabled ? t("pos.tables.acceptsReservations") : t("pos.tables.reservationsDisabled")
+        }`
       );
     } catch {
-      toast.error("Failed to update reservation setting");
+      toast.error(t("pos.tables.reservationSettingUpdateFailed"));
     }
   };
 
@@ -391,10 +393,12 @@ export function TablesManager({ storeId }: TablesManagerProps) {
                       checked={table.reservationEnabled}
                       onCheckedChange={(v) => handleReservationToggle(table, v)}
                       className="scale-75"
-                      aria-label="Enable reservations"
+                      aria-label={t("pos.tables.enableReservationsAriaLabel")}
                     />
                     <span className="text-muted-foreground truncate text-[10px]">
-                      {table.reservationEnabled ? "Reservable" : "No reserv."}
+                      {table.reservationEnabled
+                        ? t("pos.tables.reservableBadge")
+                        : t("pos.tables.noReservationBadge")}
                     </span>
                   </div>
                   {table.reservationEnabled && (

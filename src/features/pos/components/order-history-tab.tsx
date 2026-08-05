@@ -14,6 +14,8 @@ import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosStaffList } from "../hooks/use-pos-staff-list";
 import { usePersistedState } from "../hooks/use-persisted-state";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
+import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
+import type { SettlePaymentMethod } from "../types/pos.types";
 import {
   DATE_RANGE_PRESETS,
   resolveDateRangePreset,
@@ -28,7 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { DateRangeField } from "@/components/ui/date-range-field";
 import {
   Select,
   SelectContent,
@@ -276,6 +278,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   // --- Bulk selection & actions -------------------------------------------
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [showBulkMarkPaid, setShowBulkMarkPaid] = useState(false);
   const updateStatus = useUpdateOrderStatus(storeId);
   const { confirm, confirmDialog: bulkConfirmDialog } = useConfirm();
 
@@ -304,7 +307,15 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     setSelectedIds(checked ? new Set(orders.map((o) => o.id)) : new Set());
   };
 
-  async function runBulkUpdate(ids: string[], patch: { status?: string; paymentStatus?: "PAID" }) {
+  async function runBulkUpdate(
+    ids: string[],
+    patch: {
+      status?: string;
+      paymentStatus?: "PAID";
+      paymentMethod?: SettlePaymentMethod;
+      paymentNote?: string;
+    }
+  ) {
     const results = await Promise.allSettled(
       ids.map((orderId) => updateStatus.mutateAsync({ orderId, ...patch }))
     );
@@ -312,21 +323,19 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     return { succeeded: ids.length - failed, failed };
   }
 
-  async function handleBulkMarkPaid() {
+  function handleBulkMarkPaid() {
     if (markPaidIds.length === 0 || isBulkProcessing) return;
-    const ok = await confirm({
-      title: t("pos.history.bulk.markPaidConfirmTitle"),
-      description: t("pos.history.bulk.markPaidConfirmDesc").replace(
-        "{n}",
-        String(markPaidIds.length)
-      ),
-      confirmText: t("pos.history.bulk.markPaid"),
-    });
-    if (!ok) return;
+    setShowBulkMarkPaid(true);
+  }
 
+  async function handleConfirmBulkMarkPaid({ paymentMethod, paymentNote }: MarkPaidConfirmData) {
     setIsBulkProcessing(true);
     try {
-      const { succeeded, failed } = await runBulkUpdate(markPaidIds, { paymentStatus: "PAID" });
+      const { succeeded, failed } = await runBulkUpdate(markPaidIds, {
+        paymentStatus: "PAID",
+        paymentMethod,
+        paymentNote,
+      });
       if (failed === 0) {
         toast.success(t("pos.history.bulk.markPaidSuccess").replace("{n}", String(succeeded)));
       } else {
@@ -338,6 +347,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
         );
       }
       setSelectedIds(new Set());
+      setShowBulkMarkPaid(false);
     } finally {
       setIsBulkProcessing(false);
     }
@@ -548,32 +558,14 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
           </RemovableFilter>
         )}
         {activeFilterKeys.includes("dateRange") && datePreset === "custom" && (
-          <div className="flex gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="history-from" className="text-xs">
-                {t("pos.history.from")}
-              </Label>
-              <Input
-                id="history-from"
-                type="date"
-                value={from}
-                onChange={(e) => patchFilters({ from: e.target.value })}
-                className="w-36"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="history-to" className="text-xs">
-                {t("pos.history.to")}
-              </Label>
-              <Input
-                id="history-to"
-                type="date"
-                value={to}
-                onChange={(e) => patchFilters({ to: e.target.value })}
-                className="w-36"
-              />
-            </div>
-          </div>
+          <DateRangeField
+            id="history-date-range"
+            from={from}
+            to={to}
+            presets={[]}
+            className="w-full lg:w-64"
+            onChange={(nextFrom, nextTo) => patchFilters({ from: nextFrom, to: nextTo })}
+          />
         )}
         <AddFilterMenu
           options={HISTORY_FILTER_KEYS.filter((k) => !activeFilterKeys.includes(k)).map((k) => ({
@@ -747,6 +739,16 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
         }}
       />
       {bulkConfirmDialog}
+      <MarkPaidDialog
+        open={showBulkMarkPaid}
+        onOpenChange={setShowBulkMarkPaid}
+        onConfirm={handleConfirmBulkMarkPaid}
+        isSubmitting={isBulkProcessing}
+        description={t("pos.history.bulk.markPaidConfirmDesc").replace(
+          "{n}",
+          String(markPaidIds.length)
+        )}
+      />
     </div>
   );
 }

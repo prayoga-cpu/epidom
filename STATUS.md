@@ -6,6 +6,161 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-08-06 — Pricing Page Accuracy Audit
+
+Cross-referenced every claim on `/pricing` (`pricing-cards.tsx` + `feature-comparison.tsx`) against actual plan gating (`src/lib/plans/entitlements.ts`, every `requirePlan()` call under `(dashboard)/*/layout.tsx`, `stripe.config.ts`'s `PLAN_LIMITS`, and the Prisma schema) rather than trusting the existing copy or `docs/FEATURES.md` (found to itself be stale — still describes multi-outlet as Phase-5/Enterprise-only, and AI import/production batches as feature-flagged, none of which is true anymore; left un-edited, out of scope for this pass, flagged for a follow-up).
+
+- [x] Removed 5 fictional feature claims with no code behind them: "Daily P&L emailed to owner" (no scheduled email exists — `src/lib/inngest/functions/` has no such cron), "Allergen + nutrition labels" (no schema field), "Wholesale order portal" (no B2B ordering surface, only a cost-margin display hint), "SSO" (Better Auth only has Google OAuth, no SAML/OIDC), "API + Zapier + webhooks" (no public API/webhook surface — only inbound provider webhooks like Xendit's).
+- [x] Fixed a genuine self-contradiction: the Operations card claimed a "multi-outlet dashboard" while the comparison table's `cmp_multi` marked the same-labeled row Enterprise-only. Root cause: two different real things share the ambiguous label "multi-outlet dashboard" — Operations gets **unlimited outlets** (`stripe.config.ts` `maxStores: Infinity`), but the **cross-store owner roll-up view** (`/owner`, `src/app/api/owner/summary/route.ts:33` hard-checks `plan === ENTERPRISE`) really is Enterprise-exclusive. Reworded both so they no longer collide: Operations → "Unlimited outlets", Enterprise → "Multi-outlet owner roll-up dashboard" / comparison row → "Owner roll-up dashboard".
+- [x] Also caught (beyond the original audit) that Enterprise's "Centralised recipe library" claim doesn't exist — `Recipe.storeId` in `prisma/schema.prisma` shows recipes are strictly per-store with no cross-store sharing mechanism, consistent with AGENTS.md's no-cross-tenant-query rule. Removed.
+- [x] Added the 3 real, shipped-but-previously-unadvertised Operations-tier features from the concurrent scheduling/attendance/waste session: shift scheduling & rosters (`/schedule`), selfie + geolocation attendance (`/attendance`), waste & loss tracking (Management → Edit Stock → Record Waste). Added a reservations mention to the POS tier (`tableReservations: POS` in entitlements.ts was previously unreflected in any pricing copy).
+- [x] Deleted 4 dead i18n strings (`t1f7`, `t1f8`, `t2f7`, `t2f8`) — never rendered (`FEAT_COUNTS = [6,6,8,...]` caps those tiers below where they'd appear) and factually wrong for their tier had they rendered (claimed Recipes/Multi-outlet at Free/POS, both actually Operations+).
+- [x] Trimmed Enterprise from 9 to 7 card bullets (`FEAT_COUNTS` `9`→`7`) rather than backfill the two removed fictional slots with more invented claims — added one honest support-tier bullet ("Priority support & onboarding", consistent with the existing unverifiable-but-standard "Dedicated account manager"/"Custom SLAs" promises already on that card).
+- [x] Edited `en.ts` and `id.ts` only, per AGENTS.md's i18n rule — `fr.ts` (deprecated) left untouched; its now-orphaned old strings are harmless since `translations: Record<Lang, any>` has no cross-locale structural type check.
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 575 passing
+- `pnpm build` (`next build` directly, since the wrapper script's `sync-changelog.ts` needs `DATABASE_URL` in-process and this shell doesn't auto-load `.env` the way Prisma CLI/Next.js do) — 211 routes, 0 errors, 0 warnings
+
+---
+
+## ✅ 2026-08-06 — Unified Date-Range Picker (`DateRangeField`)
+
+A previous concurrent session's log (below, "Schedule/Attendance Follow-ups") already referenced adopting a repo-wide `DateRangeField` component "another concurrent session was introducing at the same time" — that component never actually landed in this working tree (no such file existed, and Attendance still had the plain From/To inputs). This session builds it for real and applies it everywhere a date-range toggle existed.
+
+- [x] New `src/components/ui/date-range-field.tsx` — a single trigger button + popover containing quick-pick presets (Today, Yesterday, Last 7/30 Days, This Month) and one calendar month with range highlighting, replacing the old two-`<Input type="date">` + separate preset-dropdown pattern. Built on the existing `Calendar`/`Popover` primitives (`react-day-picker`), with a plain `from`/`to` ISO-string API matching how every call site already stored its filter state.
+- [x] Applied to all five date-range surfaces: Finance report, Dashboard Analytics, Attendance, Owner Dashboard, and POS Order History (which keeps its own outer "All time/Today/.../Last Month" preset selector and uses `DateRangeField` with `presets={[]}` for just its "Custom" step, avoiding duplicate preset UIs).
+- [x] Removed the now-unused `DateRangeLabel` component (`src/features/dashboard/shared/components/date-range-label.tsx`) — its preset logic (`describeDateRange`/`resolveDateRangePreset`/`DATE_RANGE_PRESETS` in `src/lib/utils/date-range.ts`) is reused inside `DateRangeField` instead.
+- [x] Added `common.datePicker.dateRange` label key to `id.ts`/`en.ts` (not `fr.ts`, per AGENTS.md).
+- [x] New unit test suite `src/__tests__/components/date-range-field.test.tsx` (6 tests: placeholder state, preset-label recognition, custom-range formatting, preset-click commit, hiding presets, two-step calendar commit).
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 575 passing
+
+---
+
+## ✅ 2026-08-06 — Schedule/Attendance Follow-ups (day off, print/PDF, date presets, i18n fix)
+
+Live-usage feedback on the Staff Scheduling/Attendance work below, addressed in the same session.
+
+- [x] **Schedule: "Today" button** jumps the week grid back to the current week (disabled when already viewing it).
+- [x] **Schedule: day-off marking.** New `StaffSchedule.isDayOff` (migration `20260805230007_add_staff_schedule_day_off`), mutually exclusive with the block/custom-time choice (Zod refine covers all three states). Shown as a distinct "Day Off" chip in the week grid and in "My Schedule."
+- [x] **Schedule: day detail view** — clicking a date-column header opens a read-only dialog listing every staff member's entry for that day (department/notes included, unlike the cramped grid cell).
+- [x] **Schedule + Attendance: print/PDF export.** New shared `PrintReportShell` (`src/features/dashboard/shared/components/print-report-shell.tsx`), factored out of the existing `OrderHistoryPrintView` so every report gets the same Epidom-branded header, diagonal watermark, and repeating footer rather than a one-off look — this is also the answer to "check each env has it": one shared shell, not per-feature copies. New standalone print routes `/store/[storeId]/schedule/print` and `/store/[storeId]/attendance/print` (outside the `(dashboard)` route group, same convention as `pos/orders/print`), each auto-triggering the browser print dialog — "export to PDF" is Print → Save as PDF, matching the existing convention rather than a new jsPDF pipeline. Publishing a week now opens the print view automatically; Attendance's print button is tab-aware (exports whichever of Log/Hours is active).
+- [x] **Attendance: date-range presets.** Replaced the plain From/To inputs with `DateRangeField` (a repo-wide component another concurrent session was introducing at the same time — adopted here for consistency rather than keeping the older `DateRangeLabel` pattern).
+- [x] **Overtime threshold input changed from raw minutes to `HH:mm`** (`<input type="time">`), converted to minutes only at the API boundary — avoids the mental-math of typing "480" for 8 hours.
+- [x] **Fixed i18n bug:** `pages.noData` rendered as literal text "pages.noData" on Attendance — the key only existed nested at `pages.analytics.noData`, not the top-level `pages.noData` the new page called. Added the correct top-level key to both `id.ts`/`en.ts`, then wrote a throwaway Vitest audit (import both locale modules, resolve every dotted key path actually used by the new components, assert each is a string) to catch any other silent misses — found exactly this one, confirmed all ~99 other keys used by the staff-scheduling/attendance feature resolve correctly in both languages.
+
+### Note on concurrent editing
+This session and the "Order-Linked Production" session below were both active on this repo at the same time, editing some of the same shared files (`schema.prisma`, `finance-client.tsx`, `CHANGELOG.md`, `STATUS.md`, `package.json`). No conflicts — Prisma migrations, locale files, and this log all merged cleanly; `pnpm type-check`/`lint`/`test` re-verified after each round of concurrent changes landed.
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 569 passing
+
+---
+
+## ✅ 2026-08-06 — Order-Linked Production (KDS ↔ Production Batches)
+
+Grew out of a question about whether Management's "Production"/"History" tabs duplicate Kitchen & Bar (KDS)'s order-prep tracking. Research found they didn't overlap — KDS tracks live `OrderItemStatus` per order, `ProductionBatch` tracks proactive Recipe→Material→Product manufacturing runs, completely disconnected at the code level (confirmed via `stock-deduction.service.ts`, which never touches `ProductionBatch`). The real ask, after clarification, was to connect them.
+
+### Production / POS
+- [x] **Auto-drafted production batches, triggered by real order demand.** New `ProductionBatch.triggerType` (`MANUAL` | `ORDER_SHORTFALL`) and `OrderItem.productionBatchId` (migration bundled into `20260805221704_add_staff_scheduling_and_attendance` — see note below). When an order needs more of a recipe-linked product than `Product.currentStock` covers, `ProductionBatchService.draftShortfallBatchesForOrder()` creates an `IN_PROGRESS`/`ORDER_SHORTFALL` batch sized to the shortfall and links it to the triggering `OrderItem`(s) — called at the moment an order is confirmed and enters the kitchen/bar queue (POS cash/pay-later creation, POS finalize, and the Xendit webhook — the last one specifically *before* `deductStockForOrder`, since it runs `deductStockForOrder` immediately on payment unlike the cash flow, and shortfall must be computed against pre-deduction stock or it double-counts).
+- [x] **One action closes both.** `completeProduction()` now branches on `triggerType`: `MANUAL` batches behave exactly as before (PRODUCTION_IN movement, increments `Product.currentStock`); `ORDER_SHORTFALL` batches skip that (the order's own SALE deduction already covers the full quantity — this would otherwise double-count) and instead flip every linked `OrderItem` to `READY` and run the existing order-auto-advance check (extracted into a shared `advanceOrderToReadyIfAllItemsReady()` helper used by both the KDS item-status route and batch completion). The KDS item-status route (`PATCH .../items/[itemId]`) delegates to batch completion when an item is linked, so tapping the ticket to Ready on the KDS board *is* completing the batch — no separate step.
+- [x] **KDS board shows a "making" indicator** on any ticket linked to an auto-drafted batch, so kitchen staff know why it's not a grab-from-the-case item.
+- [x] **Production History table shows a Source badge** — "Manual" or "From Order #…" (linked order number) — per batch, so the connection is visible without merging the UI.
+- [x] `cancelProduction()` now forces `restoreMaterials: false` for `ORDER_SHORTFALL` batches (they never deducted materials in the first place — see above).
+- [ ] **Deferred**: merging the "Production" and "History" tabs into one "Batches" tab in Management, as originally discussed — scoped down given the size/regression-risk of rewriting the existing paginated/filterable/exported History table; the Source badge above delivers the visible connection without that rewrite. Worth doing as a follow-up.
+
+### Known v1 limitations
+- One batch per shortfall-triggering order — near-simultaneous orders for the same out-of-stock product each draft their own batch rather than being consolidated (batch sprawl during a rush is possible).
+- Order cancellation doesn't auto-cancel a still-open linked shortfall batch (not addressed; `reverseStockForOrder` correctly leaves these batches alone regardless, since it only reads `SALE` movements and a shortfall batch never wrote one).
+- Only the three primary order-confirmation paths trigger the auto-draft (see above) — aggregator-imported orders and any other less common entry points don't yet.
+
+### Migration note
+- The schema for this feature (`ProductionTriggerType` enum, `ProductionBatch.triggerType`, `OrderItem.productionBatchId`) ended up bundled into migration `20260805221704_add_staff_scheduling_and_attendance` rather than its own — a concurrent `prisma migrate dev` run (for the Staff Scheduling feature above) diffed against this session's in-progress `schema.prisma` edits on the same shared file and captured both at once. Verified via direct DB inspection that both migrations' columns/enums are present and `prisma migrate status` reports clean — no action needed, just noting the attribution for anyone tracing history later.
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 568/569 passing; the 1 failure (`sidebar.test.tsx`, a timeout) is pre-existing full-suite flakiness unrelated to this change — passes 10/10 in isolation.
+
+---
+
+## ✅ 2026-08-05 — Staff Scheduling, Hours & Overtime, Shift-Block Reports, Selfie Attendance
+
+Implements the full "Proposed addition" scope from `docs/roadmap.md` (now moved to shipped — `docs/roadmap.md` and `docs/FEATURES.md` updated accordingly), across all 3 planned phases in one pass.
+
+### Schema (migration `20260805221704_add_staff_scheduling_and_attendance`)
+- [x] New parallel domain, deliberately not touching the existing `Shift` model (a POS cash-drawer till session, cashier-only): `ScheduleShift` (reusable named time-block templates, e.g. "Shift 1" 08:00–16:00), `StaffSchedule` (roster: staff × date × block or custom time, `DRAFT`/`PUBLISHED`), `AttendanceRecord` (`CLOCK_IN`/`CLOCK_OUT`/`ABSENCE` events with selfie URL + lat/lng + reverse-geocoded label). New `Store.standardWorkMinutesPerDay` (default 480) drives the overtime threshold.
+- [x] **Note:** this migration's SQL also includes a pre-existing, unrelated, already-uncommitted schema change found in the working tree at the start of this session — `ProductionBatch.triggerType` (`ProductionTriggerType` enum) and `OrderItem.productionBatchId` — not implemented by this work. Prisma migrations diff against live DB state, not git history, so it was swept in as part of the same `migrate dev` run. Flagging for whoever owns that feature to verify it end-to-end.
+
+### Attendance (selfie + geolocation clock-in/out)
+- [x] New "Clock In / Out" action in the account menu (`nav-user.tsx`), reachable by any staff persona regardless of `allowedPages` — same shelf as `StaffSwitcherDialog`. Flow: pick staff → PIN → capture selfie (`getUserMedia`, falls back to `<input capture="user">`) or report an absence with a reason → best-effort `navigator.geolocation` → submit.
+- [x] 7 new API routes under `/api/stores/[id]/attendance/*`: `clock-in`, `clock-out`, `absence`, `status`, the manager audit list (`GET /attendance`), a manager-only correction endpoint (`[attendanceId]/close` — appends a new `CLOCK_OUT` rather than editing history, same principle as the Waste feature's compensating entries), and `settings` (the overtime threshold).
+- [x] Reverse geocoding (`src/lib/attendance/geocode.ts`) calls OpenStreetMap Nominatim server-side, fails silently to `null` on any error/timeout — never blocks a clock-in. No map-rendering library anywhere (AGENTS.md §7) — the audit view shows raw coordinates/label plus an external Google Maps link only.
+- [x] New `/attendance` page (Owner/Manager only, like `/shifts`) with a "Log" tab (filterable by staff + date range) and an "Hours & Overtime" tab.
+
+### Scheduling
+- [x] New `/schedule` page: managers get a week-grid roster builder (pick a named block or custom time per staff/day, department tag, publish-week action, "Manage Shift Blocks" CRUD dialog); Cashier/Kitchen roles get a read-only "My Schedule" list of their own published entries only (enforced server-side, not just hidden client-side).
+- [x] 8 new API routes for `schedule-shifts` and `staff-schedules` (CRUD + bulk create + publish).
+
+### Hours & Overtime
+- [x] `src/lib/attendance/hours-aggregation.ts`: pure function pairing `CLOCK_IN`/`CLOCK_OUT` events into completed workdays, attributing a pair to the day its clock-in happened (so a 20:00→04:00 shift needs zero cross-midnight special-casing), flags missing clock-outs/orphan clock-outs instead of estimating, splits regular/overtime minutes against `standardWorkMinutesPerDay`. 10 unit tests covering same-day, cross-midnight, double clock-in, orphan, still-open, absence, split-shift, and the overtime boundary.
+
+### Shift-Block Finance Report
+- [x] New Finance tab "By Shift Block" (`/finance/by-schedule-shift`) — revenue/order-count per named block per day, joined with who was rostered on. Named blocks can overlap by design (handover coverage), so this is a coverage-window query, not a partition — verified overlapping-block double-counting is intentional via `schedule-shift-bucketing.test.ts`, and disclosed explicitly in the UI copy so it doesn't read as a bug.
+- [x] **Known v1 limitation:** "who was rostered on" is informational only — true order-level revenue attribution to a specific person only exists for cashiers via the existing `Shift.staffMemberId` (`/finance/by-shift?staffId=`). Extending that to every role would need a new `Order.servedByStaffMemberId` populated at POS checkout — a separate, larger scope decision, not included here.
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 561 passing (44 new: `attendance.schemas.test.ts`, `scheduling.schemas.test.ts`, `hours-aggregation.test.ts`, `geocode.test.ts`, `schedule-shift-bucketing.test.ts`)
+
+---
+
+## ✅ 2026-08-05 — Waste Management (record, track loss on Finance report, manual correction)
+
+### Management / Finance
+- [x] **Record wasted Materials or Products** from Management → Edit Stock ("Record Waste" — header button + per-item quick action) via a new `WasteEntry` model (migration `20260805143640_add_waste_entries`) with a `WasteReason` enum (`EXPIRED`, `DAMAGED`, `SPOILED`, `OVERPRODUCTION`, `QUALITY_CONTROL`, `OTHER` + required free-text `customReason` when `OTHER`). Deducts `currentStock` and writes a linked `StockMovement` (`type: WASTE`, previously defined in the schema but never used anywhere) via `wasteService.recordWaste()` (`src/lib/services/waste.service.ts`), `Serializable`-isolated like `stock-deduction.service.ts`.
+- [x] **Waste loss is now trackable on the Finance report.** `/api/stores/[id]/finance/summary` gained a `wasteLoss` field (`Σ WasteEntry.totalValue` in range) that subtracts from `netProfit` only (not `cogs`/`grossProfit` — shrinkage, not cost of goods sold). New "Waste Loss" and "Net Profit" KPI cards in `finance-client.tsx` (the latter was already computed/exported to XLSX but had no card). New `by-waste-reason` sub-report + a "Waste" report tab (itemized + by-reason breakdown), included in the Excel export.
+- [x] **Entries are correctable for any condition**, right from the Finance Waste tab (edit/delete row actions) or the record dialog in edit mode. Corrections never rewrite the original `WASTE` movement — they append a compensating `ADJUSTMENT` movement (linked via new `StockMovement.wasteEntryId`) that reconciles live `currentStock`; historical `balanceAfter` snapshots on other movements are left as recorded, same principle as a correcting ledger entry rather than an erasure. An "Advanced" section on edit allows overriding the frozen `unitCostSnapshot` itself for a full manual correction. Delete restores the consumed stock and removes the entry (linked movements persist, orphaned via `onDelete: SetNull`).
+- [x] **Fixed pre-existing bug: Product stock adjustments silently failed.** `materialService.adjustStock` always threw `"Product stock adjustment not yet implemented"` for a Product, even though `StockAdjustmentDialog`'s own item-type selector has offered "Product" since it shipped. Extracted shared `resolveStockItem`/`applyStockDelta` (`src/lib/services/stock-item.helpers.ts`), reused by both the adjustment flow and the new waste service — Products now work in both.
+- [x] Known v1 limitation: `WasteEntry` has no shift/order linkage, so the Finance report's staff-shift filter dropdown doesn't scope the Waste tab.
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 509 passing, 10 pre-existing failures unrelated to this change (`reservation-list.test.tsx`, `sidebar.test.tsx` — broken by a concurrent unrelated edit to `reservation-list.tsx` mid-session, not touched by this work)
+
+---
+
+## ✅ 2026-08-05 — Account Deactivation, Reactivation & Data Retention
+
+### Profile / Auth
+- [x] **"Delete Account" replaced with "Deactivate Account"** (soft delete). `User.deactivatedAt`/`User.purgeAt` added (migration `20260805085354_add_user_deactivation_fields`). Deactivating signs the user out and sends a confirmation email (`sendAccountDeactivatedEmail`); no data is touched.
+- [x] **30-day self-service reactivation.** Logging back in while deactivated redirects to `/profile` (gated in `(app)/(stores)/layout.tsx` and `store/[storeId]/(dashboard)/layout.tsx` via `getSession()`, now wrapped in React `cache()`), where a "Reactivate My Account" button instantly restores access (`POST /api/user/account-settings` action `reactivate-account`). `withApiHandler` gained an `allowDeactivated` option so only the account-settings route stays reachable while deactivated.
+- [x] **31–365 days: support-quoted recovery, no self-service.** UI switches to a "contact support" message with a mailto link; `userService.reactivateAccount()` rejects self-service reactivation past the 30-day window. Admins can still reactivate any time within the year via a new "Reactivate Account" row action + `deactivatedAt` badge/stat tile in the Master Admin Panel (`reactivate-user` action, `enforceGracePeriod: false`).
+- [x] **Storefronts go offline while deactivated.** `storefrontService.getStorefrontBySlug` now filters out storefronts owned by a deactivated user (`store.business.user.deactivatedAt: null`) — reverts automatically on reactivation, no other public-route changes needed.
+- [x] **Automatic permanent purge after 12 months.** New daily Inngest cron `purge-expired-accounts` (`0 3 * * *`) hard-deletes any account past `purgeAt`, reusing the existing `userService.deleteAccount()` cascade. Admin's separate instant hard-delete (`delete-user`) is unchanged.
+- [x] **Terms & Conditions (new §11) and Privacy Policy updated** with the full deactivation → reactivation → retention → deletion lifecycle, plus explicit France/GDPR/CNIL and Indonesia/UU PDP data-subject rights. Added to `en.ts`/`id.ts` only per AGENTS.md (`fr.ts` deprecated, no new French strings).
+- [x] **Fixed pre-existing bug: `/privacy` required login.** `src/proxy.ts`'s public-route allowlist had `/terms` but not `/privacy` — found while smoke-testing this change. One-line fix.
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 478 passing
+
+---
+
+## ✅ 2026-08-05 — Mark as Paid: Settle Payment Method + Note
+
+### POS / Alerts
+- [x] **Every "Mark as Paid" action now opens a confirmation dialog** (`src/features/pos/components/mark-paid-dialog.tsx`) instead of settling instantly — pick the payment method actually used (Cash, QRIS, GoPay, OVO, DANA, ShopeePay, Virtual Account, Credit Card) and add an optional free-text note (e.g. "client paid directly to the owner"). Wired into all four call sites that could mark an order paid: the Active Queue order card (`pos-order-primary-action.tsx`), the Order History detail dialog and its bulk "Mark as Paid" action (`order-history-tab.tsx`), and the dashboard's Unpaid Orders alert card (`unpaid-orders-card.tsx`) — all share the same `useUpdateOrderStatus` mutation, so only that one hook + the PATCH route needed to grow new fields.
+- [x] New `Order.paymentNote` column (migration `20260805084015_add_order_payment_note`), separate from the existing `Order.notes` (customer/checkout notes) so mark-paid notes never overwrite them. `updateOrderStatusSchema` gained optional `paymentMethod`/`paymentNote`, with a refine requiring `paymentMethod` only alongside `paymentStatus: "PAID"`, and a `settlePaymentMethodEnum` (excludes `PAY_LATER`, which isn't a real settle-up method).
+
+- `pnpm type-check` — clean
+- `pnpm lint` — clean
+- `pnpm test` — 478 passing (new: `pos.schemas.test.ts`)
+
+---
+
 ## ✅ 2026-08-02 — Finance Reporting (Category/Department/Shift) + Dashboard Enhancements
 
 ### Finance Reports
@@ -144,6 +299,7 @@ _(AI Agents: Update this checklist every time you finish a task)_
 - [ ] Add `FONNTE_API_TOKEN` (Fonnte device must be online)
 - [ ] Enable `acceptsOrders: true` on storefronts that should show Order & Pay
 - [ ] Enable `acceptsReservations: true` + toggle `reservationEnabled` per table
+- [ ] After deploying, confirm the new `purge-expired-accounts` cron function (daily, 03:00) shows up and is enabled in the Inngest dashboard — Inngest syncs functions from `/api/inngest` on deploy, but cron functions are worth a manual check since nothing else exercises that endpoint until day 366 for any given account
 
 ---
 

@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { createHmac, timingSafeEqual } from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/services/email.service";
@@ -123,7 +124,7 @@ function verifySignedCookie(signedValue: string, secret: string): string | null 
  * Server-side session retrieval
  * Securely verifies signed cookies before querying database
  */
-export async function getSession() {
+export const getSession = cache(async function getSession() {
   try {
     const cookieStore = await cookies();
 
@@ -198,6 +199,7 @@ export async function getSession() {
         image: session.user.image,
         createdAt: session.user.createdAt,
         updatedAt: session.user.updatedAt,
+        deactivatedAt: session.user.deactivatedAt,
       },
     };
   } catch (error) {
@@ -210,7 +212,7 @@ export async function getSession() {
     }
     return null;
   }
-}
+});
 
 // Type definitions for session
 export type Session = Awaited<ReturnType<typeof getSession>>;

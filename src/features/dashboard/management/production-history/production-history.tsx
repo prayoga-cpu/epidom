@@ -163,6 +163,10 @@ export function ProductionHistoryCard() {
     [t("management.productionHistory.batchNumber")]: batch.batchNumber,
     [t("management.productionHistory.recipe")]:
       batch.product?.name || getRecipeName(batch.recipeId || ""),
+    [t("management.productionHistory.source")]:
+      batch.triggerType === "ORDER_SHORTFALL" && batch.orderItems?.[0]
+        ? `${t("management.productionHistory.fromOrder")} ${batch.orderItems[0].order.orderNumber}`
+        : t("management.productionHistory.triggerManual"),
     [t("management.productionHistory.status")]: getStatusConfig(batch.status).label,
     [t("management.productionHistory.metrics.plannedQuantity")]: batch.plannedQuantity,
     [t("management.productionHistory.metrics.producedQuantity")]: batch.actualQuantity || 0,
@@ -369,7 +373,7 @@ export function ProductionHistoryCard() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <div className="min-w-[640px]">
+                <div className="min-w-[760px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -383,6 +387,7 @@ export function ProductionHistoryCard() {
                           </div>
                         </TableHead>
                         <TableHead>{t("management.productionHistory.recipe")}</TableHead>
+                        <TableHead>{t("management.productionHistory.source")}</TableHead>
                         <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
                           <div className="flex items-center">
                             {t("management.productionHistory.status")}
@@ -420,6 +425,18 @@ export function ProductionHistoryCard() {
                             <TableCell className="font-medium">{batch.batchNumber}</TableCell>
                             <TableCell>
                               {batch.product?.name || getRecipeName(batch.recipeId)}
+                            </TableCell>
+                            <TableCell>
+                              {batch.triggerType === "ORDER_SHORTFALL" && batch.orderItems?.[0] ? (
+                                <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                  {t("management.productionHistory.fromOrder")}{" "}
+                                  {batch.orderItems[0].order.orderNumber}
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">
+                                  {t("management.productionHistory.triggerManual")}
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge className={statusConfig.color}>

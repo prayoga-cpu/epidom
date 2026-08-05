@@ -34,6 +34,13 @@ model User {
   stripeConnectOnboarded Boolean   @default(false)
   isAdmin                Boolean   @default(false)
   hasOnboarded           Boolean   @default(false)
+  // Set when the owner self-deactivates (or an admin does so on their behalf).
+  // Self-service reactivation is allowed for 30 days after this; after that,
+  // recovery requires a support-quoted fee up until purgeAt.
+  deactivatedAt          DateTime?
+  // deactivatedAt + 365 days. The daily purge job hard-deletes the account
+  // once this passes — retention is only guaranteed for 12 months.
+  purgeAt                DateTime?
 
   sessions                  Session[]
   accounts                  Account[]
@@ -149,6 +156,7 @@ model Store {
   aggregatorEmails        AggregatorEmail[]
   financeSettings         StoreFinanceSettings?
   staffSessions           StaffSession[]
+  wasteEntries            WasteEntry[]
   // When true, this store's fees & taxes are read from Business.financeSettings
   // instead of its own StoreFinanceSettings row (a shared, profile-wide config).
   syncFinanceWithBusiness Boolean                @default(false)
@@ -163,6 +171,13 @@ model Store {
   // operations (e.g. a counter-only coffee stand) that have no kitchen
   // workflow to track.
   kitchenDisplayEnabled   Boolean                @default(true)
+  // Daily overtime threshold, in minutes, used by the Attendance "Hours &
+  // Overtime" report — worked minutes beyond this per calendar day count as
+  // overtime. Flat per-store value (no per-role/per-shift threshold in v1).
+  standardWorkMinutesPerDay Int                  @default(480)
+  scheduleShifts          ScheduleShift[]
+  staffSchedules          StaffSchedule[]
+  attendanceRecords       AttendanceRecord[]
 
   @@index([businessId])
   @@map("stores")
@@ -259,6 +274,7 @@ model Product {
   stockMovements    StockMovement[]
   menuItems         MenuItem[]
   optionGroups      ProductOptionGroup[]
+  wasteEntries      WasteEntry[]
 
   @@unique([storeId, sku])
   @@index([storeId])
@@ -337,6 +353,7 @@ model Material {
   stockMovements     StockMovement[]
   supplierOrderItems SupplierOrderItem[]
   productOptions     ProductOption[]
+  wasteEntries       WasteEntry[]
 
   @@unique([storeId, sku])
   @@index([storeId])
@@ -425,24 +442,32 @@ model RecipeProduct {
 }
 
 model ProductionBatch {
-  id              String           @id @default(cuid())
-  batchNumber     String           @unique
+  id              String                @id @default(cuid())
+  batchNumber     String                @unique
   productId       String
   recipeId        String?
-  plannedQuantity Decimal          @db.Decimal(10, 3)
-  actualQuantity  Decimal?         @db.Decimal(10, 3)
+  plannedQuantity Decimal               @db.Decimal(10, 3)
+  actualQuantity  Decimal?              @db.Decimal(10, 3)
   unit            String
-  status          ProductionStatus @default(PLANNED)
+  status          ProductionStatus      @default(PLANNED)
+  // MANUAL = staff proactively started this (the original flow, unchanged).
+  // ORDER_SHORTFALL = auto-drafted by stock-deduction.service.ts when an
+  // order needed more of a recipe-linked product than was on hand. These
+  // never move stock themselves (see completeProduction) — they're a task
+  // record proving a human still needs to physically make the shortfall,
+  // and their completion is what flips the linked OrderItem(s) to READY.
+  triggerType     ProductionTriggerType @default(MANUAL)
   scheduledDate   DateTime
   completedDate   DateTime?
   notes           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
   storeId         String
-  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  recipe          Recipe?          @relation(fields: [recipeId], references: [id])
-  store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product         Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recipe          Recipe?               @relation(fields: [recipeId], references: [id])
+  store           Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
   stockMovements  StockMovement[]
+  orderItems      OrderItem[]
 
   @@index([storeId])
   @@index([productId])
@@ -465,16 +490,65 @@ model StockMovement {
   materialId        String?
   reason            String?
   referenceId       String?
+  // Links this movement back to the WasteEntry that produced it — the
+  // original WASTE-type movement at creation, plus any later compensating
+  // ADJUSTMENT movement from an edit/delete correction (see WasteEntry).
+  // One-to-many: a single WasteEntry can accumulate several movements over
+  // its life as it's corrected, so this is never unique.
+  wasteEntryId      String?
   material          Material?        @relation(fields: [materialId], references: [id], onDelete: Cascade)
   order             Order?           @relation(fields: [orderId], references: [id])
   product           Product?         @relation(fields: [productId], references: [id], onDelete: Cascade)
   productionBatch   ProductionBatch? @relation(fields: [productionBatchId], references: [id])
+  wasteEntry        WasteEntry?      @relation(fields: [wasteEntryId], references: [id], onDelete: SetNull)
 
   @@index([productId])
   @@index([materialId])
   @@index([type])
   @@index([createdAt])
+  @@index([wasteEntryId])
   @@map("stock_movements")
+}
+
+// A staff-recorded loss of a Material (raw ingredient) or Product (finished
+// good) — expired, damaged, spoiled, etc. Unlike StockMovement (an
+// append-only audit ledger), WasteEntry is mutable: corrections update this
+// row directly and, when the correction changes quantity/cost, append a new
+// compensating StockMovement rather than rewriting the original one. See
+// WasteService for the reconciliation logic.
+model WasteEntry {
+  id               String          @id @default(cuid())
+  storeId          String
+  materialId       String?
+  productId        String?
+  quantity         Decimal         @db.Decimal(10, 3)
+  unit             String
+  reason           WasteReason
+  // Free-text detail. Required (enforced at the validation layer) when
+  // reason = OTHER; optional supplementary detail otherwise.
+  customReason     String?
+  notes            String?
+  // Cost per unit frozen at record time (or explicitly overridden on a later
+  // edit) — never re-derived from the item's live cost, so historical loss
+  // value stays stable even if ingredient prices change afterward.
+  unitCostSnapshot Decimal         @db.Decimal(14, 6)
+  // quantity * unitCostSnapshot, stored (not computed on read) so an edit's
+  // manual override is preserved exactly as entered.
+  totalValue       Decimal         @db.Decimal(12, 2)
+  referenceId      String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  store            Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  material         Material?       @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  product          Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockMovements   StockMovement[]
+
+  @@index([storeId])
+  @@index([materialId])
+  @@index([productId])
+  @@index([reason])
+  @@index([createdAt])
+  @@map("waste_entries")
 }
 
 model Supplier {
@@ -579,6 +653,10 @@ model Order {
   paymentStatus      PaymentStatus   @default(PENDING)
   paymentProviderRef String?
   paymentQrString    String?         @db.Text
+  // Optional free-text note recorded when manually settling a PENDING order
+  // via "Mark as Paid" (e.g. "client paid directly to the owner") — distinct
+  // from the order-level `notes` field, which is customer/checkout notes.
+  paymentNote        String?
   source             OrderSource     @default(MANUAL)
   // Phase 3 fields
   tableId            String?
@@ -626,16 +704,24 @@ model OrderItem {
   status          OrderItemStatus @default(PENDING)
   preparedAt      DateTime?
   servedAt        DateTime?
+  // Set when this line triggered (or was folded into) an auto-drafted
+  // ORDER_SHORTFALL ProductionBatch — see ProductionBatch.triggerType and
+  // stock-deduction.service.ts. Completing that batch flips this item to
+  // READY, so the kitchen's "done" tap and the batch's completion are the
+  // same real-world event instead of two disconnected systems.
+  productionBatchId String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product         Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
   menuItem        MenuItem?       @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  productionBatch ProductionBatch? @relation(fields: [productionBatchId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([productId])
   @@index([menuItemId])
   @@index([status])
+  @@index([productionBatchId])
   @@map("order_items")
 }
 
@@ -751,6 +837,11 @@ enum ProductionStatus {
   CANCELLED
 }
 
+enum ProductionTriggerType {
+  MANUAL
+  ORDER_SHORTFALL
+}
+
 enum MovementType {
   PURCHASE
   PRODUCTION_IN
@@ -759,6 +850,15 @@ enum MovementType {
   ADJUSTMENT
   WASTE
   RETURN
+}
+
+enum WasteReason {
+  EXPIRED
+  DAMAGED
+  SPOILED
+  OVERPRODUCTION
+  QUALITY_CONTROL
+  OTHER
 }
 
 enum SupplierOrderStatus {
@@ -977,6 +1077,8 @@ model StaffMember {
   store           Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
   shifts          Shift[]
   sessions        StaffSession[]
+  staffSchedules    StaffSchedule[]
+  attendanceRecords AttendanceRecord[]
 
   @@unique([storeId, username])
   @@index([storeId])
@@ -1024,6 +1126,115 @@ model Shift {
   @@index([staffMemberId])
   @@index([openedAt])
   @@map("shifts")
+}
+
+// =============================================================================
+// STAFF SCHEDULING, HOURS & SELFIE ATTENDANCE (proposed addition, see
+// docs/roadmap.md) — a parallel domain from `Shift` above, which is a POS
+// cash-drawer till session (mandatory openingCash, realistically cashier-only).
+// These models track planned rosters and actual clock-in/out for every role.
+// =============================================================================
+
+enum ScheduleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum AttendanceType {
+  CLOCK_IN
+  CLOCK_OUT
+  ABSENCE
+}
+
+// A reusable named time-block template per store (e.g. "Shift 1" 08:00–16:00),
+// picked from a dropdown when building a roster instead of retyping times
+// every time. Blocks may legitimately overlap (staggered handover coverage)
+// — see StaffSchedule and the Finance by-schedule-shift report.
+model ScheduleShift {
+  id        String   @id @default(cuid())
+  storeId   String
+  name      String
+  // Plain "HH:mm" strings — there's no calendar date at the template level,
+  // only once applied to a StaffSchedule row on a specific date. endTime may
+  // be numerically <= startTime, meaning the block crosses midnight (e.g.
+  // "20:00" -> "04:00").
+  startTime String
+  endTime   String
+  color     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  schedules StaffSchedule[]
+
+  @@unique([storeId, name])
+  @@index([storeId])
+  @@map("schedule_shifts")
+}
+
+// One roster assignment: a staff member working a given date, either a named
+// ScheduleShift block or a custom one-off time range. No uniqueness
+// constraint on (staffMemberId, date) — a split shift is legitimately two
+// rows for the same staff/date.
+model StaffSchedule {
+  id              String         @id @default(cuid())
+  storeId         String
+  staffMemberId   String
+  date            DateTime       @db.Date
+  scheduleShiftId String?
+  customStartTime String?
+  customEndTime   String?
+  // A day off for this staff member on this date — mutually exclusive with
+  // scheduleShiftId/customStartTime+customEndTime (enforced in Zod, not the
+  // DB, same approach as the block-vs-custom-time choice above).
+  isDayOff        Boolean        @default(false)
+  department      Department?
+  notes           String?
+  status          ScheduleStatus @default(DRAFT)
+  publishedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  store           Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember     StaffMember       @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  scheduleShift   ScheduleShift?    @relation(fields: [scheduleShiftId], references: [id], onDelete: SetNull)
+  attendanceRecords AttendanceRecord[]
+
+  @@index([storeId, date])
+  @@index([staffMemberId])
+  @@index([scheduleShiftId])
+  @@map("staff_schedules")
+}
+
+// One clock event (clock-in, clock-out, or a reported absence). No DB-level
+// "one open clock-in" constraint, same precedent as Shift — enforced at the
+// app layer. Corrections never edit/delete a record — see the manager
+// "close" endpoint, which appends a new CLOCK_OUT instead.
+model AttendanceRecord {
+  id              String         @id @default(cuid())
+  storeId         String
+  staffMemberId   String
+  staffScheduleId String?
+  type            AttendanceType
+  timestamp       DateTime       @default(now())
+  // Required by app-layer validation for CLOCK_IN/CLOCK_OUT, not required
+  // for ABSENCE — the DB stays permissive since the requirement differs by
+  // `type`, enforced in the Zod schema instead.
+  selfieUrl       String?
+  latitude        Decimal?       @db.Decimal(9, 6)
+  longitude       Decimal?       @db.Decimal(9, 6)
+  // Best-effort reverse-geocoded label — never blocks a clock-in/out if the
+  // lookup fails or times out.
+  locationLabel   String?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  store           Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember     StaffMember    @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  staffSchedule   StaffSchedule? @relation(fields: [staffScheduleId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([staffMemberId, timestamp])
+  @@index([staffScheduleId])
+  @@map("attendance_records")
 }
 
 // =============================================================================

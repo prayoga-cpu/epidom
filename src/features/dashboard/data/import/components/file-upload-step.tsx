@@ -131,7 +131,7 @@ export function FileUploadStep({
             disabled={isLoading}
           >
             <SelectTrigger className="hover:bg-muted/50 h-8 w-[200px] border-none bg-transparent shadow-none focus:ring-0">
-              <SelectValue placeholder="Auto-detect" />
+              <SelectValue placeholder={t("import.upload.autoDetectPlaceholder")} />
             </SelectTrigger>
             <SelectContent align="center">
               <SelectItem value="auto">{t("import.upload.entities.auto")}</SelectItem>

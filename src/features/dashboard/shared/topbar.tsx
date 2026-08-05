@@ -19,12 +19,20 @@ import { useState } from "react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { EpidomLogo } from "@/features/marketing/shared/components/epidom-logo";
+import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 
 export function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
+  const posSession = usePosSession();
+  // A staff persona signs out via "Back to Owner Account" (PIN-gated) in the
+  // profile dropdown, not this button — this button calls the real Better
+  // Auth signOut(), which would log the underlying owner account out
+  // entirely.
+  const actingAsStaff =
+    posSession.isActive && posSession.storeId === storeId && posSession.staffRole !== "OWNER";
 
   return (
     <header
@@ -98,18 +106,20 @@ export function Topbar() {
             <NavUser />
 
             {/* Logout - icon only on mobile, text + icon on tablet+ */}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-9 shrink-0 rounded-xl hover:bg-red-500/20 sm:px-2"
-              style={{ color: "var(--epi-cream-50)" }}
-              onClick={() => {
-                signOut().then(() => (window.location.href = "/login"));
-              }}
-            >
-              <LogOut className="size-4 sm:mr-1.5" />
-              <span className="hidden sm:inline">{t("actions.logout")}</span>
-            </Button>
+            {!actingAsStaff && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-9 shrink-0 rounded-xl hover:bg-red-500/20 sm:px-2"
+                style={{ color: "var(--epi-cream-50)" }}
+                onClick={() => {
+                  signOut().then(() => (window.location.href = "/login"));
+                }}
+              >
+                <LogOut className="size-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">{t("actions.logout")}</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -187,19 +197,21 @@ export function Topbar() {
             <div className="flex items-center">
               <NavUser />
             </div>
-            <div className="flex items-center">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-9 rounded-xl px-3 hover:bg-red-500"
-                onClick={() => {
-                  signOut().then(() => (window.location.href = "/login"));
-                }}
-              >
-                <LogOut className="mr-1.5 size-4" />
-                {t("actions.logout")}
-              </Button>
-            </div>
+            {!actingAsStaff && (
+              <div className="flex items-center">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-9 rounded-xl px-3 hover:bg-red-500"
+                  onClick={() => {
+                    signOut().then(() => (window.location.href = "/login"));
+                  }}
+                >
+                  <LogOut className="mr-1.5 size-4" />
+                  {t("actions.logout")}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

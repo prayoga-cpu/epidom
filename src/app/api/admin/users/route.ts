@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdminUser } from "@/lib/admin";
 import { z } from "zod";
 import { hashPassword } from "better-auth/crypto";
+import { userService } from "@/lib/services";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -37,6 +38,8 @@ export async function GET() {
       timezone: true,
       timezoneUpdatedAt: true,
       currency: true,
+      deactivatedAt: true,
+      purgeAt: true,
       accounts: {
         select: { providerId: true, password: true },
       },
@@ -102,6 +105,10 @@ const updateSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("reset-account"),
+    userId: z.string(),
+  }),
+  z.object({
+    action: z.literal("reactivate-user"),
     userId: z.string(),
   }),
 ]);
@@ -278,6 +285,21 @@ export async function PATCH(req: NextRequest) {
       prisma.user.update({ where: { id: input.userId }, data: { hasOnboarded: false } }),
     ]);
     return NextResponse.json({ reset: true });
+  }
+
+  if (input.action === "reactivate-user") {
+    // No 30-day grace-period check — an admin reactivates any time within
+    // the 1-year retention window, after a support-quoted recovery has been
+    // arranged out-of-band.
+    try {
+      await userService.reactivateAccount(input.userId, { enforceGracePeriod: false });
+      return NextResponse.json({ reactivated: true });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Failed to reactivate account" },
+        { status: 400 }
+      );
+    }
   }
 
   return NextResponse.json({ error: "Unhandled action" }, { status: 400 });

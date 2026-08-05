@@ -23,4 +23,8 @@ export { FileUploadStep } from "./components/file-upload-step";
 export { AnalysisStep } from "./components/analysis-step";
 export { PreviewStep } from "./components/preview-step";
 export { ResultsStep } from "./components/results-step";
-export { EntityPreviewCard, ENTITY_FIELDS, ENTITY_LABELS } from "./components/entity-preview-card";
+export {
+  EntityPreviewCard,
+  ENTITY_FIELDS,
+  ENTITY_LABEL_KEYS,
+} from "./components/entity-preview-card";

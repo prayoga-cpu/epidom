@@ -38,7 +38,7 @@ export async function PATCH(
       );
     }
 
-    const { status, paymentStatus } = parsed.data;
+    const { status, paymentStatus, paymentMethod, paymentNote } = parsed.data;
 
     // Verify order belongs to this store
     const existing = await prisma.order.findFirst({
@@ -62,6 +62,8 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {};
     if (status !== undefined) updateData.status = status;
     if (paymentStatus !== undefined) updateData.paymentStatus = paymentStatus;
+    if (paymentMethod !== undefined) updateData.paymentMethod = paymentMethod;
+    if (paymentNote !== undefined) updateData.paymentNote = paymentNote || null;
 
     // When delivering, mark timestamp and free up the table
     if (status === "DELIVERED") {
@@ -109,6 +111,8 @@ export async function PATCH(
         id: updated.id,
         status: updated.status,
         paymentStatus: updated.paymentStatus,
+        paymentMethod: updated.paymentMethod,
+        paymentNote: updated.paymentNote,
       })
     );
   } catch (error) {

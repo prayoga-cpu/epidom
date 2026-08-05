@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ExternalLink, CheckCircle2, AlertCircle, Wallet } from "lucide-react";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface ConnectStatus {
   onboardingComplete: boolean;
@@ -26,6 +27,7 @@ interface ConnectStatus {
  * The owner receives 80% of all subscription revenue via Stripe Connect.
  */
 export function StripeConnectCard() {
+  const { t } = useI18n();
   const [status, setStatus] = useState<ConnectStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -42,7 +44,9 @@ export function StripeConnectCard() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error?.message || data.error || "Failed to fetch status");
+        throw new Error(
+          data.error?.message || data.error || t("pages.stripeConnectFetchStatusFailed")
+        );
       }
 
       setStatus(data.data);
@@ -66,7 +70,9 @@ export function StripeConnectCard() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error?.message || data.error || "Failed to create onboarding link");
+        throw new Error(
+          data.error?.message || data.error || t("pages.stripeConnectCreateOnboardingFailed")
+        );
       }
 
       // Redirect to Stripe-hosted onboarding
@@ -90,7 +96,9 @@ export function StripeConnectCard() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error?.message || data.error || "Failed to create dashboard link");
+        throw new Error(
+          data.error?.message || data.error || t("pages.stripeConnectCreateDashboardFailed")
+        );
       }
 
       // Open Stripe Dashboard in new tab
@@ -108,9 +116,9 @@ export function StripeConnectCard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wallet className="h-5 w-5" />
-            Payment Setup
+            {t("pages.stripeConnectTitle")}
           </CardTitle>
-          <CardDescription>Loading status...</CardDescription>
+          <CardDescription>{t("pages.stripeConnectLoadingStatus")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
@@ -130,16 +138,14 @@ export function StripeConnectCard() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Wallet className="h-5 w-5" />
-              Payment Setup
+              {t("pages.stripeConnectTitle")}
             </CardTitle>
-            <CardDescription>
-              Receive 80% of subscription revenue via Stripe Connect
-            </CardDescription>
+            <CardDescription>{t("pages.stripeConnectDesc")}</CardDescription>
           </div>
           {isOnboarded && (
             <Badge variant="default" className="gap-1">
               <CheckCircle2 className="h-3 w-3" />
-              Connected
+              {t("pages.stripeConnectConnected")}
             </Badge>
           )}
         </div>
@@ -160,10 +166,11 @@ export function StripeConnectCard() {
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
                 <div>
-                  <p className="font-medium text-green-900">Payment setup complete</p>
+                  <p className="font-medium text-green-900">
+                    {t("pages.stripeConnectCompleteTitle")}
+                  </p>
                   <p className="mt-1 text-sm text-green-700">
-                    You're all set to receive payments. 80% of all subscription revenue will be
-                    automatically transferred to your Stripe account.
+                    {t("pages.stripeConnectCompleteDesc")}
                   </p>
                 </div>
               </div>
@@ -171,23 +178,29 @@ export function StripeConnectCard() {
 
             {/* Account Details */}
             <div className="space-y-2 rounded-lg border p-4">
-              <h4 className="text-sm font-medium">Account Status</h4>
+              <h4 className="text-sm font-medium">{t("pages.stripeConnectAccountStatus")}</h4>
               <div className="grid gap-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Charges</span>
+                  <span className="text-muted-foreground">{t("pages.stripeConnectCharges")}</span>
                   <Badge variant={status?.chargesEnabled ? "default" : "secondary"}>
-                    {status?.chargesEnabled ? "Enabled" : "Disabled"}
+                    {status?.chargesEnabled
+                      ? t("profile.feesAndTaxes.enabled")
+                      : t("profile.feesAndTaxes.disabled")}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Payouts</span>
+                  <span className="text-muted-foreground">{t("pages.stripeConnectPayouts")}</span>
                   <Badge variant={status?.payoutsEnabled ? "default" : "secondary"}>
-                    {status?.payoutsEnabled ? "Enabled" : "Disabled"}
+                    {status?.payoutsEnabled
+                      ? t("profile.feesAndTaxes.enabled")
+                      : t("profile.feesAndTaxes.disabled")}
                   </Badge>
                 </div>
                 {status?.accountId && (
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Account ID</span>
+                    <span className="text-muted-foreground">
+                      {t("pages.stripeConnectAccountId")}
+                    </span>
                     <code className="text-xs">{status.accountId}</code>
                   </div>
                 )}
@@ -206,28 +219,25 @@ export function StripeConnectCard() {
               ) : (
                 <ExternalLink className="h-4 w-4" />
               )}
-              View Earnings in Stripe Dashboard
+              {t("pages.stripeConnectViewEarnings")}
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Complete Stripe Connect onboarding to start receiving 80% of subscription payments.
-                This is required for the payment system to work.
-              </AlertDescription>
+              <AlertDescription>{t("pages.stripeConnectOnboardingAlert")}</AlertDescription>
             </Alert>
 
             <div className="rounded-lg border p-4">
-              <h4 className="mb-2 text-sm font-medium">What you'll need:</h4>
+              <h4 className="mb-2 text-sm font-medium">{t("pages.stripeConnectWhatYoullNeed")}</h4>
               <ul className="text-muted-foreground space-y-1 text-sm">
-                <li>• Business information (name, address, tax ID)</li>
-                <li>• Bank account details for payouts</li>
-                <li>• Identity verification (may require documents)</li>
+                <li>• {t("pages.stripeConnectNeedBusinessInfo")}</li>
+                <li>• {t("pages.stripeConnectNeedBankDetails")}</li>
+                <li>• {t("pages.stripeConnectNeedIdentity")}</li>
               </ul>
               <p className="text-muted-foreground mt-3 text-xs">
-                This process is handled securely by Stripe and typically takes 5-10 minutes.
+                {t("pages.stripeConnectSecureNote")}
               </p>
             </div>
 
@@ -239,18 +249,18 @@ export function StripeConnectCard() {
               {actionLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Redirecting to Stripe...
+                  {t("pages.stripeConnectRedirecting")}
                 </>
               ) : (
                 <>
                   <ExternalLink className="h-4 w-4" />
-                  Complete Payment Setup
+                  {t("pages.stripeConnectCompleteSetup")}
                 </>
               )}
             </Button>
 
             <p className="text-muted-foreground text-center text-xs">
-              You'll be redirected to Stripe's secure onboarding page
+              {t("pages.stripeConnectRedirectNote")}
             </p>
           </div>
         )}

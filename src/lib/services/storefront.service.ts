@@ -29,8 +29,11 @@ export class StorefrontService {
    * Get storefront by its public slug
    */
   async getStorefrontBySlug(slug: string) {
-    return prisma.storefront.findUnique({
-      where: { slug },
+    return prisma.storefront.findFirst({
+      // Deactivated owners' storefronts go offline for the duration of the
+      // deactivation (comes back automatically on reactivation, since this
+      // is a live filter rather than a cached flag).
+      where: { slug, store: { business: { user: { deactivatedAt: null } } } },
       include: {
         menuCategories: {
           orderBy: { displayOrder: "asc" },

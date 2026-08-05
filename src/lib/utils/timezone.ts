@@ -7,7 +7,7 @@
  */
 
 /** Offset of `timeZone` from UTC, in minutes, at the given instant. */
-function getTimezoneOffsetMinutes(timeZone: string, date: Date): number {
+export function getTimezoneOffsetMinutes(timeZone: string, date: Date): number {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
@@ -32,6 +32,19 @@ function getTimezoneOffsetMinutes(timeZone: string, date: Date): number {
   );
 
   return (asUTC - date.getTime()) / 60000;
+}
+
+/**
+ * Human-readable UTC offset for `timeZone` (e.g. "GMT+7") — used to tell
+ * users which clock the midnight session-expiry above is measured against,
+ * since it's the store's business timezone, not the viewer's own.
+ */
+export function getTimezoneOffsetLabel(timeZone: string, date: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    timeZoneName: "shortOffset",
+  }).formatToParts(date);
+  return parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
 }
 
 /** The next local midnight (00:00:00) in `timeZone`, as a real UTC instant. */

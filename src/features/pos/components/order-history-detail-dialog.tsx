@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateTime } from "@/lib/utils/formatting";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
+import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
 import { toast } from "sonner";
 
 function getSourceBadgeVariant(source: string) {
@@ -84,6 +86,7 @@ export function OrderHistoryDetailDialog({
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const { confirm, confirmDialog } = useConfirm();
   const updateStatus = useUpdateOrderStatus(storeId);
+  const [showMarkPaid, setShowMarkPaid] = useState(false);
 
   const handleCancel = async () => {
     if (!order) return;
@@ -107,11 +110,17 @@ export function OrderHistoryDetailDialog({
     }
   };
 
-  const handleMarkPaid = async () => {
+  const handleMarkPaid = async ({ paymentMethod, paymentNote }: MarkPaidConfirmData) => {
     if (!order) return;
     try {
-      await updateStatus.mutateAsync({ orderId: order.id, paymentStatus: "PAID" });
+      await updateStatus.mutateAsync({
+        orderId: order.id,
+        paymentStatus: "PAID",
+        paymentMethod,
+        paymentNote,
+      });
       toast.success(t("pos.orderCard.markPaidSuccess"));
+      setShowMarkPaid(false);
     } catch {
       toast.error(t("pos.queue.updateFailed"));
     }
@@ -256,7 +265,7 @@ export function OrderHistoryDetailDialog({
                   <Button
                     variant="outline"
                     disabled={updateStatus.isPending}
-                    onClick={handleMarkPaid}
+                    onClick={() => setShowMarkPaid(true)}
                   >
                     {t("pos.orderCard.markPaid")}
                   </Button>
@@ -275,6 +284,13 @@ export function OrderHistoryDetailDialog({
         )}
       </DialogContent>
       {confirmDialog}
+      <MarkPaidDialog
+        open={showMarkPaid}
+        onOpenChange={setShowMarkPaid}
+        onConfirm={handleMarkPaid}
+        isSubmitting={updateStatus.isPending}
+        description={order?.orderNumber}
+      />
     </Dialog>
   );
 }

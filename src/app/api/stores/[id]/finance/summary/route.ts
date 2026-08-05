@@ -91,12 +91,22 @@ export const GET = withApiHandler(
     const grossProfit = revenue - cogs;
     const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
 
+    // Waste loss (expired/damaged/spoiled/... inventory): shrinkage, not
+    // cost-of-goods-sold for items that actually sold, so it's kept out of
+    // cogs/grossProfit and only reduces the netProfit bottom line. Note: not
+    // scoped by shiftWhere — WasteEntry has no shift/order linkage (v1).
+    const wasteResult = await prisma.wasteEntry.aggregate({
+      where: { storeId, createdAt: { gte: from, lte: to } },
+      _sum: { totalValue: true },
+    });
+    const wasteLoss = Number(wasteResult._sum.totalValue ?? 0);
+
     // netRevenue excludes tax (it's the government's, not the business's) and
     // the payment-processing fee (the provider's cut). netProfit further
-    // subtracts COGS. See src/lib/finance/order-charges.ts for how these
-    // amounts are computed and frozen onto each order.
+    // subtracts COGS and waste loss. See src/lib/finance/order-charges.ts for
+    // how these amounts are computed and frozen onto each order.
     const netRevenue = revenue - taxCollected - processingFee;
-    const netProfit = netRevenue - cogs;
+    const netProfit = netRevenue - cogs - wasteLoss;
 
     // Daily breakdown for chart using memory grouping to avoid Prisma groupBy timezone/timestamp issues
     const rawOrders = await prisma.order.findMany({
@@ -130,6 +140,7 @@ export const GET = withApiHandler(
         cogs: Math.round(cogs * 100) / 100,
         grossProfit: Math.round(grossProfit * 100) / 100,
         grossMarginPct: Math.round(grossMargin * 100) / 100,
+        wasteLoss: Math.round(wasteLoss * 100) / 100,
         taxCollected: Math.round(taxCollected * 100) / 100,
         serviceCharge: Math.round(serviceCharge * 100) / 100,
         processingFee: Math.round(processingFee * 100) / 100,

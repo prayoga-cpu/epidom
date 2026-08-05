@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { updateOrderItemStatusSchema } from "@/lib/validation/pos.schemas";
+import { productionBatchService } from "@/lib/services/production-batch.service";
+import { advanceOrderToReadyIfAllItemsReady } from "@/lib/services/order-status.helpers";
 
 /**
  * PATCH /api/stores/[id]/pos/orders/[orderId]/items/[itemId]
@@ -46,6 +48,21 @@ export async function PATCH(
     });
   }
 
+  // Items tied to an auto-drafted production batch (see
+  // ProductionBatch.triggerType: ORDER_SHORTFALL) complete via the batch —
+  // that's what actually happened in the kitchen — rather than a plain
+  // status write, so the "kitchen made it" and "batch fulfilled" events stay
+  // one action instead of two. completeProduction handles this item's status
+  // (and the order auto-advance) itself.
+  if (parsed.data.status === "READY" && item.productionBatchId) {
+    await productionBatchService.completeProduction(
+      item.productionBatchId,
+      storeId,
+      Number(item.quantity)
+    );
+    return NextResponse.json(createSuccessResponse({ id: item.id, status: "READY" }));
+  }
+
   const updateData: Record<string, unknown> = { status: parsed.data.status };
   if (parsed.data.status === "READY") updateData.preparedAt = new Date();
   if (parsed.data.status === "SERVED") updateData.servedAt = new Date();
@@ -57,16 +74,7 @@ export async function PATCH(
 
   // Auto-advance order status: if ALL items ready → order READY
   if (parsed.data.status === "READY") {
-    const allItems = await prisma.orderItem.findMany({
-      where: { orderId },
-      select: { status: true },
-    });
-    const allReady = allItems.every(
-      (i) => i.status === "READY" || i.status === "SERVED" || i.status === "CANCELLED"
-    );
-    if (allReady) {
-      await prisma.order.update({ where: { id: orderId }, data: { status: "READY" } });
-    }
+    await advanceOrderToReadyIfAllItemsReady(prisma, orderId);
   }
 
   return NextResponse.json(createSuccessResponse({ id: updated.id, status: updated.status }));

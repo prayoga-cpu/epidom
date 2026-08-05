@@ -23,9 +23,11 @@ export const ROLE_DEFAULT_PAGES: Record<StaffRole, string[]> = {
     "/data",
     "/alerts",
     "/shifts",
+    "/schedule",
+    "/attendance",
   ],
-  CASHIER: ["/pos", "/pos/orders", "/tables"],
-  KITCHEN: ["/pos/kds"],
+  CASHIER: ["/pos", "/pos/orders", "/tables", "/schedule"],
+  KITCHEN: ["/pos/kds", "/schedule"],
 };
 
 /** Resolves a staff member's effective page access: their own override, or their role's default. */

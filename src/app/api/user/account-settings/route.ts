@@ -4,6 +4,10 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { withApiHandler } from "@/lib/api-handler";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { parseUserAgent, geolocateIp } from "@/lib/utils/user-agent";
+import { userService } from "@/lib/services";
+import { sendAccountDeactivatedEmail } from "@/lib/services/email.service";
+
+const REACTIVATION_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +20,7 @@ export const GET = withApiHandler(
     const [user, accounts, storeStats, sessions] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { createdAt: true, email: true },
+        select: { createdAt: true, email: true, deactivatedAt: true, purgeAt: true },
       }),
       prisma.account.findMany({
         where: { userId },
@@ -74,10 +78,15 @@ export const GET = withApiHandler(
         linkedAccounts,
         hasPasswordAccount,
         sessions: deviceSessions,
+        deactivatedAt: user?.deactivatedAt ?? null,
+        reactivationDeadline: user?.deactivatedAt
+          ? new Date(user.deactivatedAt.getTime() + REACTIVATION_WINDOW_MS).toISOString()
+          : null,
+        retentionDeadline: user?.purgeAt ? user.purgeAt.toISOString() : null,
       })
     );
   },
-  { rateLimitEndpoint: "/api/user/account-settings", requireStoreAuth: false }
+  { rateLimitEndpoint: "/api/user/account-settings", requireStoreAuth: false, allowDeactivated: true }
 );
 
 /**
@@ -183,26 +192,45 @@ export const POST = withApiHandler(
       return NextResponse.json(createSuccessResponse({ changed: true }));
     }
 
-    if (action === "delete-account") {
+    if (action === "deactivate-account") {
       const { confirmEmail } = body;
-      const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      });
 
-      if (confirmEmail !== user?.email) {
+      if (!user || confirmEmail !== user.email) {
         return NextResponse.json(
           createErrorResponse(ApiErrorCode.INVALID_INPUT, "Email confirmation does not match"),
           { status: 400 }
         );
       }
 
-      // Cascade deletes handle related data via Prisma schema
-      await prisma.user.delete({ where: { id: userId } });
+      const { deactivatedAt } = await userService.deactivateAccount(userId);
+      const reactivationDeadline = new Date(deactivatedAt.getTime() + REACTIVATION_WINDOW_MS);
+      await sendAccountDeactivatedEmail(user.email, user.name, reactivationDeadline);
 
-      return NextResponse.json(createSuccessResponse({ deleted: true }));
+      return NextResponse.json(createSuccessResponse({ deactivated: true }));
+    }
+
+    if (action === "reactivate-account") {
+      try {
+        await userService.reactivateAccount(userId);
+        return NextResponse.json(createSuccessResponse({ reactivated: true }));
+      } catch (err) {
+        return NextResponse.json(
+          createErrorResponse(
+            ApiErrorCode.FORBIDDEN,
+            err instanceof Error ? err.message : "Failed to reactivate account"
+          ),
+          { status: 403 }
+        );
+      }
     }
 
     return NextResponse.json(createErrorResponse(ApiErrorCode.INVALID_INPUT, "Unknown action"), {
       status: 400,
     });
   },
-  { rateLimitEndpoint: "/api/user/account-settings", requireStoreAuth: false }
+  { rateLimitEndpoint: "/api/user/account-settings", requireStoreAuth: false, allowDeactivated: true }
 );

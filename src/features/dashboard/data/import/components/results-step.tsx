@@ -9,6 +9,7 @@
 import { Check, X, Package, ShoppingCart, Truck, ChefHat, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface ResultsStepProps {
   result: {
@@ -26,31 +27,32 @@ interface ResultsStepProps {
 }
 
 export function ResultsStep({ result, onClose }: ResultsStepProps) {
+  const { t } = useI18n();
   const { success, summary, error } = result;
 
   // Entity display config
   const entities = [
     {
       key: "suppliers",
-      label: "Suppliers",
+      labelKey: "pages.smartImportTabSuppliers",
       icon: Truck,
       data: summary?.suppliers,
     },
     {
       key: "materials",
-      label: "Materials",
+      labelKey: "pages.smartImportTabMaterials",
       icon: Package,
       data: summary?.materials,
     },
     {
       key: "recipes",
-      label: "Recipes",
+      labelKey: "pages.smartImportTabRecipes",
       icon: ChefHat,
       data: summary?.recipes,
     },
     {
       key: "products",
-      label: "Products",
+      labelKey: "pages.smartImportTabProducts",
       icon: ShoppingCart,
       data: summary?.products,
     },
@@ -69,10 +71,13 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
           </div>
 
           <h3 className="mb-2 text-2xl font-bold text-green-600 dark:text-green-400">
-            Import Successful!
+            {t("pages.smartImportSuccessTitle")}
           </h3>
           <p className="text-muted-foreground mb-8">
-            {summary?.totalSucceeded || 0} items imported successfully
+            {t("pages.smartImportSuccessCount").replace(
+              "{count}",
+              String(summary?.totalSucceeded || 0)
+            )}
           </p>
 
           {/* Entity breakdown */}
@@ -93,7 +98,7 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
                 >
                   <div className="flex items-center gap-3">
                     <Icon className="text-muted-foreground h-5 w-5" />
-                    <span className="font-medium">{entity.label}</span>
+                    <span className="font-medium">{t(entity.labelKey)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span
@@ -121,9 +126,9 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
           {/* Quick actions */}
           <div className="mt-8 flex gap-4">
             <Button variant="outline" onClick={onClose}>
-              Close
+              {t("common.actions.close")}
             </Button>
-            <Button onClick={onClose}>View Imported Data</Button>
+            <Button onClick={onClose}>{t("pages.smartImportViewData")}</Button>
           </div>
         </>
       ) : (
@@ -136,8 +141,10 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
             </div>
           </div>
 
-          <h3 className="mb-2 text-2xl font-bold text-red-600 dark:text-red-400">Import Failed</h3>
-          <p className="text-muted-foreground mb-4">Something went wrong during import.</p>
+          <h3 className="mb-2 text-2xl font-bold text-red-600 dark:text-red-400">
+            {t("pages.smartImportFailedTitle")}
+          </h3>
+          <p className="text-muted-foreground mb-4">{t("pages.smartImportFailedDesc")}</p>
 
           {error && (
             <div className="mb-8 w-full max-w-md rounded-lg border border-red-500/20 bg-red-500/10 p-4">
@@ -147,9 +154,11 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
 
           <div className="flex gap-4">
             <Button variant="outline" onClick={onClose}>
-              Close
+              {t("common.actions.close")}
             </Button>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
+            <Button onClick={() => window.location.reload()}>
+              {t("pages.smartImportTryAgain")}
+            </Button>
           </div>
         </>
       )}

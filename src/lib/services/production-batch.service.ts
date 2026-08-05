@@ -1,4 +1,12 @@
-import { ProductionBatch, ProductionStatus, MovementType, Prisma } from "@prisma/client";
+import {
+  ProductionBatch,
+  ProductionStatus,
+  ProductionTriggerType,
+  MovementType,
+  OrderItemStatus,
+  Prisma,
+} from "@prisma/client";
+import { advanceOrderToReadyIfAllItemsReady } from "./order-status.helpers";
 import {
   productionBatchRepository,
   ProductionBatchWithRelations,
@@ -389,6 +397,47 @@ export class ProductionBatchService {
       throw new Error("Only batches in progress can be completed");
     }
 
+    // ORDER_SHORTFALL batches never moved stock in the first place (the
+    // order's own SALE deduction already covers the full ordered quantity —
+    // see stock-deduction.service.ts and draftShortfallBatchesForOrder
+    // below) — completing one is purely a task-completion + KDS signal, not
+    // an inventory event, or it would double-count the stock impact.
+    if (batch.triggerType === ProductionTriggerType.ORDER_SHORTFALL) {
+      return prisma.$transaction(async (tx) => {
+        const updatedBatch = await tx.productionBatch.update({
+          where: { id: batchId },
+          data: {
+            status: ProductionStatus.COMPLETED,
+            actualQuantity,
+            completedDate: new Date(),
+          },
+        });
+
+        const linkedItems = await tx.orderItem.findMany({
+          where: { productionBatchId: batchId },
+          select: { id: true, orderId: true, status: true },
+        });
+
+        const affectedOrderIds = new Set<string>();
+        for (const item of linkedItems) {
+          if (item.status === OrderItemStatus.READY || item.status === OrderItemStatus.SERVED) {
+            continue;
+          }
+          await tx.orderItem.update({
+            where: { id: item.id },
+            data: { status: OrderItemStatus.READY, preparedAt: new Date() },
+          });
+          affectedOrderIds.add(item.orderId);
+        }
+
+        for (const orderId of affectedOrderIds) {
+          await advanceOrderToReadyIfAllItemsReady(tx, orderId);
+        }
+
+        return updatedBatch;
+      });
+    }
+
     // Start transaction with timeout
     return prisma.$transaction(
       async (tx) => {
@@ -461,6 +510,13 @@ export class ProductionBatchService {
     const batch = await productionBatchRepository.findById(batchId);
     if (!batch) {
       throw new Error("Production batch not found");
+    }
+
+    // ORDER_SHORTFALL batches never deducted materials (see completeProduction
+    // above) — restoring them here would incorrectly add stock that was never
+    // taken, regardless of what the caller passed.
+    if (batch.triggerType === ProductionTriggerType.ORDER_SHORTFALL) {
+      restoreMaterials = false;
     }
 
     // Validate status
@@ -636,6 +692,128 @@ export class ProductionBatchService {
     endDate: Date
   ): Promise<ProductionBatch[]> {
     return productionBatchRepository.getBatchesDueSoon(storeId, startDate, endDate);
+  }
+
+  /**
+   * Auto-draft ORDER_SHORTFALL production batches for a newly confirmed
+   * order — one per recipe-linked product whose on-hand currentStock
+   * doesn't cover what was just ordered, linking the batch to the triggering
+   * OrderItem(s) so completing it flips them to READY (see completeProduction
+   * and the KDS item-status route).
+   *
+   * Must be called with PRE-deduction stock numbers — i.e. before
+   * deductStockForOrder runs for the same order — or the shortfall would be
+   * computed against stock this same order already ate into. Never mutates
+   * Material/Product stock itself; that still happens exactly as before, via
+   * the normal SALE deduction at delivery (or immediately for online
+   * payments) — this is purely a task/tracking record.
+   *
+   * Only products with a default Recipe can auto-produce; a plain
+   * finished-goods product with no recipe just runs out, same as today.
+   */
+  async draftShortfallBatchesForOrder(
+    orderId: string,
+    storeId: string
+  ): Promise<{ batchesCreated: number }> {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          where: { status: { not: OrderItemStatus.CANCELLED } },
+          include: {
+            product: {
+              include: {
+                recipeProducts: {
+                  where: { isDefault: true },
+                  include: { recipe: { select: { id: true, yieldUnit: true } } },
+                },
+              },
+            },
+            menuItem: {
+              include: {
+                product: {
+                  include: {
+                    recipeProducts: {
+                      where: { isDefault: true },
+                      include: { recipe: { select: { id: true, yieldUnit: true } } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order || order.storeId !== storeId) return { batchesCreated: 0 };
+
+    interface ShortfallCandidate {
+      productId: string;
+      currentStock: number;
+      recipeId: string;
+      yieldUnit: string;
+      orderedQty: number;
+      itemIds: string[];
+    }
+    const byProduct = new Map<string, ShortfallCandidate>();
+
+    for (const item of order.items) {
+      const product = item.product ?? item.menuItem?.product;
+      if (!product) continue;
+      const defaultRecipeProduct = product.recipeProducts[0];
+      if (!defaultRecipeProduct?.recipe) continue; // no recipe = no way to auto-produce more
+
+      const existing = byProduct.get(product.id);
+      if (existing) {
+        existing.orderedQty += Number(item.quantity);
+        existing.itemIds.push(item.id);
+      } else {
+        byProduct.set(product.id, {
+          productId: product.id,
+          currentStock: Number(product.currentStock),
+          recipeId: defaultRecipeProduct.recipe.id,
+          yieldUnit: defaultRecipeProduct.recipe.yieldUnit,
+          orderedQty: Number(item.quantity),
+          itemIds: [item.id],
+        });
+      }
+    }
+
+    let batchesCreated = 0;
+
+    for (const entry of byProduct.values()) {
+      const shortfall = entry.orderedQty - entry.currentStock;
+      if (shortfall <= 0) continue;
+
+      const batchNumber = await productionBatchRepository.generateBatchNumber(storeId, "ORD");
+
+      await prisma.$transaction(async (tx) => {
+        const batch = await tx.productionBatch.create({
+          data: {
+            storeId,
+            batchNumber,
+            productId: entry.productId,
+            recipeId: entry.recipeId,
+            plannedQuantity: shortfall,
+            unit: entry.yieldUnit,
+            status: ProductionStatus.IN_PROGRESS,
+            triggerType: ProductionTriggerType.ORDER_SHORTFALL,
+            scheduledDate: new Date(),
+            notes: `Auto-drafted — order ${order.orderNumber} needed more than was on hand`,
+          },
+        });
+
+        await tx.orderItem.updateMany({
+          where: { id: { in: entry.itemIds } },
+          data: { productionBatchId: batch.id },
+        });
+      });
+
+      batchesCreated++;
+    }
+
+    return { batchesCreated };
   }
 }
 

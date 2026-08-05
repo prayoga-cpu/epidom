@@ -259,6 +259,42 @@ These were not deleted in Phase 0; just hidden. They come back behind plan gatin
 
 ---
 
+## Staff Scheduling, Hours & Selfie Attendance
+
+**Status:** Shipped 2026-08-05 (see `STATUS.md`). Originally documented here as a "proposed addition, pending approval" beyond the committed Phase 5 roadmap (AGENTS.md §2) — the operator approved and it was built across all 3 phases below in one pass. Kept as its own section (not folded into Phase 4 or 5's write-ups above) since it postdates both. See `docs/FEATURES.md`'s "Shift management" / "Staff and roles" bullets (OPERATIONS tier) for the corresponding tier-facing entries.
+
+**Goal:** managers can build and publish work rosters, staff clock in/out with a selfie + geolocation for an auditable attendance trail, hours/overtime are calculated automatically, and end-of-day transactions can be sliced per named shift-block and per staff member.
+
+**Why a new domain instead of extending the existing `Shift` model:** `Shift` (Phase 4) is a POS cash-drawer till session — `openingCash` is required, so in practice only cashier-role staff ever get one. Kitchen/bar/waiter staff have no clock-in mechanism today. This proposal adds a parallel, general-purpose domain rather than overloading the append-only, financially-critical `Shift` table.
+
+**New schema:**
+
+- `ScheduleShift` — reusable named time-block templates per store (e.g. "Shift 1" 08:00–16:00), matching how merchants already run rosters in spreadsheets (named, colored, sometimes-overlapping blocks for handover coverage).
+- `StaffSchedule` — one roster assignment: staff × date × block (or a custom one-off time range), department, `DRAFT`/`PUBLISHED` status, `publishedAt`.
+- `AttendanceRecord` — one clock event: `CLOCK_IN` / `CLOCK_OUT` / `ABSENCE`, timestamp, selfie URL (via the existing `StorageAdapter`/`POST /api/upload`), best-effort latitude/longitude + reverse-geocoded label, optional link back to the `StaffSchedule` row being clocked into.
+- `Store.standardWorkMinutesPerDay` (default 480) — single scalar, same pattern as the existing `payLaterEnabled`/`kitchenDisplayEnabled` toggles, used as the overtime threshold.
+
+**Working hours / overtime:** computed on read, not stored — pairs `CLOCK_IN`/`CLOCK_OUT` records per staff per day (business timezone), attributes a completed pair to the day it started (so a 20:00→04:00 shift is one entry, no special-casing for crossing midnight), flags missing clock-outs instead of estimating them, and compares total minutes/day against `standardWorkMinutesPerDay` for the regular/overtime split. No payroll amount computation — hours only.
+
+**Shift reports:** because named blocks can overlap by design (a merchant's "Shift 2 Middle" deliberately overlaps "Shift 1" and "Shift 3" for handover), a per-block revenue report is a set of independent coverage-window sums, not a mutually-exclusive partition — totals across blocks are not expected to sum to the grand total, and the UI must say so explicitly. "Per staff member" can only mean true order-level revenue attribution for cashiers (via the existing `Shift.staffMemberId`) unless `Order` gains a `servedByStaffMemberId` field (an explicit, separate scope decision, not included by default) — for every other role it means "who was rostered on," shown as a separate informational cut.
+
+**Selfie + geolocation:** browser-native `getUserMedia` (with a plain `<input type="file" capture="user">` fallback) and `navigator.geolocation`, both best-effort — permission denial must never block a clock-in/out. Reverse geocoding happens server-side against a free/keyless provider and fails silently to `null`. No map-rendering library (per AGENTS.md §7) — the audit view shows raw coordinates/label plus an external "view on Google Maps" link only.
+
+**Suggested phasing:**
+
+1. Attendance capture (schema + clock-in/out/absence/status/audit routes, topbar clock-in dialog, selfie+geo UI) — usable standalone as a manager audit tool.
+2. Scheduling + hours/overtime (roster CRUD/publish, week-grid builder, the overtime algorithm).
+3. Shift reports (Finance tab extension, coverage-window bucketing, XLSX export).
+
+**Acceptance criteria:**
+
+- A manager can publish a week's roster and every affected staff member sees only their own published shifts in-app.
+- Every clock-in/out is backed by a selfie + timestamp + best-effort location, filterable by staff and date range in the audit view.
+- Overtime hours reconcile against a manual spot-check of raw clock-in/out timestamps for at least one cross-midnight shift.
+- The shift-block revenue report visibly discloses when blocks overlap rather than silently double-counting.
+
+---
+
 ## Cross-phase technical decisions
 
 These apply across phases. Listed once here so we don't re-debate them.

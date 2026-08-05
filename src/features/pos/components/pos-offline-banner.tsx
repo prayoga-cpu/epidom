@@ -4,12 +4,14 @@ import { WifiOff, RefreshCw, CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useOfflineQueue } from "../hooks/use-offline-queue";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface PosOfflineBannerProps {
   storeId: string;
 }
 
 export function PosOfflineBanner({ storeId }: PosOfflineBannerProps) {
+  const { t } = useI18n();
   const [isOnline, setIsOnline] = useState(true);
   const { pendingCount, isSyncing, syncQueue } = useOfflineQueue(storeId);
 
@@ -43,8 +45,10 @@ export function PosOfflineBanner({ storeId }: PosOfflineBannerProps) {
         )}
         <span>
           {!isOnline
-            ? `Offline — pesanan disimpan lokal${pendingCount > 0 ? ` (${pendingCount} menunggu)` : ""}`
-            : `${pendingCount} pesanan offline menunggu sinkronisasi`}
+            ? pendingCount > 0
+              ? t("pages.posOfflineMessageWithPending").replace("{count}", String(pendingCount))
+              : t("pages.posOfflineMessageNoPending")
+            : t("pages.posOfflineSyncPending").replace("{count}", String(pendingCount))}
         </span>
       </div>
 
@@ -57,7 +61,7 @@ export function PosOfflineBanner({ storeId }: PosOfflineBannerProps) {
           disabled={isSyncing}
         >
           <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-          {isSyncing ? "Menyinkronkan..." : "Sinkronkan Sekarang"}
+          {isSyncing ? t("pages.posOfflineSyncing") : t("pages.posOfflineSyncNow")}
         </Button>
       )}
     </div>

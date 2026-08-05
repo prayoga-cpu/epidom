@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { ReservationStatus } from "@prisma/client";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface Reservation {
   id: string;
@@ -56,11 +57,11 @@ interface Reservation {
   table: { id: string; label: string; capacity: number } | null;
 }
 
-const STATUS_LABELS: Record<ReservationStatus, string> = {
-  PENDING: "Pending",
-  CONFIRMED: "Confirmed",
-  CANCELLED: "Cancelled",
-  COMPLETED: "Completed",
+const STATUS_LABEL_KEYS: Record<ReservationStatus, string> = {
+  PENDING: "pages.reservationsStatusPending",
+  CONFIRMED: "pages.reservationsStatusConfirmed",
+  CANCELLED: "pages.reservationsStatusCancelled",
+  COMPLETED: "pages.reservationsStatusCompleted",
 };
 
 const STATUS_COLORS: Record<ReservationStatus, string> = {
@@ -77,6 +78,8 @@ interface Props {
 }
 
 export function ReservationList({ storeId }: Props) {
+  const { t } = useI18n();
+  const statusLabel = (s: ReservationStatus) => t(STATUS_LABEL_KEYS[s]);
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | "ALL">("ALL");
   const [search, setSearch] = useState("");
@@ -109,9 +112,9 @@ export function ReservationList({ storeId }: Props) {
       queryClient.invalidateQueries({ queryKey: ["reservations-all", storeId] });
       queryClient.invalidateQueries({ queryKey: ["tables", storeId] });
       queryClient.invalidateQueries({ queryKey: ["notifications", storeId] });
-      toast.success("Reservation updated");
+      toast.success(t("pages.reservationsUpdated"));
     },
-    onError: () => toast.error("Failed to update"),
+    onError: () => toast.error(t("pages.reservationsUpdateFailed")),
   });
 
   const deleteMutation = useMutation({
@@ -121,9 +124,9 @@ export function ReservationList({ storeId }: Props) {
       queryClient.invalidateQueries({ queryKey: ["tables", storeId] });
       queryClient.invalidateQueries({ queryKey: ["notifications", storeId] });
       setDeleteId(null);
-      toast.success("Reservation deleted");
+      toast.success(t("pages.reservationsDeleted"));
     },
-    onError: () => toast.error("Failed to delete"),
+    onError: () => toast.error(t("pages.reservationsDeleteFailed")),
   });
 
   const counts = (data?.reservations ?? []).reduce(
@@ -143,10 +146,12 @@ export function ReservationList({ storeId }: Props) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <CalendarClock className="text-muted-foreground h-5 w-5 shrink-0" />
-            <h2 className="text-foreground truncate text-base font-semibold">Reservations</h2>
+            <h2 className="text-foreground truncate text-base font-semibold">
+              {t("pages.reservationsTitle")}
+            </h2>
             {counts.PENDING ? (
               <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600">
-                {counts.PENDING} pending
+                {t("pages.reservationsPendingBadge").replace("{count}", String(counts.PENDING))}
               </span>
             ) : null}
           </div>
@@ -155,7 +160,7 @@ export function ReservationList({ storeId }: Props) {
             size="icon"
             className="h-10 w-10 shrink-0 touch-manipulation"
             onClick={() => refetch()}
-            title="Refresh"
+            title={t("pages.reservationsRefresh")}
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
@@ -172,7 +177,7 @@ export function ReservationList({ storeId }: Props) {
                   : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
-              {s === "ALL" ? "All" : STATUS_LABELS[s as ReservationStatus]}
+              {s === "ALL" ? t("pages.reservationsAll") : statusLabel(s as ReservationStatus)}
               {s !== "ALL" && counts[s as ReservationStatus]
                 ? ` (${counts[s as ReservationStatus]})`
                 : ""}
@@ -184,7 +189,7 @@ export function ReservationList({ storeId }: Props) {
       {/* Search */}
       <div className="px-3 pb-3 sm:px-6">
         <Input
-          placeholder="Search by guest name, phone, email, or table…"
+          placeholder={t("pages.reservationsSearchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm text-sm"
@@ -194,18 +199,18 @@ export function ReservationList({ storeId }: Props) {
       {/* List */}
       {isLoading ? (
         <div className="text-muted-foreground px-3 py-8 text-center text-sm sm:px-6">
-          Loading reservations…
+          {t("pages.reservationsLoading")}
         </div>
       ) : reservations.length === 0 ? (
         <div className="px-3 py-12 text-center sm:px-6">
           <CalendarClock className="text-muted-foreground/30 mx-auto mb-3 h-10 w-10" />
-          <p className="text-muted-foreground text-sm">No reservations found.</p>
+          <p className="text-muted-foreground text-sm">{t("pages.reservationsNoneFound")}</p>
           {statusFilter !== "ALL" && (
             <button
               onClick={() => setStatusFilter("ALL")}
               className="text-muted-foreground hover:text-foreground mt-1 text-xs underline"
             >
-              Clear filter
+              {t("pages.reservationsClearFilter")}
             </button>
           )}
         </div>
@@ -232,7 +237,7 @@ export function ReservationList({ storeId }: Props) {
                       <span
                         className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[r.status]}`}
                       >
-                        {STATUS_LABELS[r.status]}
+                        {statusLabel(r.status)}
                       </span>
                       {r.table && (
                         <span className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-[10px] font-medium">
@@ -251,13 +256,13 @@ export function ReservationList({ storeId }: Props) {
                         {date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                         {isUpcoming && r.status === "CONFIRMED" && (
                           <span className="ml-1 rounded-full bg-emerald-500/10 px-1.5 text-[9px] font-semibold text-emerald-600">
-                            upcoming
+                            {t("pages.reservationsUpcoming")}
                           </span>
                         )}
                       </span>
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
-                        {r.partySize} pax
+                        {r.partySize} {t("pages.reservationsPax")}
                       </span>
                       {r.guestPhone && (
                         <a
@@ -285,7 +290,7 @@ export function ReservationList({ storeId }: Props) {
                       </p>
                     )}
                     <p className="text-muted-foreground/50 mt-1 text-[10px]">
-                      Submitted{" "}
+                      {t("pages.reservationsSubmitted")}{" "}
                       {new Date(r.createdAt).toLocaleDateString("en-GB", {
                         day: "numeric",
                         month: "short",
@@ -300,7 +305,7 @@ export function ReservationList({ storeId }: Props) {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-7 gap-1 px-2.5 text-xs">
-                        Status <ChevronDown className="h-3 w-3" />
+                        {t("pages.reservationsStatusButton")} <ChevronDown className="h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -321,10 +326,10 @@ export function ReservationList({ storeId }: Props) {
                                     : "bg-slate-500"
                             }`}
                           />
-                          {STATUS_LABELS[s]}
+                          {statusLabel(s)}
                           {r.status === s && (
                             <span className="text-muted-foreground ml-auto text-[10px]">
-                              current
+                              {t("pages.reservationsCurrent")}
                             </span>
                           )}
                         </DropdownMenuItem>
@@ -350,19 +355,17 @@ export function ReservationList({ storeId }: Props) {
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent className="max-h-[85dvh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove the reservation. This cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("pages.reservationsDeleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("pages.reservationsDeleteDesc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.actions.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
               onClick={() => deleteId && deleteMutation.mutate(deleteId)}
               disabled={deleteMutation.isPending}
             >
-              Delete
+              {t("common.actions.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

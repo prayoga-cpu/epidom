@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, UserRound } from "lucide-react";
+import { ArrowLeft, KeyRound, Loader2, UserRound } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,7 @@ import { apiClient } from "@/lib/api/client";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { toast } from "sonner";
 import type { StaffRole } from "@prisma/client";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface StaffOption {
   id: string;
@@ -33,6 +35,8 @@ interface StaffSwitcherDialogProps {
 
 /** Dropdown-triggered "Switch Staff" flow — select a staff member, enter their PIN. */
 export function StaffSwitcherDialog({ open, onOpenChange, storeId }: StaffSwitcherDialogProps) {
+  const { t } = useI18n();
+  const router = useRouter();
   const { login } = usePosSession();
   const [selected, setSelected] = useState<StaffOption | null>(null);
   const [pin, setPin] = useState("");
@@ -69,7 +73,7 @@ export function StaffSwitcherDialog({ open, onOpenChange, storeId }: StaffSwitch
             setShake(true);
             setTimeout(() => setShake(false), 500);
             setPin("");
-            toast.error("Incorrect PIN. Try again.");
+            toast.error(t("pages.staffAuthIncorrectPin"));
           }
           return;
         }
@@ -83,7 +87,7 @@ export function StaffSwitcherDialog({ open, onOpenChange, storeId }: StaffSwitch
           shiftId: shift?.id ?? null,
           allowedPages: staff.allowedPages ?? null,
         });
-        toast.success(`Switched to ${staff.name}`);
+        toast.success(t("pages.staffSwitcherSwitchedTo").replace("{name}", staff.name));
         reset();
         onOpenChange(false);
         // Hard navigation, not router.push: the page currently on screen may
@@ -95,7 +99,7 @@ export function StaffSwitcherDialog({ open, onOpenChange, storeId }: StaffSwitch
         const landingPage = staff.allowedPages?.[0] ?? "/pos";
         window.location.href = `/store/${storeId}${landingPage}`;
       } catch {
-        toast.error("Failed to verify PIN. Check your connection.");
+        toast.error(t("pages.staffAuthVerifyFailed"));
         setPin("");
       } finally {
         setIsVerifying(false);
@@ -103,6 +107,13 @@ export function StaffSwitcherDialog({ open, onOpenChange, storeId }: StaffSwitch
     },
     [storeId, login, onOpenChange]
   );
+
+  const handleEditPin = () => {
+    if (!selected) return;
+    onOpenChange(false);
+    reset();
+    router.push(`/store/${storeId}/staff?editStaffId=${selected.id}`);
+  };
 
   const handleSelect = (member: StaffOption) => {
     setSelected(member);
@@ -134,8 +145,8 @@ export function StaffSwitcherDialog({ open, onOpenChange, storeId }: StaffSwitch
         {!selected ? (
           <>
             <DialogHeader className="text-center">
-              <DialogTitle>Switch Staff</DialogTitle>
-              <DialogDescription>Choose your account to continue</DialogDescription>
+              <DialogTitle>{t("pages.staffSwitcherTitle")}</DialogTitle>
+              <DialogDescription>{t("pages.staffSwitcherDesc")}</DialogDescription>
             </DialogHeader>
             {isLoading ? (
               <div className="flex justify-center py-8">
@@ -144,7 +155,7 @@ export function StaffSwitcherDialog({ open, onOpenChange, storeId }: StaffSwitch
             ) : activeStaff.length === 0 ? (
               <div className="space-y-2 py-8 text-center">
                 <UserRound className="text-muted-foreground/50 mx-auto h-10 w-10" />
-                <p className="text-muted-foreground text-sm">No active staff members found.</p>
+                <p className="text-muted-foreground text-sm">{t("pages.staffAuthNoActiveStaff")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-3 py-2">
@@ -180,18 +191,28 @@ export function StaffSwitcherDialog({ open, onOpenChange, storeId }: StaffSwitch
               }}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              {t("common.actions.back")}
             </Button>
             <div className="mt-2 text-center">
               <div className="bg-primary/10 text-primary mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold">
                 {selected.name.charAt(0).toUpperCase()}
               </div>
               <p className="text-lg font-bold tracking-tight">{selected.name}</p>
-              <p className="text-muted-foreground mt-1 text-xs">Enter your 4-digit PIN</p>
+              <p className="text-muted-foreground mt-1 text-xs">{t("pages.staffAuthEnterPin")}</p>
             </div>
             <div className="mt-6">
               <PinPad value={pin} onKey={handleKey} disabled={isVerifying} shake={shake} />
             </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground mt-4 gap-1.5"
+              onClick={handleEditPin}
+            >
+              <KeyRound className="h-3.5 w-3.5" />
+              {t("pages.staffAuthForgotPin")}
+            </Button>
           </div>
         )}
       </DialogContent>

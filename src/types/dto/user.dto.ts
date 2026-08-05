@@ -68,6 +68,7 @@ export interface StoreDto {
   syncFinanceWithBusiness: boolean;
   payLaterEnabled: boolean;
   kitchenDisplayEnabled: boolean;
+  standardWorkMinutesPerDay: number;
 }
 
 // Subscription DTO

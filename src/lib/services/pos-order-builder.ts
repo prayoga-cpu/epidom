@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { OrderStatus, PaymentMethod } from "@prisma/client";
 import type { CreatePosOrderInput, SelectedOptionInput } from "@/lib/validation/pos.schemas";
 import { deductStockForOrder } from "./stock-deduction.service";
+import { productionBatchService } from "./production-batch.service";
 
 /**
  * Methods that need no online payment step: CASH is settled at the counter
@@ -46,6 +47,26 @@ export async function deliverOrderImmediately(orderId: string, storeId: string):
   }
 }
 
+/**
+ * Companion to deliverOrderImmediately for the opposite branch: an order
+ * that just landed on CONFIRMED (going to the kitchen/bar queue, stock not
+ * deducted yet — see stock-deduction.service.ts's deferred-to-DELIVERED
+ * design). Auto-drafts any ORDER_SHORTFALL production batches this order
+ * needs — see ProductionBatchService.draftShortfallBatchesForOrder — so
+ * they're visible on the KDS board from the start. Never blocks order
+ * creation on failure, same as deliverOrderImmediately.
+ */
+export async function draftShortfallBatchesForConfirmedOrder(
+  orderId: string,
+  storeId: string
+): Promise<void> {
+  try {
+    await productionBatchService.draftShortfallBatchesForOrder(orderId, storeId);
+  } catch (err) {
+    console.error("[SHORTFALL_PRODUCTION] Failed to draft batches:", err);
+  }
+}
+
 /** Thrown when one or more requested menu items are missing/unavailable — callers map this to a 422. */
 export class OrderBuildError extends Error {}
 
@@ -70,16 +91,20 @@ export async function validateAndBuildOrderItems(
   storeId: string,
   items: CreatePosOrderInput["items"]
 ): Promise<{ orderItems: BuiltOrderItem[]; subtotal: number }> {
-  const menuItemIds = items.map((i) => i.menuItemId);
+  // Dedupe: the cart can list the same menu item on multiple lines (e.g. two
+  // orders of the same drink with different notes), and Prisma's `id: { in }`
+  // only ever returns one row per unique id — comparing against the raw,
+  // possibly-repeating items array would then falsely flag available items.
+  const uniqueMenuItemIds = [...new Set(items.map((i) => i.menuItemId))];
   const menuItems = await prisma.menuItem.findMany({
     where: {
-      id: { in: menuItemIds },
+      id: { in: uniqueMenuItemIds },
       storefront: { storeId },
       isAvailable: true,
     },
   });
 
-  if (menuItems.length !== menuItemIds.length) {
+  if (menuItems.length !== uniqueMenuItemIds.length) {
     const foundIds = new Set(menuItems.map((m) => m.id));
     // Name the exact items so the cashier knows what to remove, rather than a
     // vague "something is wrong" — this is the common case when a held order

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CircleDollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,10 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatRelativeTime } from "@/lib/utils/format-date";
 import { useUpdateOrderStatus } from "@/features/pos/hooks/use-update-order-status";
+import {
+  MarkPaidDialog,
+  type MarkPaidConfirmData,
+} from "@/features/pos/components/mark-paid-dialog";
 import { toast } from "sonner";
 import type { UnpaidOrderAlert } from "@/features/dashboard/shared/hooks/use-alerts";
 
@@ -20,13 +25,21 @@ export function UnpaidOrdersCard({ alerts, storeId }: UnpaidOrdersCardProps) {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const updateStatus = useUpdateOrderStatus(storeId);
+  const [markPaidAlert, setMarkPaidAlert] = useState<UnpaidOrderAlert | null>(null);
 
   if (alerts.length === 0) return null;
 
-  const handleMarkPaid = async (alert: UnpaidOrderAlert) => {
+  const handleMarkPaid = async ({ paymentMethod, paymentNote }: MarkPaidConfirmData) => {
+    if (!markPaidAlert) return;
     try {
-      await updateStatus.mutateAsync({ orderId: alert.orderId, paymentStatus: "PAID" });
+      await updateStatus.mutateAsync({
+        orderId: markPaidAlert.orderId,
+        paymentStatus: "PAID",
+        paymentMethod,
+        paymentNote,
+      });
       toast.success(t("alerts.unpaidOrders.markPaidSuccess"));
+      setMarkPaidAlert(null);
     } catch {
       toast.error(t("alerts.unpaidOrders.markPaidFailed"));
     }
@@ -65,13 +78,21 @@ export function UnpaidOrdersCard({ alerts, storeId }: UnpaidOrdersCardProps) {
               size="sm"
               variant="outline"
               disabled={updateStatus.isPending}
-              onClick={() => handleMarkPaid(alert)}
+              onClick={() => setMarkPaidAlert(alert)}
             >
               {t("alerts.unpaidOrders.markPaid")}
             </Button>
           </li>
         ))}
       </ul>
+
+      <MarkPaidDialog
+        open={!!markPaidAlert}
+        onOpenChange={(open) => !open && setMarkPaidAlert(null)}
+        onConfirm={handleMarkPaid}
+        isSubmitting={updateStatus.isPending}
+        description={markPaidAlert?.orderNumber}
+      />
     </div>
   );
 }

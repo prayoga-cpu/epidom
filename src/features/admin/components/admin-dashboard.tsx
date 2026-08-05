@@ -25,6 +25,8 @@ import {
   MessageSquare,
   RotateCcw,
   Wrench,
+  PowerOff,
+  Power,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,6 +78,8 @@ interface UserRow {
   timezone?: string;
   timezoneUpdatedAt?: string | null;
   currency?: string;
+  deactivatedAt: string | null;
+  purgeAt: string | null;
   providers: string[];
   hasPassword: boolean;
   subscription: {
@@ -223,6 +227,8 @@ export function AdminDashboard() {
       } else if (action === "set-plan") {
         toast.success("Plan updated — reloading…");
         setTimeout(() => window.location.reload(), 800);
+      } else if (action === "reactivate-user") {
+        toast.success("Account reactivated");
       } else {
         toast.success("Subscription updated");
       }
@@ -248,6 +254,7 @@ export function AdminDashboard() {
     admins: users.filter(
       (u) => u.isAdmin || (HARDCODED_ADMIN_EMAILS as readonly string[]).includes(u.email)
     ).length,
+    deactivated: users.filter((u) => u.deactivatedAt).length,
   };
 
   // Per-row action menu — shared by the desktop table cell and the mobile card list.
@@ -440,6 +447,18 @@ export function AdminDashboard() {
 
               <DropdownMenuSeparator />
 
+              {/* Reactivate a self-deactivated account (no 30-day limit for admins) */}
+              {user.deactivatedAt && (
+                <DropdownMenuItem
+                  className="text-emerald-500 focus:bg-emerald-500/10 focus:text-emerald-500"
+                  disabled={mutation.isPending}
+                  onClick={() => mutation.mutate({ action: "reactivate-user", userId: user.id })}
+                >
+                  <Power className="mr-2 h-3.5 w-3.5" />
+                  Reactivate Account
+                </DropdownMenuItem>
+              )}
+
               {/* Reset account data (keeps login + plan, wipes business data) */}
               <DropdownMenuItem
                 className="text-amber-500 focus:bg-amber-500/10 focus:text-amber-500"
@@ -518,12 +537,18 @@ export function AdminDashboard() {
 
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {[
             { label: "Total Users", value: stats.total, icon: Users, color: "text-blue-400" },
             { label: "Active Subs", value: stats.active, icon: Crown, color: "text-emerald-400" },
             { label: "Enterprise", value: stats.enterprise, icon: Store, color: "text-violet-400" },
             { label: "Admins", value: stats.admins, icon: Shield, color: "text-red-400" },
+            {
+              label: "Deactivated",
+              value: stats.deactivated,
+              icon: PowerOff,
+              color: "text-amber-400",
+            },
           ].map(({ label, value, icon: Icon, color }) => (
             <div key={label} className="border-border bg-card rounded-xl border p-4">
               <div className="mb-1 flex items-center justify-between">
@@ -599,6 +624,12 @@ export function AdminDashboard() {
                         {isSelf && (
                           <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-blue-400 uppercase">
                             You
+                          </span>
+                        )}
+                        {user.deactivatedAt && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-amber-400 uppercase">
+                            <PowerOff className="h-2.5 w-2.5" />
+                            Deactivated
                           </span>
                         )}
                       </p>
@@ -716,6 +747,12 @@ export function AdminDashboard() {
                                 {isSelf && (
                                   <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-blue-400 uppercase">
                                     You
+                                  </span>
+                                )}
+                                {user.deactivatedAt && (
+                                  <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-amber-400 uppercase">
+                                    <PowerOff className="h-2.5 w-2.5" />
+                                    Deactivated
                                   </span>
                                 )}
                               </p>

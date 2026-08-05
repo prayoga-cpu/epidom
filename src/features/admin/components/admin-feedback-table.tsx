@@ -19,6 +19,7 @@ import {
   Table2,
   Kanban,
   Rss,
+  ArrowUpDown,
   type LucideIcon,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -150,7 +151,73 @@ const VIEW_OPTIONS: { key: FeedbackView; label: string; icon: LucideIcon }[] = [
   { key: "feed", label: "Feed", icon: Rss },
 ];
 
+type SortOption = "status" | "newest" | "oldest" | "priority";
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "status", label: "Status (grouped)" },
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "priority", label: "Priority" },
+];
+
 const VIEW_STORAGE_KEY = "epidom-admin-feedback-view";
+const FILTERS_STORAGE_KEY = "epidom-admin-feedback-filters";
+
+interface StoredFilters {
+  statusFilter: FeedbackStatus | "ALL";
+  typeFilter: FeedbackType | "ALL";
+  priorityFilter: FeedbackPriority | "ALL";
+  sortBy: SortOption;
+  search: string;
+}
+
+const DEFAULT_FILTERS: StoredFilters = {
+  statusFilter: "ALL",
+  typeFilter: "ALL",
+  priorityFilter: "ALL",
+  sortBy: "status",
+  search: "",
+};
+
+// Called from a post-mount effect, not a lazy useState initializer — `window`
+// is already defined by the client's first render (before hydration), so
+// reading storage there would return real saved values while the server
+// rendered the `typeof window === "undefined"` defaults, breaking hydration.
+function readStoredView(): FeedbackView {
+  if (typeof window === "undefined") return "table";
+  const saved = window.localStorage.getItem(VIEW_STORAGE_KEY);
+  return saved === "table" || saved === "board" || saved === "feed" ? saved : "table";
+}
+
+function readStoredFilters(): StoredFilters {
+  if (typeof window === "undefined") return DEFAULT_FILTERS;
+  try {
+    const saved = window.localStorage.getItem(FILTERS_STORAGE_KEY);
+    if (!saved) return DEFAULT_FILTERS;
+    const parsed = JSON.parse(saved) as Partial<StoredFilters>;
+    return {
+      statusFilter:
+        parsed.statusFilter === "ALL" || STATUS_OPTIONS.includes(parsed.statusFilter as FeedbackStatus)
+          ? (parsed.statusFilter as FeedbackStatus | "ALL")
+          : DEFAULT_FILTERS.statusFilter,
+      typeFilter:
+        parsed.typeFilter === "ALL" ||
+        ["BUG", "FEATURE_SUGGESTION", "GENERAL_FEEDBACK"].includes(parsed.typeFilter as string)
+          ? (parsed.typeFilter as FeedbackType | "ALL")
+          : DEFAULT_FILTERS.typeFilter,
+      priorityFilter:
+        parsed.priorityFilter === "ALL" || PRIORITY_OPTIONS.includes(parsed.priorityFilter as FeedbackPriority)
+          ? (parsed.priorityFilter as FeedbackPriority | "ALL")
+          : DEFAULT_FILTERS.priorityFilter,
+      sortBy: SORT_OPTIONS.some((o) => o.value === parsed.sortBy)
+        ? (parsed.sortBy as SortOption)
+        : DEFAULT_FILTERS.sortBy,
+      search: typeof parsed.search === "string" ? parsed.search : DEFAULT_FILTERS.search,
+    };
+  } catch {
+    return DEFAULT_FILTERS;
+  }
+}
 
 const DESCRIPTION_PREVIEW_LENGTH = 80;
 
@@ -639,19 +706,51 @@ export function AdminFeedbackTable() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<FeedbackStatus | "ALL">("ALL");
-  const [typeFilter, setTypeFilter] = useState<FeedbackType | "ALL">("ALL");
-  const [search, setSearch] = useState("");
+  // Initial values are the SSR-safe defaults — reading localStorage straight
+  // in the initializer looked appealing (no flash-of-default) but `window` is
+  // already defined by the time the client's first render runs, so it read
+  // the real stored values before hydration and diverged from the
+  // `typeof window === "undefined"` defaults the server rendered, breaking
+  // hydration. The saved habit is applied a moment later, once mounted below.
+  const [statusFilter, setStatusFilter] = useState<FeedbackStatus | "ALL">(
+    DEFAULT_FILTERS.statusFilter
+  );
+  const [typeFilter, setTypeFilter] = useState<FeedbackType | "ALL">(DEFAULT_FILTERS.typeFilter);
+  const [priorityFilter, setPriorityFilter] = useState<FeedbackPriority | "ALL">(
+    DEFAULT_FILTERS.priorityFilter
+  );
+  const [search, setSearch] = useState(DEFAULT_FILTERS.search);
   const [view, setView] = useState<FeedbackView>("table");
+  const [sortBy, setSortBy] = useState<SortOption>(DEFAULT_FILTERS.sortBy);
+  const [storageLoaded, setStorageLoaded] = useState(false);
 
+  // Apply the saved habit once mounted (client-only, post-hydration).
   useEffect(() => {
-    const saved = window.localStorage.getItem(VIEW_STORAGE_KEY);
-    if (saved === "table" || saved === "board" || saved === "feed") setView(saved);
+    const stored = readStoredFilters();
+    setStatusFilter(stored.statusFilter);
+    setTypeFilter(stored.typeFilter);
+    setPriorityFilter(stored.priorityFilter);
+    setSearch(stored.search);
+    setSortBy(stored.sortBy);
+    setView(readStoredView());
+    setStorageLoaded(true);
   }, []);
 
   useEffect(() => {
+    if (!storageLoaded) return;
     window.localStorage.setItem(VIEW_STORAGE_KEY, view);
-  }, [view]);
+  }, [storageLoaded, view]);
+
+  // Persist the last-used sort + filters (including which status stat-card
+  // is active) so a reload or a closed tab picks up right where the admin
+  // left off — the initial values above are read straight from storage.
+  useEffect(() => {
+    if (!storageLoaded) return;
+    window.localStorage.setItem(
+      FILTERS_STORAGE_KEY,
+      JSON.stringify({ statusFilter, typeFilter, priorityFilter, sortBy, search })
+    );
+  }, [storageLoaded, statusFilter, typeFilter, priorityFilter, sortBy, search]);
 
   const { data, isLoading, isError } = useQuery<{ feedback: FeedbackRow[] }>({
     queryKey: ["admin-feedback"],
@@ -699,22 +798,37 @@ export function AdminFeedbackTable() {
 
   const rawRows = data?.feedback ?? [];
 
-  // Group by status (Open → In Progress → Resolved → Archived), then by
-  // priority (Urgent → ... → Low) within each status group; the API already
-  // returns createdAt desc, and Array#sort is stable, so newest-first
-  // ordering is preserved within each status+priority group.
-  const rows = useMemo(
-    () =>
-      [...rawRows].sort(
-        (a, b) =>
-          STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
-          PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
-      ),
-    [rawRows]
-  );
+  // The API already returns createdAt desc, and Array#sort is stable, so
+  // newest-first ordering is preserved within any tied group below.
+  const rows = useMemo(() => {
+    const sorted = [...rawRows];
+    switch (sortBy) {
+      case "newest":
+        sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case "oldest":
+        sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        break;
+      case "priority":
+        sorted.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+        break;
+      case "status":
+      default:
+        // Group by status (Open → In Progress → Resolved → Archived), then
+        // by priority (Urgent → ... → Low) within each status group.
+        sorted.sort(
+          (a, b) =>
+            STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
+            PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+        );
+        break;
+    }
+    return sorted;
+  }, [rawRows, sortBy]);
 
   const matchesBaseFilters = (r: FeedbackRow) => {
     if (typeFilter !== "ALL" && r.type !== typeFilter) return false;
+    if (priorityFilter !== "ALL" && r.priority !== priorityFilter) return false;
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       const haystack =
@@ -727,12 +841,15 @@ export function AdminFeedbackTable() {
   // Table/feed views: fully filtered including the status badge filter.
   const filteredRows = useMemo(
     () => rows.filter((r) => matchesBaseFilters(r) && (statusFilter === "ALL" || r.status === statusFilter)),
-    [rows, statusFilter, typeFilter, search]
+    [rows, statusFilter, typeFilter, priorityFilter, search]
   );
 
   // Board view keeps all status columns visible; the status filter only
   // highlights the matching column instead of hiding the others.
-  const boardBaseRows = useMemo(() => rows.filter(matchesBaseFilters), [rows, typeFilter, search]);
+  const boardBaseRows = useMemo(
+    () => rows.filter(matchesBaseFilters),
+    [rows, typeFilter, priorityFilter, search]
+  );
 
   const feedRows = useMemo(
     () => [...filteredRows].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
@@ -769,10 +886,15 @@ export function AdminFeedbackTable() {
     });
   };
 
-  const hasActiveFilters = statusFilter !== "ALL" || typeFilter !== "ALL" || search.trim().length > 0;
+  const hasActiveFilters =
+    statusFilter !== "ALL" ||
+    typeFilter !== "ALL" ||
+    priorityFilter !== "ALL" ||
+    search.trim().length > 0;
   const clearFilters = () => {
     setStatusFilter("ALL");
     setTypeFilter("ALL");
+    setPriorityFilter("ALL");
     setSearch("");
   };
 
@@ -850,6 +972,35 @@ export function AdminFeedbackTable() {
                 <SelectItem value="BUG">Bug</SelectItem>
                 <SelectItem value="FEATURE_SUGGESTION">Feature</SelectItem>
                 <SelectItem value="GENERAL_FEEDBACK">General</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={priorityFilter}
+              onValueChange={(v) => setPriorityFilter(v as FeedbackPriority | "ALL")}
+            >
+              <SelectTrigger size="sm" className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All priorities</SelectItem>
+                {PRIORITY_OPTIONS.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {priorityLabels[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+              <SelectTrigger size="sm" className="w-[160px]">
+                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {hasActiveFilters && (

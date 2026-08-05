@@ -35,7 +35,8 @@
       "Bash(npx tsc:*)",
       "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
       "Bash(rtk grep *)",
-      "Bash(rtk git *)"
+      "Bash(rtk git *)",
+      "Bash(rtk read *)"
     ],
     "deny": [],
     "ask": []

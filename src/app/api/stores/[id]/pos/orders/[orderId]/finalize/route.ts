@@ -12,6 +12,7 @@ import {
   skipsOnlinePayment,
   resolveSettledOrderStatus,
   deliverOrderImmediately,
+  draftShortfallBatchesForConfirmedOrder,
   OrderBuildError,
   type BuiltOrderItem,
 } from "@/lib/services/pos-order-builder";
@@ -185,6 +186,8 @@ export async function POST(
 
     if (immediatelyDelivered) {
       await deliverOrderImmediately(order.id, storeId);
+    } else if (settledStatus === "CONFIRMED") {
+      await draftShortfallBatchesForConfirmedOrder(order.id, storeId);
     }
 
     // Fire background notification via Inngest — the true, one-time

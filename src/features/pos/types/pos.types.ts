@@ -52,6 +52,11 @@ export interface PosOrderItemDisplay {
   notes?: string | null;
   selectedOptions?: CartModifier[] | null;
   menuItem?: { name: string; department?: "KITCHEN" | "BAR" | null } | null;
+  // Set when this line needed more of a recipe-linked product than was on
+  // hand — an auto-drafted ProductionBatch (triggerType: ORDER_SHORTFALL) is
+  // covering it. Completing that batch (or tapping this item to READY, which
+  // delegates to it) is the same event — see the item PATCH route.
+  productionBatchId?: string | null;
 }
 
 export interface PosOrderDisplay {
@@ -117,6 +122,13 @@ export interface PosTable {
   status: TableStatus;
   currentOrderId?: string | null;
 }
+
+// ─── Mark as Paid ────────────────────────────────────────────────────────────
+
+// The method actually used to settle a payment — excludes PAY_LATER, which
+// only makes sense as a deferred choice at checkout, not as a record of how
+// money changed hands.
+export type SettlePaymentMethod = Exclude<PaymentMethod, "PAY_LATER">;
 
 // ─── Checkout ────────────────────────────────────────────────────────────────
 

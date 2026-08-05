@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
 import { I18nProvider } from "@/components/lang/i18n-provider";
 import { SiteHeader } from "@/features/marketing/shared/components/site-header";
 
@@ -7,7 +9,12 @@ export const metadata: Metadata = {
   description: "Manage your stores",
 };
 
-export default function StoresLayout({ children }: { children: React.ReactNode }) {
+export default async function StoresLayout({ children }: { children: React.ReactNode }) {
+  const session = await getSession();
+  if (session?.user?.deactivatedAt) {
+    redirect("/profile");
+  }
+
   return (
     <I18nProvider>
       <div className="bg-background flex h-screen flex-col overflow-hidden">

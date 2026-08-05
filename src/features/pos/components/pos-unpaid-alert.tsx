@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CircleAlert } from "lucide-react";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface PosUnpaidAlertProps {
   storeId: string;
@@ -10,6 +11,7 @@ interface PosUnpaidAlertProps {
 
 /** Full-width banner surfacing unpaid orders right on the register — tap through to the pre-filtered queue. */
 export function PosUnpaidAlert({ storeId, unpaidCount }: PosUnpaidAlertProps) {
+  const { t } = useI18n();
   if (unpaidCount === 0) return null;
 
   return (
@@ -19,7 +21,10 @@ export function PosUnpaidAlert({ storeId, unpaidCount }: PosUnpaidAlertProps) {
     >
       <CircleAlert className="h-4 w-4 shrink-0" />
       <span>
-        {unpaidCount} {unpaidCount === 1 ? "order" : "orders"} unpaid — tap to view
+        {t(unpaidCount === 1 ? "pos.unpaidAlertSingular" : "pos.unpaidAlertPlural").replace(
+          "{count}",
+          String(unpaidCount)
+        )}
       </span>
     </Link>
   );

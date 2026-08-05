@@ -23,11 +23,13 @@ import {
   AlertCircle,
   XCircle,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
 import { BulkAdjustmentDialog } from "./bulk-adjustment-dialog";
 import { AdjustmentHistoryDialog } from "./adjustment-history-dialog";
 import { CSVImportDialog } from "./csv-import-dialog";
+import { WasteFormDialog } from "../waste/waste-form-dialog";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -63,6 +65,9 @@ export function EditStockCard() {
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
   const [historyItemType, setHistoryItemType] = useState<ItemType>("material");
   const [csvImportDialogOpen, setCsvImportDialogOpen] = useState(false);
+  const [wasteDialogOpen, setWasteDialogOpen] = useState(false);
+  const [wasteItemId, setWasteItemId] = useState<string | undefined>(undefined);
+  const [wasteItemType, setWasteItemType] = useState<ItemType>("material");
 
   // Fetch materials from API
   const { data: materialsData, isLoading } = useMaterials(storeId);
@@ -199,6 +204,19 @@ export function EditStockCard() {
           </div>
 
           <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full md:w-auto"
+              onClick={() => {
+                setWasteItemId(undefined);
+                setWasteItemType("material");
+                setWasteDialogOpen(true);
+              }}
+            >
+              <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
+              {t("waste.recordWaste") || "Record Waste"}
+            </Button>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -443,6 +461,18 @@ export function EditStockCard() {
 
                     <Button
                       variant="outline"
+                      onClick={() => {
+                        setWasteItemId(selectedItem.id);
+                        setWasteItemType(selectedItem.type);
+                        setWasteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
+                      {t("waste.recordWaste") || "Record Waste"}
+                    </Button>
+
+                    <Button
+                      variant="outline"
                       onClick={() => viewAdjustmentHistory(selectedItem.id, selectedItem.type)}
                     >
                       <History className="mr-1 hidden h-4 w-4 sm:inline" />
@@ -478,6 +508,16 @@ export function EditStockCard() {
 
       {/* CSV Import Dialog */}
       <CSVImportDialog open={csvImportDialogOpen} onOpenChange={setCsvImportDialogOpen} />
+
+      {/* Record Waste Dialog */}
+      <WasteFormDialog
+        open={wasteDialogOpen}
+        onOpenChange={setWasteDialogOpen}
+        storeId={storeId}
+        mode="create"
+        itemId={wasteItemId}
+        itemType={wasteItemType}
+      />
     </>
   );
 }

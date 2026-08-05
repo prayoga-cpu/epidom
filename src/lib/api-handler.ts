@@ -36,6 +36,7 @@ type ApiHandler = (request: Request, context: ApiContext) => Promise<Response>;
 interface HandlerOptions {
   rateLimitEndpoint?: string; // Endpoint identifier for rate limiter
   requireStoreAuth?: boolean; // Whether to verify store ownership
+  allowDeactivated?: boolean; // Allow deactivated accounts to hit this route (e.g. account-settings)
 }
 
 /**
@@ -59,6 +60,13 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
         return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
           status: 401,
         });
+      }
+
+      if (session.user.deactivatedAt && !options.allowDeactivated) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.FORBIDDEN, "Account is deactivated"),
+          { status: 403 }
+        );
       }
 
       // ========================================

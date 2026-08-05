@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Delete, Loader2, UserRound, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Delete, Loader2, UserRound, ArrowLeft, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { usePosSession } from "../hooks/use-pos-session";
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { StaffRole } from "@prisma/client";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface StaffMember {
   id: string;
@@ -27,6 +29,8 @@ interface PosStaffGateProps {
 const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"] as const;
 
 export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProps) {
+  const { t } = useI18n();
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const { isActive, storeId: sessionStoreId, login, checkStale } = usePosSession();
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
@@ -97,7 +101,7 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
           setShake(true);
           setTimeout(() => setShake(false), 500);
           setPin("");
-          toast.error("Incorrect PIN. Try again.");
+          toast.error(t("pages.staffAuthIncorrectPin"));
         }
         return;
       }
@@ -113,18 +117,21 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
       });
 
       if (!shift) {
-        toast.info(
-          `Welcome, ${staff.name}! No open shift — orders won't be linked to a shift until you open one.`
-        );
+        toast.info(t("pages.posStaffGateWelcomeNoShift").replace("{name}", staff.name));
       } else {
-        toast.success(`Welcome, ${staff.name}!`);
+        toast.success(t("pages.posStaffGateWelcome").replace("{name}", staff.name));
       }
     } catch {
-      toast.error("Failed to verify PIN. Check your connection.");
+      toast.error(t("pages.staffAuthVerifyFailed"));
       setPin("");
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const handleEditPin = () => {
+    if (!selectedStaff) return;
+    router.push(`/store/${storeId}/staff?editStaffId=${selectedStaff.id}`);
   };
 
   const handleStaffClick = (member: StaffMember) => {
@@ -176,8 +183,8 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
         {!selectedStaff ? (
           <>
             <div className="text-center">
-              <h2 className="text-2xl font-bold tracking-tight">Select Staff</h2>
-              <p className="text-muted-foreground mt-1 text-sm">Choose your account to login</p>
+              <h2 className="text-2xl font-bold tracking-tight">{t("pages.posStaffGateTitle")}</h2>
+              <p className="text-muted-foreground mt-1 text-sm">{t("pages.posStaffGateDesc")}</p>
             </div>
 
             {isLoading ? (
@@ -187,10 +194,8 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
             ) : activeStaff.length === 0 ? (
               <div className="space-y-2 py-12 text-center">
                 <UserRound className="text-muted-foreground/50 mx-auto h-12 w-12" />
-                <p className="text-muted-foreground">No active staff members found.</p>
-                <p className="text-muted-foreground text-sm">
-                  Go to Dashboard &gt; Operations &gt; Staff to create one.
-                </p>
+                <p className="text-muted-foreground">{t("pages.staffAuthNoActiveStaff")}</p>
+                <p className="text-muted-foreground text-sm">{t("pages.posStaffGateCreateHint")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
@@ -231,7 +236,7 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
                   })
                 }
               >
-                Continue as Owner
+                {t("pages.posStaffGateContinueAsOwner")}
               </Button>
             </div>
           </>
@@ -247,7 +252,7 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
               }}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              {t("common.actions.back")}
             </Button>
 
             <div className="mt-2 text-center sm:mt-4">
@@ -256,7 +261,7 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
               </div>
               <h2 className="text-lg font-bold tracking-tight sm:text-xl">{selectedStaff.name}</h2>
               <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
-                Enter your 4-digit PIN
+                {t("pages.staffAuthEnterPin")}
               </p>
             </div>
 
@@ -305,6 +310,17 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
                 );
               })}
             </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground mt-4 gap-1.5 sm:mt-6"
+              onClick={handleEditPin}
+            >
+              <KeyRound className="h-3.5 w-3.5" />
+              {t("pages.staffAuthForgotPin")}
+            </Button>
           </div>
         )}
       </div>

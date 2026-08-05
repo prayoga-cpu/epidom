@@ -1,4 +1,4 @@
-import { Material, MovementType, Department } from "@prisma/client";
+import { Material, Product, MovementType, Department } from "@prisma/client";
 import {
   materialRepository,
   MaterialRepository,
@@ -7,6 +7,7 @@ import {
 } from "@/lib/repositories/material.repository";
 import { prisma } from "@/lib/prisma";
 import { toDecimal } from "@/lib/utils/types.server";
+import { resolveStockItem, applyStockDelta } from "@/lib/services/stock-item.helpers";
 import type { CategoryDeleteMode } from "@/lib/validation/inventory.schemas";
 
 /**
@@ -177,30 +178,17 @@ export class MaterialService {
       notes?: string;
       referenceId?: string;
     }
-  ): Promise<{ material?: Material; product?: any; movement: any }> {
-    if (!input.materialId && !input.productId) {
-      throw new Error("Either materialId or productId must be provided");
-    }
+  ): Promise<{ material?: Material; product?: Product; movement: any }> {
+    const item = await resolveStockItem(storeId, {
+      materialId: input.materialId,
+      productId: input.productId,
+    });
 
-    // For now, only support materials (products can be added later)
-    if (!input.materialId) {
-      throw new Error("Product stock adjustment not yet implemented");
-    }
-
-    const material = await this.materialRepo.findById(input.materialId);
-    if (!material) {
-      throw new Error("Material not found");
-    }
-
-    const belongsToStore = await this.materialRepo.belongsToStore(input.materialId, storeId);
-    if (!belongsToStore) {
-      throw new Error("Material does not belong to this store");
-    }
-
-    const oldStock = Number(material.currentStock);
     const adjustmentQuantity = input.quantity;
     const isIncrease = input.adjustmentType === "IN";
-    const newStock = isIncrease ? oldStock + adjustmentQuantity : oldStock - adjustmentQuantity;
+    const newStock = isIncrease
+      ? item.currentStock + adjustmentQuantity
+      : item.currentStock - adjustmentQuantity;
 
     if (newStock < 0) {
       throw new Error("Stock cannot be negative");
@@ -212,10 +200,11 @@ export class MaterialService {
         // Create stock movement with all adjustment data
         const movement = await tx.stockMovement.create({
           data: {
-            materialId: input.materialId,
+            materialId: item.kind === "material" ? item.id : undefined,
+            productId: item.kind === "product" ? item.id : undefined,
             type: MovementType.ADJUSTMENT,
             quantity: isIncrease ? adjustmentQuantity : -adjustmentQuantity, // Signed quantity
-            unit: material.unit,
+            unit: item.unit,
             balanceAfter: newStock,
             notes: input.notes || undefined,
             reason: input.reason,
@@ -223,17 +212,20 @@ export class MaterialService {
           },
         });
 
-        // Update material stock
-        // Convert number to Prisma Decimal using type helper
-        const updatedMaterial = await tx.material.update({
-          where: { id: input.materialId },
-          data: {
-            currentStock: toDecimal(newStock),
-          },
-        });
+        await applyStockDelta(tx, item, newStock);
+
+        const updatedMaterial =
+          item.kind === "material"
+            ? await tx.material.findUniqueOrThrow({ where: { id: item.id } })
+            : undefined;
+        const updatedProduct =
+          item.kind === "product"
+            ? await tx.product.findUniqueOrThrow({ where: { id: item.id } })
+            : undefined;
 
         return {
           material: updatedMaterial,
+          product: updatedProduct,
           movement,
         };
       },

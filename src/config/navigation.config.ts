@@ -18,6 +18,8 @@ import {
   BarChart3,
   MenuSquare,
   Wrench,
+  CalendarDays,
+  Camera,
   type LucideIcon,
 } from "lucide-react";
 
@@ -153,6 +155,20 @@ export const dashboardNavigation: NavSection[] = [
         href: "/shifts",
         labelKey: "nav.shifts",
         icon: Clock,
+        showBadge: false,
+        requiredPlan: "OPERATIONS",
+      },
+      {
+        href: "/schedule",
+        labelKey: "nav.schedule",
+        icon: CalendarDays,
+        showBadge: false,
+        requiredPlan: "OPERATIONS",
+      },
+      {
+        href: "/attendance",
+        labelKey: "nav.attendance",
+        icon: Camera,
         showBadge: false,
         requiredPlan: "OPERATIONS",
       },

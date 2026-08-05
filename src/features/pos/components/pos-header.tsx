@@ -68,7 +68,7 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
               variant="ghost"
               size="icon"
               className="h-10 w-10 shrink-0 touch-manipulation"
-              aria-label="Account menu"
+              aria-label={t("pages.posAccountMenuAriaLabel")}
             >
               <UserCircle2 className="h-5 w-5" />
             </Button>

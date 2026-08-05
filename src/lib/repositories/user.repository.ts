@@ -119,6 +119,18 @@ export class UserRepository extends BaseRepository {
   }
 
   /**
+   * Clear deactivation state on reactivation.
+   * The generic `update()` above strips `null` values (it only special-cases
+   * `image`), so it can't be reused to null these fields back out.
+   */
+  async clearDeactivation(userId: string): Promise<User> {
+    return this.db.user.update({
+      where: { id: userId },
+      data: { deactivatedAt: null, purgeAt: null },
+    });
+  }
+
+  /**
    * Delete user (cascade deletes business, alerts, etc.)
    */
   async delete(userId: string): Promise<User> {

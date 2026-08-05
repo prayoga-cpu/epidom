@@ -29,6 +29,9 @@ import {
   MapPin,
   LogOut,
   X,
+  RotateCcw,
+  Mail,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { signOut } from "@/lib/auth-client";
@@ -39,6 +42,9 @@ import { useConfirm } from "@/components/ui/use-confirm";
 
 interface AccountData {
   createdAt: string;
+  deactivatedAt: string | null;
+  reactivationDeadline: string | null;
+  retentionDeadline: string | null;
   dataUsage: {
     totalStores: number;
     totalProducts: number;
@@ -110,6 +116,15 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
   const { data: pinStatus } = useOwnerPinStatus();
   const { confirm, confirmDialog } = useConfirm();
 
+  const reactivationDeadlineMs = data?.reactivationDeadline
+    ? new Date(data.reactivationDeadline).getTime()
+    : null;
+  const withinGracePeriod = reactivationDeadlineMs !== null && Date.now() <= reactivationDeadlineMs;
+  const daysRemaining =
+    reactivationDeadlineMs !== null
+      ? Math.max(0, Math.ceil((reactivationDeadlineMs - Date.now()) / (24 * 60 * 60 * 1000)))
+      : 0;
+
   // Change password dialog
   const [pwDialog, setPwDialog] = useState(false);
   const [currentPw, setCurrentPw] = useState("");
@@ -119,9 +134,9 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
   // Owner PIN dialog
   const [pinDialog, setPinDialog] = useState(false);
 
-  // Delete account dialog
-  const [deleteDialog, setDeleteDialog] = useState(false);
-  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+  // Deactivate account dialog
+  const [deactivateDialog, setDeactivateDialog] = useState(false);
+  const [deactivateConfirmEmail, setDeactivateConfirmEmail] = useState("");
 
   const changePwMutation = useMutation({
     mutationFn: () =>
@@ -141,13 +156,22 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const deleteAccountMutation = useMutation({
+  const deactivateAccountMutation = useMutation({
     mutationFn: () =>
-      postAccountAction({ action: "delete-account", confirmEmail: deleteConfirmEmail }),
+      postAccountAction({ action: "deactivate-account", confirmEmail: deactivateConfirmEmail }),
     onSuccess: async () => {
-      toast.success(t("profile.accountSettings.accountDeleted"));
+      toast.success(t("profile.accountSettings.accountDeactivated"));
       await signOut();
       window.location.href = "/";
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const reactivateAccountMutation = useMutation({
+    mutationFn: () => postAccountAction({ action: "reactivate-account" }),
+    onSuccess: () => {
+      toast.success(t("profile.accountSettings.reactivateSuccess"));
+      queryClient.invalidateQueries({ queryKey: ["account-settings"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -155,7 +179,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
   const revokeSessionMutation = useMutation({
     mutationFn: (sessionId: string) => postAccountAction({ action: "revoke-session", sessionId }),
     onSuccess: () => {
-      toast.success("Device signed out");
+      toast.success(t("profile.accountSettings.deviceSignedOut"));
       queryClient.invalidateQueries({ queryKey: ["account-settings"] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -166,8 +190,12 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
     onSuccess: (result: { revokedCount: number }) => {
       toast.success(
         result.revokedCount > 0
-          ? `Signed out ${result.revokedCount} other device${result.revokedCount === 1 ? "" : "s"}`
-          : "No other devices to sign out"
+          ? t(
+              result.revokedCount === 1
+                ? "profile.accountSettings.signedOutOtherDevicesSingular"
+                : "profile.accountSettings.signedOutOtherDevicesPlural"
+            ).replace("{count}", String(result.revokedCount))
+          : t("profile.accountSettings.noOtherDevicesToSignOut")
       );
       queryClient.invalidateQueries({ queryKey: ["account-settings"] });
     },
@@ -177,9 +205,9 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
   const handleRevokeSession = async (sessionId: string, label: string) => {
     if (
       !(await confirm({
-        title: "Sign out this device?",
-        description: `${label} will be signed out immediately and will need to log in again.`,
-        confirmText: "Sign out",
+        title: t("profile.accountSettings.signOutDeviceTitle"),
+        description: t("profile.accountSettings.signOutDeviceDesc").replace("{name}", label),
+        confirmText: t("profile.accountSettings.signOutDeviceConfirm"),
         variant: "destructive",
       }))
     ) {
@@ -191,10 +219,9 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
   const handleRevokeOtherSessions = async () => {
     if (
       !(await confirm({
-        title: "Log out all other devices?",
-        description:
-          "Every other device currently signed in to this account will be logged out immediately. This device stays signed in.",
-        confirmText: "Log out other devices",
+        title: t("profile.accountSettings.logOutOtherDevicesTitle"),
+        description: t("profile.accountSettings.logOutOtherDevicesDesc"),
+        confirmText: t("profile.accountSettings.logOutOtherDevicesConfirm"),
         variant: "destructive",
       }))
     ) {
@@ -228,6 +255,54 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+            </div>
+          ) : data?.deactivatedAt ? (
+            <div className="space-y-4 py-2">
+              <div className="border-destructive/40 bg-destructive/5 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-start">
+                <AlertTriangle className="text-destructive h-5 w-5 shrink-0" />
+                <div className="space-y-2">
+                  {withinGracePeriod ? (
+                    <>
+                      <p className="text-sm font-semibold">
+                        {t("profile.accountSettings.daysRemainingToReactivate").replace(
+                          "{days}",
+                          String(daysRemaining)
+                        )}
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {t("profile.accountSettings.deactivateDescription")}
+                      </p>
+                      <Button
+                        className="gap-2"
+                        onClick={() => reactivateAccountMutation.mutate()}
+                        disabled={reactivateAccountMutation.isPending}
+                      >
+                        {reactivateAccountMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-4 w-4" />
+                        )}
+                        {t("profile.accountSettings.reactivateAccount")}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold">
+                        {t("profile.accountSettings.pastGracePeriodTitle")}
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {t("profile.accountSettings.pastGracePeriodDescription")}
+                      </p>
+                      <Button variant="outline" className="gap-2" asChild>
+                        <a href="mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io">
+                          <Mail className="h-4 w-4" />
+                          {t("profile.accountSettings.contactSupportToRecover")}
+                        </a>
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           ) : (
             <>
@@ -333,7 +408,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-muted-foreground flex items-center gap-2 text-sm font-semibold tracking-wide uppercase">
                     <Monitor className="h-4 w-4" />
-                    Connected Devices
+                    {t("profile.accountSettings.connectedDevices")}
                   </p>
                   {(data?.sessions.length ?? 0) > 1 && (
                     <Button
@@ -348,12 +423,14 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                       ) : (
                         <LogOut className="h-3.5 w-3.5" />
                       )}
-                      Log out all other devices
+                      {t("profile.accountSettings.logOutAllOtherDevicesButton")}
                     </Button>
                   )}
                 </div>
                 {!data?.sessions.length ? (
-                  <p className="text-muted-foreground text-sm">No active sessions found.</p>
+                  <p className="text-muted-foreground text-sm">
+                    {t("profile.accountSettings.noActiveSessions")}
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {data.sessions.map((s) => {
@@ -376,7 +453,10 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                               <span className="text-muted-foreground font-normal"> · {s.device}</span>
                             </p>
                             <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-                              <span>Last active {formatDate(new Date(s.lastActive))}</span>
+                              <span>
+                                {t("profile.accountSettings.lastActive")}{" "}
+                                {formatDate(new Date(s.lastActive))}
+                              </span>
                               {s.location && (
                                 <span className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3 shrink-0" />
@@ -436,10 +516,10 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                   <Button
                     variant="outline"
                     className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive gap-2"
-                    onClick={() => setDeleteDialog(true)}
+                    onClick={() => setDeactivateDialog(true)}
                   >
                     <Trash2 className="h-4 w-4" />
-                    {t("profile.accountSettings.deleteAccount")}
+                    {t("profile.accountSettings.deactivateAccount")}
                   </Button>
                 </div>
               </div>
@@ -508,25 +588,25 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
         </FormDialogLayout>
       </Dialog>
 
-      {/* Delete Account Dialog */}
-      <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+      {/* Deactivate Account Dialog */}
+      <Dialog open={deactivateDialog} onOpenChange={setDeactivateDialog}>
         <FormDialogLayout
-          title={t("profile.accountSettings.deleteAccount")}
-          description={t("profile.accountSettings.deleteDescription")}
+          title={t("profile.accountSettings.deactivateAccount")}
+          description={t("profile.accountSettings.deactivateDescription")}
           footer={
             <>
-              <Button variant="outline" onClick={() => setDeleteDialog(false)}>
+              <Button variant="outline" onClick={() => setDeactivateDialog(false)}>
                 {t("common.actions.cancel")}
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => deleteAccountMutation.mutate()}
-                disabled={deleteConfirmEmail !== userEmail || deleteAccountMutation.isPending}
+                onClick={() => deactivateAccountMutation.mutate()}
+                disabled={deactivateConfirmEmail !== userEmail || deactivateAccountMutation.isPending}
               >
-                {deleteAccountMutation.isPending ? (
+                {deactivateAccountMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  t("profile.accountSettings.deleteConfirmButton")
+                  t("profile.accountSettings.deactivateConfirmButton")
                 )}
               </Button>
             </>
@@ -537,8 +617,8 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
               {t("profile.accountSettings.confirmEmailLabel").replace("{email}", userEmail)}
             </Label>
             <Input
-              value={deleteConfirmEmail}
-              onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+              value={deactivateConfirmEmail}
+              onChange={(e) => setDeactivateConfirmEmail(e.target.value)}
               placeholder={userEmail}
             />
           </div>

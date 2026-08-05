@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { KdsTimer } from "./kds-timer";
-import { CheckCircle, ChefHat } from "lucide-react";
+import { CheckCircle, ChefHat, Factory } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import type { PosOrderDisplay } from "../../types/pos.types";
 import type { KdsDepartment } from "./kds-department";
@@ -151,6 +151,12 @@ export function KdsOrderCard({ order, storeId, department }: KdsOrderCardProps) 
               )}
               {item.notes && (
                 <span className="pl-6 text-xs italic opacity-80">“{item.notes}”</span>
+              )}
+              {item.productionBatchId && (
+                <span className="flex items-center gap-1 pl-6 text-xs opacity-80">
+                  <Factory className="h-3 w-3" />
+                  {t("pos.kds.fromProduction")}
+                </span>
               )}
             </div>
             <span className="text-xs font-semibold tracking-wide uppercase">

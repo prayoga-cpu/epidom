@@ -15,6 +15,25 @@ export const selectedOptionSchema = z.object({
 
 export type SelectedOptionInput = z.infer<typeof selectedOptionSchema>;
 
+// Shared by checkout (where PAY_LATER defers payment) and the mark-paid flow
+// (where PAY_LATER would be a contradiction — see settlePaymentMethodEnum).
+export const paymentMethodEnum = z.enum([
+  "CASH",
+  "QRIS",
+  "GOPAY",
+  "OVO",
+  "DANA",
+  "SHOPEEPAY",
+  "BANK_TRANSFER",
+  "STRIPE_CARD",
+  "PAY_LATER",
+]);
+
+// The method actually used to settle a payment — excludes PAY_LATER, which
+// only makes sense as a deferred choice at checkout, not as a record of how
+// money changed hands.
+export const settlePaymentMethodEnum = paymentMethodEnum.exclude(["PAY_LATER"]);
+
 export const createPosOrderSchema = z.object({
   items: z
     .array(
@@ -28,17 +47,7 @@ export const createPosOrderSchema = z.object({
       })
     )
     .min(1),
-  paymentMethod: z.enum([
-    "CASH",
-    "QRIS",
-    "GOPAY",
-    "OVO",
-    "DANA",
-    "SHOPEEPAY",
-    "BANK_TRANSFER",
-    "STRIPE_CARD",
-    "PAY_LATER",
-  ]),
+  paymentMethod: paymentMethodEnum,
   orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
   tableId: z.string().cuid().optional(),
   tableNumber: z.string().optional(),
@@ -80,9 +89,17 @@ export const updateOrderStatusSchema = z
     // that was actually collected outside the online flow) — deliberately
     // narrowed to "mark paid" only, not a general paymentStatus setter.
     paymentStatus: z.literal("PAID").optional(),
+    // How the settle-up was actually paid, and an optional free-text note
+    // (e.g. "client paid directly to the owner") — only meaningful alongside
+    // paymentStatus: "PAID", enforced by the refine below.
+    paymentMethod: settlePaymentMethodEnum.optional(),
+    paymentNote: z.string().max(300, "Note is too long").optional(),
   })
   .refine((data) => data.status !== undefined || data.paymentStatus !== undefined, {
     message: "Either status or paymentStatus is required",
+  })
+  .refine((data) => data.paymentMethod === undefined || data.paymentStatus === "PAID", {
+    message: "paymentMethod requires paymentStatus: PAID",
   });
 
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;

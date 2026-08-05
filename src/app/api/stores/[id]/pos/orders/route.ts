@@ -14,6 +14,7 @@ import {
   skipsOnlinePayment,
   resolveSettledOrderStatus,
   deliverOrderImmediately,
+  draftShortfallBatchesForConfirmedOrder,
   OrderBuildError,
   type BuiltOrderItem,
 } from "@/lib/services/pos-order-builder";
@@ -229,6 +230,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // otherwise trigger later (deductStockForOrder is idempotent).
     if (immediatelyDelivered) {
       await deliverOrderImmediately(order.id, storeId);
+    } else if (settledStatus === "CONFIRMED") {
+      // Going to the kitchen/bar queue — flag any recipe-linked product
+      // that's short on hand-made stock before deduction runs later.
+      await draftShortfallBatchesForConfirmedOrder(order.id, storeId);
     }
 
     // Fire background notification via Inngest (non-blocking)

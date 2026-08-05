@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseXenditWebhook, type XenditWebhookPayload } from "@/lib/payments/providers/xendit";
 import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
+import { productionBatchService } from "@/lib/services/production-batch.service";
 import { inngest } from "@/lib/inngest/client";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
@@ -86,6 +87,20 @@ export async function POST(request: Request) {
             providerRef,
           },
         });
+
+        // Going to the kitchen/bar queue — must run BEFORE deductStockForOrder
+        // below, which (unlike the cash-order flow) fires immediately here,
+        // or the shortfall would be computed against stock this same order
+        // already ate into. No-op when settledStatus is DELIVERED (no KDS
+        // board to show it on). Guarded by the same paymentStatus check as
+        // the update above so a retry never drafts a duplicate batch.
+        if (settledStatus === "CONFIRMED") {
+          try {
+            await productionBatchService.draftShortfallBatchesForOrder(orderId, order.storeId);
+          } catch (err) {
+            console.error("[XENDIT_WEBHOOK] Shortfall batch drafting failed:", err);
+          }
+        }
       }
 
       // Payment confirmed — the purchase is complete, so sync stock now.

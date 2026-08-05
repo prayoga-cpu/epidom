@@ -25,9 +25,15 @@ function calcSummary(revenue: number, cogsMovements: { quantity: number; unitCos
 }
 
 // Inline the net revenue/profit formulas added alongside fees & taxes
-function calcNet(revenue: number, taxCollected: number, processingFee: number, cogs: number) {
+function calcNet(
+  revenue: number,
+  taxCollected: number,
+  processingFee: number,
+  cogs: number,
+  wasteLoss: number = 0
+) {
   const netRevenue = revenue - taxCollected - processingFee;
-  const netProfit = netRevenue - cogs;
+  const netProfit = netRevenue - cogs - wasteLoss;
   return {
     netRevenue: Math.round(netRevenue * 100) / 100,
     netProfit: Math.round(netProfit * 100) / 100,
@@ -110,5 +116,18 @@ describe("net revenue / net profit (tax + processing fee deducted)", () => {
     const revenue = 111_000; // 100,000 + 11,000 tax
     const result = calcNet(revenue, 11_000, 0, 0);
     expect(result.netRevenue).toBe(100_000);
+  });
+
+  it("netProfit further subtracts waste loss on top of COGS", () => {
+    const result = calcNet(1_000_000, 100_000, 7_000, 300_000, 50_000);
+    expect(result.netRevenue).toBe(893_000); // unaffected by waste
+    expect(result.netProfit).toBe(543_000); // 593,000 - 50,000
+  });
+
+  it("waste loss does not affect netRevenue, only netProfit", () => {
+    const withoutWaste = calcNet(500_000, 0, 0, 0, 0);
+    const withWaste = calcNet(500_000, 0, 0, 0, 25_000);
+    expect(withWaste.netRevenue).toBe(withoutWaste.netRevenue);
+    expect(withWaste.netProfit).toBe(withoutWaste.netProfit - 25_000);
   });
 });

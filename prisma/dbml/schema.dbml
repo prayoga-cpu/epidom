@@ -20,6 +20,8 @@ Table user {
   stripeConnectOnboarded Boolean [not null, default: false]
   isAdmin Boolean [not null, default: false]
   hasOnboarded Boolean [not null, default: false]
+  deactivatedAt DateTime
+  purgeAt DateTime
   sessions session [not null]
   accounts account [not null]
   alerts alerts [not null]
@@ -120,9 +122,14 @@ Table stores {
   aggregatorEmails aggregator_emails [not null]
   financeSettings store_finance_settings
   staffSessions staff_sessions [not null]
+  wasteEntries waste_entries [not null]
   syncFinanceWithBusiness Boolean [not null, default: false]
   payLaterEnabled Boolean [not null, default: false]
   kitchenDisplayEnabled Boolean [not null, default: true]
+  standardWorkMinutesPerDay Int [not null, default: 480]
+  scheduleShifts schedule_shifts [not null]
+  staffSchedules staff_schedules [not null]
+  attendanceRecords attendance_records [not null]
 }
 
 Table store_finance_settings {
@@ -203,6 +210,7 @@ Table products {
   stockMovements stock_movements [not null]
   menuItems menu_items [not null]
   optionGroups product_option_groups [not null]
+  wasteEntries waste_entries [not null]
 
   indexes {
     (storeId, sku) [unique]
@@ -258,6 +266,7 @@ Table ingredients {
   stockMovements stock_movements [not null]
   supplierOrderItems supplier_order_items [not null]
   productOptions product_options [not null]
+  wasteEntries waste_entries [not null]
 
   indexes {
     (storeId, sku) [unique]
@@ -342,6 +351,7 @@ Table production_batches {
   actualQuantity Decimal
   unit String [not null]
   status ProductionStatus [not null, default: 'PLANNED']
+  triggerType ProductionTriggerType [not null, default: 'MANUAL']
   scheduledDate DateTime [not null]
   completedDate DateTime
   notes String
@@ -352,6 +362,7 @@ Table production_batches {
   recipe recipes
   store stores [not null]
   stockMovements stock_movements [not null]
+  orderItems order_items [not null]
 }
 
 Table stock_movements {
@@ -368,10 +379,33 @@ Table stock_movements {
   materialId String
   reason String
   referenceId String
+  wasteEntryId String
   material ingredients
   order orders
   product products
   productionBatch production_batches
+  wasteEntry waste_entries
+}
+
+Table waste_entries {
+  id String [pk]
+  storeId String [not null]
+  materialId String
+  productId String
+  quantity Decimal [not null]
+  unit String [not null]
+  reason WasteReason [not null]
+  customReason String
+  notes String
+  unitCostSnapshot Decimal [not null]
+  totalValue Decimal [not null]
+  referenceId String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+  material ingredients
+  product products
+  stockMovements stock_movements [not null]
 }
 
 Table suppliers {
@@ -458,6 +492,7 @@ Table orders {
   paymentStatus PaymentStatus [not null, default: 'PENDING']
   paymentProviderRef String
   paymentQrString String
+  paymentNote String
   source OrderSource [not null, default: 'MANUAL']
   tableId String
   shiftId String
@@ -484,11 +519,13 @@ Table order_items {
   status OrderItemStatus [not null, default: 'PENDING']
   preparedAt DateTime
   servedAt DateTime
+  productionBatchId String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   order orders [not null]
   product products
   menuItem menu_items
+  productionBatch production_batches
 }
 
 Table alerts {
@@ -620,6 +657,8 @@ Table staff_members {
   store stores [not null]
   shifts shifts [not null]
   sessions staff_sessions [not null]
+  staffSchedules staff_schedules [not null]
+  attendanceRecords attendance_records [not null]
 
   indexes {
     (storeId, username) [unique]
@@ -659,6 +698,63 @@ Table shifts {
   store stores [not null]
   staffMember staff_members [not null]
   orders orders [not null]
+}
+
+Table schedule_shifts {
+  id String [pk]
+  storeId String [not null]
+  name String [not null]
+  startTime String [not null]
+  endTime String [not null]
+  color String
+  isActive Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+  schedules staff_schedules [not null]
+
+  indexes {
+    (storeId, name) [unique]
+  }
+}
+
+Table staff_schedules {
+  id String [pk]
+  storeId String [not null]
+  staffMemberId String [not null]
+  date DateTime [not null]
+  scheduleShiftId String
+  customStartTime String
+  customEndTime String
+  isDayOff Boolean [not null, default: false]
+  department Department
+  notes String
+  status ScheduleStatus [not null, default: 'DRAFT']
+  publishedAt DateTime
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+  staffMember staff_members [not null]
+  scheduleShift schedule_shifts
+  attendanceRecords attendance_records [not null]
+}
+
+Table attendance_records {
+  id String [pk]
+  storeId String [not null]
+  staffMemberId String [not null]
+  staffScheduleId String
+  type AttendanceType [not null]
+  timestamp DateTime [default: `now()`, not null]
+  selfieUrl String
+  latitude Decimal
+  longitude Decimal
+  locationLabel String
+  notes String
+  createdAt DateTime [default: `now()`, not null]
+  store stores [not null]
+  staffMember staff_members [not null]
+  staffSchedule staff_schedules
 }
 
 Table aggregator_connections {
@@ -815,6 +911,11 @@ Enum ProductionStatus {
   CANCELLED
 }
 
+Enum ProductionTriggerType {
+  MANUAL
+  ORDER_SHORTFALL
+}
+
 Enum MovementType {
   PURCHASE
   PRODUCTION_IN
@@ -823,6 +924,15 @@ Enum MovementType {
   ADJUSTMENT
   WASTE
   RETURN
+}
+
+Enum WasteReason {
+  EXPIRED
+  DAMAGED
+  SPOILED
+  OVERPRODUCTION
+  QUALITY_CONTROL
+  OTHER
 }
 
 Enum SupplierOrderStatus {
@@ -957,6 +1067,17 @@ Enum Department {
   BOTH
 }
 
+Enum ScheduleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+Enum AttendanceType {
+  CLOCK_IN
+  CLOCK_OUT
+  ABSENCE
+}
+
 Enum AggregatorPlatform {
   GOFOOD
   GRABFOOD
@@ -1016,6 +1137,14 @@ Ref: stock_movements.productId > products.id [delete: Cascade]
 
 Ref: stock_movements.productionBatchId > production_batches.id
 
+Ref: stock_movements.wasteEntryId > waste_entries.id [delete: Set Null]
+
+Ref: waste_entries.storeId > stores.id [delete: Cascade]
+
+Ref: waste_entries.materialId > ingredients.id [delete: Cascade]
+
+Ref: waste_entries.productId > products.id [delete: Cascade]
+
 Ref: suppliers.storeId > stores.id [delete: Cascade]
 
 Ref: supplier_orders.storeId > stores.id [delete: Cascade]
@@ -1040,6 +1169,8 @@ Ref: order_items.productId > products.id [delete: Set Null]
 
 Ref: order_items.menuItemId > menu_items.id [delete: Set Null]
 
+Ref: order_items.productionBatchId > production_batches.id [delete: Set Null]
+
 Ref: alerts.userId > user.id [delete: Cascade]
 
 Ref: feedback.userId > user.id [delete: Set Null]
@@ -1061,6 +1192,20 @@ Ref: staff_sessions.staffMemberId > staff_members.id [delete: Cascade]
 Ref: shifts.storeId > stores.id [delete: Cascade]
 
 Ref: shifts.staffMemberId > staff_members.id [delete: Cascade]
+
+Ref: schedule_shifts.storeId > stores.id [delete: Cascade]
+
+Ref: staff_schedules.storeId > stores.id [delete: Cascade]
+
+Ref: staff_schedules.staffMemberId > staff_members.id [delete: Cascade]
+
+Ref: staff_schedules.scheduleShiftId > schedule_shifts.id [delete: Set Null]
+
+Ref: attendance_records.storeId > stores.id [delete: Cascade]
+
+Ref: attendance_records.staffMemberId > staff_members.id [delete: Cascade]
+
+Ref: attendance_records.staffScheduleId > staff_schedules.id [delete: Set Null]
 
 Ref: aggregator_connections.storeId > stores.id [delete: Cascade]
 

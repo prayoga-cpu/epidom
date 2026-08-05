@@ -25,6 +25,7 @@ export interface ProductionBatchWithRelations {
   actualQuantity: number | null;
   unit: string;
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  triggerType: "MANUAL" | "ORDER_SHORTFALL";
   scheduledDate: Date;
   completedDate: Date | null;
   notes: string | null;
@@ -65,6 +66,7 @@ export interface ProductionBatchWithRelations {
     unit: string;
     createdAt: Date;
   }>;
+  orderItems: Array<{ order: { orderNumber: string } }>;
 }
 
 export interface ProductionBatchesResponse {
