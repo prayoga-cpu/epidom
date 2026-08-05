@@ -51,7 +51,11 @@ interface MenuEditorProps {
 export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: MenuEditorProps) {
   const { t } = useI18n();
   const { confirm, confirmDialog } = useConfirm();
-  const { currency, formatPrice } = useCurrency();
+  // MenuItem.price is literal in the store's display currency, never IDR —
+  // passing `currency` skips formatPrice's default base-currency conversion
+  // (matches how it's entered/saved below, with no conversion either way).
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const router = useRouter();
   const queryClient = useQueryClient();
 

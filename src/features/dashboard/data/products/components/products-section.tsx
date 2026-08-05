@@ -830,6 +830,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
       {selectedProduct && (
         <>
           <ProductDetailsDialog
+            storeId={storeId}
             product={selectedProduct}
             open={viewDialogOpen}
             onOpenChange={setViewDialogOpen}

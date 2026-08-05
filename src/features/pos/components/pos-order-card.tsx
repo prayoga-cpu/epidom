@@ -27,7 +27,10 @@ interface PosOrderCardProps {
 
 export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardProps) {
   const { t, locale } = useI18n();
-  const { formatPrice } = useCurrency();
+  // Order total is literal in the store's display currency, never IDR —
+  // passing `currency` skips formatPrice's default base-currency conversion.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const { handleCancel, handleResume, confirmDialog } = useOrderQueueActions(
     order,
     storeId,

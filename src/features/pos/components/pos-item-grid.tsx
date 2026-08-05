@@ -22,7 +22,11 @@ export function PosItemGrid({
   searchQuery,
 }: PosItemGridProps) {
   const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  // Menu item prices are literal in the store's display currency, never
+  // IDR — passing `currency` skips formatPrice's default base-currency
+  // conversion.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
 
   const filteredCategories = categories
     .map((cat) => ({

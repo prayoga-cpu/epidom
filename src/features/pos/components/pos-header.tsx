@@ -27,7 +27,10 @@ interface PosHeaderProps {
 
 export function PosHeader({ store, onCartClick }: PosHeaderProps) {
   const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  // Cart total is literal in the store's display currency, never IDR —
+  // passing `currency` skips formatPrice's default base-currency conversion.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const cart = usePosCart();
   const [time, setTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(true);

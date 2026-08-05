@@ -60,7 +60,10 @@ export function OrderHistoryPrintView({
   generatedAt,
 }: OrderHistoryPrintViewProps) {
   const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  // Order amounts are literal in the store's display currency, never IDR —
+  // passing `currency` skips formatPrice's default base-currency conversion.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
 
   useEffect(() => {
     const timer = setTimeout(() => window.print(), 400);

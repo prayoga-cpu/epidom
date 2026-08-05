@@ -21,6 +21,7 @@ import {
   Calendar,
   ChefHat,
   AlertCircle,
+  ListChecks,
 } from "lucide-react";
 import type { ProductWithRelations } from "@/lib/repositories/product.repository";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/utils/formatting";
@@ -29,8 +30,10 @@ import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { getTranslatedCategory } from "../../recipes/utils/category-helpers";
+import { useMaterials } from "../../materials/hooks/use-materials";
 
 interface ProductDetailsDialogProps {
+  storeId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: ProductWithRelations;
@@ -39,6 +42,7 @@ interface ProductDetailsDialogProps {
 }
 
 export function ProductDetailsDialog({
+  storeId,
   open,
   onOpenChange,
   product,
@@ -48,6 +52,10 @@ export function ProductDetailsDialog({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
+  // Only the material's name/unit are needed to label an option's stock
+  // linkage — the option itself already carries materialId/materialQty.
+  const { data: materialsData } = useMaterials(storeId);
+  const materials = materialsData?.materials ?? [];
 
   // Calculate profit margins
   const calculateMargins = () => {
@@ -244,30 +252,28 @@ export function ProductDetailsDialog({
               <Tag className="h-5 w-5" />
               {t("data.products.sections.basicInfo")}
             </h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-3">
-                <div>
-                  <label className="text-muted-foreground text-sm font-medium">SKU</label>
-                  <p className="text-sm">{product.sku || t("common.notAvailable")}</p>
-                </div>
-                <div>
-                  <label className="text-muted-foreground text-sm font-medium">
-                    {t("data.products.form.category")}
-                  </label>
-                  <p className="text-sm">
-                    {product.category ? (
-                      <Badge variant="secondary">{product.category}</Badge>
-                    ) : (
-                      t("common.notAvailable")
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-muted-foreground text-sm font-medium">
-                    {t("data.products.form.unit")}
-                  </label>
-                  <p className="text-sm">{product.unit || t("common.notAvailable")}</p>
-                </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="text-muted-foreground text-sm font-medium">SKU</label>
+                <p className="text-sm">{product.sku || t("common.notAvailable")}</p>
+              </div>
+              <div>
+                <label className="text-muted-foreground text-sm font-medium">
+                  {t("data.products.form.category")}
+                </label>
+                <p className="text-sm">
+                  {product.category ? (
+                    <Badge variant="secondary">{product.category}</Badge>
+                  ) : (
+                    t("common.notAvailable")
+                  )}
+                </p>
+              </div>
+              <div>
+                <label className="text-muted-foreground text-sm font-medium">
+                  {t("data.products.form.unit")}
+                </label>
+                <p className="text-sm">{product.unit || t("common.notAvailable")}</p>
               </div>
             </div>
           </div>
@@ -357,6 +363,75 @@ export function ProductDetailsDialog({
                       {t("data.products.warnings.noRecipes.action") || "Link Recipe"}
                     </Button>
                   )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Option Groups (variants like Size or Sugar Level) */}
+          {product.optionGroups && product.optionGroups.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+                  <ListChecks className="h-5 w-5" />
+                  {t("data.products.sections.options")} ({product.optionGroups.length})
+                </h3>
+                <div className="space-y-3">
+                  {product.optionGroups.map((group) => (
+                    <Card key={group.id} className="bg-muted/30">
+                      <CardContent className="pt-6">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-base font-semibold">{group.name}</p>
+                          <div className="flex items-center gap-2">
+                            {group.isRequired && (
+                              <Badge variant="outline">
+                                {t("data.products.options.required")}
+                              </Badge>
+                            )}
+                            <Badge variant="secondary">
+                              {t("data.products.options.maxSelections")}: {group.maxSelections}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {group.options.map((option) => {
+                            const material = materials.find((m) => m.id === option.materialId);
+                            const priceAdjustment = Number(option.priceAdjustment) || 0;
+                            return (
+                              <div
+                                key={option.id}
+                                className="bg-background flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm"
+                              >
+                                <span className="font-medium">{option.name}</span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {priceAdjustment !== 0 && (
+                                    <span className="text-muted-foreground text-xs">
+                                      +{formatPrice(priceAdjustment)}
+                                    </span>
+                                  )}
+                                  {material ? (
+                                    <Badge variant="outline" className="text-xs font-normal">
+                                      {material.name} −
+                                      {formatNumber(Number(option.materialQty) || 0)}{" "}
+                                      {material.unit}
+                                    </Badge>
+                                  ) : (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-muted-foreground text-xs font-normal"
+                                    >
+                                      {t("data.products.options.noMaterial")}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </div>
             </>

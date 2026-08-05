@@ -38,7 +38,11 @@ interface PosShellProps {
 
 export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  // Menu item/modifier prices are literal in the store's display currency,
+  // never IDR — passing `currency` skips formatPrice's default base-currency
+  // conversion. See pos-order-builder.ts.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<"KITCHEN" | "BAR" | null>(null);
   const [activeFilterKeys, setActiveFilterKeys] = useState<PosFilterKey[]>([]);

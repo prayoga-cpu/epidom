@@ -15,7 +15,11 @@ interface PosCartItemProps {
 
 export function PosCartItem({ item, onUpdateQuantity, onRemove, onEdit }: PosCartItemProps) {
   const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  // Cart amounts (unit price, modifiers, line total) are literal in the
+  // store's display currency, never IDR — passing `currency` skips
+  // formatPrice's default base-currency conversion. See pos-order-builder.ts.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
 
   return (
     <div className="flex flex-col gap-2 border-b p-2 last:border-0 sm:p-4">

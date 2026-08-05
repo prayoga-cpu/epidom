@@ -62,7 +62,14 @@ export function PosCheckoutDialog({
   shiftId,
 }: PosCheckoutDialogProps) {
   const { t, locale } = useI18n();
-  const { currency, formatPrice, convertToBase } = useCurrency();
+  // Every monetary value flowing through the POS (cart totals, menu item
+  // prices, modifiers, amountTendered) is stored and computed literally in
+  // the store's own display currency — see pos-order-builder.ts, which
+  // derives unitPrice straight from `menuItem.price` with no conversion.
+  // Passing `currency` as the (otherwise IDR-defaulting) `fromCurrency` arg
+  // makes formatPrice a pure display formatter here, matching that model.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const cart = usePosCart();
   const { data: financeSettings } = useFinanceSettings(storeId);
   const autoPrint = usePrinterSettings((s) => s.autoPrint);
@@ -110,8 +117,7 @@ export function PosCheckoutDialog({
   // field.value directly, not from this, so it can never lag a keystroke.
   const amountTendered = useWatch({ control: form.control, name: "amountTendered" });
   const isCashUnderpaid =
-    paymentMethod === "CASH" &&
-    (amountTendered == null || convertToBase(amountTendered) < cart.total);
+    paymentMethod === "CASH" && (amountTendered == null || amountTendered < cart.total);
 
   useEffect(() => {
     if (open) {
@@ -235,19 +241,12 @@ export function PosCheckoutDialog({
   const onSubmit = async (data: CreatePosOrderInput) => {
     setIsSubmitting(true);
     try {
-      // amountTendered was typed by the cashier in their display currency,
-      // but every other monetary value in this order (cart.total, subtotal,
-      // menu item prices) is stored in the base currency (IDR) — the
-      // server, the printed receipt, and buildReceipt's own change
-      // calculation below all assume IDR. Convert once, up front, so
-      // nothing downstream has to know this conversion happened. A no-op
-      // for the (majority) case where the store's display currency is
-      // already IDR.
-      const submitData: CreatePosOrderInput = {
-        ...data,
-        amountTendered:
-          data.amountTendered != null ? convertToBase(data.amountTendered) : undefined,
-      };
+      // amountTendered is typed by the cashier in the store's display
+      // currency — same units as cart.total and every menu item price, none
+      // of which are converted anywhere in this flow (see pos-order-builder.ts).
+      // The server compares/subtracts it against charges.total directly, so
+      // it must be submitted as-is.
+      const submitData: CreatePosOrderInput = { ...data };
 
       if (!navigator.onLine) {
         if (cart.resumingOrderId) {
@@ -513,17 +512,11 @@ export function PosCheckoutDialog({
                       // exactly what's on screen on every keystroke — no
                       // separate subscription that can lag or go stale.
                       //
-                      // field.value is what the cashier typed in *their*
-                      // display currency, but cart.total is always stored
-                      // in the base currency (IDR) — subtracting them
-                      // directly mixes units. Convert the tendered amount
-                      // to base first, do the subtraction in base units
-                      // (matching cart.total), then let formatPrice convert
-                      // the result back to the display currency, same as
-                      // every other price in this dialog.
-                      const tenderedBase = field.value ? convertToBase(field.value) : 0;
-                      const change = tenderedBase ? Math.max(0, tenderedBase - cart.total) : 0;
-                      const isUnderpaid = field.value != null && tenderedBase < cart.total;
+                      // field.value is what the cashier typed in the store's
+                      // display currency — the same units as cart.total, so
+                      // no conversion is needed before subtracting.
+                      const change = field.value ? Math.max(0, field.value - cart.total) : 0;
+                      const isUnderpaid = field.value != null && field.value < cart.total;
                       return (
                         <>
                           <FormItem>
