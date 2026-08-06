@@ -55,14 +55,20 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      await sendPasswordResetEmail(user.email, user.name, url);
+      const result = await sendPasswordResetEmail(user.email, user.name, url);
+      if (!result.success) {
+        throw new Error(`Failed to send password reset email: ${result.error}`);
+      }
     },
   },
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      await sendVerificationEmail(user.email, user.name, url);
+      const result = await sendVerificationEmail(user.email, user.name, url);
+      if (!result.success) {
+        throw new Error(`Failed to send verification email: ${result.error}`);
+      }
     },
   },
   socialProviders: {
