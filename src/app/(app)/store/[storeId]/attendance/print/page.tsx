@@ -6,6 +6,8 @@ import { requireOwnerOnly } from "@/lib/auth/require-owner-only";
 import { AttendancePrintView } from "@/features/dashboard/attendance/components/attendance-print-view";
 import { pairAttendanceIntoWorkdays } from "@/lib/attendance/hours-aggregation";
 import { getBusinessDateKey } from "@/lib/attendance/business-date";
+import { fetchUnifiedLog } from "@/lib/attendance/unified-log";
+import { formatCurrency } from "@/lib/utils/formatting";
 
 // Deliberately outside the (dashboard) route group — see pos/orders/print's
 // page.tsx for the original precedent.
@@ -91,22 +93,26 @@ export default async function AttendancePrintPage({ params, searchParams }: Prin
     );
   }
 
-  const records = await prisma.attendanceRecord.findMany({
-    where: {
-      storeId,
-      timestamp: { gte: fromDate, lte: toDate },
-      ...(staffId && { staffMemberId: staffId }),
-    },
-    include: { staffMember: { select: { name: true } } },
-    orderBy: { timestamp: "desc" },
+  const business = await prisma.store.findUnique({
+    where: { id: storeId },
+    select: { business: { select: { currency: true } } },
+  });
+  const currency = business?.business.currency ?? "IDR";
+
+  const records = await fetchUnifiedLog({
+    storeId,
+    from: fromDate,
+    to: toDate,
+    staffId: staffId ?? undefined,
   });
 
   const logRows = records.map((r) => ({
-    timestamp: r.timestamp.toISOString(),
-    staffName: r.staffMember.name,
+    timestamp: r.timestamp,
+    staffName: r.staffName,
     type: r.type,
     hasSelfie: !!r.selfieUrl,
     locationLabel: r.locationLabel,
+    amountFormatted: r.amount != null ? formatCurrency(r.amount, currency) : null,
   }));
 
   return (

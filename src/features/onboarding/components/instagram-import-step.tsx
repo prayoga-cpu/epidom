@@ -107,7 +107,7 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
     e.target.value = "";
     if (!file) return;
 
-    if (!isValidImage(file) || !isValidImageSize(file, 5)) {
+    if (!isValidImage(file) || !isValidImageSize(file)) {
       toast.error(t("common.error"), { description: t(`${ik}.uploadHint`) });
       return;
     }

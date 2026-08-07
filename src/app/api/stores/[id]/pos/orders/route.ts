@@ -21,6 +21,8 @@ import {
 import { serializePosOrders } from "@/lib/server/serialize";
 import { resolveFinanceSettingsForOrder } from "@/lib/services";
 import { computeOrderCharges } from "@/lib/finance/order-charges";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -223,6 +225,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
 
       return created;
+    });
+
+    publishStoreEvent(storeId, REALTIME_EVENTS.ORDER_CREATED, {
+      action: "created",
+      entityId: order.id,
     });
 
     // Kitchen display is off for this store — the order skipped straight to

@@ -147,6 +147,13 @@ These five bug classes have each caused real, shipped breakage on iPad Safari. C
 - **Every link in a nested flex `flex-1`/`overflow-y-auto` scroll chain needs `min-h-0` (or `min-w-0` for a row) on each intermediate flex item.** A flex item's browser default is to refuse to shrink below its own content's size; skip this and content quietly overflows/is clipped by an ancestor's `overflow-hidden` instead of scrolling, with no scrollbar ever appearing.
 - **In a flex row with more than one button, give the one that should fill remaining space `flex-1`, never `w-full`.** `width: 100%` doesn't know about sibling elements and claims the _entire_ row on top of them, overflowing by exactly the sibling's width — regardless of screen size or device, but it's easiest to notice on a cramped tablet panel.
 
+**Images**
+
+- Every image upload — current or new — MUST go through `/api/upload`, which auto-compresses server-side via `compressImageServer` (`src/lib/utils/server-image-compression.ts`, sharp): resized to ≤1600px on the longest edge, re-encoded until it's ≤2MB by default (`IMAGE_DEFAULT_TARGET_MB` in `src/lib/constants/image.ts`). This is the authoritative guarantee — never rely on the client alone.
+- Client-side, call `compressImage()` (`src/lib/utils/image-compression.ts`) before uploading — it's a bandwidth/UX optimization, not a substitute for server compression. Prefer the shared `<ImageUpload>` component (`src/components/shared/image-upload.tsx`), which already wires this up; only hand-roll an upload zone if the UX genuinely can't use it (see `selfie-capture.tsx`), and still compress before the `fetch("/api/upload")` call.
+- A feature needing a larger guaranteed size (e.g. a hero/cover banner) passes its own `maxSize` (MB) to `<ImageUpload>` / `compressImage()` and appends it as the `maxSizeMB` form field sent to `/api/upload` — the server clamps it to `[IMAGE_MIN_TARGET_MB, IMAGE_MAX_TARGET_MB]`. Don't invent a new upload route or a separate size rule per feature.
+- Never gate on raw file size against the compression target (that rejects a normal phone photo before compression gets a chance to shrink it) — raw files are only checked against `IMAGE_RAW_UPLOAD_MAX_MB` (5MB), a processing-cost ceiling, not the promised output size.
+
 **i18n**
 
 - Every user-facing string goes through `useI18n()`.

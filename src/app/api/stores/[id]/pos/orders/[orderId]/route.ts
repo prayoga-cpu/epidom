@@ -6,6 +6,8 @@ import { updateOrderStatusSchema } from "@/lib/validation/pos.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { deductStockForOrder, reverseStockForOrder } from "@/lib/services/stock-deduction.service";
 import { serializePosOrder } from "@/lib/server/serialize";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 /**
  * PATCH /api/stores/[id]/pos/orders/[orderId]
@@ -85,6 +87,11 @@ export async function PATCH(
       }
 
       return order;
+    });
+
+    publishStoreEvent(storeId, REALTIME_EVENTS.ORDER_UPDATED, {
+      action: "updated",
+      entityId: updated.id,
     });
 
     // Deduct ingredient stock when order is completed (Synchronous to prevent race conditions)

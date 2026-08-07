@@ -6,7 +6,7 @@ import { DashboardCard } from "../components/dashboard-card";
 import { Chart } from "./components/chart";
 import { useMemo } from "react";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { useProductionBatches } from "@/features/dashboard/management/recipe-production/hooks/use-production-batches";
+import { useProductionBatches } from "@/features/dashboard/production/recipe-production/hooks/use-production-batches";
 import { exportData } from "@/features/dashboard/dashboard/production-history/utils/export";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { Loader2 } from "lucide-react";

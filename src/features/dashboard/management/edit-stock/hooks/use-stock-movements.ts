@@ -1,8 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StockMovement } from "@prisma/client";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
+import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 export interface StockMovementWithRelations extends StockMovement {
   // reason and referenceId are already in StockMovement from Prisma
@@ -57,6 +59,13 @@ export const stockMovementKeys = {
 export function useStockMovements(storeId: string, filters?: StockMovementFilters) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
+  const queryClient = useQueryClient();
+
+  useRealtimeChannel(storeId, {
+    [REALTIME_EVENTS.STOCK_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.lists(storeId) });
+    },
+  });
 
   return useQuery<StockMovementsResponse>({
     queryKey: stockMovementKeys.list(storeId, normalizedFilters),

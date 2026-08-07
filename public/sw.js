@@ -4,7 +4,7 @@
 
 // Bump this version on any precached-asset change (e.g. favicon) so the
 // activate handler purges the old cache and install re-precaches fresh copies.
-const CACHE_NAME = "epidom-v2";
+const CACHE_NAME = "epidom-v3";
 
 // Minimal precache: only assets that are stable across builds
 const PRECACHE = ["/favicon.ico"];
@@ -78,6 +78,57 @@ self.addEventListener("fetch", (event) => {
         return response;
       });
       return cached ?? networkFetch;
+    })
+  );
+});
+
+// Web Push (OS-level notifications: new storefront orders, low/critical
+// material stock — see src/lib/push/send.ts). Independent of the IS_DEV
+// fetch-passthrough guard above; push must work in every environment.
+self.addEventListener("push", (event) => {
+  let payload = { title: "Epidom", body: "You have a new notification.", url: "/" };
+
+  if (event.data) {
+    try {
+      payload = { ...payload, ...event.data.json() };
+    } catch {
+      // Not valid JSON — fall back to plain text if there is any, else keep defaults.
+      let text = "";
+      try {
+        text = event.data.text();
+      } catch {
+        // no-op — keep default body
+      }
+      if (text) payload.body = text;
+    }
+  }
+
+  const options = {
+    body: payload.body,
+    // manifest.ts's icon-192/512 paths don't currently exist on disk — use
+    // the real logo asset instead so the notification icon doesn't 404.
+    icon: "/logo.png",
+    badge: "/logo.png",
+    tag: payload.tag,
+    data: { url: payload.url || "/" },
+  };
+
+  event.waitUntil(self.registration.showNotification(payload.title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || "/";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.startsWith(self.location.origin) && "focus" in client) {
+          if ("navigate" in client) client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })
   );
 });

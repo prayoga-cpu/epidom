@@ -1,6 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PosMenuCategory } from "../types/pos.types";
 import { apiClient } from "@/lib/api/client";
+import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 interface PosMenuData {
   categories: PosMenuCategory[];
@@ -8,7 +10,9 @@ interface PosMenuData {
 }
 
 export function usePosMenu(storeId: string) {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["pos", "menu", storeId],
     queryFn: async () => {
       return apiClient.get<PosMenuData>(`/stores/${storeId}/pos/menu`);
@@ -17,10 +21,21 @@ export function usePosMenu(storeId: string) {
     // Prices, availability, and options can be edited from Data/Menu Editor
     // in a different tab/device while the cashier has this screen open — a
     // long staleTime would leave POS silently serving a stale menu. Polling
-    // (same pattern as useMaterials) keeps it self-healing without needing
-    // a full realtime/WebSocket setup; mutations that touch the menu also
-    // invalidate this key directly for instant same-tab feedback.
+    // (same pattern as useMaterials) keeps it self-healing; the Pusher push
+    // below (when configured) makes the common case near-instant instead of
+    // waiting up to 5s, without removing the poll as a safety net.
     staleTime: 3 * 1000,
     refetchInterval: 5 * 1000,
   });
+
+  useRealtimeChannel(storeId, {
+    [REALTIME_EVENTS.MENU_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId] });
+    },
+    [REALTIME_EVENTS.PRODUCT_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId] });
+    },
+  });
+
+  return query;
 }

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Store } from "../hooks/use-stores";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { compressImage } from "@/lib/utils/image-compression";
+import { IMAGE_DEFAULT_TARGET_MB } from "@/lib/constants/image";
 import { toast } from "sonner";
 import { X, Upload } from "lucide-react";
 
@@ -110,6 +111,7 @@ export function StoreForm({
         // Upload to server
         const formData = new FormData();
         formData.append("file", compressedFile);
+        formData.append("maxSizeMB", String(IMAGE_DEFAULT_TARGET_MB));
 
         const response = await fetch("/api/upload", {
           method: "POST",
@@ -192,7 +194,8 @@ export function StoreForm({
                           Click to upload store image
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          JPEG, PNG, WebP, or GIF (max 5MB)
+                          JPEG, PNG, WebP, or GIF — auto-compressed to {IMAGE_DEFAULT_TARGET_MB}MB or
+                          less
                         </p>
                       </div>
                     </div>

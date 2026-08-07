@@ -153,7 +153,12 @@ export function ScheduleShiftBlocksDialog({
         <div className="space-y-3 border-t pt-3">
           <div className="space-y-1">
             <Label>{t("pages.scheduleBlockName")}</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={40}
+              placeholder={t("pages.scheduleBlockNamePlaceholder")}
+            />
           </div>
           <div className="flex gap-2">
             <div className="flex-1 space-y-1">

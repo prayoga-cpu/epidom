@@ -9,6 +9,8 @@ import { prisma } from "@/lib/prisma";
 import { toDecimal } from "@/lib/utils/types.server";
 import { resolveStockItem, applyStockDelta } from "@/lib/services/stock-item.helpers";
 import type { CategoryDeleteMode } from "@/lib/validation/inventory.schemas";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 /**
  * Material (Ingredient) Service
@@ -56,6 +58,7 @@ export interface UpdateMaterialInput {
   currentStock?: number;
   minStock?: number;
   maxStock?: number;
+  expirationDate?: Date | null;
   suppliers?: Array<{
     supplierId: string;
     price: number;
@@ -129,7 +132,7 @@ export class MaterialService {
 
     // Use transaction to ensure atomicity
     // Add timeout to prevent hanging on slow database connections
-    return await prisma.$transaction(
+    const created = await prisma.$transaction(
       async (tx) => {
         // Create material with suppliers
         const material = await this.materialRepo.create({
@@ -161,6 +164,11 @@ export class MaterialService {
         timeout: 10000, // Maximum time for transaction to complete (10s)
       }
     );
+    publishStoreEvent(storeId, REALTIME_EVENTS.MATERIAL_CHANGED, {
+      action: "created",
+      entityId: created.id,
+    });
+    return created;
   }
 
   /**
@@ -195,7 +203,7 @@ export class MaterialService {
     }
 
     // Use transaction to ensure atomicity
-    return await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
         // Create stock movement with all adjustment data
         const movement = await tx.stockMovement.create({
@@ -234,6 +242,11 @@ export class MaterialService {
         timeout: 10000, // Maximum time for transaction to complete (10s)
       }
     );
+    publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, {
+      action: "updated",
+      entityId: item.id,
+    });
+    return result;
   }
 
   /**
@@ -276,7 +289,7 @@ export class MaterialService {
       (input.currentStock !== undefined && input.currentStock !== Number(material.currentStock)) ||
       input.suppliers !== undefined
     ) {
-      return await prisma.$transaction(
+      const updated = await prisma.$transaction(
         async (tx) => {
           // Handle stock changes
           if (
@@ -337,6 +350,7 @@ export class MaterialService {
             updateData.currentStock = toDecimal(input.currentStock);
           if (input.minStock !== undefined) updateData.minStock = toDecimal(input.minStock);
           if (input.maxStock !== undefined) updateData.maxStock = toDecimal(input.maxStock);
+          if (input.expirationDate !== undefined) updateData.expirationDate = input.expirationDate;
 
           // Update material
           return await tx.material.update({
@@ -349,6 +363,11 @@ export class MaterialService {
           timeout: 10000, // Maximum time for transaction to complete (10s)
         }
       );
+      publishStoreEvent(storeId, REALTIME_EVENTS.MATERIAL_CHANGED, {
+        action: "updated",
+        entityId: materialId,
+      });
+      return updated;
     }
 
     // No stock change and no suppliers update, just update basic properties
@@ -367,8 +386,14 @@ export class MaterialService {
     if (input.currentStock !== undefined) updateData.currentStock = toDecimal(input.currentStock);
     if (input.minStock !== undefined) updateData.minStock = toDecimal(input.minStock);
     if (input.maxStock !== undefined) updateData.maxStock = toDecimal(input.maxStock);
+    if (input.expirationDate !== undefined) updateData.expirationDate = input.expirationDate;
 
-    return this.materialRepo.update(materialId, updateData);
+    const updated = await this.materialRepo.update(materialId, updateData);
+    publishStoreEvent(storeId, REALTIME_EVENTS.MATERIAL_CHANGED, {
+      action: "updated",
+      entityId: materialId,
+    });
+    return updated;
   }
 
   /**
@@ -384,7 +409,12 @@ export class MaterialService {
 
     // Use direct repository delete (relies on DB cascade)
     // This matches the pattern used in Recipe, Product, and Supplier services
-    return this.materialRepo.delete(materialId);
+    const deleted = await this.materialRepo.delete(materialId);
+    publishStoreEvent(storeId, REALTIME_EVENTS.MATERIAL_CHANGED, {
+      action: "deleted",
+      entityId: materialId,
+    });
+    return deleted;
   }
 
   /**
@@ -613,6 +643,10 @@ export class MaterialService {
         timeout: 10000, // Maximum time for transaction to complete (10s)
       }
     );
+    publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, {
+      action: "updated",
+      entityId: materialId,
+    });
   }
 }
 

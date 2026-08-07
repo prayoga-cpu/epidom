@@ -200,6 +200,50 @@ export async function exportToPDF<T extends Record<string, any>>(
 }
 
 /**
+ * Build the same table-in-a-PDF as exportToPDF, but return the raw Blob
+ * instead of triggering a browser download — for flows that need to upload
+ * or attach the PDF (e.g. emailing/WhatsApping it to a supplier) rather than
+ * save it locally.
+ */
+export async function generatePDFBlob<T extends Record<string, any>>(
+  data: T[],
+  columns?: Array<{ key: keyof T; header: string }>,
+  title?: string
+): Promise<Blob> {
+  const { default: jsPDF } = await import("jspdf");
+  const autoTable = (await import("jspdf-autotable")).default;
+
+  const doc = new jsPDF();
+
+  if (title) {
+    doc.setFontSize(16);
+    doc.text(title, 14, 15);
+  }
+
+  const cols = columns || Object.keys(data[0]).map((key) => ({ key: key as keyof T, header: key }));
+  const headers = cols.map((col) => col.header);
+  const body = data.map((row) =>
+    cols.map((col) => {
+      const value = row[col.key];
+      if (isDate(value)) return formatDate(value);
+      if (value === null || value === undefined) return "";
+      return String(value);
+    })
+  );
+
+  autoTable(doc, {
+    head: [headers],
+    body: body,
+    startY: title ? 25 : 10,
+    theme: "grid",
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [66, 139, 202] },
+  });
+
+  return doc.output("blob");
+}
+
+/**
  * Generic export function that handles all formats
  */
 export async function exportData<T extends Record<string, any>>(

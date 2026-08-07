@@ -23,7 +23,7 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "any",
       },
       {
-        src: "/images/icon-192.png",
+        src: "/images/icon-192-maskable.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "maskable",
@@ -35,10 +35,24 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "any",
       },
       {
-        src: "/images/icon-512.png",
+        src: "/images/icon-512-maskable.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
+      },
+    ],
+    screenshots: [
+      {
+        src: "/images/screenshot-narrow-1.png",
+        sizes: "410x856",
+        type: "image/png",
+        form_factor: "narrow",
+      },
+      {
+        src: "/images/screenshot-wide-1.png",
+        sizes: "1602x1067",
+        type: "image/png",
+        form_factor: "wide",
       },
     ],
     categories: ["business", "productivity"],

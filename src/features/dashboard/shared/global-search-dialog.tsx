@@ -95,7 +95,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
       {
         id: "management",
         title: t("nav.management"),
-        description: t("management.supplierOrders.title"),
+        description: t("management.editStock.description"),
         href: `/store/${storeId}/management`,
         icon: <Boxes className="size-4" />,
         category: t("search.categories.navigation"),
@@ -119,23 +119,23 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         category: t("search.categories.navigation"),
         gateHref: "/alerts",
       },
+      {
+        id: "production",
+        title: t("nav.production"),
+        description: t("management.recipeProduction.description"),
+        href: `/store/${storeId}/production`,
+        icon: <UtensilsCrossed className="size-4" />,
+        category: t("search.categories.navigation"),
+        gateHref: "/production",
+      },
 
       // Management Section
       {
         id: "supplier-orders",
         title: t("management.supplierOrders.title"),
         description: t("management.supplierOrders.description"),
-        href: `/store/${storeId}/management/supplier-orders`,
+        href: `/store/${storeId}/management?tab=stock`,
         icon: <FileText className="size-4" />,
-        category: t("search.categories.management"),
-        gateHref: "/management",
-      },
-      {
-        id: "recipe-production",
-        title: t("management.recipeProduction.title"),
-        description: t("management.recipeProduction.description"),
-        href: `/store/${storeId}/management/recipe-production`,
-        icon: <UtensilsCrossed className="size-4" />,
         category: t("search.categories.management"),
         gateHref: "/management",
       },

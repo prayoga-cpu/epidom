@@ -14,6 +14,8 @@ import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { trackEvent } from "@/lib/analytics";
+import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 export interface MaterialsResponse {
   materials: MaterialWithSuppliers[];
@@ -41,6 +43,16 @@ export function useMaterials(
 ) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
+  const queryClient = useQueryClient();
+
+  useRealtimeChannel(storeId, {
+    [REALTIME_EVENTS.MATERIAL_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
+    },
+    [REALTIME_EVENTS.STOCK_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
+    },
+  });
 
   return useQuery<MaterialsResponse>({
     queryKey: materialKeys.list(storeId, normalizedFilters),

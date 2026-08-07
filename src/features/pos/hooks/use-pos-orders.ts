@@ -2,9 +2,13 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PosOrderDisplay, OrdersSSEMessage } from "../types/pos.types";
 import { apiClient } from "@/lib/api/client";
+import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { isRealtimeConfiguredClient } from "@/lib/realtime/pusher-client";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 export function usePosOrders(storeId: string) {
   const queryClient = useQueryClient();
+  const pusherConfigured = isRealtimeConfiguredClient();
 
   const query = useQuery({
     queryKey: ["pos", "orders", storeId],
@@ -12,12 +16,28 @@ export function usePosOrders(storeId: string) {
       return apiClient.get<PosOrderDisplay[]>(`/stores/${storeId}/pos/orders`);
     },
     enabled: !!storeId,
-    refetchInterval: 10000, // Fallback polling every 10s in case SSE fails
+    refetchInterval: 10000, // Fallback polling every 10s in case push fails
   });
 
-  // Setup SSE for real-time updates (best-effort, graceful degradation)
+  // Preferred path: Pusher push. Invalidate-and-refetch rather than patching
+  // cache directly from the event payload — publish() sends only
+  // {action, entityId}, not the full serialized order list, so a refetch is
+  // the simplest way to stay correct without duplicating serializePosOrders
+  // on the client.
+  useRealtimeChannel(pusherConfigured ? storeId : null, {
+    [REALTIME_EVENTS.ORDER_CREATED]: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos", "orders", storeId] });
+    },
+    [REALTIME_EVENTS.ORDER_UPDATED]: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos", "orders", storeId] });
+    },
+  });
+
+  // Fallback path: the original SSE endpoint (server-side DB poll, pushed
+  // over SSE). Only runs while Pusher isn't configured, so there's never two
+  // live-update mechanisms racing to update the same query.
   useEffect(() => {
-    if (!storeId) return;
+    if (!storeId || pusherConfigured) return;
 
     let eventSource: EventSource | null = null;
     let retryTimeout: ReturnType<typeof setTimeout>;
@@ -86,7 +106,7 @@ export function usePosOrders(storeId: string) {
       }
       clearTimeout(retryTimeout);
     };
-  }, [storeId, queryClient]);
+  }, [storeId, queryClient, pusherConfigured]);
 
   return query;
 }

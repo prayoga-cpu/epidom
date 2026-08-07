@@ -47,6 +47,18 @@ export const reportAbsenceSchema = z.object({
 });
 export type ReportAbsenceInput = z.infer<typeof reportAbsenceSchema>;
 
+// A retaken photo replaces the selfie on an existing record instead of
+// creating a new one — but only the photo, and only briefly after the
+// original capture (see RETAKE_WINDOW_MS in the [attendanceId]/retake-photo
+// route). Everything else about the record (type, timestamp, notes) stays
+// exactly as recorded; this is not a general "edit attendance" escape hatch.
+export const retakeAttendancePhotoSchema = z.object({
+  staffId: z.string().cuid(),
+  pin: pinSchema,
+  selfieUrl: z.string().url("A selfie photo is required"),
+});
+export type RetakeAttendancePhotoInput = z.infer<typeof retakeAttendancePhotoSchema>;
+
 export const manualCloseAttendanceSchema = z.object({
   notes: z.string().min(1, "A correction reason is required").max(500),
   timestamp: z.string().datetime().optional(),

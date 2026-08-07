@@ -1,17 +1,24 @@
 /**
  * Image Compression Utility
  *
- * Client-side image compression using browser-image-compression.
- * Reduces image size by 60-80% before upload.
+ * Client-side half of the image-compression rule (AGENTS.md § 6, "Images").
+ * Runs before upload so most images never leave the browser at full size —
+ * the server (`compressImageServer`) re-compresses on receipt regardless,
+ * so this is a bandwidth/UX optimization, not the only enforcement point.
  *
  * Features:
  * - Compresses to WebP format (better compression than JPEG/PNG)
- * - Resizes to max 1200x1200px
- * - Target file size: < 500KB
+ * - Resizes to max IMAGE_MAX_DIMENSION_PX on the longest edge
+ * - Target file size: IMAGE_DEFAULT_TARGET_MB (override per-feature via options)
  * - Uses Web Worker for better performance
  */
 
 import imageCompression from "browser-image-compression";
+import {
+  IMAGE_DEFAULT_TARGET_MB,
+  IMAGE_MAX_DIMENSION_PX,
+  IMAGE_RAW_UPLOAD_MAX_MB,
+} from "@/lib/constants/image";
 
 /**
  * Configuration options for image compression
@@ -33,8 +40,8 @@ export interface ImageCompressionOptions {
  * Default compression options
  */
 const DEFAULT_OPTIONS: Required<ImageCompressionOptions> = {
-  maxSizeMB: 0.5,
-  maxWidthOrHeight: 1200,
+  maxSizeMB: IMAGE_DEFAULT_TARGET_MB,
+  maxWidthOrHeight: IMAGE_MAX_DIMENSION_PX,
   useWebWorker: true,
   fileType: "image/webp",
   initialQuality: 0.8,
@@ -89,7 +96,7 @@ export function isValidImage(file: File): boolean {
  * @param maxSizeMB - Maximum file size in MB
  * @returns true if valid size, false otherwise
  */
-export function isValidImageSize(file: File, maxSizeMB: number = 5): boolean {
+export function isValidImageSize(file: File, maxSizeMB: number = IMAGE_RAW_UPLOAD_MAX_MB): boolean {
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
   return file.size <= maxSizeBytes;
 }

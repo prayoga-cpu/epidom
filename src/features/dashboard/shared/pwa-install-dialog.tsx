@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Download, Share, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,9 +41,16 @@ export function PwaInstallTrigger({ variant }: { variant: PwaInstallTriggerVaria
   const [open, setOpen] = useState(false);
   // Computed client-side only — touches window/navigator
   const [showIosSteps, setShowIosSteps] = useState(false);
+  const [isNarrowViewport, setIsNarrowViewport] = useState(true);
 
   useEffect(() => {
     setShowIosSteps(isIosDevice());
+
+    const mql = window.matchMedia("(min-width: 640px)");
+    const onChange = () => setIsNarrowViewport(!mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
   }, []);
 
   if (isStandalone) return null;
@@ -83,6 +91,26 @@ export function PwaInstallTrigger({ variant }: { variant: PwaInstallTriggerVaria
         </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto">
+          <div className="overflow-hidden rounded-lg border">
+            {isNarrowViewport ? (
+              <Image
+                src="/images/screenshot-narrow-1.png"
+                alt=""
+                width={410}
+                height={856}
+                className="h-auto w-full"
+              />
+            ) : (
+              <Image
+                src="/images/screenshot-wide-1.png"
+                alt=""
+                width={1602}
+                height={1067}
+                className="h-auto w-full"
+              />
+            )}
+          </div>
+
           {canInstall && (
             <Button className="w-full" onClick={handleInstall}>
               <Download className="size-4" />

@@ -28,15 +28,38 @@ interface PosStaffGateProps {
 
 const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"] as const;
 
+// POS handles cash and payments, so a staff PIN shouldn't stay valid
+// indefinitely the way it does for the rest of the dashboard (once-a-day,
+// see StoreAccessGate) — re-ask periodically through a long shift. Doesn't
+// apply to the Owner persona: they don't have a staff PIN to re-check here.
+const PIN_REVERIFY_MS = 4 * 60 * 60 * 1000;
+
 export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProps) {
   const { t } = useI18n();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  const { isActive, storeId: sessionStoreId, login, checkStale } = usePosSession();
+  const {
+    isActive,
+    storeId: sessionStoreId,
+    staffId,
+    staffName,
+    staffRole,
+    pinVerifiedAt,
+    login,
+    logout,
+    touchPinVerified,
+    checkStale,
+  } = usePosSession();
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [pin, setPin] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [shake, setShake] = useState(false);
+  const [reverifyPin, setReverifyPin] = useState("");
+  const [isReverifying, setIsReverifying] = useState(false);
+  const [reverifyShake, setReverifyShake] = useState(false);
+  // Forces a re-render every minute so a session that goes stale while the
+  // tab just sits open on the register still locks, not only on navigation.
+  const [, forceTick] = useState(0);
 
   React.useEffect(() => {
     // A persona left logged in from a previous day must be cleared before
@@ -45,8 +68,60 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
     // expiry — this just keeps this gate's own render honest immediately).
     checkStale();
     setIsMounted(true);
+    const interval = setInterval(() => forceTick((n) => n + 1), 60_000);
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const needsPinReverify =
+    isActive &&
+    sessionStoreId === storeId &&
+    staffRole !== "OWNER" &&
+    !!pinVerifiedAt &&
+    Date.now() - pinVerifiedAt > PIN_REVERIFY_MS;
+
+  const verifyReverifyPin = async (enteredPin: string) => {
+    if (!staffId) return;
+    setIsReverifying(true);
+    try {
+      const res = await fetch(`/api/stores/${storeId}/staff/verify-pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffId, pin: enteredPin }),
+      });
+      if (!res.ok) {
+        setReverifyShake(true);
+        setTimeout(() => setReverifyShake(false), 500);
+        setReverifyPin("");
+        toast.error(t("pages.staffAuthIncorrectPin"));
+        return;
+      }
+      touchPinVerified();
+      setReverifyPin("");
+    } catch {
+      toast.error(t("pages.staffAuthVerifyFailed"));
+      setReverifyPin("");
+    } finally {
+      setIsReverifying(false);
+    }
+  };
+
+  const handleReverifyKey = (key: string) => {
+    if (isReverifying) return;
+    if (key === "del") {
+      setReverifyPin((p) => p.slice(0, -1));
+      return;
+    }
+    if (reverifyPin.length >= 4) return;
+    const next = reverifyPin + key;
+    setReverifyPin(next);
+    if (next.length === 4) verifyReverifyPin(next);
+  };
+
+  const handleNotYou = () => {
+    logout();
+    setReverifyPin("");
+  };
 
   React.useEffect(() => {
     if (bypassGate && !(isActive && sessionStoreId === storeId)) {
@@ -165,8 +240,90 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
   // Prevent hydration mismatch: wait for Zustand to load from local storage
   if (!isMounted) return null;
 
-  // If already logged in for this store, render POS directly
+  // If already logged in for this store, render POS directly — unless the
+  // PIN has gone stale for a cash-handling persona (see PIN_REVERIFY_MS).
   if (isActive && sessionStoreId === storeId) {
+    if (needsPinReverify) {
+      return (
+        <div className="flex min-h-[calc(100vh-200px)] w-full flex-col items-center justify-center p-4">
+          <div className="bg-background relative flex w-full max-w-xs flex-col items-center justify-center rounded-2xl border p-6 shadow-2xl">
+            <div className="mt-2 text-center">
+              <div className="bg-primary/10 text-primary mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold sm:mb-4 sm:h-16 sm:w-16">
+                {staffName?.charAt(0).toUpperCase() ?? "?"}
+              </div>
+              <h2 className="text-lg font-bold tracking-tight sm:text-xl">{staffName}</h2>
+              <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
+                {t("pages.posPinReverifyDesc")}
+              </p>
+            </div>
+
+            <div
+              className={cn(
+                "mt-6 flex justify-center gap-4 sm:mt-8",
+                reverifyShake && "animate-[shake_0.4s_ease]"
+              )}
+            >
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-3 w-3 rounded-full border-2 transition-all sm:h-4 sm:w-4",
+                    i < reverifyPin.length
+                      ? "border-primary bg-primary"
+                      : "border-muted-foreground/30 bg-transparent"
+                  )}
+                />
+              ))}
+            </div>
+
+            <div className="mt-6 grid w-full max-w-[240px] grid-cols-3 gap-2 sm:mt-8 sm:gap-3">
+              {PAD_KEYS.map((key, idx) => {
+                if (key === "") return <div key={idx} />;
+                return (
+                  <Button
+                    key={idx}
+                    variant={key === "del" ? "outline" : "secondary"}
+                    className="h-12 text-base font-semibold sm:h-14 sm:text-lg"
+                    onClick={() => handleReverifyKey(key)}
+                    disabled={isReverifying}
+                  >
+                    {key === "del" ? (
+                      isReverifying ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Delete className="h-5 w-5" />
+                      )
+                    ) : (
+                      key
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground mt-4 gap-1.5 sm:mt-6"
+              onClick={handleNotYou}
+            >
+              {t("pages.posPinReverifyNotYou")}
+            </Button>
+          </div>
+
+          <style>{`
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              20% { transform: translateX(-8px); }
+              40% { transform: translateX(8px); }
+              60% { transform: translateX(-8px); }
+              80% { transform: translateX(4px); }
+            }
+          `}</style>
+        </div>
+      );
+    }
     return <>{children}</>;
   }
 
@@ -225,7 +382,16 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
                 variant="ghost"
                 size="sm"
                 className="text-muted-foreground text-xs"
-                onClick={() =>
+                onClick={async () => {
+                  // Clears any leftover StaffSession cookie from an earlier
+                  // persona — requireOwnerOnly reads that cookie server-side,
+                  // not this client state, so it must be cleared too or the
+                  // owner pages we're unlocking here would still bounce.
+                  try {
+                    await apiClient.post(`/stores/${storeId}/staff/logout`, {});
+                  } catch {
+                    // Best-effort — proceed regardless.
+                  }
                   login({
                     storeId,
                     staffId: "owner",
@@ -233,8 +399,8 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
                     staffRole: "OWNER",
                     shiftId: null,
                     allowedPages: null,
-                  })
-                }
+                  });
+                }}
               >
                 {t("pages.posStaffGateContinueAsOwner")}
               </Button>

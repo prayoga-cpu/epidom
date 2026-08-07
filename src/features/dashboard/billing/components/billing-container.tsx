@@ -19,6 +19,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
 import { formatDate } from "@/lib/utils/format-date";
@@ -26,10 +27,23 @@ import { getApiErrorMessage } from "@/lib/utils/api-error";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { BetaPlanSwitcher } from "./beta-plan-switcher";
 
+// Epidom's SaaS subscription is billed in IDR. Kept in sync with the public
+// /pricing page's monthly rate (redesign.pricingPage.t2price_mo/t3price_mo —
+// Rp 229k / Rp 459k, i.e. $14.99 / $29.99 at the charm-priced USD rate).
+// docs/BILLING.md's Rp 99k/249k table predates a since-applied price raise
+// and is stale; the live /pricing copy is the source of truth. Every display
+// currency is derived from this IDR base via useCurrency(), the same
+// IDR->userCurrency conversion the rest of the dashboard already relies on.
+const PLAN_PRICE_IDR: Record<string, number> = {
+  POS: 229000,
+  OPERATIONS: 459000,
+};
+
 export function BillingContainer() {
   const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { formatPrice } = useCurrency();
   const { data, isLoading: loading, error: subscriptionError } = useSubscriptionStatus();
   const { confirm, confirmDialog } = useConfirm();
   const [actionLoading, setActionLoading] = useState(false);
@@ -197,11 +211,9 @@ export function BillingContainer() {
               <p className="text-muted-foreground text-sm">
                 {subscription?.plan === "FREE"
                   ? "Free forever"
-                  : subscription?.plan === "POS"
-                    ? t("profile.subscription.pricing.starter")
-                    : subscription?.plan === "OPERATIONS"
-                      ? t("profile.subscription.pricing.pro")
-                      : t("profile.subscription.pricing.enterprise")}
+                  : subscription?.plan && PLAN_PRICE_IDR[subscription.plan]
+                    ? `${formatPrice(PLAN_PRICE_IDR[subscription.plan])}${t("billing.perMonth")}`
+                    : t("profile.subscription.pricing.enterprise")}
               </p>
             </div>
             {subscription?.plan === "POS" && (

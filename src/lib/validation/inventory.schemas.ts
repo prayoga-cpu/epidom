@@ -97,6 +97,9 @@ const baseIngredientSchema = z.object({
   currentStock: decimalSchema.default(0),
   minStock: decimalSchema.default(0),
   maxStock: decimalSchema.default(1000),
+  // Single next-expiration date for this material's current stock — not
+  // per-batch/lot. Nullable so it can be explicitly cleared once set.
+  expirationDate: z.coerce.date().nullable().optional(),
   suppliers: z.array(ingredientSupplierSchema).optional(),
 });
 
@@ -140,6 +143,7 @@ const baseIngredientFormSchema = z.object({
   currentStock: decimalSchema.optional(),
   minStock: decimalSchema.optional(),
   maxStock: decimalSchema.optional(),
+  expirationDate: z.coerce.date().nullable().optional(),
   suppliers: z.array(ingredientSupplierSchema).optional(),
 });
 

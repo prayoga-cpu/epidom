@@ -157,6 +157,7 @@ model Store {
   financeSettings         StoreFinanceSettings?
   staffSessions           StaffSession[]
   wasteEntries            WasteEntry[]
+  pushSubscriptions       PushSubscription[]
   // When true, this store's fees & taxes are read from Business.financeSettings
   // instead of its own StoreFinanceSettings row (a shared, profile-wide config).
   syncFinanceWithBusiness Boolean                @default(false)
@@ -171,6 +172,13 @@ model Store {
   // operations (e.g. a counter-only coffee stand) that have no kitchen
   // workflow to track.
   kitchenDisplayEnabled   Boolean                @default(true)
+  // Owner-only toggle, defaults off. Recipe-to-batch production tracking is
+  // a distinct manufacturing workflow (plan a batch from a recipe, consume
+  // materials, produce finished product) that not every merchant needs —
+  // many cook fresh to order with no fixed recipe. Off by default so the
+  // Production nav page shows a guide/explainer instead of the workflow
+  // until the owner opts in.
+  productionEnabled       Boolean                @default(false)
   // Daily overtime threshold, in minutes, used by the Attendance "Hours &
   // Overtime" report — worked minutes beyond this per calendar day count as
   // overtime. Flat per-store value (no per-role/per-shift threshold in v1).
@@ -346,6 +354,11 @@ model Material {
   updatedAt          DateTime            @updatedAt
   maxStock           Decimal             @default(1000) @db.Decimal(10, 3)
   minStock           Decimal             @default(0) @db.Decimal(10, 3)
+  // Single next-expiration date for this material's current stock. Not
+  // per-batch/lot — if a store receives multiple deliveries with different
+  // expiration dates, this holds whichever date the owner has set most
+  // recently (typically the soonest-expiring one they want to track).
+  expirationDate     DateTime?
   storeId            String
   materialSuppliers  MaterialSupplier[]  @relation("MaterialToSuppliers")
   store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -742,6 +755,28 @@ model Alert {
   @@index([type])
   @@index([createdAt])
   @@map("alerts")
+}
+
+// Browser/OS Web Push subscription (standard Push API + VAPID). Scoped to
+// storeId, not userId — a shared shop device can be operated by rotating
+// staff PIN personas that carry no User.id of their own (see
+// src/lib/api-handler.ts), so push fan-out targets every device subscribed
+// for a store, not a single account. userId is kept only as a
+// best-effort reference to who subscribed, never used to filter delivery.
+model PushSubscription {
+  id         String   @id @default(cuid())
+  storeId    String
+  userId     String?
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @updatedAt
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@map("push_subscriptions")
 }
 
 model Feedback {

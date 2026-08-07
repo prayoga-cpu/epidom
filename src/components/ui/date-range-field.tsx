@@ -27,6 +27,8 @@ interface DateRangeFieldProps {
   /** Quick-pick shortcuts shown above the calendar. Pass `[]` to hide (e.g. when an
    * outer preset selector already covers this, as in the POS order history filters). */
   presets?: readonly DateRangePreset[];
+  /** Smallest allowed inclusive span, in days (e.g. `7` = at least a full week). */
+  minDays?: number;
   className?: string;
   align?: "start" | "center" | "end";
 }
@@ -43,6 +45,7 @@ export function DateRangeField({
   to,
   onChange,
   presets = DATE_RANGE_PRESETS,
+  minDays,
   className,
   align = "start",
 }: DateRangeFieldProps) {
@@ -119,6 +122,10 @@ export function DateRangeField({
           defaultMonth={draft?.from ?? (from ? parseLocalISO(from) : undefined)}
           selected={draft}
           onSelect={handleSelect}
+          // react-day-picker's `min` is the gap between endpoints (calendar
+          // days difference, exclusive), not the inclusive span length — a
+          // 7-day range (Mon..Sun) has a gap of 6, hence the -1.
+          min={minDays ? minDays - 1 : undefined}
           numberOfMonths={1}
           className="mx-auto"
         />

@@ -12,7 +12,7 @@ import {
 } from "../hooks/use-order-history";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosStaffList } from "../hooks/use-pos-staff-list";
-import { usePersistedState } from "../hooks/use-persisted-state";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
 import type { SettlePaymentMethod } from "../types/pos.types";

@@ -35,7 +35,7 @@ import { getTranslatedCategory } from "@/features/dashboard/data/recipes/utils/c
 import {
   useUpdateProductionBatch,
   useCompleteProduction,
-} from "@/features/dashboard/management/recipe-production/hooks/use-production-batches";
+} from "@/features/dashboard/production/recipe-production/hooks/use-production-batches";
 import { exportToCSV } from "@/lib/utils/export";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 import { toast } from "sonner";

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { withApiHandler } from "@/lib/api-handler";
 import { reportAbsenceSchema } from "@/lib/validation/attendance.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { reverseGeocode } from "@/lib/attendance/geocode";
+import { isStaffAuthenticated } from "@/lib/attendance/verify-staff-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -39,18 +39,11 @@ export const POST = withApiHandler(
       );
     }
 
-    if (staff.pin) {
-      if (!pin) {
-        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "PIN required"), {
-          status: 401,
-        });
-      }
-      const pinValid = await compare(pin, staff.pin);
-      if (!pinValid) {
-        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"), {
-          status: 401,
-        });
-      }
+    if (!(await isStaffAuthenticated(storeId!, staffId, pin, staff.pin))) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, pin ? "Incorrect PIN" : "PIN required"),
+        { status: 401 }
+      );
     }
 
     const locationLabel =

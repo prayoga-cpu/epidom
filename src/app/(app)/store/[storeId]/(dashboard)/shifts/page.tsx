@@ -1,24 +1,10 @@
-import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { ShiftsClient } from "@/features/dashboard/shifts/components/shifts-client";
-import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
+// Shifts (POS till cash sessions) merged into the unified Schedule page —
+// see schedule-log.tsx's Log tab (Cash In/Out rows) and my-schedule-list.tsx
+// (the staff self-service Cash In/Cash Out action). Kept as a redirect
+// rather than deleted outright so old bookmarks/links don't dead-end.
 export default async function ShiftsPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
-  const session = await getSession();
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-  await requireStaffPageAccess(storeId, "/shifts");
-
-  // Pre-fetch active staff for the open-shift dialog
-  const staff = await prisma.staffMember.findMany({
-    where: { storeId, isActive: true },
-    select: { id: true, name: true, role: true },
-    orderBy: { name: "asc" },
-  });
-
-  return <ShiftsClient storeId={storeId} staff={staff} />;
+  redirect(`/store/${storeId}/schedule`);
 }

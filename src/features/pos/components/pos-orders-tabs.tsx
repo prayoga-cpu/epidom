@@ -6,7 +6,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PosOrderQueue } from "./pos-order-queue";
 import { OrderHistoryTab } from "./order-history-tab";
-import { usePersistedState } from "../hooks/use-persisted-state";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 
 interface PosOrdersTabsProps {
   storeId: string;

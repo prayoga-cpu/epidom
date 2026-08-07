@@ -1,6 +1,9 @@
 export interface FonnteMessageRequest {
   to: string;
   message: string;
+  /** Public URL of a file/document to attach (Fonnte's `url` param) — used
+   * for sending a PDF, not just a text message. */
+  fileUrl?: string;
 }
 
 export interface FonnteMessageResponse {
@@ -33,6 +36,7 @@ export async function sendFonnteWhatsApp(
       target: phone,
       message: req.message,
       typing: false,
+      ...(req.fileUrl && { url: req.fileUrl }),
     }),
   });
 

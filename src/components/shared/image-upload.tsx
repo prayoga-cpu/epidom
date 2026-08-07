@@ -28,6 +28,7 @@ import {
   revokeImagePreview,
   deleteBlobImage,
 } from "@/lib/utils/image-compression";
+import { IMAGE_DEFAULT_TARGET_MB, IMAGE_RAW_UPLOAD_MAX_MB } from "@/lib/constants/image";
 import { cn } from "@/lib/utils";
 
 export interface ImageUploadProps {
@@ -37,7 +38,11 @@ export interface ImageUploadProps {
   onChange: (url: string | undefined) => void;
   /** Disabled state */
   disabled?: boolean;
-  /** Maximum file size in MB (default: 5) */
+  /**
+   * Guaranteed output size in MB after compression (default: 2). This is
+   * the compression *target*, not a rejection threshold — any file up to
+   * IMAGE_RAW_UPLOAD_MAX_MB is accepted and auto-compressed down to this.
+   */
   maxSize?: number;
   /** Custom class name */
   className?: string;
@@ -57,7 +62,7 @@ export function ImageUpload({
   value,
   onChange,
   disabled = false,
-  maxSize = 5,
+  maxSize = IMAGE_DEFAULT_TARGET_MB,
   className,
   aspectRatio,
   onUploadStateChange,
@@ -86,22 +91,21 @@ export function ImageUpload({
   /**
    * Validate file before upload
    */
-  const validateFile = useCallback(
-    (file: File): string | null => {
-      // Check file type
-      if (!isValidImage(file)) {
-        return "Please select a valid image file (JPEG, PNG, WebP, or GIF)";
-      }
+  const validateFile = useCallback((file: File): string | null => {
+    // Check file type
+    if (!isValidImage(file)) {
+      return "Please select a valid image file (JPEG, PNG, WebP, or GIF)";
+    }
 
-      // Check file size
-      if (!isValidImageSize(file, maxSize)) {
-        return `Image size must be less than ${maxSize}MB`;
-      }
+    // Check raw (pre-compression) file size — compression brings it down to
+    // `maxSize` afterward, so this only needs to bound processing cost, not
+    // match the target.
+    if (!isValidImageSize(file, IMAGE_RAW_UPLOAD_MAX_MB)) {
+      return `Image must be smaller than ${IMAGE_RAW_UPLOAD_MAX_MB}MB`;
+    }
 
-      return null;
-    },
-    [maxSize]
-  );
+    return null;
+  }, []);
 
   /**
    * Upload image to server
@@ -128,7 +132,7 @@ export function ImageUpload({
           description: "Please wait while we optimize your image.",
         });
 
-        const compressedFile = await compressImage(file);
+        const compressedFile = await compressImage(file, { maxSizeMB: maxSize });
 
         // Create preview
         const preview = createImagePreview(compressedFile);
@@ -142,6 +146,7 @@ export function ImageUpload({
 
         const formData = new FormData();
         formData.append("file", compressedFile);
+        formData.append("maxSizeMB", String(maxSize));
 
         const response = await fetch("/api/upload", {
           method: "POST",
@@ -185,7 +190,7 @@ export function ImageUpload({
         setIsUploading(false);
       }
     },
-    [value, onChange, toast, previewUrl]
+    [value, onChange, toast, previewUrl, maxSize]
   );
 
   /**

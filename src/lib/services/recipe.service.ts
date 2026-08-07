@@ -6,6 +6,8 @@ import {
 } from "../repositories/recipe.repository";
 import { materialRepository } from "../repositories/material.repository";
 import type { CategoryDeleteMode } from "@/lib/validation/inventory.schemas";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 /**
  * Recipe Service
@@ -73,7 +75,12 @@ export class RecipeService {
       }
     }
 
-    return recipeRepository.create(data);
+    const created = await recipeRepository.create(data);
+    publishStoreEvent(data.storeId, REALTIME_EVENTS.RECIPE_CHANGED, {
+      action: "created",
+      entityId: created.id,
+    });
+    return created;
   }
 
   /**
@@ -114,7 +121,12 @@ export class RecipeService {
     }
 
     // Use updateWithIngredients to handle both recipe and ingredients update
-    return recipeRepository.updateWithIngredients(recipeId, data);
+    const updated = await recipeRepository.updateWithIngredients(recipeId, data);
+    publishStoreEvent(storeId, REALTIME_EVENTS.RECIPE_CHANGED, {
+      action: "updated",
+      entityId: recipeId,
+    });
+    return updated;
   }
 
   /**
@@ -127,7 +139,12 @@ export class RecipeService {
       throw new Error("Recipe not found or does not belong to this store");
     }
 
-    return recipeRepository.delete(recipeId);
+    const deleted = await recipeRepository.delete(recipeId);
+    publishStoreEvent(storeId, REALTIME_EVENTS.RECIPE_CHANGED, {
+      action: "deleted",
+      entityId: recipeId,
+    });
+    return deleted;
   }
 
   /**

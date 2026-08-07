@@ -21,6 +21,7 @@ When you add a new env var to the codebase, update this doc and `.env.example` i
 | Sentry        | Error tracking         | Phase 1     |
 | Upstash Redis | Rate limiting          | Phase 1     |
 | Feature flags | Hiding legacy surfaces | Phase 0     |
+| Web Push      | Order/low-stock push notifications | Maintenance |
 
 ---
 
@@ -187,6 +188,38 @@ DNS records required at the domain level:
 - SPF
 - DKIM
 - DMARC (recommended)
+
+---
+
+## Web Push (VAPID) — OS-level browser push
+
+```bash
+# Server-side
+VAPID_PUBLIC_KEY=<from-web-push-generate-vapid-keys>
+VAPID_PRIVATE_KEY=<from-web-push-generate-vapid-keys>
+VAPID_SUBJECT=mailto:you@yourdomain.com
+
+# Client-side (same value as VAPID_PUBLIC_KEY above)
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=<same-as-VAPID_PUBLIC_KEY>
+```
+
+**Where to get keys:**
+
+1. Run `npx web-push generate-vapid-keys` once (or `node -e "console.log(require('web-push').generateVAPIDKeys())"` if you already have the package installed)
+2. Copy the pair into `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`
+3. Copy the public key again into `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+4. `VAPID_SUBJECT` must be a `mailto:` or `https:` URL — push services use it to contact you if your server misbehaves (excessive sends, invalid subscriptions, etc.)
+
+Used for OS-level browser push (new storefront orders, low/critical material stock — see
+`src/lib/push/send.ts`). Optional — until all four vars are set, the push toggle in
+`NotificationBell` stays hidden and everything keeps working via existing polling
+(see AGENTS.md "Graceful Degradation").
+
+**Platform notes:** iOS Safari requires the site to be added to the Home Screen
+(standalone display mode) and iOS 16.4+ — Web Push is unavailable in a plain Safari
+tab. Desktop Safari requires macOS 13+. A user who has already denied the browser
+permission prompt won't be re-prompted automatically — the UI must surface that as
+a distinct "blocked" state rather than retrying.
 
 ---
 

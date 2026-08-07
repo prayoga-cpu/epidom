@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { usePosOrders } from "../hooks/use-pos-orders";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
-import { usePersistedState } from "../hooks/use-persisted-state";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { PosOrderCard } from "./pos-order-card";
 import { PosOrderRow } from "./pos-order-row";
 import { PosOrderBoard } from "./pos-order-board";

@@ -11,20 +11,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser } from "@/lib/auth-client";
+import { useUser, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "./hooks/use-current-store";
 import { useOwnerPinStatus } from "./hooks/use-owner-pin";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 import { isAdminEmail } from "@/lib/admin";
-import { Shield, TrendingUp, Users, KeyRound, Clock } from "lucide-react";
+import { Shield, TrendingUp, KeyRound, ShieldCheck, LogOut, RefreshCw } from "lucide-react";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { apiClient } from "@/lib/api/client";
-import { StaffSwitcherDialog } from "./staff-switcher-dialog";
 import { VerifyOwnerPinDialog } from "./verify-owner-pin-dialog";
 import { SetOwnerPinDialog } from "./set-owner-pin-dialog";
-import { ClockInOutDialog } from "./clock-in-out-dialog";
+import { AccountAccessDialog } from "./account-access-dialog";
 
 export function NavUser() {
   const router = useRouter();
@@ -46,10 +45,9 @@ export function NavUser() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [switcherOpen, setSwitcherOpen] = useState(false);
   const [verifyOwnerOpen, setVerifyOwnerOpen] = useState(false);
   const [setOwnerPinOpen, setSetOwnerPinOpen] = useState(false);
-  const [clockInOutOpen, setClockInOutOpen] = useState(false);
+  const [accountAccessOpen, setAccountAccessOpen] = useState(false);
 
   // Role-based, not ID-based: a StaffMember row can itself have role "OWNER"
   // (e.g. seeded accounts), and that persona is functionally the owner too —
@@ -73,6 +71,45 @@ export function NavUser() {
     // router transition wouldn't re-run the page guards or refetch anything
     // that was hidden/redirected while restricted.
     window.location.reload();
+  };
+
+  // Clears whichever persona is currently active on this device (staff or
+  // "Continue as Owner" from the gate) without touching the underlying
+  // Better Auth session. Clearing posSession (and the matching server-side
+  // StaffSession cookie, harmless to call even when there isn't one) is
+  // exactly what StoreAccessGate checks to decide whether to show its
+  // "who's using this device?" picker, so a reload lands right back there —
+  // used both for "Switch Account" (owner picking a different persona,
+  // replacing the old in-dropdown PIN-switcher now that the gate exists) and
+  // "Log Out of Staff Session" (staff stepping away, no owner PIN needed).
+  const handleReturnToPicker = async () => {
+    posSession.logout();
+    if (storeId) {
+      try {
+        await apiClient.post(`/stores/${storeId}/staff/logout`, {});
+      } catch {
+        // Best-effort — the client-side session is already cleared either way.
+      }
+    }
+    window.location.reload();
+  };
+
+  // The heavier action, shown regardless of persona: ends the real,
+  // underlying Epidom account session (Better Auth) via the same signOut()
+  // the topbar used to call directly — moved in here (and out of the
+  // topbar) so it's one consistent "leave Epidom entirely" action wherever
+  // you are, Owner or staff. Clears the staff session too for a clean slate.
+  const handleOwnerAccountLogout = async () => {
+    posSession.logout();
+    if (storeId) {
+      try {
+        await apiClient.post(`/stores/${storeId}/staff/logout`, {});
+      } catch {
+        // Best-effort — proceeding to sign out regardless.
+      }
+    }
+    await signOut();
+    window.location.href = "/login";
   };
 
   return (
@@ -128,15 +165,30 @@ export function NavUser() {
               Back to Owner Account
             </DropdownMenuItem>
           ) : (
-            <DropdownMenuItem onClick={() => setSwitcherOpen(true)}>
-              <Users className="mr-2 h-3.5 w-3.5" />
-              Switch to Staff Account
+            <DropdownMenuItem onClick={handleReturnToPicker}>
+              <RefreshCw className="mr-2 h-3.5 w-3.5" />
+              {t("nav.switchAccount")}
             </DropdownMenuItem>
           )}
 
-          <DropdownMenuItem onClick={() => setClockInOutOpen(true)}>
-            <Clock className="mr-2 h-3.5 w-3.5" />
-            {t("clockInOut.dialogTitle")}
+          <DropdownMenuItem onClick={() => setAccountAccessOpen(true)}>
+            <ShieldCheck className="mr-2 h-3.5 w-3.5" />
+            {t("nav.accountAccess")}
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+          {actingAsStaff && (
+            <DropdownMenuItem onClick={handleReturnToPicker}>
+              <LogOut className="mr-2 h-3.5 w-3.5" />
+              {t("nav.logoutStaffSession")}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem
+            onClick={handleOwnerAccountLogout}
+            className="text-red-400 focus:bg-red-500/10 focus:text-red-400"
+          >
+            <LogOut className="mr-2 h-3.5 w-3.5" />
+            {t("nav.logoutOwnerAccount")}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
@@ -172,12 +224,6 @@ export function NavUser() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {storeId && (
-        <StaffSwitcherDialog open={switcherOpen} onOpenChange={setSwitcherOpen} storeId={storeId} />
-      )}
-      {storeId && (
-        <ClockInOutDialog open={clockInOutOpen} onOpenChange={setClockInOutOpen} storeId={storeId} />
-      )}
       <VerifyOwnerPinDialog
         open={verifyOwnerOpen}
         onOpenChange={setVerifyOwnerOpen}
@@ -189,6 +235,14 @@ export function NavUser() {
         title="Set Owner PIN to continue"
         description="No Owner PIN is set yet. Set one now to switch this device back to your Owner account."
         onSuccess={handleSwitchedBackToOwner}
+      />
+      <AccountAccessDialog
+        open={accountAccessOpen}
+        onOpenChange={setAccountAccessOpen}
+        actingAsStaff={actingAsStaff}
+        name={actingAsStaff ? posSession.staffName : (user?.name ?? user?.email ?? null)}
+        role={actingAsStaff ? posSession.staffRole : "OWNER"}
+        allowedPages={staffAllowedPages}
       />
     </>
   );

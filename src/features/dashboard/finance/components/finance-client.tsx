@@ -24,6 +24,12 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -36,8 +42,7 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateTime } from "@/lib/utils/formatting";
-import { Download, Pencil, Trash2 } from "lucide-react";
-import * as XLSX from "xlsx";
+import { Download, FileText, Sheet, Pencil, Trash2 } from "lucide-react";
 import { useSortable, sortRows } from "@/features/dashboard/shared/hooks/use-sortable";
 import { SortIcon } from "@/features/dashboard/shared/components/sort-icon";
 import { DateRangeField } from "@/components/ui/date-range-field";
@@ -303,7 +308,8 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
     [byShift.data, shiftSort.sortField, shiftSort.sortDir]
   );
 
-  function exportXlsx() {
+  async function exportXlsx() {
+    const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
 
     if (summary.data) {
@@ -490,6 +496,14 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
     XLSX.writeFile(wb, `finance-report-${from}-${to}.xlsx`);
   }
 
+  function openPrintView() {
+    const params = new URLSearchParams({ from, to });
+    if (staffId !== ALL) params.set("staffId", staffId);
+    if (categoryId !== ALL) params.set("category", categoryId);
+    if (department !== ALL) params.set("department", department);
+    window.open(`/store/${storeId}/finance/print?${params.toString()}`, "_blank");
+  }
+
   const handleEditWaste = (entry: WasteEntryWithRelations) => {
     setEditingWasteEntry(entry);
     setWasteDialogOpen(true);
@@ -518,10 +532,24 @@ export function FinanceClient({ storeId, staff, categories }: FinanceClientProps
           </h1>
           <p className="text-muted-foreground text-sm">{t("pages.financeDesc")}</p>
         </div>
-        <Button size="sm" variant="outline" onClick={exportXlsx} className="shrink-0">
-          <Download className="mr-2 h-4 w-4" />
-          {t("common.actions.exportAsExcel")}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="outline" className="shrink-0">
+              <Download className="mr-2 h-4 w-4" />
+              {t("common.actions.export")}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={openPrintView}>
+              <FileText className="mr-2 h-4 w-4" />
+              {t("common.actions.exportAsPdf")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={exportXlsx}>
+              <Sheet className="mr-2 h-4 w-4" />
+              {t("common.actions.exportAsExcel")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Filters */}

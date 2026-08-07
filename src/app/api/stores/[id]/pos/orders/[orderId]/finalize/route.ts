@@ -18,6 +18,8 @@ import {
 } from "@/lib/services/pos-order-builder";
 import { resolveFinanceSettingsForOrder } from "@/lib/services";
 import { computeOrderCharges } from "@/lib/finance/order-charges";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 /**
  * POST /api/stores/[id]/pos/orders/[orderId]/finalize
@@ -182,6 +184,11 @@ export async function POST(
       }
 
       return updated;
+    });
+
+    publishStoreEvent(storeId, REALTIME_EVENTS.ORDER_UPDATED, {
+      action: "updated",
+      entityId: order.id,
     });
 
     if (immediatelyDelivered) {

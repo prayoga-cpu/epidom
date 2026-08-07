@@ -26,6 +26,7 @@ const mockMaterial: MaterialWithSuppliers = {
   currentStock: new Prisma.Decimal(100),
   minStock: new Prisma.Decimal(10),
   maxStock: new Prisma.Decimal(200),
+  expirationDate: null,
   storeId: "store-1",
   createdAt: new Date(),
   updatedAt: new Date(),

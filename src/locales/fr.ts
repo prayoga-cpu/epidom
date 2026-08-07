@@ -835,7 +835,7 @@ export const fr = {
       starter: {
         title: "CAISSE",
         description: "Pour les cafés et restaurants prêts pour une vraie caisse",
-        price: "9,99 €",
+        price: "13,99 €",
         billing: "par mois",
         select: "Commencer",
         f1: "Tout du GRATUIT",
@@ -845,7 +845,7 @@ export const fr = {
       pro: {
         title: "OPÉRATIONS",
         description: "Gestion complète pour les établissements en croissance",
-        price: "24,99 €",
+        price: "27,99 €",
         billing: "par mois",
         select: "Commencer",
         recommended: "Le Plus Populaire",
@@ -3277,8 +3277,6 @@ export const fr = {
         pos: "POS",
       },
       pricing: {
-        starter: "Rp 99.000/mois",
-        pro: "Rp 249.000/mois",
         enterprise: "Sur mesure",
       },
       status: {

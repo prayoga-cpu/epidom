@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -11,7 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Search, ArrowDownCircle, ArrowUpCircle, Minus } from "lucide-react";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { FilterBar } from "@/features/dashboard/shared/components/filter-bar";
+import { sortRows, type SortDir } from "@/features/dashboard/shared/hooks/use-sortable";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
+import { Loader2, ArrowDownCircle, ArrowUpCircle, Minus, ArrowUpDown } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/formatting";
 import { MovementType } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
@@ -45,20 +49,55 @@ function sourceLabel(m: Movement): string {
   return "—";
 }
 
+interface HistoryFilters {
+  typeFilter: string;
+  dateFrom: string | null;
+  dateTo: string | null;
+  sortDir: SortDir;
+}
+
+const HISTORY_FILTER_DEFAULTS: HistoryFilters = {
+  typeFilter: "ALL",
+  dateFrom: null,
+  dateTo: null,
+  sortDir: "desc",
+};
+
+function sanitizeHistoryFilters(raw: unknown, defaults: HistoryFilters): HistoryFilters {
+  if (!raw || typeof raw !== "object") return defaults;
+  const r = raw as Partial<HistoryFilters>;
+  const validType =
+    typeof r.typeFilter === "string" &&
+    (r.typeFilter === "ALL" || (Object.values(MovementType) as string[]).includes(r.typeFilter));
+  return {
+    typeFilter: validType ? r.typeFilter! : "ALL",
+    dateFrom: typeof r.dateFrom === "string" ? r.dateFrom : null,
+    dateTo: typeof r.dateTo === "string" ? r.dateTo : null,
+    sortDir: r.sortDir === "asc" ? "asc" : "desc",
+  };
+}
+
 interface MovementsTabProps {
   storeId: string;
 }
 
 export function MovementsTab({ storeId }: MovementsTabProps) {
   const { t } = useI18n();
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [filters, setFilters] = usePersistedState<HistoryFilters>(
+    `epidom-history-filters-${storeId}`,
+    HISTORY_FILTER_DEFAULTS,
+    sanitizeHistoryFilters
+  );
 
   const params = new URLSearchParams({ take: "50" });
-  if (typeFilter !== "ALL") params.set("type", typeFilter);
+  if (filters.typeFilter !== "ALL") params.set("type", filters.typeFilter);
+  if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters.dateTo) params.set("dateTo", filters.dateTo);
 
   const { data, isLoading } = useQuery<{ movements: Movement[]; total: number }>({
-    queryKey: ["stock-movements", storeId, "all", typeFilter],
+    queryKey: ["stock-movements", storeId, "all", filters.typeFilter, filters.dateFrom, filters.dateTo],
     queryFn: () =>
       fetch(`/api/stores/${storeId}/stock-movements?${params.toString()}`).then((r) => r.json()),
     enabled: !!storeId,
@@ -66,41 +105,77 @@ export function MovementsTab({ storeId }: MovementsTabProps) {
     refetchInterval: 30 * 1000,
   });
 
-  const movements = (data?.movements ?? []).filter((m) => {
-    if (!search) return true;
-    const name = m.material?.name ?? m.product?.name ?? "";
-    return name.toLowerCase().includes(search.toLowerCase());
-  });
+  const movements = useMemo(() => {
+    let rows = data?.movements ?? [];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      rows = rows.filter((m) => (m.material?.name ?? m.product?.name ?? "").toLowerCase().includes(q));
+    }
+    return sortRows(rows, filters.sortDir, (m) => new Date(m.createdAt).getTime());
+  }, [data, searchQuery, filters.sortDir]);
+
+  const hasActiveFilters = filters.typeFilter !== "ALL" || !!filters.dateFrom || !!filters.dateTo;
+
+  const clearFilters = () => {
+    setFilters((prev) => ({ ...prev, typeFilter: "ALL", dateFrom: null, dateTo: null }));
+  };
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
-          <Input
-            placeholder={t("tracking.movements.searchPlaceholder") || "Search item…"}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <FilterBar
+          className="sm:flex-1"
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={t("tracking.movements.searchPlaceholder") || "Search item…"}
+          hasActiveFilters={hasActiveFilters}
+          onClearFilters={clearFilters}
+          clearLabel={t("management.editStock.clearFilters")}
+        >
+          <Select
+            value={filters.typeFilter}
+            onValueChange={(v) => setFilters((prev) => ({ ...prev, typeFilter: v }))}
+          >
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">{t("filters.allTypes") || "All types"}</SelectItem>
+              {Object.values(MovementType).map((v) => (
+                <SelectItem key={v} value={v}>
+                  {v}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DateRangePicker
+            value={{
+              from: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+              to: filters.dateTo ? new Date(filters.dateTo) : undefined,
+            }}
+            onChange={(range) =>
+              setFilters((prev) => ({
+                ...prev,
+                dateFrom: range?.from ? range.from.toISOString() : null,
+                dateTo: range?.to ? range.to.toISOString() : null,
+              }))
+            }
           />
-        </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">{t("filters.allTypes") || "All types"}</SelectItem>
-            {Object.values(MovementType).map((v) => (
-              <SelectItem key={v} value={v}>
-                {v}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        </FilterBar>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            setFilters((prev) => ({ ...prev, sortDir: prev.sortDir === "desc" ? "asc" : "desc" }))
+          }
+          className="shrink-0"
+        >
+          <ArrowUpDown className="mr-1 h-4 w-4" />
+          {filters.sortDir === "desc" ? t("sort.newest") : t("sort.oldest")}
+        </Button>
       </div>
 
-      {/* List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />

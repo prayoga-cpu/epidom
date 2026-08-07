@@ -57,34 +57,17 @@ export function getStatusLabel(
 }
 
 /**
- * Plan prices per currency. Primary market is Indonesia (IDR).
- * USD and EUR are shown for international users.
+ * Epidom's SaaS subscription is billed in IDR. Kept in sync with the public
+ * /pricing page's monthly rate (redesign.pricingPage.t2price_mo/t3price_mo —
+ * Rp 229k / Rp 459k, i.e. $14.99 / $29.99 at the charm-priced USD rate);
+ * docs/BILLING.md's Rp 99k/249k table predates a since-applied price raise
+ * and is stale. Every other display currency is derived from this IDR base
+ * via useCurrency()'s live exchange rate, so this works for all ~140
+ * currencies the app supports rather than a hardcoded few.
  */
-const PLAN_PRICES: Record<string, Record<string, string>> = {
-  POS: {
-    IDR: "Rp 99.000/bln",
-    USD: "$6/month",
-    EUR: "€19/month",
-    MGA: "Ar 27.000/volana",
-  },
-  OPERATIONS: {
-    IDR: "Rp 249.000/bln",
-    USD: "$15/month",
-    EUR: "€49/month",
-    MGA: "Ar 68.000/volana",
-  },
-  ENTERPRISE: {
-    IDR: "Sesuai Permintaan",
-    USD: "Custom",
-    EUR: "Custom",
-    MGA: "Araka ny filana",
-  },
-  FREE: {
-    IDR: "Gratis / selamanya",
-    USD: "Free / forever",
-    EUR: "Gratuit / à vie",
-    MGA: "Maimaim-poana / mandrakizay",
-  },
+const PLAN_PRICE_IDR: Record<string, number> = {
+  POS: 229000,
+  OPERATIONS: 459000,
 };
 
 /**
@@ -99,45 +82,42 @@ export interface PlanDetails {
 
 /**
  * Get plan details, with price localised to the user's active currency.
- * Pass currency from useCurrency() so the price updates when the user
+ * Pass `formatPrice` from useCurrency() so the price updates when the user
  * changes their currency setting without a page reload.
  */
 export function getPlanDetails(
   plan: string | undefined,
   t: (key: string) => string,
-  currency: string = "IDR"
+  formatPrice: (valueInIdr: number) => string
 ): PlanDetails {
-  const curr =
-    currency === "IDR" || currency === "USD" || currency === "EUR" || currency === "MGA"
-      ? currency
-      : "IDR";
+  const perMonth = (idr: number) => `${formatPrice(idr)}${t("billing.perMonth")}`;
 
   switch (plan) {
     case "OPERATIONS":
       return {
         name: t("profile.subscription.plans.pro") || "Operations",
-        price: PLAN_PRICES.OPERATIONS[curr],
+        price: perMonth(PLAN_PRICE_IDR.OPERATIONS),
         color: "text-purple-600",
         badgeColor: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
       };
     case "ENTERPRISE":
       return {
         name: t("profile.subscription.plans.enterprise") || "Enterprise",
-        price: PLAN_PRICES.ENTERPRISE[curr],
+        price: t("profile.subscription.pricing.enterprise") || "Custom",
         color: "text-blue-600",
         badgeColor: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
       };
     case "FREE":
       return {
         name: t("profile.subscription.plans.free") || "Starter Plan",
-        price: t("profile.subscription.plans.free_price") || PLAN_PRICES.FREE[curr],
+        price: t("profile.subscription.plans.free_price") || "Free",
         color: "text-emerald-600",
         badgeColor: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
       };
     case "POS":
       return {
         name: t("profile.subscription.plans.pos") || "POS",
-        price: PLAN_PRICES.POS[curr],
+        price: perMonth(PLAN_PRICE_IDR.POS),
         color: "text-green-600",
         badgeColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
       };

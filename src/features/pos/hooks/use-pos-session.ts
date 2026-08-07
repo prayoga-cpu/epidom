@@ -13,6 +13,12 @@ export interface PosSessionState {
   isActive: boolean;
   /** Local calendar date (toDateString()) this persona logged in on — see checkStale(). */
   loginDate: string | null;
+  /**
+   * Epoch ms the staff PIN was last verified. Powers PosStaffGate's periodic
+   * re-verification for POS specifically (money-handling, so kept stricter
+   * than the once-a-day gate everywhere else) — see PIN_REVERIFY_MS there.
+   */
+  pinVerifiedAt: number | null;
   login: (params: {
     storeId: string;
     staffId: string;
@@ -23,6 +29,8 @@ export interface PosSessionState {
   }) => void;
   logout: () => void;
   setShiftId: (shiftId: string) => void;
+  /** Refreshes pinVerifiedAt after a lightweight re-verification (no identity/page changes). */
+  touchPinVerified: () => void;
   /**
    * Clears a persona left logged in from a previous calendar day. The real
    * enforcement is server-side (StaffSession expires at next midnight in the
@@ -43,6 +51,7 @@ export const usePosSession = create<PosSessionState>()(
       shiftId: null,
       isActive: false,
       loginDate: null,
+      pinVerifiedAt: null,
 
       login: ({ storeId, staffId, staffName, staffRole, shiftId, allowedPages }) =>
         set({
@@ -54,6 +63,7 @@ export const usePosSession = create<PosSessionState>()(
           allowedPages: allowedPages ?? null,
           isActive: true,
           loginDate: new Date().toDateString(),
+          pinVerifiedAt: Date.now(),
         }),
 
       logout: () =>
@@ -66,9 +76,12 @@ export const usePosSession = create<PosSessionState>()(
           shiftId: null,
           isActive: false,
           loginDate: null,
+          pinVerifiedAt: null,
         }),
 
       setShiftId: (shiftId) => set({ shiftId }),
+
+      touchPinVerified: () => set({ pinVerifiedAt: Date.now() }),
 
       checkStale: () =>
         set((state) => {
@@ -82,6 +95,7 @@ export const usePosSession = create<PosSessionState>()(
               shiftId: null,
               isActive: false,
               loginDate: null,
+              pinVerifiedAt: null,
             };
           }
           return {};

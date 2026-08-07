@@ -13,7 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 import { Download } from "lucide-react";
-import * as XLSX from "xlsx";
 import { ChartSkeleton } from "../components/chart-skeleton";
 import { DateRangeField } from "@/components/ui/date-range-field";
 import { todayLocalISO } from "@/lib/utils/date-range";
@@ -115,7 +114,8 @@ export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
   const isLoading = topItems.isLoading || orders.isLoading || customers.isLoading;
   const isEmpty = !isLoading && (orders.data?.totalOrders ?? 0) === 0;
 
-  function exportXlsx() {
+  async function exportXlsx() {
+    const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
 
     if (orders.data && customers.data) {

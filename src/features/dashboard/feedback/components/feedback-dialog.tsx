@@ -196,7 +196,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
     if (file) {
       if (!isValidImage(file)) {
         toast.error(t("feedback.screenshotInvalidType"));
-      } else if (!isValidImageSize(file, 5)) {
+      } else if (!isValidImageSize(file)) {
         toast.error(t("feedback.screenshotTooLarge"));
       } else {
         setScreenshotFile(file);

@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { MovementType, AlertType, AlertSeverity, OrderItemStatus } from "@prisma/client";
 import { toDecimal } from "@/lib/utils/types.server";
 import { convertUnit } from "@/lib/utils/unit-conversion";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
+import { sendPushToStore } from "@/lib/push/send";
 
 /**
  * Deduct stock when an order is purchased/confirmed.
@@ -319,6 +322,19 @@ export async function deductStockForOrder(
     { isolationLevel: "Serializable" }
   );
 
+  for (const p of productDeductions) {
+    publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, {
+      action: "updated",
+      entityId: p.productId,
+    });
+  }
+  for (const d of materialDeductions) {
+    publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, {
+      action: "updated",
+      entityId: d.materialId,
+    });
+  }
+
   // Fire alerts outside the transaction — non-critical, OK to be eventually consistent.
   const fireLowStockAlert = async (params: {
     entityId: string;
@@ -351,6 +367,17 @@ export async function deductStockForOrder(
         entityType: params.entityType,
         entityId: params.entityId,
       },
+    });
+
+    // Only pushes when a NEW alert was actually created above — the dedup
+    // check just above already blocks re-firing on every subsequent order
+    // once an unread alert exists for this entity, so reuse it as-is
+    // rather than a second dedup layer.
+    sendPushToStore(storeId, {
+      title: isCritical ? `Stok kritis: ${params.name}` : `Stok rendah: ${params.name}`,
+      body: `Sisa stok: ${params.newStock.toFixed(2)} ${params.unit} (min: ${params.minStock} ${params.unit})`,
+      url: `/store/${storeId}/data`,
+      tag: `stock-${params.entityId}`,
     });
   };
 
@@ -470,6 +497,13 @@ export async function reverseStockForOrder(
     },
     { isolationLevel: "Serializable" }
   );
+
+  for (const movement of saleMovements) {
+    const entityId = movement.productId ?? movement.materialId;
+    if (entityId) {
+      publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, { action: "updated", entityId });
+    }
+  }
 
   return { reversed: saleMovements.length };
 }

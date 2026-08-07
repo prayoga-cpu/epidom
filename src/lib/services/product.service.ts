@@ -8,6 +8,8 @@ import { arrayToCSV } from "../utils/csv-export";
 import { prisma } from "@/lib/prisma";
 import { storefrontService } from "./storefront.service";
 import type { CategoryDeleteMode, ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 /**
  * Product Service
@@ -124,16 +126,27 @@ export class ProductService {
     }
 
     // Then create option groups if provided
+    let result: ProductWithRelations;
     if (data.optionGroups && data.optionGroups.length > 0) {
-      return productRepository.updateOptionGroups(product.id, data.optionGroups);
-    }
-
-    if (data.recipeIds && data.recipeIds.length > 0) {
+      result = await productRepository.updateOptionGroups(product.id, data.optionGroups);
+    } else if (data.recipeIds && data.recipeIds.length > 0) {
       // Return updated product with recipes
-      return (await productRepository.findById(product.id))!;
+      result = (await productRepository.findById(product.id))!;
+    } else {
+      result = product;
     }
 
-    return product;
+    publishStoreEvent(data.storeId, REALTIME_EVENTS.PRODUCT_CHANGED, {
+      action: "created",
+      entityId: product.id,
+    });
+    if (!data.linkedMenuItemId || data.linkedMenuItemId === "none") {
+      publishStoreEvent(data.storeId, REALTIME_EVENTS.MENU_CHANGED, {
+        action: "created",
+        entityId: product.id,
+      });
+    }
+    return result;
   }
 
   /**
@@ -235,16 +248,27 @@ export class ProductService {
     }
 
     // Update option groups if provided
+    let result: ProductWithRelations;
     if (data.optionGroups !== undefined) {
-      return productRepository.updateOptionGroups(productId, data.optionGroups);
-    }
-
-    if (data.recipeIds !== undefined) {
+      result = await productRepository.updateOptionGroups(productId, data.optionGroups);
+    } else if (data.recipeIds !== undefined) {
       // Return updated product with recipes
-      return (await productRepository.findById(productId))!;
+      result = (await productRepository.findById(productId))!;
+    } else {
+      result = updatedProduct;
     }
 
-    return updatedProduct;
+    publishStoreEvent(storeId, REALTIME_EVENTS.PRODUCT_CHANGED, {
+      action: "updated",
+      entityId: productId,
+    });
+    if (data.name !== undefined || data.sellingPrice !== undefined || data.department !== undefined) {
+      publishStoreEvent(storeId, REALTIME_EVENTS.MENU_CHANGED, {
+        action: "updated",
+        entityId: productId,
+      });
+    }
+    return result;
   }
 
   /**
@@ -258,7 +282,12 @@ export class ProductService {
       throw new Error("Product does not belong to this store");
     }
 
-    return productRepository.delete(productId);
+    const deleted = await productRepository.delete(productId);
+    publishStoreEvent(storeId, REALTIME_EVENTS.PRODUCT_CHANGED, {
+      action: "deleted",
+      entityId: productId,
+    });
+    return deleted;
   }
 
   /**

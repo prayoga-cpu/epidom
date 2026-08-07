@@ -7,9 +7,10 @@ import { formatDateTime } from "@/lib/utils/formatting";
 interface LogRow {
   timestamp: string;
   staffName: string;
-  type: "CLOCK_IN" | "CLOCK_OUT" | "ABSENCE";
+  type: "CLOCK_IN" | "CLOCK_OUT" | "ABSENCE" | "CASH_IN" | "CASH_OUT";
   hasSelfie: boolean;
   locationLabel: string | null;
+  amountFormatted?: string | null;
 }
 
 interface HoursRow {
@@ -86,7 +87,7 @@ export function AttendancePrintView({
               <th className="py-2 pr-2 font-semibold">{t("common.timestamp")}</th>
               <th className="py-2 pr-2 font-semibold">{t("pages.staff")}</th>
               <th className="py-2 pr-2 font-semibold">{t("pages.attendanceTypeColumn")}</th>
-              <th className="py-2 pr-2 font-semibold">{t("pages.attendanceSelfieColumn")}</th>
+              <th className="py-2 pr-2 font-semibold">{t("pages.scheduleLogDetailColumn")}</th>
               <th className="py-2 pl-2 font-semibold">{t("pages.attendanceLocationColumn")}</th>
             </tr>
           </thead>
@@ -100,9 +101,15 @@ export function AttendancePrintView({
                     ? t("clockInOut.typeClockIn")
                     : row.type === "CLOCK_OUT"
                       ? t("clockInOut.typeClockOut")
-                      : t("clockInOut.typeAbsence")}
+                      : row.type === "ABSENCE"
+                        ? t("clockInOut.typeAbsence")
+                        : row.type === "CASH_IN"
+                          ? t("clockInOut.typeCashIn")
+                          : t("clockInOut.typeCashOut")}
                 </td>
-                <td className="py-1.5 pr-2">{row.hasSelfie ? "✓" : "—"}</td>
+                <td className="py-1.5 pr-2">
+                  {row.amountFormatted ?? (row.hasSelfie ? "✓" : "—")}
+                </td>
                 <td className="py-1.5 pl-2">
                   {row.locationLabel ?? t("pages.attendanceCoordinatesUnavailable")}
                 </td>

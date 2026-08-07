@@ -34,7 +34,7 @@ import { SectionErrorState } from "@/features/dashboard/data/components/section-
 import { isSubscriptionError } from "@/lib/utils/types";
 import { formatDate } from "@/lib/utils/format-date";
 
-export function OrdersView() {
+export function OrdersToPlaceView() {
   const { t } = useI18n();
   const router = useRouter();
   const { formatPrice } = useCurrency();

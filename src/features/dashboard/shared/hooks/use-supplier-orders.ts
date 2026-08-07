@@ -256,6 +256,11 @@ export function useCreateSupplierOrder(storeId: string) {
       queryClient.invalidateQueries({
         queryKey: supplierOrderKeys.lists(storeId),
       });
+      // A new order reserves stock toward being replenished — reflect that
+      // immediately in the live stock bar and alerts, not just once it's
+      // later marked PLACED/RECEIVED.
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
       toast.success("Supplier order created successfully");
     },
     onError: (error: Error) => {

@@ -12,14 +12,13 @@ import {
   Monitor,
   UtensilsCrossed,
   ChefHat,
+  Factory,
   Grid2X2,
   Users,
-  Clock,
   BarChart3,
   MenuSquare,
   Wrench,
   CalendarDays,
-  Camera,
   type LucideIcon,
 } from "lucide-react";
 
@@ -130,6 +129,13 @@ export const dashboardNavigation: NavSection[] = [
         requiredPlan: "OPERATIONS",
       },
       {
+        href: "/production",
+        labelKey: "nav.production",
+        icon: Factory,
+        showBadge: false,
+        requiredPlan: "OPERATIONS",
+      },
+      {
         href: "/data",
         labelKey: "nav.data",
         icon: Database,
@@ -152,23 +158,9 @@ export const dashboardNavigation: NavSection[] = [
         requiredPlan: "OPERATIONS",
       },
       {
-        href: "/shifts",
-        labelKey: "nav.shifts",
-        icon: Clock,
-        showBadge: false,
-        requiredPlan: "OPERATIONS",
-      },
-      {
         href: "/schedule",
         labelKey: "nav.schedule",
         icon: CalendarDays,
-        showBadge: false,
-        requiredPlan: "OPERATIONS",
-      },
-      {
-        href: "/attendance",
-        labelKey: "nav.attendance",
-        icon: Camera,
         showBadge: false,
         requiredPlan: "OPERATIONS",
       },

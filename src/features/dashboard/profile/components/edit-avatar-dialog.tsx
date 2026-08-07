@@ -5,7 +5,6 @@ import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { ImageUpload } from "@/components/shared/image-upload";
 import { AvatarCropper } from "@/components/shared/avatar-cropper";
 import { toast } from "sonner";
 import { useUpdateProfile } from "../hooks/use-profile";

@@ -774,3 +774,53 @@ function generateCustomDevelopmentNotificationEmailHtml(
 </html>
   `.trim();
 }
+
+/**
+ * Send a supplier order (reorder/refill) detail as a PDF attachment —
+ * "send the PDF detail to supplier" from the Stock tab's reorder panel.
+ */
+export async function sendSupplierOrderEmail(
+  to: string,
+  storeName: string,
+  orderNumber: string,
+  pdfBuffer: Buffer
+): Promise<SendEmailResult> {
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject: `Purchase Order ${orderNumber} from ${storeName}`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333;">
+          <p>Hello,</p>
+          <p>Please find attached purchase order <strong>${orderNumber}</strong> from <strong>${storeName}</strong>.</p>
+          <p>Thank you.</p>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: `${orderNumber}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send supplier order email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("[Email] Supplier order email error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}

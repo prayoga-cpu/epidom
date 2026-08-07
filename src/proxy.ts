@@ -104,8 +104,12 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - sw.js (service worker — must be fetchable by anonymous storefront
+     *   visitors too, or registration fails for anyone without a session
+     *   cookie, breaking PWA installability and push notifications)
+     * - manifest.webmanifest (PWA manifest, same reasoning)
      * - public files (images, etc.)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

@@ -28,7 +28,7 @@ export function SubscriptionInfoCard({
   subscription: initialSubscription,
 }: SubscriptionInfoCardProps) {
   const { t } = useI18n();
-  const { currency } = useCurrency();
+  const { formatPrice } = useCurrency();
   const { data: subStatus } = useSubscriptionStatus();
   const isBeta = !!subStatus?.subscription?.isBeta;
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
@@ -75,7 +75,7 @@ export function SubscriptionInfoCard({
     currentPeriodEnd: null,
   };
 
-  const planDetails = getPlanDetails(subscription.plan, t, currency);
+  const planDetails = getPlanDetails(subscription.plan, t, formatPrice);
   const isActive = subscription.status === "ACTIVE";
   const isPastDue = subscription.status === "PAST_DUE";
 

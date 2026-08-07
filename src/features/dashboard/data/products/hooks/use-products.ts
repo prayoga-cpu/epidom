@@ -9,6 +9,8 @@ import { ApiClientError } from "@/lib/api/client";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
 import { trackEvent } from "@/lib/analytics";
+import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 export interface LinkedMenuItem {
   id: string;
@@ -237,6 +239,16 @@ export function useProducts(
 ) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
+  const queryClient = useQueryClient();
+
+  useRealtimeChannel(storeId, {
+    [REALTIME_EVENTS.PRODUCT_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: productKeys.lists(storeId) });
+    },
+    [REALTIME_EVENTS.STOCK_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: productKeys.lists(storeId) });
+    },
+  });
 
   return useQuery({
     queryKey: productKeys.list(storeId, normalizedFilters),

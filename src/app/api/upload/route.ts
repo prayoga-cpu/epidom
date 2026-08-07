@@ -19,16 +19,19 @@ import { NextResponse } from "next/server";
 import { getStorageAdapter } from "@/lib/storage";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { compressImageServer } from "@/lib/utils/server-image-compression";
+import { ALLOWED_IMAGE_TYPES, IMAGE_RAW_UPLOAD_MAX_BYTES, clampTargetMB } from "@/lib/constants/image";
 
 /**
  * Allowed image MIME types
  */
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_TYPES: readonly string[] = ALLOWED_IMAGE_TYPES;
 
 /**
- * Maximum file size (5MB)
+ * Maximum raw (pre-compression) file size accepted. This bounds processing
+ * cost — it is not the guaranteed output size, see compressImageServer.
  */
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = IMAGE_RAW_UPLOAD_MAX_BYTES;
 
 /**
  * POST /api/upload
@@ -80,12 +83,38 @@ export const POST = withApiHandler(
       );
     }
 
+    // Server-side compression — the authoritative half of the image rule
+    // (AGENTS.md § 6, "Images"). Guarantees every image ever stored is at
+    // most `maxSizeMB` regardless of what the client sent, so client-side
+    // compression is a bandwidth/UX optimization, not the only gate.
+    const requestedTargetMB = Number(formData.get("maxSizeMB"));
+    const targetBytes = clampTargetMB(requestedTargetMB) * 1024 * 1024;
+
+    let uploadFile: File;
+    try {
+      const inputBuffer = Buffer.from(await file.arrayBuffer());
+      const { buffer: compressedBuffer, contentType } = await compressImageServer(
+        inputBuffer,
+        file.type,
+        targetBytes
+      );
+      uploadFile = new File([new Uint8Array(compressedBuffer)], file.name, { type: contentType });
+    } catch (error) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          error instanceof Error ? error.message : "Failed to compress image."
+        ),
+        { status: 400 }
+      );
+    }
+
     // Upload file
     // Use user ID and timestamp for unique path
     const timestamp = Date.now();
     const path = `users/${userId}/images/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "")}`;
 
-    const result = await storage.upload(file, {
+    const result = await storage.upload(uploadFile, {
       path,
       access: "public",
       cacheControl: "3600", // 1 hour cache

@@ -2,7 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, ShoppingBag, CalendarClock, CheckCircle2, Sparkles, X } from "lucide-react";
+import {
+  Bell,
+  BellRing,
+  BellOff,
+  ShoppingBag,
+  CalendarClock,
+  CheckCircle2,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRouter } from "next/navigation";
@@ -14,6 +23,7 @@ import { id, enUS, fr } from "date-fns/locale";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { APP_VERSION } from "@/lib/version";
 import { getLastSeenVersion, setLastSeenVersion } from "@/lib/last-seen-version";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 
 // The pinned "What's new" prompt uses a local "changelog" type that widens the
 // notifications route's NotificationItem union (which we must not edit).
@@ -45,6 +55,8 @@ export function NotificationBell() {
   // Version the user last acknowledged via the "What's new" prompt (client-only)
   const [seenVersion, setSeenVersion] = useState<string | null>(null);
   const { t, locale } = useI18n();
+  const { state: pushState, subscribe: subscribePush, unsubscribe: unsubscribePush } =
+    usePushNotifications(storeId);
 
   useEffect(() => {
     setSeenVersion(getLastSeenVersion());
@@ -144,6 +156,44 @@ export function NotificationBell() {
             </button>
           )}
         </div>
+
+        {/* Push notifications toggle — hidden entirely when unsupported or
+            unconfigured (no VAPID env vars), matching the "graceful
+            degradation" pattern used by the rest of the realtime layer. */}
+        {pushState !== "unsupported" && (
+          <div className="border-border flex items-center justify-between gap-2 border-b px-4 py-2.5">
+            <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px]">
+              {pushState === "subscribed" ? (
+                <BellRing className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+              ) : (
+                <BellOff className="h-3.5 w-3.5 shrink-0" />
+              )}
+              <span className="truncate">
+                {pushState === "subscribed" && t("notifications.push.enabled")}
+                {pushState === "denied" && t("notifications.push.blocked")}
+                {pushState === "ios-not-installed" && t("notifications.push.iosInstallHint")}
+                {(pushState === "default" || pushState === "subscribing") &&
+                  t("notifications.push.prompt")}
+              </span>
+            </div>
+            {(pushState === "default" ||
+              pushState === "subscribing" ||
+              pushState === "subscribed") && (
+              <button
+                onClick={pushState === "subscribed" ? unsubscribePush : subscribePush}
+                disabled={pushState === "subscribing"}
+                // h-10 (40px) meets the ≥40px touch-target rule; visible by
+                // default rather than hover-gated, since touch devices have
+                // no persistent hover state.
+                className="text-muted-foreground hover:text-foreground flex h-10 shrink-0 touch-manipulation items-center justify-center rounded px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-50"
+              >
+                {pushState === "subscribed"
+                  ? t("notifications.push.disable")
+                  : t("notifications.push.enable")}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* List */}
         <div className="max-h-[360px] overflow-y-auto">

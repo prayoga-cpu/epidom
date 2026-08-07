@@ -156,7 +156,7 @@ For merchants with staff and ingredient cost concerns. Everything in POS, plus:
 - Cash drawer reconciliation
 - Discrepancy alerts
 - Shift handover notes
-- Staff roster/scheduling with manager publish + staff self-view (`/schedule`), selfie + geolocation attendance audit trail (`/attendance`), automatic overtime calculation — see `docs/roadmap.md`
+- Staff roster/scheduling, selfie + geolocation attendance, and till cash reconciliation are unified on one page (`/schedule`, merged 2026-08-07 — `/shifts` and `/attendance` now redirect here): managers get roster setup/publish plus a filterable Log & History (clock events and cash in/out on one timeline); staff get their own upcoming shifts with Clock In/Out and (Cashier/Owner/Manager) Cash In/Out actions, and their own history. Automatic overtime calculation — see `docs/roadmap.md`
 
 ### Staff and roles _(Phase 4)_
 

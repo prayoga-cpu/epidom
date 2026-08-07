@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { openShiftSchema } from "@/lib/validation/operations.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
-import { compare } from "bcryptjs";
 import { toDecimal } from "@/lib/utils/types.server";
+import { isStaffAuthenticated } from "@/lib/attendance/verify-staff-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +13,13 @@ export const GET = withApiHandler(
     const { searchParams } = new URL(request.url);
     const take = Math.min(Number(searchParams.get("take") ?? "20"), 100);
     const skip = Number(searchParams.get("skip") ?? "0");
+    const staffId = searchParams.get("staffId") || undefined;
+
+    const where = { storeId, ...(staffId && { staffMemberId: staffId }) };
 
     const [shifts, total] = await Promise.all([
       prisma.shift.findMany({
-        where: { storeId },
+        where,
         include: {
           staffMember: { select: { id: true, name: true, role: true } },
           _count: { select: { orders: true } },
@@ -25,7 +28,7 @@ export const GET = withApiHandler(
         take,
         skip,
       }),
-      prisma.shift.count({ where: { storeId } }),
+      prisma.shift.count({ where }),
     ]);
 
     return NextResponse.json(createSuccessResponse({ shifts, total }));
@@ -58,18 +61,11 @@ export const POST = withApiHandler(
       );
     }
 
-    if (staff.pin) {
-      if (!pin || pin === "") {
-        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "PIN required"), {
-          status: 401,
-        });
-      }
-      const pinValid = await compare(pin, staff.pin);
-      if (!pinValid) {
-        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Incorrect PIN"), {
-          status: 401,
-        });
-      }
+    if (!(await isStaffAuthenticated(storeId!, staffId, pin, staff.pin))) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.UNAUTHORIZED, pin ? "Incorrect PIN" : "PIN required"),
+        { status: 401 }
+      );
     }
 
     // Only one open shift per staff member at a time

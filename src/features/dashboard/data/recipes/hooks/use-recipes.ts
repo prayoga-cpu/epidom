@@ -9,6 +9,8 @@ import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateRecipeRelatedQueries } from "@/lib/utils/cache-helpers";
 import { trackEvent } from "@/lib/analytics";
 import { ApiClientError } from "@/lib/api/client";
+import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 // Types
 export interface RecipeWithIngredients {
@@ -256,6 +258,16 @@ export function useRecipes(
 ) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)
   const normalizedFilters = normalizeFilters(filters);
+  const queryClient = useQueryClient();
+
+  useRealtimeChannel(storeId, {
+    [REALTIME_EVENTS.RECIPE_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: recipeKeys.lists(storeId) });
+    },
+    [REALTIME_EVENTS.STOCK_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: recipeKeys.lists(storeId) });
+    },
+  });
 
   return useQuery({
     queryKey: recipeKeys.list(storeId, normalizedFilters),

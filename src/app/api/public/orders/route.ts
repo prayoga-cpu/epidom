@@ -4,6 +4,9 @@ import { createPublicOrderSchema } from "@/lib/validation/public-orders.schemas"
 import { initiatePayment } from "@/lib/payments";
 import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
 import { inngest } from "@/lib/inngest/client";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
+import { sendPushToStore } from "@/lib/push/send";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
@@ -168,6 +171,15 @@ export async function POST(request: Request) {
       return created;
     });
 
+    // Live-update any open dashboard/POS tab for this store (mirrors the
+    // same call in the POS order route — storefront orders previously never
+    // triggered this, so open dashboards only learned about them on the
+    // next 30s notification-bell poll).
+    publishStoreEvent(storefront.storeId, REALTIME_EVENTS.ORDER_CREATED, {
+      action: "created",
+      entityId: order.id,
+    });
+
     // Initiate payment (gracefully falls back if provider not configured)
     let paymentUrl: string | null = null;
     let qrString: string | null = null;
@@ -256,6 +268,15 @@ export async function POST(request: Request) {
     } catch (err) {
       console.error("[public/orders] Inngest event failed:", err);
     }
+
+    // OS-level push to any subscribed device for this store — fire-and-forget,
+    // never throws, no try/catch needed (see sendPushToStore).
+    sendPushToStore(storefront.storeId, {
+      title: "Pesanan baru masuk",
+      body: `${orderNumber} · ${input.customerName}`,
+      url: `/store/${storefront.storeId}/pos`,
+      tag: `order-${order.id}`,
+    });
 
     return NextResponse.json(
       createSuccessResponse({
