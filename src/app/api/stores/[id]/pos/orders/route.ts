@@ -7,11 +7,9 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
 import { inngest } from "@/lib/inngest/client";
-import { initiatePayment } from "@/lib/payments";
 import { ACTIVE_POS_QUEUE_FILTER } from "@/lib/constants/order-status";
 import {
   validateAndBuildOrderItems,
-  skipsOnlinePayment,
   resolveSettledOrderStatus,
   deliverOrderImmediately,
   draftShortfallBatchesForConfirmedOrder,
@@ -182,7 +180,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           tableId: input.tableId,
           shiftId: input.shiftId,
           paymentMethod: input.paymentMethod as PaymentMethod,
-          paymentStatus: input.paymentMethod === "CASH" ? "PAID" : "PENDING",
+          paymentStatus: input.paymentMethod === "PAY_LATER" ? "PENDING" : "PAID",
           status: settledStatus,
           ...(immediatelyDelivered && { deliveredDate: new Date() }),
           source: "POS",
@@ -274,43 +272,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         ? Math.max(0, input.amountTendered - charges.total)
         : null;
 
-    // Initiate payment for methods that actually need an online payment step
-    let qrString: string | null = null;
-    let paymentProviderRef: string | null = null;
-
-    if (!skipsOnlinePayment(input.paymentMethod as PaymentMethod)) {
-      try {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-        const payment = await initiatePayment({
-          orderId: order.id,
-          amount: charges.total,
-          currency: "IDR",
-          customerName: input.customerName ?? "Walk-in",
-          customerPhone: input.customerPhone,
-          description: `Pesanan ${orderNumber} - POS`,
-          paymentMethod: input.paymentMethod as PaymentMethod,
-          bankCode: input.bankCode as import("@/lib/payments").XenditVABankCode | undefined,
-          successUrl: `${appUrl}/pos`, // POS doesn't redirect
-          cancelUrl: `${appUrl}/pos`,
-          callbackUrl: `${appUrl}/api/webhooks/xendit`,
-        });
-
-        if (payment.providerRef || payment.qrString) {
-          await prisma.order.update({
-            where: { id: order.id },
-            data: {
-              paymentProviderRef: payment.providerRef,
-              paymentQrString: payment.qrString || null,
-            },
-          });
-          qrString = payment.qrString ?? null;
-          paymentProviderRef = payment.providerRef ?? null;
-        }
-      } catch (err) {
-        console.error("[POS_ORDERS_POST] Payment initiation failed:", err);
-      }
-    }
-
     return NextResponse.json(
       createSuccessResponse({
         orderId: order.id,
@@ -318,8 +279,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         status: order.status,
         paymentStatus: order.paymentStatus,
         change,
-        qrString,
-        paymentProviderRef,
       }),
       { status: 201 }
     );

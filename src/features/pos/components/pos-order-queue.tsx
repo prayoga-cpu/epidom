@@ -19,8 +19,10 @@ import {
   sortQueueOrders,
   QUEUE_STATUSES,
   QUEUE_FILTER_KEYS,
+  QUEUE_PAYMENT_METHODS,
   type QueueDepartmentFilter,
   type QueueFilterKey,
+  type QueuePaymentMethodFilter,
   type QueueSortBy,
   type QueueSourceFilter,
   type QueueStatusFilter,
@@ -43,6 +45,7 @@ interface QueueFiltersState {
   productFilter: string;
   departmentFilter: QueueDepartmentFilter;
   staffFilter: string;
+  paymentMethodFilter: QueuePaymentMethodFilter;
   // Which of the optional filter dropdowns are currently shown — everything
   // except search/unpaid is hidden until the cashier explicitly adds it via
   // "+ Add filter", Notion-style, to keep the default toolbar uncluttered.
@@ -59,6 +62,7 @@ const QUEUE_FILTERS_DEFAULTS: QueueFiltersState = {
   productFilter: "ALL",
   departmentFilter: "ALL",
   staffFilter: "ALL",
+  paymentMethodFilter: "ALL",
   activeFilterKeys: [],
 };
 
@@ -68,6 +72,7 @@ const SOURCE_FILTERS: QueueSourceFilter[] = ["ALL", "POS", "ONLINE"];
 const TYPE_FILTERS: QueueTypeFilter[] = ["ALL", "DINE_IN", "TAKEAWAY", "DELIVERY"];
 const SORT_BYS: QueueSortBy[] = ["newest", "oldest", "total-desc", "total-asc"];
 const DEPARTMENT_FILTERS: QueueDepartmentFilter[] = ["ALL", "KITCHEN", "BAR"];
+const PAYMENT_METHOD_FILTERS: QueuePaymentMethodFilter[] = ["ALL", ...QUEUE_PAYMENT_METHODS];
 
 // The reset applied to a filter's own value when it's removed from view —
 // hiding a filter also clears it, so it can never keep narrowing results silently.
@@ -77,6 +82,7 @@ const QUEUE_FILTER_RESET: Record<QueueFilterKey, Partial<QueueFiltersState>> = {
   department: { departmentFilter: "ALL" },
   product: { productFilter: "ALL" },
   staff: { staffFilter: "ALL" },
+  paymentMethod: { paymentMethodFilter: "ALL" },
 };
 
 function pick<T>(value: unknown, allowed: T[], fallback: T): T {
@@ -101,6 +107,11 @@ function sanitizeQueueFilters(raw: unknown, defaults: QueueFiltersState): QueueF
     productFilter: typeof r.productFilter === "string" ? r.productFilter : defaults.productFilter,
     departmentFilter: pick(r.departmentFilter, DEPARTMENT_FILTERS, defaults.departmentFilter),
     staffFilter: typeof r.staffFilter === "string" ? r.staffFilter : defaults.staffFilter,
+    paymentMethodFilter: pick(
+      r.paymentMethodFilter,
+      PAYMENT_METHOD_FILTERS,
+      defaults.paymentMethodFilter
+    ),
     activeFilterKeys,
   };
 }
@@ -140,6 +151,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     productFilter,
     departmentFilter,
     staffFilter,
+    paymentMethodFilter,
     activeFilterKeys,
   } = filters;
   // search is deliberately excluded from persistence — a stale free-text
@@ -228,6 +240,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
           productFilter,
           departmentFilter,
           staffFilter,
+          paymentMethodFilter,
         })
       ),
     [
@@ -239,6 +252,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
       productFilter,
       departmentFilter,
       staffFilter,
+      paymentMethodFilter,
     ]
   );
 
@@ -275,6 +289,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     productFilter !== "ALL" ||
     departmentFilter !== "ALL" ||
     staffFilter !== "ALL" ||
+    paymentMethodFilter !== "ALL" ||
     search.trim().length > 0;
 
   const clearFilters = () => {
@@ -287,6 +302,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
       productFilter: "ALL",
       departmentFilter: "ALL",
       staffFilter: "ALL",
+      paymentMethodFilter: "ALL",
       activeFilterKeys: [],
     }));
     setSearch("");
@@ -334,6 +350,8 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
         staffFilter={staffFilter}
         onStaffFilterChange={(v) => patchFilters({ staffFilter: v })}
         staffOptions={staffOptions}
+        paymentMethodFilter={paymentMethodFilter}
+        onPaymentMethodFilterChange={(v) => patchFilters({ paymentMethodFilter: v })}
         activeFilterKeys={activeFilterKeys}
         onAddFilter={addFilter}
         onRemoveFilter={removeFilter}

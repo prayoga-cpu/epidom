@@ -49,7 +49,7 @@ import {
   useSubmitFeedback,
   useUpdateFeedback,
 } from "../hooks/use-feedback";
-import { ApiSuccessResponse } from "@/types/api/responses";
+import { ApiErrorResponse, ApiSuccessResponse } from "@/types/api/responses";
 import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 import { toast } from "sonner";
 import {
@@ -288,15 +288,17 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
           });
 
           if (!response.ok) {
-            throw new Error("Upload failed");
+            const errorBody: ApiErrorResponse = await response.json();
+            throw new Error(errorBody.error?.message);
           }
 
           const uploadData: ApiSuccessResponse<{ url: string }> = await response.json();
           screenshotUrl = uploadData.data.url;
           uploadedRef.current = { file: screenshotFile, url: screenshotUrl };
-        } catch {
+        } catch (error) {
           setIsUploading(false);
-          toast.error(t("feedback.screenshotUploadFailed"));
+          const message = error instanceof Error ? error.message : "";
+          toast.error(message || t("feedback.screenshotUploadFailed"));
           return;
         }
         setIsUploading(false);

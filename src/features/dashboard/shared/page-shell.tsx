@@ -40,7 +40,15 @@ export function PageShell({ children }: { children: React.ReactNode }) {
                 the end (a longstanding Chromium flexbox/overflow quirk) —
                 splitting scroll and padding across two elements avoids it. */}
             <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-              <div className="flex flex-col p-2 md:p-6">
+              {/* min-h-full (not h-full): gives a page that wants to fill the
+                  viewport and manage its own internal scroll regions (e.g.
+                  PosShell — a fixed-height app with its own item-grid/cart
+                  overflow-y-auto children) a definite height to size its
+                  flex-1 against, without capping/clipping a normal page
+                  whose content is naturally taller than the viewport — that
+                  content still grows past min-h-full and scrolls via this
+                  wrapper's own overflow-y-auto ancestor exactly as before. */}
+              <div className="flex min-h-full flex-col p-2 md:p-6">
                 <UpgradeGateProvider>{children}</UpgradeGateProvider>
               </div>
             </div>

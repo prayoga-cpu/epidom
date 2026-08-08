@@ -33,6 +33,21 @@ export function mapOrderStatusLabel(t: (key: string) => string, status: string):
   return t(`pos.status.${key}`);
 }
 
+// Mostly reuses the storefront checkout's payment-method map
+// (publicOrder.paymentMethods) rather than duplicating a second copy — CASH,
+// QRIS, GOPAY, OVO, DANA, SHOPEEPAY, and PAY_LATER already read identically
+// in both places. BANK_TRANSFER/STRIPE_CARD are the exception: the POS
+// checkout dialog and Mark Paid dialog already established "Virtual
+// Account"/"Credit Card" on this side (pos.markPaid.*), distinct from the
+// storefront's more generic "Bank Transfer"/"Credit/Debit Card" — kept as
+// overrides here so the queue/history views agree with the rest of the POS
+// rather than silently drifting to the storefront's wording.
+export function mapPaymentMethodLabel(t: (key: string) => string, method: string): string {
+  if (method === "BANK_TRANSFER") return t("pos.markPaid.virtualAccount");
+  if (method === "STRIPE_CARD") return t("pos.markPaid.creditCard");
+  return t(`publicOrder.paymentMethods.${method}`);
+}
+
 /**
  * An order that hasn't been settled yet — the case the "Unpaid" badge,
  * payment alerts, and the active-queue payment follow-up (delivered orders

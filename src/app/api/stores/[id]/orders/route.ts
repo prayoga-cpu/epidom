@@ -18,6 +18,7 @@ import { buildOrderHistoryWhere } from "@/lib/services/order-history-query";
  *   productId — menu item id, order must contain a line for it
  *   department — "KITCHEN" | "BAR", order must contain an item from it
  *   staffId — StaffMember id, order's shift must belong to them
+ *   paymentMethod — PaymentMethod filter (ignored if invalid)
  *   take — page size (default 25, max 100)
  *   cursor — order id for cursor pagination
  */
@@ -34,6 +35,7 @@ export const GET = withApiHandler(
     const productId = searchParams.get("productId");
     const department = searchParams.get("department");
     const staffId = searchParams.get("staffId");
+    const paymentMethod = searchParams.get("paymentMethod");
     const cursor = searchParams.get("cursor");
     const take = Math.min(Math.max(parseInt(searchParams.get("take") ?? "25", 10) || 25, 1), 100);
 
@@ -60,6 +62,7 @@ export const GET = withApiHandler(
       productId,
       department,
       staffId,
+      paymentMethod,
     });
 
     const [rows, totalCount] = await Promise.all([

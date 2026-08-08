@@ -877,6 +877,7 @@ body.dialog-open {
    dark-mode text overrides above (they made the report unreadable). */
 .dark .print-report.text-black,
 .dark .print-report .text-black,
+.dark .print-report .text-gray-600,
 .dark .print-report .text-gray-700,
 .dark .print-report .text-gray-800 {
   color: #1f2937 !important;
@@ -884,6 +885,10 @@ body.dialog-open {
 
 .dark .print-report .text-gray-500 {
   color: #6b7280 !important;
+}
+
+.dark .print-report .text-gray-400 {
+  color: #9ca3af !important;
 }
 
 /* ========================================

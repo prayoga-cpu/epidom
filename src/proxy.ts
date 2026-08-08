@@ -66,8 +66,14 @@ export default async function proxy(req: NextRequest) {
   // Also allow public storefront routes which start with /@
   const isStorefrontRoute = path.startsWith("/@");
 
-  // If it's a public route or storefront route, allow access without authentication
-  if (isPublicRoute || isStorefrontRoute) {
+  // Public digital receipt page (/r/[orderId]) — same trust model as
+  // storefront routes: an unguessable cuid is the only gate, no session
+  // required. This is the page the customer-facing WhatsApp receipt link
+  // and the POS/storefront "View Receipt" actions point to.
+  const isReceiptRoute = path.startsWith("/r/");
+
+  // If it's a public route, storefront route, or receipt route, allow access without authentication
+  if (isPublicRoute || isStorefrontRoute || isReceiptRoute) {
     return response;
   }
 

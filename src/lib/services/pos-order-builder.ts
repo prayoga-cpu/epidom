@@ -5,14 +5,20 @@ import { deductStockForOrder } from "./stock-deduction.service";
 import { productionBatchService } from "./production-batch.service";
 
 /**
- * Methods that need no online payment step: CASH is settled at the counter
- * immediately, PAY_LATER is deliberately deferred. Both send the order
- * straight to the kitchen (status CONFIRMED) instead of waiting on a
- * provider webhook, and neither should trigger initiatePayment(). Shared by
- * order creation and finalize so the two routes can't drift.
+ * Whether this order is settled the instant the cashier hits Confirm. The
+ * POS is a cashier-attended counter, not a self-checkout: for every method
+ * except PAY_LATER, payment has already changed hands in person (cash
+ * counted, a card tapped on a separate terminal, a QRIS/e-wallet scan the
+ * cashier watched happen) by the time Confirm is pressed — there's no online
+ * payment gateway step to wait on for any of them. Only PAY_LATER is
+ * deliberately deferred. (The storefront's self-checkout flow is different —
+ * see /api/public/orders, which has its own initiatePayment() call since a
+ * customer paying alone online genuinely does need to complete a real
+ * payment step.) Shared by order creation and finalize so the two routes
+ * can't drift.
  */
 export function skipsOnlinePayment(method: PaymentMethod): boolean {
-  return method === "CASH" || method === "PAY_LATER";
+  return method !== "PAY_LATER";
 }
 
 /**

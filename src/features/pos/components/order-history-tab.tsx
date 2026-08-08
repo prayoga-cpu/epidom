@@ -8,6 +8,7 @@ import {
   buildOrderHistoryParams,
   useDebouncedValue,
   useOrderHistory,
+  useOrderPaymentTotals,
 } from "../hooks/use-order-history";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosStaffList } from "../hooks/use-pos-staff-list";
@@ -21,6 +22,7 @@ import {
   type DateRangePreset,
 } from "../lib/date-range-presets";
 import type { OrderHistoryFilters, OrderHistoryItem } from "../types/pos.types";
+import { mapPaymentMethodLabel } from "../lib/order-status-display";
 import { OrderHistoryDetailDialog } from "./order-history-detail-dialog";
 import { UnpaidFilterToggle } from "./unpaid-filter-toggle";
 import { AddFilterMenu } from "./add-filter-menu";
@@ -63,8 +65,29 @@ const DEPARTMENT_VALUES = ["ALL", "KITCHEN", "BAR"] as const;
 const DATE_PRESET_VALUES: DateRangePreset[] = [...DATE_RANGE_PRESETS, "custom"];
 
 // The optional filter dropdowns hidden by default behind "+ Add filter".
-const HISTORY_FILTER_KEYS = ["status", "source", "department", "product", "staff", "dateRange"] as const;
+const HISTORY_FILTER_KEYS = [
+  "status",
+  "source",
+  "department",
+  "product",
+  "staff",
+  "paymentMethod",
+  "dateRange",
+] as const;
 type HistoryFilterKey = (typeof HISTORY_FILTER_KEYS)[number];
+
+const PAYMENT_METHOD_VALUES = [
+  "CASH",
+  "QRIS",
+  "GOPAY",
+  "OVO",
+  "DANA",
+  "SHOPEEPAY",
+  "BANK_TRANSFER",
+  "STRIPE_CARD",
+  "PAY_LATER",
+] as const;
+const PAYMENT_METHOD_FILTER_VALUES = ["ALL", ...PAYMENT_METHOD_VALUES] as const;
 
 interface HistoryFiltersState {
   status: string;
@@ -76,6 +99,7 @@ interface HistoryFiltersState {
   productId: string;
   department: string;
   staffId: string;
+  paymentMethod: string;
   activeFilterKeys: HistoryFilterKey[];
 }
 
@@ -89,6 +113,7 @@ const HISTORY_FILTERS_DEFAULTS: HistoryFiltersState = {
   productId: "ALL",
   department: "ALL",
   staffId: "ALL",
+  paymentMethod: "ALL",
   activeFilterKeys: [],
 };
 
@@ -100,6 +125,7 @@ const HISTORY_FILTER_RESET: Record<HistoryFilterKey, Partial<HistoryFiltersState
   department: { department: "ALL" },
   product: { productId: "ALL" },
   staff: { staffId: "ALL" },
+  paymentMethod: { paymentMethod: "ALL" },
   dateRange: { datePreset: "all", from: "", to: "" },
 };
 
@@ -128,6 +154,7 @@ function sanitizeHistoryFilters(
     productId: typeof r.productId === "string" ? r.productId : defaults.productId,
     department: pick(r.department, DEPARTMENT_VALUES, defaults.department),
     staffId: typeof r.staffId === "string" ? r.staffId : defaults.staffId,
+    paymentMethod: pick(r.paymentMethod, PAYMENT_METHOD_FILTER_VALUES, defaults.paymentMethod),
     activeFilterKeys,
   };
 }
@@ -212,6 +239,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     productId,
     department,
     staffId,
+    paymentMethod,
     activeFilterKeys,
   } = filterState;
   const patchFilters = (patch: Partial<HistoryFiltersState>) =>
@@ -264,6 +292,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     productId,
     department,
     staffId,
+    paymentMethod,
   };
 
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useOrderHistory(
@@ -273,6 +302,11 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
 
   const orders = data?.pages.flatMap((p) => p.orders) ?? [];
   const totalCount = data?.pages[0]?.totalCount ?? 0;
+
+  // Same filters as the table above (paginated separately) — this reflects
+  // the audit total for whatever date range/filters are currently applied,
+  // not just the page of rows currently loaded on screen.
+  const paymentTotals = useOrderPaymentTotals(storeId, filters);
 
   // --- Bulk selection & actions -------------------------------------------
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -287,7 +321,18 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   useEffect(() => {
     setSelectedIds(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, source, from, to, unpaidOnly, productId, department, staffId, debouncedSearch]);
+  }, [
+    status,
+    source,
+    from,
+    to,
+    unpaidOnly,
+    productId,
+    department,
+    staffId,
+    paymentMethod,
+    debouncedSearch,
+  ]);
 
   const selectedOrders = orders.filter((o) => selectedIds.has(o.id));
   const markPaidIds = selectedOrders.filter((o) => o.paymentStatus === "PENDING").map((o) => o.id);
@@ -536,6 +581,23 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
             </Select>
           </RemovableFilter>
         )}
+        {activeFilterKeys.includes("paymentMethod") && (
+          <RemovableFilter onRemove={() => removeFilter("paymentMethod")}>
+            <Select value={paymentMethod} onValueChange={(v) => patchFilters({ paymentMethod: v })}>
+              <SelectTrigger className="w-full lg:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("pos.queue.filterAllPaymentMethods")}</SelectItem>
+                {PAYMENT_METHOD_VALUES.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {mapPaymentMethodLabel(t, m)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </RemovableFilter>
+        )}
         {activeFilterKeys.includes("dateRange") && (
           <RemovableFilter onRemove={() => removeFilter("dateRange")}>
             <Select
@@ -578,6 +640,41 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
           {t("pos.history.exportPdf")}
         </Button>
       </div>
+
+      {/* Payment method totals — audits "how much came in via each method"
+          for whatever's currently filtered above, independent of Finance
+          Reports access (see staff-permissions.config.ts). */}
+      {!paymentTotals.isLoading &&
+        !paymentTotals.isError &&
+        (paymentTotals.data?.methods.length ?? 0) > 0 && (
+          <div className="rounded-lg border p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-muted-foreground text-xs font-semibold uppercase">
+                {t("pos.history.paymentTotalsTitle")}
+              </span>
+              <span className="text-sm font-semibold">
+                {formatPrice(paymentTotals.data!.totalRevenue)}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {paymentTotals.data!.methods.map((m) => (
+                <div
+                  key={m.paymentMethod}
+                  className="bg-muted/30 flex min-w-[140px] flex-1 flex-col gap-0.5 rounded-md border px-3 py-2"
+                >
+                  <span className="text-muted-foreground text-xs">
+                    {mapPaymentMethodLabel(t, m.paymentMethod)}
+                  </span>
+                  <span className="text-sm font-semibold">{formatPrice(m.revenue)}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {t("pos.history.paymentTotalsOrders").replace("{n}", String(m.orderCount))} ·{" "}
+                    {m.percentOfTotal}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Bulk action bar — appears once at least one order is selected */}
       {selectedIds.size > 0 && (
@@ -632,7 +729,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
       ) : (
         <>
           <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-[960px]">
+            <div className="min-w-[1080px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -650,6 +747,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                     <TableHead>{t("pos.history.colCustomer")}</TableHead>
                     <TableHead>{t("pos.history.colItems")}</TableHead>
                     <TableHead className="text-right">{t("pos.history.colTotal")}</TableHead>
+                    <TableHead>{t("pos.history.colPaymentMethod")}</TableHead>
                     <TableHead>{t("pos.history.colPayment")}</TableHead>
                     <TableHead>{t("pos.history.colStatus")}</TableHead>
                   </TableRow>
@@ -693,6 +791,9 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         {formatPrice(Number(order.total))}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {mapPaymentMethodLabel(t, order.paymentMethod)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getPaymentBadgeVariant(order.paymentStatus)}>

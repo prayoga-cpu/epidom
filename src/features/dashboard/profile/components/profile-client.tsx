@@ -7,6 +7,7 @@ import { BusinessInfoCard } from "./business-info-card";
 import { SubscriptionInfoCard } from "./subscription-info-card";
 import { AccountSettingsCard } from "./account-settings-card";
 import { FeesAndTaxesCard } from "./fees-and-taxes-card";
+import { ReceiptSettingsCard } from "./receipt-settings-card";
 import { useProfile } from "../hooks/use-profile";
 import type { ProfileData } from "../types";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
@@ -83,6 +84,12 @@ export function ProfileClient({ initialProfile, isOwner, storeId, storeName }: P
         {storeId && (
           <div className="animate-slide-up-delayed-3">
             <FeesAndTaxesCard storeId={storeId} storeName={storeName} />
+          </div>
+        )}
+
+        {storeId && (
+          <div className="animate-slide-up-delayed-3">
+            <ReceiptSettingsCard storeId={storeId} storeName={storeName} />
           </div>
         )}
 

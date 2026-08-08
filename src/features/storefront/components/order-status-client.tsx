@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, MessageCircle, RefreshCw } from "lucide-react";
+import { ArrowLeft, MessageCircle, Receipt, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -324,6 +324,13 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
 
         {/* Actions */}
         <div className="space-y-3">
+          <a href={`/r/${order.id}`} target="_blank" rel="noopener noreferrer" className="block">
+            <Button variant="outline" className="flex w-full items-center gap-2 py-3">
+              <Receipt className="size-4" />
+              {t("publicOrder.orderStatus.viewReceipt")}
+            </Button>
+          </a>
+
           {whatsappContactUrl && (
             <a
               href={whatsappContactUrl}

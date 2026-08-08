@@ -202,4 +202,5 @@ export interface OrderHistoryFilters {
   productId: string;
   department: string;
   staffId: string;
+  paymentMethod: string;
 }

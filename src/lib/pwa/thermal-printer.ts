@@ -4,6 +4,16 @@
 
 export interface ReceiptData {
   storeName: string;
+  // Branding block — all optional so a store with no storefront/receipt
+  // settings configured yet still prints a valid (just plainer) receipt.
+  tagline?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+  instagramHandle?: string;
+  tiktokHandle?: string;
+  facebookHandle?: string;
+  footerMessage?: string;
   orderNumber: string;
   date: string;
   items: Array<{
@@ -15,6 +25,10 @@ export interface ReceiptData {
     notes?: string;
   }>;
   subtotal: number;
+  tax?: number;
+  taxLabel?: string;
+  serviceCharge?: number;
+  serviceChargeLabel?: string;
   discountAmount?: number;
   discountReason?: string;
   total: number;
@@ -121,7 +135,52 @@ function formatMoney(amount: number): string {
   }).format(amount);
 }
 
-function buildEscPos(receipt: ReceiptData): Uint8Array {
+// Word-wraps a single line into printer-column-width lines instead of
+// cutting mid-word. A single word longer than `cols` is hard-broken (nowhere
+// left to wrap to) but only as a last resort.
+function wrapLine(text: string, cols: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    if (word.length > cols) {
+      if (current) {
+        lines.push(current);
+        current = "";
+      }
+      for (let i = 0; i < word.length; i += cols) {
+        lines.push(word.slice(i, i + cols));
+      }
+      continue;
+    }
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > cols) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+// Wraps every free-text field on the receipt (store name, address, item
+// names, notes, footer message) so nothing gets silently dropped the way the
+// old `.substring(0, N)` truncation did. Explicit `\n` breaks (e.g. a
+// merchant's custom multi-line footer message) are preserved as hard line
+// breaks rather than being reflowed with the rest of the text.
+export function wrapText(text: string, cols: number): string[] {
+  if (!text) return [];
+  return text.split("\n").flatMap((paragraph) => wrapLine(paragraph, cols));
+}
+
+function labelRow(label: string, value: string): string {
+  return `${label.padEnd(9)}: ${value}`;
+}
+
+export function buildEscPos(receipt: ReceiptData): Uint8Array {
   const cols = receipt.width ?? 32;
   const divider = "-".repeat(cols);
 
@@ -133,6 +192,11 @@ function buildEscPos(receipt: ReceiptData): Uint8Array {
   const commands: number[] = [];
 
   const push = (...bytes: number[]) => commands.push(...bytes);
+  // Only ASCII (0-127) round-trips correctly through this byte-per-char
+  // encoding — a JS string literal like "♥" or "•" does NOT map to the
+  // printer's CP437 codepage this way, it'll print as garbage. Keep any
+  // decorative characters ASCII-only unless explicitly mapped to a CP437
+  // byte value.
   const text = (str: string) => {
     for (const ch of str) commands.push(ch.charCodeAt(0) & 0xff);
   };
@@ -140,37 +204,60 @@ function buildEscPos(receipt: ReceiptData): Uint8Array {
     text(str);
     push(LF);
   };
+  const lines = (strs: string[]) => {
+    for (const s of strs) line(s);
+  };
   const blank = (n = 1) => {
     for (let i = 0; i < n; i++) push(LF);
   };
+  const bold = (on: boolean) => push(ESC, 0x45, on ? 0x01 : 0x00);
+  const center = () => push(ESC, 0x61, 0x01);
+  const left = () => push(ESC, 0x61, 0x00);
 
   // Initialize printer
   push(ESC, 0x40);
 
-  // Center alignment
-  push(ESC, 0x61, 0x01);
-
-  // Bold + double-size store name
+  // ---- Header: store name (bold double-size), tagline ----
+  center();
   push(ESC, 0x21, 0x30);
-  line(receipt.storeName.substring(0, 16));
+  // Double-width glyphs take 2 cell-widths each, so the usable line length
+  // here is half of `cols` — this is the actual root cause of the old
+  // "TAHOMA CAFE & EA" truncation bug (it hardcoded 16 = 32/2 and never
+  // adapted when `cols` changed). Wrapping instead of truncating means a
+  // long name spans multiple bold/double-size lines instead of losing text.
+  lines(wrapText(receipt.storeName, Math.max(1, Math.floor(cols / 2))));
   push(ESC, 0x21, 0x00);
 
-  // Order number
-  push(ESC, 0x45, 0x01); // bold on
-  line(receipt.orderNumber);
-  push(ESC, 0x45, 0x00); // bold off
+  if (receipt.tagline) {
+    lines(wrapText(receipt.tagline, cols));
+  }
 
-  line(receipt.date);
-  if (receipt.cashierName) line(`Kasir: ${receipt.cashierName}`);
-  if (receipt.tableLabel) line(`Meja: ${receipt.tableLabel}`);
+  // ---- Address / contact block ----
+  const contactLine = [receipt.email, receipt.phone].filter(Boolean).join("  ");
+  const handleLine = receipt.instagramHandle ? `@${receipt.instagramHandle}` : "";
+  const hasContactBlock = !!(receipt.address || contactLine || handleLine);
+  if (hasContactBlock) {
+    line(divider);
+    if (receipt.address) lines(wrapText(receipt.address, cols));
+    if (contactLine) lines(wrapText(contactLine, cols));
+    if (handleLine) lines(wrapText(handleLine, cols));
+  }
 
-  // Left alignment
-  push(ESC, 0x61, 0x00);
+  // ---- Bill info block ----
   line(divider);
+  left();
+  line(labelRow("No. Bill", receipt.orderNumber));
+  line(labelRow("Tanggal", receipt.date));
+  if (receipt.cashierName) line(labelRow("Kasir", receipt.cashierName));
+  if (receipt.tableLabel) line(labelRow("Meja", receipt.tableLabel));
 
-  // Items
+  // ---- Items ----
+  line(divider);
+  bold(true);
+  line(formatCols("ITEM", "QTY   TOTAL", cols));
+  bold(false);
   for (const item of receipt.items) {
-    line(item.name.substring(0, cols));
+    lines(wrapText(item.name, cols));
     line(
       formatCols(
         `  ${item.quantity}x Rp${formatMoney(item.unitPrice)}`,
@@ -179,18 +266,27 @@ function buildEscPos(receipt: ReceiptData): Uint8Array {
       )
     );
     if (item.optionNames && item.optionNames.length > 0) {
-      line(`  ${item.optionNames.join(", ")}`.substring(0, cols));
+      lines(wrapText(`  ${item.optionNames.join(", ")}`, cols));
     }
     if (item.notes) {
-      line(`  * ${item.notes}`.substring(0, cols));
+      lines(wrapText(`  * ${item.notes}`, cols));
     }
   }
 
+  // ---- Totals ----
   line(divider);
-
-  // Totals
-  if (receipt.subtotal !== receipt.total) {
-    line(formatCols("Subtotal", `Rp${formatMoney(receipt.subtotal)}`, cols));
+  line(formatCols("SUBTOTAL", `Rp${formatMoney(receipt.subtotal)}`, cols));
+  if (receipt.tax) {
+    line(formatCols(receipt.taxLabel || "Pajak", `Rp${formatMoney(receipt.tax)}`, cols));
+  }
+  if (receipt.serviceCharge) {
+    line(
+      formatCols(
+        receipt.serviceChargeLabel || "Service",
+        `Rp${formatMoney(receipt.serviceCharge)}`,
+        cols
+      )
+    );
   }
   if (receipt.discountAmount) {
     line(
@@ -202,31 +298,54 @@ function buildEscPos(receipt: ReceiptData): Uint8Array {
     );
   }
 
-  push(ESC, 0x45, 0x01);
+  line(divider);
+  bold(true);
   line(formatCols("TOTAL", `Rp${formatMoney(receipt.total)}`, cols));
-  push(ESC, 0x45, 0x00);
+  bold(false);
 
-  line(formatCols("Bayar (" + receipt.paymentMethod + ")", "", cols));
-  if (receipt.amountTendered) {
-    line(formatCols("  Diterima", `Rp${formatMoney(receipt.amountTendered)}`, cols));
-  }
-  if (receipt.change !== undefined && receipt.change >= 0) {
-    line(formatCols("  Kembalian", `Rp${formatMoney(receipt.change)}`, cols));
+  // ---- Payment ----
+  line(divider);
+  if (receipt.paymentMethod === "CASH" && receipt.amountTendered) {
+    line(formatCols("TUNAI", `Rp${formatMoney(receipt.amountTendered)}`, cols));
+    if (receipt.change !== undefined && receipt.change >= 0) {
+      line(formatCols("KEMBALI", `Rp${formatMoney(receipt.change)}`, cols));
+    }
+  } else {
+    line(formatCols(`Bayar (${receipt.paymentMethod})`, "LUNAS", cols));
   }
 
   if (receipt.notes) {
     line(divider);
-    line("Catatan: " + receipt.notes.substring(0, cols - 9));
+    lines(wrapText("Catatan: " + receipt.notes, cols));
   }
 
-  // Center footer
-  push(ESC, 0x61, 0x01);
+  // ---- Footer ----
   line(divider);
-  line("Terima kasih!");
+  center();
+  lines(wrapText(receipt.footerMessage || "Terima kasih!\nSilakan datang kembali", cols));
+
+  const socialLine = [
+    receipt.instagramHandle ? `IG @${receipt.instagramHandle}` : null,
+    receipt.tiktokHandle ? `TikTok @${receipt.tiktokHandle}` : null,
+    receipt.facebookHandle ? `FB ${receipt.facebookHandle}` : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+  if (socialLine) {
+    line(divider);
+    lines(wrapText(socialLine, cols));
+  }
+
+  line(divider);
   line("epidom.app");
 
-  // Feed and cut
-  blank(4);
+  // Extra feed + an explicit tear-guide line before the cut command. Cheap
+  // cutter-less BT printers (the common case for small IDN merchants) rely
+  // on the customer tearing by hand — a thin gap here is what caused
+  // consecutive orders to visually run into each other.
+  blank(2);
+  line(divider);
+  blank(6);
   push(GS, 0x56, 0x41, 0x03); // partial cut
 
   return new Uint8Array(commands);

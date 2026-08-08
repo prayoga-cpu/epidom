@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { OrderHistoryFilters, OrderHistoryPage } from "../types/pos.types";
 import { apiClient } from "@/lib/api/client";
+
+export interface PaymentMethodTotal {
+  paymentMethod: string;
+  orderCount: number;
+  revenue: number;
+  percentOfTotal: number;
+}
+
+interface PaymentTotalsResponse {
+  methods: PaymentMethodTotal[];
+  totalRevenue: number;
+  totalOrders: number;
+}
 
 export function useDebouncedValue<T>(value: T, delay = 300): T {
   const [debounced, setDebounced] = useState(value);
@@ -30,6 +43,8 @@ export function buildOrderHistoryParams(
   if (filters.department && filters.department !== "ALL")
     params.set("department", filters.department);
   if (filters.staffId && filters.staffId !== "ALL") params.set("staffId", filters.staffId);
+  if (filters.paymentMethod && filters.paymentMethod !== "ALL")
+    params.set("paymentMethod", filters.paymentMethod);
   if (cursor) params.set("cursor", cursor);
   return params;
 }
@@ -43,6 +58,25 @@ export function useOrderHistory(storeId: string, filters: OrderHistoryFilters) {
     },
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
+    enabled: !!storeId,
+  });
+}
+
+// Revenue/order-count per payment method for exactly what useOrderHistory's
+// filters currently match (same buildOrderHistoryParams, same `where` on the
+// server) — a self-serve audit total for the History tab's own filter set,
+// not tied to Finance Reports' page-level access (see
+// staff-permissions.config.ts: Finance Reports isn't in any non-owner role's
+// default pages, but the History tab is).
+export function useOrderPaymentTotals(storeId: string, filters: OrderHistoryFilters) {
+  return useQuery({
+    queryKey: ["pos", "order-history-payment-totals", storeId, filters],
+    queryFn: async () => {
+      const params = buildOrderHistoryParams(filters, 0);
+      return apiClient.get<PaymentTotalsResponse>(
+        `/stores/${storeId}/orders/payment-totals?${params.toString()}`
+      );
+    },
     enabled: !!storeId,
   });
 }

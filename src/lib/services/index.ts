@@ -22,6 +22,7 @@ export * from "./subscription.service";
 export * from "./stripe-connect.service";
 export * from "./storefront.service";
 export * from "./finance-settings.service";
+export * from "./receipt-settings.service";
 
 // Domain services
 export * from "./material.service";

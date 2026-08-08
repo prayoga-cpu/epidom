@@ -18,7 +18,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { PosPrinterMenu } from "./pos-printer-menu";
 
 interface PosHeaderProps {
-  store: Pick<Store, "name">;
+  store: Pick<Store, "id" | "name">;
   /** Opens the mobile cart dialog — the cart button rendered here (mobile
    * only) doesn't own that dialog's state, since it lives in the sibling
    * PosMobileCart, one level up in PosShell. */
@@ -92,7 +92,7 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
         </DropdownMenu>
 
         <div className="flex items-center gap-1">
-          <PosPrinterMenu />
+          <PosPrinterMenu storeId={store.id} />
           <Button
             onClick={onCartClick}
             size="sm"
@@ -130,7 +130,7 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
       </div>
 
       <div className="hidden shrink-0 items-center gap-2 sm:gap-4 md:flex">
-        <PosPrinterMenu />
+        <PosPrinterMenu storeId={store.id} />
 
         <div className="text-muted-foreground text-sm font-medium">
           {format(time, "dd MMM yyyy • HH:mm")}

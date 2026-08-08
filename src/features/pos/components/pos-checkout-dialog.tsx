@@ -2,11 +2,12 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
+import { useReceiptSettings } from "@/features/dashboard/profile/hooks/use-receipt-settings";
 import { createPosOrderSchema, type CreatePosOrderInput } from "@/lib/validation/pos.schemas";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -21,7 +22,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
-import { QRCodeSVG } from "qrcode.react";
 import {
   Form,
   FormControl,
@@ -44,6 +44,7 @@ import {
   type ReceiptData,
 } from "@/lib/pwa/thermal-printer";
 import { usePrinterSettings } from "../hooks/use-printer-settings";
+import { useLastReceipt } from "../hooks/use-last-receipt";
 interface PosCheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -72,21 +73,13 @@ export function PosCheckoutDialog({
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const cart = usePosCart();
   const { data: financeSettings } = useFinanceSettings(storeId);
+  const { data: receiptSettings } = useReceiptSettings(storeId);
   const autoPrint = usePrinterSettings((s) => s.autoPrint);
+  const paperWidth = usePrinterSettings((s) => s.paperWidth);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
   const [showPrint, setShowPrint] = useState(false);
-  const [showPaymentQr, setShowPaymentQr] = useState(false);
-  const [currentQrString, setCurrentQrString] = useState<string | null>(null);
-  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
-  const [isPollingPayment, setIsPollingPayment] = useState(false);
-  const pendingPurchaseRef = useRef<{
-    transaction_id: string;
-    value: number;
-    currency: string;
-    items: Array<{ item_id: string; item_name: string; price: number; quantity: number }>;
-  } | null>(null);
 
   const form = useForm<CreatePosOrderInput>({
     resolver: zodResolver(createPosOrderSchema),
@@ -135,44 +128,25 @@ export function PosCheckoutDialog({
     }
   }, [open, cart.items]);
 
-  useEffect(() => {
-    if (!showPaymentQr || !currentOrderId) return;
-    setIsPollingPayment(true);
-    const interval = setInterval(async () => {
-      try {
-        const res = await apiClient.get<{ status: string; paymentStatus: string }>(
-          `/stores/${storeId}/pos/orders/${currentOrderId}`
-        );
-        const data = (res as any)?.data ?? res;
-        if (data?.paymentStatus === "PAID") {
-          setIsPollingPayment(false);
-          setShowPaymentQr(false);
-          if (lastReceipt) {
-            finishWithReceipt(lastReceipt);
-          } else {
-            setShowPrint(true);
-          }
-          toast.success(t("pos.checkout.success"));
-          if (pendingPurchaseRef.current) {
-            trackEvent("purchase", {
-              event_category: "pos_order",
-              ...pendingPurchaseRef.current,
-            });
-            pendingPurchaseRef.current = null;
-          }
-        }
-      } catch (e) {
-        // ignore poll errors
-      }
-    }, 3000);
-    return () => {
-      clearInterval(interval);
-      setIsPollingPayment(false);
-    };
-  }, [showPaymentQr, currentOrderId, storeId, t]);
-
   const buildReceipt = (data: CreatePosOrderInput, orderNumber: string): ReceiptData => ({
     storeName: storeName ?? "Epidom POS",
+    tagline: receiptSettings?.tagline ?? undefined,
+    address: receiptSettings?.address ?? undefined,
+    email: receiptSettings?.email ?? undefined,
+    phone: receiptSettings?.phone ?? undefined,
+    instagramHandle:
+      receiptSettings?.showSocialLinks !== false
+        ? (receiptSettings?.instagramHandle ?? undefined)
+        : undefined,
+    tiktokHandle:
+      receiptSettings?.showSocialLinks !== false
+        ? (receiptSettings?.tiktokHandle ?? undefined)
+        : undefined,
+    facebookHandle:
+      receiptSettings?.showSocialLinks !== false
+        ? (receiptSettings?.facebookHandle ?? undefined)
+        : undefined,
+    footerMessage: receiptSettings?.footerMessage ?? undefined,
     orderNumber,
     date: new Intl.DateTimeFormat(locale === "id" ? "id-ID" : locale === "fr" ? "fr-FR" : "en-US", {
       dateStyle: "short",
@@ -187,6 +161,9 @@ export function PosCheckoutDialog({
       notes: i.notes,
     })),
     subtotal: cart.subtotal,
+    tax: cart.tax > 0 ? cart.tax : undefined,
+    taxLabel: financeSettings?.taxLabel ?? undefined,
+    serviceCharge: cart.serviceCharge > 0 ? cart.serviceCharge : undefined,
     discountAmount: cart.discountAmount > 0 ? cart.discountAmount : undefined,
     discountReason: cart.discountReason ?? undefined,
     total: cart.total,
@@ -196,6 +173,7 @@ export function PosCheckoutDialog({
     cashierName,
     tableLabel: data.tableNumber ?? undefined,
     notes: data.notes ?? undefined,
+    width: paperWidth,
   });
 
   const handlePrint = async (receipt: ReceiptData) => {
@@ -225,14 +203,18 @@ export function PosCheckoutDialog({
     }
   };
 
-  // Called on every successful order (cash, confirmed QRIS/e-wallet, offline
-  // queue). Silently auto-prints when the cashier has both opted in and
+  // Called on every successful order (any payment method, offline queue).
+  // Silently auto-prints when the cashier has both opted in and
   // already paired a printer this session — pairing itself needs a live
   // click (Web Bluetooth's requestDevice requires user activation), so it
   // can't be triggered from here. Anything short of that falls back to the
   // manual print-or-skip prompt.
   const finishWithReceipt = (receipt: ReceiptData) => {
     setLastReceipt(receipt);
+    // Shared across the app (not just this dialog's local state) so the
+    // printer menu's "Reprint Last Order" action can offer it later, even
+    // after this dialog closes.
+    useLastReceipt.getState().setLastReceipt(receipt);
     if (autoPrint && isPrinterConnected()) {
       handlePrint(receipt);
     } else {
@@ -289,16 +271,13 @@ export function PosCheckoutDialog({
       });
 
       const orderNumber = (result as any)?.orderNumber ?? "—";
-      const qrStr = (result as any)?.qrString ?? null;
-      const orderId = (result as any)?.orderId ?? null;
 
       const receipt = buildReceipt(submitData, orderNumber);
       setLastReceipt(receipt);
 
-      // Snapshot the cart for the purchase event before clearCart() wipes it —
-      // needed either immediately below (CASH) or later once async payment
-      // methods (QRIS/e-wallet) confirm via polling.
-      pendingPurchaseRef.current = {
+      // Read before clearCart() wipes cart.items/cart.total below.
+      trackEvent("purchase", {
+        event_category: "pos_order",
         transaction_id: orderNumber,
         value: cart.total,
         currency,
@@ -308,23 +287,13 @@ export function PosCheckoutDialog({
           price: i.unitPrice,
           quantity: i.quantity,
         })),
-      };
+      });
 
       cart.clearCart();
       onOpenChange(false);
 
-      if (qrStr) {
-        setCurrentQrString(qrStr);
-        setCurrentOrderId(orderId);
-        setShowPaymentQr(true);
-      } else {
-        finishWithReceipt(receipt);
-        toast.success(t("pos.checkout.success"));
-        if (pendingPurchaseRef.current) {
-          trackEvent("purchase", { event_category: "pos_order", ...pendingPurchaseRef.current });
-          pendingPurchaseRef.current = null;
-        }
-      }
+      finishWithReceipt(receipt);
+      toast.success(t("pos.checkout.success"));
     } catch (error) {
       // Surface the server's actual reason (e.g. "item no longer available",
       // "order is no longer held") instead of a blanket failure message —
@@ -668,55 +637,6 @@ export function PosCheckoutDialog({
             </form>
           </Form>
         </FormDialogLayout>
-      </Dialog>
-
-      {/* Payment QR prompt */}
-      <Dialog open={showPaymentQr} onOpenChange={setShowPaymentQr}>
-        <DialogContent className="text-center sm:max-w-xs">
-          <DialogHeader>
-            <DialogTitle>Instruksi Pembayaran</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col items-center gap-4 py-4">
-            {currentQrString && currentQrString.includes(":") ? (
-              <div className="w-full border-b p-2 text-center sm:rounded-xl sm:border-2 sm:border-slate-100 sm:bg-white sm:p-4">
-                <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
-                  Nomor Virtual Account
-                </p>
-                <p className="font-mono text-xl font-bold tracking-widest break-all sm:text-slate-800">
-                  {currentQrString.split(":")[1]}
-                </p>
-              </div>
-            ) : currentQrString ? (
-              <div className="p-2 sm:rounded-xl sm:border-2 sm:border-slate-100 sm:bg-white sm:p-4">
-                <QRCodeSVG value={currentQrString} size={200} level="M" includeMargin={false} />
-              </div>
-            ) : (
-              <div className="w-full border-b p-2 text-center sm:rounded-xl sm:border-2 sm:border-slate-100 sm:bg-white sm:p-4">
-                <p className="mb-2 text-sm font-medium sm:text-slate-800">
-                  Notifikasi e-Wallet sudah dikirim!
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Minta pembeli untuk cek aplikasi mereka.
-                </p>
-              </div>
-            )}
-            <p className="text-muted-foreground mt-2 animate-pulse text-sm">
-              Menunggu pembayaran...
-            </p>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPaymentQr(false);
-                setShowPrint(true); // skip waiting and let them print
-              }}
-              className="w-full"
-            >
-              Lewati / Selesai Manual
-            </Button>
-          </DialogFooter>
-        </DialogContent>
       </Dialog>
 
       {/* Post-checkout print prompt */}

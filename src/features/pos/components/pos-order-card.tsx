@@ -17,6 +17,7 @@ import {
   getOrderStatusBadgeVariant,
   isAwaitingPayment,
   mapOrderStatusLabel,
+  mapPaymentMethodLabel,
 } from "../lib/order-status-display";
 
 interface PosOrderCardProps {
@@ -64,6 +65,7 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
           <Badge variant={getOrderSourceBadgeVariant(order.source)}>
             {order.source === "POS" ? t("pos.source.walkIn") : t("pos.source.online")}
           </Badge>
+          <Badge variant="outline">{mapPaymentMethodLabel(t, order.paymentMethod)}</Badge>
           {isAwaitingPayment(order) && (
             <Badge variant="destructive">{t("pos.orderCard.unpaid")}</Badge>
           )}

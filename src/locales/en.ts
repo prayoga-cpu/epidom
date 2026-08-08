@@ -3186,6 +3186,24 @@ export const en = {
       },
     },
 
+    // Receipt & WhatsApp notifications
+    receiptSettings: {
+      title: "Receipt & WhatsApp",
+      footerMessage: "Receipt Footer Message",
+      footerMessagePlaceholder: "Thank you!\nPlease come again",
+      facebookUrl: "Facebook (optional)",
+      facebookUrlPlaceholder: "page.name or page URL",
+      showSocialLinks: "Show social handles on receipt",
+      showSocialLinksDesc: "Instagram/TikTok/Facebook (when filled in) appear at the bottom of the receipt.",
+      autoSendWhatsapp: "Auto-send WhatsApp receipt",
+      autoSendWhatsappDesc:
+        "As soon as an order is paid and the customer's WhatsApp number is on file, the receipt link is sent automatically.",
+      autoSendWhatsappUnavailable: "Requires WhatsApp (Fonnte) to be configured by the operator.",
+      preview: "Preview",
+      brandingNote:
+        "Store name, address, email, phone, Instagram & TikTok follow your Store/Storefront data.",
+    },
+
     // Subscription
     subscription: {
       title: "Subscription",
@@ -3295,6 +3313,9 @@ export const en = {
       editFeesAndTaxes: "Edit Fees & Taxes",
       editFeesAndTaxesDescription:
         "Set the tax rate, service charge, and payment processing fees for this store",
+      editReceiptSettings: "Edit Receipt & WhatsApp",
+      editReceiptSettingsDescription:
+        "Customize the receipt footer message, social handles, and automatic WhatsApp receipt sending",
       editAvatar: "Edit Profile Picture",
       editAvatarDescription: "Upload a new profile picture or remove the current one.",
       cropAvatarDescription: "Crop and adjust your profile picture.",
@@ -3334,6 +3355,8 @@ export const en = {
       businessUpdateFailed: "Failed to update business information. Please try again.",
       feesAndTaxesUpdateFailed: "Failed to update fees & taxes. Please try again.",
       feesAndTaxesLoadFailed: "Failed to load fees & taxes settings.",
+      receiptSettingsUpdateFailed: "Failed to update receipt settings. Please try again.",
+      receiptSettingsLoadFailed: "Failed to load receipt settings.",
       loadImageFailed: "Failed to load image",
       uploadFailed: "Upload failed",
     },
@@ -3355,6 +3378,10 @@ export const en = {
       feesAndTaxesUpdated: {
         title: "Fees & Taxes Updated",
         description: "Fees & taxes settings saved successfully.",
+      },
+      receiptSettingsUpdated: {
+        title: "Receipt Settings Updated",
+        description: "Receipt & WhatsApp settings saved successfully.",
       },
       avatarUpdated: {
         title: "Avatar Updated",
@@ -4929,6 +4956,13 @@ export const en = {
       orderItems: "Order Items",
       orderedOn: "Ordered on",
       whatsappMessage: "Hi! I'd like to ask about order {orderNumber}.",
+      viewReceipt: "View Receipt",
+    },
+    receiptPage: {
+      title: "Order Receipt",
+      print: "Print / Save PDF",
+      notFoundTitle: "Receipt not found",
+      notFoundDesc: "This order doesn't exist or has been removed.",
     },
     menu: {
       badge: "Menu & Order",
@@ -5202,6 +5236,7 @@ export const en = {
       unpaidOnly: "Unpaid",
       filterAllProducts: "All products",
       filterAllStaff: "All staff",
+      filterAllPaymentMethods: "All payment methods",
       awaitingPaymentColumn: "Delivered — Awaiting Payment",
     },
     filters: {
@@ -5215,6 +5250,7 @@ export const en = {
       staff: "Staff",
       status: "Status",
       dateRange: "Date range",
+      paymentMethod: "Payment method",
     },
     status: {
       pending: "Pending",
@@ -5400,6 +5436,13 @@ export const en = {
       connecting: "Connecting...",
       disconnect: "Disconnect",
       disconnected: "Printer disconnected",
+      paperWidth: "Paper size",
+      paperWidth58: "58mm",
+      paperWidth80: "80mm",
+      reprintLast: "Reprint Last Order",
+      reprintLastEmpty: "No order printed yet this session",
+      reprint: "Reprint",
+      goToOrderHistory: "Order History",
     },
     history: {
       activeTab: "Active",
@@ -5428,6 +5471,7 @@ export const en = {
       colCustomer: "Customer",
       colItems: "Items",
       colTotal: "Total",
+      colPaymentMethod: "Method",
       colPayment: "Payment",
       colStatus: "Status",
       delivery: "Delivery",
@@ -5436,6 +5480,8 @@ export const en = {
       paymentFailed: "Failed",
       paymentExpired: "Expired",
       paymentRefunded: "Refunded",
+      paymentTotalsTitle: "Total by payment method",
+      paymentTotalsOrders: "{n} orders",
       results: "{n} orders",
       loadMore: "Load more",
       empty: "No orders match your filters",
@@ -5444,6 +5490,14 @@ export const en = {
       detailTitle: "Order details",
       detailNotes: "Notes",
       detailDelivered: "Delivered at",
+      viewReceipt: "View Receipt",
+      sendReceipt: "Send Receipt via WhatsApp",
+      resendReceipt: "Resend via WhatsApp",
+      sendingReceipt: "Sending...",
+      receiptSent: "Receipt sent via WhatsApp",
+      receiptFailed: "Receipt send failed",
+      receiptSendSuccess: "Receipt sent via WhatsApp",
+      receiptSendFailed: "Failed to send receipt",
       bulk: {
         selectedCount: "{n} selected",
         selectAll: "Select all",

@@ -54,6 +54,7 @@ import {
 } from "@/lib/utils/date-range";
 import { Switch } from "@/components/ui/switch";
 import { WasteFormDialog } from "@/features/dashboard/management/waste/waste-form-dialog";
+import { mapPaymentMethodLabel } from "@/features/pos/lib/order-status-display";
 import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
 import {
   useWasteEntries,
@@ -397,20 +398,11 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
     }
   };
 
-  const paymentMethodLabel = (method: string) => {
-    switch (method) {
-      case "CASH":
-        return t("pos.checkout.cash");
-      case "QRIS":
-        return t("pos.checkout.qris");
-      case "BANK_TRANSFER":
-        return t("pos.markPaid.virtualAccount");
-      case "STRIPE_CARD":
-        return t("pos.markPaid.creditCard");
-      default:
-        return method;
-    }
-  };
+  // This used to be a local switch that only covered CASH/QRIS/BANK_TRANSFER/
+  // STRIPE_CARD, silently falling through to the raw enum string for GOPAY/
+  // OVO/DANA/SHOPEEPAY/PAY_LATER — mapPaymentMethodLabel covers all 9 and
+  // keeps this page's wording in sync with the POS queue/history views.
+  const paymentMethodLabel = (method: string) => mapPaymentMethodLabel(t, method);
 
   const dateParams = `from=${from}T00:00:00Z&to=${to}T23:59:59Z`;
   const staffParam = staffId !== ALL ? `&staffId=${staffId}` : "";

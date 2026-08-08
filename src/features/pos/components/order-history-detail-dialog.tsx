@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
@@ -18,9 +19,19 @@ import {
 import { useConfirm } from "@/components/ui/use-confirm";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { useRefundOrder } from "../hooks/use-refund-order";
+import { useOrderReceiptSends, useSendOrderReceipt } from "../hooks/use-order-receipt-sends";
 import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
 import { RefundDialog, type RefundConfirmData } from "./refund-dialog";
 import { toast } from "sonner";
+import { ExternalLink, Send, CheckCircle2, XCircle, Loader2, Printer } from "lucide-react";
+import { apiClient } from "@/lib/api/client";
+import {
+  isBluetoothSupported,
+  isPrinterConnected,
+  printReceipt,
+  type ReceiptData,
+} from "@/lib/pwa/thermal-printer";
+import { usePrinterSettings } from "../hooks/use-printer-settings";
 
 function getSourceBadgeVariant(source: string) {
   switch (source) {
@@ -88,8 +99,55 @@ export function OrderHistoryDetailDialog({
   const { confirm, confirmDialog } = useConfirm();
   const updateStatus = useUpdateOrderStatus(storeId);
   const refundOrder = useRefundOrder(storeId);
+  const { data: receiptSends } = useOrderReceiptSends(storeId, order?.id);
+  const sendReceipt = useSendOrderReceipt(storeId);
   const [showMarkPaid, setShowMarkPaid] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
+  const [isReprinting, setIsReprinting] = useState(false);
+  const lastReceiptSend = receiptSends?.[0];
+
+  const handleReprint = async () => {
+    if (!order) return;
+    if (!isBluetoothSupported()) {
+      toast.error(t("pos.print.bluetoothUnsupported"));
+      return;
+    }
+    setIsReprinting(true);
+    try {
+      const res = await apiClient.get<ReceiptData>(
+        `/stores/${storeId}/pos/orders/${order.id}/receipt`
+      );
+      const receipt = (res as any)?.data ?? res;
+      if (!isPrinterConnected()) {
+        const ok = await usePrinterSettings.getState().connect();
+        if (!ok) {
+          toast.error(t("pos.print.connectFailed"));
+          return;
+        }
+      }
+      await printReceipt(receipt as ReceiptData);
+      toast.success(t("pos.print.success"));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("pos.print.failed"));
+    } finally {
+      setIsReprinting(false);
+    }
+  };
+
+  const handleSendReceipt = async () => {
+    if (!order) return;
+    try {
+      const result = await sendReceipt.mutateAsync(order.id);
+      const data = (result as any)?.data ?? result;
+      if (data?.sent) {
+        toast.success(t("pos.history.receiptSendSuccess"));
+      } else {
+        toast.error(data?.error || t("pos.history.receiptSendFailed"));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("pos.history.receiptSendFailed"));
+    }
+  };
 
   const handleCancel = async () => {
     if (!order) return;
@@ -290,6 +348,69 @@ export function OrderHistoryDetailDialog({
                 <p>{order.notes}</p>
               </div>
             )}
+
+            <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+              <Button variant="outline" size="sm" className="gap-2" asChild>
+                <a href={`/r/${order.id}`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  {t("pos.history.viewReceipt")}
+                </a>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={isReprinting}
+                onClick={handleReprint}
+              >
+                {isReprinting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Printer className="h-3.5 w-3.5" />
+                )}
+                {t("pos.print.reprint")}
+              </Button>
+              {order.customerPhone && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={sendReceipt.isPending}
+                  onClick={handleSendReceipt}
+                >
+                  {sendReceipt.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  {sendReceipt.isPending
+                    ? t("pos.history.sendingReceipt")
+                    : lastReceiptSend
+                      ? t("pos.history.resendReceipt")
+                      : t("pos.history.sendReceipt")}
+                </Button>
+              )}
+              {lastReceiptSend && (
+                <span
+                  className={cn(
+                    "flex items-center gap-1 text-xs",
+                    lastReceiptSend.status === "SENT"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-destructive"
+                  )}
+                >
+                  {lastReceiptSend.status === "SENT" ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5" />
+                  )}
+                  {lastReceiptSend.status === "SENT"
+                    ? t("pos.history.receiptSent")
+                    : t("pos.history.receiptFailed")}{" "}
+                  · {formatDateTime(lastReceiptSend.sentAt)}
+                </span>
+              )}
+            </div>
 
             {order.deliveredDate && (
               <p className="text-muted-foreground text-xs">

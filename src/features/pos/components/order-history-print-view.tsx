@@ -7,6 +7,7 @@ import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import type { OrderHistoryItem } from "../types/pos.types";
+import { mapPaymentMethodLabel } from "../lib/order-status-display";
 
 interface StoreDetail {
   name: string;
@@ -33,6 +34,7 @@ interface AppliedFilters {
   productLabel: string | null;
   department: string | null;
   staffLabel: string | null;
+  paymentMethod: string | null;
 }
 
 interface OrderHistoryPrintViewProps {
@@ -130,6 +132,11 @@ export function OrderHistoryPrintView({
   }
   if (filters.staffLabel) {
     filterChips.push(`${t("pos.printReport.filterStaff")}: ${filters.staffLabel}`);
+  }
+  if (filters.paymentMethod && filters.paymentMethod !== "ALL") {
+    filterChips.push(
+      `${t("pos.history.colPaymentMethod")}: ${mapPaymentMethodLabel(t, filters.paymentMethod)}`
+    );
   }
 
   const storeLocation = [store.city, store.country].filter(Boolean).join(", ");

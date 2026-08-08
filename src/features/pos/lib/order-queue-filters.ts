@@ -10,6 +10,32 @@ export type QueueTypeFilter = "ALL" | "DINE_IN" | "TAKEAWAY" | "DELIVERY";
 
 export type QueueDepartmentFilter = "ALL" | "KITCHEN" | "BAR";
 
+// Mirrors the Prisma PaymentMethod enum as plain strings — same reasoning as
+// QUEUE_STATUSES above: that enum type isn't safe to import into client bundles.
+export type QueuePaymentMethodFilter =
+  | "ALL"
+  | "CASH"
+  | "QRIS"
+  | "GOPAY"
+  | "OVO"
+  | "DANA"
+  | "SHOPEEPAY"
+  | "BANK_TRANSFER"
+  | "STRIPE_CARD"
+  | "PAY_LATER";
+
+export const QUEUE_PAYMENT_METHODS: Exclude<QueuePaymentMethodFilter, "ALL">[] = [
+  "CASH",
+  "QRIS",
+  "GOPAY",
+  "OVO",
+  "DANA",
+  "SHOPEEPAY",
+  "BANK_TRANSFER",
+  "STRIPE_CARD",
+  "PAY_LATER",
+];
+
 export type QueueSortBy = "newest" | "oldest" | "total-desc" | "total-asc";
 
 // Statuses that can appear in the active POS queue — mirrors
@@ -27,7 +53,14 @@ export const QUEUE_STATUSES: Exclude<QueueStatusFilter, "ALL">[] = [
 // The optional filter dropdowns hidden by default behind "+ Add filter" —
 // status is excluded since it's driven by the always-visible tiles, not a
 // dropdown in this set.
-export const QUEUE_FILTER_KEYS = ["source", "type", "department", "product", "staff"] as const;
+export const QUEUE_FILTER_KEYS = [
+  "source",
+  "type",
+  "department",
+  "product",
+  "staff",
+  "paymentMethod",
+] as const;
 export type QueueFilterKey = (typeof QUEUE_FILTER_KEYS)[number];
 
 interface QueueFilterParams {
@@ -38,6 +71,7 @@ interface QueueFilterParams {
   productFilter: string; // "ALL" or a menuItemId
   departmentFilter: QueueDepartmentFilter;
   staffFilter: string; // "ALL" or a staffMemberId
+  paymentMethodFilter: QueuePaymentMethodFilter;
 }
 
 // Source/type/search filters apply everywhere; matches the "Walk-in"/"Online"
@@ -52,6 +86,7 @@ export function matchesQueueFilters(
     productFilter,
     departmentFilter,
     staffFilter,
+    paymentMethodFilter,
   }: QueueFilterParams
 ): boolean {
   if (sourceFilter !== "ALL") {
@@ -60,6 +95,7 @@ export function matchesQueueFilters(
   }
   if (typeFilter !== "ALL" && order.orderType !== typeFilter) return false;
   if (unpaidOnly && order.paymentStatus !== "PENDING") return false;
+  if (paymentMethodFilter !== "ALL" && order.paymentMethod !== paymentMethodFilter) return false;
   if (productFilter !== "ALL" && !order.items.some((i) => i.menuItemId === productFilter)) {
     return false;
   }

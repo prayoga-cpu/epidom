@@ -38,10 +38,15 @@ export function PosOrdersTabs({ storeId }: PosOrdersTabsProps) {
   // gets stranded there since usePersistedState's saved tab wins by default.
   // Runs after that load effect (registered first, so it fires first on
   // mount), so this write overrides it rather than the other way around.
+  // Symmetric to ?unpaid=1 above — the printer menu's "Order History" link
+  // (for reprinting a past order) always wants the History tab, regardless
+  // of whichever tab the cashier last had open.
   const searchParams = useSearchParams();
   useEffect(() => {
     if (searchParams.get("unpaid") === "1") {
       setTabState({ tab: "active" });
+    } else if (searchParams.get("tab") === "history") {
+      setTabState({ tab: "history" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

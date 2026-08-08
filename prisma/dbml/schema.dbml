@@ -124,6 +124,7 @@ Table stores {
   staffSessions staff_sessions [not null]
   wasteEntries waste_entries [not null]
   pushSubscriptions push_subscriptions [not null]
+  receiptSettings store_receipt_settings
   syncFinanceWithBusiness Boolean [not null, default: false]
   payLaterEnabled Boolean [not null, default: false]
   kitchenDisplayEnabled Boolean [not null, default: true]
@@ -148,6 +149,24 @@ Table store_finance_settings {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   store stores [not null]
+}
+
+Table store_receipt_settings {
+  id String [pk]
+  storeId String [unique, not null]
+  footerMessage String
+  facebookUrl String
+  showSocialLinks Boolean [not null, default: true]
+  autoSendWhatsappReceipt Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+
+  Note: 'Printed/digital receipt branding + WhatsApp auto-send config. Only holds
+what isn\'t already on Storefront (tagline/logoUrl/instagramUrl/tiktokUrl —
+reused directly from there when a store has a published storefront; a
+cash-only store with no storefront simply omits those lines on its
+receipt instead of duplicating the same fields here).'
 }
 
 Table business_finance_settings {
@@ -510,6 +529,7 @@ Table orders {
   table tables
   shift shifts
   stockMovements stock_movements [not null]
+  receiptSends order_receipt_sends [not null]
 }
 
 Table order_items {
@@ -535,6 +555,23 @@ Table order_items {
   product products
   menuItem menu_items
   productionBatch production_batches
+}
+
+Table order_receipt_sends {
+  id String [pk]
+  orderId String [not null]
+  channel String [not null, default: 'WHATSAPP']
+  recipientPhone String [not null]
+  status OrderReceiptSendStatus [not null]
+  fonnteMessageId String
+  errorMessage String
+  sentAt DateTime [default: `now()`, not null]
+  order orders [not null]
+
+  Note: 'Audit trail for the customer-facing digital receipt (WhatsApp link to
+/r/[orderId]) — one row per send attempt, whether it succeeded or not.
+Lets order history show "already sent"/"failed" instead of a bare button,
+and lets a merchant retry a FAILED send. See send-customer-receipt.ts.'
 }
 
 Table alerts {
@@ -914,6 +951,11 @@ Table menu_items {
   orderItems order_items [not null]
 }
 
+Enum OrderReceiptSendStatus {
+  SENT
+  FAILED
+}
+
 Enum SubscriptionPlan {
   FREE
   POS
@@ -1125,6 +1167,8 @@ Ref: stores.businessId > businesses.id [delete: Cascade]
 
 Ref: store_finance_settings.storeId - stores.id [delete: Cascade]
 
+Ref: store_receipt_settings.storeId - stores.id [delete: Cascade]
+
 Ref: business_finance_settings.businessId - businesses.id [delete: Cascade]
 
 Ref: subscriptions.userId - user.id [delete: Cascade]
@@ -1200,6 +1244,8 @@ Ref: order_items.productId > products.id [delete: Set Null]
 Ref: order_items.menuItemId > menu_items.id [delete: Set Null]
 
 Ref: order_items.productionBatchId > production_batches.id [delete: Set Null]
+
+Ref: order_receipt_sends.orderId > orders.id [delete: Cascade]
 
 Ref: alerts.userId > user.id [delete: Cascade]
 

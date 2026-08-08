@@ -3227,6 +3227,24 @@ export const id = {
       },
     },
 
+    // Struk & Notifikasi WhatsApp
+    receiptSettings: {
+      title: "Struk & WhatsApp",
+      footerMessage: "Pesan Penutup Struk",
+      footerMessagePlaceholder: "Terima kasih!\nSilakan datang kembali",
+      facebookUrl: "Facebook (opsional)",
+      facebookUrlPlaceholder: "nama.toko atau URL halaman",
+      showSocialLinks: "Tampilkan sosial media di struk",
+      showSocialLinksDesc: "Instagram/TikTok/Facebook (jika diisi) muncul di bagian bawah struk.",
+      autoSendWhatsapp: "Kirim struk WhatsApp otomatis",
+      autoSendWhatsappDesc:
+        "Begitu pesanan lunas dan nomor WhatsApp pelanggan tersedia, tautan struk dikirim otomatis.",
+      autoSendWhatsappUnavailable: "Perlu WhatsApp (Fonnte) dikonfigurasi oleh operator.",
+      preview: "Pratinjau",
+      brandingNote:
+        "Nama toko, alamat, email, telepon, Instagram & TikTok mengikuti data Toko/Storefront kamu.",
+    },
+
     // Langganan
     subscription: {
       title: "Langganan",
@@ -3336,6 +3354,9 @@ export const id = {
       editFeesAndTaxes: "Edit Biaya & Pajak",
       editFeesAndTaxesDescription:
         "Atur tarif pajak, biaya layanan, dan biaya proses pembayaran untuk toko ini",
+      editReceiptSettings: "Edit Struk & WhatsApp",
+      editReceiptSettingsDescription:
+        "Sesuaikan pesan penutup struk, tautan sosial media, dan pengiriman struk WhatsApp otomatis",
       editAvatar: "Edit Foto Profil",
       editAvatarDescription: "Unggah foto profil baru atau hapus foto yang ada.",
       cropAvatarDescription: "Potong dan sesuaikan foto profil Anda.",
@@ -3374,6 +3395,8 @@ export const id = {
       businessUpdateFailed: "Gagal memperbarui informasi bisnis. Silakan coba lagi.",
       feesAndTaxesUpdateFailed: "Gagal memperbarui biaya & pajak. Silakan coba lagi.",
       feesAndTaxesLoadFailed: "Gagal memuat pengaturan biaya & pajak.",
+      receiptSettingsUpdateFailed: "Gagal memperbarui pengaturan struk. Silakan coba lagi.",
+      receiptSettingsLoadFailed: "Gagal memuat pengaturan struk.",
       loadImageFailed: "Gagal memuat gambar",
       uploadFailed: "Gagal mengunggah",
     },
@@ -3395,6 +3418,10 @@ export const id = {
       feesAndTaxesUpdated: {
         title: "Biaya & Pajak Diperbarui",
         description: "Pengaturan biaya & pajak berhasil disimpan.",
+      },
+      receiptSettingsUpdated: {
+        title: "Struk Diperbarui",
+        description: "Pengaturan struk & WhatsApp berhasil disimpan.",
       },
       avatarUpdated: {
         title: "Avatar Diperbarui",
@@ -4968,6 +4995,13 @@ export const id = {
       orderItems: "Item Pesanan",
       orderedOn: "Dipesan pada",
       whatsappMessage: "Halo! Saya ingin tanya mengenai pesanan {orderNumber}.",
+      viewReceipt: "Lihat Struk",
+    },
+    receiptPage: {
+      title: "Struk Pesanan",
+      print: "Cetak / Simpan PDF",
+      notFoundTitle: "Struk tidak ditemukan",
+      notFoundDesc: "Pesanan ini tidak ada atau sudah dihapus.",
     },
     menu: {
       badge: "Menu & Order",
@@ -5241,6 +5275,7 @@ export const id = {
       unpaidOnly: "Belum Bayar",
       filterAllProducts: "Semua produk",
       filterAllStaff: "Semua staf",
+      filterAllPaymentMethods: "Semua metode pembayaran",
       awaitingPaymentColumn: "Terkirim — Menunggu Pembayaran",
     },
     filters: {
@@ -5254,6 +5289,7 @@ export const id = {
       staff: "Staf",
       status: "Status",
       dateRange: "Rentang tanggal",
+      paymentMethod: "Metode pembayaran",
     },
     status: {
       pending: "Menunggu",
@@ -5438,6 +5474,13 @@ export const id = {
       connecting: "Menghubungkan...",
       disconnect: "Putuskan",
       disconnected: "Printer diputuskan",
+      paperWidth: "Ukuran kertas",
+      paperWidth58: "58mm",
+      paperWidth80: "80mm",
+      reprintLast: "Cetak Ulang Pesanan Terakhir",
+      reprintLastEmpty: "Belum ada pesanan yang dicetak sesi ini",
+      reprint: "Cetak Ulang",
+      goToOrderHistory: "Riwayat Pesanan",
     },
     history: {
       activeTab: "Aktif",
@@ -5466,6 +5509,7 @@ export const id = {
       colCustomer: "Pelanggan",
       colItems: "Item",
       colTotal: "Total",
+      colPaymentMethod: "Metode",
       colPayment: "Pembayaran",
       colStatus: "Status",
       delivery: "Antar",
@@ -5474,6 +5518,8 @@ export const id = {
       paymentFailed: "Gagal",
       paymentExpired: "Kedaluwarsa",
       paymentRefunded: "Dikembalikan",
+      paymentTotalsTitle: "Total per metode pembayaran",
+      paymentTotalsOrders: "{n} pesanan",
       results: "{n} pesanan",
       loadMore: "Muat lebih banyak",
       empty: "Tidak ada pesanan yang cocok dengan filter",
@@ -5482,6 +5528,14 @@ export const id = {
       detailTitle: "Detail pesanan",
       detailNotes: "Catatan",
       detailDelivered: "Diantar pada",
+      viewReceipt: "Lihat Struk",
+      sendReceipt: "Kirim Struk via WhatsApp",
+      resendReceipt: "Kirim Ulang via WhatsApp",
+      sendingReceipt: "Mengirim...",
+      receiptSent: "Struk terkirim via WhatsApp",
+      receiptFailed: "Pengiriman struk gagal",
+      receiptSendSuccess: "Struk berhasil dikirim via WhatsApp",
+      receiptSendFailed: "Gagal mengirim struk",
       bulk: {
         selectedCount: "{n} dipilih",
         selectAll: "Pilih semua",

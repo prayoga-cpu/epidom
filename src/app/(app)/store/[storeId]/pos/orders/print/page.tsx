@@ -47,6 +47,7 @@ export default async function OrderHistoryPrintPage({ params, searchParams }: Pr
   const productId = firstParam(sp.productId);
   const department = firstParam(sp.department);
   const staffId = firstParam(sp.staffId);
+  const paymentMethod = firstParam(sp.paymentMethod);
 
   const where = buildOrderHistoryWhere(storeId, {
     status,
@@ -58,6 +59,7 @@ export default async function OrderHistoryPrintPage({ params, searchParams }: Pr
     productId,
     department,
     staffId,
+    paymentMethod,
   });
 
   // Resolve names for the filters-applied summary — the report only has IDs
@@ -121,6 +123,7 @@ export default async function OrderHistoryPrintPage({ params, searchParams }: Pr
         productLabel: productLabel?.name ?? null,
         department,
         staffLabel: staffLabel?.name ?? null,
+        paymentMethod,
       }}
       generatedAt={new Date().toISOString()}
     />

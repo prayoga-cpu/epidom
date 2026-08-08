@@ -26,15 +26,18 @@ import {
 } from "lucide-react";
 import {
   QUEUE_FILTER_KEYS,
+  QUEUE_PAYMENT_METHODS,
   QUEUE_STATUSES,
   type QueueDepartmentFilter,
   type QueueFilterKey,
+  type QueuePaymentMethodFilter,
   type QueueSortBy,
   type QueueSourceFilter,
   type QueueStatusFilter,
   type QueueTypeFilter,
   type QueueView,
 } from "../lib/order-queue-filters";
+import { mapPaymentMethodLabel } from "../lib/order-status-display";
 import { UnpaidFilterToggle } from "./unpaid-filter-toggle";
 import { AddFilterMenu } from "./add-filter-menu";
 import { RemovableFilter } from "./removable-filter";
@@ -77,6 +80,8 @@ interface PosOrderQueueToolbarProps {
   staffFilter: string;
   onStaffFilterChange: (value: string) => void;
   staffOptions: FilterOption[];
+  paymentMethodFilter: QueuePaymentMethodFilter;
+  onPaymentMethodFilterChange: (value: QueuePaymentMethodFilter) => void;
   activeFilterKeys: QueueFilterKey[];
   onAddFilter: (key: QueueFilterKey) => void;
   onRemoveFilter: (key: QueueFilterKey) => void;
@@ -109,6 +114,8 @@ export function PosOrderQueueToolbar({
   staffFilter,
   onStaffFilterChange,
   staffOptions,
+  paymentMethodFilter,
+  onPaymentMethodFilterChange,
   activeFilterKeys,
   onAddFilter,
   onRemoveFilter,
@@ -271,6 +278,26 @@ export function PosOrderQueueToolbar({
                   {staffOptions.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </RemovableFilter>
+          )}
+          {activeFilterKeys.includes("paymentMethod") && (
+            <RemovableFilter onRemove={() => onRemoveFilter("paymentMethod")}>
+              <Select
+                value={paymentMethodFilter}
+                onValueChange={(v) => onPaymentMethodFilterChange(v as QueuePaymentMethodFilter)}
+              >
+                <SelectTrigger size="sm" className="w-[150px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">{t("pos.queue.filterAllPaymentMethods")}</SelectItem>
+                  {QUEUE_PAYMENT_METHODS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {mapPaymentMethodLabel(t, m)}
                     </SelectItem>
                   ))}
                 </SelectContent>

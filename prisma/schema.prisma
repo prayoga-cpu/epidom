@@ -158,6 +158,7 @@ model Store {
   staffSessions           StaffSession[]
   wasteEntries            WasteEntry[]
   pushSubscriptions       PushSubscription[]
+  receiptSettings         StoreReceiptSettings?
   // When true, this store's fees & taxes are read from Business.financeSettings
   // instead of its own StoreFinanceSettings row (a shared, profile-wide config).
   syncFinanceWithBusiness Boolean                @default(false)
@@ -211,6 +212,29 @@ model StoreFinanceSettings {
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@map("store_finance_settings")
+}
+
+/// Printed/digital receipt branding + WhatsApp auto-send config. Only holds
+/// what isn't already on Storefront (tagline/logoUrl/instagramUrl/tiktokUrl —
+/// reused directly from there when a store has a published storefront; a
+/// cash-only store with no storefront simply omits those lines on its
+/// receipt instead of duplicating the same fields here).
+model StoreReceiptSettings {
+  id      String @id @default(cuid())
+  storeId String @unique
+
+  footerMessage String?
+  facebookUrl   String?
+  showSocialLinks Boolean @default(true)
+  // Per-store opt-out for the automatic "receipt sent via WhatsApp once
+  // paymentStatus flips to PAID" flow — see send-customer-receipt.ts.
+  autoSendWhatsappReceipt Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("store_receipt_settings")
 }
 
 /// Shared fees & taxes config for a Business, used by any Store with
@@ -692,6 +716,7 @@ model Order {
   table              Table?          @relation(fields: [tableId], references: [id], onDelete: SetNull)
   shift              Shift?          @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   stockMovements     StockMovement[]
+  receiptSends       OrderReceiptSend[]
 
   @@index([storeId])
   @@index([status])
@@ -753,6 +778,30 @@ model OrderItem {
   @@index([status])
   @@index([productionBatchId])
   @@map("order_items")
+}
+
+/// Audit trail for the customer-facing digital receipt (WhatsApp link to
+/// /r/[orderId]) — one row per send attempt, whether it succeeded or not.
+/// Lets order history show "already sent"/"failed" instead of a bare button,
+/// and lets a merchant retry a FAILED send. See send-customer-receipt.ts.
+model OrderReceiptSend {
+  id              String                 @id @default(cuid())
+  orderId         String
+  channel         String                 @default("WHATSAPP")
+  recipientPhone  String
+  status          OrderReceiptSendStatus
+  fonnteMessageId String?
+  errorMessage    String?
+  sentAt          DateTime               @default(now())
+  order           Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_receipt_sends")
+}
+
+enum OrderReceiptSendStatus {
+  SENT
+  FAILED
 }
 
 model Alert {

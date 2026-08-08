@@ -1,4 +1,4 @@
-import { Prisma, OrderStatus, OrderSource, Department } from "@prisma/client";
+import { Prisma, OrderStatus, OrderSource, PaymentMethod, Department } from "@prisma/client";
 
 export interface OrderHistoryQueryParams {
   status?: string | null;
@@ -10,6 +10,7 @@ export interface OrderHistoryQueryParams {
   productId?: string | null;
   department?: string | null;
   staffId?: string | null;
+  paymentMethod?: string | null;
 }
 
 /**
@@ -19,7 +20,18 @@ export interface OrderHistoryQueryParams {
  */
 export function buildOrderHistoryWhere(
   storeId: string,
-  { status, source, from, to, q, unpaid, productId, department, staffId }: OrderHistoryQueryParams
+  {
+    status,
+    source,
+    from,
+    to,
+    q,
+    unpaid,
+    productId,
+    department,
+    staffId,
+    paymentMethod,
+  }: OrderHistoryQueryParams
 ): Prisma.OrderWhereInput {
   const where: Prisma.OrderWhereInput = { storeId };
 
@@ -29,6 +41,10 @@ export function buildOrderHistoryWhere(
 
   if (source && (Object.values(OrderSource) as string[]).includes(source)) {
     where.source = source as OrderSource;
+  }
+
+  if (paymentMethod && (Object.values(PaymentMethod) as string[]).includes(paymentMethod)) {
+    where.paymentMethod = paymentMethod as PaymentMethod;
   }
 
   if (unpaid) {

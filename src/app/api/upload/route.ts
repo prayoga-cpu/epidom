@@ -23,6 +23,13 @@ import { compressImageServer } from "@/lib/utils/server-image-compression";
 import { ALLOWED_IMAGE_TYPES, IMAGE_RAW_UPLOAD_MAX_BYTES, clampTargetMB } from "@/lib/constants/image";
 
 /**
+ * Sharp's native binary load + multi-pass compression on a cold serverless
+ * instance, plus the outbound Blob upload, can exceed the platform's
+ * default function timeout — raise it rather than let cold requests 504.
+ */
+export const maxDuration = 30;
+
+/**
  * Allowed image MIME types
  */
 const ALLOWED_TYPES: readonly string[] = ALLOWED_IMAGE_TYPES;
@@ -109,10 +116,10 @@ export const POST = withApiHandler(
       );
     }
 
-    // Upload file
-    // Use user ID and timestamp for unique path
-    const timestamp = Date.now();
-    const path = `users/${userId}/images/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "")}`;
+    // Upload file — the adapter appends its own timestamped, sanitized
+    // filename under this prefix (see VercelBlobAdapter.upload), so `path`
+    // here is a directory, not a full key.
+    const path = `users/${userId}/images`;
 
     const result = await storage.upload(uploadFile, {
       path,
