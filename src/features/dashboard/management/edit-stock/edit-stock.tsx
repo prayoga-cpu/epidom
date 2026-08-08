@@ -42,7 +42,6 @@ import type { SupplierOrder } from "@/features/dashboard/shared/hooks/use-suppli
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatDate } from "@/lib/utils/formatting";
 
 type ItemType = "material" | "product";
 type StatusFilter = "all" | "low" | "overstock" | "in-stock";
@@ -117,7 +116,7 @@ export function EditStockCard({
   highlightSupplierId,
   onHighlightConsumed,
 }: EditStockCardProps = {}) {
-  const { t } = useI18n();
+  const { t, dateLocale, formatDate } = useI18n();
   const { toast } = useToast();
   const { formatPrice } = useCurrency();
   const params = useParams();
@@ -669,6 +668,7 @@ export function EditStockCard({
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
+                              locale={dateLocale}
                               selected={
                                 selectedItem.expirationDate ? new Date(selectedItem.expirationDate) : undefined
                               }

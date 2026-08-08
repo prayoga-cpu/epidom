@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
 import type { OrderHistoryItem } from "../types/pos.types";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +17,9 @@ import {
 } from "@/components/ui/dialog";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
+import { useRefundOrder } from "../hooks/use-refund-order";
 import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
+import { RefundDialog, type RefundConfirmData } from "./refund-dialog";
 import { toast } from "sonner";
 
 function getSourceBadgeVariant(source: string) {
@@ -79,14 +80,16 @@ export function OrderHistoryDetailDialog({
   storeId,
   onOpenChange,
 }: OrderHistoryDetailDialogProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   // Order amounts are literal in the store's display currency, never IDR —
   // passing `currency` skips formatPrice's default base-currency conversion.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const { confirm, confirmDialog } = useConfirm();
   const updateStatus = useUpdateOrderStatus(storeId);
+  const refundOrder = useRefundOrder(storeId);
   const [showMarkPaid, setShowMarkPaid] = useState(false);
+  const [showRefund, setShowRefund] = useState(false);
 
   const handleCancel = async () => {
     if (!order) return;
@@ -123,6 +126,17 @@ export function OrderHistoryDetailDialog({
       setShowMarkPaid(false);
     } catch {
       toast.error(t("pos.queue.updateFailed"));
+    }
+  };
+
+  const handleRefund = async ({ amount, reason }: RefundConfirmData) => {
+    if (!order) return;
+    try {
+      await refundOrder.mutateAsync({ orderId: order.id, amount, reason });
+      toast.success(t("pos.refund.success"));
+      setShowRefund(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("pos.queue.updateFailed"));
     }
   };
 
@@ -171,6 +185,10 @@ export function OrderHistoryDetailDialog({
         return t("pos.history.delivery");
     }
   };
+
+  const remainingRefundable = order
+    ? Math.max(0, Number(order.total) - Number(order.refundAmount ?? 0))
+    : 0;
 
   return (
     <Dialog open={!!order} onOpenChange={onOpenChange}>
@@ -238,10 +256,30 @@ export function OrderHistoryDetailDialog({
                 <span className="text-muted-foreground">{t("pos.history.delivery")}</span>
                 <span>{formatPrice(Number(order.delivery))}</span>
               </div>
+              {Number(order.discountAmount) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {t("pos.cart.discount")}
+                    {order.discountReason ? ` (${order.discountReason})` : ""}
+                  </span>
+                  <span className="text-orange-600">
+                    -{formatPrice(Number(order.discountAmount))}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between font-semibold">
                 <span>{t("pos.cart.total")}</span>
                 <span>{formatPrice(Number(order.total))}</span>
               </div>
+              {Number(order.refundAmount) > 0 && (
+                <div className="flex justify-between text-destructive">
+                  <span>
+                    {t("pos.refund.refunded")}
+                    {order.refundReason ? ` (${order.refundReason})` : ""}
+                  </span>
+                  <span>-{formatPrice(Number(order.refundAmount))}</span>
+                </div>
+              )}
             </div>
 
             {order.notes && (
@@ -270,6 +308,17 @@ export function OrderHistoryDetailDialog({
                     {t("pos.orderCard.markPaid")}
                   </Button>
                 )}
+                {(order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED") &&
+                  remainingRefundable > 0 && (
+                    <Button
+                      variant="outline"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      disabled={refundOrder.isPending}
+                      onClick={() => setShowRefund(true)}
+                    >
+                      {t("pos.refund.action")}
+                    </Button>
+                  )}
                 <Button
                   variant="outline"
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -290,6 +339,14 @@ export function OrderHistoryDetailDialog({
         onConfirm={handleMarkPaid}
         isSubmitting={updateStatus.isPending}
         description={order?.orderNumber}
+      />
+      <RefundDialog
+        open={showRefund}
+        onOpenChange={setShowRefund}
+        onConfirm={handleRefund}
+        isSubmitting={refundOrder.isPending}
+        orderNumber={order?.orderNumber}
+        remainingAmount={remainingRefundable}
       />
     </Dialog>
   );

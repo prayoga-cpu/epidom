@@ -30,6 +30,8 @@ export const GET = withApiHandler(
         allowedPages: true,
         isActive: true,
         inviteStatus: true,
+        payType: true,
+        payRate: true,
         createdAt: true,
         updatedAt: true,
         pin: true,
@@ -37,9 +39,10 @@ export const GET = withApiHandler(
       orderBy: { name: "asc" },
     });
 
-    const staffResponse = staff.map(({ pin, ...s }) => ({
+    const staffResponse = staff.map(({ pin, payRate, ...s }) => ({
       ...s,
       hasPin: pin !== null,
+      payRate: payRate !== null ? Number(payRate) : null,
     }));
 
     return NextResponse.json(createSuccessResponse({ staff: staffResponse }));

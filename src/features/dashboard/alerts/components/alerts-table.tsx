@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { type LowStockAlert } from "@/features/dashboard/shared/hooks/use-alerts";
 import { AlertCircle, ShoppingCart, Package2 } from "lucide-react";
-import { formatDate } from "@/lib/utils/format-date";
 
 interface AlertsTableProps {
   alerts: LowStockAlert[];
@@ -18,7 +17,7 @@ interface AlertsTableProps {
 }
 
 export function AlertsTable({ alerts, storeId, onViewDetails }: AlertsTableProps) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const router = useRouter();
 
   // Group alerts by supplier

@@ -27,7 +27,6 @@ import { SelfieCapture } from "@/components/shared/selfie-capture";
 import { apiClient } from "@/lib/api/client";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { compressImage } from "@/lib/utils/image-compression";
 import { toast } from "sonner";
 import type { StaffRole } from "@prisma/client";
@@ -73,7 +72,7 @@ type Action = "clockIn" | "clockOut" | "absence";
 const RETAKE_WINDOW_MS = 30 * 60 * 1000;
 
 export function ClockInOutDialog({ open, onOpenChange, storeId }: ClockInOutDialogProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const geolocation = useGeolocation();
   const posSession = usePosSession();
   const queryClient = useQueryClient();

@@ -73,15 +73,22 @@ export function ScheduleGridFilters({
           </p>
           <div className="max-h-64 space-y-0.5 overflow-y-auto">
             {staff.map((member) => (
-              <button
+              <div
                 key={member.id}
-                type="button"
-                className="hover:bg-muted flex min-h-10 w-full items-center gap-2 rounded-md p-2 text-left text-sm"
+                role="button"
+                tabIndex={0}
+                className="hover:bg-muted flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-md p-2 text-left text-sm"
                 onClick={() => onStaffFilterChange(toggleId(staffFilter, member.id))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onStaffFilterChange(toggleId(staffFilter, member.id));
+                  }
+                }}
               >
                 <Checkbox checked={staffFilter.includes(member.id)} className="pointer-events-none" />
                 <span className="truncate">{member.name}</span>
-              </button>
+              </div>
             ))}
           </div>
         </PopoverContent>
@@ -105,11 +112,18 @@ export function ScheduleGridFilters({
           </p>
           <div className="max-h-64 space-y-0.5 overflow-y-auto">
             {activeBlocks.map((block) => (
-              <button
+              <div
                 key={block.id}
-                type="button"
-                className="hover:bg-muted flex min-h-10 w-full items-center gap-2 rounded-md p-2 text-left text-sm"
+                role="button"
+                tabIndex={0}
+                className="hover:bg-muted flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-md p-2 text-left text-sm"
                 onClick={() => onBlockFilterChange(toggleId(blockFilter, block.id))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onBlockFilterChange(toggleId(blockFilter, block.id));
+                  }
+                }}
               >
                 <Checkbox checked={blockFilter.includes(block.id)} className="pointer-events-none" />
                 <span
@@ -117,7 +131,7 @@ export function ScheduleGridFilters({
                   style={{ backgroundColor: block.color ?? "#94a3b8" }}
                 />
                 <span className="truncate">{block.name}</span>
-              </button>
+              </div>
             ))}
           </div>
         </PopoverContent>

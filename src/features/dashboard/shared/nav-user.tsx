@@ -191,17 +191,6 @@ export function NavUser() {
             {t("nav.logoutOwnerAccount")}
           </DropdownMenuItem>
 
-          <DropdownMenuSeparator />
-          {(!staffAllowedPages || staffAllowedPages.includes("/profile")) && (
-            <DropdownMenuItem onClick={() => router.push(`/store/${storeId}/profile`)}>
-              {t("nav.profile")}
-            </DropdownMenuItem>
-          )}
-          {(!staffAllowedPages || staffAllowedPages.includes("/dashboard")) && (
-            <DropdownMenuItem onClick={() => router.push(`/store/${storeId}/dashboard`)}>
-              {t("nav.dashboard")}
-            </DropdownMenuItem>
-          )}
           {!actingAsStaff && (isAdminEmail(user?.email) || (profile as any)?.isAdmin) && (
             <>
               <DropdownMenuSeparator />

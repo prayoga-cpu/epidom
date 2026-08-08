@@ -9,7 +9,6 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useState } from "react";
 import { getStatusColor, getStatusLabel, getPlanDetails } from "@/lib/utils/subscription-helpers";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatDate } from "@/lib/utils/format-date";
 import { getApiErrorMessage } from "@/lib/utils/api-error";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { BetaPlanSwitcher } from "@/features/dashboard/billing/components/beta-plan-switcher";
@@ -27,7 +26,7 @@ interface SubscriptionInfoCardProps {
 export function SubscriptionInfoCard({
   subscription: initialSubscription,
 }: SubscriptionInfoCardProps) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { formatPrice } = useCurrency();
   const { data: subStatus } = useSubscriptionStatus();
   const isBeta = !!subStatus?.subscription?.isBeta;

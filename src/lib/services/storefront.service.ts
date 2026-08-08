@@ -7,6 +7,7 @@ import type {
   UpdateMenuItemInput,
 } from "@/lib/validation/storefront.schemas";
 import { Prisma, Department } from "@prisma/client";
+import { getExchangeRate } from "./exchange-rate.service";
 
 export class StorefrontService {
   /**
@@ -107,9 +108,16 @@ export class StorefrontService {
         count++;
       }
 
-      // Create draft storefront
-      storefront = await prisma.storefront.create({
-        data: {
+      // Upsert on storeId (not create): two requests racing to auto-create the
+      // first storefront for a store (e.g. two products created back-to-back
+      // before either finishes) would otherwise both pass the findUnique check
+      // above, both attempt to create, and the loser would throw a unique
+      // constraint error — silently swallowed by autoLinkProductToMenu's
+      // catch, so that product would never get its POS menu item. Upsert
+      // makes the second caller a no-op update instead of a failed create.
+      storefront = await prisma.storefront.upsert({
+        where: { storeId },
+        create: {
           storeId,
           slug,
           displayName: store.name,
@@ -130,6 +138,7 @@ export class StorefrontService {
             sunday: { open: "09:00", close: "21:00", isClosed: true },
           },
         },
+        update: {},
         include: {
           menuCategories: {
             orderBy: { displayOrder: "asc" },
@@ -335,6 +344,62 @@ export class StorefrontService {
     return storefront?.store.business.user.currency ?? "IDR";
   }
 
+  /**
+   * Resolve the store owner's currency and the live IDR->currency rate once.
+   * Bulk callers (CSV/Smart Import processing many rows) should fetch this a
+   * single time and pass the rate to `convertBaseToOwnerSync`/
+   * `convertOwnerToBaseSync` per row, rather than re-querying per row.
+   */
+  async getOwnerCurrencyAndRate(storeId: string): Promise<{ currency: string; rate: number }> {
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: { business: { select: { user: { select: { currency: true } } } } },
+    });
+    const currency = store?.business?.user?.currency ?? "IDR";
+    if (currency === "IDR") return { currency, rate: 1 };
+
+    const { rate } = await getExchangeRate("IDR", currency);
+    return { currency, rate };
+  }
+
+  /**
+   * Convert an amount stored in the platform base currency (IDR) — e.g. a
+   * linked Product's costPrice/sellingPrice — into the store owner's live
+   * display currency. `MenuItem.price` must always be a literal value in
+   * the owner's own currency, so any Product price synced into a MenuItem
+   * has to pass through this first, or a non-IDR store's menu silently
+   * mis-prices by the full exchange-rate factor (e.g. a €1 product
+   * showing as "€20,833.33").
+   */
+  async convertBaseCurrencyToOwner(
+    storeId: string,
+    amountInBase: number
+  ): Promise<{ price: number; currency: string }> {
+    const { currency, rate } = await this.getOwnerCurrencyAndRate(storeId);
+    return { price: this.convertBaseToOwnerSync(amountInBase, rate), currency };
+  }
+
+  /** Pure version of the IDR->owner conversion for a pre-fetched rate. */
+  convertBaseToOwnerSync(amountInBase: number, rate: number): number {
+    if (rate === 1) return amountInBase;
+    return Math.round(amountInBase * rate * 100) / 100;
+  }
+
+  /**
+   * Inverse of `convertBaseToOwnerSync`: convert an amount a merchant typed
+   * or imported in their own currency into the platform base currency (IDR)
+   * for storage — the same conversion the Add/Edit Product form applies via
+   * `useCurrency().convertToBase()` before submitting. CSV/Smart Import
+   * writes Product/Material cost fields directly (see `actions.ts`) and must
+   * apply this too, or an imported row's price is stored as a raw literal
+   * and later silently mis-displayed by the full exchange-rate factor
+   * everywhere Product/Material costs are shown.
+   */
+  convertOwnerToBaseSync(amountInOwnerCurrency: number, rate: number): number {
+    if (rate === 1) return amountInOwnerCurrency;
+    return Math.round((amountInOwnerCurrency / rate) * 100) / 100;
+  }
+
   async updateMenuItem(itemId: string, storefrontId: string, input: UpdateMenuItemInput) {
     const item = await prisma.menuItem.findUnique({
       where: { id: itemId },
@@ -432,6 +497,13 @@ export class StorefrontService {
         _max: { displayOrder: true },
       });
 
+      // product.sellingPrice is stored in IDR (the platform base currency);
+      // MenuItem.price must be a literal value in the owner's own currency.
+      const { price, currency } = await this.convertBaseCurrencyToOwner(
+        storeId,
+        Number(product.sellingPrice)
+      );
+
       await prisma.menuItem.create({
         data: {
           storefrontId: storefront.id,
@@ -439,7 +511,8 @@ export class StorefrontService {
           productId: product.id,
           name: product.name,
           department: product.department ?? "KITCHEN",
-          price: new Prisma.Decimal(Number(product.sellingPrice)),
+          price: new Prisma.Decimal(price),
+          currency,
           isAvailable: true,
           displayOrder: (maxItemOrder._max.displayOrder ?? -1) + 1,
         },

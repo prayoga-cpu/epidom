@@ -6,6 +6,7 @@ import {
   addDaysLocalISO,
   todayLocalISO,
   startOfMonthLocalISO,
+  previousPeriodLocalISO,
 } from "../date-range";
 
 describe("describeDateRange", () => {
@@ -69,5 +70,29 @@ describe("addDaysLocalISO", () => {
 
   it("rolls over year boundaries", () => {
     expect(addDaysLocalISO("2025-12-31", 1)).toBe("2026-01-01");
+  });
+});
+
+describe("previousPeriodLocalISO", () => {
+  it("a single day compares against the single day before it", () => {
+    expect(previousPeriodLocalISO("2026-08-08", "2026-08-08")).toEqual({
+      from: "2026-08-07",
+      to: "2026-08-07",
+    });
+  });
+
+  it("an 8-day range compares against the equal-length 8-day stretch immediately before it", () => {
+    // Aug 1-8 (8 days) -> Jul 24-31 (8 days), not calendar last month.
+    expect(previousPeriodLocalISO("2026-08-01", "2026-08-08")).toEqual({
+      from: "2026-07-24",
+      to: "2026-07-31",
+    });
+  });
+
+  it("rolls over a month/year boundary", () => {
+    expect(previousPeriodLocalISO("2026-01-01", "2026-01-05")).toEqual({
+      from: "2025-12-27",
+      to: "2025-12-31",
+    });
   });
 });

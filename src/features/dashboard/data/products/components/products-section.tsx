@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ import {
   useExportProducts,
   useAddProductToMenu,
   useRemoveProductFromMenu,
+  useBulkAddProductsToMenu,
   useProductMenuStatus,
   useDeleteProductCategory,
   type Product,
@@ -74,6 +76,64 @@ import { useDialogState } from "../../hooks/use-dialog-state";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
 
+type ProductSortBy =
+  | "name"
+  | "sku"
+  | "currentStock"
+  | "costPrice"
+  | "sellingPrice"
+  | "createdAt"
+  | "updatedAt";
+type ProductSortOrder = "asc" | "desc";
+
+interface ProductFiltersState {
+  search: string;
+  category: string;
+  department: "KITCHEN" | "BAR" | undefined;
+  sortBy: ProductSortBy;
+  sortOrder: ProductSortOrder;
+  skip: number;
+  take: number;
+}
+
+const PRODUCT_FILTER_DEFAULTS: ProductFiltersState = {
+  search: "",
+  category: "",
+  department: undefined,
+  sortBy: "createdAt",
+  sortOrder: "desc",
+  skip: 0,
+  take: 20,
+};
+
+const PRODUCT_SORT_OPTIONS: ProductSortBy[] = [
+  "name",
+  "sku",
+  "currentStock",
+  "costPrice",
+  "sellingPrice",
+  "createdAt",
+  "updatedAt",
+];
+
+// Search text and pagination position are intentionally never restored from
+// storage — only the filter/sort selections carry over across visits.
+function sanitizeProductFilters(raw: unknown, defaults: ProductFiltersState): ProductFiltersState {
+  if (!raw || typeof raw !== "object") return defaults;
+  const r = raw as Partial<ProductFiltersState>;
+  return {
+    search: "",
+    category: typeof r.category === "string" ? r.category : defaults.category,
+    department: r.department === "KITCHEN" || r.department === "BAR" ? r.department : undefined,
+    sortBy: PRODUCT_SORT_OPTIONS.includes(r.sortBy as ProductSortBy)
+      ? (r.sortBy as ProductSortBy)
+      : defaults.sortBy,
+    sortOrder: r.sortOrder === "asc" ? "asc" : "desc",
+    skip: 0,
+    take: typeof r.take === "number" && [10, 20, 50, 100].includes(r.take) ? r.take : defaults.take,
+  };
+}
+
 interface ProductsSectionProps {
   initialProducts?: Product[];
 }
@@ -85,16 +145,13 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const { advancedReportsAccess } = useFeatureAccess();
   const storeId = params.storeId as string;
 
-  // Filters and pagination state
-  const [filters, setFilters] = useState({
-    search: "",
-    category: "",
-    department: undefined as "KITCHEN" | "BAR" | undefined,
-    sortBy: "createdAt" as const,
-    sortOrder: "desc" as const,
-    skip: 0,
-    take: 20,
-  });
+  // Filters and pagination state — persisted across visits so switching tabs
+  // or navigating away and back keeps the last-used filter/sort selections.
+  const [filters, setFilters] = usePersistedState<ProductFiltersState>(
+    `epidom-data-products-filters-${storeId}`,
+    PRODUCT_FILTER_DEFAULTS,
+    sanitizeProductFilters
+  );
 
   // Smart Import dialog state
   const [smartImportOpen, setSmartImportOpen] = useState(false);
@@ -123,6 +180,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const exportProducts = useExportProducts();
   const addToMenu = useAddProductToMenu(storeId);
   const removeFromMenu = useRemoveProductFromMenu(storeId);
+  const bulkAddToMenu = useBulkAddProductsToMenu(storeId);
   const { menuLinkedIds } = useProductMenuStatus(storeId);
   const { confirm, confirmDialog } = useConfirm();
   const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
@@ -242,6 +300,39 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     }
   };
 
+  const handleBulkAddToMenu = async () => {
+    const selected = products.filter((p) => selectedIds.has(p.id) && !menuLinkedIds.has(p.id));
+    if (selected.length === 0) {
+      toast.info(
+        t("data.products.toasts.bulkAddToMenuNone") ||
+          "Selected products are already in the POS menu"
+      );
+      return;
+    }
+
+    try {
+      const result = await bulkAddToMenu.mutateAsync(selected);
+      if (result.failed > 0) {
+        toast.warning(
+          t("data.products.toasts.bulkAddedToMenuPartial")
+            ?.replace("{succeeded}", String(result.succeeded))
+            .replace("{failed}", String(result.failed)) ||
+            `${result.succeeded} added to POS menu, ${result.failed} failed`
+        );
+      } else {
+        toast.success(
+          t("data.products.toasts.bulkAddedToMenu")?.replace(
+            "{count}",
+            String(result.succeeded)
+          ) || `${result.succeeded} product(s) added to POS menu`
+        );
+      }
+      clearSelection();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add products to menu");
+    }
+  };
+
   const handleExport = async () => {
     try {
       await exportProducts.mutateAsync({ storeId, filters });
@@ -280,15 +371,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
 
   // Clear all filters
   const clearFilters = () => {
-    setFilters({
-      search: "",
-      category: "",
-      department: undefined,
-      sortBy: "createdAt",
-      sortOrder: "desc",
-      skip: 0,
-      take: 20,
-    });
+    setFilters(PRODUCT_FILTER_DEFAULTS);
   };
 
   const hasActiveFilters = filters.search || filters.category || filters.department;
@@ -395,6 +478,22 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                 <Tags className="mr-1 hidden h-4 w-4 sm:inline" />
                 {t("data.products.manageCategories.button")}
               </Button>
+              {bulkSelectMode && selectedCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkAddToMenu}
+                  disabled={bulkAddToMenu.isPending}
+                  className="w-full sm:w-auto"
+                >
+                  {bulkAddToMenu.isPending ? (
+                    <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                  ) : (
+                    <UtensilsCrossed className="mr-1 hidden h-4 w-4 sm:inline" />
+                  )}
+                  {t("data.products.bulkAddToMenu") || "Add to Menu"} ({selectedCount})
+                </Button>
+              )}
               {bulkSelectMode && selectedCount > 0 && (
                 <Button
                   variant="destructive"

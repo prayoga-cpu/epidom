@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { usePosOrders } from "@/features/pos/hooks/use-pos-orders";
-import { formatRelativeTime } from "@/lib/utils/format-date";
 
 // Not translated, matching the existing SOURCE_LABELS precedent in
 // src/app/api/stores/[id]/finance/channels/route.ts.
@@ -41,8 +40,12 @@ interface NewOrdersCardProps {
  * tile in a stretched grid row, so it should just size to its own content.
  */
 export function NewOrdersCard({ storeId }: NewOrdersCardProps) {
-  const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  const { t, formatRelativeTime } = useI18n();
+  // order.total is already literal in the owner's own currency, not IDR.
+  // Bare formatPrice() defaults to converting from IDR, which would wrongly
+  // re-scale it by the exchange rate for any non-IDR store.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const { data: orders, isLoading, isError } = usePosOrders(storeId);
 
   const pendingOrders = useMemo(

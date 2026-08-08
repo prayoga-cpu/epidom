@@ -7,13 +7,15 @@
 
 "use client";
 
-import { useState } from "react";
+import { useCallback } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { ItemCardGrid } from "./base-item-card";
 import {
   prefetchMaterials,
@@ -180,6 +182,22 @@ function TabContentSkeleton() {
   );
 }
 
+type DataTab = "materials" | "recipes" | "products" | "suppliers";
+
+interface TabState {
+  tab: DataTab;
+}
+
+const TAB_DEFAULTS: TabState = { tab: "materials" };
+
+const DATA_TABS: DataTab[] = ["materials", "recipes", "products", "suppliers"];
+
+function sanitizeTabState(raw: unknown, defaults: TabState): TabState {
+  if (!raw || typeof raw !== "object") return defaults;
+  const r = raw as Partial<TabState>;
+  return { tab: DATA_TABS.includes(r.tab as DataTab) ? (r.tab as DataTab) : defaults.tab };
+}
+
 interface DataViewClientProps {
   initialMaterials?: MaterialWithSuppliers[];
   initialRecipes?: RecipeWithIngredients[];
@@ -211,7 +229,31 @@ export function DataViewClient({
 }: DataViewClientProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("materials");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [tabState, setTabState] = usePersistedState<TabState>(
+    `epidom-data-tab-${storeId}`,
+    TAB_DEFAULTS,
+    sanitizeTabState
+  );
+
+  const urlTab = searchParams.get("tab");
+  const activeTab: DataTab = DATA_TABS.includes(urlTab as DataTab)
+    ? (urlTab as DataTab)
+    : tabState.tab;
+
+  const setActiveTab = useCallback(
+    (value: string) => {
+      const tab = value as DataTab;
+      setTabState({ tab });
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", tab);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams, setTabState]
+  );
 
   /**
    * Handle tab hover to prefetch data

@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useParams } from "next/navigation";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,6 +94,76 @@ const SUPPLIER_PREFETCH_FILTERS = {
   take: 100,
 };
 
+type MaterialDepartment = "KITCHEN" | "BAR" | "BOTH" | undefined;
+type MaterialSortBy = "name" | "sku" | "currentStock" | "unitCost" | "createdAt" | "updatedAt";
+type MaterialSortOrder = "asc" | "desc";
+
+interface MaterialFiltersState {
+  search: string;
+  category: string;
+  department: MaterialDepartment;
+  supplierId: string;
+  stockStatus: StockFilter;
+  sortBy: MaterialSortBy;
+  sortOrder: MaterialSortOrder;
+  skip: number;
+  take: number;
+}
+
+const MATERIAL_FILTER_DEFAULTS: MaterialFiltersState = {
+  search: "",
+  category: "",
+  department: undefined,
+  supplierId: "",
+  stockStatus: undefined,
+  sortBy: "createdAt",
+  sortOrder: "desc",
+  skip: 0,
+  take: 50,
+};
+
+const MATERIAL_STOCK_STATUSES: StockFilter[] = [
+  "in_stock",
+  "low_stock",
+  "out_of_stock",
+  "overstocked",
+];
+const MATERIAL_SORT_OPTIONS: MaterialSortBy[] = [
+  "name",
+  "sku",
+  "currentStock",
+  "unitCost",
+  "createdAt",
+  "updatedAt",
+];
+
+// Search text and pagination position are intentionally never restored from
+// storage — only the filter/sort selections carry over across visits.
+function sanitizeMaterialFilters(
+  raw: unknown,
+  defaults: MaterialFiltersState
+): MaterialFiltersState {
+  if (!raw || typeof raw !== "object") return defaults;
+  const r = raw as Partial<MaterialFiltersState>;
+  return {
+    search: "",
+    category: typeof r.category === "string" ? r.category : defaults.category,
+    department: (["KITCHEN", "BAR", "BOTH"] as const).includes(
+      r.department as "KITCHEN" | "BAR" | "BOTH"
+    )
+      ? (r.department as MaterialDepartment)
+      : undefined,
+    supplierId: typeof r.supplierId === "string" ? r.supplierId : defaults.supplierId,
+    stockStatus: MATERIAL_STOCK_STATUSES.includes(r.stockStatus) ? r.stockStatus : undefined,
+    sortBy: MATERIAL_SORT_OPTIONS.includes(r.sortBy as MaterialSortBy)
+      ? (r.sortBy as MaterialSortBy)
+      : defaults.sortBy,
+    sortOrder: r.sortOrder === "asc" ? "asc" : "desc",
+    skip: 0,
+    take: typeof r.take === "number" && [10, 20, 50, 100].includes(r.take) ? r.take : defaults.take,
+  };
+}
+
 interface MaterialsSectionProps {
   initialMaterials?: MaterialWithSuppliers[];
 }
@@ -125,18 +196,13 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
     });
   }, [storeId, queryClient]);
 
-  // Filters state
-  const [filters, setFilters] = useState({
-    search: "",
-    category: "",
-    department: undefined as "KITCHEN" | "BAR" | undefined,
-    supplierId: "",
-    stockStatus: undefined as StockFilter,
-    sortBy: "createdAt" as const,
-    sortOrder: "desc" as const,
-    skip: 0,
-    take: 50,
-  });
+  // Filters state — persisted across visits so switching tabs or navigating
+  // away and back keeps the last-used filter/sort selections.
+  const [filters, setFilters] = usePersistedState<MaterialFiltersState>(
+    `epidom-data-materials-filters-${storeId}`,
+    MATERIAL_FILTER_DEFAULTS,
+    sanitizeMaterialFilters
+  );
 
   // Debounce search input to reduce API calls (300ms delay)
   const debouncedSearch = useDebounce(filters.search, 300);
@@ -338,17 +404,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
 
   // Clear filters
   const clearFilters = () => {
-    setFilters({
-      search: "",
-      category: "",
-      department: undefined,
-      supplierId: "",
-      stockStatus: undefined,
-      sortBy: "createdAt",
-      sortOrder: "desc",
-      skip: 0,
-      take: 50,
-    });
+    setFilters(MATERIAL_FILTER_DEFAULTS);
   };
 
   const hasActiveFilters = !!(

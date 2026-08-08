@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Activity, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { MovementType } from "@prisma/client";
 
@@ -39,7 +38,7 @@ function sourceLabel(m: Movement): string {
 }
 
 export function RecentMovementsCard() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { storeId } = useCurrentStore();
 
   const { data, isLoading } = useQuery<{ movements: Movement[] }>({

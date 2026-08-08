@@ -15,6 +15,13 @@ vi.mock("@/lib/prisma", () => {
     menuCategory: {
       aggregate: vi.fn(),
     },
+    // getOwnerCurrencyAndRate() (via convertBaseCurrencyToOwner, called
+    // before every menuItem.create here) looks this up — a not-found store
+    // defaults to IDR/rate 1, matching every test below (none exercise a
+    // non-IDR conversion).
+    store: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
   };
   return { prisma: prismaMock };
 });

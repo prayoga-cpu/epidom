@@ -14,7 +14,6 @@ import {
   getPlanBadgeColor,
   getPlanLabel,
 } from "@/lib/utils/subscription-helpers";
-import { formatDate } from "@/lib/utils/format-date";
 
 interface ProfileHeaderProps {
   user: {
@@ -32,7 +31,7 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ user, subscription, onUpdate }: ProfileHeaderProps) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
 
   const getInitials = () => {

@@ -2,7 +2,6 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
@@ -33,7 +32,7 @@ export function PrintReportShell({
   subtitle,
   children,
 }: PrintReportShellProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
 
   useEffect(() => {
     const timer = setTimeout(() => window.print(), 400);

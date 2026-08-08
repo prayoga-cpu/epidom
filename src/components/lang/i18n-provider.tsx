@@ -2,15 +2,47 @@
 
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { enUS, fr, id as idLocale, type Locale as DateFnsLocale } from "date-fns/locale";
 import { translations } from "@/locales";
 import { getLanguagePreference, setLanguagePreference } from "@/lib/cookie-consent";
+import {
+  formatDate as formatDateWithLocale,
+  formatDateTime as formatDateTimeWithLocale,
+  formatDateOnly as formatDateOnlyWithLocale,
+  formatTimeOnly as formatTimeOnlyWithLocale,
+  formatRelativeTime as formatRelativeTimeWithLocale,
+} from "@/lib/utils/formatting";
 
 export type Locale = "en" | "fr" | "id";
+
+/** date-fns `Locale` object for the given app locale — for call sites that
+ * need to invoke `date-fns`'s `format()`/`formatDistanceToNow()` directly
+ * (e.g. building a custom format string) rather than through the bound
+ * helpers below. */
+export const DATE_FNS_LOCALES: Record<Locale, DateFnsLocale> = { en: enUS, fr, id: idLocale };
+
+/** `Intl` locale tag for the given app locale — for `Intl.DateTimeFormat`/
+ * `Intl.NumberFormat` call sites. */
+export const INTL_LOCALES: Record<Locale, string> = { en: "en-US", fr: "fr-FR", id: "id-ID" };
 
 type I18nContextType = {
   locale: Locale;
   setLocale: (l: Locale) => void;
   t: (key: string) => string;
+  /** Locale-bound date formatters — always use these (or the raw exports
+   * from `date-fns`/`Intl` seeded with `dateLocale`/`intlLocale` below) over
+   * `@/lib/utils/format-date` or a bare `.toLocaleDateString()`, which
+   * either hardcode English or silently default to it. */
+  formatDate: (date: Date | string | null | undefined, formatStr?: string) => string;
+  formatDateTime: (date: Date | string | null | undefined) => string;
+  formatDateOnly: (date: Date | string | null | undefined) => string;
+  formatTimeOnly: (date: Date | string | null | undefined) => string;
+  formatRelativeTime: (date: Date | string | null | undefined) => string;
+  /** The current locale's `date-fns` `Locale` object, for call sites that
+   * need to call `date-fns`'s `format()` themselves with a custom pattern. */
+  dateLocale: DateFnsLocale;
+  /** The current locale's `Intl` tag (e.g. "id-ID"), for `Intl.DateTimeFormat`. */
+  intlLocale: string;
 };
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -98,7 +130,56 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     [locale]
   );
 
-  const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
+  const formatDate = useCallback(
+    (date: Date | string | null | undefined, formatStr?: string) =>
+      formatDateWithLocale(date, formatStr, locale),
+    [locale]
+  );
+  const formatDateTime = useCallback(
+    (date: Date | string | null | undefined) => formatDateTimeWithLocale(date, locale),
+    [locale]
+  );
+  const formatDateOnly = useCallback(
+    (date: Date | string | null | undefined) => formatDateOnlyWithLocale(date, locale),
+    [locale]
+  );
+  const formatTimeOnly = useCallback(
+    (date: Date | string | null | undefined) => formatTimeOnlyWithLocale(date, locale),
+    [locale]
+  );
+  const formatRelativeTime = useCallback(
+    (date: Date | string | null | undefined) => formatRelativeTimeWithLocale(date, locale),
+    [locale]
+  );
+  const dateLocale = DATE_FNS_LOCALES[locale];
+  const intlLocale = INTL_LOCALES[locale];
+
+  const value = useMemo(
+    () => ({
+      locale,
+      setLocale,
+      t,
+      formatDate,
+      formatDateTime,
+      formatDateOnly,
+      formatTimeOnly,
+      formatRelativeTime,
+      dateLocale,
+      intlLocale,
+    }),
+    [
+      locale,
+      setLocale,
+      t,
+      formatDate,
+      formatDateTime,
+      formatDateOnly,
+      formatTimeOnly,
+      formatRelativeTime,
+      dateLocale,
+      intlLocale,
+    ]
+  );
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 

@@ -136,6 +136,15 @@ export async function deductStockForOrder(
   >();
   let skipped = 0;
 
+  // Frozen per-line COGS snapshot — Product.costPrice is already the
+  // authoritative per-unit cost (recipe-derived or manually overridden, see
+  // the Products page), so it's reused as-is rather than re-deriving cost
+  // from raw ingredient prices here. Keyed by OrderItem.id since one
+  // material/product StockMovement below is aggregated across items, but
+  // this snapshot is per-line. Items with no resolvable product (skipped
+  // above) simply have no entry, leaving OrderItem.unitCostSnapshot null.
+  const itemCostSnapshots = new Map<string, number>();
+
   for (const item of activeItems) {
     const product = item.product ?? item.menuItem?.product;
     if (!product) {
@@ -145,6 +154,8 @@ export async function deductStockForOrder(
       skipped++;
       continue;
     }
+
+    itemCostSnapshots.set(item.id, Number(product.costPrice));
 
     const orderedQty = Number(item.quantity);
 
@@ -316,6 +327,13 @@ export async function deductStockForOrder(
             balanceAfter: toDecimal(d.newStock),
             notes: `Auto-deducted for order ${order.orderNumber}`,
           },
+        });
+      }
+
+      for (const [orderItemId, unitCost] of itemCostSnapshots) {
+        await tx.orderItem.update({
+          where: { id: orderItemId },
+          data: { unitCostSnapshot: toDecimal(unitCost) },
         });
       }
     },

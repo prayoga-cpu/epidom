@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StoreCard } from "./store-card";
+import { AdminCard } from "./admin-card";
 import { CreateStoreDialog } from "./create-store-dialog";
 import { useStores } from "../hooks/use-stores";
 import { useSubscriptionStatus } from "../hooks/use-subscription-status";
@@ -11,6 +12,8 @@ import { AlertCircle, Store, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSession } from "@/lib/auth-client";
+import { isAdminEmail } from "@/lib/admin";
 
 export function StoresContainer() {
   const { t } = useI18n();
@@ -18,6 +21,12 @@ export function StoresContainer() {
   const { data: stores, isLoading, error, refetch } = useStores();
   const { data: subscriptionStatus, isLoading: isLoadingSubscription } = useSubscriptionStatus();
   const [isActivating, setIsActivating] = useState(false);
+  const { data: session } = useSession();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  // Email check only (no DB isAdmin flag) — same simplification the old
+  // top-nav Admin badge used; this card replaces that badge.
+  const isAdmin = mounted && isAdminEmail(session?.user?.email);
 
   async function handleActivateFree() {
     setIsActivating(true);
@@ -247,6 +256,7 @@ export function StoresContainer() {
 
                     return <StoreCard key={store.id} store={store} isBlocked={isBlocked} />;
                   })}
+              {!isLoadingSubscription && isAdmin && <AdminCard />}
             </div>
           )}
         </div>

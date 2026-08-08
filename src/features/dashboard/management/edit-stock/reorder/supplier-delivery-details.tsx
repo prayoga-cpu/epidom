@@ -15,7 +15,6 @@ import {
 import { useI18n } from "@/components/lang/i18n-provider";
 import type { SupplierDelivery } from "@/types/entities";
 import { SupplierDeliveryStatus } from "@/types/entities";
-import { formatDate, formatDateTime } from "@/lib/utils/formatting";
 import {
   User,
   Phone,
@@ -47,7 +46,7 @@ export function SupplierDeliveryDetails({
   onUpdateStatus,
   onPrintDelivery,
 }: SupplierDeliveryDetailsProps) {
-  const { t } = useI18n();
+  const { t, formatDate, formatDateTime } = useI18n();
 
   if (!selectedDelivery) {
     return (

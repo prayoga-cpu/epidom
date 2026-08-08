@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
@@ -59,7 +58,7 @@ export function OrderHistoryPrintView({
   filters,
   generatedAt,
 }: OrderHistoryPrintViewProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   // Order amounts are literal in the store's display currency, never IDR —
   // passing `currency` skips formatPrice's default base-currency conversion.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();

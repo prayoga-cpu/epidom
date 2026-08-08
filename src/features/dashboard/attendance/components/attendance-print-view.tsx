@@ -2,7 +2,6 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { PrintReportShell } from "@/features/dashboard/shared/components/print-report-shell";
-import { formatDateTime } from "@/lib/utils/formatting";
 
 interface LogRow {
   timestamp: string;
@@ -43,7 +42,7 @@ export function AttendancePrintView({
   logRows,
   hoursRows,
 }: AttendancePrintViewProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const isHours = !!hoursRows;
 
   return (

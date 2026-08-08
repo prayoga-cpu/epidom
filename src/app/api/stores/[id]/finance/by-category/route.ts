@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
-import { shiftFilter } from "@/lib/finance/report-filters";
+import { shiftFilter, channelFilter, paymentMethodFilter } from "@/lib/finance/report-filters";
 import { bucketItemsByCategory } from "@/lib/finance/report-aggregation";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +36,8 @@ export const GET = withApiHandler(
           status: { notIn: NON_REVENUE_STATUSES },
           orderDate: { gte: from, lte: to },
           ...shiftWhere,
+          ...channelFilter(searchParams.get("channel")),
+          ...paymentMethodFilter(searchParams.get("paymentMethod")),
         },
       },
       select: {

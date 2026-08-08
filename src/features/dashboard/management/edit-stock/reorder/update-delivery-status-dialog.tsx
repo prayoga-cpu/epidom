@@ -20,7 +20,6 @@ import { SupplierDelivery, SupplierDeliveryStatus } from "@/types/entities";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { formatDate } from "@/lib/utils/formatting";
 import { CalendarIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import { toast as sonnerToast } from "sonner";
@@ -37,7 +36,7 @@ export function UpdateDeliveryStatusDialog({
   onOpenChange,
   delivery,
 }: UpdateDeliveryStatusDialogProps) {
-  const { t } = useI18n();
+  const { t, dateLocale, formatDate } = useI18n();
   const { toast } = useToast();
   const params = useParams();
   const storeId = params?.storeId as string;
@@ -258,6 +257,7 @@ export function UpdateDeliveryStatusDialog({
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
+                    locale={dateLocale}
                     selected={receivedDate}
                     onSelect={setReceivedDate}
                     initialFocus

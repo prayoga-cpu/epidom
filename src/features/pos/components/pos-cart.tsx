@@ -2,7 +2,10 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Trash2, Pause, Info, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ShoppingBag, Trash2, Pause, Info, X, Tag } from "lucide-react";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { PosCartItem } from "./pos-cart-item";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -48,6 +51,9 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
   // the edit affordance to reconfigure it in place.
   const { data: menuData } = usePosMenu(storeId);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  const [isDiscountOpen, setIsDiscountOpen] = useState(false);
+  const [discountInput, setDiscountInput] = useState("");
+  const [discountReasonInput, setDiscountReasonInput] = useState("");
   const editingMenuItem = editingItem
     ? menuData?.categories
         .flatMap((c: any) => c.items)
@@ -73,6 +79,31 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
   }, [financeSettings]);
 
   const totalItems = cart.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+
+  const openDiscountPopover = (open: boolean) => {
+    if (open) {
+      setDiscountInput(cart.discountAmount > 0 ? String(cart.discountAmount) : "");
+      setDiscountReasonInput(cart.discountReason ?? "");
+    }
+    setIsDiscountOpen(open);
+  };
+
+  const handleApplyDiscount = () => {
+    const amount = Number(discountInput);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      cart.setDiscount(null);
+    } else {
+      cart.setDiscount(amount, discountReasonInput.trim() || undefined);
+    }
+    setIsDiscountOpen(false);
+  };
+
+  const handleRemoveDiscount = () => {
+    cart.setDiscount(null);
+    setDiscountInput("");
+    setDiscountReasonInput("");
+    setIsDiscountOpen(false);
+  };
 
   const handleHoldClick = () => {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -200,6 +231,15 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
               <span>{formatPrice(cart.serviceCharge)}</span>
             </div>
           )}
+          {cart.discountAmount > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">
+                {t("pos.cart.discount")}
+                {cart.discountReason ? ` (${cart.discountReason})` : ""}
+              </span>
+              <span className="text-orange-600">-{formatPrice(cart.discountAmount)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("pos.cart.tax")}</span>
             <span>{formatPrice(cart.tax)}</span>
@@ -210,7 +250,53 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
           </div>
         </div>
 
-        <div className="mt-4 flex gap-2">
+        <Popover open={isDiscountOpen} onOpenChange={openDiscountPopover}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground mt-2 h-9 gap-1.5 px-2"
+              disabled={cart.items.length === 0}
+            >
+              <Tag className="h-3.5 w-3.5" />
+              {cart.discountAmount > 0 ? t("pos.cart.editDiscount") : t("pos.cart.addDiscount")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="pos-discount-amount">{t("pos.cart.discountAmount")}</Label>
+              <Input
+                id="pos-discount-amount"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                value={discountInput}
+                onChange={(e) => setDiscountInput(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pos-discount-reason">{t("pos.cart.discountReason")}</Label>
+              <Input
+                id="pos-discount-reason"
+                value={discountReasonInput}
+                onChange={(e) => setDiscountReasonInput(e.target.value)}
+                maxLength={200}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              {cart.discountAmount > 0 && (
+                <Button variant="outline" size="sm" onClick={handleRemoveDiscount}>
+                  {t("common.actions.remove")}
+                </Button>
+              )}
+              <Button size="sm" onClick={handleApplyDiscount}>
+                {t("common.actions.apply")}
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        <div className="mt-2 flex gap-2">
           <Button
             variant="outline"
             size="lg"

@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { PrintReportShell } from "@/features/dashboard/shared/components/print-report-shell";
-import { formatDateTime } from "@/lib/utils/formatting";
 
 interface SummaryData {
   revenue: number;
@@ -153,9 +152,16 @@ export function FinancePrintView({
   wasteReasons,
   wasteEntries,
 }: FinancePrintViewProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
+  // formatPrice: no-op passthrough — every summary/channels/topItems/
+  // category/shift figure is already literal in the owner's own currency
+  // (Order-derived, or pre-converted server-side by finance/print/page.tsx —
+  // see storefront.service.ts's convertBaseToOwnerSync). formatCost: real
+  // IDR->owner-currency conversion, for the waste-reason/waste-entry rows
+  // below, which come from raw WasteEntry records the page never converts.
   const { formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
+  const formatCost = (value: number | null | undefined) => formatPriceRaw(value);
 
   const filterChips: string[] = [`${t("pos.printReport.filterDateRange")}: ${from} – ${to}`];
   if (filters.staffLabel) {
@@ -426,7 +432,7 @@ export function FinancePrintView({
                 key={r.reason + r.label}
                 className="rounded-full border border-gray-300 px-2 py-1 text-gray-800"
               >
-                {r.label}: {formatPrice(r.totalValue)}
+                {r.label}: {formatCost(r.totalValue)}
               </span>
             ))}
           </div>
@@ -451,8 +457,8 @@ export function FinancePrintView({
                 <td className="py-1 pr-2 text-right">
                   {entry.quantity} {entry.unit}
                 </td>
-                <td className="py-1 pr-2 text-right">{formatPrice(entry.unitCostSnapshot)}</td>
-                <td className="py-1 pl-2 text-right font-semibold">{formatPrice(entry.totalValue)}</td>
+                <td className="py-1 pr-2 text-right">{formatCost(entry.unitCostSnapshot)}</td>
+                <td className="py-1 pl-2 text-right font-semibold">{formatCost(entry.totalValue)}</td>
               </tr>
             ))}
           </tbody>

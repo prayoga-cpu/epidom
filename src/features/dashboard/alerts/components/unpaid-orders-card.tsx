@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatRelativeTime } from "@/lib/utils/format-date";
 import { useUpdateOrderStatus } from "@/features/pos/hooks/use-update-order-status";
 import {
   MarkPaidDialog,
@@ -22,8 +21,13 @@ interface UnpaidOrdersCardProps {
 }
 
 export function UnpaidOrdersCard({ alerts, storeId }: UnpaidOrdersCardProps) {
-  const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  const { t, formatRelativeTime } = useI18n();
+  // alert.total is Order.total — already literal in the owner's own
+  // currency, not IDR. Passing it through bare formatPrice() (which
+  // defaults to converting from IDR) would wrongly re-scale it by the
+  // exchange rate for any non-IDR store.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const updateStatus = useUpdateOrderStatus(storeId);
   const [markPaidAlert, setMarkPaidAlert] = useState<UnpaidOrderAlert | null>(null);
 

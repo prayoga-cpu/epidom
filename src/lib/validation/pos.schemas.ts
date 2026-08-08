@@ -57,6 +57,10 @@ export const createPosOrderSchema = z.object({
   notes: z.string().optional(),
   amountTendered: z.number().optional(),
   shiftId: z.string().cuid().optional(),
+  // Staff-applied discount, flat amount off the item total. Clamped again
+  // server-side in computeOrderCharges() — never trust this alone.
+  discountAmount: z.number().min(0).optional(),
+  discountReason: z.string().max(200, "Reason is too long").optional(),
 });
 
 export type CreatePosOrderInput = z.infer<typeof createPosOrderSchema>;
@@ -103,6 +107,17 @@ export const updateOrderStatusSchema = z
   });
 
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
+
+// Staff-initiated refund (POS order history "Issue Refund" action). Supports
+// repeat partial refunds against the same order — the route sums this
+// against Order.refundAmount and rejects anything that would exceed the
+// order's total, so the schema itself only needs a positive amount.
+export const refundOrderSchema = z.object({
+  amount: z.number().positive(),
+  reason: z.string().max(300, "Reason is too long").optional(),
+});
+
+export type RefundOrderInput = z.infer<typeof refundOrderSchema>;
 
 export const updateOrderItemStatusSchema = z.object({
   status: z.enum(["PENDING", "PREPARING", "READY", "SERVED", "CANCELLED"]),

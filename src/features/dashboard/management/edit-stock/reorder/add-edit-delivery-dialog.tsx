@@ -23,7 +23,6 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { SupplierDelivery, SupplierDeliveryStatus } from "@/types/entities";
 import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { useToast } from "@/hooks/use-toast";
-import { formatDate } from "@/lib/utils/formatting";
 import { CalendarIcon } from "lucide-react";
 import {
   Table,
@@ -49,7 +48,7 @@ interface DeliveryItemForm {
 }
 
 export function AddEditDeliveryDialog({ open, onOpenChange, delivery }: AddEditDeliveryDialogProps) {
-  const { t } = useI18n();
+  const { t, dateLocale, formatDate } = useI18n();
   const { toast } = useToast();
   const params = useParams();
   const storeId = params?.storeId as string;
@@ -218,6 +217,7 @@ export function AddEditDeliveryDialog({ open, onOpenChange, delivery }: AddEditD
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
+                  locale={dateLocale}
                   selected={expectedDate}
                   onSelect={setExpectedDate}
                   initialFocus

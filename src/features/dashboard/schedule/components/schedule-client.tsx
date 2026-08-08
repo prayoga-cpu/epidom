@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DateRangeField } from "@/components/ui/date-range-field";
@@ -9,7 +10,7 @@ import { ChevronLeft, ChevronRight, Settings2, Send, Plus, CalendarOff, Printer,
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { todayLocalISO } from "@/lib/utils/date-range";
+import { todayLocalISO, parseLocalISO } from "@/lib/utils/date-range";
 import { addDaysToDateKey } from "@/lib/attendance/business-date";
 import { MyScheduleList } from "./my-schedule-list";
 import { ScheduleShiftBlocksDialog, type ScheduleShiftOption } from "./schedule-shift-blocks-dialog";
@@ -25,7 +26,6 @@ import type { StaffRole } from "@prisma/client";
 // normal roster cycle.
 const MIN_RANGE_DAYS = 7;
 
-const INTL_LOCALE: Record<string, string> = { en: "en-US", id: "id-ID", fr: "fr-FR" };
 const ROLE_ORDER: StaffRole[] = ["OWNER", "MANAGER", "CASHIER", "KITCHEN"];
 
 interface StaffOption {
@@ -53,11 +53,11 @@ function mondayOf(dateKey: string): string {
 }
 
 export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId }: ScheduleClientProps) {
-  const { t, locale } = useI18n();
+  const { t, intlLocale, dateLocale } = useI18n();
   const queryClient = useQueryClient();
   const weekdayFormatter = useMemo(
-    () => new Intl.DateTimeFormat(INTL_LOCALE[locale] ?? "en-US", { weekday: "short" }),
-    [locale]
+    () => new Intl.DateTimeFormat(intlLocale, { weekday: "short" }),
+    [intlLocale]
   );
   const [rangeFrom, setRangeFrom] = useState(() => mondayOf(todayLocalISO()));
   const [rangeTo, setRangeTo] = useState(() => addDaysToDateKey(mondayOf(todayLocalISO()), 6));
@@ -219,7 +219,8 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium">
-          {rangeFrom} – {rangeTo}
+          {format(parseLocalISO(rangeFrom), "d MMM yyyy", { locale: dateLocale })} –{" "}
+          {format(parseLocalISO(rangeTo), "d MMM yyyy", { locale: dateLocale })}
         </span>
         <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => shiftRange(rangeDays.length)}>
           <ChevronRight className="h-4 w-4" />

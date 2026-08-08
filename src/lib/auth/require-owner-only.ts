@@ -20,3 +20,18 @@ export async function requireOwnerOnly(storeId: string): Promise<void> {
     redirect(`/store/${storeId}${fallback}`);
   }
 }
+
+/**
+ * Server-side gate for the account-level Profile page (/profile — no
+ * storeId, reached from the top nav rather than a store dashboard). It shows
+ * the same account contact info, business details, and subscription/billing
+ * as the store-scoped Profile page that requireOwnerOnly protects, so any
+ * active staff PIN persona — for any store — must be sent to the store
+ * picker instead, never shown or able to edit this data.
+ */
+export async function requireNoActiveStaffPersona(): Promise<void> {
+  const staffSession = await getActiveStaffSession();
+  if (staffSession && staffSession.role !== "OWNER") {
+    redirect("/stores");
+  }
+}

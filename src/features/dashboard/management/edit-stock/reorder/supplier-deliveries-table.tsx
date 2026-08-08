@@ -23,7 +23,6 @@ import {
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { SupplierDelivery, SupplierDeliveryStatus } from "@/types/entities";
-import { formatDate } from "@/lib/utils/formatting";
 import {
   Search,
   Filter,
@@ -67,7 +66,7 @@ export function SupplierDeliveriesTable({
   onPrintDelivery,
   onDeleteDelivery,
 }: SupplierDeliveriesTableProps) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");

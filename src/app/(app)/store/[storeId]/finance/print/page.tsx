@@ -16,6 +16,8 @@ import { bucketOrdersByScheduleShift, enumerateDateKeys } from "@/lib/finance/sc
 import { getBusinessDateKey, businessDateKeyToDate } from "@/lib/attendance/business-date";
 import { commissionRate, AGGREGATOR_LABELS } from "@/config/aggregator.config";
 import { wasteService } from "@/lib/services/waste.service";
+import { storefrontService } from "@/lib/services/storefront.service";
+import { getExchangeRate } from "@/lib/services/exchange-rate.service";
 import { FinancePrintView } from "@/features/dashboard/finance/components/finance-print-view";
 
 // Deliberately outside the (dashboard) route group — see pos/orders/print's
@@ -73,15 +75,22 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   const [business, staffMember, categoryRecord] = await Promise.all([
     prisma.store.findUnique({
       where: { id: storeId },
-      select: { business: { select: { currency: true, timezone: true } } },
+      // Business.currency is a legacy field nothing keeps in sync — the
+      // real source of truth for a store owner's currency is the live
+      // User.currency (see storefront.service.ts's getOwnerCurrencyAndRate
+      // and every other currency lookup in this codebase).
+      select: {
+        business: { select: { timezone: true, user: { select: { currency: true } } } },
+      },
     }),
     staffId ? prisma.staffMember.findUnique({ where: { id: staffId }, select: { name: true } }) : null,
     categoryId && categoryId !== UNCATEGORIZED
       ? prisma.menuCategory.findUnique({ where: { id: categoryId }, select: { name: true } })
       : null,
   ]);
-  const currency = business?.business.currency ?? "IDR";
+  const currency = business?.business.user?.currency ?? "IDR";
   const timezone = business?.business.timezone ?? "UTC";
+  const ownerRate = currency === "IDR" ? 1 : (await getExchangeRate("IDR", currency)).rate;
 
   // ─── Summary ───
   const revenueResult = await prisma.order.aggregate({
@@ -124,11 +133,16 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
     },
     include: { material: { select: { unitCost: true } } },
   });
-  const cogs = cogsMovements.reduce((sum, m) => {
+  const cogsRaw = cogsMovements.reduce((sum, m) => {
     const qty = Math.abs(Number(m.quantity));
     const cost = Number(m.material?.unitCost ?? 0);
     return sum + qty * cost;
   }, 0);
+  // revenue is already literal in the owner's own currency; cogs comes
+  // from Material.unitCost, stored in IDR (the platform base currency).
+  // Convert before combining, or the result mixes units for any non-IDR
+  // store — mirrors the fix in /api/stores/[id]/finance/summary.
+  const cogs = storefrontService.convertBaseToOwnerSync(cogsRaw, ownerRate);
 
   const grossProfit = revenue - cogs;
   const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
@@ -137,7 +151,10 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
     where: { storeId, createdAt: { gte: from, lte: to } },
     _sum: { totalValue: true },
   });
-  const wasteLoss = Number(wasteResult._sum.totalValue ?? 0);
+  const wasteLoss = storefrontService.convertBaseToOwnerSync(
+    Number(wasteResult._sum.totalValue ?? 0),
+    ownerRate
+  );
 
   const netRevenue = revenue - taxCollected - processingFee;
   const netProfit = netRevenue - cogs - wasteLoss;

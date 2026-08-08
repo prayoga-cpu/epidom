@@ -654,6 +654,17 @@ model Order {
   taxRate            Decimal         @default(0) @db.Decimal(6, 4)
   serviceChargeRate  Decimal         @default(0) @db.Decimal(6, 4)
   processingFeeRate  Decimal         @default(0) @db.Decimal(6, 4)
+  // Discount applied at checkout, frozen the same way as the charges above —
+  // subtracted from subtotal before tax/service-charge are computed. See
+  // computeOrderCharges() in src/lib/finance/order-charges.ts.
+  discountAmount     Decimal         @default(0) @db.Decimal(10, 2)
+  discountReason     String?
+  // Staff-initiated refund (POS order history "Issue Refund" action) — never
+  // written automatically. Does not reverse stock: in F&B a refund does not
+  // mean the food returns to inventory.
+  refundAmount       Decimal         @default(0) @db.Decimal(10, 2)
+  refundedAt         DateTime?
+  refundReason       String?
   notes              String?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -713,6 +724,12 @@ model OrderItem {
   // so stock-deduction has a stable record of exactly what extra material to
   // subtract even if the option is later changed.
   selectedOptions Json?
+  // Frozen Material.unitCost at the moment deductStockForOrder() recorded this
+  // item's SALE StockMovement — same idea as WasteEntry.unitCostSnapshot, so
+  // historical COGS/margin reports don't silently drift if ingredient prices
+  // change later. Null for legacy rows and for items with no COGS
+  // attribution path (aggregator items with only menuItemId, no productId).
+  unitCostSnapshot Decimal?        @db.Decimal(14, 6)
   // Phase 3: KDS workflow
   status          OrderItemStatus @default(PENDING)
   preparedAt      DateTime?
@@ -1083,6 +1100,12 @@ enum Department {
   BOTH
 }
 
+enum PayType {
+  HOURLY
+  MONTHLY
+  NONE
+}
+
 model StaffMember {
   id              String         @id @default(cuid())
   storeId         String
@@ -1105,6 +1128,13 @@ model StaffMember {
   // template default ever changes.
   allowedPages    String[]       @default([])
   pin             String? // bcrypt hash — optional
+  // Optional pay rate for labor-cost reporting — hours come from
+  // AttendanceRecord/Shift timestamps, cost is hours × payRate for HOURLY,
+  // or a flat payRate/period for MONTHLY. NONE (default) means no rate is
+  // set (many roles are genuinely off-system payroll); reports must treat
+  // NONE as "unknown," not zero.
+  payType         PayType        @default(NONE)
+  payRate         Decimal?       @db.Decimal(12, 2)
   isActive        Boolean        @default(true)
   inviteStatus    String? // "pending" | "accepted" | null
   createdAt       DateTime       @default(now())

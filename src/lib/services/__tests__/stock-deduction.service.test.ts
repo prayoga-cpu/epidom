@@ -15,6 +15,7 @@ vi.mock("@/lib/prisma", () => {
         product: { update: vi.fn() },
         material: { update: vi.fn() },
         stockMovement: { create: vi.fn() },
+        orderItem: { update: vi.fn() },
       };
       return fn(capturedTx);
     }),
@@ -90,6 +91,7 @@ describe("deductStockForOrder — option-driven material consumption", () => {
             unit: "pcs",
             minStock: 0,
             currentStock: 50,
+            costPrice: 15,
             recipeProducts: [],
           },
           menuItem: null,
@@ -124,6 +126,13 @@ describe("deductStockForOrder — option-driven material consumption", () => {
     expect(capturedTx.stockMovement.create).toHaveBeenCalledTimes(1);
     const [movementCall] = capturedTx.stockMovement.create.mock.calls;
     expect(movementCall[0].data.productId).toBe("prod-active");
+
+    // Frozen per-line COGS snapshot: only the active (non-cancelled) item
+    // gets a snapshot, taken from its product's costPrice.
+    expect(capturedTx.orderItem.update).toHaveBeenCalledTimes(1);
+    const [snapshotCall] = capturedTx.orderItem.update.mock.calls;
+    expect(snapshotCall[0].where).toEqual({ id: "item-active" });
+    expect(Number(snapshotCall[0].data.unitCostSnapshot)).toBe(15);
   });
 
   it("is idempotent — a second call for the same order is a no-op", async () => {

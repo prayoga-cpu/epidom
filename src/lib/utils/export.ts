@@ -3,7 +3,14 @@
  */
 
 import { isDate } from "@/lib/utils/types";
-import { formatDate } from "@/lib/utils/format-date";
+import { formatDate } from "@/lib/utils/formatting";
+
+// This module has no access to `useI18n()` (it's a plain utility, called
+// from many components' export buttons, not a component itself) — default
+// to the primary market's locale rather than English. Callers embedded in
+// a component can't easily thread the live locale through here without a
+// larger API change; "id" is the right default until that's worth doing.
+const EXPORT_LOCALE = "id";
 
 /**
  * Convert an array of objects to CSV string
@@ -172,7 +179,7 @@ export async function exportToPDF<T extends Record<string, any>>(
         const value = row[col.key];
         // Use type guard for Date conversion
         if (isDate(value)) {
-          return formatDate(value);
+          return formatDate(value, "PP", EXPORT_LOCALE);
         }
         if (value === null || value === undefined) {
           return "";
@@ -225,7 +232,7 @@ export async function generatePDFBlob<T extends Record<string, any>>(
   const body = data.map((row) =>
     cols.map((col) => {
       const value = row[col.key];
-      if (isDate(value)) return formatDate(value);
+      if (isDate(value)) return formatDate(value, "PP", EXPORT_LOCALE);
       if (value === null || value === undefined) return "";
       return String(value);
     })

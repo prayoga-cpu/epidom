@@ -82,7 +82,7 @@ export function StartProductionDialog({
   recipe,
   availableIngredients,
 }: StartProductionDialogProps) {
-  const { t } = useI18n();
+  const { t, dateLocale } = useI18n();
   const { formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params?.storeId as string;
@@ -470,6 +470,7 @@ export function StartProductionDialog({
                         <PopoverContent className="w-auto p-0" align="start">
                           <CalendarComponent
                             mode="single"
+                            locale={dateLocale}
                             selected={dateValue}
                             onSelect={(date) => {
                               if (date) {

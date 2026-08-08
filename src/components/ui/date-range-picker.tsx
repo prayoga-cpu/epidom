@@ -32,7 +32,7 @@ export function DateRangePicker({
   className,
   align = "start",
 }: DateRangePickerProps) {
-  const { t } = useI18n();
+  const { t, dateLocale } = useI18n();
   const [selectedPreset, setSelectedPreset] = React.useState<string>("custom");
 
   const handlePresetChange = (preset: string) => {
@@ -83,10 +83,11 @@ export function DateRangePicker({
             {value?.from ? (
               value.to ? (
                 <>
-                  {format(value.from, "LLL dd, y")} - {format(value.to, "LLL dd, y")}
+                  {format(value.from, "LLL dd, y", { locale: dateLocale })} -{" "}
+                  {format(value.to, "LLL dd, y", { locale: dateLocale })}
                 </>
               ) : (
-                format(value.from, "LLL dd, y")
+                format(value.from, "LLL dd, y", { locale: dateLocale })
               )
             ) : (
               <span>{t("common.datePicker.pickDateRange")}</span>
@@ -112,6 +113,7 @@ export function DateRangePicker({
           <Calendar
             initialFocus
             mode="range"
+            locale={dateLocale}
             defaultMonth={value?.from}
             selected={value}
             onSelect={(range) => {

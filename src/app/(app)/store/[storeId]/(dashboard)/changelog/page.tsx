@@ -23,8 +23,12 @@ const TAG_META: Record<ReleaseTag, { label: string; className: string }> = {
   ux: { label: "UX", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
 };
 
+// Server component — no useI18n() access, and the app's language preference
+// is only readable client-side (localStorage-backed, not an HTTP cookie), so
+// this can't know the visiting user's actual locale. Defaults to "id"
+// (the primary market) rather than hardcoding English.
 function formatReleaseDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+  return new Date(iso).toLocaleDateString("id-ID", {
     year: "numeric",
     month: "long",
     day: "numeric",

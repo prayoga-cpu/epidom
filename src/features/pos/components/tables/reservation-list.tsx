@@ -78,7 +78,7 @@ interface Props {
 }
 
 export function ReservationList({ storeId }: Props) {
-  const { t } = useI18n();
+  const { t, intlLocale } = useI18n();
   const statusLabel = (s: ReservationStatus) => t(STATUS_LABEL_KEYS[s]);
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | "ALL">("ALL");
@@ -248,12 +248,12 @@ export function ReservationList({ storeId }: Props) {
                     <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                       <span className="flex items-center gap-1">
                         <CalendarClock className="h-3 w-3" />
-                        {date.toLocaleDateString("en-GB", {
+                        {date.toLocaleDateString(intlLocale, {
                           weekday: "short",
                           day: "numeric",
                           month: "short",
                         })}{" "}
-                        {date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                        {date.toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit" })}
                         {isUpcoming && r.status === "CONFIRMED" && (
                           <span className="ml-1 rounded-full bg-emerald-500/10 px-1.5 text-[9px] font-semibold text-emerald-600">
                             {t("pages.reservationsUpcoming")}
@@ -291,7 +291,7 @@ export function ReservationList({ storeId }: Props) {
                     )}
                     <p className="text-muted-foreground/50 mt-1 text-[10px]">
                       {t("pages.reservationsSubmitted")}{" "}
-                      {new Date(r.createdAt).toLocaleDateString("en-GB", {
+                      {new Date(r.createdAt).toLocaleDateString(intlLocale, {
                         day: "numeric",
                         month: "short",
                         year: "numeric",

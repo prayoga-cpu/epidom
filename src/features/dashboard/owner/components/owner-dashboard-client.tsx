@@ -17,7 +17,7 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { DateRangeField } from "@/components/ui/date-range-field";
-import { Store, TrendingUp, ShoppingCart, Clock } from "lucide-react";
+import { Store, TrendingUp, ShoppingCart, Clock, Percent } from "lucide-react";
 
 interface StoreMetric {
   storeId: string;
@@ -26,6 +26,11 @@ interface StoreMetric {
   revenue: number;
   orderCount: number;
   pendingOrders: number;
+  cogs: number;
+  grossProfit: number;
+  grossMarginPct: number;
+  wasteLoss: number;
+  netProfit: number;
 }
 
 interface OwnerSummary {
@@ -35,6 +40,11 @@ interface OwnerSummary {
   totalRevenue: number;
   totalOrders: number;
   totalPending: number;
+  totalCogs: number;
+  totalGrossProfit: number;
+  totalGrossMarginPct: number;
+  totalWasteLoss: number;
+  totalNetProfit: number;
   storeCount: number;
   stores: StoreMetric[];
 }
@@ -49,7 +59,14 @@ function today() {
 
 export function OwnerDashboardClient() {
   const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  // Every figure from /api/owner/summary (revenue, cogs, grossProfit,
+  // wasteLoss, netProfit) is already literal in the owner's own currency —
+  // revenue directly from Order.total, and cogs/wasteLoss pre-converted
+  // server-side (see storefront.service.ts's convertBaseToOwnerSync) before
+  // being combined with it. Bare formatPrice() defaults to converting from
+  // IDR, which would wrongly re-scale these for any non-IDR business.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const [from, setFrom] = useState(startOfMonth());
   const [to, setTo] = useState(today());
 
@@ -114,6 +131,18 @@ export function OwnerDashboardClient() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-1">
                 <CardTitle className="text-muted-foreground text-sm font-medium">
+                  {t("pages.financeGrossProfit")}
+                </CardTitle>
+                <Percent className="text-muted-foreground h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatPrice(data.totalGrossProfit)}</p>
+                <p className="text-muted-foreground text-xs">{data.totalGrossMarginPct}%</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-1">
+                <CardTitle className="text-muted-foreground text-sm font-medium">
                   {t("pages.ownerTotalOrders")}
                 </CardTitle>
                 <ShoppingCart className="text-muted-foreground h-4 w-4" />
@@ -146,14 +175,19 @@ export function OwnerDashboardClient() {
             </Card>
           </div>
 
-          {/* Per-store table */}
+          {/* Per-store table — drill-down to the full accuracy /finance
+              page for any one store lives via its own nav, this is the
+              cross-store overview. */}
           <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-[380px]">
+            <div className="min-w-[680px]">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("common.name")}</TableHead>
                     <TableHead className="text-right">{t("pages.financeRevenue")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeCogs")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeGrossProfit")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeMargin")}</TableHead>
                     <TableHead className="text-right">{t("pages.ownerOrders")}</TableHead>
                     <TableHead className="text-right">{t("pages.ownerPending")}</TableHead>
                   </TableRow>
@@ -161,7 +195,7 @@ export function OwnerDashboardClient() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-muted-foreground py-8 text-center">
+                      <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
                         {t("common.loading")}
                       </TableCell>
                     </TableRow>
@@ -170,6 +204,11 @@ export function OwnerDashboardClient() {
                       <TableRow key={store.storeId}>
                         <TableCell className="font-medium">{store.name}</TableCell>
                         <TableCell className="text-right">{formatPrice(store.revenue)}</TableCell>
+                        <TableCell className="text-right">{formatPrice(store.cogs)}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatPrice(store.grossProfit)}
+                        </TableCell>
+                        <TableCell className="text-right">{store.grossMarginPct}%</TableCell>
                         <TableCell className="text-right">{store.orderCount}</TableCell>
                         <TableCell className="text-right">
                           {store.pendingOrders > 0 ? (

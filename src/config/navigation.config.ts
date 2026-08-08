@@ -215,17 +215,17 @@ export const landingNavigation: NavItem[] = [
 
 /**
  * Authenticated navigation items (for logged-in users)
+ *
+ * Profile is deliberately absent here — it's account/business/billing detail
+ * that only belongs inside a specific store's own dashboard (see
+ * dashboardNavigation's "General" section), never on the top-level shell
+ * shown before a store is picked.
  */
 export const authenticatedNavigation: NavItem[] = [
   {
     href: "/stores",
     labelKey: "common.nav.stores", // Will use "My Stores" as fallback
     icon: Store,
-  },
-  {
-    href: "/profile",
-    labelKey: "common.nav.profile",
-    icon: UserRound,
   },
 ];
 

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,44 @@ type SortField =
   | "updatedAt";
 type SortOrder = "asc" | "desc";
 
+interface RecipeFiltersState {
+  category: string | undefined;
+  department: "KITCHEN" | "BAR" | undefined;
+  sortBy: SortField;
+  sortOrder: SortOrder;
+}
+
+const RECIPE_FILTER_DEFAULTS: RecipeFiltersState = {
+  category: undefined,
+  department: undefined,
+  sortBy: "createdAt",
+  sortOrder: "desc",
+};
+
+const RECIPE_SORT_OPTIONS: SortField[] = [
+  "name",
+  "category",
+  "productionTimeMinutes",
+  "costPerBatch",
+  "createdAt",
+  "updatedAt",
+];
+
+// Search text is intentionally never restored from storage — only the
+// filter/sort selections carry over across visits.
+function sanitizeRecipeFilters(raw: unknown, defaults: RecipeFiltersState): RecipeFiltersState {
+  if (!raw || typeof raw !== "object") return defaults;
+  const r = raw as Partial<RecipeFiltersState>;
+  return {
+    category: typeof r.category === "string" ? r.category : undefined,
+    department: r.department === "KITCHEN" || r.department === "BAR" ? r.department : undefined,
+    sortBy: RECIPE_SORT_OPTIONS.includes(r.sortBy as SortField)
+      ? (r.sortBy as SortField)
+      : defaults.sortBy,
+    sortOrder: r.sortOrder === "asc" ? "asc" : "desc",
+  };
+}
+
 // Recipe categories - use translation keys
 // Store English values in DB, but display translated labels
 const getRecipeCategories = (t: (key: string) => string) => [
@@ -111,12 +150,13 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
-  const [departmentFilter, setDepartmentFilter] = useState<"KITCHEN" | "BAR" | undefined>(
-    undefined
+  // Filter/sort selections — persisted across visits so switching tabs or
+  // navigating away and back keeps the last-used selections.
+  const [filters, setFilters] = usePersistedState<RecipeFiltersState>(
+    `epidom-data-recipes-filters-${storeId}`,
+    RECIPE_FILTER_DEFAULTS,
+    sanitizeRecipeFilters
   );
-  const [sortField, setSortField] = useState<SortField>("createdAt");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   // Duplicate dialog is not part of useDialogState, handle separately
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
 
@@ -138,10 +178,10 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
     storeId,
     {
       search: debouncedSearch || undefined,
-      category: categoryFilter,
-      department: departmentFilter,
-      sortBy: sortField,
-      sortOrder: sortOrder,
+      category: filters.category,
+      department: filters.department,
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder,
       skip: 0,
       take: 100,
     },
@@ -267,10 +307,10 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
         storeId,
         filters: {
           search: searchQuery || undefined,
-          category: categoryFilter,
-          department: departmentFilter,
-          sortBy: sortField,
-          sortOrder: sortOrder,
+          category: filters.category,
+          department: filters.department,
+          sortBy: filters.sortBy,
+          sortOrder: filters.sortOrder,
           skip: 0,
           take: 100,
         },
@@ -288,14 +328,11 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
-    setCategoryFilter(undefined);
-    setDepartmentFilter(undefined);
-    setSortField("createdAt");
-    setSortOrder("desc");
+    setFilters(RECIPE_FILTER_DEFAULTS);
   };
 
   const hasActiveFilters =
-    searchQuery || categoryFilter !== undefined || departmentFilter !== undefined;
+    searchQuery || filters.category !== undefined || filters.department !== undefined;
 
   // Loading state - use pixel-perfect skeleton to prevent layout shift
   if (isLoading) {
@@ -419,8 +456,12 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                 key: "category",
                 label: t("filters.placeholderCategory"),
                 placeholder: t("filters.placeholderCategory"),
-                value: categoryFilter || "all",
-                onChange: (value) => setCategoryFilter(value === "all" ? undefined : value),
+                value: filters.category || "all",
+                onChange: (value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    category: value === "all" ? undefined : value,
+                  })),
                 options: [
                   { value: "all", label: t("filters.allCategories") },
                   ...getRecipeCategories(t),
@@ -430,9 +471,12 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                 key: "department",
                 label: t("filters.allDepartments"),
                 placeholder: t("filters.allDepartments"),
-                value: departmentFilter || "all",
+                value: filters.department || "all",
                 onChange: (value) =>
-                  setDepartmentFilter(value === "all" ? undefined : (value as "KITCHEN" | "BAR")),
+                  setFilters((prev) => ({
+                    ...prev,
+                    department: value === "all" ? undefined : (value as "KITCHEN" | "BAR"),
+                  })),
                 options: [
                   { value: "all", label: t("filters.allDepartments") },
                   { value: "KITCHEN", label: t("common.departmentKitchen") },
@@ -443,11 +487,10 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                 key: "sort",
                 label: t("filters.placeholderSortBy"),
                 placeholder: t("filters.placeholderSortBy"),
-                value: `${sortField}-${sortOrder}`,
+                value: `${filters.sortBy}-${filters.sortOrder}`,
                 onChange: (v) => {
                   const [field, order] = v.split("-") as [SortField, SortOrder];
-                  setSortField(field);
-                  setSortOrder(order);
+                  setFilters((prev) => ({ ...prev, sortBy: field, sortOrder: order }));
                 },
                 options: [
                   { value: "name-asc", label: t("sort.nameAZ") },

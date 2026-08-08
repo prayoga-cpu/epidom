@@ -32,10 +32,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SubscriptionLockedState } from "@/features/dashboard/shared/components/subscription-locked-state";
 import { SectionErrorState } from "@/features/dashboard/data/components/section-error-state";
 import { isSubscriptionError } from "@/lib/utils/types";
-import { formatDate } from "@/lib/utils/format-date";
 
 export function OrdersToPlaceView() {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const router = useRouter();
   const { formatPrice } = useCurrency();
   const params = useParams();

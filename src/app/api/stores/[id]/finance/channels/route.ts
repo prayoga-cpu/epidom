@@ -10,7 +10,7 @@ import { withApiHandler } from "@/lib/api-handler";
 import { OrderSource } from "@prisma/client";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { commissionRate, AGGREGATOR_LABELS } from "@/config/aggregator.config";
-import { shiftFilter } from "@/lib/finance/report-filters";
+import { shiftFilter, paymentMethodFilter } from "@/lib/finance/report-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,7 @@ export const GET = withApiHandler(
     );
     const to = new Date(searchParams.get("to") ?? now.toISOString());
     const shiftWhere = shiftFilter(searchParams);
+    const paymentWhere = paymentMethodFilter(searchParams.get("paymentMethod"));
 
     const grouped = await prisma.order.groupBy({
       by: ["source"],
@@ -41,6 +42,7 @@ export const GET = withApiHandler(
         status: { notIn: NON_REVENUE_STATUSES },
         orderDate: { gte: from, lte: to },
         ...shiftWhere,
+        ...paymentWhere,
       },
       _sum: { total: true, tax: true },
       _count: { id: true },
@@ -55,6 +57,7 @@ export const GET = withApiHandler(
         paymentStatus: "PAID",
         orderDate: { gte: from, lte: to },
         ...shiftWhere,
+        ...paymentWhere,
       },
       _sum: { processingFee: true },
     });

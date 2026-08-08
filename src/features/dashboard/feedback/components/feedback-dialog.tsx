@@ -106,7 +106,7 @@ const ticketRefOf = (id: string) => "#" + id.slice(-8).toUpperCase();
  * Shows a success step with the ticket reference and community CTAs after submission
  */
 export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const pathname = usePathname();
   const { storeId } = useCurrentStore();
   const submitFeedback = useSubmitFeedback();
@@ -619,13 +619,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                         <p className="mt-2 line-clamp-2 text-sm">{ticket.description}</p>
                         <div className="mt-2 flex items-center gap-3">
                           <span className="text-muted-foreground text-xs">
-                            {new Date(ticket.createdAt).toLocaleDateString(undefined, {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {formatDateTime(ticket.createdAt)}
                           </span>
                           {ticket.screenshotUrl && (
                             <a

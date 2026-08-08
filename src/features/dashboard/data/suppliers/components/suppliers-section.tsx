@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,46 @@ import { SubscriptionLockedState } from "@/features/dashboard/shared/components/
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
 
+type SupplierSortBy = "name" | "createdAt";
+type SupplierSortOrder = "asc" | "desc";
+
+interface SupplierFiltersState {
+  search: string;
+  sortBy: SupplierSortBy;
+  sortOrder: SupplierSortOrder;
+  skip: number;
+  take: number;
+}
+
+const SUPPLIER_FILTER_DEFAULTS: SupplierFiltersState = {
+  search: "",
+  sortBy: "createdAt",
+  sortOrder: "desc",
+  skip: 0,
+  take: 20,
+};
+
+const SUPPLIER_SORT_OPTIONS: SupplierSortBy[] = ["name", "createdAt"];
+
+// Search text and pagination position are intentionally never restored from
+// storage — only the sort selection carries over across visits.
+function sanitizeSupplierFilters(
+  raw: unknown,
+  defaults: SupplierFiltersState
+): SupplierFiltersState {
+  if (!raw || typeof raw !== "object") return defaults;
+  const r = raw as Partial<SupplierFiltersState>;
+  return {
+    search: "",
+    sortBy: SUPPLIER_SORT_OPTIONS.includes(r.sortBy as SupplierSortBy)
+      ? (r.sortBy as SupplierSortBy)
+      : defaults.sortBy,
+    sortOrder: r.sortOrder === "asc" ? "asc" : "desc",
+    skip: 0,
+    take: typeof r.take === "number" && [10, 20, 50, 100].includes(r.take) ? r.take : defaults.take,
+  };
+}
+
 interface SuppliersSectionProps {
   initialSuppliers?: SupplierWithRelations[];
 }
@@ -78,14 +119,13 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
     isLoading: isLoadingAccess,
   } = useFeatureAccess();
 
-  // Filters and pagination state
-  const [filters, setFilters] = useState({
-    search: "",
-    sortBy: "createdAt" as const,
-    sortOrder: "desc" as const,
-    skip: 0,
-    take: 20,
-  });
+  // Filters and pagination state — persisted across visits so switching tabs
+  // or navigating away and back keeps the last-used sort selection.
+  const [filters, setFilters] = usePersistedState<SupplierFiltersState>(
+    `epidom-data-suppliers-filters-${storeId}`,
+    SUPPLIER_FILTER_DEFAULTS,
+    sanitizeSupplierFilters
+  );
 
   // Smart Import dialog state
   const [smartImportOpen, setSmartImportOpen] = useState(false);
@@ -195,13 +235,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
 
   // Clear all filters
   const clearFilters = () => {
-    setFilters({
-      search: "",
-      sortBy: "createdAt",
-      sortOrder: "desc",
-      skip: 0,
-      take: 20,
-    });
+    setFilters(SUPPLIER_FILTER_DEFAULTS);
   };
 
   const hasActiveFilters = filters.search;

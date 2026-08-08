@@ -196,16 +196,26 @@ export function ApplyShiftTemplateDialog({
             </div>
             <div className="max-h-48 space-y-0.5 overflow-y-auto rounded-md border p-1">
               {staff.map((member) => (
-                <button
+                <div
                   key={member.id}
-                  type="button"
-                  disabled={saving}
-                  className="hover:bg-muted flex min-h-10 w-full items-center gap-2 rounded-md p-2 text-left text-sm disabled:opacity-50"
+                  role="button"
+                  tabIndex={saving ? -1 : 0}
+                  aria-disabled={saving}
+                  className={cn(
+                    "hover:bg-muted flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-md p-2 text-left text-sm",
+                    saving && "pointer-events-none opacity-50"
+                  )}
                   onClick={() => toggleStaff(member.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleStaff(member.id);
+                    }
+                  }}
                 >
                   <Checkbox checked={selectedStaffIds.has(member.id)} className="pointer-events-none" />
                   <span className="truncate">{member.name}</span>
-                </button>
+                </div>
               ))}
             </div>
           </div>

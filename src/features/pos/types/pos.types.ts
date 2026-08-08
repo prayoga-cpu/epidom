@@ -167,6 +167,11 @@ export interface OrderHistoryItem {
   tax: string | number;
   delivery: string | number;
   total: string | number;
+  discountAmount?: string | number;
+  discountReason?: string | null;
+  refundAmount?: string | number;
+  refundedAt?: string | null;
+  refundReason?: string | null;
   orderDate: string;
   createdAt: string;
   deliveredDate?: string | null;

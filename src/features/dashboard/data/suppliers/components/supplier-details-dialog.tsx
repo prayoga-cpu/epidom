@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import {
-  formatDate,
   formatCurrency,
   formatNumber,
   getCurrencySymbol,
@@ -51,7 +50,7 @@ export function SupplierDetailsDialog({
   onDelete,
 }: SupplierDetailsDialogProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { currency, convertPrice, formatPrice } = useCurrency();
 
   return (

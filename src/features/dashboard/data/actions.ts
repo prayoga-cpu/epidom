@@ -265,6 +265,14 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
     let successCount = 0;
     const errors: Array<{ index: number; message: string }> = [];
 
+    // Material.unitCost (and MaterialSupplier.price) are stored in IDR, the
+    // platform base currency — same as everywhere else costs are persisted.
+    // Imported rows carry a plain number the merchant entered/pasted in
+    // their own currency, so it has to be converted here or a non-IDR
+    // store's imported materials silently mis-price by the exchange-rate
+    // factor (e.g. a €5/kg ingredient stored as literally "5 IDR").
+    const { rate: importRate } = await storefrontService.getOwnerCurrencyAndRate(storeId);
+
     // Process each material individually to handle relationships properly
     for (let i = 0; i < validData.length; i++) {
       const item = validData[i];
@@ -275,13 +283,21 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
           supplierId = supplierMap.get(normalizeSupplierName(item.supplierName));
         }
 
+        const unitCostBase = storefrontService.convertOwnerToBaseSync(
+          parseGlobalNumber(item.unitCost) || 0,
+          importRate
+        );
+        const supplierPriceBase = storefrontService.convertOwnerToBaseSync(
+          parseGlobalNumber(item.supplierPrice) || parseGlobalNumber(item.unitCost) || 0,
+          importRate
+        );
+
         // Prepare supplier relation data if supplier exists
         const materialSuppliersCreate = supplierId
           ? {
               create: {
                 supplierId,
-                price:
-                  parseGlobalNumber(item.supplierPrice) || parseGlobalNumber(item.unitCost) || 0,
+                price: supplierPriceBase,
                 isPreferred: true,
               },
             }
@@ -297,7 +313,7 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
             description: item.description || undefined,
             category: item.category || undefined,
             unit: item.unit || "kg",
-            unitCost: parseGlobalNumber(item.unitCost) || 0,
+            unitCost: unitCostBase,
             currentStock: parseGlobalNumber(item.currentStock) || 0,
             minStock: parseGlobalNumber(item.minStock) || 0,
             maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
@@ -356,6 +372,13 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
     let successCount = 0;
     const errors: Array<{ index: number; message: string }> = [];
 
+    // Product.costPrice/sellingPrice are stored in IDR, the platform base
+    // currency. Imported rows carry a plain number the merchant entered/
+    // pasted in their own currency, so it has to be converted here or a
+    // non-IDR store's imported products silently mis-price by the
+    // exchange-rate factor (e.g. a €2.20 pastry stored as literally "2.2 IDR").
+    const { rate: importRate } = await storefrontService.getOwnerCurrencyAndRate(storeId);
+
     // Process one by one to handle Updates (Upsert logic) and precise error reporting
     for (let i = 0; i < validData.length; i++) {
       const item = validData[i];
@@ -387,8 +410,14 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
           description: item.description || undefined,
           category: item.category || undefined,
           unit: item.unit || "pcs",
-          costPrice: parseGlobalNumber(item.costPrice) || 0,
-          sellingPrice: parseGlobalNumber(item.sellingPrice) || 0,
+          costPrice: storefrontService.convertOwnerToBaseSync(
+            parseGlobalNumber(item.costPrice) || 0,
+            importRate
+          ),
+          sellingPrice: storefrontService.convertOwnerToBaseSync(
+            parseGlobalNumber(item.sellingPrice) || 0,
+            importRate
+          ),
           currentStock: parseGlobalNumber(item.currentStock) || 0,
           minStock: parseGlobalNumber(item.minStock) || 0,
           maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,

@@ -1,4 +1,4 @@
-import { Department, type Prisma } from "@prisma/client";
+import { Department, type OrderSource, type PaymentMethod, type Prisma } from "@prisma/client";
 
 /**
  * Shared `Order` where-clause fragment for the staff/shift filter used
@@ -46,4 +46,25 @@ export function departmentFilter(department: string | null): Prisma.OrderItemWhe
     return { menuItemId: null };
   }
   return { menuItem: { department: department as Department } };
+}
+
+/**
+ * `Order` where-clause fragment for the sales-channel filter (Order.source —
+ * POS/STOREFRONT/aggregators). Whole-order-level, unlike category/department
+ * (which are per-line), so it applies cleanly to any route filtering Order
+ * directly.
+ */
+export function channelFilter(source: string | null): Prisma.OrderWhereInput {
+  if (!source) return {};
+  return { source: source as OrderSource };
+}
+
+/**
+ * `Order` where-clause fragment for the payment-method filter
+ * (Order.paymentMethod). Whole-order-level, same applicability as
+ * channelFilter.
+ */
+export function paymentMethodFilter(method: string | null): Prisma.OrderWhereInput {
+  if (!method) return {};
+  return { paymentMethod: method as PaymentMethod };
 }

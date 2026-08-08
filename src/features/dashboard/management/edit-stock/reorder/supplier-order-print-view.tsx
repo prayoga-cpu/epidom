@@ -2,7 +2,6 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { PrintReportShell } from "@/features/dashboard/shared/components/print-report-shell";
-import { formatDate } from "@/lib/utils/formatting";
 
 interface SupplierOrderPrintItem {
   materialName: string;
@@ -48,7 +47,7 @@ export function SupplierOrderPrintView({
   totalFormatted,
   generatedAt,
 }: SupplierOrderPrintViewProps) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
 
   return (
     <PrintReportShell

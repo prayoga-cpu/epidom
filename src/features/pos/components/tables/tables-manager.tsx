@@ -525,13 +525,14 @@ function ReservationCard({
   onDelete: () => void;
   isPending: boolean;
 }) {
+  const { intlLocale } = useI18n();
   const dt = new Date(reservation.scheduledAt);
-  const dateStr = dt.toLocaleDateString(undefined, {
+  const dateStr = dt.toLocaleDateString(intlLocale, {
     weekday: "short",
     month: "short",
     day: "numeric",
   });
-  const timeStr = dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const timeStr = dt.toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="bg-card space-y-2 rounded-lg border p-3">

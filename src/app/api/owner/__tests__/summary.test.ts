@@ -111,3 +111,48 @@ describe("ENTERPRISE plan gating logic", () => {
     }
   );
 });
+
+describe("owner dashboard rollup — COGS/gross-profit/margin per store (Phase 4)", () => {
+  // Mirrors the batched-cogs-then-per-store-enrich logic in
+  // /api/owner/summary/route.ts: cogsByStore/wasteByStore are built from ONE
+  // cross-store query each, then merged into each store's own revenue.
+  function enrichStore(revenue: number, cogs: number, wasteLoss: number) {
+    const grossProfit = Math.round((revenue - cogs) * 100) / 100;
+    const grossMarginPct = revenue > 0 ? Math.round((grossProfit / revenue) * 1000) / 10 : 0;
+    const netProfit = Math.round((grossProfit - wasteLoss) * 100) / 100;
+    return { grossProfit, grossMarginPct, netProfit };
+  }
+
+  it("computes gross profit and margin from revenue and COGS", () => {
+    const result = enrichStore(1_000_000, 400_000, 0);
+    expect(result.grossProfit).toBe(600_000);
+    expect(result.grossMarginPct).toBe(60);
+  });
+
+  it("net profit further subtracts waste loss from gross profit", () => {
+    const result = enrichStore(1_000_000, 400_000, 50_000);
+    expect(result.netProfit).toBe(550_000);
+  });
+
+  it("a store with zero revenue reports 0% margin, not NaN or Infinity", () => {
+    const result = enrichStore(0, 0, 0);
+    expect(result.grossMarginPct).toBe(0);
+    expect(Number.isFinite(result.grossMarginPct)).toBe(true);
+  });
+
+  it("rolled-up totals across stores sum each store's already-computed figures", () => {
+    const stores = [
+      { revenue: 1_000_000, cogs: 400_000, wasteLoss: 10_000 },
+      { revenue: 500_000, cogs: 300_000, wasteLoss: 0 },
+    ].map((s) => ({ ...s, ...enrichStore(s.revenue, s.cogs, s.wasteLoss) }));
+
+    const totalRevenue = stores.reduce((sum, s) => sum + s.revenue, 0);
+    const totalGrossProfit = stores.reduce((sum, s) => sum + s.grossProfit, 0);
+    const totalGrossMarginPct =
+      totalRevenue > 0 ? Math.round((totalGrossProfit / totalRevenue) * 1000) / 10 : 0;
+
+    expect(totalRevenue).toBe(1_500_000);
+    expect(totalGrossProfit).toBe(800_000); // 600,000 + 200,000
+    expect(totalGrossMarginPct).toBeCloseTo(53.3, 1);
+  });
+});

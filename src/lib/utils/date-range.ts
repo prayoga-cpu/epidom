@@ -33,6 +33,20 @@ export function startOfMonthLocalISO(): string {
   return toLocalISO(new Date(now.getFullYear(), now.getMonth(), 1));
 }
 
+/**
+ * The immediately-preceding period of the same length — e.g. "this month"
+ * (Aug 1-8) compares against "last equivalent stretch" (Jul 24-31), not
+ * calendar-last-month. Used by the Finance report's "Compare to previous
+ * period" toggle.
+ */
+export function previousPeriodLocalISO(from: string, to: string): { from: string; to: string } {
+  const rangeDays =
+    Math.round((parseLocalISO(to).getTime() - parseLocalISO(from).getTime()) / 86_400_000) + 1;
+  const prevTo = addDaysLocalISO(from, -1);
+  const prevFrom = addDaysLocalISO(prevTo, -(rangeDays - 1));
+  return { from: prevFrom, to: prevTo };
+}
+
 export type DateRangeLabelKey =
   | "today"
   | "yesterday"

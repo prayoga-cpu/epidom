@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { userService } from "@/lib/services";
 import { ProfileClient } from "@/features/dashboard/profile/components/profile-client";
 import type { ProfileData } from "@/features/dashboard/profile/types";
+import { requireNoActiveStaffPersona } from "@/lib/auth/require-owner-only";
 
 export default async function ProfilePage() {
   const session = await getSession();
@@ -10,6 +11,11 @@ export default async function ProfilePage() {
   if (!session?.user?.id) {
     redirect("/login");
   }
+
+  // Account contact info, business details, and subscription/billing —
+  // a restricted staff persona must never reach it. See the store-scoped
+  // Profile page's requireOwnerOnly for the same rule, scoped to one store.
+  await requireNoActiveStaffPersona();
 
   // Fetch user profile
   const profileDto = await userService.getProfile(session.user.id);

@@ -104,6 +104,7 @@ export async function POST(
     const financeSettings = await resolveFinanceSettingsForOrder(storeId);
     const charges = computeOrderCharges({
       itemsTotal: subtotal,
+      discountAmount: input.discountAmount,
       paymentMethod: input.paymentMethod as PaymentMethod,
       settings: financeSettings,
     });
@@ -152,6 +153,8 @@ export async function POST(
           tax: new Prisma.Decimal(charges.tax),
           delivery: new Prisma.Decimal(0),
           total: new Prisma.Decimal(charges.total),
+          discountAmount: new Prisma.Decimal(charges.discountAmount),
+          discountReason: charges.discountAmount > 0 ? input.discountReason : undefined,
           serviceCharge: new Prisma.Decimal(charges.serviceCharge),
           processingFee: new Prisma.Decimal(charges.processingFee),
           taxRate: new Prisma.Decimal(charges.taxRate),

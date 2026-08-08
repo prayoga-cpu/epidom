@@ -11,6 +11,7 @@ import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
 import { trackEvent } from "@/lib/analytics";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
+import { useCurrency } from "@/components/providers/currency-provider";
 
 export interface LinkedMenuItem {
   id: string;
@@ -549,59 +550,91 @@ export function useExportProducts() {
 }
 
 /**
+ * Resolve a MenuCategory id matching `categoryName`, creating one if none
+ * exists. `cache` is shared across a batch so callers linking many products
+ * at once resolve each distinct category name exactly once instead of racing
+ * to create duplicate categories in parallel.
+ */
+async function resolveMenuCategoryId(
+  storeId: string,
+  categoryName: string | null | undefined,
+  cache: Map<string, string | null>
+): Promise<string | null> {
+  if (!categoryName) return null;
+  const key = categoryName.toLowerCase();
+  if (cache.has(key)) return cache.get(key) ?? null;
+
+  try {
+    const existing: any[] = await fetch(`/api/stores/${storeId}/storefront/categories`)
+      .then((r) => r.json())
+      .then((d) => d?.data ?? []);
+    const match = existing.find((c: any) => c.name?.toLowerCase() === key);
+    let categoryId: string | null;
+    if (match) {
+      categoryId = match.id;
+    } else {
+      const created = await fetch(`/api/stores/${storeId}/storefront/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: categoryName, displayOrder: existing.length }),
+      })
+        .then((r) => r.json())
+        .then((d) => d?.data);
+      categoryId = created?.id ?? null;
+    }
+    cache.set(key, categoryId);
+    return categoryId;
+  } catch {
+    // non-fatal — item will still be created without a category
+    return null;
+  }
+}
+
+async function createMenuItemForProduct(
+  storeId: string,
+  product: Pick<Product, "id" | "name">,
+  categoryId: string | null,
+  price: number
+) {
+  const response = await fetch(`/api/stores/${storeId}/storefront/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: product.name,
+      price,
+      productId: product.id,
+      categoryId,
+      isAvailable: true,
+    }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new ApiClientError(error, response.status);
+  }
+  return response.json();
+}
+
+/**
  * Add a product to the store's POS menu as a MenuItem.
  * Finds or creates a MenuCategory matching the product's category so the
  * item shows up grouped correctly in the POS.
  */
 export function useAddProductToMenu(storeId: string) {
   const queryClient = useQueryClient();
+  const { convertPrice } = useCurrency();
   const linkedKey = ["storefront-items-linked", storeId];
 
   return useMutation({
     mutationFn: async (product: Pick<Product, "id" | "name" | "sellingPrice" | "category">) => {
-      // Resolve category: find existing or create new one matching the product's category
-      let categoryId: string | null = null;
-      if (product.category) {
-        try {
-          const existing: any[] = await fetch(`/api/stores/${storeId}/storefront/categories`)
-            .then((r) => r.json())
-            .then((d) => d?.data ?? []);
-          const match = existing.find(
-            (c: any) => c.name?.toLowerCase() === product.category?.toLowerCase()
-          );
-          if (match) {
-            categoryId = match.id;
-          } else {
-            const created = await fetch(`/api/stores/${storeId}/storefront/categories`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name: product.category, displayOrder: existing.length }),
-            })
-              .then((r) => r.json())
-              .then((d) => d?.data);
-            categoryId = created?.id ?? null;
-          }
-        } catch {
-          // non-fatal — item will still be created without a category
-        }
-      }
-
-      const response = await fetch(`/api/stores/${storeId}/storefront/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: product.name,
-          price: Number(product.sellingPrice),
-          productId: product.id,
-          categoryId,
-          isAvailable: true,
-        }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new ApiClientError(error, response.status);
-      }
-      return response.json();
+      const categoryId = await resolveMenuCategoryId(storeId, product.category, new Map());
+      // product.sellingPrice is stored in IDR (the platform base currency);
+      // MenuItem.price must be a literal value in the owner's own currency.
+      return createMenuItemForProduct(
+        storeId,
+        product,
+        categoryId,
+        convertPrice(Number(product.sellingPrice))
+      );
     },
     onMutate: async (product) => {
       // Optimistic update: immediately show "In Menu" badge without waiting for server
@@ -612,7 +645,7 @@ export function useAddProductToMenu(storeId: string) {
         {
           id: "__optimistic__",
           name: product.name,
-          price: Number(product.sellingPrice),
+          price: convertPrice(Number(product.sellingPrice)),
           productId: product.id,
           isAvailable: true,
         },
@@ -682,6 +715,61 @@ export function useRemoveProductFromMenu(storeId: string) {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(linkedKey, context.previous);
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: linkedKey });
+      queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId] });
+    },
+  });
+}
+
+export interface BulkAddToMenuResult {
+  total: number;
+  succeeded: number;
+  failed: number;
+}
+
+/**
+ * Add many products to the store's POS menu at once (bulk-selection toolbar
+ * action). Distinct category names are resolved sequentially first — so a
+ * batch of products sharing a category doesn't race and create duplicates —
+ * then each MenuItem is created in parallel. Per-product failures don't
+ * abort the batch; the settled counts are returned so the caller can show a
+ * single summary toast.
+ */
+export function useBulkAddProductsToMenu(storeId: string) {
+  const queryClient = useQueryClient();
+  const { convertPrice } = useCurrency();
+  const linkedKey = ["storefront-items-linked", storeId];
+
+  return useMutation({
+    mutationFn: async (
+      products: Pick<Product, "id" | "name" | "sellingPrice" | "category">[]
+    ): Promise<BulkAddToMenuResult> => {
+      const categoryCache = new Map<string, string | null>();
+      const uniqueCategories = Array.from(
+        new Set(products.map((p) => p.category).filter((c): c is string => !!c))
+      );
+      for (const category of uniqueCategories) {
+        await resolveMenuCategoryId(storeId, category, categoryCache);
+      }
+
+      const results = await Promise.allSettled(
+        products.map((product) =>
+          createMenuItemForProduct(
+            storeId,
+            product,
+            product.category ? (categoryCache.get(product.category.toLowerCase()) ?? null) : null,
+            // product.sellingPrice is stored in IDR (the platform base
+            // currency); MenuItem.price must be literal in the owner's
+            // own currency.
+            convertPrice(Number(product.sellingPrice))
+          )
+        )
+      );
+
+      const failed = results.filter((r) => r.status === "rejected").length;
+      return { total: products.length, succeeded: products.length - failed, failed };
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: linkedKey });

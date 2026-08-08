@@ -13,8 +13,11 @@ export default async function FinancePage({ params }: { params: Promise<{ storeI
   }
   await requireStaffPageAccess(storeId, "/finance");
 
-  // Pre-fetch filter options for the Staff / Category selects
-  const [staff, categories] = await Promise.all([
+  // Pre-fetch filter options for the Staff / Category selects, plus the
+  // business's total store count — only worth surfacing the "All Outlets"
+  // rollup link (see /owner) when there's actually more than one store to
+  // roll up.
+  const [staff, categories, store] = await Promise.all([
     prisma.staffMember.findMany({
       where: { storeId, isActive: true },
       select: { id: true, name: true, role: true },
@@ -25,7 +28,19 @@ export default async function FinancePage({ params }: { params: Promise<{ storeI
       select: { id: true, name: true },
       orderBy: { displayOrder: "asc" },
     }),
+    prisma.store.findUnique({
+      where: { id: storeId },
+      select: { business: { select: { _count: { select: { stores: true } } } } },
+    }),
   ]);
+  const businessStoreCount = store?.business?._count.stores ?? 1;
 
-  return <FinanceClient storeId={storeId} staff={staff} categories={categories} />;
+  return (
+    <FinanceClient
+      storeId={storeId}
+      staff={staff}
+      categories={categories}
+      showOwnerLink={businessStoreCount > 1}
+    />
+  );
 }

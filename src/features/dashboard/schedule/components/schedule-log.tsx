@@ -35,7 +35,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api/client";
 import { todayLocalISO, startOfMonthLocalISO } from "@/lib/utils/date-range";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { toast } from "sonner";
 import { MapPin, ImageOff, Printer } from "lucide-react";
 import { DateRangeField } from "@/components/ui/date-range-field";
@@ -92,7 +91,7 @@ interface MissingClockOutRow {
  * on the same timeline, not two separate pages.
  */
 export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffOption[] }) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { formatPrice } = useCurrency();
   const queryClient = useQueryClient();
   const [from, setFrom] = useState(startOfMonthLocalISO());

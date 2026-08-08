@@ -12,6 +12,7 @@ vi.mock("@/lib/prisma", () => {
     product: { update: vi.fn().mockResolvedValue({}) },
     material: { update: vi.fn().mockResolvedValue({}) },
     stockMovement: { create: vi.fn().mockResolvedValue({}) },
+    orderItem: { update: vi.fn().mockResolvedValue({}) },
   };
   prismaMock = {
     order: { findUnique: vi.fn() },

@@ -55,6 +55,10 @@ export const updateStaffSchema = z.object({
     .or(z.literal("")),
   isActive: z.boolean().optional(),
   sendPinEmail: z.boolean().optional(),
+  // Optional pay rate for labor-cost reporting — many roles are genuinely
+  // off-system payroll, so NONE (the default) means "unknown," not zero.
+  payType: z.enum(["HOURLY", "MONTHLY", "NONE"]).optional(),
+  payRate: z.number().min(0).optional().nullable(),
 });
 export type UpdateStaffInput = z.infer<typeof updateStaffSchema>;
 

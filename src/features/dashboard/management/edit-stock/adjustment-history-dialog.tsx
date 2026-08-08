@@ -15,7 +15,6 @@ import { Separator } from "@/components/ui/separator";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ExportButton } from "@/components/ui/export-button";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { MovementType } from "@prisma/client";
 import type { DateRange } from "react-day-picker";
 import {
@@ -50,7 +49,7 @@ export function AdjustmentHistoryDialog({
   itemId,
   itemType,
 }: AdjustmentHistoryDialogProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const params = useParams();
   const storeId = params?.storeId as string;
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);

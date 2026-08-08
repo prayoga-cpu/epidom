@@ -70,7 +70,12 @@ interface AnalyticsSectionProps {
 
 export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
   const { t } = useI18n();
-  const { formatPrice } = useCurrency();
+  // Every value shown here (revenue, AOV, totalRevenue, totalSpend) is
+  // Order/OrderItem-derived — already literal in the owner's own currency,
+  // not IDR. Bare formatPrice() defaults to converting from IDR, which
+  // would wrongly re-scale it by the exchange rate for any non-IDR store.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const { advancedReportsAccess } = useFeatureAccess();
   // Defaults to today — the report an operator checks most: "how are we
   // doing right now." The date inputs below let them widen the range.

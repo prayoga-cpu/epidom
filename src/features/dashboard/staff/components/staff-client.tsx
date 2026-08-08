@@ -49,6 +49,8 @@ interface StaffMember {
   allowedPages: string[];
   isActive: boolean;
   inviteStatus: string | null;
+  payType: "HOURLY" | "MONTHLY" | "NONE";
+  payRate: number | null;
   createdAt: string;
 }
 
@@ -96,6 +98,8 @@ export function StaffClient({
   const [editWhatsapp, setEditWhatsapp] = useState("");
   const [editRole, setEditRole] = useState<StaffRole>("CASHIER");
   const [editCustomRoleLabel, setEditCustomRoleLabel] = useState("");
+  const [editPayType, setEditPayType] = useState<"HOURLY" | "MONTHLY" | "NONE">("NONE");
+  const [editPayRate, setEditPayRate] = useState("");
   const [editAllowedPages, setEditAllowedPages] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
   const [editPin, setEditPin] = useState("");
@@ -162,6 +166,8 @@ export function StaffClient({
     setEditWhatsapp(member.whatsapp ?? "");
     setEditRole(member.role);
     setEditCustomRoleLabel(member.customRoleLabel ?? "");
+    setEditPayType(member.payType);
+    setEditPayRate(member.payRate != null ? String(member.payRate) : "");
     setEditAllowedPages(
       member.allowedPages.length > 0 ? member.allowedPages : ROLE_DEFAULT_PAGES[member.role]
     );
@@ -202,6 +208,9 @@ export function StaffClient({
         customRoleLabel: editCustomRoleLabel,
         allowedPages: editAllowedPages,
         isActive: editIsActive,
+        payType: editPayType,
+        payRate:
+          editPayType === "NONE" || editPayRate.trim() === "" ? null : Number(editPayRate),
       };
       if (editRemovePin) {
         body.pin = "";
@@ -697,6 +706,45 @@ export function StaffClient({
                     placeholder={t("pages.staffWhatsappPlaceholder")}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-3 rounded-lg border p-3">
+                <p className="text-muted-foreground text-xs font-semibold">
+                  {t("pages.staffPayRate")}{" "}
+                  <span className="font-normal">{t("pages.staffOptional")}</span>
+                </p>
+                <div className="space-y-1">
+                  <Label>{t("pages.staffPayType")}</Label>
+                  <Select
+                    value={editPayType}
+                    onValueChange={(v) => setEditPayType(v as "HOURLY" | "MONTHLY" | "NONE")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">{t("pages.staffPayTypeNone")}</SelectItem>
+                      <SelectItem value="HOURLY">{t("pages.staffPayTypeHourly")}</SelectItem>
+                      <SelectItem value="MONTHLY">{t("pages.staffPayTypeMonthly")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editPayType !== "NONE" && (
+                  <div className="space-y-1">
+                    <Label>
+                      {editPayType === "HOURLY"
+                        ? t("pages.staffPayRateHourly")
+                        : t("pages.staffPayRateMonthly")}
+                    </Label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      value={editPayRate}
+                      onChange={(e) => setEditPayRate(e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
 
               <PageAccessChecklist

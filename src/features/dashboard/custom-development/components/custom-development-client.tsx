@@ -18,7 +18,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { apiClient } from "@/lib/api/client";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { Wrench, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,7 +49,7 @@ interface CustomDevelopmentClientProps {
 }
 
 export function CustomDevelopmentClient({ storeId }: CustomDevelopmentClientProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const queryClient = useQueryClient();
 
   const [company, setCompany] = useState("");

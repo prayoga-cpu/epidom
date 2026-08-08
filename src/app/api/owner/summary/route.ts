@@ -4,16 +4,21 @@
  * Aggregates metrics across all stores in the authenticated user's business.
  * Gated to ENTERPRISE plan.
  *
- * Returns per-store revenue breakdown + rolled-up totals for the given date range.
+ * Returns per-store revenue + COGS/gross-profit/margin breakdown + rolled-up
+ * totals for the given date range. COGS/waste are fetched with one batched
+ * query across every store (storeId IN [...]) rather than looping the
+ * per-store /finance/summary logic once per store — cheap regardless of how
+ * many outlets the business has.
  */
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { OrderStatus, SubscriptionPlan } from "@prisma/client";
+import { OrderStatus, MovementType } from "@prisma/client";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
-
-const PLAN_ORDER: SubscriptionPlan[] = ["FREE", "POS", "OPERATIONS", "ENTERPRISE"];
+import { planHasFeature } from "@/lib/plans/entitlements";
+import { getExchangeRate } from "@/lib/services/exchange-rate.service";
+import { storefrontService } from "@/lib/services/storefront.service";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +32,9 @@ export async function GET(request: Request) {
 
   const userId = session.user.id;
 
-  // Check ENTERPRISE plan
   const subscription = await prisma.subscription.findUnique({ where: { userId } });
   const plan = subscription?.plan ?? "FREE";
-  if (PLAN_ORDER.indexOf(plan) < PLAN_ORDER.indexOf("ENTERPRISE")) {
+  if (!planHasFeature(plan, "finance")) {
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.FORBIDDEN, "Owner summary requires ENTERPRISE plan"),
       { status: 403 }
@@ -39,7 +43,10 @@ export async function GET(request: Request) {
 
   const business = await prisma.business.findUnique({
     where: { userId },
-    include: { stores: { select: { id: true, name: true, image: true } } },
+    include: {
+      stores: { select: { id: true, name: true, image: true } },
+      user: { select: { currency: true } },
+    },
   });
 
   if (!business) {
@@ -48,17 +55,28 @@ export async function GET(request: Request) {
     });
   }
 
+  // Order.total (→ revenue) is already a literal value in the owner's own
+  // currency, but Material.unitCost/WasteEntry.totalValue (→ cogs/wasteLoss)
+  // are stored in IDR, the platform base currency. Mixing them in
+  // `revenue - cogs` without converting first produces a nonsensical number
+  // for any non-IDR business (subtracting IDR-scale cost from e.g. a EUR
+  // total) — convert cogs/waste into the owner's currency before combining.
+  const ownerCurrency = business.user?.currency ?? "IDR";
+  const ownerRate =
+    ownerCurrency === "IDR" ? 1 : (await getExchangeRate("IDR", ownerCurrency)).rate;
+
   const { searchParams } = new URL(request.url);
   const now = new Date();
   const from = new Date(
     searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   );
   const to = new Date(searchParams.get("to") ?? now.toISOString());
+  const storeIds = business.stores.map((s) => s.id);
 
-  // Per-store revenue in parallel
-  const storeMetrics = await Promise.all(
+  // Per-store revenue + pending count in parallel — unchanged from before.
+  const storeMetricsPromise = Promise.all(
     business.stores.map(async (store) => {
-      const [agg, orderCount] = await Promise.all([
+      const [agg, pendingCount] = await Promise.all([
         prisma.order.aggregate({
           where: {
             storeId: store.id,
@@ -68,31 +86,85 @@ export async function GET(request: Request) {
           _sum: { total: true },
           _count: { id: true },
         }),
-        prisma.order.count({
-          where: {
-            storeId: store.id,
-            status: OrderStatus.PENDING,
-          },
-        }),
+        prisma.order.count({ where: { storeId: store.id, status: OrderStatus.PENDING } }),
       ]);
-
       return {
         storeId: store.id,
         name: store.name,
         image: store.image,
         revenue: Math.round(Number(agg._sum.total ?? 0) * 100) / 100,
         orderCount: agg._count.id,
-        pendingOrders: orderCount,
+        pendingOrders: pendingCount,
       };
     })
   );
 
-  const totalRevenue = storeMetrics.reduce((s, m) => s + m.revenue, 0);
-  const totalOrders = storeMetrics.reduce((s, m) => s + m.orderCount, 0);
-  const totalPending = storeMetrics.reduce((s, m) => s + m.pendingOrders, 0);
+  // COGS across every store in one query, bucketed client-side by storeId —
+  // the whole point of batching instead of one query per store.
+  const cogsMovementsPromise = prisma.stockMovement.findMany({
+    where: {
+      type: MovementType.SALE,
+      materialId: { not: null },
+      order: {
+        storeId: { in: storeIds },
+        orderDate: { gte: from, lte: to },
+        status: { notIn: NON_REVENUE_STATUSES },
+      },
+    },
+    select: {
+      quantity: true,
+      order: { select: { storeId: true } },
+      material: { select: { unitCost: true } },
+    },
+  });
 
-  // Sort by revenue descending
-  storeMetrics.sort((a, b) => b.revenue - a.revenue);
+  // Waste loss across every store in one query, same batching principle.
+  const wasteEntriesPromise = prisma.wasteEntry.findMany({
+    where: { storeId: { in: storeIds }, createdAt: { gte: from, lte: to } },
+    select: { storeId: true, totalValue: true },
+  });
+
+  const [storeMetrics, cogsMovements, wasteEntries] = await Promise.all([
+    storeMetricsPromise,
+    cogsMovementsPromise,
+    wasteEntriesPromise,
+  ]);
+
+  const cogsByStore = new Map<string, number>();
+  for (const m of cogsMovements) {
+    if (!m.order) continue;
+    const qty = Math.abs(Number(m.quantity));
+    const cost = Number(m.material?.unitCost ?? 0);
+    const storeId = m.order.storeId;
+    cogsByStore.set(storeId, (cogsByStore.get(storeId) ?? 0) + qty * cost);
+  }
+
+  const wasteByStore = new Map<string, number>();
+  for (const w of wasteEntries) {
+    wasteByStore.set(w.storeId, (wasteByStore.get(w.storeId) ?? 0) + Number(w.totalValue));
+  }
+
+  const enrichedStores = storeMetrics.map((m) => {
+    const cogs = storefrontService.convertBaseToOwnerSync(cogsByStore.get(m.storeId) ?? 0, ownerRate);
+    const wasteLoss = storefrontService.convertBaseToOwnerSync(
+      wasteByStore.get(m.storeId) ?? 0,
+      ownerRate
+    );
+    const grossProfit = Math.round((m.revenue - cogs) * 100) / 100;
+    const grossMarginPct = m.revenue > 0 ? Math.round((grossProfit / m.revenue) * 1000) / 10 : 0;
+    const netProfit = Math.round((grossProfit - wasteLoss) * 100) / 100;
+    return { ...m, cogs, grossProfit, grossMarginPct, wasteLoss, netProfit };
+  });
+
+  const totalRevenue = enrichedStores.reduce((s, m) => s + m.revenue, 0);
+  const totalOrders = enrichedStores.reduce((s, m) => s + m.orderCount, 0);
+  const totalPending = enrichedStores.reduce((s, m) => s + m.pendingOrders, 0);
+  const totalCogs = enrichedStores.reduce((s, m) => s + m.cogs, 0);
+  const totalGrossProfit = enrichedStores.reduce((s, m) => s + m.grossProfit, 0);
+  const totalWasteLoss = enrichedStores.reduce((s, m) => s + m.wasteLoss, 0);
+  const totalNetProfit = enrichedStores.reduce((s, m) => s + m.netProfit, 0);
+
+  enrichedStores.sort((a, b) => b.revenue - a.revenue);
 
   return NextResponse.json(
     createSuccessResponse({
@@ -102,8 +174,14 @@ export async function GET(request: Request) {
       totalRevenue: Math.round(totalRevenue * 100) / 100,
       totalOrders,
       totalPending,
+      totalCogs: Math.round(totalCogs * 100) / 100,
+      totalGrossProfit: Math.round(totalGrossProfit * 100) / 100,
+      totalGrossMarginPct:
+        totalRevenue > 0 ? Math.round((totalGrossProfit / totalRevenue) * 1000) / 10 : 0,
+      totalWasteLoss: Math.round(totalWasteLoss * 100) / 100,
+      totalNetProfit: Math.round(totalNetProfit * 100) / 100,
       storeCount: business.stores.length,
-      stores: storeMetrics,
+      stores: enrichedStores,
     })
   );
 }

@@ -36,6 +36,14 @@ vi.mock("@/lib/prisma", () => ({
     menuItem: {
       updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
+    // getOwnerCurrencyAndRate() (via storefrontService.convertBaseCurrencyToOwner,
+    // called from updateProduct's menu-price sync) looks this up — a
+    // not-found store defaults to IDR/rate 1, a currency-neutral default for
+    // every test here except where a currency conversion is explicitly
+    // exercised.
+    store: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
   },
 }));
 
@@ -226,9 +234,11 @@ describe("ProductService", () => {
         sellingPrice: 30,
       });
 
+      // price comes back as a converted plain number (+ its currency), not
+      // the raw Decimal — see storefrontService.convertBaseCurrencyToOwner.
       expect(prisma.menuItem.updateMany).toHaveBeenCalledWith({
         where: { productId: "prod-1" },
-        data: { name: "Updated Product", price: updated.sellingPrice },
+        data: { name: "Updated Product", price: 30, currency: "IDR" },
       });
     });
 

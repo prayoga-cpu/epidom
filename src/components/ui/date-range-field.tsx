@@ -49,7 +49,7 @@ export function DateRangeField({
   className,
   align = "start",
 }: DateRangeFieldProps) {
-  const { t } = useI18n();
+  const { t, dateLocale } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<DateRange | undefined>(undefined);
 
@@ -66,9 +66,10 @@ export function DateRangeField({
     }
     if (!from) return t("common.datePicker.pickDateRange");
     const fromDate = parseLocalISO(from);
-    if (!to || to === from) return format(fromDate, "d MMM yyyy");
-    return `${format(fromDate, "d MMM yyyy")} - ${format(parseLocalISO(to), "d MMM yyyy")}`;
-  }, [activePreset, from, to, t]);
+    const opts = { locale: dateLocale };
+    if (!to || to === from) return format(fromDate, "d MMM yyyy", opts);
+    return `${format(fromDate, "d MMM yyyy", opts)} - ${format(parseLocalISO(to), "d MMM yyyy", opts)}`;
+  }, [activePreset, from, to, t, dateLocale]);
 
   const applyPreset = (preset: DateRangePreset) => {
     const range = resolveDateRangePreset(preset);
@@ -119,6 +120,7 @@ export function DateRangeField({
         <Calendar
           initialFocus
           mode="range"
+          locale={dateLocale}
           defaultMonth={draft?.from ?? (from ? parseLocalISO(from) : undefined)}
           selected={draft}
           onSelect={handleSelect}

@@ -30,7 +30,6 @@ import { apiClient } from "@/lib/api/client";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { todayLocalISO } from "@/lib/utils/date-range";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
 import type { StaffScheduleEntry } from "./staff-schedule-cell-dialog";
@@ -59,7 +58,7 @@ interface UnifiedLogRow {
 const POS_CAPABLE_ROLES = new Set(["CASHIER", "OWNER", "MANAGER"]);
 
 export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; staffMemberId: string }) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { formatPrice } = useCurrency();
   const queryClient = useQueryClient();
   const posSession = usePosSession();

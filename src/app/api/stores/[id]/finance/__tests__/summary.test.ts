@@ -30,9 +30,10 @@ function calcNet(
   taxCollected: number,
   processingFee: number,
   cogs: number,
-  wasteLoss: number = 0
+  wasteLoss: number = 0,
+  refundAmount: number = 0
 ) {
-  const netRevenue = revenue - taxCollected - processingFee;
+  const netRevenue = revenue - refundAmount - taxCollected - processingFee;
   const netProfit = netRevenue - cogs - wasteLoss;
   return {
     netRevenue: Math.round(netRevenue * 100) / 100,
@@ -129,5 +130,39 @@ describe("net revenue / net profit (tax + processing fee deducted)", () => {
     const withWaste = calcNet(500_000, 0, 0, 0, 25_000);
     expect(withWaste.netRevenue).toBe(withoutWaste.netRevenue);
     expect(withWaste.netProfit).toBe(withoutWaste.netProfit - 25_000);
+  });
+
+  it("subtracts refundAmount from netRevenue (money that left the business)", () => {
+    const result = calcNet(500_000, 0, 0, 0, 0, 50_000);
+    expect(result.netRevenue).toBe(450_000);
+  });
+
+  it("refunds flow through to netProfit alongside COGS/waste", () => {
+    const result = calcNet(500_000, 0, 0, 100_000, 10_000, 50_000);
+    // 500,000 - 50,000 refund - 100,000 cogs - 10,000 waste
+    expect(result.netProfit).toBe(340_000);
+  });
+
+  it("no refund (default) matches pre-refund-tracking behavior exactly", () => {
+    const withRefundParam = calcNet(500_000, 10_000, 5_000, 50_000, 1_000, 0);
+    const withoutRefundParam = calcNet(500_000, 10_000, 5_000, 50_000, 1_000);
+    expect(withRefundParam).toEqual(withoutRefundParam);
+  });
+});
+
+describe("grossRevenue (P&L statement view)", () => {
+  // Inline from summary/route.ts: total is already post-discount, so
+  // grossRevenue backs the pre-discount figure out rather than being an
+  // independently-summed value.
+  function calcGrossRevenue(revenue: number, discountAmount: number) {
+    return Math.round((revenue + discountAmount) * 100) / 100;
+  }
+
+  it("equals revenue when no discount was applied", () => {
+    expect(calcGrossRevenue(500_000, 0)).toBe(500_000);
+  });
+
+  it("adds the discount back on top of the (already-discounted) revenue", () => {
+    expect(calcGrossRevenue(80_000, 20_000)).toBe(100_000);
   });
 });

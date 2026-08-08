@@ -187,6 +187,8 @@ export function PosCheckoutDialog({
       notes: i.notes,
     })),
     subtotal: cart.subtotal,
+    discountAmount: cart.discountAmount > 0 ? cart.discountAmount : undefined,
+    discountReason: cart.discountReason ?? undefined,
     total: cart.total,
     paymentMethod: data.paymentMethod,
     amountTendered: data.amountTendered,
@@ -246,7 +248,14 @@ export function PosCheckoutDialog({
       // of which are converted anywhere in this flow (see pos-order-builder.ts).
       // The server compares/subtracts it against charges.total directly, so
       // it must be submitted as-is.
-      const submitData: CreatePosOrderInput = { ...data };
+      // discountAmount/discountReason live in the cart store (applied from
+      // the cart footer's popover, not a form field on this dialog) — merged
+      // in here rather than through react-hook-form's defaultValues.
+      const submitData: CreatePosOrderInput = {
+        ...data,
+        discountAmount: cart.discountAmount > 0 ? cart.discountAmount : undefined,
+        discountReason: cart.discountReason ?? undefined,
+      };
 
       if (!navigator.onLine) {
         if (cart.resumingOrderId) {

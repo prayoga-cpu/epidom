@@ -22,7 +22,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
-import { formatDate } from "@/lib/utils/format-date";
 import { getApiErrorMessage } from "@/lib/utils/api-error";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { BetaPlanSwitcher } from "./beta-plan-switcher";
@@ -40,7 +39,7 @@ const PLAN_PRICE_IDR: Record<string, number> = {
 };
 
 export function BillingContainer() {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { formatPrice } = useCurrency();
@@ -234,11 +233,7 @@ export function BillingContainer() {
               <div className="flex-1">
                 <p className="text-sm font-medium">{t("billing.nextBilling")}</p>
                 <p className="text-muted-foreground text-sm">
-                  {new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {formatDate(subscription.currentPeriodEnd, "PPP")}
                 </p>
               </div>
             </div>

@@ -12,7 +12,6 @@ import { useState } from "react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatDate } from "@/lib/utils/format-date";
 
 interface MaterialDetailsDialogProps {
   open: boolean;
@@ -57,7 +56,7 @@ export function MaterialDetailsDialog({
   onDelete,
 }: MaterialDetailsDialogProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { formatPrice } = useCurrency();
 
   if (!material) return null;

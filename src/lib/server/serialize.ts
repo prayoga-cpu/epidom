@@ -257,6 +257,8 @@ export function serializePosOrder(order: any): any {
     taxRate: decimalToNumber(order.taxRate),
     serviceChargeRate: decimalToNumber(order.serviceChargeRate),
     processingFeeRate: decimalToNumber(order.processingFeeRate),
+    discountAmount: decimalToNumber(order.discountAmount),
+    refundAmount: decimalToNumber(order.refundAmount),
     items:
       order.items?.map((item: any) => ({
         ...item,

@@ -106,6 +106,8 @@ export const PATCH = withApiHandler(
         allowedPages: true,
         isActive: true,
         inviteStatus: true,
+        payType: true,
+        payRate: true,
         updatedAt: true,
       },
     });

@@ -16,7 +16,6 @@ import { FilterBar } from "@/features/dashboard/shared/components/filter-bar";
 import { sortRows, type SortDir } from "@/features/dashboard/shared/hooks/use-sortable";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { Loader2, ArrowDownCircle, ArrowUpCircle, Minus, ArrowUpDown } from "lucide-react";
-import { formatDateTime } from "@/lib/utils/formatting";
 import { MovementType } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -82,7 +81,7 @@ interface MovementsTabProps {
 }
 
 export function MovementsTab({ storeId }: MovementsTabProps) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const [searchQuery, setSearchQuery] = useState("");
 
   const [filters, setFilters] = usePersistedState<HistoryFilters>(

@@ -35,7 +35,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { signOut } from "@/lib/auth-client";
-import { formatDate } from "@/lib/utils/format-date";
 import { useOwnerPinStatus } from "@/features/dashboard/shared/hooks/use-owner-pin";
 import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
 import { useConfirm } from "@/components/ui/use-confirm";
@@ -107,7 +106,7 @@ async function postAccountAction(body: Record<string, unknown>) {
 }
 
 export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["account-settings"],

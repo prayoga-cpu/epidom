@@ -232,11 +232,24 @@ export class ProductService {
       data.sellingPrice !== undefined ||
       data.department !== undefined
     ) {
+      // updatedProduct.sellingPrice is stored in IDR (the platform base
+      // currency); MenuItem.price must be a literal value in the owner's
+      // own currency, so it needs converting before it overwrites the
+      // linked menu item(s) — copying it raw silently mis-prices every
+      // non-IDR store's menu by the full exchange-rate factor.
+      const priceUpdate =
+        data.sellingPrice !== undefined
+          ? await storefrontService.convertBaseCurrencyToOwner(
+              storeId,
+              Number(updatedProduct.sellingPrice)
+            )
+          : null;
+
       await prisma.menuItem.updateMany({
         where: { productId },
         data: {
           ...(data.name !== undefined && { name: updatedProduct.name }),
-          ...(data.sellingPrice !== undefined && { price: updatedProduct.sellingPrice }),
+          ...(priceUpdate && { price: priceUpdate.price, currency: priceUpdate.currency }),
           ...(data.department !== undefined && { department: updatedProduct.department }),
         },
       });

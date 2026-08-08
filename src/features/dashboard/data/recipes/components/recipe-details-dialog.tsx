@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import {
   formatCurrency,
-  formatDate,
   formatDuration,
   formatNumber,
   getCurrencySymbol,
@@ -62,7 +61,7 @@ export function RecipeDetailsDialog({
   onDelete,
 }: RecipeDetailsDialogProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { currency, convertPrice, formatPrice } = useCurrency();
   const params = useParams();
   const storeId = params.storeId as string;

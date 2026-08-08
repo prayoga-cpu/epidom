@@ -15,6 +15,8 @@ export interface ReceiptData {
     notes?: string;
   }>;
   subtotal: number;
+  discountAmount?: number;
+  discountReason?: string;
   total: number;
   paymentMethod: string;
   amountTendered?: number;
@@ -189,6 +191,15 @@ function buildEscPos(receipt: ReceiptData): Uint8Array {
   // Totals
   if (receipt.subtotal !== receipt.total) {
     line(formatCols("Subtotal", `Rp${formatMoney(receipt.subtotal)}`, cols));
+  }
+  if (receipt.discountAmount) {
+    line(
+      formatCols(
+        receipt.discountReason ? `Diskon (${receipt.discountReason})` : "Diskon",
+        `-Rp${formatMoney(receipt.discountAmount)}`,
+        cols
+      )
+    );
   }
 
   push(ESC, 0x45, 0x01);

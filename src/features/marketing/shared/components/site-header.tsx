@@ -8,11 +8,10 @@ import { WaitlistDialog } from "@/features/marketing/shared/components/waitlist-
 import { usePathname, useRouter } from "next/navigation";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { ChevronRight, Shield } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { EpidomLogo } from "./epidom-logo";
 import { useSession, signOut } from "@/lib/auth-client";
 import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
-import { isAdminEmail } from "@/lib/admin";
 import { trackEvent } from "@/lib/analytics";
 
 /**
@@ -179,15 +178,6 @@ export const SiteHeader = memo(function SiteHeader({
       {/* Right side */}
       <div className="flex items-center gap-3">
         <div className="hidden items-center gap-3 lg:flex">
-          {mounted &&
-            isAdminEmail(session?.user?.email) && ( // DB isAdmin not checked here — email check is sufficient for header
-              <button
-                onClick={() => router.push("/admin")}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-red-400 uppercase transition-all hover:bg-red-500/20"
-              >
-                <Shield className="h-3 w-3" /> Admin
-              </button>
-            )}
           <LangSwitcher />
           {mounted && <DesktopCTA />}
         </div>
@@ -262,16 +252,6 @@ export const SiteHeader = memo(function SiteHeader({
               </nav>
 
               <div className="p-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                {mounted && isAdminEmail(session?.user?.email) && (
-                  <SheetClose asChild>
-                    <button
-                      onClick={() => router.push("/admin")}
-                      className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 py-2.5 text-xs font-semibold tracking-wide text-red-400 uppercase transition-all hover:bg-red-500/20"
-                    >
-                      <Shield className="h-3.5 w-3.5" /> Admin
-                    </button>
-                  </SheetClose>
-                )}
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
                     {BUTTON_MODE === "waitlist" ? (

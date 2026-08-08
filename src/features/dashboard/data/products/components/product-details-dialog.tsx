@@ -24,7 +24,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import type { ProductWithRelations } from "@/lib/repositories/product.repository";
-import { formatCurrency, formatDate, formatNumber } from "@/lib/utils/formatting";
+import { formatCurrency, formatNumber } from "@/lib/utils/formatting";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -50,7 +50,7 @@ export function ProductDetailsDialog({
   onDelete,
 }: ProductDetailsDialogProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { formatPrice } = useCurrency();
   // Only the material's name/unit are needed to label an option's stock
   // linkage — the option itself already carries materialId/materialQty.
