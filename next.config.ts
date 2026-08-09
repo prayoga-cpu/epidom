@@ -25,11 +25,6 @@ const nextConfig: NextConfig = {
   },
   // Enable React strict mode for better error detection
   reactStrictMode: true,
-  // sharp ships platform-specific native binaries; bundling it with
-  // webpack/turbopack instead of requiring it natively at runtime is a known
-  // cause of serverless functions crashing at cold start (before the route
-  // handler's own try/catch can run) when they import it, as /api/upload does.
-  serverExternalPackages: ["sharp"],
   // Optimize production builds
   compiler: {
     removeConsole:

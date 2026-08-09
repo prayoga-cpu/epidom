@@ -8,13 +8,25 @@
  * at most `IMAGE_MAX_DIMENSION_PX` on its longest edge and re-encoded under
  * the requested target size.
  *
- * GIFs are passed through unresized: re-encoding an animated GIF frame-by-
- * frame needs a codec path sharp doesn't reliably ship, so a GIF is only
- * checked against the target size, never recompressed. This mirrors prior
- * behavior (GIFs were never processed) and is documented, not a regression.
+ * Pure JavaScript (jimp), not sharp: sharp's native linux-x64 binary gets
+ * pruned from Vercel's deployed function bundle (loaded via a runtime
+ * dlopen() that its output file tracer can't see), which crashed every
+ * upload with ERR_DLOPEN_FAILED. jimp has no native/dlopen'd binary at all —
+ * what passes locally behaves identically on Vercel.
+ *
+ * GIFs and WebP are both passed through unresized: re-encoding an animated
+ * GIF frame-by-frame needs a codec path this library doesn't have, and the
+ * only available WebP codec (@jimp/wasm-webp, wrapping @jsquash/webp) loads
+ * its WASM binary via a `fetch()` call that isn't implemented for local
+ * files under plain Node.js — the same runtime Vercel functions use — so it
+ * would crash `/api/upload` on any real WebP upload exactly like sharp did.
+ * Both formats are only checked against the target size, never recompressed.
+ * GIF pass-through mirrors prior behavior (documented, not a regression);
+ * WebP pass-through is a deliberate, narrower guarantee than before rather
+ * than risk a third production crash on an unproven codec path.
  */
 
-import sharp from "sharp";
+import { Jimp, JimpMime } from "jimp";
 import { IMAGE_MAX_DIMENSION_PX } from "@/lib/constants/image";
 
 export interface CompressedImage {
@@ -25,23 +37,8 @@ export interface CompressedImage {
 /** Quality steps to retry at (highest first) until the output fits the target size. */
 const QUALITY_STEPS = [82, 68, 54, 40] as const;
 
-async function encodeAtQuality(
-  pixels: Buffer,
-  format: "jpeg" | "webp" | "png",
-  quality: number
-): Promise<Buffer<ArrayBufferLike>> {
-  const image = sharp(pixels);
-  switch (format) {
-    case "jpeg":
-      return image.jpeg({ quality, mozjpeg: true }).toBuffer();
-    case "webp":
-      return image.webp({ quality }).toBuffer();
-    case "png":
-      // `palette: true` enables pngquant-style quantization so `quality`
-      // actually shrinks output size — a plain lossless PNG ignores it.
-      return image.png({ quality, palette: true, effort: 8 }).toBuffer();
-  }
-}
+/** Color-count steps for PNG, which has no lossy "quality" — only palette size. */
+const PNG_QUANTIZE_STEPS = [256, 128, 64, 32] as const;
 
 /**
  * Resize + re-encode an image buffer so it fits within `targetBytes`.
@@ -55,29 +52,44 @@ export async function compressImageServer(
   if (contentType === "image/gif") {
     if (input.length > targetBytes) {
       throw new Error(
-        `GIF exceeds the ${(targetBytes / 1024 / 1024).toFixed(1)}MB limit and can't be auto-compressed. Please use a JPEG, PNG, or WebP, or shrink the GIF manually.`
+        `GIF exceeds the ${(targetBytes / 1024 / 1024).toFixed(1)}MB limit and can't be auto-compressed. Please use a JPEG or PNG, or shrink the GIF manually.`
       );
     }
     return { buffer: input, contentType };
   }
 
-  const format = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpeg";
+  if (contentType === "image/webp") {
+    if (input.length > targetBytes) {
+      throw new Error(
+        `WebP exceeds the ${(targetBytes / 1024 / 1024).toFixed(1)}MB limit and can't be auto-compressed. Please use a JPEG or PNG, or shrink the file manually.`
+      );
+    }
+    return { buffer: input, contentType };
+  }
 
-  const resized: Buffer<ArrayBufferLike> = await sharp(input, { failOn: "none" })
-    .rotate() // normalize EXIF orientation before it's stripped
-    .resize({
-      width: IMAGE_MAX_DIMENSION_PX,
-      height: IMAGE_MAX_DIMENSION_PX,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .toBuffer();
+  const image = await Jimp.read(input);
 
-  let output: Buffer<ArrayBufferLike> = resized;
-  for (const quality of QUALITY_STEPS) {
-    output = await encodeAtQuality(resized, format, quality);
-    if (output.length <= targetBytes) {
-      return { buffer: output, contentType };
+  if (image.bitmap.width > IMAGE_MAX_DIMENSION_PX || image.bitmap.height > IMAGE_MAX_DIMENSION_PX) {
+    image.scaleToFit({ w: IMAGE_MAX_DIMENSION_PX, h: IMAGE_MAX_DIMENSION_PX });
+  }
+
+  if (contentType === "image/png") {
+    const lossless = await image.getBuffer(JimpMime.png, { deflateLevel: 9 });
+    if (lossless.length <= targetBytes) {
+      return { buffer: lossless, contentType: "image/png" };
+    }
+    for (const colors of PNG_QUANTIZE_STEPS) {
+      const buffer = await image.clone().quantize({ colors }).getBuffer(JimpMime.png, { deflateLevel: 9 });
+      if (buffer.length <= targetBytes) {
+        return { buffer, contentType: "image/png" };
+      }
+    }
+  } else {
+    for (const quality of QUALITY_STEPS) {
+      const buffer = await image.getBuffer(JimpMime.jpeg, { quality });
+      if (buffer.length <= targetBytes) {
+        return { buffer, contentType: "image/jpeg" };
+      }
     }
   }
 
