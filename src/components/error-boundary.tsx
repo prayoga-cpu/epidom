@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/logger";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { isStaleChunkError, reloadForStaleChunk } from "@/lib/utils/stale-chunk-reload";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -33,6 +34,14 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     logger.error("ErrorBoundary caught an error:", error);
+
+    // A React.lazy() import failing (stale chunk hash from an older deploy)
+    // throws during render, landing here rather than in ChunkErrorReloader's
+    // global listeners — recover the same way instead of showing the
+    // "Something went wrong" screen for what's really just a stale tab.
+    if ((error.name === "ChunkLoadError" || isStaleChunkError(error.message)) && reloadForStaleChunk()) {
+      return;
+    }
 
     this.setState({
       error,

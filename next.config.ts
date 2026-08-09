@@ -25,6 +25,22 @@ const nextConfig: NextConfig = {
   },
   // Enable React strict mode for better error detection
   reactStrictMode: true,
+  // sharp ships platform-specific native binaries; bundling it with
+  // webpack/turbopack instead of requiring it natively at runtime is a known
+  // cause of serverless functions crashing at cold start (before the route
+  // handler's own try/catch can run) when they import it, as /api/upload does.
+  serverExternalPackages: ["sharp"],
+  // Vercel's output file tracer can't see sharp's *runtime* dlopen() of
+  // libvips-cpp.so (only static `require`s are traceable), so it prunes that
+  // .so out of the deployed function bundle — the build succeeds but every
+  // invocation then crashes with ERR_DLOPEN_FAILED. Force-include it.
+  outputFileTracingIncludes: {
+    "/api/upload": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
+    ],
+  },
   // Optimize production builds
   compiler: {
     removeConsole:
@@ -56,7 +72,7 @@ const nextConfig: NextConfig = {
         // Restrict browser features
         {
           key: "Permissions-Policy",
-          value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+          value: "camera=(), microphone=(), geolocation=()",
         },
         // XSS Protection (legacy browsers)
         { key: "X-XSS-Protection", value: "1; mode=block" },
