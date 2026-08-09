@@ -9,6 +9,49 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.39.0] - 2026-08-09 · ux
+
+- **Kitchen & Bar / Order Queue ticket timers no longer show absurd raw minute counts on old tickets** (e.g. "51482m 50s"). Past an hour, the live mm:ss counter now switches to a human duration — "8hrs 9mins ago", "7 days ago", "1 month 4 days ago" — instead of continuing to tick in raw minutes.
+- **Order History table's Date column now reads "<weekday>, <day> <month>"** (e.g. "Thursday, 9 July") with the time on a second line, instead of a year-inclusive timestamp that made the column harder to scan. The exact weekday, date, year, and timezone are still there in full — now on the order detail dialog, which shows a precise timestamp with both the timezone offset and full zone name (e.g. "Sunday, Jul 9, 2026, 4:00 PM GMT+7 (Western Indonesia Time)") for the order date, delivered date, and last receipt send time.
+
+## [2.38.0] - 2026-08-09 · feat
+
+- **Menu Editor: categories and items can now actually be dragged to reorder.** The grip handles were previously decorative; they now use `@dnd-kit` (new dependency) to reorder categories among themselves, and items within a category, persisting the new `displayOrder` via the existing update endpoints. Touch-safe (40px drag-handle hit targets, `touch-action: none`) for iPad/Android use.
+- **Product-linked menu items: deleting is now framed as "remove from POS menu," not "delete."** The item's trash icon and confirm dialog say "Remove from POS menu" and clarify the product data is kept — only its POS listing goes away. Deleting a category that contains product-linked items shows the same clarified wording for its "delete items" option.
+- **Product-linked menu items no longer show a Category or Modifiers editor in the Menu Editor.** Both are owned by the Product (`Product.category`, `Product.optionGroups`) and edited there via the existing "Edit in Products" link — duplicating them in the Menu Editor risked silent drift. Description and photo remain editable in place since those aren't synced from the product.
+
+## [2.37.0] - 2026-08-09 · feat
+
+- **Kitchen & Bar display and the Order Queue are now one module.** Both pages share a single "Active Queue" setting: turning Kitchen & Bar display off now also empties the Order Queue (new orders skip straight to History as Delivered), and a matching toggle was added to the Order Queue page itself — turning it off does the same and flips Kitchen & Bar display off too. Either page's toggle controls the same store-wide setting, in sync everywhere.
+- Closed a gap where a Pay Later order could still sit on Pending in the queue even with the display off — it now also goes straight to Delivered (still unpaid, still followable from Order History's Mark Paid action).
+- Hold order is now disabled while the Active Queue is off, since there's no queue left to park it in or resume it from.
+
+## [2.36.0] - 2026-08-09 · feat
+
+- **Menu Editor: move an item to a different category (or create one) without deleting and re-adding it.** The Edit Item dialog now has a Category field (searchable, creatable) that reassigns the item's `MenuCategory` in place.
+- **POS menu items linked to a Product are now clearly marked and protected from drift.** A "From Product" badge + tooltip appears on any menu item backed by a Product; its Edit dialog locks Name/Price/Department (owned by the product and synced one-way) and offers an "Edit in Products" button that deep-links to that product's edit dialog on the Data page instead. Category, description, image, and modifiers stay editable in the Menu Editor.
+- **Fixed the Data > Products "in POS menu" icon going stale.** Adding/removing/editing a menu item (from the Menu Editor, another tab, or another device) now publishes a `menu.changed` realtime event that the Products page subscribes to, instead of relying only on window-focus refetch; the Menu Editor also invalidates the Products page's linked-status cache directly for instant same-tab feedback.
+- **Added a bulk "Remove from Menu" action** to the Products page's multi-select toolbar, mirroring the existing bulk "Add to Menu".
+- **The "not yet in POS menu" icon on a product card no longer looks similar to the green "already in menu" one** — it's now a neutral/muted color so the two states are easier to tell apart at a glance.
+
+## [2.35.0] - 2026-08-09 · ux
+
+- **Email and WhatsApp Number now format live and show their own inline error, like Username already did.** Add/Edit Staff previously only caught a bad email or phone value on submit (or worse, silently on Add — those two fields had no inline error rendering at all). WhatsApp Number now strips non-digits while typing (keeping a leading `+`); Email strips whitespace and lowercases. Both re-validate as you type — Add via a `watch` + `trigger` effect (react-hook-form), Edit via a new shared `optionalEmailSchema` (`common.schemas.ts`, alongside the existing `phoneSchema`) checked directly against the plain `useState` fields — and show the specific reason inline instead of only a generic toast after Save.
+
+## [2.34.1] - 2026-08-09 · fix
+
+- **Staff save failures now say which field is wrong.** Saving the Add/Edit Staff dialog surfaced a bare "Validation failed" toast on any Zod validation error (e.g. a non-phone value sitting in WhatsApp Number), giving no way to tell what to fix — the actual per-field reason was already being computed server-side (`parsed.error.flatten()`) but discarded on the way to the toast, which only ever read the response's generic top-level message. Both dialogs now surface the real field + reason (e.g. "WhatsApp Number: Invalid phone number format").
+
+## [2.34.0] - 2026-08-09 · fix
+
+- **Staff filter dropdowns (Finance Reports, POS Order History, Order Queue) no longer drop staff the moment they're deactivated.** Finance Reports and Order History both queried/filtered `isActive: true`, so a staff member's own past orders became impossible to filter by as soon as they were deactivated — with no way to isolate their historical revenue or transactions. All three now keep deactivated staff selectable, labeled "(Inactive)", instead of quietly removing the option along with the person.
+- **Hid "Switch Account" from the account dropdown when there's no one to switch to.** Previously always shown to the owner regardless of roster state, it reloaded into an empty picker whenever the store had zero staff or only inactive ones. Now hidden unless at least one active, non-Owner staff account exists (mirrors the existing zero-staff bypass check in the dashboard layout).
+
+## [2.33.0] - 2026-08-09 · ux
+
+- **Custom staff role moved into the Role dropdown, and it now actually shows up.** The Add/Edit Staff dialogs previously had an always-visible "Custom role label" text field sitting below the Role select — confusing since it looked mandatory, and its value was silently discarded by the display layer (the staff table's role Badge never read `customRoleLabel`, only the base role name). Replaced with a "Custom…" entry inside the Role dropdown itself: selecting it reveals a single inline text input right there, and the staff list now shows that custom title instead of the base role wherever it's set.
+- **Staff username field now auto-formats while typing** instead of only rejecting invalid characters on submit — lowercases and strips anything outside `a-z0-9_.` live, matching the existing backend `usernameSchema` regex, in both the Add and Edit Staff forms.
+
 ## [2.32.0] - 2026-08-08 · feat
 
 - **Fixed the printed/digital receipt going nearly invisible in dark mode.** `ReceiptDocument` (the shared component behind the public `/r/[orderId]` page and the receipt-settings live preview) deliberately renders as fixed black-on-white "paper" regardless of the app's theme — but a global dark-mode CSS rule that remaps `.text-black`/`.text-gray-*` to pale cream (for readability against the dark dashboard theme) was catching it too, since it wasn't opted out. Fixed by applying the same `print-report` marker class already used by the other "always white" views (`print-report-shell.tsx`, `order-history-print-view.tsx`) and extending that opt-out rule to cover the additional gray shades the receipt uses.

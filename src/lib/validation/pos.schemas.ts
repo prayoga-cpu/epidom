@@ -108,6 +108,15 @@ export const updateOrderStatusSchema = z
 
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 
+// Kept separate from updateOrderStatusSchema (a different endpoint) rather
+// than folded in — status updates carry side effects (stock deduction,
+// freeing a table) that a contact-info edit has no business triggering.
+export const updateOrderCustomerSchema = z.object({
+  customerPhone: z.string().min(6, "Phone number is too short").max(30),
+});
+
+export type UpdateOrderCustomerInput = z.infer<typeof updateOrderCustomerSchema>;
+
 // Staff-initiated refund (POS order history "Issue Refund" action). Supports
 // repeat partial refunds against the same order — the route sums this
 // against Order.refundAmount and rejects anything that would exceed the

@@ -4,8 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { ACTIVE_POS_QUEUE_FILTER } from "@/lib/constants/order-status";
 import { serializePosOrders } from "@/lib/server/serialize";
 
-// SSE endpoint for real-time order updates.
-// Clients poll the latest pending/confirmed orders every 5 seconds.
+// SSE endpoint for real-time order updates. Only used as a client-side
+// fallback when Pusher isn't configured (see usePosOrders) — kept as a
+// long-lived connection, so its poll interval directly drives Fluid CPU
+// cost for as long as any client is on this path.
 // A proper push implementation (Postgres LISTEN/NOTIFY or WebSockets)
 // can replace this in Phase 3 without changing the client contract.
 
@@ -51,6 +53,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
       const poll = async () => {
         if (isClosed) return;
+
+        // Active Queue is off for this store — nothing to report even if an
+        // order happens to still be unpaid (see resolveSettledOrderStatus).
+        // Re-checked every poll (not just once at connection-open) so an
+        // owner flipping the toggle mid-shift is reflected on this long-lived
+        // connection without requiring a reconnect.
+        const store = await prisma.store.findUnique({
+          where: { id: storeId },
+          select: { kitchenDisplayEnabled: true },
+        });
+        if (!store?.kitchenDisplayEnabled) {
+          send({ type: "orders", orders: [] });
+          return;
+        }
+
         const orders = await prisma.order.findMany({
           where: {
             storeId,
@@ -84,7 +101,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           clearInterval(interval);
           safeClose();
         });
-      }, 5000);
+      }, 15000);
 
       // Clean up when client disconnects
       const cleanup = () => {

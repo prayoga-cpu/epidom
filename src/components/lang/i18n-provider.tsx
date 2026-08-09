@@ -11,6 +11,8 @@ import {
   formatDateOnly as formatDateOnlyWithLocale,
   formatTimeOnly as formatTimeOnlyWithLocale,
   formatRelativeTime as formatRelativeTimeWithLocale,
+  formatDayDate as formatDayDateWithLocale,
+  formatDateTimeWithTimezone as formatDateTimeWithTimezoneWithLocale,
 } from "@/lib/utils/formatting";
 
 export type Locale = "en" | "fr" | "id";
@@ -38,6 +40,14 @@ type I18nContextType = {
   formatDateOnly: (date: Date | string | null | undefined) => string;
   formatTimeOnly: (date: Date | string | null | undefined) => string;
   formatRelativeTime: (date: Date | string | null | undefined) => string;
+  /** "<weekday>, <day> <month>" with no year — for a scannable table
+   * column (see formatDateTimeWithTimezone for the exact-precision
+   * counterpart used in detail views). */
+  formatDayDate: (date: Date | string | null | undefined) => string;
+  /** Exact date + year + time, plus the viewer's timezone abbreviation —
+   * for a detail view (e.g. an order's detail dialog) where the list row's
+   * formatDateTime alone would leave the reader guessing the timezone. */
+  formatDateTimeWithTimezone: (date: Date | string | null | undefined) => string;
   /** The current locale's `date-fns` `Locale` object, for call sites that
    * need to call `date-fns`'s `format()` themselves with a custom pattern. */
   dateLocale: DateFnsLocale;
@@ -151,6 +161,14 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     (date: Date | string | null | undefined) => formatRelativeTimeWithLocale(date, locale),
     [locale]
   );
+  const formatDayDate = useCallback(
+    (date: Date | string | null | undefined) => formatDayDateWithLocale(date, locale),
+    [locale]
+  );
+  const formatDateTimeWithTimezone = useCallback(
+    (date: Date | string | null | undefined) => formatDateTimeWithTimezoneWithLocale(date, locale),
+    [locale]
+  );
   const dateLocale = DATE_FNS_LOCALES[locale];
   const intlLocale = INTL_LOCALES[locale];
 
@@ -164,6 +182,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       formatDateOnly,
       formatTimeOnly,
       formatRelativeTime,
+      formatDayDate,
+      formatDateTimeWithTimezone,
       dateLocale,
       intlLocale,
     }),
@@ -176,6 +196,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       formatDateOnly,
       formatTimeOnly,
       formatRelativeTime,
+      formatDayDate,
+      formatDateTimeWithTimezone,
       dateLocale,
       intlLocale,
     ]

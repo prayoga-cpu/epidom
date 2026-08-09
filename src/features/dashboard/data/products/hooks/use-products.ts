@@ -256,9 +256,11 @@ export function useProducts(
     queryFn: () => fetchProducts(storeId, normalizedFilters || filters),
     enabled: !!storeId,
     initialData, // ✅ Accept initial data from Server Component
-    // Real-time configuration: Aggressive polling for instant cross-tab updates
-    staleTime: 3 * 1000, // 3 seconds - consider data stale faster
-    refetchInterval: 5 * 1000, // Poll every 5 seconds - 6x faster for real-time sync
+    // Real-time configuration: Pusher (see useRealtimeChannel below) is the
+    // primary update path; this poll is only a safety net for when push
+    // misses an event, so it doesn't need safety-net-grade CPU cost.
+    staleTime: 20 * 1000,
+    refetchInterval: 30 * 1000, // Safety-net poll — Pusher covers the instant case
     refetchIntervalInBackground: false, // Only poll when tab is active
     refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
     refetchOnWindowFocus: true, // Refetch on window focus if stale
@@ -779,15 +781,81 @@ export function useBulkAddProductsToMenu(storeId: string) {
 }
 
 /**
+ * Remove many products from the store's POS menu at once (bulk-selection
+ * toolbar action) — mirror of useBulkAddProductsToMenu. Each product may
+ * have more than one linked MenuItem; all are deleted. Per-product failures
+ * don't abort the batch, so the caller can show a single summary toast.
+ */
+export function useBulkRemoveProductsFromMenu(storeId: string) {
+  const queryClient = useQueryClient();
+  const linkedKey = ["storefront-items-linked", storeId];
+
+  return useMutation({
+    mutationFn: async (
+      products: Pick<Product, "id" | "name">[]
+    ): Promise<BulkAddToMenuResult> => {
+      const results = await Promise.allSettled(
+        products.map(async (product) => {
+          const items: LinkedMenuItem[] = await fetch(
+            `/api/stores/${storeId}/storefront/items?productId=${product.id}`
+          )
+            .then((r) => r.json())
+            .then((d) => (d?.data ?? []) as LinkedMenuItem[]);
+
+          for (const item of items) {
+            const res = await fetch(`/api/stores/${storeId}/storefront/items/${item.id}`, {
+              method: "DELETE",
+            });
+            if (!res.ok) {
+              const error = await res.json().catch(() => null);
+              throw new ApiClientError(
+                error?.error
+                  ? error
+                  : {
+                      success: false,
+                      error: { code: "INTERNAL_ERROR", message: "Failed to remove product from menu" },
+                    },
+                res.status
+              );
+            }
+          }
+        })
+      );
+
+      const failed = results.filter((r) => r.status === "rejected").length;
+      return { total: products.length, succeeded: products.length - failed, failed };
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: linkedKey });
+      queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId] });
+    },
+  });
+}
+
+/**
  * Returns a Set of productIds that already have a linked MenuItem in the storefront.
  * Used by the product cards to show an "In Menu" badge instead of the add button.
+ *
+ * Real-time enabled: subscribes to MENU_CHANGED so an item added/removed/moved
+ * from the Menu Editor (or another tab/device) flips this badge immediately
+ * instead of only after the next window focus. The poll below is a safety
+ * net for when Pusher isn't configured, matching useProducts/usePosMenu.
  */
 export function useProductMenuStatus(storeId: string): {
   menuLinkedIds: Set<string>;
   isLoading: boolean;
 } {
+  const queryClient = useQueryClient();
+  const linkedKey = ["storefront-items-linked", storeId];
+
+  useRealtimeChannel(storeId, {
+    [REALTIME_EVENTS.MENU_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: linkedKey });
+    },
+  });
+
   const { data, isLoading } = useQuery<LinkedMenuItem[]>({
-    queryKey: ["storefront-items-linked", storeId],
+    queryKey: linkedKey,
     queryFn: () =>
       fetch(`/api/stores/${storeId}/storefront/items`)
         .then((r) => r.json())
@@ -795,6 +863,8 @@ export function useProductMenuStatus(storeId: string): {
     enabled: !!storeId,
     staleTime: 0, // always considered stale → refetches on focus/invalidation
     refetchOnWindowFocus: true,
+    refetchInterval: 30 * 1000,
+    refetchIntervalInBackground: false,
     select: (items) => items.filter((i) => !!i.productId),
   });
 
@@ -809,8 +879,17 @@ export function useProductMenuStatus(storeId: string): {
  * Powers the "Link to existing menu item" selector in AddProductDialog.
  */
 export function useUnlinkedMenuItems(storeId: string) {
+  const queryClient = useQueryClient();
+  const unlinkedKey = ["storefront-items-unlinked", storeId];
+
+  useRealtimeChannel(storeId, {
+    [REALTIME_EVENTS.MENU_CHANGED]: () => {
+      queryClient.invalidateQueries({ queryKey: unlinkedKey });
+    },
+  });
+
   return useQuery<LinkedMenuItem[]>({
-    queryKey: ["storefront-items-unlinked", storeId],
+    queryKey: unlinkedKey,
     queryFn: () =>
       fetch(`/api/stores/${storeId}/storefront/items?unlinked=true`)
         .then((r) => r.json())

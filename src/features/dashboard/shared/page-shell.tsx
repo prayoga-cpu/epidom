@@ -1,8 +1,16 @@
 "use client";
 import type React from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/features/dashboard/shared/sidebar";
 import { Topbar } from "@/features/dashboard/shared/topbar";
 import { UpgradeGateProvider } from "@/features/billing/upgrade/upgrade-modal";
+import { cn } from "@/lib/utils";
+
+// Matches only the POS cashier screen itself (/store/{id}/pos), not its
+// siblings (/pos/orders, /pos/kds) — the one page in the dashboard that
+// wants to fill the viewport exactly, edge to edge, with no breathing room
+// below it, instead of the padded/scrollable treatment every other page gets.
+const POS_CASHIER_PATH = /^\/store\/[^/]+\/pos\/?$/;
 
 /**
  * PageShell Component
@@ -13,6 +21,9 @@ import { UpgradeGateProvider } from "@/features/billing/upgrade/upgrade-modal";
  * Note: SessionProvider is now in root layout (app/layout.tsx)
  */
 export function PageShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isPosCashier = POS_CASHIER_PATH.test(pathname ?? "");
+
   return (
     <div className="page-transition-container flex h-screen w-full flex-col overflow-hidden">
       {/* Topbar - Fixed at top */}
@@ -40,15 +51,32 @@ export function PageShell({ children }: { children: React.ReactNode }) {
                 the end (a longstanding Chromium flexbox/overflow quirk) —
                 splitting scroll and padding across two elements avoids it. */}
             <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-              {/* min-h-full (not h-full): gives a page that wants to fill the
-                  viewport and manage its own internal scroll regions (e.g.
-                  PosShell — a fixed-height app with its own item-grid/cart
-                  overflow-y-auto children) a definite height to size its
-                  flex-1 against, without capping/clipping a normal page
-                  whose content is naturally taller than the viewport — that
-                  content still grows past min-h-full and scrolls via this
-                  wrapper's own overflow-y-auto ancestor exactly as before. */}
-              <div className="flex min-h-full flex-col p-2 md:p-6">
+              {/* min-h-full (not h-full) + padding on every side is right
+                  for a page that's naturally taller than the viewport (the
+                  common case — Stock, Finance Reports, every hand-tuned
+                  min-h-[calc(100vh-Npx)] page): min-h-full is a floor, not a
+                  cap, so real content — and this div's own pb-* after it —
+                  renders in full and simply overflows into this wrapper's
+                  overflow-y-auto ancestor. h-full would look equivalent for
+                  a short page, but for a tall one it anchors pb-* to *this
+                  div's* fixed bottom edge instead of to wherever the content
+                  actually ends, which (with default overflow: visible) sits
+                  past that edge — so the padding ends up hidden behind the
+                  overflow instead of trailing it.
+
+                  POS Cashier is the one page that wants the opposite: it
+                  fills the viewport exactly, edge to edge, and manages its
+                  own internal scroll regions (menu grid, cart) instead of
+                  scrolling as a whole — h-full (not min-h-full) hands its
+                  root flex-1 (flex-basis 0) a genuinely *definite* height to
+                  size against, and pb-0 (not p-*'s default bottom) drops the
+                  trailing gap this same div gives every other page. */}
+              <div
+                className={cn(
+                  "flex flex-col p-2 md:p-6",
+                  isPosCashier ? "h-full pb-0 md:pb-0" : "min-h-full"
+                )}
+              >
                 <UpgradeGateProvider>{children}</UpgradeGateProvider>
               </div>
             </div>

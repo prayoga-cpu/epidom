@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -150,27 +151,27 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
       }
       return;
     }
-    
+
     if (isAutoSave) {
       setIsAutoSaving(true);
     } else {
       setIsSaving(true);
     }
-    
+
     try {
       await storefrontApi.updateStorefront(storeId, data);
-      
+
       if (!isAutoSave) {
         toast.success(t("storefront.settings.saveSuccess"));
       } else {
         setLastSaved(new Date());
       }
-      
+
       initialSlug.current = (data.slug || "").trim().toLowerCase();
       setSlugStatus("idle");
-      
+
       form.reset(data, { keepValues: true, keepErrors: true, keepTouched: true });
-      
+
       if (!isAutoSave) onSuccess();
     } catch (error: any) {
       if (error.response?.status === 409) {
@@ -261,12 +262,14 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
             <div className="text-muted-foreground flex items-center gap-1.5 text-sm transition-opacity duration-300">
               {isAutoSaving && (
                 <>
-                  <Loader2 className="size-3.5 animate-spin" /> {t("storefront.settings.savingButton")}
+                  <Loader2 className="size-3.5 animate-spin" />{" "}
+                  {t("storefront.settings.savingButton")}
                 </>
               )}
               {!isAutoSaving && lastSaved && !form.formState.isDirty && (
                 <>
-                  <CheckCircle2 className="size-3.5 text-green-500" /> {t("storefront.settings.saveSuccess")}
+                  <CheckCircle2 className="size-3.5 text-green-500" />{" "}
+                  {t("storefront.settings.saveSuccess")}
                 </>
               )}
             </div>
@@ -525,21 +528,12 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                   <FormItem>
                     <FormLabel>{t("storefront.settings.whatsappNumber")}</FormLabel>
                     <FormControl>
-                      <div className="border-input focus-within:ring-ring flex rounded-md border shadow-sm focus-within:ring-1">
-                        <div className="bg-muted text-muted-foreground flex items-center border-r px-3 py-2 text-sm select-none">
-                          +
-                        </div>
-                        <input
-                          {...field}
-                          inputMode="numeric"
-                          className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
-                          placeholder="628123456789"
-                        />
-                      </div>
+                      <PhoneInput
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        defaultCountry="ID"
+                      />
                     </FormControl>
-                    <FormDescription>
-                      Include country code without +. Example: 628123456789 (Indonesia)
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

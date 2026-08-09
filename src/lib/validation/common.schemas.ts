@@ -36,6 +36,17 @@ export const phoneSchema = z
   .optional()
   .or(z.literal(""));
 
+// Email validation for optional contact fields (unlike `emailSchema` above,
+// which requires a value) — trims/lowercases before checking so client-side
+// live validation and the server agree on what counts as valid.
+export const optionalEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email("Invalid email format")
+  .optional()
+  .or(z.literal(""));
+
 // URL validation
 export const urlSchema = z.string().url("Invalid URL format").optional().or(z.literal(""));
 

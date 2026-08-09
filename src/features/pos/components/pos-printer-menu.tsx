@@ -3,7 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Printer, Bluetooth, BluetoothConnected, History, Loader2 } from "lucide-react";
+import {
+  Printer,
+  Bluetooth,
+  BluetoothConnected,
+  History,
+  Loader2,
+  MessageCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -33,6 +40,7 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
     disconnect,
   } = usePrinterSettings();
   const lastReceipt = useLastReceipt((s) => s.receipt);
+  const lastReceiptMeta = useLastReceipt((s) => s.meta);
   const [isReprinting, setIsReprinting] = useState(false);
   const supported = isBluetoothSupported();
 
@@ -163,9 +171,18 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
           <p className="text-sm font-medium">{t("pos.print.reprintLast")}</p>
           {lastReceipt ? (
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground truncate font-mono text-xs">
-                {lastReceipt.orderNumber}
-              </span>
+              {lastReceiptMeta ? (
+                <Link
+                  href={`/store/${storeId}/pos/orders?tab=history&order=${lastReceiptMeta.orderId}`}
+                  className="text-muted-foreground hover:text-foreground truncate font-mono text-xs underline underline-offset-2"
+                >
+                  {lastReceipt.orderNumber}
+                </Link>
+              ) : (
+                <span className="text-muted-foreground truncate font-mono text-xs">
+                  {lastReceipt.orderNumber}
+                </span>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -183,6 +200,16 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
             </div>
           ) : (
             <p className="text-muted-foreground text-xs">{t("pos.print.reprintLastEmpty")}</p>
+          )}
+          {lastReceiptMeta && (
+            <Button variant="outline" size="sm" className="w-full gap-2" asChild>
+              <Link
+                href={`/store/${storeId}/pos/orders?tab=history&order=${lastReceiptMeta.orderId}`}
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                {t("pos.print.sendLastReceipt")}
+              </Link>
+            </Button>
           )}
         </div>
 

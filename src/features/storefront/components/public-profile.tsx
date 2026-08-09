@@ -21,6 +21,7 @@ import { getPremiumTheme } from "@/lib/utils/color";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface CustomLink {
   label: string;
@@ -548,12 +549,11 @@ function ReservationModal({ slug, tables, onClose }: ReservationModalProps) {
                 <label className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                   {t("publicProfile.reservation.phoneLabel")}
                 </label>
-                <input
-                  className="border-border focus:ring-ring w-full rounded-lg border px-3 py-2.5 text-sm focus:ring-2 focus:outline-none"
+                <PhoneInput
                   placeholder={t("publicProfile.reservation.phonePlaceholder")}
-                  type="tel"
+                  defaultCountry="ID"
                   value={form.guestPhone}
-                  onChange={(e) => setForm((f) => ({ ...f, guestPhone: e.target.value }))}
+                  onChange={(value) => setForm((f) => ({ ...f, guestPhone: value ?? "" }))}
                 />
               </div>
               <div className="space-y-1">

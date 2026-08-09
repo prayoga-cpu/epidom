@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getFinanceSettings, getReceiptBranding } from "@/lib/services";
 import type { ReceiptData } from "@/lib/pwa/thermal-printer";
+import { RECEIPT_INTL_LOCALE, resolveReceiptLocale } from "@/lib/receipts/receipt-labels";
 
 export interface BuiltReceipt {
   receipt: ReceiptData;
@@ -11,6 +12,11 @@ export interface BuiltReceipt {
   customerName: string;
   paymentStatus: string;
   autoSendWhatsappReceipt: boolean;
+  /** Raw order timestamp — kept separate from `receipt.date` (a string
+   * already formatted for the printed/HTML receipt) so callers that need to
+   * format it differently (e.g. the WhatsApp message's own date shape) can
+   * without reparsing a locale-formatted string. */
+  orderDate: Date;
 }
 
 /**
@@ -31,7 +37,12 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
       items: { include: { menuItem: { select: { name: true } } } },
       table: { select: { label: true } },
       storefront: { select: { slug: true } },
-      store: { select: { name: true } },
+      store: {
+        select: {
+          name: true,
+          business: { select: { locale: true, user: { select: { currency: true } } } },
+        },
+      },
     },
   });
   if (!order) return null;
@@ -40,6 +51,17 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     getReceiptBranding(order.storeId),
     getFinanceSettings(order.storeId),
   ]);
+
+  // The store owner's *current* account currency — this is what every
+  // MenuItem/cart/order amount is actually stored literally in (see
+  // CurrencyProvider's own docs: `useCurrency()` reads User.currency, not
+  // Business.currency, and the whole POS/dashboard treats that as the
+  // store's display currency with no conversion). Orders don't freeze a
+  // currency snapshot at creation time, so this is only wrong if the owner
+  // changes their account currency after the fact — rare, and out of scope
+  // here.
+  const currency = order.store.business.user.currency;
+  const receiptLocale = resolveReceiptLocale(order.store.business.locale);
 
   const items: ReceiptData["items"] = order.items.map((item) => {
     const selectedOptions = Array.isArray(item.selectedOptions)
@@ -57,6 +79,8 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
 
   const receipt: ReceiptData = {
     storeName: branding.storeName,
+    currency,
+    locale: receiptLocale,
     tagline: branding.tagline ?? undefined,
     address: branding.address ?? undefined,
     email: branding.email ?? undefined,
@@ -66,9 +90,10 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     facebookHandle: branding.showSocialLinks ? (branding.facebookHandle ?? undefined) : undefined,
     footerMessage: branding.footerMessage ?? undefined,
     orderNumber: order.orderNumber,
-    date: new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(
-      order.orderDate
-    ),
+    date: new Intl.DateTimeFormat(RECEIPT_INTL_LOCALE[receiptLocale], {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(order.orderDate),
     items,
     subtotal: Number(order.subtotal),
     tax: Number(order.tax) > 0 ? Number(order.tax) : undefined,
@@ -91,5 +116,6 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     customerName: order.customerName,
     paymentStatus: order.paymentStatus,
     autoSendWhatsappReceipt: branding.autoSendWhatsappReceipt,
+    orderDate: order.orderDate,
   };
 }

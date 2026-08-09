@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildReceiptData } from "@/lib/receipts/build-receipt-data";
-import { ReceiptDocument } from "@/components/shared/receipt-document";
+import { ReceiptView } from "./receipt-view";
 import { ReceiptPrintButton } from "./receipt-print-button";
 
 interface PageProps {
@@ -34,7 +34,7 @@ export default async function ReceiptPage({ params }: PageProps) {
       <div className="print:hidden">
         <ReceiptPrintButton />
       </div>
-      <ReceiptDocument data={built.receipt} className="print:shadow-none" />
+      <ReceiptView receipt={built.receipt} />
     </div>
   );
 }

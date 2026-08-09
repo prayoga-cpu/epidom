@@ -40,8 +40,7 @@ export async function sendCustomerReceiptForOrder(
   }
   if (!built.customerPhone) return { sent: false, skipped: true, reason: "no_customer_phone" };
   if (built.paymentStatus !== "PAID") return { sent: false, skipped: true, reason: "not_paid" };
-  if (!isFonnteAvailable())
-    return { sent: false, skipped: true, reason: "fonnte_not_configured" };
+  if (!isFonnteAvailable()) return { sent: false, skipped: true, reason: "fonnte_not_configured" };
   if (!options.skipAutoSendGate && !built.autoSendWhatsappReceipt) {
     return { sent: false, skipped: true, reason: "auto_send_disabled" };
   }
@@ -61,10 +60,11 @@ export async function sendCustomerReceiptForOrder(
       customerName: built.customerName,
       storeName: built.receipt.storeName,
       totalAmount: built.receipt.total,
-      currency: "IDR",
-      orderDate: built.receipt.date,
+      currency: built.receipt.currency ?? "IDR",
+      orderDate: built.orderDate,
       receiptUrl,
       customerPhone: built.customerPhone,
+      locale: built.receipt.locale ?? "id",
     });
 
     await prisma.orderReceiptSend.create({

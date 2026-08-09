@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { usePosOrders } from "../hooks/use-pos-orders";
+import { usePosStaffList } from "../hooks/use-pos-staff-list";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
+import { useKdsSettings } from "../hooks/use-kds-settings";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { PosOrderCard } from "./pos-order-card";
 import { PosOrderRow } from "./pos-order-row";
@@ -12,7 +14,7 @@ import { PosOrderBoard } from "./pos-order-board";
 import { PosOrderQueueToolbar } from "./pos-order-queue-toolbar";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SearchX, UtensilsCrossed } from "lucide-react";
+import { SearchX, UtensilsCrossed, Power } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   matchesQueueFilters,
@@ -119,8 +121,10 @@ function sanitizeQueueFilters(raw: unknown, defaults: QueueFiltersState): QueueF
 export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   const { t } = useI18n();
   const { data: orders, isLoading } = usePosOrders(storeId);
+  const { data: kdsSettings, isLoading: isLoadingSettings } = useKdsSettings(storeId);
   const queryClient = useQueryClient();
   const updateStatus = useUpdateOrderStatus(storeId);
+  const activeQueueEnabled = kdsSettings?.kitchenDisplayEnabled ?? true;
 
   const [filters, setFilters] = usePersistedState(
     `epidom-pos-queue-filters-${storeId}`,
@@ -216,15 +220,20 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [allOrders]);
 
+  // isActive lookup only, so a since-deactivated staff member (still valid
+  // to filter by — their past orders didn't disappear) can be labeled
+  // Inactive instead of looking indistinguishable from current staff.
+  const { data: staffRoster } = usePosStaffList(storeId);
   const staffOptions = useMemo(() => {
+    const activeById = new Map((staffRoster ?? []).map((s) => [s.id, s.isActive]));
     const map = new Map<string, string>();
     for (const o of allOrders) {
       if (o.shift?.staffMember) map.set(o.shift.staffMember.id, o.shift.staffMember.name);
     }
     return Array.from(map.entries())
-      .map(([id, name]) => ({ id, name }))
+      .map(([id, name]) => ({ id, name, isActive: activeById.get(id) ?? true }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allOrders]);
+  }, [allOrders, staffRoster]);
 
   // Source/type/search filters apply everywhere; the status filter is a hard
   // filter in grid/compact views but only highlights a column in board view
@@ -308,12 +317,27 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     setSearch("");
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingSettings) {
     return (
       <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-64 w-full rounded-xl" />
         ))}
+      </div>
+    );
+  }
+
+  // Active Queue is off — GET /pos/orders always reports empty in this mode
+  // (see the API route), so this isn't the same as the queue merely having
+  // no orders right now; explain why instead of the generic empty state.
+  if (!activeQueueEnabled) {
+    return (
+      <div className="text-muted-foreground flex h-[60vh] flex-col items-center justify-center gap-3 p-6 text-center">
+        <div className="bg-muted rounded-full p-6">
+          <Power className="h-10 w-10 opacity-40" />
+        </div>
+        <p className="text-foreground text-lg font-medium">{t("pos.queue.activeQueueDisabledTitle")}</p>
+        <p className="max-w-sm text-sm">{t("pos.queue.activeQueueDisabledDesc")}</p>
       </div>
     );
   }

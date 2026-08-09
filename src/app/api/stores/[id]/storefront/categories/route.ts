@@ -3,6 +3,8 @@ import { storefrontService } from "@/lib/services";
 import { createMenuCategorySchema } from "@/lib/validation/storefront.schemas";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 /**
  * GET /api/stores/[id]/storefront/categories
@@ -30,6 +32,10 @@ export const POST = withApiHandler(
     const input = createMenuCategorySchema.parse(body);
 
     const category = await storefrontService.createMenuCategory(storefront.id, input);
+    publishStoreEvent(storeId!, REALTIME_EVENTS.MENU_CHANGED, {
+      action: "created",
+      entityId: category.id,
+    });
     return NextResponse.json(createSuccessResponse(category), { status: 201 });
   },
   {

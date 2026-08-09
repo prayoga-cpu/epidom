@@ -23,9 +23,9 @@ export function usePosMenu(storeId: string) {
     // long staleTime would leave POS silently serving a stale menu. Polling
     // (same pattern as useMaterials) keeps it self-healing; the Pusher push
     // below (when configured) makes the common case near-instant instead of
-    // waiting up to 5s, without removing the poll as a safety net.
-    staleTime: 3 * 1000,
-    refetchInterval: 5 * 1000,
+    // waiting on the poll, which exists purely as a safety net.
+    staleTime: 20 * 1000,
+    refetchInterval: 30 * 1000,
   });
 
   useRealtimeChannel(storeId, {

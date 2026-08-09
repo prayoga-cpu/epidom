@@ -1,4 +1,6 @@
 import { sendFonnteWhatsApp, isFonnteAvailable } from "./providers/fonnte";
+import { formatCurrency } from "@/lib/utils/formatting";
+import { buildReceiptWhatsAppMessage, type ReceiptLocale } from "@/lib/receipts/receipt-labels";
 
 export interface OrderNotificationData {
   orderNumber: string;
@@ -14,11 +16,7 @@ export interface OrderNotificationData {
 function formatOrderNotification(data: OrderNotificationData): string {
   const itemLines = data.items.map((i) => `  • ${i.name} x${i.quantity}`).join("\n");
 
-  const amount = new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: data.currency,
-    minimumFractionDigits: 0,
-  }).format(data.totalAmount);
+  const amount = formatCurrency(data.totalAmount, data.currency, "id-ID");
 
   return (
     `🛒 *Pesanan Baru!* - ${data.storeName}\n\n` +
@@ -46,24 +44,22 @@ export interface CustomerReceiptNotificationData {
   storeName: string;
   totalAmount: number;
   currency: string;
-  orderDate: string;
+  orderDate: Date;
   receiptUrl: string;
   customerPhone: string;
+  locale: ReceiptLocale;
 }
 
 function formatCustomerReceiptNotification(data: CustomerReceiptNotificationData): string {
-  const amount = new Intl.NumberFormat("id-ID", {
-    style: "currency",
+  return buildReceiptWhatsAppMessage({
+    customerName: data.customerName,
+    storeName: data.storeName,
+    total: data.totalAmount,
     currency: data.currency,
-    minimumFractionDigits: 0,
-  }).format(data.totalAmount);
-
-  return (
-    `Hai ${data.customerName} 👋\n` +
-    `Terima kasih ya kunjungannya di *${data.storeName}*.\n` +
-    `Berikut total pesananmu sebesar *${amount}*, pada ${data.orderDate}.\n\n` +
-    `Detailnya kami cantumkan di sini ya\n${data.receiptUrl}`
-  );
+    orderDate: data.orderDate,
+    receiptUrl: data.receiptUrl,
+    locale: data.locale,
+  });
 }
 
 /** Sends the customer-facing digital-receipt link — see send-customer-receipt.ts for when this fires. */

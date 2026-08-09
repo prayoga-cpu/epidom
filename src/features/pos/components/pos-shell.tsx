@@ -77,6 +77,13 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
 
   return (
     <PosStaffGate storeId={store.id} bypassGate={bypassStaffGate}>
+      {/* flex-1 min-h-0 (not a hardcoded h-[calc(100vh-Npx)]): page-shell.tsx
+          gives the POS route's wrapper a genuinely definite height (h-full,
+          not min-h-full) specifically so this can resolve its flex-basis:0
+          growth against it exactly, edge to edge, without needing to guess
+          the surrounding chrome's pixel total. min-h-0 lets it shrink below
+          its content's natural size so overflow-hidden below can actually
+          clip instead of growing past the available space. */}
       <div className="bg-muted/10 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl">
         <PosHeader store={store} onCartClick={() => setMobileCartOpen(true)} />
         <PosOfflineBanner storeId={store.id} />

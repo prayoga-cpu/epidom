@@ -1,16 +1,17 @@
 import { cn } from "@/lib/utils";
 import type { ReceiptData } from "@/lib/pwa/thermal-printer";
+import { formatCurrency } from "@/lib/utils/formatting";
+import {
+  RECEIPT_INTL_LOCALE,
+  RECEIPT_LABELS,
+  RECEIPT_POWERED_BY_URL,
+  resolveReceiptLocale,
+} from "@/lib/receipts/receipt-labels";
+import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 
 interface ReceiptDocumentProps {
   data: ReceiptData;
   className?: string;
-}
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function Divider() {
@@ -36,6 +37,12 @@ function Row({ label, value }: { label: string; value: string }) {
  * light/dark theme — it's emulating a physical printed artifact, not app UI.
  */
 export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
+  const locale = resolveReceiptLocale(data.locale);
+  const labels = RECEIPT_LABELS[locale];
+  const currency = data.currency ?? "IDR";
+  const formatMoney = (amount: number) =>
+    formatCurrency(amount, currency, RECEIPT_INTL_LOCALE[locale]);
+
   const social = [
     data.instagramHandle ? `IG @${data.instagramHandle}` : null,
     data.tiktokHandle ? `TikTok @${data.tiktokHandle}` : null,
@@ -79,16 +86,18 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
 
       <Divider />
       <div className="space-y-0.5">
-        <Row label="No. Bill" value={data.orderNumber} />
-        <Row label="Tanggal" value={data.date} />
-        {data.cashierName && <Row label="Kasir" value={data.cashierName} />}
-        {data.tableLabel && <Row label="Meja" value={data.tableLabel} />}
+        <Row label={labels.billNo} value={data.orderNumber} />
+        <Row label={labels.date} value={data.date} />
+        {data.cashierName && <Row label={labels.cashier} value={data.cashierName} />}
+        {data.tableLabel && <Row label={labels.table} value={data.tableLabel} />}
       </div>
 
       <Divider />
       <div className="flex justify-between font-semibold">
-        <span>ITEM</span>
-        <span>QTY&nbsp;&nbsp;&nbsp;TOTAL</span>
+        <span>{labels.item}</span>
+        <span>
+          {labels.qty}&nbsp;&nbsp;&nbsp;{labels.total}
+        </span>
       </div>
       <div className="mt-1.5 space-y-1.5">
         {data.items.map((item, i) => (
@@ -96,9 +105,9 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
             <p>{item.name}</p>
             <div className="flex justify-between text-gray-600">
               <span>
-                {item.quantity}x Rp{formatMoney(item.unitPrice)}
+                {item.quantity}x {formatMoney(item.unitPrice)}
               </span>
-              <span>Rp{formatMoney(item.total)}</span>
+              <span>{formatMoney(item.total)}</span>
             </div>
             {item.optionNames && item.optionNames.length > 0 && (
               <p className="text-[11px] text-gray-500">{item.optionNames.join(", ")}</p>
@@ -110,54 +119,56 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
 
       <Divider />
       <div className="space-y-0.5">
-        <Row label="SUBTOTAL" value={`Rp${formatMoney(data.subtotal)}`} />
-        {!!data.tax && (
-          <Row label={data.taxLabel || "Pajak"} value={`Rp${formatMoney(data.tax)}`} />
-        )}
+        <Row label={labels.subtotal} value={formatMoney(data.subtotal)} />
+        {!!data.tax && <Row label={data.taxLabel || labels.tax} value={formatMoney(data.tax)} />}
         {!!data.serviceCharge && (
           <Row
-            label={data.serviceChargeLabel || "Service"}
-            value={`Rp${formatMoney(data.serviceCharge)}`}
+            label={data.serviceChargeLabel || labels.service}
+            value={formatMoney(data.serviceCharge)}
           />
         )}
         {!!data.discountAmount && (
           <Row
-            label={data.discountReason ? `Diskon (${data.discountReason})` : "Diskon"}
-            value={`-Rp${formatMoney(data.discountAmount)}`}
+            label={
+              data.discountReason ? `${labels.discount} (${data.discountReason})` : labels.discount
+            }
+            value={`-${formatMoney(data.discountAmount)}`}
           />
         )}
       </div>
 
       <Divider />
       <div className="flex justify-between text-sm font-bold">
-        <span>TOTAL</span>
-        <span>Rp{formatMoney(data.total)}</span>
+        <span>{labels.total}</span>
+        <span>{formatMoney(data.total)}</span>
       </div>
 
       <Divider />
       <div className="space-y-0.5">
         {data.paymentMethod === "CASH" && data.amountTendered ? (
           <>
-            <Row label="TUNAI" value={`Rp${formatMoney(data.amountTendered)}`} />
+            <Row label={labels.cash} value={formatMoney(data.amountTendered)} />
             {data.change !== undefined && data.change >= 0 && (
-              <Row label="KEMBALI" value={`Rp${formatMoney(data.change)}`} />
+              <Row label={labels.change} value={formatMoney(data.change)} />
             )}
           </>
         ) : (
-          <Row label={`Bayar (${data.paymentMethod})`} value="LUNAS" />
+          <Row label={`${labels.paidVia} (${data.paymentMethod})`} value={labels.paid} />
         )}
       </div>
 
       {data.notes && (
         <>
           <Divider />
-          <p>Catatan: {data.notes}</p>
+          <p>
+            {labels.notes}: {data.notes}
+          </p>
         </>
       )}
 
       <Divider />
       <div className="text-center whitespace-pre-line">
-        {data.footerMessage || "Terima kasih!\nSilakan datang kembali"}
+        {data.footerMessage || labels.defaultFooter}
       </div>
 
       {social.length > 0 && (
@@ -168,7 +179,12 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
       )}
 
       <Divider />
-      <p className="text-center text-[11px] text-gray-400">epidom.app</p>
+      <div className="flex items-center justify-center gap-1.5 text-gray-400">
+        <EpidomMark size={14} />
+        <p className="text-[11px]">
+          {RECEIPT_POWERED_BY_URL} | {labels.poweredByTitle}
+        </p>
+      </div>
     </div>
   );
 }

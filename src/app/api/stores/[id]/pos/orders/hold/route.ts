@@ -41,6 +41,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
   if (verification instanceof NextResponse) return verification;
+  const store = verification;
+
+  // Defense in depth — the client only shows the Hold button when the store's
+  // Active Queue is on, but never trust that a request actually came from a
+  // client that enforced it. A HELD order only makes sense with a queue to
+  // park it in and a board to resume it from; with the queue off, every
+  // order settles straight to DELIVERED/history instead (see
+  // resolveSettledOrderStatus).
+  if (!store.kitchenDisplayEnabled) {
+    return NextResponse.json(
+      createErrorResponse(ApiErrorCode.INVALID_INPUT, "Active Queue is off for this store"),
+      { status: 422 }
+    );
+  }
 
   try {
     const body = await request.json();

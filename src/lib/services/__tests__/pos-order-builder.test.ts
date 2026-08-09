@@ -12,7 +12,11 @@ vi.mock("@/lib/prisma", () => {
   return { prisma: prismaMock };
 });
 
-import { validateAndBuildOrderItems, OrderBuildError } from "../pos-order-builder";
+import {
+  validateAndBuildOrderItems,
+  resolveSettledOrderStatus,
+  OrderBuildError,
+} from "../pos-order-builder";
 
 describe("validateAndBuildOrderItems", () => {
   beforeEach(() => {
@@ -129,5 +133,34 @@ describe("validateAndBuildOrderItems", () => {
         { menuItemId: "missing", name: "Ghost", quantity: 1, unitPrice: 1 },
       ] as any)
     ).rejects.toThrow(OrderBuildError);
+  });
+});
+
+/**
+ * The Active Queue toggle (kitchenDisplayEnabled) is the single shared
+ * switch behind both the Kitchen & Bar display and the Order Queue's
+ * "Active Queue" toggle — turning either off turns both off. When off,
+ * every payment method must settle straight to DELIVERED, including
+ * PAY_LATER: with no queue left to hold a tab in, it can't stay on PENDING
+ * (see GET /pos/orders and the SSE stream, which report an empty active
+ * feed whenever this is off — a lingering PENDING order would be invisible
+ * and unmanageable).
+ */
+describe("resolveSettledOrderStatus", () => {
+  it("goes to CONFIRMED for a cashier-attended payment when the Active Queue is on", () => {
+    expect(resolveSettledOrderStatus("CASH", true)).toBe("CONFIRMED");
+    expect(resolveSettledOrderStatus("QRIS", true)).toBe("CONFIRMED");
+  });
+
+  it("stays PENDING for PAY_LATER when the Active Queue is on", () => {
+    expect(resolveSettledOrderStatus("PAY_LATER", true)).toBe("PENDING");
+  });
+
+  it("goes straight to DELIVERED for a cashier-attended payment when the Active Queue is off", () => {
+    expect(resolveSettledOrderStatus("CASH", false)).toBe("DELIVERED");
+  });
+
+  it("also goes straight to DELIVERED for PAY_LATER when the Active Queue is off — never left on PENDING", () => {
+    expect(resolveSettledOrderStatus("PAY_LATER", false)).toBe("DELIVERED");
   });
 });

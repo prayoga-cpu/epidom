@@ -14,6 +14,7 @@ import { PosCheckoutDialog } from "./pos-checkout-dialog";
 import { PosHoldDialog, type HoldFormValues } from "./pos-hold-dialog";
 import { usePosSession } from "../hooks/use-pos-session";
 import { useHoldOrder } from "../hooks/use-hold-order";
+import { useKdsSettings } from "../hooks/use-kds-settings";
 import { ApiClientError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
@@ -45,6 +46,13 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isHoldOpen, setIsHoldOpen] = useState(false);
   const holdOrder = useHoldOrder(storeId);
+  // Hold only makes sense with an Active Queue to park it in — when the
+  // store has turned it off, every order settles straight to
+  // DELIVERED/history instead (see resolveSettledOrderStatus), so the button
+  // is disabled rather than left to fail server-side after the cashier fills
+  // out the hold dialog.
+  const { data: kdsSettings } = useKdsSettings(storeId);
+  const activeQueueEnabled = kdsSettings?.kitchenDisplayEnabled ?? true;
   const { data: financeSettings } = useFinanceSettings(storeId);
   // Shares the same query cache as pos-shell.tsx's usePosMenu call — used
   // here only to look up a cart line's option groups when the cashier taps
@@ -106,6 +114,10 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
   };
 
   const handleHoldClick = () => {
+    if (!activeQueueEnabled) {
+      toast.error(t("pos.cart.holdDisabled"));
+      return;
+    }
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       toast.error(t("pos.cart.holdOffline"));
       return;
@@ -302,8 +314,8 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
             size="lg"
             className="h-12 w-12 shrink-0 touch-manipulation"
             onClick={handleHoldClick}
-            disabled={holdOrder.isPending}
-            title={t("pos.cart.hold")}
+            disabled={holdOrder.isPending || !activeQueueEnabled}
+            title={activeQueueEnabled ? t("pos.cart.hold") : t("pos.cart.holdDisabled")}
           >
             <Pause className="h-4 w-4" />
           </Button>

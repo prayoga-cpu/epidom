@@ -6,6 +6,8 @@ import {
 } from "@/lib/validation/storefront.schemas";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 /**
  * PATCH /api/stores/[id]/storefront/categories/[categoryId]
@@ -21,6 +23,10 @@ export const PATCH = withApiHandler(
     const input = updateMenuCategorySchema.parse(body);
 
     const category = await storefrontService.updateMenuCategory(categoryId, storefront.id, input);
+    publishStoreEvent(storeId!, REALTIME_EVENTS.MENU_CHANGED, {
+      action: "updated",
+      entityId: categoryId,
+    });
     return NextResponse.json(createSuccessResponse(category));
   },
   {
@@ -44,6 +50,10 @@ export const DELETE = withApiHandler(
     const { mode } = deleteMenuCategorySchema.parse(body);
 
     await storefrontService.deleteMenuCategory(categoryId, storefront.id, mode);
+    publishStoreEvent(storeId!, REALTIME_EVENTS.MENU_CHANGED, {
+      action: "deleted",
+      entityId: categoryId,
+    });
     return NextResponse.json(createSuccessResponse({ success: true, mode }));
   },
   {

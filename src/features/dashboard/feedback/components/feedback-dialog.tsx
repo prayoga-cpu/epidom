@@ -288,8 +288,11 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
           });
 
           if (!response.ok) {
-            const errorBody: ApiErrorResponse = await response.json();
-            throw new Error(errorBody.error?.message);
+            // A platform-level failure (e.g. a serverless timeout or gateway
+            // error) can return an HTML error page instead of JSON — don't
+            // let that raw parse failure leak to the user as the toast text.
+            const errorBody: ApiErrorResponse | null = await response.json().catch(() => null);
+            throw new Error(errorBody?.error?.message || "");
           }
 
           const uploadData: ApiSuccessResponse<{ url: string }> = await response.json();

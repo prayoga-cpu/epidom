@@ -44,6 +44,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
   if (verification instanceof NextResponse) return verification;
+  const store = verification;
+
+  // Active Queue is off for this store — every order settles straight to
+  // DELIVERED/history (see resolveSettledOrderStatus), so there's nothing to
+  // report here even if an order happens to still be unpaid.
+  if (!store.kitchenDisplayEnabled) {
+    return NextResponse.json(createSuccessResponse([]));
+  }
 
   try {
     const orders = await prisma.order.findMany({

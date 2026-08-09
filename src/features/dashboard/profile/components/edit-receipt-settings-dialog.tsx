@@ -11,9 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { toast } from "sonner";
 import { ReceiptDocument } from "@/components/shared/receipt-document";
 import type { ReceiptData } from "@/lib/pwa/thermal-printer";
+import { RECEIPT_INTL_LOCALE } from "@/lib/receipts/receipt-labels";
 import {
   useUpdateReceiptSettings,
   type ReceiptSettingsData,
@@ -54,7 +56,8 @@ export function EditReceiptSettingsDialog({
   storeId,
   settings,
 }: EditReceiptSettingsDialogProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const { currency } = useCurrency();
   const updateSettings = useUpdateReceiptSettings(storeId);
 
   const form = useForm<FormValues>({ defaultValues: toFormValues(settings) });
@@ -94,6 +97,8 @@ export function EditReceiptSettingsDialog({
 
   const previewData: ReceiptData = {
     storeName: settings.storeName,
+    currency,
+    locale,
     tagline: settings.tagline ?? undefined,
     address: settings.address ?? undefined,
     email: settings.email ?? undefined,
@@ -103,9 +108,10 @@ export function EditReceiptSettingsDialog({
     facebookHandle: showSocialLinks && facebookUrl ? facebookUrl : undefined,
     footerMessage: footerMessage || undefined,
     orderNumber: "POS-PREVIEW-0001",
-    date: new Intl.DateTimeFormat("id-ID", { dateStyle: "short", timeStyle: "short" }).format(
-      new Date()
-    ),
+    date: new Intl.DateTimeFormat(RECEIPT_INTL_LOCALE[locale], {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date()),
     items: SAMPLE_ITEMS,
     subtotal: 73000,
     tax: 7300,

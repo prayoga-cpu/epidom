@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatLongElapsed } from "@/lib/utils/formatting";
 
 interface KdsTimerProps {
   startTime: string; // ISO string
@@ -20,9 +21,13 @@ export function KdsTimer({ startTime }: KdsTimerProps) {
     return () => clearInterval(interval);
   }, [startTime]);
 
+  // Past an hour, a live-ticking mm:ss counter stops being useful and
+  // starts looking broken (e.g. "51482m 50s" on a stale/abandoned ticket) —
+  // switch to a coarser human duration instead.
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  const label = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  const label =
+    seconds >= 3600 ? formatLongElapsed(seconds) : mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
 
   // Color-code urgency
   const colorClass =

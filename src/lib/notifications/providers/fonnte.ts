@@ -1,3 +1,5 @@
+import { normalizeWhatsappPhone } from "@/lib/utils/whatsapp";
+
 export interface FonnteMessageRequest {
   to: string;
   message: string;
@@ -24,7 +26,7 @@ export async function sendFonnteWhatsApp(
     throw new Error("FONNTE_API_TOKEN is not configured");
   }
 
-  const phone = req.to.replace(/\D/g, "").replace(/^0/, "62");
+  const phone = normalizeWhatsappPhone(req.to);
 
   const res = await fetch("https://api.fonnte.com/send", {
     method: "POST",

@@ -23,18 +23,23 @@ export function skipsOnlinePayment(method: PaymentMethod): boolean {
 
 /**
  * The order's status the moment payment is settled — CONFIRMED normally
- * (goes to the kitchen/bar queue), but DELIVERED outright when the store has
- * no kitchen/bar workflow to track (kitchenDisplayEnabled: false), since
- * there's no production stage left to pass through. Shared by order
- * creation, finalize, and the payment webhook so all three settlement paths
- * agree on what "paid" means for a given store.
+ * (goes to the kitchen/bar queue, i.e. the Active Queue), but DELIVERED
+ * outright when the store has turned the Active Queue off
+ * (kitchenDisplayEnabled: false), since there's no production stage or
+ * queue left to pass through. That includes PAY_LATER: with no queue to
+ * hold it in, an unpaid tab is recorded straight to history as delivered
+ * (paymentStatus stays PENDING for follow-up from there) rather than
+ * sitting on PENDING with nowhere to be reviewed. Shared by order creation,
+ * finalize, and the payment webhook so all three settlement paths agree on
+ * what "paid" means for a given store.
  */
 export function resolveSettledOrderStatus(
   method: PaymentMethod,
   kitchenDisplayEnabled: boolean
 ): OrderStatus {
+  if (!kitchenDisplayEnabled) return "DELIVERED";
   if (!skipsOnlinePayment(method)) return "PENDING";
-  return kitchenDisplayEnabled ? "CONFIRMED" : "DELIVERED";
+  return "CONFIRMED";
 }
 
 /**

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
@@ -133,10 +134,7 @@ function pick<T>(value: unknown, allowed: readonly T[], fallback: T): T {
   return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
-function sanitizeHistoryFilters(
-  raw: unknown,
-  defaults: HistoryFiltersState
-): HistoryFiltersState {
+function sanitizeHistoryFilters(raw: unknown, defaults: HistoryFiltersState): HistoryFiltersState {
   if (!raw || typeof raw !== "object") return defaults;
   const r = raw as Partial<Record<keyof HistoryFiltersState, unknown>>;
   const activeFilterKeys = Array.isArray(r.activeFilterKeys)
@@ -215,7 +213,7 @@ interface OrderHistoryTabProps {
 }
 
 export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDayDate, formatTimeOnly } = useI18n();
   // Order amounts are literal in the store's display currency, never IDR —
   // passing `currency` skips formatPrice's default base-currency conversion.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
@@ -266,9 +264,15 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [menuData]);
 
+  // Kept regardless of isActive — a past order can be tied to a
+  // since-deactivated staff member, so the filter still needs to be able to
+  // select them (labeled Inactive below), not just staff currently active.
   const { data: staffList } = usePosStaffList(storeId);
   const staffOptions = useMemo(
-    () => (staffList ?? []).filter((s) => s.isActive).sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      [...(staffList ?? [])].sort(
+        (a, b) => Number(b.isActive) - Number(a.isActive) || a.name.localeCompare(b.name)
+      ),
     [staffList]
   );
 
@@ -302,6 +306,32 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
 
   const orders = data?.pages.flatMap((p) => p.orders) ?? [];
   const totalCount = data?.pages[0]?.totalCount ?? 0;
+
+  // Deep link from the printer menu's "Reprint Last Order" panel
+  // (?tab=history&order=<id>) — opens that order's detail dialog directly
+  // instead of leaving the cashier to hunt for it in the table.
+  const searchParams = useSearchParams();
+  const targetOrderId = searchParams.get("order");
+  const hasAutoOpenedRef = useRef(false);
+
+  // A restrictive filter left over from a previous session (persisted via
+  // usePersistedState) could hide the order we were just deep-linked to —
+  // reset to defaults so it's actually findable in `orders` below.
+  useEffect(() => {
+    if (!targetOrderId) return;
+    setFilterState(HISTORY_FILTERS_DEFAULTS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetOrderId]);
+
+  useEffect(() => {
+    if (!targetOrderId || hasAutoOpenedRef.current) return;
+    const match = orders.find((o) => o.id === targetOrderId);
+    if (match) {
+      setSelected(match);
+      hasAutoOpenedRef.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetOrderId, orders]);
 
   // Same filters as the table above (paginated separately) — this reflects
   // the audit total for whatever date range/filters are currently applied,
@@ -384,10 +414,9 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
         toast.success(t("pos.history.bulk.markPaidSuccess").replace("{n}", String(succeeded)));
       } else {
         toast.error(
-          t("pos.history.bulk.partialFailure").replace("{ok}", String(succeeded)).replace(
-            "{fail}",
-            String(failed)
-          )
+          t("pos.history.bulk.partialFailure")
+            .replace("{ok}", String(succeeded))
+            .replace("{fail}", String(failed))
         );
       }
       setSelectedIds(new Set());
@@ -414,10 +443,9 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
         toast.success(t("pos.history.bulk.cancelSuccess").replace("{n}", String(succeeded)));
       } else {
         toast.error(
-          t("pos.history.bulk.partialFailure").replace("{ok}", String(succeeded)).replace(
-            "{fail}",
-            String(failed)
-          )
+          t("pos.history.bulk.partialFailure")
+            .replace("{ok}", String(succeeded))
+            .replace("{fail}", String(failed))
         );
       }
       setSelectedIds(new Set());
@@ -575,6 +603,9 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                 {staffOptions.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.name}
+                    {!s.isActive && (
+                      <span className="text-muted-foreground"> ({t("pages.staffInactive")})</span>
+                    )}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -767,7 +798,12 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                         />
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {formatDateTime(order.orderDate)}
+                        {/* No year here — the exact date/year/timezone
+                            lives in the order detail dialog instead. */}
+                        <div>{formatDayDate(order.orderDate)}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {formatTimeOnly(order.orderDate)}
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono">{order.orderNumber}</TableCell>
                       <TableCell>

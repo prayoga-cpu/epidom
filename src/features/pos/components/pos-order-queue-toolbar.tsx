@@ -45,6 +45,9 @@ import { RemovableFilter } from "./removable-filter";
 interface FilterOption {
   id: string;
   name: string;
+  // Only meaningful for staff options — a past order can still be tied to a
+  // since-deactivated staff member, so they stay selectable, just labeled.
+  isActive?: boolean;
 }
 
 const STATUS_META: Record<
@@ -278,6 +281,9 @@ export function PosOrderQueueToolbar({
                   {staffOptions.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
+                      {s.isActive === false && (
+                        <span className="text-muted-foreground"> ({t("pages.staffInactive")})</span>
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>

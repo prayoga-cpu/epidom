@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -29,7 +30,9 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createStaffSchema, type CreateStaffInput } from "@/lib/validation/operations.schemas";
-import { apiClient } from "@/lib/api/client";
+import { phoneSchema, optionalEmailSchema } from "@/lib/validation/common.schemas";
+import type { ZodType } from "zod";
+import { apiClient, ApiClientError } from "@/lib/api/client";
 import { UserRound, Plus, Pencil, UserX, Crown, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { StaffRole } from "@prisma/client";
@@ -73,6 +76,59 @@ const ROLE_LABEL_KEYS: Record<StaffRole, string> = {
 };
 
 const ROLES_FOR_SELECT: StaffRole[] = ["MANAGER", "CASHIER", "KITCHEN"];
+const CUSTOM_ROLE_VALUE = "CUSTOM";
+
+// Mirrors the backend `usernameSchema` character set (lowercase letters,
+// numbers, underscore, dot) so invalid characters never reach submit —
+// strips/lowercases live instead of only surfacing a validation error.
+function formatUsernameInput(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9_.]/g, "");
+}
+
+// Emails can't contain whitespace and are treated case-insensitively
+// elsewhere in the app (see `optionalEmailSchema`) — strip/lowercase live
+// instead of only catching it on submit.
+function formatEmailInput(value: string): string {
+  return value.replace(/\s/g, "").toLowerCase();
+}
+
+// Runs a field's own Zod schema outside of full-form validation, for the
+// Edit Staff dialog's plain useState fields (no react-hook-form there).
+function firstZodError(schema: ZodType<unknown>, value: string): string | null {
+  const result = schema.safeParse(value);
+  return result.success ? null : (result.error.issues[0]?.message ?? null);
+}
+
+const STAFF_FIELD_LABELS: Record<string, string> = {
+  name: "Name",
+  username: "Username",
+  email: "Email",
+  whatsapp: "WhatsApp Number",
+  role: "Role",
+  customRoleLabel: "Custom role label",
+  pin: "PIN",
+  payRate: "Pay Rate",
+};
+
+// The API's 400 response message is a generic "Validation failed" — the
+// actually-useful per-field reason lives in `error.details.fieldErrors`
+// (Zod's `.flatten()` shape) and was previously discarded, leaving the toast
+// unable to tell the owner which field broke (e.g. a leftover non-phone
+// value in WhatsApp Number).
+function describeStaffError(err: unknown, fallback: string): string {
+  if (err instanceof ApiClientError) {
+    const fieldErrors = (
+      err.response.error.details as { fieldErrors?: Record<string, string[]> } | undefined
+    )?.fieldErrors;
+    const firstEntry = fieldErrors && Object.entries(fieldErrors).find(([, msgs]) => msgs?.length);
+    if (firstEntry) {
+      const [field, [message]] = firstEntry;
+      return `${STAFF_FIELD_LABELS[field] ?? field}: ${message}`;
+    }
+    return err.message || fallback;
+  }
+  return err instanceof Error ? err.message : fallback;
+}
 
 export function StaffClient({
   storeId,
@@ -87,6 +143,7 @@ export function StaffClient({
   const { confirm, confirmDialog } = useConfirm();
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
+  const [addCustomRoleActive, setAddCustomRoleActive] = useState(false);
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
   const [setPinOpen, setSetPinOpen] = useState(false);
   const { data: pinStatus } = useOwnerPinStatus();
@@ -98,6 +155,7 @@ export function StaffClient({
   const [editWhatsapp, setEditWhatsapp] = useState("");
   const [editRole, setEditRole] = useState<StaffRole>("CASHIER");
   const [editCustomRoleLabel, setEditCustomRoleLabel] = useState("");
+  const [editCustomRoleActive, setEditCustomRoleActive] = useState(false);
   const [editPayType, setEditPayType] = useState<"HOURLY" | "MONTHLY" | "NONE">("NONE");
   const [editPayRate, setEditPayRate] = useState("");
   const [editAllowedPages, setEditAllowedPages] = useState<string[]>([]);
@@ -115,6 +173,8 @@ export function StaffClient({
   const staff = data?.staff ?? [];
   const activeCount = staff.filter((s) => s.isActive).length;
   const roleLabel = (r: StaffRole) => t(ROLE_LABEL_KEYS[r]);
+  const displayRoleLabel = (member: Pick<StaffMember, "role" | "customRoleLabel">) =>
+    member.customRoleLabel?.trim() || roleLabel(member.role);
 
   const {
     register,
@@ -122,6 +182,7 @@ export function StaffClient({
     setValue,
     watch,
     reset,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<CreateStaffInput & { email?: string; sendInvite?: boolean }>({
     resolver: zodResolver(createStaffSchema) as never,
@@ -133,9 +194,21 @@ export function StaffClient({
   });
 
   const watchEmail = watch("email" as never);
+  const watchWhatsapp = watch("whatsapp" as never);
   const watchSendInvite = watch("sendInvite" as never);
   const watchRole = watch("role");
   const watchAllowedPages = watch("allowedPages" as never) as string[] | undefined;
+
+  // Re-validates as-you-type instead of only on submit — reacting to `watch`
+  // (rather than triggering inline from the input's onChange) so this always
+  // runs after react-hook-form's own state update has committed the
+  // formatted value, not whatever was in the field before formatting ran.
+  useEffect(() => {
+    trigger("email" as never);
+  }, [watchEmail, trigger]);
+  useEffect(() => {
+    trigger("whatsapp" as never);
+  }, [watchWhatsapp, trigger]);
 
   const addMutation = useMutation({
     mutationFn: (body: CreateStaffInput & { email?: string; sendInvite?: boolean }) =>
@@ -144,9 +217,10 @@ export function StaffClient({
       queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
       setAddOpen(false);
       reset();
+      setAddCustomRoleActive(false);
       toast.success(t("pages.staffAdded"));
     },
-    onError: (err: Error) => toast.error(err.message || t("pages.staffAddFailed")),
+    onError: (err: Error) => toast.error(describeStaffError(err, t("pages.staffAddFailed"))),
   });
 
   const deactivateMutation = useMutation({
@@ -166,6 +240,7 @@ export function StaffClient({
     setEditWhatsapp(member.whatsapp ?? "");
     setEditRole(member.role);
     setEditCustomRoleLabel(member.customRoleLabel ?? "");
+    setEditCustomRoleActive(!!member.customRoleLabel?.trim());
     setEditPayType(member.payType);
     setEditPayRate(member.payRate != null ? String(member.payRate) : "");
     setEditAllowedPages(
@@ -195,6 +270,9 @@ export function StaffClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, staff]);
 
+  const editEmailError = firstZodError(optionalEmailSchema, editEmail);
+  const editWhatsappError = firstZodError(phoneSchema, editWhatsapp);
+
   const handleEditSave = async () => {
     if (!editTarget) return;
     setEditLoading(true);
@@ -209,8 +287,7 @@ export function StaffClient({
         allowedPages: editAllowedPages,
         isActive: editIsActive,
         payType: editPayType,
-        payRate:
-          editPayType === "NONE" || editPayRate.trim() === "" ? null : Number(editPayRate),
+        payRate: editPayType === "NONE" || editPayRate.trim() === "" ? null : Number(editPayRate),
       };
       if (editRemovePin) {
         body.pin = "";
@@ -226,7 +303,7 @@ export function StaffClient({
         toast.success(t("pages.staffPinSentToEmail"));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("pages.staffUpdateFailed"));
+      toast.error(describeStaffError(err, t("pages.staffUpdateFailed")));
     } finally {
       setEditLoading(false);
     }
@@ -296,7 +373,7 @@ export function StaffClient({
                     <span className="text-muted-foreground/50 text-[8px] sm:text-xs">—</span>
                   )}
                 </div>
-                <Badge variant="secondary">{roleLabel(member.role)}</Badge>
+                <Badge variant="secondary">{displayRoleLabel(member)}</Badge>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={member.isActive ? "default" : "outline"}>
@@ -384,12 +461,14 @@ export function StaffClient({
                   <TableRow key={member.id}>
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {member.username ? `@${member.username}` : (
+                      {member.username ? (
+                        `@${member.username}`
+                      ) : (
                         <span className="text-muted-foreground/50">—</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{roleLabel(member.role)}</Badge>
+                      <Badge variant="secondary">{displayRoleLabel(member)}</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -456,7 +535,10 @@ export function StaffClient({
         open={addOpen}
         onOpenChange={(open) => {
           setAddOpen(open);
-          if (!open) reset();
+          if (!open) {
+            reset();
+            setAddCustomRoleActive(false);
+          }
         }}
       >
         <FormDialogLayout
@@ -507,8 +589,13 @@ export function StaffClient({
                 id="add-username"
                 autoCapitalize="none"
                 autoCorrect="off"
+                maxLength={20}
                 placeholder={t("pages.staffUsernamePlaceholder")}
-                {...register("username")}
+                {...register("username", {
+                  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                    e.target.value = formatUsernameInput(e.target.value);
+                  },
+                })}
               />
               {errors.username && (
                 <p className="text-destructive text-xs">{errors.username.message}</p>
@@ -517,8 +604,14 @@ export function StaffClient({
             <div className="space-y-1">
               <Label>{t("pages.staffRole")}</Label>
               <Select
-                defaultValue="CASHIER"
+                value={addCustomRoleActive ? CUSTOM_ROLE_VALUE : watchRole}
                 onValueChange={(v) => {
+                  if (v === CUSTOM_ROLE_VALUE) {
+                    setAddCustomRoleActive(true);
+                    return;
+                  }
+                  setAddCustomRoleActive(false);
+                  setValue("customRoleLabel" as never, "" as never);
                   setValue("role", v as StaffRole);
                   setValue("allowedPages" as never, ROLE_DEFAULT_PAGES[v as StaffRole] as never);
                 }}
@@ -532,19 +625,20 @@ export function StaffClient({
                       {roleLabel(r)}
                     </SelectItem>
                   ))}
+                  <SelectItem value={CUSTOM_ROLE_VALUE}>
+                    {t("pages.staffRoleCustomOption")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="add-custom-role">
-                {t("pages.staffCustomRoleLabel")}{" "}
-                <span className="text-muted-foreground text-xs">{t("pages.staffOptional")}</span>
-              </Label>
-              <Input
-                id="add-custom-role"
-                placeholder={t("pages.staffCustomRoleLabelPlaceholder")}
-                {...register("customRoleLabel" as never)}
-              />
+              {addCustomRoleActive && (
+                <Input
+                  id="add-custom-role"
+                  className="mt-2"
+                  autoFocus
+                  placeholder={t("pages.staffCustomRoleLabelPlaceholder")}
+                  {...register("customRoleLabel" as never)}
+                />
+              )}
             </div>
             <PageAccessChecklist
               role={watchRole}
@@ -577,18 +671,31 @@ export function StaffClient({
                 <Input
                   id="add-email"
                   type="email"
-                  {...register("email" as never)}
                   placeholder={t("pages.staffEmailPlaceholder")}
+                  {...register("email" as never, {
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                      e.target.value = formatEmailInput(e.target.value);
+                    },
+                  })}
                 />
+                {errors.email && (
+                  <p className="text-destructive text-xs">{errors.email.message as string}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="add-whatsapp">{t("pages.staffWhatsappNumber")}</Label>
-                <Input
+                <PhoneInput
                   id="add-whatsapp"
-                  type="tel"
-                  {...register("whatsapp" as never)}
                   placeholder={t("pages.staffWhatsappPlaceholder")}
+                  defaultCountry="ID"
+                  value={(watchWhatsapp as unknown as string) || ""}
+                  onChange={(value) =>
+                    setValue("whatsapp" as never, (value ?? "") as never, { shouldDirty: true })
+                  }
                 />
+                {errors.whatsapp && (
+                  <p className="text-destructive text-xs">{errors.whatsapp.message as string}</p>
+                )}
               </div>
             </div>
 
@@ -614,7 +721,13 @@ export function StaffClient({
                 </Button>
                 <Button
                   onClick={handleEditSave}
-                  disabled={editLoading || !editName.trim() || (editPin.length > 0 && editPin.length < 4)}
+                  disabled={
+                    editLoading ||
+                    !editName.trim() ||
+                    (editPin.length > 0 && editPin.length < 4) ||
+                    !!editEmailError ||
+                    !!editWhatsappError
+                  }
                 >
                   {editLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -635,16 +748,23 @@ export function StaffClient({
                 <Input
                   autoCapitalize="none"
                   autoCorrect="off"
+                  maxLength={20}
                   value={editUsername}
-                  onChange={(e) => setEditUsername(e.target.value)}
+                  onChange={(e) => setEditUsername(formatUsernameInput(e.target.value))}
                   placeholder={t("pages.staffUsernamePlaceholder")}
                 />
               </div>
               <div className="space-y-1">
                 <Label>{t("pages.staffRole")}</Label>
                 <Select
-                  value={editRole}
+                  value={editCustomRoleActive ? CUSTOM_ROLE_VALUE : editRole}
                   onValueChange={(v) => {
+                    if (v === CUSTOM_ROLE_VALUE) {
+                      setEditCustomRoleActive(true);
+                      return;
+                    }
+                    setEditCustomRoleActive(false);
+                    setEditCustomRoleLabel("");
                     setEditRole(v as StaffRole);
                     setEditAllowedPages(ROLE_DEFAULT_PAGES[v as StaffRole]);
                   }}
@@ -662,25 +782,27 @@ export function StaffClient({
                         {roleLabel(r)}
                       </SelectItem>
                     ))}
+                    {editTarget.role !== "OWNER" && (
+                      <SelectItem value={CUSTOM_ROLE_VALUE}>
+                        {t("pages.staffRoleCustomOption")}
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
                 {editTarget.role === "OWNER" && (
-                  <p className="text-muted-foreground text-[10px] mt-1">
+                  <p className="text-muted-foreground mt-1 text-[10px]">
                     {t("pages.staffOwnerRoleLocked")}
                   </p>
                 )}
-              </div>
-
-              <div className="space-y-1">
-                <Label>
-                  {t("pages.staffCustomRoleLabel")}{" "}
-                  <span className="text-muted-foreground text-xs">{t("pages.staffOptional")}</span>
-                </Label>
-                <Input
-                  value={editCustomRoleLabel}
-                  onChange={(e) => setEditCustomRoleLabel(e.target.value)}
-                  placeholder={t("pages.staffCustomRoleLabelPlaceholder")}
-                />
+                {editCustomRoleActive && (
+                  <Input
+                    className="mt-2"
+                    autoFocus
+                    value={editCustomRoleLabel}
+                    onChange={(e) => setEditCustomRoleLabel(e.target.value)}
+                    placeholder={t("pages.staffCustomRoleLabelPlaceholder")}
+                  />
+                )}
               </div>
 
               <div className="space-y-3 rounded-lg border p-3">
@@ -693,18 +815,22 @@ export function StaffClient({
                   <Input
                     type="email"
                     value={editEmail}
-                    onChange={(e) => setEditEmail(e.target.value)}
+                    onChange={(e) => setEditEmail(formatEmailInput(e.target.value))}
                     placeholder={t("pages.staffEmailPlaceholder")}
                   />
+                  {editEmailError && <p className="text-destructive text-xs">{editEmailError}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label>{t("pages.staffWhatsappNumber")}</Label>
-                  <Input
-                    type="tel"
+                  <PhoneInput
+                    defaultCountry="ID"
                     value={editWhatsapp}
-                    onChange={(e) => setEditWhatsapp(e.target.value)}
+                    onChange={(value) => setEditWhatsapp(value ?? "")}
                     placeholder={t("pages.staffWhatsappPlaceholder")}
                   />
+                  {editWhatsappError && (
+                    <p className="text-destructive text-xs">{editWhatsappError}</p>
+                  )}
                 </div>
               </div>
 
@@ -758,7 +884,9 @@ export function StaffClient({
                 <Select
                   value={editIsActive ? "ACTIVE" : "INACTIVE"}
                   onValueChange={(v) => setEditIsActive(v === "ACTIVE")}
-                  disabled={editTarget.isActive && (activeCount <= 1 || editTarget.role === "OWNER")}
+                  disabled={
+                    editTarget.isActive && (activeCount <= 1 || editTarget.role === "OWNER")
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -769,7 +897,7 @@ export function StaffClient({
                   </SelectContent>
                 </Select>
                 {editTarget.isActive && (activeCount <= 1 || editTarget.role === "OWNER") && (
-                  <p className="text-amber-500/80 text-[10px] mt-1">
+                  <p className="mt-1 text-[10px] text-amber-500/80">
                     {editTarget.role === "OWNER"
                       ? t("pages.staffOwnerMustStayActive")
                       : t("pages.staffMinOneActive")}
@@ -794,9 +922,7 @@ export function StaffClient({
                   disabled={editRemovePin}
                 />
                 {editPin.length > 0 && editPin.length < 4 && (
-                  <p className="text-destructive text-xs mt-1">
-                    {t("pages.staffPinLengthError")}
-                  </p>
+                  <p className="text-destructive mt-1 text-xs">{t("pages.staffPinLengthError")}</p>
                 )}
               </div>
               <label className="flex cursor-pointer items-center gap-2 text-sm select-none">

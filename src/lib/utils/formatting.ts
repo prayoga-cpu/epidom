@@ -11,6 +11,11 @@ import { enUS, fr, id } from "date-fns/locale";
 
 const locales = { en: enUS, fr: fr, id: id };
 
+/** `Intl` locale tags mirroring `INTL_LOCALES` in `i18n-provider.tsx` — kept
+ * as a small local copy rather than importing from there, since that file
+ * imports from this one (importing back would be circular). */
+const intlLocaleTags = { en: "en-US", fr: "fr-FR", id: "id-ID" };
+
 /**
  * Format a date to a readable string
  */
@@ -79,6 +84,75 @@ export function formatRelativeTime(
   } catch (error) {
     return "";
   }
+}
+
+/**
+ * Format a date as "<weekday>, <day> <month>" with no year — for a
+ * scannable table column where the year is implied by context (e.g. Order
+ * History; the exact date+year+timezone lives in the order detail view
+ * instead, via formatDateTimeWithTimezone).
+ */
+export function formatDayDate(
+  date: Date | string | null | undefined,
+  locale: "en" | "fr" | "id" = "en"
+): string {
+  return formatDate(date, "EEEE, d MMMM", locale);
+}
+
+/**
+ * Format a date with full precision (weekday, exact date, year, time) plus
+ * the viewer's timezone offset and full zone name — e.g. "Sunday, Jul 9,
+ * 2026, 4:00 PM GMT+7 (Western Indonesia Time)" — for a detail view where
+ * the table/list row's "PPp" (no weekday, no timezone) would leave the
+ * reader guessing both the day of week and which timezone a timestamp was
+ * recorded in.
+ */
+export function formatDateTimeWithTimezone(
+  date: Date | string | null | undefined,
+  locale: "en" | "fr" | "id" = "en"
+): string {
+  if (!date) return "";
+
+  const dateObj = typeof date === "string" ? parseISO(date) : date;
+
+  try {
+    const base = formatDate(date, "EEEE, PPp", locale);
+    const intlTag = intlLocaleTags[locale];
+    const offset = new Intl.DateTimeFormat(intlTag, { timeZoneName: "short" })
+      .formatToParts(dateObj)
+      .find((part) => part.type === "timeZoneName")?.value;
+    const zoneName = new Intl.DateTimeFormat(intlTag, { timeZoneName: "long" })
+      .formatToParts(dateObj)
+      .find((part) => part.type === "timeZoneName")?.value;
+    const tzSuffix = offset ? (zoneName && zoneName !== offset ? `${offset} (${zoneName})` : offset) : "";
+    return tzSuffix ? `${base} ${tzSuffix}` : base;
+  } catch (error) {
+    return "";
+  }
+}
+
+/**
+ * Human-readable elapsed duration for a live ticket timer once it's run far
+ * past the live mm:ss counter's useful range (e.g. a genuinely abandoned
+ * in-progress order, or stale demo data) — "8hrs 9mins ago" / "7 days ago" /
+ * "1 month 4 days ago" instead of an absurd "51482m 50s".
+ */
+export function formatLongElapsed(totalSeconds: number): string {
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const totalHours = Math.floor(totalMinutes / 60);
+  const totalDays = Math.floor(totalHours / 24);
+
+  if (totalDays >= 30) {
+    const months = Math.floor(totalDays / 30);
+    const days = totalDays % 30;
+    const monthPart = `${months} month${months !== 1 ? "s" : ""}`;
+    return days > 0 ? `${monthPart} ${days} day${days !== 1 ? "s" : ""} ago` : `${monthPart} ago`;
+  }
+  if (totalDays >= 1) {
+    return `${totalDays} day${totalDays !== 1 ? "s" : ""} ago`;
+  }
+  const minutes = totalMinutes % 60;
+  return minutes > 0 ? `${totalHours}hrs ${minutes}mins ago` : `${totalHours}hrs ago`;
 }
 
 /**

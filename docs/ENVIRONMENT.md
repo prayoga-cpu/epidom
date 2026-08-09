@@ -14,7 +14,7 @@ When you add a new env var to the codebase, update this doc and `.env.example` i
 | Better Auth   | Login flows            | Existing    |
 | Stripe (SaaS) | Subscription billing   | Existing    |
 | Xendit        | Customer payments      | Phase 2     |
-| Fonnte        | WhatsApp notifications | Phase 2     |
+| Fonnte        | Disabled — see below   | Phase 2     |
 | Inngest       | Background jobs        | Phase 2     |
 | Resend        | Transactional email    | Existing    |
 | Google OAuth  | Google login button    | Existing    |
@@ -118,25 +118,49 @@ Use `ngrok http 3000` or Cloudflare Tunnel, point Xendit's webhook callback at y
 
 ---
 
-## Fonnte (WhatsApp notifications, Phase 2+)
+## Fonnte (WhatsApp notifications) — disabled
+
+`FONNTE_API_TOKEN` has been removed from `.env`/`.env.example`; the token on
+file stopped working and hasn't been replaced. `isFonnteAvailable()` returns
+`false` with no token set, so every Fonnte send path (auto-send-on-payment,
+the manual "Send Receipt" button) no-ops/fails gracefully rather than
+throwing — no code changes needed to keep the app running without it. The
+receipt/order-notification flows fall back to the "Open in WhatsApp"
+(`wa.me`) redirect, which needs no API token at all.
+
+If re-enabling Fonnte (or a similar unofficial bridge) later:
 
 ```bash
 FONNTE_API_TOKEN=<from-fonnte-dashboard>
-FONNTE_SENDER_NUMBER=628xxxxxxxxx  # WA number connected to Fonnte
 ```
-
-**Where to get a token:**
 
 1. Sign up at fonnte.com
 2. Connect a WhatsApp number (you'll scan a QR with the WA Web app)
 3. Get the token from Dashboard → API
-4. Important: this is unofficial and the account can be flagged by Meta. Plan migration to official WhatsApp Business API by 100 paying customers.
+4. Important: this is unofficial and the account can be flagged/banned by
+   Meta with no notice — that's almost certainly why the previous token
+   stopped working. Treat it as a stopgap, not infrastructure to depend on.
+
+**Alternatives**, roughly cheapest/fastest-to-set-up to most durable:
+
+- **Wablas / Watzap.id / StarSender** — other Indonesian unofficial bridges,
+  same QR-scan model and same ban risk as Fonnte. Only worth it if you need
+  something working again in the next hour; budget to migrate off it later.
+- **Official Meta WhatsApp Cloud API via a BSP** (Twilio, MessageBird,
+  360dialog) — see the section below. Requires a verified Meta Business
+  account and per-template message approval, but won't get your number
+  banned and is the actual production-grade path.
+- **Twilio WhatsApp API** specifically — same BSP category as above, but
+  worth calling out on its own since it's the easiest of the three to get a
+  sandbox running same-day (Twilio's WhatsApp sandbox needs no Meta Business
+  verification to start testing), then graduate to a paid Twilio WhatsApp
+  Sender once ready for production.
 
 ---
 
 ## WhatsApp Business API (Phase 4+, migration target)
 
-When migrating from Fonnte to official Meta API:
+Official Meta Cloud API, accessed through a BSP partner:
 
 ```bash
 WHATSAPP_PHONE_NUMBER_ID=<from-meta-business>
@@ -322,10 +346,6 @@ STRIPE_PRICE_ENT_ANNUAL_IDR=
 XENDIT_SECRET_KEY=
 XENDIT_WEBHOOK_TOKEN=
 XENDIT_CALLBACK_URL=
-
-# === Fonnte (WhatsApp, Phase 2) ===
-FONNTE_API_TOKEN=
-FONNTE_SENDER_NUMBER=
 
 # === Inngest (background jobs, Phase 2) ===
 INNGEST_EVENT_KEY=

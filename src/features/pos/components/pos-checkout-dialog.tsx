@@ -31,6 +31,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -44,7 +45,7 @@ import {
   type ReceiptData,
 } from "@/lib/pwa/thermal-printer";
 import { usePrinterSettings } from "../hooks/use-printer-settings";
-import { useLastReceipt } from "../hooks/use-last-receipt";
+import { useLastReceipt, type LastReceiptMeta } from "../hooks/use-last-receipt";
 interface PosCheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -130,6 +131,8 @@ export function PosCheckoutDialog({
 
   const buildReceipt = (data: CreatePosOrderInput, orderNumber: string): ReceiptData => ({
     storeName: storeName ?? "Epidom POS",
+    currency,
+    locale,
     tagline: receiptSettings?.tagline ?? undefined,
     address: receiptSettings?.address ?? undefined,
     email: receiptSettings?.email ?? undefined,
@@ -209,12 +212,14 @@ export function PosCheckoutDialog({
   // click (Web Bluetooth's requestDevice requires user activation), so it
   // can't be triggered from here. Anything short of that falls back to the
   // manual print-or-skip prompt.
-  const finishWithReceipt = (receipt: ReceiptData) => {
+  const finishWithReceipt = (receipt: ReceiptData, meta: LastReceiptMeta | null) => {
     setLastReceipt(receipt);
     // Shared across the app (not just this dialog's local state) so the
     // printer menu's "Reprint Last Order" action can offer it later, even
-    // after this dialog closes.
-    useLastReceipt.getState().setLastReceipt(receipt);
+    // after this dialog closes. `meta` is null for an offline-queued order
+    // — it has no server-assigned id yet, so there's no /r/[orderId] link
+    // to send until it syncs.
+    if (meta) useLastReceipt.getState().setLastReceipt(receipt, meta);
     if (autoPrint && isPrinterConnected()) {
       handlePrint(receipt);
     } else {
@@ -251,7 +256,7 @@ export function PosCheckoutDialog({
 
         const localId = await enqueueOrder(storeId, submitData);
         const receipt = buildReceipt(submitData, `OFFLINE-${localId.slice(0, 8).toUpperCase()}`);
-        finishWithReceipt(receipt);
+        finishWithReceipt(receipt, null);
         toast(t("pos.offline.queued"), {
           description: t("pos.offline.queuedDesc"),
           icon: <WifiOff className="h-4 w-4" />,
@@ -265,11 +270,12 @@ export function PosCheckoutDialog({
         ? `/stores/${storeId}/pos/orders/${cart.resumingOrderId}/finalize`
         : `/stores/${storeId}/pos/orders`;
 
-      const result = await apiClient.post<{ orderNumber: string }>(endpoint, {
+      const result = await apiClient.post<{ orderId: string; orderNumber: string }>(endpoint, {
         ...submitData,
         shiftId,
       });
 
+      const orderId = (result as any)?.orderId as string | undefined;
       const orderNumber = (result as any)?.orderNumber ?? "—";
 
       const receipt = buildReceipt(submitData, orderNumber);
@@ -292,7 +298,16 @@ export function PosCheckoutDialog({
       cart.clearCart();
       onOpenChange(false);
 
-      finishWithReceipt(receipt);
+      finishWithReceipt(
+        receipt,
+        orderId
+          ? {
+              orderId,
+              customerName: submitData.customerName ?? "",
+              customerPhone: submitData.customerPhone ?? null,
+            }
+          : null
+      );
       toast.success(t("pos.checkout.success"));
     } catch (error) {
       // Surface the server's actual reason (e.g. "item no longer available",
@@ -594,7 +609,11 @@ export function PosCheckoutDialog({
                     <FormItem>
                       <FormLabel>No. WhatsApp / HP</FormLabel>
                       <FormControl>
-                        <Input placeholder="0812..." {...field} />
+                        <PhoneInput
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          defaultCountry="ID"
+                        />
                       </FormControl>
                       {["GOPAY", "OVO", "DANA", "SHOPEEPAY"].includes(paymentMethod) && (
                         <p className="text-muted-foreground mt-1 text-[10px]">

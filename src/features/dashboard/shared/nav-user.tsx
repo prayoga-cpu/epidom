@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "./hooks/use-current-store";
 import { useOwnerPinStatus } from "./hooks/use-owner-pin";
+import { useHasSwitchableStaff } from "./hooks/use-has-switchable-staff";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 import { isAdminEmail } from "@/lib/admin";
 import { Shield, TrendingUp, KeyRound, ShieldCheck, LogOut, RefreshCw } from "lucide-react";
@@ -56,6 +57,10 @@ export function NavUser() {
   const actingAsStaff =
     posSession.isActive && posSession.storeId === storeId && posSession.staffRole !== "OWNER";
   const staffAllowedPages = actingAsStaff ? (posSession.allowedPages ?? []) : null;
+
+  // "Switch Account" only makes sense if there's actually someone else to
+  // switch to — otherwise it reloads into a picker with nothing on it.
+  const hasSwitchableStaff = useHasSwitchableStaff(storeId, !actingAsStaff);
 
   const handleSwitchedBackToOwner = async () => {
     posSession.logout();
@@ -165,10 +170,12 @@ export function NavUser() {
               Back to Owner Account
             </DropdownMenuItem>
           ) : (
-            <DropdownMenuItem onClick={handleReturnToPicker}>
-              <RefreshCw className="mr-2 h-3.5 w-3.5" />
-              {t("nav.switchAccount")}
-            </DropdownMenuItem>
+            hasSwitchableStaff && (
+              <DropdownMenuItem onClick={handleReturnToPicker}>
+                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                {t("nav.switchAccount")}
+              </DropdownMenuItem>
+            )
           )}
 
           <DropdownMenuItem onClick={() => setAccountAccessOpen(true)}>

@@ -82,9 +82,11 @@ export function useMaterials(
     },
     enabled: !!storeId,
     initialData, // ✅ Accept initial data from Server Component
-    // Real-time configuration: Aggressive polling for instant cross-tab updates
-    staleTime: 3 * 1000, // 3 seconds - consider data stale faster
-    refetchInterval: 5 * 1000, // Poll every 5 seconds - 6x faster for real-time sync
+    // Real-time configuration: Pusher (see useRealtimeChannel below) is the
+    // primary update path; this poll is only a safety net for when push
+    // misses an event, so it doesn't need safety-net-grade CPU cost.
+    staleTime: 20 * 1000,
+    refetchInterval: 30 * 1000, // Safety-net poll — Pusher covers the instant case
     refetchIntervalInBackground: false, // Only poll when tab is active
     refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
     refetchOnWindowFocus: true, // Refetch on window focus if stale

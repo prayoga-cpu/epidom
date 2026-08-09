@@ -180,6 +180,7 @@ interface StaffOption {
   id: string;
   name: string;
   role: string;
+  isActive: boolean;
 }
 
 interface CategoryOption {
@@ -1007,6 +1008,9 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
               {staff.map((m) => (
                 <SelectItem key={m.id} value={m.id}>
                   {m.name}
+                  {!m.isActive && (
+                    <span className="text-muted-foreground"> ({t("pages.staffInactive")})</span>
+                  )}
                 </SelectItem>
               ))}
             </SelectContent>

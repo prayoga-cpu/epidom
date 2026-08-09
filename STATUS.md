@@ -6,6 +6,107 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-08-09 — Humanized Ticket Timers + Order History Date Formatting
+
+Operator screenshots of Kitchen & Bar and the Order History table/detail-dialog, following up on the Active Queue merge above: stale tickets showed absurd raw-minute timers (e.g. "51482m 50s"), and the History table's Date column carried a full year-inclusive timestamp that was harder to scan than necessary.
+
+- [x] **New `formatLongElapsed(seconds)`** (`formatting.ts`) — "8hrs 9mins ago" / "7 days ago" / "1 month 4 days ago". `KdsTimer` (`kds-timer.tsx`) now switches to it once a ticket has been open ≥1 hour, instead of continuing to tick a live mm:ss counter forever.
+- [x] **New `formatDayDate`** ("<weekday>, <day> <month>", no year) and **`formatDateTimeWithTimezone`** (weekday + exact date/year/time + `Intl` timezone offset, plus the full zone name in parentheses when it differs from the offset — e.g. "Sunday, Jul 9, 2026, 4:00 PM GMT+7 (Western Indonesia Time)") added to `formatting.ts` and bound through `useI18n()` alongside the existing date helpers.
+- [x] **Order History table** (`order-history-tab.tsx`) Date column now shows `formatDayDate` + a small time line instead of the year-inclusive `formatDateTime`.
+- [x] **Order History detail dialog** (`order-history-detail-dialog.tsx`) — the header timestamp, delivered-date line, and last-receipt-send timestamp all switched to `formatDateTimeWithTimezone`, so the weekday/exact date/year/full timezone that was dropped from the table is still available at full precision here.
+- [x] New tests for all three formatting helpers (`formatting.test.ts`).
+- [x] `pnpm type-check` / `pnpm lint` / `pnpm test` clean. Version bumped to 2.39.0 (on top of the concurrently-landed 2.38.0 Menu Editor drag-reorder work below).
+
+---
+
+## ✅ 2026-08-09 — Menu Editor: Working Drag Reorder, Softer Delete Wording for Product-Linked Items, Trimmed Edit Dialog
+
+Follow-up to the same-day "Menu Editor Category Move, Product-Linked Item Guardrails" work — operator screenshots confirmed that work live, then asked for three more things: the drag handles didn't actually do anything, deleting a product-linked item/category read as destructive when it isn't (product data is untouched), and the Edit dialog still showed a Category field + Modifiers editor for linked items even though those are actually owned by the Product.
+
+- [x] **Real drag-to-reorder** (`menu-editor.tsx`) — added `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` (new dependency; no prior DnD library in the repo). Categories reorder among themselves; items reorder within their category (no cross-category drag — that's what the category picker in the Edit dialog is for). Two new subcomponents, `SortableCategoryCard`/`SortableItemRow`, each call `useSortable` at their own top level (required — can't call hooks inside a `.map()`). Persists via existing `PATCH .../items/[itemId]` and `.../categories/[categoryId]` (`displayOrder` field, already in the Zod schema), only for rows whose index actually changed. Drag handles bumped to 40px hit targets with `touch-action: none` (AGENTS.md touch-safety rule — the handles were previously bare 16px icons with no touch affordance, fine when decorative, not once actually draggable) using explicit `size-10` buttons with a `-ml-2` to keep the visual row layout unchanged.
+- [x] **"Delete" reframed as "Remove from POS menu" for product-linked items** — the item trash icon's tooltip/confirm dialog/toast now say "Remove from POS menu" + "product data is kept" when `item.productId` is set (mechanically it's still the same `DELETE .../items/[itemId]` call — only the wording changed, since that call was never touching Product to begin with). The category delete dialog's "delete items" radio option gets equivalent wording when the category contains at least one linked item.
+- [x] **Category field and Modifiers editor removed (not just disabled) from the Edit dialog for linked items** — both live on the Product (`Product.category`, `Product.optionGroups`) and are edited there via the existing "Edit in Products" link; duplicating them in the Menu Editor risked silent drift between the two. `editItemCategoryId` state still initializes from the item's current category even though the field isn't rendered, so re-saving a linked item's description/photo never silently drops it to Uncategorized.
+- [x] `pnpm type-check` / `pnpm lint` clean. Version bumped to 2.38.0.
+
+---
+
+## ✅ 2026-08-09 — Kitchen & Bar + Order Queue Merged Into One "Active Queue" Module
+
+Operator screenshots of Kitchen & Bar and Order Queue asked for the two to be integrated: turning Kitchen & Bar off should also turn off the Order Queue, plus a dedicated toggle to disable the Active Queue outright (every order recorded straight to History as Delivered), which should turn Kitchen & Bar off in turn.
+
+- [x] **Reused the existing `Store.kitchenDisplayEnabled` flag as the single shared switch** behind both surfaces instead of adding a second field — Kitchen & Bar's toggle and a new toggle on the Order Queue page (`pos-orders-tabs.tsx`, above both the Active/History tabs, owner-gated the same way as `kds/page.tsx`) read/write the same `useKdsSettings`/`useUpdateKdsSettings` query key, so flipping either one is instantly reflected on the other.
+- [x] **Closed a real gap**: `resolveSettledOrderStatus` (`pos-order-builder.ts`) previously only skipped straight to DELIVERED for cashier-attended payment methods when the toggle was off — a PAY_LATER order still landed on PENDING regardless, meaning the queue was never actually fully "off." Now `!kitchenDisplayEnabled` always resolves to DELIVERED, PAY_LATER included (paymentStatus stays PENDING for follow-up via Order History's existing Mark Paid action).
+- [x] **`GET /pos/orders` and the SSE stream** (`orders/stream/route.ts`) now report an empty active feed outright when `kitchenDisplayEnabled` is false, instead of relying solely on no order ever reaching an active status — closes the edge case of a pre-existing Delivered-but-unpaid order lingering in the feed via `ACTIVE_POS_QUEUE_FILTER`'s unpaid carve-out. SSE re-checks the flag every 15s poll so an owner toggling mid-connection doesn't need a reconnect.
+- [x] **Hold order disabled while the Active Queue is off** — a HELD order has nowhere to be resumed from once the queue UI is off, so `POST .../orders/hold` now rejects with 422 (defense in depth, same pattern as the existing `payLaterEnabled` check) and the cart's Hold button (`pos-cart.tsx`) is disabled with an explanatory tooltip/toast.
+- [x] **`PosOrderQueue`** now distinguishes "Active Queue is off" (explicit disabled state, Power icon) from the generic "no orders right now" empty state.
+- [x] New `pos.queue.activeQueue*` + `pos.cart.holdDisabled` i18n keys (`id.ts` primary, `en.ts`); existing `pos.kds.disabled*` copy updated to cross-reference the shared setting. `fr.ts` untouched per AGENTS.md.
+- [x] New tests for `resolveSettledOrderStatus` covering the PAY_LATER + toggle-off case (`pos-order-builder.test.ts`).
+- [x] `pnpm type-check` / `pnpm lint` clean. Version bumped to 2.37.0.
+
+---
+
+## ✅ 2026-08-09 — Menu Editor Category Move, Product-Linked Item Guardrails, POS-Menu Bulk Remove + Realtime Fix
+
+Operator feedback from Menu/Data page screenshots: moving a menu item to another category required delete-and-recreate; add/remove-to-POS-menu on the Data page sometimes didn't reflect live; no bulk "remove from menu"; the "not yet in menu" icon looked too similar to the green "in menu" one; and a menu item backed by a Product could be edited in place even though its name/price/department are actually owned by the Product and get silently overwritten on the next product edit.
+
+- [x] **Menu Editor "Edit Item" dialog: Category field** (`menu-editor.tsx`) — searchable/creatable `Combobox` reassigns the item's `MenuCategory` (or creates a new one) via `categoryId` on `PATCH .../storefront/items/[itemId]`, which the schema already supported. Replaces the old workaround of deleting the item and re-adding it under the new category.
+- [x] **Product-linked items get a "From Product" badge + tooltip** in the item list, and their Edit dialog locks Name/Price/Department (disabled, with an explanation) plus an "Edit in Products" button that routes to `/store/{storeId}/data?tab=products&editProduct={productId}` — same deep-link pattern already used by `pos-staff-gate.tsx` → `staff-client.tsx`'s `editStaffId`. Category/description/image/modifiers remain editable in place since those aren't synced from Product.
+- [x] **`products-section.tsx`** reads `?editProduct=` (falls back to `useProduct()` fetch if the product isn't in the current filtered/paginated page) and auto-opens `EditProductDialog`, then strips the param while preserving `?tab=products`.
+- [x] **Realtime fix**: `storefront/items` and `storefront/categories` POST/PATCH/DELETE routes now `publishStoreEvent(..., REALTIME_EVENTS.MENU_CHANGED, ...)` (previously only `product.service.ts` published it — direct menu-item/category edits never pushed at all). `useProductMenuStatus`/`useUnlinkedMenuItems` (`use-products.ts`) now subscribe via `useRealtimeChannel` + a 30s poll safety net, matching `useProducts`/`usePosMenu`. Menu Editor's `refreshMenu()` also invalidates the Products page's linked-status cache directly for instant same-tab feedback.
+- [x] **Bulk "Remove from Menu"** added next to the existing bulk "Add to Menu" on the Products page multi-select toolbar — new `useBulkRemoveProductsFromMenu` hook mirrors `useBulkAddProductsToMenu`, with a confirm dialog and success/partial/none toasts.
+- [x] **"Not in menu" icon recolored** from `text-green-600` (looked like a dimmer version of the green "in menu" state) to a neutral `text-foreground/70`, so the two states read as clearly different at a glance.
+- [x] `pnpm type-check` / `pnpm lint` clean. Version bumped to 2.36.0.
+
+---
+
+## ✅ 2026-08-09 — Live Format + Realtime Validation for Staff Email/WhatsApp
+
+Follow-up to the "Validation failed" fix above — operator asked for the same auto-regex-format-while-typing plus inline per-field realtime error treatment already built for Username to be extended to Email and WhatsApp Number.
+
+- [x] **New `formatPhoneInput`/`formatEmailInput`** (`staff-client.tsx`, alongside the existing `formatUsernameInput`): phone strips everything but digits, keeping a single leading `+`; email strips whitespace and lowercases. Wired into both fields' `onChange` in Add (via `register(..., { onChange })`) and Edit (via the plain `setEditEmail`/`setEditWhatsapp` setters).
+- [x] **New shared `optionalEmailSchema`** (`src/lib/validation/common.schemas.ts`, next to the existing `phoneSchema`) — trims/lowercases before checking `.email()`, optional-or-empty like `phoneSchema`. `createStaffSchema`/`updateStaffSchema` (`operations.schemas.ts`) now both use it instead of each duplicating an inline `z.string().email().optional().or(z.literal(""))`, so client and server agree on one definition.
+- [x] **Add Staff (react-hook-form)**: didn't flip the whole form to `mode: "onChange"` (would've made the PIN field show a premature "must be exactly 4 digits" error mid-typing, a regression to a field nobody asked about) — instead added a `watch(email/whatsapp)` + `useEffect(() => trigger(field))` pair, scoped to just those two fields, and added the previously-missing `{errors.email}`/`{errors.whatsapp}` inline error paragraphs (Add's email/whatsapp had **no** error rendering before this, silently no-op'ing on invalid submit).
+- [x] **Edit Staff (plain `useState`, no react-hook-form)**: new `firstZodError(schema, value)` helper runs `optionalEmailSchema`/`phoneSchema` directly against `editEmail`/`editWhatsapp` on every render, rendering the same inline error style and now also included in the Save button's `disabled` condition.
+- [x] `pnpm type-check` / `pnpm lint` clean.
+
+---
+
+## ✅ 2026-08-09 — Staff Save Errors Now Show the Actual Field/Reason
+
+Operator hit "Validation failed" trying to save/reactivate an existing staff member (screenshot + console showing a 400 on `PATCH .../staff/[staffId]`) with no indication of which field was the problem — root cause was a stale non-phone value ("dummyforfadedline@gmail.com") sitting in WhatsApp Number from earlier test data, correctly rejected by `phoneSchema`, but the toast gave no way to discover that.
+
+- [x] **Root cause**: the PATCH/POST staff routes already compute `parsed.error.flatten()` into `error.details.fieldErrors` on a 400, but `staff-client.tsx`'s `onError`/`catch` handlers only ever read `err.message` — the response's generic top-level string ("Validation failed"), discarding the actually-useful per-field detail.
+- [x] **New `describeStaffError()`** helper: for an `ApiClientError`, pulls the first `fieldErrors` entry and renders it as `"<Field Label>: <reason>"` (small `STAFF_FIELD_LABELS` map for the known staff fields), falling back to the response's plain message, then to a generic fallback for non-API errors. Wired into both the Add Staff mutation's `onError` and the Edit Staff dialog's save `catch`.
+- [x] Did not touch `phoneSchema`/validation itself — the rejection was correct; the bug was purely in what got shown to the owner.
+- [x] `pnpm type-check` / `pnpm lint` clean.
+
+---
+
+## ✅ 2026-08-09 — Staff Filters Kept Inactive Staff Selectable, "Switch Account" Hidden When Empty
+
+Operator sent screenshots of Finance Reports' Staff filter (only "All Staff"/"Owner" showed, the just-deactivated "Test Acc" was missing) and asked to audit dropdowns generally — inactive staff should stay selectable in data filters (labeled Inactive) since past transactions are still tied to them, not disappear along with the account. Also asked to hide "Switch Account" in the account dropdown when there's no staff account to switch to.
+
+- [x] **Root cause**: `finance/page.tsx`'s staff-option query and `order-history-tab.tsx`'s `staffOptions` memo both hard-filtered `isActive: true`/`.filter(s => s.isActive)` — a staff member vanished from these filters the moment they were deactivated, even though their historical orders/reports remained. Both now keep the full roster, sorted active-first, with inactive entries suffixed `(Inactive)` (reusing the existing `pages.staffInactive` string, no new i18n key).
+- [x] **POS Order Queue's live Staff filter** (`pos-order-queue.tsx`) builds its options from currently-loaded orders rather than a staff-table query, so it was never missing anyone — but had no notion of active/inactive at all. Cross-referenced against `usePosStaffList` (already fetched elsewhere for the same purpose) to add the same `(Inactive)` label, without changing which IDs appear.
+- [x] **`FinanceClient`'s `StaffOption`** gained `isActive: boolean`; `finance/page.tsx` now selects it and orders `isActive desc, name asc` so active staff sort first.
+- [x] **"Switch Account" hidden when nobody to switch to**: new `useHasSwitchableStaff(storeId, enabled)` hook (`dashboard/shared/hooks/`) queries `/stores/[id]/staff` and mirrors the existing zero-staff-bypass role filter (`isActive && role !== "OWNER"`) from `(dashboard)/layout.tsx`, so an owner's own auto-created OWNER-role StaffMember row doesn't count as "someone else." `nav-user.tsx`'s `!actingAsStaff` branch now only renders the item when this is true; query is disabled while `actingAsStaff` (that branch shows "Back to Owner Account" instead and doesn't need it).
+- [x] **Scoped out, flagged for follow-up if wanted**: Schedule's staff filter/log (`schedule-grid-filters.tsx`, `schedule-log.tsx`) and the roster grid rows share the same active-only `staff` query in `schedule/page.tsx` — fixing the filter there would require splitting "who gets a grid row" (should stay active-only, you don't roster someone who's left) from "who's selectable in the history/filter" (should include inactive), which touches `visibleStaff`'s row logic in `schedule-client.tsx`. Left unchanged this round since it wasn't one of the reported surfaces and the row-vs-filter split needs its own pass.
+- [x] `pnpm type-check` / `pnpm lint` clean.
+
+---
+
+## ✅ 2026-08-09 — Staff Dialog: Custom Role Moved Into Dropdown, Username Auto-Format
+
+Operator sent screenshots of the Add Staff dialog: the "Custom role label" field sat permanently visible below the Role select regardless of which role was picked, and asked for it to be removed in favor of a "Custom" option living inside the Role dropdown itself, plus live formatting on the Username field instead of only erroring on submit.
+
+- [x] **Custom role folded into the Role `<Select>`** (`staff-client.tsx`, Add and Edit dialogs): a new `CUSTOM_ROLE_VALUE` item ("Custom…", new `pages.staffRoleCustomOption` key) sits after Manager/Cashier/Kitchen. Picking it flips a local `*CustomRoleActive` flag and reveals a single inline `Input` for the label in the same slot, instead of a separate field that was always rendered. The underlying `role` enum (which still drives `ROLE_DEFAULT_PAGES` defaults) is left untouched when Custom is picked, so the owner's existing Page Access checklist still governs real permissions. Editing a member whose `customRoleLabel` is already set now opens straight into Custom mode.
+- [x] **Fixed a latent display bug found while touching this code**: `customRoleLabel` was captured and persisted by both API routes but never actually read anywhere in the UI — the staff table/card Badge always rendered the base role name. Added `displayRoleLabel()` (falls back to the base role name when no custom label is set) and wired it into both the desktop table and mobile card views.
+- [x] **Username field now auto-formats while typing** (Add and Edit): new `formatUsernameInput()` lowercases and strips any character outside `a-z0-9_.` live, mirroring `usernameSchema`'s regex in `operations.schemas.ts` instead of only surfacing a validation error after submit. Added `maxLength={20}` to match the schema's max length too.
+- [x] **Considered and declined**: operator initially asked for a "delete" action on already-inactive staff, then reversed course after confirming `StaffMember` cascades to `Shift`/`AttendanceRecord`/`StaffSchedule` on delete (`onDelete: Cascade` in `schema.prisma`) — a hard delete would silently erase historical labor-cost and shift data still needed by Finance reports and Order history. Left the existing soft-deactivate-only `DELETE` endpoint as-is; no schema or API change made.
+- [x] `fr.ts` intentionally left untouched (deprecated, no new French strings per AGENTS.md).
+
+---
+
 ## ✅ 2026-08-08 — Receipt Follow-ups: Dark-Mode Contrast, Reprint, Sticky Pay Button
 
 Operator follow-up on the same-day receipt work below, with screenshots: the receipt-settings preview and the public `/r/[orderId]` page were nearly unreadable in dark mode, the printer menu had no way to reprint a past order, and the POS cart's Pay button required scrolling to reach on both desktop and mobile.

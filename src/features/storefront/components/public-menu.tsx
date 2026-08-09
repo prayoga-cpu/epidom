@@ -27,6 +27,7 @@ import { getPremiumTheme } from "@/lib/utils/color";
 import { formatCurrency } from "@/lib/utils/formatting";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { appendLocalOrder } from "../lib/local-orders";
 import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
 import {
@@ -1003,12 +1004,11 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                 <label className="text-muted-foreground pl-1 text-[11px] font-extrabold tracking-widest uppercase">
                   {t("publicOrder.checkoutForm.whatsappLabel")}
                 </label>
-                <input
-                  type="tel"
+                <PhoneInput
                   placeholder={t("publicOrder.checkoutForm.whatsappPlaceholder")}
+                  defaultCountry="ID"
                   value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="bg-muted/50 border-border focus:bg-card h-12 w-full rounded-xl border px-4 text-sm font-medium transition-all focus:border-transparent focus:ring-2 focus:ring-[var(--store-theme)] focus:outline-none"
+                  onChange={(value) => setCustomerPhone(value ?? "")}
                 />
               </div>
 

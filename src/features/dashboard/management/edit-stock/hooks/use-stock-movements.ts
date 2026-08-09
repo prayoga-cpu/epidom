@@ -93,14 +93,17 @@ export function useStockMovements(storeId: string, filters?: StockMovementFilter
       return response.json();
     },
     enabled: !!storeId && !!(filters?.materialId || filters?.productId),
-    // Real-time configuration: Most aggressive polling for critical stock tracking
-    staleTime: 2 * 1000, // 2 seconds - most critical data, must be very fresh
-    refetchInterval: 5 * 1000, // Poll every 5 seconds - instant stock movement visibility
+    // Real-time configuration: Pusher (see useRealtimeChannel above,
+    // STOCK_CHANGED) is the primary update path; this poll is only a safety
+    // net for when push misses an event, so it doesn't need safety-net-grade
+    // CPU cost. Kept tighter than other hooks since stock is critical data.
+    staleTime: 10 * 1000,
+    refetchInterval: 15 * 1000, // Safety-net poll — Pusher covers the instant case
     refetchIntervalInBackground: false, // Only poll when tab is active
     refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
-      refetchInterval: 5 * 1000, // Store in meta for smart polling
+      refetchInterval: 15 * 1000, // Store in meta for smart polling
     },
   });
 }

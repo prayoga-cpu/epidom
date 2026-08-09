@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { phoneSchema } from "./common.schemas";
+import { phoneSchema, optionalEmailSchema } from "./common.schemas";
 import { ALL_STAFF_PAGES } from "@/config/staff-permissions.config";
 
 // ── Staff ────────────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ const allowedPagesSchema = z
 export const createStaffSchema = z.object({
   name: z.string().min(1).max(100),
   username: usernameSchema,
-  email: z.string().email().optional().or(z.literal("")),
+  email: optionalEmailSchema,
   whatsapp: phoneSchema,
   role: z.enum(["OWNER", "MANAGER", "CASHIER", "KITCHEN"]),
   customRoleLabel: z.string().max(40).optional().or(z.literal("")),
@@ -42,7 +42,7 @@ export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 export const updateStaffSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   username: usernameSchema.optional(),
-  email: z.string().email().optional().or(z.literal("")),
+  email: optionalEmailSchema,
   whatsapp: phoneSchema,
   role: z.enum(["OWNER", "MANAGER", "CASHIER", "KITCHEN"]).optional(),
   customRoleLabel: z.string().max(40).optional().or(z.literal("")),

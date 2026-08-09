@@ -1405,9 +1405,11 @@ export const en = {
       description:
         "Turn a recipe into a planned production batch: pick a recipe, check material availability, and consume raw materials to produce finished stock — with each batch logged for later review.",
       whoForTitle: "Use this if...",
-      whoFor: "You cook to a standardized recipe and want to track exactly how much of each material a batch consumed.",
+      whoFor:
+        "You cook to a standardized recipe and want to track exactly how much of each material a batch consumed.",
       whoSkipTitle: "Skip this if...",
-      whoSkip: "You cook fresh to order without a fixed recipe — production batches would just add extra steps with no benefit.",
+      whoSkip:
+        "You cook fresh to order without a fixed recipe — production batches would just add extra steps with no benefit.",
       enableButton: "Enable Production Tracking",
       enabling: "Enabling...",
       enabledToast: "Production tracking enabled",
@@ -1455,7 +1457,8 @@ export const en = {
     enterPin: "Enter your PIN",
     cameraPermissionDenied: "Camera unavailable. Use the button below to take a photo.",
     cameraNotFound: "No camera found on this device. Use the button below to take a photo.",
-    cameraInsecureContext: "Camera needs a secure (HTTPS) connection. Use the button below instead.",
+    cameraInsecureContext:
+      "Camera needs a secure (HTTPS) connection. Use the button below instead.",
     cameraUnavailable: "Camera unavailable. Use the button below to take a photo.",
     retryCamera: "Try again",
     retake: "Retake",
@@ -1578,7 +1581,8 @@ export const en = {
     financeFlagged: "Doesn't balance",
     financeCost: "Cost",
     financeMarginAmount: "Margin",
-    financeUnknownCostHint: "Cost unknown for this item — sold before cost tracking started, or not linked to a stock item.",
+    financeUnknownCostHint:
+      "Cost unknown for this item — sold before cost tracking started, or not linked to a stock item.",
     financeAllOutlets: "All Outlets",
     ownerTitle: "Owner Dashboard",
     ownerDesc: "Summary across all stores in your business",
@@ -1703,6 +1707,7 @@ export const en = {
     staffUsername: "Username",
     staffUsernamePlaceholder: "e.g. jdoe",
     staffCustomRoleLabel: "Custom role label",
+    staffRoleCustomOption: "Custom…",
     staffOptional: "(optional)",
     staffCustomRoleLabelPlaceholder: "e.g. Assistant Manager",
     staffPayRate: "Pay Rate",
@@ -1985,7 +1990,8 @@ export const en = {
       pendingWithStorefront: "{count} order(s) waiting ({storefrontCount} from storefront)",
       viewQueue: "Order Queue",
       errorDescription: "Couldn't load orders",
-      errorBody: "Something went wrong loading new orders. Try refreshing, or check the Order Queue directly.",
+      errorBody:
+        "Something went wrong loading new orders. Try refreshing, or check the Order Queue directly.",
       andMore: "+{count} more — view all in Order Queue",
     },
     trackingCard: {
@@ -2473,6 +2479,11 @@ export const en = {
       addTitle: "Add New Product",
       addButton: "Add Product",
       bulkAddToMenu: "Add to Menu",
+      bulkRemoveFromMenu: "Remove from Menu",
+      bulkRemoveFromMenuConfirm: {
+        title: "Remove from POS Menu",
+        description: "Remove {count} product(s) from the POS menu?",
+      },
       editTitle: "Edit Product",
       detailsTitle: "Product Details",
       addDescription:
@@ -2590,6 +2601,9 @@ export const en = {
         bulkAddedToMenu: "{count} product(s) added to POS menu",
         bulkAddedToMenuPartial: "{succeeded} added to POS menu, {failed} failed",
         bulkAddToMenuNone: "Selected products are already in the POS menu",
+        bulkRemovedFromMenu: "{count} product(s) removed from POS menu",
+        bulkRemovedFromMenuPartial: "{succeeded} removed from POS menu, {failed} failed",
+        bulkRemoveFromMenuNone: "Selected products are not in the POS menu",
         adding: "Adding product...",
         added: {
           title: "Product Added Successfully",
@@ -3194,7 +3208,8 @@ export const en = {
       facebookUrl: "Facebook (optional)",
       facebookUrlPlaceholder: "page.name or page URL",
       showSocialLinks: "Show social handles on receipt",
-      showSocialLinksDesc: "Instagram/TikTok/Facebook (when filled in) appear at the bottom of the receipt.",
+      showSocialLinksDesc:
+        "Instagram/TikTok/Facebook (when filled in) appear at the bottom of the receipt.",
       autoSendWhatsapp: "Auto-send WhatsApp receipt",
       autoSendWhatsappDesc:
         "As soon as an order is paid and the customer's WhatsApp number is on file, the receipt link is sent automatically.",
@@ -5088,7 +5103,8 @@ export const en = {
       createTitle: "Record Waste",
       createDescription: "Record a wasted product or raw material and its reason.",
       editTitle: "Correct Waste Entry",
-      editDescription: "Correct this entry — quantity/cost changes adjust current stock accordingly.",
+      editDescription:
+        "Correct this entry — quantity/cost changes adjust current stock accordingly.",
     },
     fields: {
       itemType: "Item type",
@@ -5133,7 +5149,8 @@ export const en = {
     },
     deleteConfirm: {
       title: "Delete waste entry?",
-      description: "This restores the recorded quantity back to current stock and removes the entry.",
+      description:
+        "This restores the recorded quantity back to current stock and removes the entry.",
     },
     table: {
       date: "Date",
@@ -5169,6 +5186,7 @@ export const en = {
       items: "items",
       hold: "Hold order",
       holdOffline: "Can't hold an order while offline",
+      holdDisabled: "Hold is unavailable — Active Queue is off",
       discount: "Discount",
       addDiscount: "Add discount",
       editDiscount: "Edit discount",
@@ -5238,6 +5256,13 @@ export const en = {
       filterAllStaff: "All staff",
       filterAllPaymentMethods: "All payment methods",
       awaitingPaymentColumn: "Delivered — Awaiting Payment",
+      activeQueueLabel: "Active Queue",
+      activeQueueEnabledToast: "Active Queue turned on",
+      activeQueueDisabledToast:
+        "Active Queue turned off — new orders now go straight to delivered, and Kitchen & Bar display turns off too",
+      activeQueueDisabledTitle: "Active Queue is off",
+      activeQueueDisabledDesc:
+        "New orders skip Pending/Confirmed/Production and are recorded directly in Order History as Delivered. Kitchen & Bar display and Hold are off too. Turn this back on above if you need to stage orders before they're done.",
     },
     filters: {
       addFilter: "Add filter",
@@ -5323,11 +5348,12 @@ export const en = {
       tabBar: "Bar",
       enabledLabel: "Kitchen & Bar display",
       enabledToast: "Kitchen & Bar display turned on",
-      disabledToast: "Kitchen & Bar display turned off — new orders now go straight to delivered",
+      disabledToast:
+        "Kitchen & Bar display turned off — the Active Queue turns off too, and new orders now go straight to delivered",
       settingsUpdateFailed: "Failed to update setting",
       disabledTitle: "Kitchen & Bar display is off",
       disabledDesc:
-        "Orders skip the kitchen/bar queue and are marked delivered as soon as payment is recorded. Turn this back on above if you need to track prep status.",
+        "Orders skip the kitchen/bar queue and are marked delivered as soon as payment is recorded — the Active Queue on the Orders page is off too, since it's the same setting. Turn this back on above (or there) if you need to track prep status.",
       waitingOtherDepartment: "Waiting on the other station",
       preparing: "Preparing",
       ready: "Ready to Serve",
@@ -5442,6 +5468,7 @@ export const en = {
       reprintLast: "Reprint Last Order",
       reprintLastEmpty: "No order printed yet this session",
       reprint: "Reprint",
+      sendLastReceipt: "Send Receipt via WhatsApp",
       goToOrderHistory: "Order History",
     },
     history: {
@@ -5498,6 +5525,11 @@ export const en = {
       receiptFailed: "Receipt send failed",
       receiptSendSuccess: "Receipt sent via WhatsApp",
       receiptSendFailed: "Failed to send receipt",
+      sendWhatsappLink: "Open in WhatsApp",
+      whatsappPhonePlaceholder: "WhatsApp number",
+      whatsappPhoneRequired: "Enter a WhatsApp number first",
+      whatsappPhoneSaveFailed: "Couldn't save the number, opening WhatsApp anyway",
+      whatsappGuestFallback: "there",
       bulk: {
         selectedCount: "{n} selected",
         selectAll: "Select all",
@@ -5526,7 +5558,8 @@ export const en = {
       filterProduct: "Product",
       filterStaff: "Staff",
       noOrders: "No orders match these filters.",
-      rowCapNotice: "Showing the first {shown} of {total} orders — narrow your filters for a complete report.",
+      rowCapNotice:
+        "Showing the first {shown} of {total} orders — narrow your filters for a complete report.",
       systemBy: "System store by Epidom",
       poweredBy: "epidom.fr",
       toolbarHint: "This report will open your browser's print dialog automatically.",
@@ -6131,7 +6164,26 @@ export const en = {
       modifiers: "Modifiers",
       modifiersDesc: "Optional add-ons like Ice Level, priced per option.",
       inheritsProductOptions:
-        "This item is linked to a product — its option groups appear automatically in POS/Storefront, in addition to the modifiers below.",
+        "Its name, price, department, category, and option groups are managed on the product's page — edit them there. The description and photo below stay specific to this menu listing.",
+      fromProductBadge: "From Product",
+      fromProductTooltip: "Menu From Product Data",
+      editInProducts: "Edit in Products",
+      categoryLabel: "Category",
+      categoryMoveHint:
+        "Move this item to a different category, or type a new name to create one — no need to delete and recreate the item.",
+      uncategorized: "Uncategorized",
+      categoryPlaceholder: "Select a category",
+      categorySearchPlaceholder: "Search or create category…",
+      createCategory: 'Create "{value}"',
+      dragToReorder: "Drag to reorder",
+      reorderFailed: "Failed to save the new order",
+      removeFromMenuTooltip: "Remove from POS menu",
+      removeItemConfirm: "Remove this item from the POS menu?",
+      removeItemConfirmDesc: "Its product data is kept — only its POS menu listing is removed.",
+      itemRemovedFromMenu: "Removed from POS menu",
+      deleteItemsLabelLinked: "Remove items from POS menu",
+      deleteItemsDescriptionLinked:
+        "Permanently deletes any manually-added items; product-linked items are only removed from the POS menu — their product data is kept.",
     },
     analytics: {
       totalVisitors: "Total Visitors",

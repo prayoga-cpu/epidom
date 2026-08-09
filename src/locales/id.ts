@@ -1435,9 +1435,11 @@ export const id = {
       description:
         "Ubah resep menjadi batch produksi terencana: pilih resep, periksa ketersediaan bahan, lalu gunakan bahan baku untuk menghasilkan stok jadi — setiap batch tercatat untuk ditinjau kembali.",
       whoForTitle: "Gunakan ini jika...",
-      whoFor: "Anda memasak dengan resep baku dan ingin melacak persis berapa banyak setiap bahan yang terpakai per batch.",
+      whoFor:
+        "Anda memasak dengan resep baku dan ingin melacak persis berapa banyak setiap bahan yang terpakai per batch.",
       whoSkipTitle: "Lewati ini jika...",
-      whoSkip: "Anda memasak langsung tanpa resep tetap — batch produksi hanya akan menambah langkah tanpa manfaat.",
+      whoSkip:
+        "Anda memasak langsung tanpa resep tetap — batch produksi hanya akan menambah langkah tanpa manfaat.",
       enableButton: "Aktifkan Pelacakan Produksi",
       enabling: "Mengaktifkan...",
       enabledToast: "Pelacakan produksi diaktifkan",
@@ -1484,8 +1486,10 @@ export const id = {
     selectStaff: "Pilih staf Anda",
     enterPin: "Masukkan PIN Anda",
     cameraPermissionDenied: "Kamera tidak tersedia. Gunakan tombol di bawah untuk mengambil foto.",
-    cameraNotFound: "Kamera tidak ditemukan di perangkat ini. Gunakan tombol di bawah untuk mengambil foto.",
-    cameraInsecureContext: "Kamera memerlukan koneksi aman (HTTPS). Gunakan tombol di bawah sebagai gantinya.",
+    cameraNotFound:
+      "Kamera tidak ditemukan di perangkat ini. Gunakan tombol di bawah untuk mengambil foto.",
+    cameraInsecureContext:
+      "Kamera memerlukan koneksi aman (HTTPS). Gunakan tombol di bawah sebagai gantinya.",
     cameraUnavailable: "Kamera tidak tersedia. Gunakan tombol di bawah untuk mengambil foto.",
     retryCamera: "Coba lagi",
     retake: "Ambil Ulang",
@@ -1608,7 +1612,8 @@ export const id = {
     financeFlagged: "Tidak seimbang",
     financeCost: "Biaya",
     financeMarginAmount: "Margin",
-    financeUnknownCostHint: "Biaya untuk item ini tidak diketahui — terjual sebelum pelacakan biaya dimulai, atau tidak tertaut ke item stok.",
+    financeUnknownCostHint:
+      "Biaya untuk item ini tidak diketahui — terjual sebelum pelacakan biaya dimulai, atau tidak tertaut ke item stok.",
     financeAllOutlets: "Semua Outlet",
     ownerTitle: "Owner Dashboard",
     ownerDesc: "Ringkasan semua toko dalam bisnis Anda",
@@ -1733,6 +1738,7 @@ export const id = {
     staffUsername: "Nama Pengguna",
     staffUsernamePlaceholder: "mis. jdoe",
     staffCustomRoleLabel: "Label peran khusus",
+    staffRoleCustomOption: "Khusus…",
     staffOptional: "(opsional)",
     staffCustomRoleLabelPlaceholder: "mis. Asisten Manajer",
     staffPayRate: "Tarif Gaji",
@@ -1791,7 +1797,8 @@ export const id = {
     storeAccessGateSetOwnerPinTitle: "Atur PIN Pemilik",
     storeAccessGateSetOwnerPinDesc:
       "Atur PIN untuk memastikan ini benar-benar Anda sebelum membuka dashboard toko ini di perangkat ini.",
-    storeAccessGateForgotPinHint: "Lupa PIN? Minta pemilik toko untuk mengaturnya ulang untuk Anda.",
+    storeAccessGateForgotPinHint:
+      "Lupa PIN? Minta pemilik toko untuk mengaturnya ulang untuk Anda.",
     ownerPinSetTitle: "Atur PIN Pemilik",
     ownerPinSetDesc:
       "PIN ini melindungi peralihan kembali ke akun Pemilik di perangkat bersama setelah staf dapat masuk.",
@@ -1830,7 +1837,8 @@ export const id = {
     reservationsStatusButton: "Status",
     reservationsCurrent: "saat ini",
     reservationsDeleteTitle: "Hapus Reservasi",
-    reservationsDeleteDesc: "Ini akan menghapus reservasi secara permanen. Tindakan ini tidak dapat dibatalkan.",
+    reservationsDeleteDesc:
+      "Ini akan menghapus reservasi secara permanen. Tindakan ini tidak dapat dibatalkan.",
     reservationsUpdated: "Reservasi diperbarui",
     reservationsUpdateFailed: "Gagal memperbarui",
     reservationsDeleted: "Reservasi dihapus",
@@ -1899,10 +1907,12 @@ export const id = {
     smartImportFailedDesc: "Terjadi kesalahan saat mengimpor.",
     smartImportTryAgain: "Coba Lagi",
     authForgotTitle: "Lupa kata sandi",
-    authForgotDesc: "Masukkan alamat email Anda dan kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.",
+    authForgotDesc:
+      "Masukkan alamat email Anda dan kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.",
     authForgotLinkSent: "Tautan atur ulang kata sandi telah dikirim ke email Anda",
     authForgotSomethingWrong: "Terjadi kesalahan",
-    authForgotCheckEmail: "Periksa email Anda! Kami telah mengirim tautan atur ulang kata sandi ke {email}.",
+    authForgotCheckEmail:
+      "Periksa email Anda! Kami telah mengirim tautan atur ulang kata sandi ke {email}.",
     authForgotBackToLogin: "Kembali ke Masuk",
     authForgotEmailPlaceholder: "nama@contoh.com",
     authForgotSendLink: "Kirim Tautan Atur Ulang",
@@ -1951,7 +1961,8 @@ export const id = {
       saveChanges: "Simpan perubahan",
       updateSuccess: "Permintaan diperbarui.",
       deleteTitle: "Hapus permintaan?",
-      deleteConfirm: "Tindakan ini akan menghapus permintaan secara permanen dan tidak dapat dibatalkan.",
+      deleteConfirm:
+        "Tindakan ini akan menghapus permintaan secara permanen dan tidak dapat dibatalkan.",
       deleteSuccess: "Permintaan dihapus.",
     },
     status: {
@@ -2015,7 +2026,8 @@ export const id = {
       pendingWithStorefront: "{count} pesanan menunggu ({storefrontCount} dari storefront)",
       viewQueue: "Antrean Pesanan",
       errorDescription: "Gagal memuat pesanan",
-      errorBody: "Terjadi kesalahan saat memuat pesanan baru. Coba muat ulang, atau buka Antrean Pesanan langsung.",
+      errorBody:
+        "Terjadi kesalahan saat memuat pesanan baru. Coba muat ulang, atau buka Antrean Pesanan langsung.",
       andMore: "+{count} lainnya — lihat semua di Antrean Pesanan",
     },
     trackingCard: {
@@ -2517,6 +2529,11 @@ export const id = {
       addTitle: "Tambah Produk Baru",
       addButton: "Tambah Produk",
       bulkAddToMenu: "Tambah ke Menu",
+      bulkRemoveFromMenu: "Hapus dari Menu",
+      bulkRemoveFromMenuConfirm: {
+        title: "Hapus dari Menu POS",
+        description: "Hapus {count} produk dari menu POS?",
+      },
       editTitle: "Edit Produk",
       detailsTitle: "Detail Produk",
       addDescription:
@@ -2634,6 +2651,9 @@ export const id = {
         bulkAddedToMenu: "{count} produk ditambahkan ke menu POS",
         bulkAddedToMenuPartial: "{succeeded} berhasil ditambahkan, {failed} gagal",
         bulkAddToMenuNone: "Produk yang dipilih sudah ada di menu POS",
+        bulkRemovedFromMenu: "{count} produk dihapus dari menu POS",
+        bulkRemovedFromMenuPartial: "{succeeded} berhasil dihapus, {failed} gagal",
+        bulkRemoveFromMenuNone: "Produk yang dipilih tidak ada di menu POS",
         adding: "Menambahkan produk...",
         added: {
           title: "Produk Berhasil Ditambahkan",
@@ -5127,7 +5147,8 @@ export const id = {
       createTitle: "Catat Limbah",
       createDescription: "Catat produk atau bahan baku yang terbuang beserta alasannya.",
       editTitle: "Koreksi Catatan Limbah",
-      editDescription: "Koreksi catatan ini — perubahan jumlah/biaya akan menyesuaikan stok saat ini.",
+      editDescription:
+        "Koreksi catatan ini — perubahan jumlah/biaya akan menyesuaikan stok saat ini.",
     },
     fields: {
       itemType: "Jenis item",
@@ -5172,7 +5193,8 @@ export const id = {
     },
     deleteConfirm: {
       title: "Hapus catatan limbah?",
-      description: "Ini mengembalikan jumlah yang tercatat ke stok saat ini dan menghapus catatannya.",
+      description:
+        "Ini mengembalikan jumlah yang tercatat ke stok saat ini dan menghapus catatannya.",
     },
     table: {
       date: "Tanggal",
@@ -5208,6 +5230,7 @@ export const id = {
       items: "item",
       hold: "Tahan pesanan",
       holdOffline: "Tidak bisa menahan pesanan saat offline",
+      holdDisabled: "Tahan pesanan tidak tersedia — Antrean Aktif sedang mati",
       discount: "Diskon",
       addDiscount: "Tambah diskon",
       editDiscount: "Ubah diskon",
@@ -5277,6 +5300,13 @@ export const id = {
       filterAllStaff: "Semua staf",
       filterAllPaymentMethods: "Semua metode pembayaran",
       awaitingPaymentColumn: "Terkirim — Menunggu Pembayaran",
+      activeQueueLabel: "Antrean Aktif",
+      activeQueueEnabledToast: "Antrean Aktif dinyalakan",
+      activeQueueDisabledToast:
+        "Antrean Aktif dimatikan — pesanan baru langsung tercatat terkirim, dan tampilan Dapur & Bar ikut mati",
+      activeQueueDisabledTitle: "Antrean Aktif sedang mati",
+      activeQueueDisabledDesc:
+        "Pesanan baru melewati tahap Menunggu/Dikonfirmasi/Produksi dan langsung tercatat di Riwayat Pesanan sebagai Terkirim. Tampilan Dapur & Bar dan Tahan Pesanan ikut mati. Nyalakan lagi di atas jika kamu perlu menahan pesanan sebelum selesai.",
     },
     filters: {
       addFilter: "Tambah filter",
@@ -5361,11 +5391,12 @@ export const id = {
       tabBar: "Bar",
       enabledLabel: "Tampilan Dapur & Bar",
       enabledToast: "Tampilan Dapur & Bar diaktifkan",
-      disabledToast: "Tampilan Dapur & Bar dimatikan — pesanan baru langsung ditandai terkirim",
+      disabledToast:
+        "Tampilan Dapur & Bar dimatikan — Antrean Aktif ikut mati, dan pesanan baru langsung ditandai terkirim",
       settingsUpdateFailed: "Gagal memperbarui pengaturan",
       disabledTitle: "Tampilan Dapur & Bar sedang mati",
       disabledDesc:
-        "Pesanan melewati antrian dapur/bar dan langsung ditandai terkirim setelah pembayaran tercatat. Nyalakan lagi di atas jika Anda perlu melacak status penyiapan.",
+        "Pesanan melewati antrian dapur/bar dan langsung ditandai terkirim setelah pembayaran tercatat — Antrean Aktif di halaman Pesanan ikut mati, karena ini pengaturan yang sama. Nyalakan lagi di atas (atau di sana) jika Anda perlu melacak status penyiapan.",
       waitingOtherDepartment: "Menunggu stasiun lainnya",
       preparing: "Sedang Dibuat",
       ready: "Siap Disajikan",
@@ -5480,6 +5511,7 @@ export const id = {
       reprintLast: "Cetak Ulang Pesanan Terakhir",
       reprintLastEmpty: "Belum ada pesanan yang dicetak sesi ini",
       reprint: "Cetak Ulang",
+      sendLastReceipt: "Kirim Struk via WhatsApp",
       goToOrderHistory: "Riwayat Pesanan",
     },
     history: {
@@ -5536,6 +5568,11 @@ export const id = {
       receiptFailed: "Pengiriman struk gagal",
       receiptSendSuccess: "Struk berhasil dikirim via WhatsApp",
       receiptSendFailed: "Gagal mengirim struk",
+      sendWhatsappLink: "Buka di WhatsApp",
+      whatsappPhonePlaceholder: "Nomor WhatsApp",
+      whatsappPhoneRequired: "Masukkan nomor WhatsApp terlebih dahulu",
+      whatsappPhoneSaveFailed: "Nomor gagal disimpan, tetap membuka WhatsApp",
+      whatsappGuestFallback: "Kak",
       bulk: {
         selectedCount: "{n} dipilih",
         selectAll: "Pilih semua",
@@ -6172,7 +6209,26 @@ export const id = {
       modifiers: "Modifier",
       modifiersDesc: "Tambahan opsional seperti Level Es, dengan harga per opsi.",
       inheritsProductOptions:
-        "Menu ini tertaut ke produk — grup opsi produknya otomatis muncul di POS/Storefront, selain modifier di bawah ini.",
+        "Nama, harga, departemen, kategori, dan grup opsinya dikelola dari halaman produk — edit di sana. Deskripsi dan foto di bawah ini tetap khusus untuk tampilan menu ini.",
+      fromProductBadge: "Dari Produk",
+      fromProductTooltip: "Menu Dari Data Produk",
+      editInProducts: "Edit di Produk",
+      categoryLabel: "Kategori",
+      categoryMoveHint:
+        "Pindahkan menu ini ke kategori lain, atau ketik nama baru untuk membuat kategori — tidak perlu hapus dan buat ulang menu ini.",
+      uncategorized: "Tanpa Kategori",
+      categoryPlaceholder: "Pilih kategori",
+      categorySearchPlaceholder: "Cari atau buat kategori…",
+      createCategory: 'Buat "{value}"',
+      dragToReorder: "Seret untuk mengurutkan",
+      reorderFailed: "Gagal menyimpan urutan baru",
+      removeFromMenuTooltip: "Hapus dari menu POS",
+      removeItemConfirm: "Hapus menu ini dari menu POS?",
+      removeItemConfirmDesc: "Data produknya tetap disimpan — hanya tampilannya di menu POS yang dihapus.",
+      itemRemovedFromMenu: "Dihapus dari menu POS",
+      deleteItemsLabelLinked: "Hapus menu dari menu POS",
+      deleteItemsDescriptionLinked:
+        "Menghapus permanen menu yang ditambahkan manual; menu yang tertaut produk hanya dihapus dari menu POS — data produknya tetap disimpan.",
     },
     analytics: {
       totalVisitors: "Total Pengunjung",

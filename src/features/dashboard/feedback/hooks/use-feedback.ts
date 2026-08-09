@@ -48,10 +48,13 @@ export function useSubmitFeedback() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        const error: ApiError = new Error(errorData.error?.message || "Failed to submit feedback");
+        // A non-JSON body here (e.g. a platform-level timeout/gateway error
+        // page) would otherwise throw a raw SyntaxError from response.json()
+        // and surface its parser message to the user instead of a sensible one.
+        const errorData = await response.json().catch(() => null);
+        const error: ApiError = new Error(errorData?.error?.message || "Failed to submit feedback");
         error.status = response.status;
-        error.details = errorData.error?.details;
+        error.details = errorData?.error?.details;
         throw error;
       }
 
@@ -76,8 +79,8 @@ export function useMyFeedback(enabled: boolean) {
       const response = await fetch("/api/feedback");
 
       if (!response.ok) {
-        const errorData = await response.json();
-        const error: ApiError = new Error(errorData.error?.message || "Failed to fetch feedback");
+        const errorData = await response.json().catch(() => null);
+        const error: ApiError = new Error(errorData?.error?.message || "Failed to fetch feedback");
         error.status = response.status;
         throw error;
       }
@@ -106,10 +109,10 @@ export function useUpdateFeedback() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        const error: ApiError = new Error(errorData.error?.message || "Failed to update feedback");
+        const errorData = await response.json().catch(() => null);
+        const error: ApiError = new Error(errorData?.error?.message || "Failed to update feedback");
         error.status = response.status;
-        error.details = errorData.error?.details;
+        error.details = errorData?.error?.details;
         throw error;
       }
 
@@ -136,8 +139,8 @@ export function useDeleteFeedback() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        const error: ApiError = new Error(errorData.error?.message || "Failed to delete feedback");
+        const errorData = await response.json().catch(() => null);
+        const error: ApiError = new Error(errorData?.error?.message || "Failed to delete feedback");
         error.status = response.status;
         throw error;
       }

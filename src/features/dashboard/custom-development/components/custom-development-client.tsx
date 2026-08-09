@@ -6,6 +6,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -178,7 +179,12 @@ export function CustomDevelopmentClient({ storeId }: CustomDevelopmentClientProp
               </div>
               <div className="space-y-1">
                 <Label htmlFor="phone">{t("customDevelopment.form.phone")}</Label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <PhoneInput
+                  id="phone"
+                  defaultCountry="ID"
+                  value={phone}
+                  onChange={(value) => setPhone(value ?? "")}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="budget">{t("customDevelopment.form.budget")}</Label>
@@ -186,7 +192,11 @@ export function CustomDevelopmentClient({ storeId }: CustomDevelopmentClientProp
               </div>
               <div className="space-y-1">
                 <Label htmlFor="timeline">{t("customDevelopment.form.timeline")}</Label>
-                <Input id="timeline" value={timeline} onChange={(e) => setTimeline(e.target.value)} />
+                <Input
+                  id="timeline"
+                  value={timeline}
+                  onChange={(e) => setTimeline(e.target.value)}
+                />
               </div>
             </div>
             <div className="space-y-1">
@@ -277,10 +287,11 @@ export function CustomDevelopmentClient({ storeId }: CustomDevelopmentClientProp
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-phone">{t("customDevelopment.form.phone")}</Label>
-                <Input
+                <PhoneInput
                   id="edit-phone"
+                  defaultCountry="ID"
                   value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
+                  onChange={(value) => setEditPhone(value ?? "")}
                 />
               </div>
               <div className="space-y-1">

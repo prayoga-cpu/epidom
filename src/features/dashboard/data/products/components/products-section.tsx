@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,12 +47,14 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   useProducts,
+  useProduct,
   useDeleteProduct,
   useBulkDeleteProducts,
   useExportProducts,
   useAddProductToMenu,
   useRemoveProductFromMenu,
   useBulkAddProductsToMenu,
+  useBulkRemoveProductsFromMenu,
   useProductMenuStatus,
   useDeleteProductCategory,
   type Product,
@@ -142,6 +144,9 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const params = useParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { advancedReportsAccess } = useFeatureAccess();
   const storeId = params.storeId as string;
 
@@ -181,6 +186,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const addToMenu = useAddProductToMenu(storeId);
   const removeFromMenu = useRemoveProductFromMenu(storeId);
   const bulkAddToMenu = useBulkAddProductsToMenu(storeId);
+  const bulkRemoveFromMenu = useBulkRemoveProductsFromMenu(storeId);
   const { menuLinkedIds } = useProductMenuStatus(storeId);
   const { confirm, confirmDialog } = useConfirm();
   const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
@@ -238,6 +244,30 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   } = useBulkSelection(products);
 
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+
+  // Deep link from the Menu Editor's "Edit in Products" CTA (a product-linked
+  // menu item can't be renamed/repriced there — its name/price/department
+  // are owned by Product and synced one-way, so it redirects here instead).
+  // Falls back to a direct fetch when the product isn't in the currently
+  // loaded/filtered page of results.
+  const editProductId = searchParams.get("editProduct");
+  const { data: editProductFromParam } = useProduct(
+    storeId,
+    !products.some((p) => p.id === editProductId) ? editProductId : null
+  );
+  const appliedEditProductParam = useRef(false);
+  useEffect(() => {
+    if (appliedEditProductParam.current || !editProductId) return;
+    const product = products.find((p) => p.id === editProductId) ?? editProductFromParam;
+    if (product) {
+      appliedEditProductParam.current = true;
+      handleEdit(product);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("editProduct");
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editProductId, products, editProductFromParam]);
 
   // Helper function to determine stock status
   const getStockStatus = (product: Product): StockFilter => {
@@ -330,6 +360,52 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
       clearSelection();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add products to menu");
+    }
+  };
+
+  const handleBulkRemoveFromMenu = async () => {
+    const selected = products.filter((p) => selectedIds.has(p.id) && menuLinkedIds.has(p.id));
+    if (selected.length === 0) {
+      toast.info(
+        t("data.products.toasts.bulkRemoveFromMenuNone") ||
+          "Selected products are not in the POS menu"
+      );
+      return;
+    }
+
+    const ok = await confirm({
+      title: t("data.products.bulkRemoveFromMenuConfirm.title") || "Remove from POS Menu",
+      description:
+        t("data.products.bulkRemoveFromMenuConfirm.description")?.replace(
+          "{count}",
+          String(selected.length)
+        ) || `Remove ${selected.length} product(s) from the POS menu?`,
+      variant: "destructive",
+      confirmText: t("actions.delete"),
+      cancelText: t("actions.cancel"),
+    });
+    if (!ok) return;
+
+    try {
+      const result = await bulkRemoveFromMenu.mutateAsync(selected);
+      if (result.failed > 0) {
+        toast.warning(
+          t("data.products.toasts.bulkRemovedFromMenuPartial")
+            ?.replace("{succeeded}", String(result.succeeded))
+            .replace("{failed}", String(result.failed)) ||
+            `${result.succeeded} removed from POS menu, ${result.failed} failed`
+        );
+      } else {
+        toast.success(
+          t("data.products.toasts.bulkRemovedFromMenu")?.replace(
+            "{count}",
+            String(result.succeeded)
+          ) || `${result.succeeded} product(s) removed from POS menu`
+        );
+      }
+      clearSelection();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove products from menu");
     }
   };
 
@@ -492,6 +568,22 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                     <UtensilsCrossed className="mr-1 hidden h-4 w-4 sm:inline" />
                   )}
                   {t("data.products.bulkAddToMenu") || "Add to Menu"} ({selectedCount})
+                </Button>
+              )}
+              {bulkSelectMode && selectedCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkRemoveFromMenu}
+                  disabled={bulkRemoveFromMenu.isPending}
+                  className="w-full sm:w-auto"
+                >
+                  {bulkRemoveFromMenu.isPending ? (
+                    <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                  ) : (
+                    <UtensilsCrossed className="mr-1 hidden h-4 w-4 sm:inline" />
+                  )}
+                  {t("data.products.bulkRemoveFromMenu") || "Remove from Menu"} ({selectedCount})
                 </Button>
               )}
               {bulkSelectMode && selectedCount > 0 && (
@@ -809,7 +901,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                             <Button
                               variant="secondary"
                               size="sm"
-                              className="h-8 w-full flex-1 text-xs text-green-600 hover:text-green-700"
+                              className="h-8 w-full flex-1 text-xs text-foreground/70 hover:text-foreground"
                               disabled={addToMenu.isPending}
                               onClick={async () => {
                                 try {

@@ -19,9 +19,13 @@ export default async function FinancePage({ params }: { params: Promise<{ storeI
   // roll up.
   const [staff, categories, store] = await Promise.all([
     prisma.staffMember.findMany({
-      where: { storeId, isActive: true },
-      select: { id: true, name: true, role: true },
-      orderBy: { name: "asc" },
+      where: { storeId },
+      // Kept regardless of isActive — past orders/reports can still be tied
+      // to a since-deactivated staff member, so the filter needs to be able
+      // to select them (labeled Inactive in FinanceClient), not just staff
+      // currently on the roster.
+      select: { id: true, name: true, role: true, isActive: true },
+      orderBy: [{ isActive: "desc" }, { name: "asc" }],
     }),
     prisma.menuCategory.findMany({
       where: { storefront: { storeId } },

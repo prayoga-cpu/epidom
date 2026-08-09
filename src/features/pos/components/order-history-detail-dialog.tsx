@@ -32,6 +32,7 @@ import {
   type ReceiptData,
 } from "@/lib/pwa/thermal-printer";
 import { usePrinterSettings } from "../hooks/use-printer-settings";
+import { SendReceiptWhatsApp } from "./send-receipt-whatsapp";
 
 function getSourceBadgeVariant(source: string) {
   switch (source) {
@@ -91,7 +92,7 @@ export function OrderHistoryDetailDialog({
   storeId,
   onOpenChange,
 }: OrderHistoryDetailDialogProps) {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale, formatDateTimeWithTimezone } = useI18n();
   // Order amounts are literal in the store's display currency, never IDR —
   // passing `currency` skips formatPrice's default base-currency conversion.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
@@ -125,7 +126,10 @@ export function OrderHistoryDetailDialog({
           return;
         }
       }
-      await printReceipt(receipt as ReceiptData);
+      // Reprint in the cashier's current dashboard language, not whatever
+      // locale the order was originally built with server-side — same
+      // override the live checkout print already applies.
+      await printReceipt({ ...(receipt as ReceiptData), locale });
       toast.success(t("pos.print.success"));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("pos.print.failed"));
@@ -258,7 +262,7 @@ export function OrderHistoryDetailDialog({
                 {t("pos.history.detailTitle")}
                 <span className="font-mono">{order.orderNumber}</span>
               </DialogTitle>
-              <DialogDescription>{formatDateTime(order.orderDate)}</DialogDescription>
+              <DialogDescription>{formatDateTimeWithTimezone(order.orderDate)}</DialogDescription>
             </DialogHeader>
 
             <div className="flex flex-wrap gap-2">
@@ -330,7 +334,7 @@ export function OrderHistoryDetailDialog({
                 <span>{formatPrice(Number(order.total))}</span>
               </div>
               {Number(order.refundAmount) > 0 && (
-                <div className="flex justify-between text-destructive">
+                <div className="text-destructive flex justify-between">
                   <span>
                     {t("pos.refund.refunded")}
                     {order.refundReason ? ` (${order.refundReason})` : ""}
@@ -407,14 +411,25 @@ export function OrderHistoryDetailDialog({
                   {lastReceiptSend.status === "SENT"
                     ? t("pos.history.receiptSent")
                     : t("pos.history.receiptFailed")}{" "}
-                  · {formatDateTime(lastReceiptSend.sentAt)}
+                  · {formatDateTimeWithTimezone(lastReceiptSend.sentAt)}
                 </span>
               )}
             </div>
 
+            <SendReceiptWhatsApp
+              storeId={storeId}
+              orderId={order.id}
+              customerName={order.customerName}
+              customerPhone={order.customerPhone}
+              total={Number(order.total)}
+              currency={currency}
+              orderDate={order.orderDate}
+              className="border-t pt-3"
+            />
+
             {order.deliveredDate && (
               <p className="text-muted-foreground text-xs">
-                {t("pos.history.detailDelivered")}: {formatDateTime(order.deliveredDate)}
+                {t("pos.history.detailDelivered")}: {formatDateTimeWithTimezone(order.deliveredDate)}
               </p>
             )}
 
