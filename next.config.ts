@@ -30,17 +30,6 @@ const nextConfig: NextConfig = {
   // cause of serverless functions crashing at cold start (before the route
   // handler's own try/catch can run) when they import it, as /api/upload does.
   serverExternalPackages: ["sharp"],
-  // Vercel's output file tracer can't see sharp's *runtime* dlopen() of
-  // libvips-cpp.so (only static `require`s are traceable), so it prunes that
-  // .so out of the deployed function bundle — the build succeeds but every
-  // invocation then crashes with ERR_DLOPEN_FAILED. Force-include it.
-  outputFileTracingIncludes: {
-    "/api/upload": [
-      "./node_modules/sharp/**/*",
-      "./node_modules/@img/sharp-linux-x64/**/*",
-      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
-    ],
-  },
   // Optimize production builds
   compiler: {
     removeConsole:
