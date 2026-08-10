@@ -8,8 +8,11 @@
  * - BLOB_READ_WRITE_TOKEN: Token for Vercel Blob Storage
  */
 
-import { put, del } from "@vercel/blob";
+import { put, del, list } from "@vercel/blob";
 import type { StorageAdapter, UploadResult, UploadOptions } from "./storage-adapter.interface";
+
+/** Safety cap on pagination pages so a runaway store can never hang the request. */
+const MAX_LIST_PAGES = 200;
 
 export class VercelBlobAdapter implements StorageAdapter {
   private token: string | undefined;
@@ -97,5 +100,26 @@ export class VercelBlobAdapter implements StorageAdapter {
     // This method is mainly for constructing URLs from keys
     // In practice, we store the full URL and return it directly
     return key;
+  }
+
+  /**
+   * Total object count + bytes across the whole store, via paginated `list()`.
+   */
+  async getUsage(): Promise<{ count: number; totalBytes: number } | null> {
+    if (!this.isConfigured()) return null;
+
+    let count = 0;
+    let totalBytes = 0;
+    let cursor: string | undefined;
+
+    for (let page = 0; page < MAX_LIST_PAGES; page++) {
+      const result = await list({ token: this.token, cursor, limit: 1000 });
+      count += result.blobs.length;
+      totalBytes += result.blobs.reduce((sum, b) => sum + b.size, 0);
+      if (!result.hasMore) break;
+      cursor = result.cursor;
+    }
+
+    return { count, totalBytes };
   }
 }

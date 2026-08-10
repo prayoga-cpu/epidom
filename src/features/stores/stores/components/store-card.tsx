@@ -42,7 +42,7 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
 
   return (
     <Card
-      className={`group border-border bg-card relative flex h-full flex-col overflow-hidden border p-0 shadow-sm transition-all duration-300 ${
+      className={`group border-border bg-card relative flex h-full flex-col overflow-hidden border p-0 shadow-sm transition-all duration-300 sm:py-0 ${
         isBlocked
           ? "cursor-not-allowed opacity-75"
           : "hover:-translate-y-1 hover:border-[var(--color-brand-primary)]/30 hover:shadow-xl"

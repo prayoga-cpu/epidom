@@ -10,6 +10,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
 import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
 import { usePublicStorefrontMenu, type PublicMenuItem } from "../hooks/use-public-menu";
+import { useTrackPageView } from "../hooks/use-track-storefront-event";
 
 interface ModifierOption {
   name: string;
@@ -72,6 +73,10 @@ interface CartItem {
 export function PublicItemDetail({ storefront, item: initialItem }: PublicItemDetailProps) {
   const router = useRouter();
   const { t } = useI18n();
+  useTrackPageView(storefront.slug, "ITEM_VIEW", {
+    menuItemId: initialItem.id,
+    menuItemName: initialItem.name,
+  });
   // Polls the live menu (shared with public-menu.tsx) and swaps in this
   // item's fresh price/availability/options once loaded, so a merchant's
   // change shows up while a customer already has this page open.

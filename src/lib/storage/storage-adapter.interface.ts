@@ -65,4 +65,10 @@ export interface StorageAdapter {
    * @returns true if configured, false otherwise
    */
   isConfigured(): boolean;
+
+  /**
+   * Get aggregate usage stats for the whole store (object count + total bytes).
+   * Returns null if the adapter doesn't support usage introspection or isn't configured.
+   */
+  getUsage(): Promise<{ count: number; totalBytes: number } | null>;
 }

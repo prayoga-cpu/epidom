@@ -30,6 +30,20 @@ export function parseUserAgent(ua: string | null | undefined): ParsedUserAgent {
   return { device, os, browser };
 }
 
+// Common crawler/bot/link-preview UAs. Deliberately includes the chat-app
+// link-unfurlers (WhatsApp, Facebook, Slack, Telegram, Discord) since this
+// product's core loop is sharing the storefront link directly into WhatsApp
+// chats — every share would otherwise fetch the page once for a preview and
+// silently inflate every visitor/analytics number.
+const BOT_UA_PATTERN =
+  /bot|crawl|spider|slurp|whatsapp|facebookexternalhit|facebot|slackbot|telegrambot|discordbot|twitterbot|linkedinbot|pinterest|embedly|quora link preview|outbrain|vkshare|w3c_validator|redditbot|applebot|bingpreview|semrushbot|ahrefsbot|mj12bot|dotbot|curl|wget|python-requests|node-fetch|axios|headlesschrome|phantomjs|puppeteer|playwright/i;
+
+/** Best-effort classification of a request User-Agent as a bot/crawler/link-preview fetcher, not a real visitor. */
+export function isBotUserAgent(ua: string | null | undefined): boolean {
+  if (!ua) return true; // no UA at all is never a real browser visit
+  return BOT_UA_PATTERN.test(ua);
+}
+
 const PRIVATE_IP_PATTERNS = [/^127\./, /^10\./, /^192\.168\./, /^172\.(1[6-9]|2\d|3[01])\./];
 
 /**

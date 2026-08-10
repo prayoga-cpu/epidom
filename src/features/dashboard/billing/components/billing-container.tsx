@@ -22,6 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
+import { isLifetimePeriod } from "@/lib/utils/formatting";
 import { getApiErrorMessage } from "@/lib/utils/api-error";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { BetaPlanSwitcher } from "./beta-plan-switcher";
@@ -231,10 +232,16 @@ export function BillingContainer() {
             <div className="flex items-center gap-2 rounded-lg border p-4">
               <Calendar className="text-muted-foreground h-5 w-5" />
               <div className="flex-1">
-                <p className="text-sm font-medium">{t("billing.nextBilling")}</p>
-                <p className="text-muted-foreground text-sm">
-                  {formatDate(subscription.currentPeriodEnd, "PPP")}
+                <p className="text-sm font-medium">
+                  {isLifetimePeriod(subscription.currentPeriodEnd)
+                    ? t("billing.lifetime")
+                    : t("billing.nextBilling")}
                 </p>
+                {!isLifetimePeriod(subscription.currentPeriodEnd) && (
+                  <p className="text-muted-foreground text-sm">
+                    {formatDate(subscription.currentPeriodEnd, "PPP")}
+                  </p>
+                )}
               </div>
             </div>
           )}

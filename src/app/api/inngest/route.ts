@@ -6,6 +6,8 @@ import { parseAggregatorEmail } from "@/lib/inngest/functions/parse-aggregator-e
 import { sendFeedbackNotification } from "@/lib/inngest/functions/feedback-notification";
 import { sendCustomDevelopmentNotification } from "@/lib/inngest/functions/custom-development-notification";
 import { purgeExpiredAccounts } from "@/lib/inngest/functions/purge-expired-accounts";
+import { nightlyDatabaseBackup } from "@/lib/inngest/functions/nightly-database-backup";
+import { checkBackupFreshness } from "@/lib/inngest/functions/check-backup-freshness";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -16,5 +18,7 @@ export const { GET, POST, PUT } = serve({
     sendFeedbackNotification,
     sendCustomDevelopmentNotification,
     purgeExpiredAccounts,
+    nightlyDatabaseBackup,
+    checkBackupFreshness,
   ],
 });

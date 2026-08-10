@@ -5,6 +5,7 @@ import type {
   UpdateMenuCategoryInput,
   CreateMenuItemInput,
   UpdateMenuItemInput,
+  RecordStorefrontEventInput,
 } from "@/lib/validation/storefront.schemas";
 import { Prisma, Department } from "@prisma/client";
 import { getExchangeRate } from "./exchange-rate.service";
@@ -212,17 +213,40 @@ export class StorefrontService {
   }
 
   /**
-   * Increment view count analytics (unauthenticated / public)
+   * Record a public storefront analytics event (unauthenticated). Resolves
+   * by slug since that's all the public route has. Also bumps the legacy
+   * `viewCount` counter on `VIEW` events so it stays a meaningful lifetime
+   * total alongside the richer `StorefrontEvent` log.
    */
-  async incrementViewCount(slug: string) {
-    return prisma.storefront.update({
+  async recordEvent(
+    slug: string,
+    input: RecordStorefrontEventInput & { visitorHash: string }
+  ): Promise<{ success: boolean }> {
+    const storefront = await prisma.storefront.findUnique({
       where: { slug },
+      select: { id: true },
+    });
+    if (!storefront) return { success: false };
+
+    await prisma.storefrontEvent.create({
       data: {
-        viewCount: {
-          increment: 1,
-        },
+        storefrontId: storefront.id,
+        type: input.type,
+        menuItemId: input.menuItemId,
+        menuItemName: input.menuItemName,
+        visitorHash: input.visitorHash,
+        referrer: input.referrer,
       },
     });
+
+    if (input.type === "VIEW") {
+      await prisma.storefront.update({
+        where: { id: storefront.id },
+        data: { viewCount: { increment: 1 } },
+      });
+    }
+
+    return { success: true };
   }
 
   // ========================================

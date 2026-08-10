@@ -11,6 +11,7 @@ import {
   type OfflineOrder,
 } from "@/lib/pwa/offline-queue";
 import { apiClient } from "@/lib/api/client";
+import { setLastSyncedAt } from "@/lib/pwa/sync-status";
 
 const MAX_ATTEMPTS = 5;
 
@@ -54,6 +55,10 @@ export function useOfflineQueue(storeId: string) {
     if (synced > 0) {
       toast.success(`${synced} pesanan offline berhasil disinkronkan`);
       queryClient.invalidateQueries({ queryKey: ["pos", "orders", storeId] });
+      // A push flush counts as a sync even if the pull side didn't run this
+      // pass — a partial flush (some entries still retrying) still means
+      // real data reached the server, so "last synced" should reflect it.
+      await setLastSyncedAt(storeId);
     }
   }, [isSyncing, storeId, queryClient, refreshCount]);
 

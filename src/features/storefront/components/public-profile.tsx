@@ -22,6 +22,7 @@ import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { trackEvent, useTrackPageView } from "@/features/storefront/hooks/use-track-storefront-event";
 
 interface CustomLink {
   label: string;
@@ -80,6 +81,8 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
   const { t, locale } = useI18n();
   const [showHours, setShowHours] = useState(false);
   const [showReservation, setShowReservation] = useState(false);
+
+  useTrackPageView(storefront.slug, "VIEW");
 
   const customLinksList = (storefront.customLinks as CustomLink[]) || [];
   const hours = (storefront.openingHours as OpeningHours) || {};
@@ -247,6 +250,11 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
                         href={social.url!}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={
+                          social.label === "WhatsApp"
+                            ? () => trackEvent(storefront.slug, "WHATSAPP_CLICK")
+                            : undefined
+                        }
                         className="bg-muted hover:bg-muted border-border text-foreground flex items-center justify-center rounded-full border p-3 transition"
                         title={social.label}
                       >

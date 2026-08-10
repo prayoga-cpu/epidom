@@ -1475,16 +1475,48 @@ model Storefront {
   openingHours        Json?
   viewCount           Int     @default(0)
 
-  store          Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store          Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
   menuCategories MenuCategory[]
   menuItems      MenuItem[]
   orders         Order[]
+  events         StorefrontEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([slug])
   @@map("storefronts")
+}
+
+enum StorefrontEventType {
+  VIEW // storefront profile page load
+  MENU_VIEW // /[slug]/menu page load
+  ITEM_VIEW // /[slug]/menu/[itemId] page load
+  WHATSAPP_CLICK // click on the WhatsApp/"chat" CTA
+}
+
+model StorefrontEvent {
+  id           String              @id @default(cuid())
+  storefrontId String
+  type         StorefrontEventType
+  // Loose reference + frozen snapshot, same convention as OrderItem.name —
+  // survives the menu item being renamed/deleted later.
+  menuItemId   String?
+  menuItemName String?
+  // Daily-rotating anonymous fingerprint: sha256(ip:userAgent:dateUTC:storefrontId).
+  // Never stores raw IP. Rotating daily is a deliberate privacy trade-off (no
+  // persistent cross-day identifier, no cookie/consent flow needed) — "unique
+  // visitors" over a range is a sum of daily-uniques, the standard DAU-style
+  // approximation, not a lifetime-unique count.
+  visitorHash String
+  referrer    String?
+  createdAt   DateTime @default(now())
+
+  storefront Storefront @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
+
+  @@index([storefrontId, type, createdAt])
+  @@index([storefrontId, visitorHash, createdAt])
+  @@map("storefront_events")
 }
 
 model MenuCategory {
@@ -1523,4 +1555,26 @@ model MenuItem {
   @@index([storefrontId])
   @@index([department])
   @@map("menu_items")
+}
+
+/// One row per nightly logical-backup run (see src/lib/backup/). Not tenant-scoped —
+/// this is platform-operational metadata, not customer data.
+model BackupRun {
+  id           String          @id @default(cuid())
+  startedAt    DateTime        @default(now())
+  finishedAt   DateTime?
+  status       BackupRunStatus @default(RUNNING)
+  tableCount   Int             @default(0)
+  totalRows    Int             @default(0)
+  totalBytes   BigInt          @default(0)
+  errorMessage String?
+
+  @@index([status, startedAt])
+  @@map("backup_runs")
+}
+
+enum BackupRunStatus {
+  RUNNING
+  SUCCESS
+  FAILED
 }

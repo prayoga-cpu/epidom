@@ -86,7 +86,7 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
           clip instead of growing past the available space. */}
       <div className="bg-muted/10 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl">
         <PosHeader store={store} onCartClick={() => setMobileCartOpen(true)} />
-        <PosOfflineBanner storeId={store.id} />
+        <PosOfflineBanner />
         <PosUnpaidAlert storeId={store.id} unpaidCount={unpaidCount} />
 
         <div className="flex min-h-0 flex-1 overflow-hidden">

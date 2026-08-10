@@ -449,15 +449,19 @@ The rationale: anything tied to money or compliance must be immutable in history
 
 ## Backups and recovery
 
+See **`docs/BACKUP_RESTORE.md`** for the full implementation, restore steps,
+and the quarterly-drill checklist. Summary:
+
 Production:
 
-- Neon (or chosen Postgres provider) point-in-time recovery, 7 days
+- Neon point-in-time recovery, 7 days (built into Neon, no setup)
 - Daily logical backup to Cloudflare R2 bucket, 90-day retention
-- Quarterly restore drill (manual)
+  (`nightly-database-backup` Inngest cron, `src/lib/backup/`)
+- Quarterly restore drill (manual, `docs/BACKUP_RESTORE.md`)
 
 Staging:
 
-- Same setup but 3-day retention
+- Same setup but 3-day PITR retention
 
 Local dev:
 

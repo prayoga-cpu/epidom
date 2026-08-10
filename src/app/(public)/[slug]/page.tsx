@@ -49,17 +49,15 @@ export default async function StorefrontPage({ params }: PageProps) {
       })
     : [];
 
-  // Serialize Prisma Decimal fields to plain numbers before passing to Client Component
+  // PublicProfile doesn't read menu data at all (it links out to /menu
+  // instead) — drop menuCategories rather than passing its raw Prisma rows
+  // (including Decimal priceAdjustment/materialQty on product option groups)
+  // across the Server->Client boundary just to have them go unused, which is
+  // exactly what was crashing with "Decimal objects are not supported."
+  const { menuCategories: _menuCategories, ...storefrontWithoutMenu } = storefront;
   const serialized = {
-    ...storefront,
+    ...storefrontWithoutMenu,
     reservableTables,
-    menuCategories: storefront.menuCategories.map((cat) => ({
-      ...cat,
-      items: cat.items.map((item) => ({
-        ...item,
-        price: Number(item.price),
-      })),
-    })),
   };
 
   return <PublicProfile storefront={serialized as any} />;

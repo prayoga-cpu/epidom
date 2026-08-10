@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, MessageSquare, TrendingUp, Wrench, ArrowRight } from "lucide-react";
+import { Shield, MessageSquare, TrendingUp, Wrench, Gauge, ArrowRight } from "lucide-react";
 
 const ADMIN_SHORTCUTS = [
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
   { href: "/admin/revenue", label: "Revenue", icon: TrendingUp },
+  { href: "/admin/capacity", label: "Usage", icon: Gauge },
   { href: "/admin/custom-development", label: "Custom Dev", icon: Wrench },
 ];
 
@@ -18,7 +19,7 @@ const ADMIN_SHORTCUTS = [
  */
 export function AdminCard() {
   return (
-    <Card className="group border-border relative flex h-full flex-col overflow-hidden border border-red-500/30 bg-red-500/5 p-0 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-red-500/50 hover:shadow-xl">
+    <Card className="group border-border relative flex h-full flex-col overflow-hidden border border-red-500/30 bg-red-500/5 p-0 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-red-500/50 hover:shadow-xl sm:py-0">
       <Link
         href="/admin"
         className="flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"

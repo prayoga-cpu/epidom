@@ -6,7 +6,6 @@ import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
 import { inngest } from "@/lib/inngest/client";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
-import { sendPushToStore } from "@/lib/push/send";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
@@ -269,14 +268,9 @@ export async function POST(request: Request) {
       console.error("[public/orders] Inngest event failed:", err);
     }
 
-    // OS-level push to any subscribed device for this store — fire-and-forget,
-    // never throws, no try/catch needed (see sendPushToStore).
-    sendPushToStore(storefront.storeId, {
-      title: "Pesanan baru masuk",
-      body: `${orderNumber} · ${input.customerName}`,
-      url: `/store/${storefront.storeId}/pos`,
-      tag: `order-${order.id}`,
-    });
+    // Merchant alert (new order) now fires from the send-order-notification
+    // Inngest function above, via MagicBell — single trigger point instead
+    // of a second direct push call here.
 
     return NextResponse.json(
       createSuccessResponse({

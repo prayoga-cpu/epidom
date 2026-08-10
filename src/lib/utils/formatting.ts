@@ -199,6 +199,21 @@ export function formatDateTimeForInput(date: Date | string | null | undefined): 
   }
 }
 
+/**
+ * A subscription's `currentPeriodEnd` marks a lifetime/admin-granted period by
+ * being set far in the future (see admin panel's "Lifetime ∞" duration option,
+ * which sets it +50 years) rather than a real recurring-billing date. Shared
+ * by the admin user table and the merchant-facing Billing page so both agree
+ * on the same threshold.
+ */
+export function isLifetimePeriod(date: Date | string | null | undefined): boolean {
+  if (!date) return false;
+  const d = typeof date === "string" ? new Date(date) : date;
+  const threshold = new Date();
+  threshold.setFullYear(threshold.getFullYear() + 50);
+  return d > threshold;
+}
+
 // ============================================================================
 // NUMBER FORMATTING
 // ============================================================================

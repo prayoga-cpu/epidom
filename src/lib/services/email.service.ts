@@ -824,3 +824,54 @@ export async function sendSupplierOrderEmail(
     };
   }
 }
+
+/**
+ * Send an internal alert when the nightly database backup hasn't succeeded
+ * recently — the one check that catches "the backup silently stopped working."
+ */
+export async function sendBackupAlertEmail(
+  reason: string,
+  lastSuccessAt: string | null
+): Promise<SendEmailResult> {
+  const subject = `[${APP_NAME}] ⚠ Database backup alert`;
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🗄️ [DEV] Backup Alert Email");
+    console.log("To:", FEEDBACK_NOTIFICATION_RECIPIENTS.join(", "));
+    console.log("Reason:", reason);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: FEEDBACK_NOTIFICATION_RECIPIENTS,
+      subject,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333;">
+          <p><strong>${escapeHtml(reason)}</strong></p>
+          <p>Last successful backup: ${lastSuccessAt ? escapeHtml(lastSuccessAt) : "never recorded"}.</p>
+          <p><a href="${APP_URL}/admin/capacity">View backup status in Admin</a></p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send backup alert email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("[Email] Backup alert email error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}

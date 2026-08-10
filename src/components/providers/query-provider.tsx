@@ -1,9 +1,11 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, defaultShouldDehydrateQuery } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState, useEffect, type ReactNode } from "react";
 import { shouldPoll } from "@/lib/config/realtime.config";
+import { queryPersister, isOfflinePersistedQueryKey } from "@/lib/pwa/query-persister";
 
 /**
  * Query Provider
@@ -35,8 +37,12 @@ export function QueryProvider({ children }: QueryProviderProps) {
             // Default stale time - akan di-override oleh individual queries
             staleTime: 30 * 1000, // 30 seconds (reduced untuk real-time)
 
-            // Time before inactive queries are garbage collected
-            gcTime: 10 * 60 * 1000, // 10 minutes (increased for better cache persistence)
+            // Time before inactive queries are garbage collected. Must be >=
+            // the persister's `maxAge` below (24h) — if a query is garbage
+            // collected from memory first, it silently drops out of the next
+            // IndexedDB dehydrate, defeating offline persistence for any
+            // screen (e.g. POS menu) the cashier isn't currently viewing.
+            gcTime: 24 * 60 * 60 * 1000,
 
             // Retry failed requests
             retry: 1,
@@ -86,10 +92,22 @@ export function QueryProvider({ children }: QueryProviderProps) {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: queryPersister,
+        // 24h: generous enough to survive a weekend closed, short enough that
+        // a long-stale menu/materials mirror doesn't linger indefinitely.
+        maxAge: 24 * 60 * 60 * 1000,
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) =>
+            defaultShouldDehydrateQuery(query) && isOfflinePersistedQueryKey(query.queryKey),
+        },
+      }}
+    >
       {children}
       {/* Show DevTools in development */}
       {process.env.NODE_ENV === "development" && <ReactQueryDevtools initialIsOpen={false} />}
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

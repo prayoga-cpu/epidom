@@ -66,9 +66,11 @@ The wedge. Forever free. Replaces Linktree + Google Drive menu + WhatsApp orderi
 
 ### Basic analytics _(Phase 2)_
 
-- Storefront view count
-- Total orders today / this week / this month
-- Top 5 menu items by orders
+- Storefront view count (unique visitors, date-range driven, with trend vs. previous period)
+- Menu views and item views
+- WhatsApp chat-click conversion rate
+- Total orders today / this week / this month, storefront-attributed revenue
+- Top 5 menu items by orders, top 5 by views
 
 ### Free tier limits
 

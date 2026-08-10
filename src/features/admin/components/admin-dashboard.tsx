@@ -27,6 +27,7 @@ import {
   Wrench,
   PowerOff,
   Power,
+  Gauge,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ import {
 import { toast } from "sonner";
 import { HARDCODED_ADMIN_EMAILS } from "@/lib/admin";
 import { useUser } from "@/lib/auth-client";
+import { isLifetimePeriod } from "@/lib/utils/formatting";
 
 type Plan = "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE";
 type SubStatus = "ACTIVE" | "CANCELED" | "PAST_DUE" | "INCOMPLETE";
@@ -136,11 +138,12 @@ const PERIOD_OPTIONS = [
 
 function formatPeriodEnd(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  const lifetime = new Date();
-  lifetime.setFullYear(lifetime.getFullYear() + 50);
-  if (d > lifetime) return "Lifetime ∞";
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  if (isLifetimePeriod(dateStr)) return "Lifetime ∞";
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 /** Small count pill anchored to the top-right corner of a nav button. */
@@ -506,6 +509,10 @@ export function AdminDashboard() {
               <Button variant="outline" size="sm" onClick={() => router.push("/admin/revenue")}>
                 <TrendingUp className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Revenue Report</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => router.push("/admin/capacity")}>
+                <Gauge className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Capacity & Usage</span>
               </Button>
               <Button
                 variant="outline"

@@ -6,6 +6,82 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-08-10 — Billing Page: Lifetime Grants No Longer Show a Literal Far-Future Date
+
+Operator screenshot of the store-facing Billing page showed "Next billing date: May 4th, 2126" for an Enterprise account that was actually granted lifetime access from the admin panel (the "Lifetime ∞" duration option sets `currentPeriodEnd` +50 years as a marker, not a real date) — the admin user table already detects and displays this correctly ("Lifetime ∞"), but the merchant-facing Billing page (`billing-container.tsx`) just raw-formatted the date.
+
+- [x] **New shared `isLifetimePeriod(date)`** (`src/lib/utils/formatting.ts`) — centralizes the "further out than +50 years = lifetime marker, not a real date" threshold that was previously duplicated inline in the admin panel only. `billing-container.tsx`'s Billing Period card now shows `t("billing.lifetime")` ("Lifetime access") instead of the formatted date when this is true; the admin panel's `formatPeriodEnd()` now calls the same shared helper instead of its own copy of the threshold, so the two surfaces can't drift apart.
+- [x] New `billing.lifetime` i18n key (`id.ts` primary: "Akses seumur hidup", `en.ts`: "Lifetime access").
+- [x] Answered an operator question: the nightly backup (`nightly-database-backup` Inngest cron, from the prior capacity-dashboard work) already runs automatically every day at 2am with 90-day R2 retention — not something that needed building, just confirmed the existing schedule.
+- [x] `pnpm type-check` / `pnpm lint` clean, `formatting.test.ts` (25 tests) still passing. Version bumped to 2.46.0.
+
+---
+
+## ✅ 2026-08-10 — Capacity Dashboard: Vercel 404 Handling, Backup Card Messaging, First Real Backup
+
+Operator screenshot of the now-fixed `/admin/capacity` page showed two remaining rough edges: the Vercel card displaying a raw "Error: Vercel billing API returned 404", and the Database Backups card telling the operator to "Set R2_ACCOUNT_ID..." even though all four R2 vars were already set (from the earlier session) — it just hadn't run yet.
+
+- [x] **Vercel 404 reclassified**: `getVercelUsage()` (`platform-usage/route.ts`) now special-cases a 404 response whose body is `{error: {code: "costs_not_found"}}` — real Vercel API behavior for a Hobby-plan team with zero billable usage this period — and returns it as valid zero-usage data (`totalCostUsd: 0, byService: []`) instead of an error string. Dashboard now shows "$0.00 · No billable usage this period" for that case.
+- [x] **Backup card now distinguishes "not configured" from "configured, hasn't run yet"**: `/api/admin/backups` gained an `r2Configured` field (reusing `isR2Configured()`); the dashboard shows a different, accurate message for each case instead of always suggesting the env vars aren't set.
+- [x] **Ran the first real production backup manually** (one-off script mirroring the `nightly-database-backup` Inngest function's own library calls exactly, not a shortcut around it) rather than waiting until 2am or leaving the dashboard showing an empty state — 50 tables, 1,801 rows, 166,259 bytes compressed, verified present in R2 afterward via a direct `ListObjectsV2` call. A real `BackupRun` SUCCESS row now backs the dashboard card.
+- [x] `pnpm type-check` / `pnpm lint` clean. Version bumped to 2.45.0.
+
+---
+
+## ✅ 2026-08-10 — Capacity Dashboard Bug Fix + In-App Notification Sound
+
+Operator reported `/admin/capacity` showing "Failed to fetch capacity" (screenshot), and asked two follow-up questions: where to configure MagicBell's channels, and whether a custom notification sound is possible.
+
+- [x] **Root cause**: `src/app/api/admin/capacity/route.ts`'s orders-per-day raw SQL query used `FROM "Order"` — the Prisma **model** name — instead of `FROM "orders"`, its actual `@@map`'d table name. Every other query on the page (row counts via Prisma delegates, table sizes via `pg_stat_user_tables`) was unaffected since those don't hardcode a table name. Reproduced directly against the DB before and after the fix (`relation "Order" does not exist` → confirmed fixed) rather than guessing from the client-side error alone.
+- [x] **MagicBell channel setup**: clarified there's no in-app config screen by design — channels (web push, mobile push, email, Slack, SMS-via-Twilio) are configured per category (`new-order`, `low-stock`) directly in MagicBell's own dashboard.
+- [x] **New in-app notification sound** (`src/lib/notification-sound.ts` + `NotificationBell`): a synthesized two-tone chime or single ping (Web Audio oscillators — no audio file to source/host) plays when a genuinely new bell item arrives while the tab is open, detected via an id-diff against the previous poll (skips the initial load so opening the app doesn't ding for existing items). 3-way Chime/Ping/Off picker in the bell popover, persisted per device (mirrors `last-seen-version.ts`'s simple localStorage pattern). New `notifications.sound.*` i18n keys (`id.ts` primary, `en.ts`). Explicitly does **not** cover OS-level web push or MagicBell's channels — confirmed neither the Web Notifications API nor MagicBell support a custom delivery sound, so this only applies to the in-app bell while the tab is open, not a general "ringtone" for the app.
+- [x] `pnpm type-check` / `pnpm lint` clean. `pnpm test`: 725/729 passing — same pre-existing, unrelated `server-image-compression.test.ts` timeout failures as prior entries (jimp migration). Version bumped to 2.44.0.
+
+---
+
+## ✅ 2026-08-10 — Merchant Alerts Unified Through MagicBell
+
+Follow-up to the Admin Capacity/Usage Dashboard + Backup work below — operator provided real Neon/Vercel/R2 credentials to activate that dashboard's platform-usage and backup features (all verified live: Neon project reads real usage, Vercel token corrected from a user id to the actual team id, R2 bucket auth confirmed via a real `HeadBucket`/`ListObjectsV2` call), then asked to integrate a MagicBell project. Scoped via two rounds of `AskUserQuestion` (what MagicBell should actually do, given the app already has a working in-app bell + VAPID push; then replace-vs-add and SMS/Twilio readiness) to "replace the WhatsApp/browser-push delivery for new-order and low-stock merchant alerts with MagicBell, SMS scoped out until Twilio is connected." Delivered via plan mode.
+
+- [x] **New `src/lib/magicbell/client.ts`** — `sendMerchantAlert()` (fire-and-forget, never throws, mirrors `src/lib/push/send.ts`'s Graceful Degradation conventions) POSTs to `https://api.magicbell.com/notifications` with `x-magicbell-api-key`/`x-magicbell-api-secret` headers (the permanent key/secret pair, not the short-lived "project auth" bearer JWT also provided — that one is dashboard/testing-only and would expire on a running server). Body shape and auth verified against MagicBell's **live** API with a real test call (`HTTP 201`, real notification id returned) rather than trusted from docs alone (their docs site is JS-rendered and didn't fetch cleanly). `getStoreOwnerContact(storeId)` resolves the MagicBell recipient (email + external_id) via `Store.business.user` — the store's owning account, since MagicBell's identity-based recipient model doesn't map onto the old device-scoped/PIN-staff-agnostic push model.
+- [x] **Two call sites replaced**: `send-order-notification` Inngest function (was Fonnte WhatsApp via `notifyMerchantNewOrder`) and `stock-deduction.service.ts`'s `fireLowStockAlert` (was VAPID push via `sendPushToStore`) now both call `sendMerchantAlert`. The public orders route's separate direct `sendPushToStore(...)` call was removed outright — the Inngest function is now the single trigger point for new-order alerts instead of two.
+- [x] **Deliberately left in place, not deleted**: `sendPushToStore`/`src/lib/push/send.ts`, `notifyMerchantNewOrder` (`src/lib/notifications/index.ts`), the push-subscribe toggle in `NotificationBell`, the `PushSubscription` model, and `VAPID_*` env vars all become unused by this flow but were kept as dormant infra rather than bundling a second, larger deletion (DB migration + UI removal) into this change — flagged explicitly in the plan for the operator to revisit once MagicBell is proven in production. The in-app `NotificationBell`/`/notifications` route, customer-facing WhatsApp receipts (`notifyCustomerReceipt`), and Resend account/team-ops email are unrelated and untouched.
+- [x] New `MAGICBELL_API_KEY`/`MAGICBELL_API_SECRET` env vars documented in `.env.example`/`docs/ENVIRONMENT.md`, real values written to `.env`.
+- [x] New test `src/lib/magicbell/__tests__/client.test.ts` (5 tests) — no-ops when unconfigured, posts with correct headers/body when configured, never throws on API failure, `getStoreOwnerContact` resolution.
+- [x] `pnpm type-check` / `pnpm lint` clean. `pnpm test`: 724/729 passing — same 5 pre-existing, unrelated failures as the prior entry below (sidebar timeout + jimp image-compression timeouts). Version bumped to 2.43.0.
+
+---
+
+## ✅ 2026-08-10 — Admin Capacity/Usage Dashboard + Database Backup & Restore
+
+Operator asked what to monitor on the admin dashboard to scale wisely (tech-stack limits, usage analytics that could impact server/storage) and asked for a backup/restore system so a platform-level incident isn't unrecoverable — `docs/DATABASE.md` had documented a backup strategy since early on but it was never built. Delivered via plan mode (4 phases, approved before execution).
+
+- [x] **New `/admin/capacity` dashboard** (`capacity-dashboard.tsx`, `/api/admin/capacity`) — DB size (`pg_database_size`/`pg_total_relation_size`), table list auto-discovered via `pg_stat_user_tables` (no hardcoded model list, so a future table can't be silently missed), row-growth for the 8 highest-risk tables (Order, OrderItem, StockMovement, WasteEntry, AttendanceRecord, AggregatorEmail, Alert, OrderReceiptSend), tenant scale (store/user counts, 30-day orders/day trend), and Vercel Blob usage (new `StorageAdapter.getUsage()`, paginated `list()`).
+- [x] **Platform usage cards** (`/api/admin/platform-usage`) — Vercel (FOCUS billing-charges API; Vercel exposes no per-account plan-limit API, so this reports consumption only) and Neon (project storage/compute vs. its own quota fields). Both graceful-degrade to "not configured" per AGENTS.md when `VERCEL_API_TOKEN`/`NEON_API_KEY` etc. aren't set — verified field shapes against Vercel's and Neon's live API docs rather than guessing.
+- [x] **Nightly database backup**: new `BackupRun` model tracks each run; `src/lib/backup/export-tables.ts` streams every table via Postgres `COPY TO STDOUT` → gzip → Cloudflare R2 (new deps: `pg-copy-streams`, `@aws-sdk/client-s3` + `lib-storage`), schema itself is not backed up since it's already reproducible from `prisma/migrations/`. `nightly-database-backup` Inngest cron (2am) + `check-backup-freshness` (9am, emails via new `sendBackupAlertEmail` if the last success is >36h old — the check that catches "the backup silently stopped working"). 90-day retention pruning. Both no-op cleanly without R2 credentials.
+- [x] **Restore tooling**: `scripts/restore-from-backup.ts` (`pnpm restore:backup --date=... --target=...`) — deliberately a human-run CLI script, not a web admin action, given the blast radius of a wrong-target restore; refuses to run against this app's own `DATABASE_URL`/`DIRECT_URL`. Restores via `COPY FROM STDIN` under `SET session_replication_role = replica` (the same trick `pg_dump`'s data-only restore uses) so table order doesn't matter. New `docs/BACKUP_RESTORE.md` runbook (scratch-DB steps, quarterly-drill checklist); `docs/DATABASE.md`'s backup section now points at the real implementation instead of the old aspirational description.
+- [x] **Migration written but not applied**: `prisma migrate dev` hit a `P1002` advisory-lock timeout against the live Neon DB (likely contention with the concurrent Storefront Analytics session's own migration work landing in this same window) — rather than forcing it, hand-wrote `prisma/migrations/20260810120000_add_backup_run_tracking/migration.sql` matching Prisma's exact DDL conventions (verified against a recent real migration's output). Purely additive (one new standalone table + enum, zero impact on existing data) — picked up automatically by the next clean `prisma migrate deploy`.
+- [x] New env vars documented in `.env.example`/`docs/ENVIRONMENT.md`, all optional/graceful-degrade: `VERCEL_API_TOKEN`/`VERCEL_TEAM_ID`, `NEON_API_KEY`/`NEON_PROJECT_ID`, `R2_ACCOUNT_ID`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/`R2_BUCKET_NAME`.
+- [x] **Not covered this round** (flagged in the plan, not silently dropped): Sentry error tracking and Upstash Redis rate-limiting — both already "Phase 1+" backlog in `docs/ENVIRONMENT.md`, recommended as the next priority but scoped out as separate, larger initiatives. No new automated tests added for the backup/export/restore path (S3 + raw Postgres COPY streams) — verification is the manual runbook in `docs/BACKUP_RESTORE.md`; flagging as a gap rather than skipping silently.
+- [x] `pnpm type-check` / `pnpm lint` clean. `pnpm test`: 698/703 passing — the 5 failures (`sidebar.test.tsx` timeout, 4× `server-image-compression.test.ts` timeouts) are pre-existing, unrelated to this work (neither file touched; the image-compression timeouts trace to the already-committed sharp→jimp migration). Version bumped to 2.41.0.
+
+---
+
+## ✅ 2026-08-10 — Storefront Analytics Made Real (was a "Coming Soon" mock)
+
+Storefront → Analytics showed hardcoded "Coming Soon" for Menu Viewed/Chat Conversion, a permanent dashed-placeholder chart, and a "Total Visitors" counter that read `Storefront.viewCount` — a column nothing ever actually incremented (traced every caller; the only one was a POST route handler no client code invoked), so it was always 0.
+
+- [x] **New `StorefrontEvent` model + `StorefrontEventType` enum** (migration `add_storefront_events`) logging `VIEW`/`MENU_VIEW`/`ITEM_VIEW`/`WHATSAPP_CLICK` events, keyed by an anonymous daily-rotating `visitorHash` (`sha256(ip:userAgent:dateUTC:salt)`, new `hashVisitor()` in `visitor-hash.ts`) — no raw IP or cookie ever stored.
+- [x] **New `isBotUserAgent()`** (`user-agent.ts`) filters crawlers and, importantly, chat-app link-preview fetchers (WhatsApp/Facebook/Slack/Telegram/Discord) — critical here since sharing the storefront link into WhatsApp is the core product loop and would otherwise inflate every stat.
+- [x] Public `POST /api/public/storefront/[slug]` repurposed (was dead code) to record events: rate-limited (`rateLimitMiddleware`), bot-filtered, Zod-validated (`recordStorefrontEventSchema`). Client-side `useTrackPageView`/`trackEvent` (`use-track-storefront-event.ts`) wired into `public-profile.tsx` (VIEW + WhatsApp-icon click), `public-menu.tsx` (MENU_VIEW), `public-item-detail.tsx` (ITEM_VIEW) — fire-and-forget, never blocks the public page.
+- [x] **New authenticated `GET /api/stores/[id]/storefront/analytics`** — date-range KPIs (unique visitors + real trend vs. prior period via new pure `computeTrend`/`computeRate` helpers in `storefront-metrics.ts`, menu-view/chat-conversion rates, storefront-attributed orders/revenue from existing `Order.source = STOREFRONT` data — no new schema needed there), daily chart buckets, top-viewed items. Top-ordered-items reuses the existing `finance/top-items?channel=STOREFRONT` endpoint (`channelFilter` already supported it) rather than a new query.
+- [x] **`storefront-analytics.tsx` rewritten** to match the Dashboard Analytics tab's pattern (`DateRangeField`, `StatCard` KPI row, dynamic-imported recharts `VisitorTrendChart`, top-viewed/top-ordered breakdown cards, loading/empty states).
+- [x] New unit tests: `visitor-hash.test.ts`, `user-agent.test.ts` (bot detection), `storefront-metrics.test.ts` (trend/rate math incl. divide-by-zero).
+- [x] Fixed a leaked Postgres advisory lock (stale idle connection via pgbouncer) that was blocking `prisma migrate dev`/`deploy` project-wide — matches the failure mode already documented in `prisma.config.ts`; terminated the stale backend after confirming with the operator.
+- [x] `pnpm type-check` / `pnpm lint` / `pnpm test` clean. Version bumped to 2.40.0.
+
+---
+
 ## ✅ 2026-08-09 — Humanized Ticket Timers + Order History Date Formatting
 
 Operator screenshots of Kitchen & Bar and the Order History table/detail-dialog, following up on the Active Queue merge above: stale tickets showed absurd raw-minute timers (e.g. "51482m 50s"), and the History table's Date column carried a full year-inclusive timestamp that was harder to scan than necessary.
@@ -618,7 +694,9 @@ Implements the full "Proposed addition" scope from `docs/roadmap.md` (now moved 
 
 ### PWA
 
-- [x] **Install button** — `usePwaInstall` hook + `PwaInstallButton` in topbar; auto-hides when already in standalone mode.
+- [x] **Install button** — `usePwaInstall` hook + `PwaInstallButton` in topbar. No longer auto-hides once installed (standalone) — it now doubles as the Offline & Sync settings entry point below.
+- [x] **Offline Mode** — `PwaInstallTrigger` gained an Offline Mode toggle backed by a TanStack Query persister (`src/lib/pwa/query-persister.ts`, IndexedDB via `idb-keyval`) that mirrors POS core (menu, live orders/KDS, staff roster, KDS toggle) plus read-only materials/staff-schedules reference data; finance/admin/marketing stay online-only by design. `useOfflineMode` auto-enables it the first time the app is detected running standalone (installed), without waiting for the user to find the switch, and never re-enables it once explicitly turned off. Single `OfflineSyncProvider` instance (mounted once in `PageShell`) avoids duplicate reconnect-flushes across the topbar/sidebar/mobile-drawer install triggers.
+- [x] **Sync status** — "Last synced: <date>" + "Sync now" in the Offline & Sync dialog and the POS offline banner (`src/lib/pwa/sync-status.ts`), stamped on both push (offline order queue flush) and pull (reconnect-triggered `refetchQueries` over the persisted domains) success.
 
 ### Tests
 

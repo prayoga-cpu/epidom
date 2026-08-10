@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
@@ -10,8 +10,15 @@ import {
   CalendarClock,
   CheckCircle2,
   Sparkles,
+  Volume2,
   X,
 } from "lucide-react";
+import {
+  getNotificationTone,
+  setNotificationTone,
+  playNotificationSound,
+  type NotificationTone,
+} from "@/lib/notification-sound";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRouter } from "next/navigation";
@@ -54,12 +61,16 @@ export function NotificationBell() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   // Version the user last acknowledged via the "What's new" prompt (client-only)
   const [seenVersion, setSeenVersion] = useState<string | null>(null);
+  // In-app notification sound preference (client-only, mirrors seenVersion's
+  // lazy-load-after-mount pattern to avoid a hydration mismatch on the default).
+  const [tone, setTone] = useState<NotificationTone>("chime");
   const { t, locale } = useI18n();
   const { state: pushState, subscribe: subscribePush, unsubscribe: unsubscribePush } =
     usePushNotifications(storeId);
 
   useEffect(() => {
     setSeenVersion(getLastSeenVersion());
+    setTone(getNotificationTone());
   }, []);
 
   const hasUnseen = seenVersion !== APP_VERSION;
@@ -95,6 +106,21 @@ export function NotificationBell() {
   );
   // Operational notifications have no read state → always count as unread.
   const unread = all.filter((n) => !n.read).length;
+
+  // Plays the notification sound for genuinely new items only — null sentinel
+  // means "haven't seen a first batch yet", so the initial load never dings.
+  const seenIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = new Set(all.map((n) => n.id));
+    if (seenIds.current === null) {
+      seenIds.current = ids;
+      return;
+    }
+    const hasNewArrival = all.some((n) => !seenIds.current!.has(n.id) && !n.read);
+    seenIds.current = ids;
+    if (hasNewArrival) playNotificationSound();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [all.map((n) => n.id).join(",")]);
 
   const dismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -194,6 +220,44 @@ export function NotificationBell() {
             )}
           </div>
         )}
+
+        {/* In-app notification sound — only affects this bell while the tab is
+            open; browsers don't support a custom sound for OS-level push. */}
+        <div className="border-border flex items-center justify-between gap-2 border-b px-4 py-2">
+          <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+            <Volume2 className="h-3.5 w-3.5 shrink-0" />
+            <span>{t("notifications.sound.label")}</span>
+          </div>
+          <div className="border-border bg-muted/40 flex items-center rounded-lg border p-0.5">
+            {(["chime", "ping", "none"] as NotificationTone[]).map((option) => {
+              const active = tone === option;
+              const label =
+                option === "chime"
+                  ? t("notifications.sound.chime")
+                  : option === "ping"
+                    ? t("notifications.sound.ping")
+                    : t("notifications.sound.off");
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    setTone(option);
+                    setNotificationTone(option);
+                    if (option !== "none") playNotificationSound(option);
+                  }}
+                  className={`rounded-md px-2 py-1 text-[10px] font-semibold transition-colors ${
+                    active
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* List */}
         <div className="max-h-[360px] overflow-y-auto">

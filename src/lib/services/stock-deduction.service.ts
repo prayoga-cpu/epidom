@@ -4,7 +4,7 @@ import { toDecimal } from "@/lib/utils/types.server";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
-import { sendPushToStore } from "@/lib/push/send";
+import { sendMerchantAlert } from "@/lib/magicbell/client";
 
 /**
  * Deduct stock when an order is purchased/confirmed.
@@ -387,16 +387,21 @@ export async function deductStockForOrder(
       },
     });
 
-    // Only pushes when a NEW alert was actually created above — the dedup
+    // Only alerts when a NEW alert row was actually created above — the dedup
     // check just above already blocks re-firing on every subsequent order
     // once an unread alert exists for this entity, so reuse it as-is
     // rather than a second dedup layer.
-    sendPushToStore(storeId, {
-      title: isCritical ? `Stok kritis: ${params.name}` : `Stok rendah: ${params.name}`,
-      body: `Sisa stok: ${params.newStock.toFixed(2)} ${params.unit} (min: ${params.minStock} ${params.unit})`,
-      url: `/store/${storeId}/data`,
-      tag: `stock-${params.entityId}`,
-    });
+    const owner = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (owner) {
+      sendMerchantAlert({
+        recipientEmail: owner.email,
+        recipientExternalId: userId,
+        category: "low-stock",
+        title: isCritical ? `Stok kritis: ${params.name}` : `Stok rendah: ${params.name}`,
+        content: `Sisa stok: ${params.newStock.toFixed(2)} ${params.unit} (min: ${params.minStock} ${params.unit})`,
+        actionUrl: `/store/${storeId}/data`,
+      });
+    }
   };
 
   for (const p of productDeductions) {

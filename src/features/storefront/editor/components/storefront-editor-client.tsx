@@ -105,7 +105,7 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
         </TabsContent>
 
         <TabsContent value="analytics" className="m-0">
-          <StorefrontAnalytics storefront={storefront} />
+          <StorefrontAnalytics storeId={storeId} />
         </TabsContent>
       </Tabs>
     </div>

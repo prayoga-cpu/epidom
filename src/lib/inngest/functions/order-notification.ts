@@ -1,5 +1,6 @@
 import { inngest } from "../client";
-import { notifyMerchantNewOrder } from "@/lib/notifications";
+import { sendMerchantAlert, getStoreOwnerContact } from "@/lib/magicbell/client";
+import { formatCurrency } from "@/lib/utils/formatting";
 
 export const sendOrderNotification = inngest.createFunction(
   {
@@ -10,19 +11,18 @@ export const sendOrderNotification = inngest.createFunction(
   async ({ event }) => {
     const { data } = event;
 
-    if (!data.merchantPhone) {
-      return { skipped: true, reason: "No merchant phone configured" };
+    const owner = await getStoreOwnerContact(data.storeId);
+    if (!owner) {
+      return { skipped: true, reason: "Store owner not found" };
     }
 
-    await notifyMerchantNewOrder({
-      orderNumber: data.orderNumber,
-      customerName: data.customerName,
-      totalAmount: data.totalAmount,
-      currency: data.currency,
-      paymentMethod: data.paymentMethod,
-      items: data.items,
-      merchantPhone: data.merchantPhone,
-      storeName: data.storeName,
+    sendMerchantAlert({
+      recipientEmail: owner.email,
+      recipientExternalId: owner.externalId,
+      category: "new-order",
+      title: `New order — ${data.storeName}`,
+      content: `${data.orderNumber} · ${data.customerName} · ${formatCurrency(data.totalAmount, data.currency, "id-ID")}`,
+      actionUrl: `/store/${data.storeId}/pos`,
     });
 
     return { sent: true, orderId: data.orderId };

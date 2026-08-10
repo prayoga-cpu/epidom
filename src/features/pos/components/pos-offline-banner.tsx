@@ -2,18 +2,14 @@
 
 import { WifiOff, RefreshCw, CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useOfflineQueue } from "../hooks/use-offline-queue";
+import { useOfflineSyncContext } from "@/features/dashboard/shared/offline-sync-provider";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 
-interface PosOfflineBannerProps {
-  storeId: string;
-}
-
-export function PosOfflineBanner({ storeId }: PosOfflineBannerProps) {
-  const { t } = useI18n();
+export function PosOfflineBanner() {
+  const { t, formatDateTime } = useI18n();
   const [isOnline, setIsOnline] = useState(true);
-  const { pendingCount, isSyncing, syncQueue } = useOfflineQueue(storeId);
+  const { pendingCount, isSyncing, syncNow, lastSyncedAt } = useOfflineSyncContext();
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -43,13 +39,22 @@ export function PosOfflineBanner({ storeId }: PosOfflineBannerProps) {
         ) : (
           <WifiOff className="h-4 w-4 shrink-0" />
         )}
-        <span>
-          {!isOnline
-            ? pendingCount > 0
-              ? t("pages.posOfflineMessageWithPending").replace("{count}", String(pendingCount))
-              : t("pages.posOfflineMessageNoPending")
-            : t("pages.posOfflineSyncPending").replace("{count}", String(pendingCount))}
-        </span>
+        <div className="flex flex-col">
+          <span>
+            {!isOnline
+              ? pendingCount > 0
+                ? t("pages.posOfflineMessageWithPending").replace("{count}", String(pendingCount))
+                : t("pages.posOfflineMessageNoPending")
+              : t("pages.posOfflineSyncPending").replace("{count}", String(pendingCount))}
+          </span>
+          {!isOnline && (
+            <span className="text-xs font-normal opacity-80">
+              {lastSyncedAt
+                ? t("pages.posOfflineLastSynced").replace("{date}", formatDateTime(lastSyncedAt))
+                : t("pages.posOfflineNeverSynced")}
+            </span>
+          )}
+        </div>
       </div>
 
       {isOnline && pendingCount > 0 && (
@@ -57,7 +62,7 @@ export function PosOfflineBanner({ storeId }: PosOfflineBannerProps) {
           size="sm"
           variant="ghost"
           className="h-7 gap-1.5 text-xs"
-          onClick={syncQueue}
+          onClick={syncNow}
           disabled={isSyncing}
         >
           <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />

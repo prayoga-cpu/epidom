@@ -95,9 +95,7 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
       <Divider />
       <div className="flex justify-between font-semibold">
         <span>{labels.item}</span>
-        <span>
-          {labels.qty}&nbsp;&nbsp;&nbsp;{labels.total}
-        </span>
+        <span>{labels.total}</span>
       </div>
       <div className="mt-1.5 space-y-1.5">
         {data.items.map((item, i) => (

@@ -26,7 +26,6 @@ interface ReceiptLabels {
   cashier: string;
   table: string;
   item: string;
-  qty: string;
   total: string;
   subtotal: string;
   tax: string;
@@ -49,7 +48,6 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     cashier: "Kasir",
     table: "Meja",
     item: "ITEM",
-    qty: "QTY",
     total: "TOTAL",
     subtotal: "SUBTOTAL",
     tax: "Pajak",
@@ -69,7 +67,6 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     cashier: "Cashier",
     table: "Table",
     item: "ITEM",
-    qty: "QTY",
     total: "TOTAL",
     subtotal: "SUBTOTAL",
     tax: "Tax",
@@ -89,7 +86,6 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     cashier: "Caissier",
     table: "Table",
     item: "ARTICLE",
-    qty: "QTÉ",
     total: "TOTAL",
     subtotal: "SOUS-TOTAL",
     tax: "Taxe",

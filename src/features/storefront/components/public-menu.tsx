@@ -35,6 +35,7 @@ import {
   type PublicMenuCategory,
   type PublicMenuItem,
 } from "../hooks/use-public-menu";
+import { useTrackPageView } from "../hooks/use-track-storefront-event";
 
 interface ModifierOption {
   name: string;
@@ -188,6 +189,7 @@ const VA_BANKS: { code: VABankCode; label: string; color: string }[] = [
 
 export function PublicMenu({ storefront, menuCategories: initialMenuCategories }: PublicMenuProps) {
   const { t } = useI18n();
+  useTrackPageView(storefront.slug, "MENU_VIEW");
   // Polls the live menu so a merchant's price/availability/option change
   // shows up while a customer already has this page open, without a reload.
   const { data: menuCategories = initialMenuCategories } = usePublicStorefrontMenu(

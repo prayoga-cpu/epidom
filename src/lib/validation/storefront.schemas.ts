@@ -130,3 +130,13 @@ export const updateMenuItemSchema = createMenuItemSchema.partial();
 
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;
+
+// Public analytics event (storefront page views, menu/item views, WhatsApp clicks)
+export const recordStorefrontEventSchema = z.object({
+  type: z.enum(["VIEW", "MENU_VIEW", "ITEM_VIEW", "WHATSAPP_CLICK"]),
+  menuItemId: z.string().optional(),
+  menuItemName: z.string().max(100).optional(),
+  referrer: z.string().max(500).optional(),
+});
+
+export type RecordStorefrontEventInput = z.infer<typeof recordStorefrontEventSchema>;

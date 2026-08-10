@@ -314,6 +314,69 @@ BLOB_READ_WRITE_TOKEN=<from-vercel-storage>
 
 ---
 
+## Admin capacity dashboard — platform usage (optional)
+
+Powers the Vercel/Neon cards on `/admin/capacity`. Without these, that section just
+shows "not configured" — everything else on the page (DB size, blob usage, tenant
+scale) works without them.
+
+```bash
+# Vercel — team-scoped API token (Account Settings → Tokens) + the team id (starts
+# with `team_`, found in Team Settings). Reads current-period billing/usage via the
+# FOCUS billing-charges API; Vercel exposes no per-account plan-limit API, so this
+# reports consumption only — compare against https://vercel.com/docs/limits.
+VERCEL_API_TOKEN=
+VERCEL_TEAM_ID=
+
+# Neon — API key (Account Settings → API Keys) + project id (Project Settings →
+# General). Reads live storage/compute usage and the project's quota limits.
+NEON_API_KEY=
+NEON_PROJECT_ID=
+```
+
+---
+
+## Database backup (Cloudflare R2)
+
+Powers the nightly `nightly-database-backup` Inngest cron and the "Database
+Backups" card on `/admin/capacity`. Without these, the backup job no-ops (logs
+a skip, doesn't create a `BackupRun` row) instead of failing. See
+`docs/BACKUP_RESTORE.md` for the full setup + restore runbook.
+
+```bash
+# Cloudflare dashboard → R2 → Manage API Tokens (create a bucket-scoped token
+# with read+write access) + the bucket name you created for backups.
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+```
+
+---
+
+## MagicBell (merchant alerts: new order, low/critical stock)
+
+Replaces the old direct VAPID push / Fonnte WhatsApp calls for these two
+specific events (`src/lib/magicbell/client.ts`). Everything else — the in-app
+NotificationBell, customer-facing WhatsApp receipts, transactional email via
+Resend — is unrelated and unaffected. Without these set, both flows log a
+warning and no-op (order placement / stock deduction still succeed).
+
+```bash
+# MagicBell dashboard → API Keys. Use the permanent key/secret pair — NOT the
+# "project auth" bearer token shown in their quick-start (that one is
+# short-lived, meant for testing, and will expire on a running server).
+MAGICBELL_API_KEY=
+MAGICBELL_API_SECRET=
+```
+
+Recipient is the store's owning `User` (resolved via `Store.business.user`),
+identified to MagicBell by email + `external_id` — configure delivery
+channels (web push, mobile push, email, SMS via a connected Twilio account,
+Slack) per category in the MagicBell dashboard, not in this app's code.
+
+---
+
 ## File: `.env.example`
 
 Keep `.env.example` current. Every required env var must appear here with a placeholder value and a one-line comment explaining what it's for. Never commit a `.env` file with real secrets.

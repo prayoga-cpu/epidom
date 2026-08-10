@@ -326,7 +326,7 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   // ---- Items ----
   line(divider);
   bold(true);
-  line(formatCols(labels.item, `${labels.qty}   ${labels.total}`, cols));
+  line(formatCols(labels.item, labels.total, cols));
   bold(false);
   for (const item of receipt.items) {
     lines(wrapText(item.name, cols));

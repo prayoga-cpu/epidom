@@ -917,8 +917,21 @@ Table storefronts {
   menuCategories menu_categories [not null]
   menuItems menu_items [not null]
   orders orders [not null]
+  events storefront_events [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+}
+
+Table storefront_events {
+  id String [pk]
+  storefrontId String [not null]
+  type StorefrontEventType [not null]
+  menuItemId String
+  menuItemName String
+  visitorHash String [not null]
+  referrer String
+  createdAt DateTime [default: `now()`, not null]
+  storefront storefronts [not null]
 }
 
 Table menu_categories {
@@ -949,6 +962,20 @@ Table menu_items {
   category menu_categories
   product products
   orderItems order_items [not null]
+}
+
+Table backup_runs {
+  id String [pk]
+  startedAt DateTime [default: `now()`, not null]
+  finishedAt DateTime
+  status BackupRunStatus [not null, default: 'RUNNING']
+  tableCount Int [not null, default: 0]
+  totalRows Int [not null, default: 0]
+  totalBytes BigInt [not null, default: 0]
+  errorMessage String
+
+  Note: 'One row per nightly logical-backup run (see src/lib/backup/). Not tenant-scoped —
+this is platform-operational metadata, not customer data.'
 }
 
 Enum OrderReceiptSendStatus {
@@ -1157,6 +1184,19 @@ Enum AggregatorPlatform {
   TOKOPEDIA
 }
 
+Enum StorefrontEventType {
+  VIEW
+  MENU_VIEW
+  ITEM_VIEW
+  WHATSAPP_CLICK
+}
+
+Enum BackupRunStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
 Ref: session.userId > user.id [delete: Cascade]
 
 Ref: account.userId > user.id [delete: Cascade]
@@ -1294,6 +1334,8 @@ Ref: ai_import_memories.storeId > stores.id [delete: Cascade]
 Ref: ai_import_sessions.storeId > stores.id [delete: Cascade]
 
 Ref: storefronts.storeId - stores.id [delete: Cascade]
+
+Ref: storefront_events.storefrontId > storefronts.id [delete: Cascade]
 
 Ref: menu_categories.storefrontId > storefronts.id [delete: Cascade]
 

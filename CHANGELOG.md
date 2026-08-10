@@ -9,6 +9,41 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.46.0] - 2026-08-10 · fix
+
+- **Billing page now shows "Lifetime access" instead of a literal far-future date** (e.g. "May 4th, 2126") for accounts granted a lifetime period from the admin panel — mirrors the admin user table's existing lifetime detection, now shared via one `isLifetimePeriod()` helper instead of two separately-maintained thresholds.
+
+## [2.45.0] - 2026-08-10 · fix
+
+- **`/admin/capacity`'s Vercel card no longer shows a raw "404" as an error** — a Hobby-plan team with zero billable usage gets a real `costs_not_found` 404 from Vercel's billing API; that's honest zero-usage data, not a broken integration, so it now renders as "$0.00, no billable usage this period" instead of an error string.
+- **Backup card now tells configured-but-never-run apart from not-configured** — previously always said "Set R2_ACCOUNT_ID..." even when R2 was fully configured and just hadn't backed up yet.
+- **First real database backup run** — 50 tables, ~1,800 rows, ~166KB compressed, uploaded to Cloudflare R2.
+
+## [2.44.0] - 2026-08-10 · fix
+
+- **Fixed `/admin/capacity`'s "Failed to fetch capacity" error** — the orders-per-day query referenced the `Order` Prisma model name in raw SQL instead of its actual mapped table name (`orders`), which every other query on the page correctly used.
+- **NotificationBell gets a custom in-app sound** — a synthesized chime/ping (no audio file to host) plays when a genuinely new order/reservation/onboarding item arrives while the tab is open, with a 3-way Chime/Ping/Off picker saved per device. Doesn't apply to OS-level push or MagicBell's own channels — neither the Web Notifications API nor MagicBell support a custom delivery sound, a platform limitation this app can't work around.
+
+## [2.43.0] - 2026-08-10 · infra
+
+- **Merchant alerts (new order, low/critical stock) now route through MagicBell** instead of separate direct WhatsApp (Fonnte) and browser-push (VAPID) calls — one unified API, with web push/mobile push/email/in-app configurable per category in the MagicBell dashboard (SMS can be turned on later by connecting Twilio there, no code change needed). Recipient is the store's owning account, identified by email. The old push/WhatsApp infrastructure is intentionally left in place (unused by this flow, not deleted) rather than bundling a second, larger cleanup into this change. Nothing else — the in-app notification bell, customer-facing WhatsApp receipts, and transactional email — changed.
+
+## [2.42.0] - 2026-08-10 · feat
+
+- **Offline Mode**: the "Install app" dialog (topbar/sidebar download icon) now doubles as an Offline & Sync settings surface, and stays visible after install instead of disappearing. A new Offline Mode toggle eagerly downloads menu, live orders/KDS, materials, staff roster, and staff schedules to the device (via IndexedDB) so POS keeps working with no connection; everything else (finance, admin, marketing) stays online-only by design. Auto-enables itself the first time the app is confirmed running installed to the home screen, without waiting for anyone to find the switch — turn it back off any time to opt out for good.
+- **"Last synced: <date>" status**, shown in the Offline & Sync dialog and in the POS offline banner, plus a "Sync now" button that flushes any queued offline orders and refreshes the offline data mirror together. Reconnecting automatically triggers the same refresh.
+- Offline data now survives a reload/relaunch (previously it lived only in memory and was gone the moment you left the POS screen or closed the tab).
+
+## [2.41.0] - 2026-08-10 · infra
+
+- **New `/admin/capacity` dashboard**: database size and per-table disk usage (auto-discovered, no hardcoded table list), row-growth for the highest-traffic tables, tenant scale (stores/users/orders-per-day), and Vercel Blob storage usage — an early-warning view for approaching a platform limit before it causes an outage.
+- **Platform usage cards** for Vercel and Neon (billing/consumption vs. quota) — optional, degrade to "not configured" until their API credentials are added.
+- **Independent, off-platform database backup**: a nightly job streams every table straight from Postgres into Cloudflare R2 (gzip-compressed), with a 90-day retention and a daily freshness check that alerts if a backup hasn't succeeded in 36+ hours. Restores are a deliberate CLI script (`pnpm restore:backup`), never a web action, and are documented end-to-end in the new `docs/BACKUP_RESTORE.md` runbook including a quarterly restore-drill checklist.
+
+## [2.40.0] - 2026-08-10 · feat
+
+- **Storefront → Analytics is now real, dynamic, and date-range driven** instead of a static "Coming Soon" mock. Tracks storefront page views, menu views, item views, and WhatsApp-button clicks via a new anonymous, daily-rotating visitor fingerprint (no cookies, no raw IP stored, bot/crawler and chat-app link-preview fetches excluded so sharing the link into WhatsApp doesn't inflate the numbers). The tab now shows real unique visitors with a trend vs. the prior period, menu-view and WhatsApp chat-conversion rates, storefront-attributed orders/revenue (from existing `Order.source = STOREFRONT` data), a visitor trend chart, and top viewed/ordered items.
+
 ## [2.39.0] - 2026-08-09 · ux
 
 - **Kitchen & Bar / Order Queue ticket timers no longer show absurd raw minute counts on old tickets** (e.g. "51482m 50s"). Past an hour, the live mm:ss counter now switches to a human duration — "8hrs 9mins ago", "7 days ago", "1 month 4 days ago" — instead of continuing to tick in raw minutes.
