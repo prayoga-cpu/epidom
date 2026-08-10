@@ -73,6 +73,13 @@ describe("settlePaymentMethodEnum", () => {
       "SHOPEEPAY",
       "BANK_TRANSFER",
       "STRIPE_CARD",
+      "LINKAJA",
+      "CHEQUE",
+      "TITRE_RESTAURANT",
+      "PAYPAL",
+      "APPLE_PAY",
+      "GOOGLE_PAY",
+      "OTHER",
     ]);
   });
 });

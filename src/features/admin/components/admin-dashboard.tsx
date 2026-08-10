@@ -28,6 +28,7 @@ import {
   PowerOff,
   Power,
   Gauge,
+  CircleDollarSign,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ import { toast } from "sonner";
 import { HARDCODED_ADMIN_EMAILS } from "@/lib/admin";
 import { useUser } from "@/lib/auth-client";
 import { isLifetimePeriod } from "@/lib/utils/formatting";
+import { CURRENCIES } from "@/lib/constants/currencies";
 
 type Plan = "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE";
 type SubStatus = "ACTIVE" | "CANCELED" | "PAST_DUE" | "INCOMPLETE";
@@ -79,7 +81,6 @@ interface UserRow {
   createdAt: string;
   timezone?: string;
   timezoneUpdatedAt?: string | null;
-  currency?: string;
   deactivatedAt: string | null;
   purgeAt: string | null;
   providers: string[];
@@ -90,6 +91,9 @@ interface UserRow {
     currentPeriodStart: string | null;
     currentPeriodEnd: string | null;
     stripeCustomerId: string;
+    customPriceAmount: number | null;
+    customPriceCurrency: string | null;
+    customPriceInterval: "MONTHLY" | "YEARLY" | null;
   } | null;
   business: {
     id: string;
@@ -115,15 +119,15 @@ const statusColors: Record<SubStatus, string> = {
 };
 
 /**
- * Billing region from the user's timezone + currency (region drives plan pricing).
+ * Billing region from the user's timezone (region drives plan pricing).
  * `timezoneUpdatedAt` is only set once a real browser-detected sync has
  * happened (see TimezoneSync) — without it, `timezone` is still just the raw
  * schema default from account creation, not a real signal about the user.
+ * Currency is no longer on User — it's per-store/business now (Fees & Taxes).
  */
 function regionLabel(u: UserRow): string {
   if (!u.timezoneUpdatedAt) return "Unknown";
-  const tz = u.timezone?.split("/").pop()?.replace(/_/g, " ");
-  return [tz, u.currency].filter(Boolean).join(" · ") || "—";
+  return u.timezone?.split("/").pop()?.replace(/_/g, " ") || "—";
 }
 
 const PERIOD_OPTIONS = [
@@ -183,6 +187,12 @@ export function AdminDashboard() {
   const [copied, setCopied] = useState(false);
   const [tempLoading, setTempLoading] = useState(false);
 
+  // Custom price dialog state
+  const [priceTarget, setPriceTarget] = useState<UserRow | null>(null);
+  const [priceAmount, setPriceAmount] = useState("");
+  const [priceCurrency, setPriceCurrency] = useState("EUR");
+  const [priceInterval, setPriceInterval] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
+
   const { data, isLoading } = useQuery<{ users: UserRow[] }>({
     queryKey: ["admin-users"],
     queryFn: () => fetch("/api/admin/users").then((r) => r.json()),
@@ -232,6 +242,12 @@ export function AdminDashboard() {
         setTimeout(() => window.location.reload(), 800);
       } else if (action === "reactivate-user") {
         toast.success("Account reactivated");
+      } else if (action === "set-custom-price") {
+        setPriceTarget(null);
+        toast.success("Custom price updated");
+      } else if (action === "clear-custom-price") {
+        setPriceTarget(null);
+        toast.success("Custom price cleared");
       } else {
         toast.success("Subscription updated");
       }
@@ -326,6 +342,26 @@ export function AdminDashboard() {
               {label}
             </DropdownMenuItem>
           ))}
+
+          <DropdownMenuSeparator />
+
+          {/* Custom price */}
+          <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <CircleDollarSign className="h-3 w-3" /> Custom Price
+          </DropdownMenuLabel>
+          <DropdownMenuItem
+            onClick={() => {
+              setPriceTarget(user);
+              setPriceAmount(user.subscription?.customPriceAmount?.toString() ?? "");
+              setPriceCurrency(user.subscription?.customPriceCurrency ?? "EUR");
+              setPriceInterval(user.subscription?.customPriceInterval ?? "MONTHLY");
+            }}
+          >
+            <CircleDollarSign className="mr-2 h-3.5 w-3.5" />
+            {user.subscription?.customPriceAmount != null
+              ? "Edit Custom Price"
+              : "Set Custom Price"}
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
@@ -657,6 +693,15 @@ export function AdminDashboard() {
                       BETA
                     </span>
                   )}
+                  {user.subscription?.customPriceAmount != null && (
+                    <span
+                      className="inline-flex items-center gap-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-cyan-400 uppercase"
+                      title="Custom price set"
+                    >
+                      <CircleDollarSign className="h-2.5 w-2.5" />
+                      Custom
+                    </span>
+                  )}
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}
                   >
@@ -820,6 +865,15 @@ export function AdminDashboard() {
                             {user.subscription?.stripeCustomerId?.startsWith("admin_") && (
                               <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-400 uppercase">
                                 BETA
+                              </span>
+                            )}
+                            {user.subscription?.customPriceAmount != null && (
+                              <span
+                                className="inline-flex items-center gap-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-cyan-400 uppercase"
+                                title="Custom price set"
+                              >
+                                <CircleDollarSign className="h-2.5 w-2.5" />
+                                Custom
                               </span>
                             )}
                           </div>
@@ -1015,6 +1069,101 @@ export function AdminDashboard() {
             >
               <KeyRound className="mr-2 h-4 w-4" />
               {pwTarget?.hasPassword ? "Update Password" : "Set Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom price dialog */}
+      <Dialog
+        open={!!priceTarget}
+        onOpenChange={(open) => {
+          if (!open) setPriceTarget(null);
+        }}
+      >
+        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <CircleDollarSign className="h-4 w-4 text-emerald-400" />
+              Set Custom Price
+            </DialogTitle>
+            <DialogDescription>
+              {priceTarget?.subscription?.stripeCustomerId?.startsWith("admin_") ||
+              priceTarget?.subscription?.stripeCustomerId?.startsWith("free_")
+                ? `${priceTarget?.email} isn't Stripe-billed — this is a reference figure only, shown here and on their Billing page, for your own manual invoicing.`
+                : `${priceTarget?.email} is billed via Stripe — this changes what Stripe actually charges them starting next billing cycle.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 space-y-3 overflow-y-auto py-2">
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceAmount}
+                onChange={(e) => setPriceAmount(e.target.value)}
+                placeholder="Amount"
+                className="flex-1"
+              />
+              <Select value={priceCurrency} onValueChange={setPriceCurrency}>
+                <SelectTrigger className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Select
+              value={priceInterval}
+              onValueChange={(v) => setPriceInterval(v as "MONTHLY" | "YEARLY")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MONTHLY">Monthly</SelectItem>
+                <SelectItem value="YEARLY">Yearly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="shrink-0 flex-wrap gap-2">
+            {priceTarget?.subscription?.customPriceAmount != null && (
+              <Button
+                variant="outline"
+                className="text-red-500"
+                disabled={mutation.isPending}
+                onClick={() =>
+                  priceTarget &&
+                  mutation.mutate({ action: "clear-custom-price", userId: priceTarget.id })
+                }
+              >
+                Clear Custom Price
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setPriceTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!priceAmount || Number(priceAmount) < 0 || mutation.isPending}
+              onClick={() => {
+                if (priceTarget) {
+                  mutation.mutate({
+                    action: "set-custom-price",
+                    userId: priceTarget.id,
+                    amount: Number(priceAmount),
+                    currency: priceCurrency,
+                    interval: priceInterval,
+                  });
+                }
+              }}
+            >
+              <CircleDollarSign className="mr-2 h-4 w-4" />
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>

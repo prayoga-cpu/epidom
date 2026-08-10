@@ -70,10 +70,28 @@ function get(obj: TranslationObject, path: string): TranslationValue | undefined
     ) as TranslationValue | undefined;
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en");
+export function I18nProvider({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode;
+  /**
+   * Server-resolved locale (from the URL, via middleware — see
+   * src/lib/i18n-routing.ts). When set, the URL is the source of truth for
+   * language: skip the client-side cookie/browser-language detection that
+   * would otherwise flash-override it after hydration. Marketing layout
+   * passes this; the authenticated app and public storefront don't, and
+   * keep the original client-preference-driven behavior.
+   */
+  initialLocale?: Locale;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? "en");
 
   useEffect(() => {
+    if (initialLocale) {
+      if (typeof document !== "undefined") document.documentElement.lang = initialLocale;
+      return;
+    }
     // Get language preference from cookie consent system (with fallback to legacy storage)
     const preferredLanguage = getLanguagePreference();
     setLocaleState(preferredLanguage);

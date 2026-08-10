@@ -46,6 +46,12 @@ import {
 } from "@/lib/pwa/thermal-printer";
 import { usePrinterSettings } from "../hooks/use-printer-settings";
 import { useLastReceipt, type LastReceiptMeta } from "../hooks/use-last-receipt";
+import { PaymentMethodChip } from "./payment-method-chip";
+import { mapPaymentMethodLabel, orderPaymentMethodGroups } from "../lib/order-status-display";
+import type { PaymentMethod } from "@prisma/client";
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 interface PosCheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -100,8 +106,22 @@ export function PosCheckoutDialog({
       customerPhone: "",
       bankCode: "BNI",
       notes: "",
+      paymentNote: "",
     },
   });
+
+  // The market group matching the dashboard's own language leads the list —
+  // e.g. an "id" locale surfaces QRIS/GoPay/etc. right after Cash/Card. Each
+  // group is then filtered down to what this store actually accepts (see
+  // Fees & Taxes settings) — PAY_LATER is excluded from enabledPaymentMethods
+  // by design and keeps its own dedicated button below.
+  const enabledMethods = new Set(financeSettings?.enabledPaymentMethods ?? []);
+  const paymentMethodGroups = orderPaymentMethodGroups(locale)
+    .map((group) => ({
+      ...group,
+      methods: group.methods.filter((method) => enabledMethods.has(method as PaymentMethod)),
+    }))
+    .filter((group) => group.methods.length > 0);
 
   // useWatch (not form.watch) so this component reliably re-renders when the
   // payment method changes (shows/hides the cash vs. bank-transfer section).
@@ -170,7 +190,10 @@ export function PosCheckoutDialog({
     discountAmount: cart.discountAmount > 0 ? cart.discountAmount : undefined,
     discountReason: cart.discountReason ?? undefined,
     total: cart.total,
-    paymentMethod: data.paymentMethod,
+    // "OTHER" alone tells the customer nothing — print what the cashier
+    // actually typed instead.
+    paymentMethod:
+      data.paymentMethod === "OTHER" && data.paymentNote ? data.paymentNote : data.paymentMethod,
     amountTendered: data.amountTendered,
     change: data.amountTendered ? Math.max(0, data.amountTendered - cart.total) : undefined,
     cashierName,
@@ -328,7 +351,7 @@ export function PosCheckoutDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <FormDialogLayout
           title={t("pos.checkout.title")}
-          maxWidth="md"
+          maxWidth="lg"
           footer={
             <>
               <Button
@@ -368,122 +391,123 @@ export function PosCheckoutDialog({
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-6"
             >
-              <div className="grid gap-6 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="orderType"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>{t("pos.checkout.orderType")}</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex flex-col space-y-1"
-                        >
-                          <FormItem className="flex items-center space-y-0 space-x-3">
-                            <FormControl>
-                              <RadioGroupItem value="DINE_IN" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              {t("pos.checkout.dineIn")}
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-y-0 space-x-3">
-                            <FormControl>
-                              <RadioGroupItem value="TAKEAWAY" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              {t("pos.checkout.takeaway")}
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="orderType"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>{t("pos.checkout.orderType")}</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex flex-row gap-4"
+                      >
+                        <FormItem className="flex items-center space-y-0 space-x-3">
+                          <FormControl>
+                            <RadioGroupItem value="DINE_IN" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            {t("pos.checkout.dineIn")}
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-y-0 space-x-3">
+                          <FormControl>
+                            <RadioGroupItem value="TAKEAWAY" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            {t("pos.checkout.takeaway")}
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>{t("pos.checkout.paymentMethod")}</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          value={field.value === "PAY_LATER" ? "" : field.value}
-                          className="flex flex-col space-y-1"
-                        >
-                          <FormItem className="flex items-center space-y-0 space-x-3">
+              <FormField
+                control={form.control}
+                name="paymentMethod"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>{t("pos.checkout.paymentMethod")}</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          if (value !== "OTHER") form.setValue("paymentNote", "");
+                        }}
+                        value={field.value === "PAY_LATER" ? "" : field.value}
+                        className="space-y-4"
+                      >
+                        {paymentMethodGroups.map((group) => (
+                          <div key={group.key} className="space-y-2">
+                            {group.key !== "common" && (
+                              <p className="text-muted-foreground text-xs font-semibold uppercase">
+                                {t(`pos.checkout.market${capitalize(group.key)}`)}
+                              </p>
+                            )}
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                              {group.methods.map((method) => (
+                                <PaymentMethodChip
+                                  key={method}
+                                  idPrefix="checkout-payment"
+                                  value={method}
+                                  selected={field.value === method}
+                                  label={mapPaymentMethodLabel(t, method)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          <PaymentMethodChip
+                            idPrefix="checkout-payment"
+                            value="OTHER"
+                            selected={field.value === "OTHER"}
+                            label={t("pos.checkout.other")}
+                          />
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    {field.value === "OTHER" && (
+                      <FormField
+                        control={form.control}
+                        name="paymentNote"
+                        render={({ field: noteField }) => (
+                          <FormItem>
+                            <FormLabel className="sr-only">
+                              {t("pos.checkout.customPaymentMethodLabel")}
+                            </FormLabel>
                             <FormControl>
-                              <RadioGroupItem value="CASH" />
+                              <Input
+                                placeholder={t("pos.checkout.customPaymentMethodPlaceholder")}
+                                {...noteField}
+                              />
                             </FormControl>
-                            <FormLabel className="font-normal">{t("pos.checkout.cash")}</FormLabel>
+                            <FormMessage />
                           </FormItem>
-                          <FormItem className="flex items-center space-y-0 space-x-3">
-                            <FormControl>
-                              <RadioGroupItem value="QRIS" />
-                            </FormControl>
-                            <FormLabel className="font-normal">QRIS</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-y-0 space-x-3">
-                            <FormControl>
-                              <RadioGroupItem value="GOPAY" />
-                            </FormControl>
-                            <FormLabel className="font-normal">GoPay</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-y-0 space-x-3">
-                            <FormControl>
-                              <RadioGroupItem value="OVO" />
-                            </FormControl>
-                            <FormLabel className="font-normal">OVO</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-y-0 space-x-3">
-                            <FormControl>
-                              <RadioGroupItem value="DANA" />
-                            </FormControl>
-                            <FormLabel className="font-normal">DANA</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-y-0 space-x-3">
-                            <FormControl>
-                              <RadioGroupItem value="SHOPEEPAY" />
-                            </FormControl>
-                            <FormLabel className="font-normal">ShopeePay</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-y-0 space-x-3">
-                            <FormControl>
-                              <RadioGroupItem value="BANK_TRANSFER" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Virtual Account</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-y-0 space-x-3">
-                            <FormControl>
-                              <RadioGroupItem value="STRIPE_CARD" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Credit Card</FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      {financeSettings?.payLaterEnabled && (
-                        <button
-                          type="button"
-                          onClick={() => field.onChange("PAY_LATER")}
-                          className={cn(
-                            "flex w-full items-center justify-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm font-medium transition-colors",
-                            field.value === "PAY_LATER"
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "text-muted-foreground hover:border-foreground/40 hover:text-foreground"
-                          )}
-                        >
-                          <Clock className="h-4 w-4" />
-                          {t("pos.checkout.payLater")}
-                        </button>
-                      )}
-                    </FormItem>
-                  )}
-                />
-              </div>
+                        )}
+                      />
+                    )}
+                    {financeSettings?.payLaterEnabled && (
+                      <button
+                        type="button"
+                        onClick={() => field.onChange("PAY_LATER")}
+                        className={cn(
+                          "flex w-full items-center justify-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm font-medium transition-colors",
+                          field.value === "PAY_LATER"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+                        )}
+                      >
+                        <Clock className="h-4 w-4" />
+                        {t("pos.checkout.payLater")}
+                      </button>
+                    )}
+                  </FormItem>
+                )}
+              />
 
               {paymentMethod === "PAY_LATER" && (
                 <div className="bg-muted/20 space-y-1 rounded-md border p-4">
@@ -615,7 +639,7 @@ export function PosCheckoutDialog({
                           defaultCountry="ID"
                         />
                       </FormControl>
-                      {["GOPAY", "OVO", "DANA", "SHOPEEPAY"].includes(paymentMethod) && (
+                      {["GOPAY", "OVO", "DANA", "SHOPEEPAY", "LINKAJA"].includes(paymentMethod) && (
                         <p className="text-muted-foreground mt-1 text-[10px]">
                           Wajib untuk e-wallet
                         </p>

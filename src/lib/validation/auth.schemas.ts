@@ -4,7 +4,6 @@ import {
   passwordSchema,
   nameSchema,
   localeSchema,
-  currencySchema,
   timezoneSchema,
 } from "./common.schemas";
 
@@ -39,8 +38,8 @@ export const updateProfileSchema = z.object({
     .or(z.literal("")),
   locale: localeSchema.optional(),
   timezone: timezoneSchema.optional(),
-  currency: currencySchema.optional(),
   defaultLanding: z.enum(["dashboard", "pos", "storefront", "data"]).optional(),
+  rememberLastVisited: z.boolean().optional(),
   image: z
     .string()
     .refine((val) => val === "" || z.string().url().safeParse(val).success, {

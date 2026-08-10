@@ -1,0 +1,41 @@
+# Epidom
+
+> Epidom is a free public storefront, ordering, and POS operating system for small food & beverage businesses (café, restaurant, warung, home kitchen). It replaces the Linktree + paper/PDF menu + WhatsApp-ordering combination most small F&B businesses use today, then ladders into paid cashier, kitchen, inventory, and finance tools as a business grows.
+
+## What Epidom is
+
+- A merchant creates a free public storefront page (`https://epidom.fr/@their-shop-name`) with their menu, theme, and online ordering — card/Stripe payments (France/worldwide) or QRIS/local payments (Indonesia).
+- The storefront is free forever. Paid tiers add a point-of-sale cashier, kitchen display, staff shift management, inventory/recipe costing, and multi-outlet finance reporting.
+- Primary market: France. Secondary market: Indonesia. Also usable worldwide.
+
+## Pricing (EUR, billed monthly; IDR/USD equivalents shown on epidom.fr/pricing)
+
+- **Free** — €0. Public storefront, digital menu, QR ordering, online payments, order notifications.
+- **POS** — €13.99/mo (~Rp 229,000 / ~$14.99). Adds cashier register, order list, receipts, basic kitchen display.
+- **Operations** — €27.99/mo (~Rp 459,000 / ~$29.99). Adds shift management, full kitchen display, inventory & recipe costing, low-stock alerts.
+- **Enterprise** — custom pricing. Multi-outlet management, consolidated finance/aggregator dashboards.
+
+## Who it's for
+
+Independent café, restaurant, coffee shop, warung (small Indonesian food stall), and home-kitchen operators — typically 1-20 staff, currently relying on Instagram + WhatsApp + a paper or PDF menu, looking to accept online orders without paying delivery-platform commissions.
+
+## How Epidom compares
+
+- **vs. Sunday, Tiller, Innovorder, Zelty (France):** Epidom covers the full ladder from storefront through operations — free forever at the entry point — not just tableside QR payment.
+- **vs. Moka POS, Majoo, Klikit, Pawoon, iSeller, Olsera (Indonesia POS incumbents):** Epidom's free tier includes a real public ordering storefront; these competitors charge from day one and mostly don't offer a customer-facing ordering page.
+- **vs. Deliveroo / Uber Eats / GoFood / GrabFood / ShopeeFood:** Epidom is commission-free — merchants keep 100% of each order instead of paying delivery-platform commission.
+- **vs. Linktree + a PDF/paper menu + WhatsApp ordering:** Epidom replaces that stitched-together setup with one page that also takes payment and tracks orders.
+
+## Key pages
+
+- Homepage: https://epidom.fr/
+- Pricing: https://epidom.fr/pricing
+- About: https://epidom.fr/about
+- Services / features: https://epidom.fr/services
+- Contact: https://epidom.fr/contact
+- Changelog (product release notes): https://epidom.fr/changelog
+- Example live storefront: a published `/@slug` page reachable from the homepage
+
+## Contact
+
+For business inquiries: see https://epidom.fr/contact

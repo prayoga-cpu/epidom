@@ -33,8 +33,8 @@ Full strategic context: see `/docs/STRATEGY.md`.
 | Dimension            | Current state                                                       |
 | -------------------- | ------------------------------------------------------------------- |
 | Phase                | **Phase 5, Aggregator + Finance**                                   |
-| Primary market       | Indonesia (primary), France/Worldwide (secondary)                   |
-| Primary language     | `id`, then `en`. `fr` is deprecated, do not add new French strings. |
+| Primary market       | France (primary, re-prioritized 2026-08-10), Indonesia (secondary), Worldwide |
+| Primary language     | `fr`, then `id`, then `en`. `fr` was deprecated, reactivated and promoted to primary 2026-08-10 — new French strings are expected now. |
 | Active strategic doc | `/docs/roadmap.md` (Phase 5 section)                                |
 | Next phase           | None — Phase 5 is the final planned phase.                          |
 
@@ -175,7 +175,7 @@ These five bug classes have each caused real, shipped breakage on iPad Safari. C
 ## 7. Things you must not do
 
 1. Do not reintroduce cookie-bar-only language in marketing copy.
-2. Do not add new French (`fr`) strings.
+2. ~~Do not add new French (`fr`) strings.~~ Reversed 2026-08-10 — France is reactivated (see §2, `docs/STRATEGY.md` §3/§12). New French strings in `fr.ts` are expected; keep them real translations, not machine-flavored placeholders.
 3. `management`, `data`, and `alerts` under `src/app/(app)/store/[storeId]/(dashboard)/` are active, maintained, monetized (OPERATIONS-plan) features — treat them like any other live surface, not as paused code. (Historical note: a `tracking` page/nav item used to exist alongside these; as of 2026-08-05 it was consolidated into `management` — its unique Movements ledger became a Management tab, its redundant Stock Levels view was dropped in favor of the Data page. There is no separate `tracking` route anymore.)
 4. Do not couple the public storefront to internal inventory. `MenuItem.productId` is optional on purpose.
 5. Do not put Stripe and Xendit logic in the same module. They serve different flows (SaaS billing vs customer payments).

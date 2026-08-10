@@ -299,6 +299,20 @@ export function FeatureComparison() {
             </tbody>
           </table>
         </div>
+
+        <div style={{ textAlign: "center", marginTop: 40 }}>
+          <a
+            href="/compare/delivery-commission"
+            style={{
+              fontSize: 14,
+              color: "var(--epi-gold-400)",
+              textDecoration: "none",
+              borderBottom: "1px solid rgba(217,174,59,0.4)",
+            }}
+          >
+            {t("redesign.pricingPage.compareDeliveryLink")}
+          </a>
+        </div>
       </div>
     </section>
   );

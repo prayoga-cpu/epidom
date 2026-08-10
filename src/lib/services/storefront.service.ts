@@ -9,6 +9,7 @@ import type {
 } from "@/lib/validation/storefront.schemas";
 import { Prisma, Department } from "@prisma/client";
 import { getExchangeRate } from "./exchange-rate.service";
+import { getFinanceSettings } from "./finance-settings.service";
 
 export class StorefrontService {
   /**
@@ -31,7 +32,7 @@ export class StorefrontService {
    * Get storefront by its public slug
    */
   async getStorefrontBySlug(slug: string) {
-    return prisma.storefront.findFirst({
+    const storefront = await prisma.storefront.findFirst({
       // Deactivated owners' storefronts go offline for the duration of the
       // deactivation (comes back automatically on reactivation, since this
       // is a live filter rather than a cached flag).
@@ -56,15 +57,49 @@ export class StorefrontService {
           },
         },
         store: {
-          select: {
-            business: {
-              select: {
-                user: { select: { currency: true } },
-              },
-            },
-          },
+          select: { id: true },
         },
       },
+    });
+    if (!storefront) return storefront;
+
+    // The store's resolved currency (store-or-business, per
+    // syncFinanceWithBusiness) — moved off the old User.currency, which
+    // this storefront's owner no longer has.
+    const { currency } = await getFinanceSettings(storefront.store.id);
+    return {
+      ...storefront,
+      store: { ...storefront.store, currency },
+    };
+  }
+
+  /**
+   * One real, currently-published storefront to link to as a live example
+   * from the marketing homepage ("see a real storefront"). Picked by
+   * highest view count so it's an actually-active shop, not an abandoned
+   * draft that happened to toggle isPublished on once. Never hardcode a
+   * specific slug in marketing copy — always resolve this at request time,
+   * since a merchant can unpublish or deactivate at any point.
+   */
+  async getExampleStorefrontSlug(): Promise<string | null> {
+    const storefront = await prisma.storefront.findFirst({
+      where: { isPublished: true, store: { business: { user: { deactivatedAt: null } } } },
+      orderBy: { viewCount: "desc" },
+      select: { slug: true },
+    });
+    return storefront?.slug ?? null;
+  }
+
+  /**
+   * Slugs + last-update timestamp for every live, published storefront —
+   * used to build the dynamic sitemap. Same deactivation filter as
+   * getStorefrontBySlug so a deactivated owner's page drops out of the
+   * sitemap for the duration of the deactivation.
+   */
+  async getPublishedSlugsForSitemap() {
+    return prisma.storefront.findMany({
+      where: { isPublished: true, store: { business: { user: { deactivatedAt: null } } } },
+      select: { slug: true, updatedAt: true },
     });
   }
 
@@ -363,9 +398,24 @@ export class StorefrontService {
   private async getOwnerCurrency(storefrontId: string): Promise<string> {
     const storefront = await prisma.storefront.findUnique({
       where: { id: storefrontId },
-      select: { store: { select: { business: { select: { user: { select: { currency: true } } } } } } },
+      select: { store: { select: { id: true } } },
     });
-    return storefront?.store.business.user.currency ?? "IDR";
+    if (!storefront) return "IDR";
+    return this.resolveStoreCurrency(storefront.store.id);
+  }
+
+  /**
+   * getFinanceSettings() throws when the store doesn't exist — appropriate
+   * for request handlers, but not here: a not-found store should just mean
+   * "no currency conversion to apply" (matches the old direct-Prisma-lookup
+   * behavior this replaced), not fail whatever bulk operation is mid-flight.
+   */
+  private async resolveStoreCurrency(storeId: string): Promise<string> {
+    try {
+      return (await getFinanceSettings(storeId)).currency;
+    } catch {
+      return "IDR";
+    }
   }
 
   /**
@@ -375,11 +425,7 @@ export class StorefrontService {
    * `convertOwnerToBaseSync` per row, rather than re-querying per row.
    */
   async getOwnerCurrencyAndRate(storeId: string): Promise<{ currency: string; rate: number }> {
-    const store = await prisma.store.findUnique({
-      where: { id: storeId },
-      select: { business: { select: { user: { select: { currency: true } } } } },
-    });
-    const currency = store?.business?.user?.currency ?? "IDR";
+    const currency = await this.resolveStoreCurrency(storeId);
     if (currency === "IDR") return { currency, rate: 1 };
 
     const { rate } = await getExchangeRate("IDR", currency);

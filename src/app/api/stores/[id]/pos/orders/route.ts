@@ -189,6 +189,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           shiftId: input.shiftId,
           paymentMethod: input.paymentMethod as PaymentMethod,
           paymentStatus: input.paymentMethod === "PAY_LATER" ? "PENDING" : "PAID",
+          paymentNote: input.paymentNote,
           status: settledStatus,
           ...(immediatelyDelivered && { deliveredDate: new Date() }),
           source: "POS",

@@ -11,16 +11,35 @@ import {
   CheckCircle2,
   Sparkles,
   Volume2,
+  SlidersHorizontal,
+  Check,
+  Upload,
+  Trash2,
   X,
 } from "lucide-react";
 import {
   getNotificationTone,
   setNotificationTone,
   playNotificationSound,
+  getCustomSound,
+  clearCustomSound,
+  validateAndSaveCustomSound,
+  MAX_CUSTOM_SOUND_SECONDS,
+  MAX_CUSTOM_SOUND_BYTES,
   type NotificationTone,
 } from "@/lib/notification-sound";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import { useCurrentStore } from "./hooks/use-current-store";
 import { apiClient } from "@/lib/api/client";
@@ -64,6 +83,8 @@ export function NotificationBell() {
   // In-app notification sound preference (client-only, mirrors seenVersion's
   // lazy-load-after-mount pattern to avoid a hydration mismatch on the default).
   const [tone, setTone] = useState<NotificationTone>("chime");
+  const [hasCustomSound, setHasCustomSound] = useState(false);
+  const customSoundInputRef = useRef<HTMLInputElement>(null);
   const { t, locale } = useI18n();
   const { state: pushState, subscribe: subscribePush, unsubscribe: unsubscribePush } =
     usePushNotifications(storeId);
@@ -71,7 +92,54 @@ export function NotificationBell() {
   useEffect(() => {
     setSeenVersion(getLastSeenVersion());
     setTone(getNotificationTone());
+    setHasCustomSound(!!getCustomSound());
   }, []);
+
+  async function handleCustomSoundUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    const result = await validateAndSaveCustomSound(file);
+    if ("error" in result) {
+      toast.error(result.error.message);
+      return;
+    }
+    setHasCustomSound(true);
+    setTone("custom");
+    setNotificationTone("custom");
+    playNotificationSound("custom");
+  }
+
+  function handleRemoveCustomSound(e: React.SyntheticEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    clearCustomSound();
+    setHasCustomSound(false);
+    if (tone === "custom") {
+      setTone("chime");
+      setNotificationTone("chime");
+    }
+  }
+
+  function selectTone(option: NotificationTone) {
+    setTone(option);
+    setNotificationTone(option);
+    if (option !== "none") playNotificationSound(option);
+  }
+
+  function toneLabel(option: NotificationTone): string {
+    switch (option) {
+      case "chime":
+        return t("notifications.sound.chime");
+      case "ping":
+        return t("notifications.sound.ping");
+      case "custom":
+        return t("notifications.sound.custom");
+      case "none":
+        return t("notifications.sound.off");
+    }
+  }
 
   const hasUnseen = seenVersion !== APP_VERSION;
 
@@ -183,80 +251,119 @@ export function NotificationBell() {
           )}
         </div>
 
-        {/* Push notifications toggle — hidden entirely when unsupported or
-            unconfigured (no VAPID env vars), matching the "graceful
-            degradation" pattern used by the rest of the realtime layer. */}
-        {pushState !== "unsupported" && (
-          <div className="border-border flex items-center justify-between gap-2 border-b px-4 py-2.5">
-            <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px]">
-              {pushState === "subscribed" ? (
-                <BellRing className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-              ) : (
-                <BellOff className="h-3.5 w-3.5 shrink-0" />
-              )}
-              <span className="truncate">
-                {pushState === "subscribed" && t("notifications.push.enabled")}
-                {pushState === "denied" && t("notifications.push.blocked")}
-                {pushState === "ios-not-installed" && t("notifications.push.iosInstallHint")}
-                {(pushState === "default" || pushState === "subscribing") &&
-                  t("notifications.push.prompt")}
-              </span>
-            </div>
-            {(pushState === "default" ||
-              pushState === "subscribing" ||
-              pushState === "subscribed") && (
-              <button
-                onClick={pushState === "subscribed" ? unsubscribePush : subscribePush}
-                disabled={pushState === "subscribing"}
-                // h-10 (40px) meets the ≥40px touch-target rule; visible by
-                // default rather than hover-gated, since touch devices have
-                // no persistent hover state.
-                className="text-muted-foreground hover:text-foreground flex h-10 shrink-0 touch-manipulation items-center justify-center rounded px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-50"
-              >
-                {pushState === "subscribed"
-                  ? t("notifications.push.disable")
-                  : t("notifications.push.enable")}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* In-app notification sound — only affects this bell while the tab is
-            open; browsers don't support a custom sound for OS-level push. */}
+        {/* Notification settings — one row: a single switch for the primary
+            enable/disable action (push subscription, when supported), plus a
+            "customize" dropdown for everything else (why push can't be
+            toggled right now, and the in-app sound — which only affects this
+            bell while the tab is open; browsers don't support a custom sound
+            for OS-level push, so that limitation lives in the dropdown copy,
+            not as a separate always-visible control). */}
         <div className="border-border flex items-center justify-between gap-2 border-b px-4 py-2">
-          <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-            <Volume2 className="h-3.5 w-3.5 shrink-0" />
-            <span>{t("notifications.sound.label")}</span>
+          <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px]">
+            {pushState === "subscribed" ? (
+              <BellRing className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+            ) : (
+              <BellOff className="h-3.5 w-3.5 shrink-0" />
+            )}
+            <span className="truncate">{t("notifications.title")}</span>
           </div>
-          <div className="border-border bg-muted/40 flex items-center rounded-lg border p-0.5">
-            {(["chime", "ping", "none"] as NotificationTone[]).map((option) => {
-              const active = tone === option;
-              const label =
-                option === "chime"
-                  ? t("notifications.sound.chime")
-                  : option === "ping"
-                    ? t("notifications.sound.ping")
-                    : t("notifications.sound.off");
-              return (
+          <div className="flex shrink-0 items-center gap-2">
+            {pushState !== "unsupported" && (
+              <Switch
+                checked={pushState === "subscribed"}
+                disabled={
+                  pushState === "subscribing" ||
+                  pushState === "denied" ||
+                  pushState === "ios-not-installed"
+                }
+                onCheckedChange={(checked) => (checked ? subscribePush() : unsubscribePush())}
+                aria-label={
+                  pushState === "subscribed"
+                    ? t("notifications.push.disable")
+                    : t("notifications.push.enable")
+                }
+              />
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <button
-                  key={option}
                   type="button"
-                  onClick={() => {
-                    setTone(option);
-                    setNotificationTone(option);
-                    if (option !== "none") playNotificationSound(option);
-                  }}
-                  className={`rounded-md px-2 py-1 text-[10px] font-semibold transition-colors ${
-                    active
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  aria-label={t("notifications.customize")}
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted/50 flex h-7 w-7 items-center justify-center rounded transition-colors"
                 >
-                  {label}
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
                 </button>
-              );
-            })}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                {(pushState === "denied" ||
+                  pushState === "ios-not-installed" ||
+                  pushState === "default" ||
+                  pushState === "subscribing") && (
+                  <>
+                    <p className="text-muted-foreground px-2 py-1.5 text-[11px]">
+                      {pushState === "denied" && t("notifications.push.blocked")}
+                      {pushState === "ios-not-installed" && t("notifications.push.iosInstallHint")}
+                      {(pushState === "default" || pushState === "subscribing") &&
+                        t("notifications.push.prompt")}
+                    </p>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-normal">
+                  <Volume2 className="h-3.5 w-3.5" />
+                  {t("notifications.sound.label")}
+                </DropdownMenuLabel>
+                {(["chime", "ping", "custom", "none"] as NotificationTone[]).map((option) => {
+                  const active = tone === option;
+                  return (
+                    <DropdownMenuItem
+                      key={option}
+                      onSelect={(e) => {
+                        if (option === "custom" && !hasCustomSound) {
+                          e.preventDefault();
+                          customSoundInputRef.current?.click();
+                          return;
+                        }
+                        selectTone(option);
+                      }}
+                    >
+                      <span className="flex w-4 shrink-0 items-center justify-center">
+                        {active && <Check className="h-3.5 w-3.5" />}
+                      </span>
+                      {option === "custom" && <Upload className="h-3.5 w-3.5 shrink-0" />}
+                      <span className="flex-1">{toneLabel(option)}</span>
+                      {option === "custom" && hasCustomSound && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={handleRemoveCustomSound}
+                          onKeyDown={(e) => e.key === "Enter" && handleRemoveCustomSound(e)}
+                          aria-label={t("notifications.sound.removeCustom")}
+                          className="hover:text-destructive touch-manipulation"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <p className="text-muted-foreground px-2 py-1.5 text-[10px]">
+                  {t("notifications.sound.customGuide")
+                    .replace("{s}", String(MAX_CUSTOM_SOUND_SECONDS))
+                    .replace("{mb}", String(MAX_CUSTOM_SOUND_BYTES / 1_000_000))}
+                </p>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+          <input
+            ref={customSoundInputRef}
+            type="file"
+            accept="audio/*"
+            className="hidden"
+            onChange={handleCustomSoundUpload}
+          />
         </div>
 
         {/* List */}

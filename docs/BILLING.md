@@ -20,12 +20,15 @@ The two flows live in different modules and never share code paths. See `/docs/A
 
 The current public pricing for Indonesia.
 
-| Tier       | IDR/month   | USD equiv | EUR equiv (legacy) | Trial             |
-| ---------- | ----------- | --------- | ------------------ | ----------------- |
-| FREE       | Rp 0        | $0        | €0                 | n/a, free forever |
-| POS        | Rp 99,000   | ~$6       | €19                | 14 days           |
-| OPERATIONS | Rp 249,000  | ~$15      | €49                | 14 days           |
-| ENTERPRISE | Rp 499,000+ | ~$30+     | €99+               | Sales-assisted    |
+| Tier       | IDR/month  | USD equiv | Trial              |
+| ---------- | ---------- | --------- | ------------------ |
+| FREE       | Rp 0       | $0        | n/a, free forever  |
+| POS        | Rp 229,000 | $14.99    | 14 days            |
+| OPERATIONS | Rp 459,000 | $29.99    | 14 days            |
+| ENTERPRISE | Custom     | Custom    | Sales-assisted     |
+
+(Raised from the original Rp 99k/249k/499k+ figures — see `CHANGELOG.md` 2.24.1. Enterprise moved to
+custom/sales-assisted pricing rather than a fixed Rp 499,000+ floor.)
 
 Pricing rationale and the Indonesian SaaS benchmarks behind these numbers are in `/docs/STRATEGY.md` section 7.
 

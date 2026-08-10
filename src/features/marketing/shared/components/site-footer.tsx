@@ -3,11 +3,14 @@
 import { memo } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 import { APP_VERSION } from "@/lib/version";
 import { Container } from "./container";
 import { EpidomLogo } from "./epidom-logo";
 import { PrionationMark } from "./prionation-mark";
 
+// Instagram only — no other social accounts are actively maintained.
 const SOCIAL = [
   {
     label: "Instagram",
@@ -30,39 +33,12 @@ const SOCIAL = [
       </svg>
     ),
   },
-  {
-    label: "TikTok",
-    href: "https://tiktok.com/@epidom",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.95a8.23 8.23 0 004.83 1.54V7.07a4.85 4.85 0 01-1.06-.38z" />
-      </svg>
-    ),
-  },
-  {
-    label: "LinkedIn",
-    href: "https://linkedin.com/company/epidom",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
-        <circle cx="4" cy="4" r="2" />
-      </svg>
-    ),
-  },
-  {
-    label: "X / Twitter",
-    href: "https://x.com/epidomid",
-    icon: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-      </svg>
-    ),
-  },
 ] as const;
 
 export const SiteFooter = memo(function SiteFooter() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const year = new Date().getFullYear();
+  const waOptions = getWhatsAppOptions(locale);
 
   return (
     <footer
@@ -146,12 +122,14 @@ export const SiteFooter = memo(function SiteFooter() {
           <FooterCol
             heading={t("footer.colProduct")}
             links={[
-              { label: t("footer.linkHome"), href: "/" },
-              { label: t("footer.linkFeatures"), href: "/services" },
-              { label: t("footer.linkPricing"), href: "/pricing" },
-              { label: t("footer.linkContact"), href: "/contact" },
-              { label: t("footer.linkChangelog"), href: "/changelog" },
-              { label: t("footer.linkStatus"), href: "/status" },
+              { label: t("footer.linkHome"), href: getLocalizedPath("/", locale) },
+              { label: t("footer.linkFeatures"), href: getLocalizedPath("/services", locale) },
+              { label: t("footer.linkPricing"), href: getLocalizedPath("/pricing", locale) },
+              { label: t("footer.linkCompare"), href: getLocalizedPath("/compare", locale) },
+              { label: t("footer.linkContact"), href: getLocalizedPath("/contact", locale) },
+              { label: t("footer.linkDocs"), href: getLocalizedPath("/docs", locale) },
+              { label: t("footer.linkChangelog"), href: getLocalizedPath("/changelog", locale) },
+              { label: t("footer.linkStatus"), href: getLocalizedPath("/status", locale) },
             ]}
           />
 
@@ -159,11 +137,15 @@ export const SiteFooter = memo(function SiteFooter() {
           <FooterCol
             heading={t("footer.colCompany")}
             links={[
-              { label: t("footer.linkAbout"), href: "/about" },
-              { label: t("footer.linkBlog"), href: "/blog" },
-              { label: t("footer.linkCareers"), href: "/careers" },
-              { label: t("footer.linkPress"), href: "/press" },
-              { label: t("footer.linkPartners"), href: "/partners" },
+              { label: t("footer.linkAbout"), href: getLocalizedPath("/about", locale) },
+              { label: t("footer.linkBlog"), href: getLocalizedPath("/blog", locale) },
+              { label: t("footer.linkCareers"), href: getLocalizedPath("/careers", locale) },
+              { label: t("footer.linkPress"), href: getLocalizedPath("/press", locale) },
+              { label: t("footer.linkPartners"), href: getLocalizedPath("/partners", locale) },
+              {
+                label: t("footer.linkBuildWithUs"),
+                href: getLocalizedPath("/build-with-us", locale),
+              },
             ]}
           />
 
@@ -171,11 +153,11 @@ export const SiteFooter = memo(function SiteFooter() {
           <FooterCol
             heading={t("footer.colLegal")}
             links={[
-              { label: t("footer.linkTerms"), href: "/terms" },
-              { label: t("footer.linkPrivacy"), href: "/privacy" },
-              { label: t("footer.linkRefunds"), href: "/refund-policy" },
-              { label: t("footer.linkCookies"), href: "/cookie-policy" },
-              { label: t("footer.linkGdpr"), href: "/gdpr" },
+              { label: t("footer.linkTerms"), href: getLocalizedPath("/terms", locale) },
+              { label: t("footer.linkPrivacy"), href: getLocalizedPath("/privacy", locale) },
+              { label: t("footer.linkRefunds"), href: getLocalizedPath("/refund-policy", locale) },
+              { label: t("footer.linkCookies"), href: getLocalizedPath("/cookie-policy", locale) },
+              { label: t("footer.linkGdpr"), href: getLocalizedPath("/gdpr", locale) },
             ]}
           />
 
@@ -214,19 +196,21 @@ export const SiteFooter = memo(function SiteFooter() {
                   </Link>
                 </ContactRow>
               </li>
-              <li>
-                <ContactRow icon={<WaIcon />}>
-                  <Link
-                    href="https://wa.me/33781732386"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={linkStyle}
-                    className="hover:text-[rgba(251,249,228,0.9)]"
-                  >
-                    WhatsApp
-                  </Link>
-                </ContactRow>
-              </li>
+              {waOptions.map((opt) => (
+                <li key={opt.number}>
+                  <ContactRow icon={<WaIcon />}>
+                    <Link
+                      href={whatsappHref(opt.number)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={linkStyle}
+                      className="hover:text-[rgba(251,249,228,0.9)]"
+                    >
+                      {waOptions.length > 1 ? `WhatsApp (${opt.label})` : "WhatsApp"}
+                    </Link>
+                  </ContactRow>
+                </li>
+              ))}
               <li>
                 <ContactRow icon={<PinIcon />}>
                   <span style={{ fontSize: 14, color: "rgba(251,249,228,0.5)" }}>
@@ -313,7 +297,7 @@ export const SiteFooter = memo(function SiteFooter() {
           <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
             {`© ${year} Epidom. All rights reserved.`}
             <Link
-              href="/changelog"
+              href={getLocalizedPath("/changelog", locale)}
               style={{ ...linkStyle, fontSize: 12 }}
               className="hover:text-[rgba(251,249,228,0.9)]"
             >
@@ -322,9 +306,9 @@ export const SiteFooter = memo(function SiteFooter() {
           </span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>
             {[
-              { label: t("footer.linkTerms"), href: "/terms" },
-              { label: t("footer.linkPrivacy"), href: "/privacy" },
-              { label: t("footer.linkRefunds"), href: "/refund-policy" },
+              { label: t("footer.linkTerms"), href: getLocalizedPath("/terms", locale) },
+              { label: t("footer.linkPrivacy"), href: getLocalizedPath("/privacy", locale) },
+              { label: t("footer.linkRefunds"), href: getLocalizedPath("/refund-policy", locale) },
             ].map((l) => (
               <Link
                 key={l.href}

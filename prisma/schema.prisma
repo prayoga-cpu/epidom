@@ -28,8 +28,13 @@ model User {
   // account that never loaded an authenticated page (still on the raw
   // schema default) instead of guessing from the value alone.
   timezoneUpdatedAt      DateTime?
-  currency               String    @default("IDR")
   defaultLanding         String    @default("dashboard")
+  // When true, visiting the marketing homepage while signed in redirects to
+  // the last app URL this device visited (see LastVisitedTracker/
+  // ResumeLastVisited) instead of showing marketing content. Device-local
+  // (localStorage) tracking, this field just gates whether it's active —
+  // replaces "Default landing page" as the editable setting in Profile.
+  rememberLastVisited    Boolean   @default(true)
   stripeConnectAccountId String?
   stripeConnectOnboarded Boolean   @default(false)
   isAdmin                Boolean   @default(false)
@@ -109,7 +114,6 @@ model Business {
   email           String?
   logo            String?
   website         String?
-  currency        String                   @default("IDR")
   timezone        String                   @default("Asia/Jakarta")
   locale          String                   @default("id")
   // bcrypt hash of the owner's 4-digit PIN. Required once any StaffMember
@@ -196,6 +200,19 @@ model StoreFinanceSettings {
   id      String @id @default(cuid())
   storeId String @unique
 
+  // The currency this store charges customers in (and displays throughout
+  // the dashboard/POS/storefront). Moved here from the old User.currency —
+  // it's a property of how the store operates, not of whoever's logged in.
+  currency String @default("IDR")
+  // Which payment rails this store's fee table/checkout offers by default —
+  // editable independently of `currency`; see inferMarket() in
+  // payment-fees.config.ts for the one-time suggested default.
+  market   PaymentMarket @default(INDONESIA)
+  // Which PaymentMethod values the cashier can actually pick at POS
+  // checkout. PAY_LATER is deliberately excluded — it has its own
+  // `payLaterEnabled` toggle below, never part of this list.
+  enabledPaymentMethods PaymentMethod[] @default([CASH, QRIS, GOPAY, OVO, DANA, SHOPEEPAY, BANK_TRANSFER, STRIPE_CARD])
+
   taxEnabled   Boolean @default(false)
   taxRate      Decimal @default(0) @db.Decimal(6, 4) // 0.1100 = 11%
   taxLabel     String?
@@ -244,6 +261,13 @@ model BusinessFinanceSettings {
   id         String @id @default(cuid())
   businessId String @unique
 
+  // Shared currency/market for every Store with syncFinanceWithBusiness =
+  // true — see StoreFinanceSettings for the per-store equivalent and field
+  // docs.
+  currency              String          @default("IDR")
+  market                PaymentMarket   @default(INDONESIA)
+  enabledPaymentMethods PaymentMethod[] @default([CASH, QRIS, GOPAY, OVO, DANA, SHOPEEPAY, BANK_TRANSFER, STRIPE_CARD])
+
   taxEnabled   Boolean @default(false)
   taxRate      Decimal @default(0) @db.Decimal(6, 4) // 0.1100 = 11%
   taxLabel     String?
@@ -274,6 +298,18 @@ model Subscription {
   currentPeriodEnd     DateTime?
   trialEndsAt          DateTime?
   cancelAtPeriodEnd    Boolean            @default(false)
+  // Admin-set custom price override. null = standard catalog pricing
+  // (STRIPE_CONFIG.PLAN_LIMITS[plan].price). Non-null on a real Stripe-billed
+  // account (stripeCustomerId not admin_/free_-prefixed) = live override,
+  // applied via an ad-hoc Stripe price on the subscription item — see
+  // SubscriptionService.setCustomPrice. Non-null on an admin_/free_ account
+  // = reference-only figure for the operator's own manual invoicing, never
+  // sent to Stripe. Deliberately separate from stripePriceId, which Stripe
+  // webhook handlers rewrite on every subscription event, so these three
+  // fields can never be silently clobbered back to catalog pricing.
+  customPriceAmount    Decimal?           @db.Decimal(10, 2)
+  customPriceCurrency  String?
+  customPriceInterval  BillingInterval?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1040,6 +1076,28 @@ enum PaymentMethod {
   BANK_TRANSFER
   STRIPE_CARD
   PAY_LATER
+  // Indonesia market
+  LINKAJA
+  // France market — Cheque and Titre-Restaurant (meal voucher, e.g.
+  // Edenred/Swile) are genuinely distinct payment instruments there, not
+  // just relabeled cards/e-wallets.
+  CHEQUE
+  TITRE_RESTAURANT
+  // Worldwide/EN market
+  PAYPAL
+  APPLE_PAY
+  GOOGLE_PAY
+  // Free-text fallback for anything not covered above — the actual label
+  // the cashier typed is stored in Order.paymentNote.
+  OTHER
+}
+
+/// Which payment rails a store/business's fee table and POS checkout offer
+/// by default — see PAYMENT_METHODS_BY_MARKET in payment-fees.config.ts.
+enum PaymentMarket {
+  INDONESIA
+  FRANCE
+  INTERNATIONAL
 }
 
 enum PaymentStatus {
@@ -1153,6 +1211,11 @@ enum PayType {
   HOURLY
   MONTHLY
   NONE
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
 }
 
 model StaffMember {

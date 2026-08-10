@@ -22,7 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
-import { isLifetimePeriod } from "@/lib/utils/formatting";
+import { isLifetimePeriod, formatCurrency } from "@/lib/utils/formatting";
 import { getApiErrorMessage } from "@/lib/utils/api-error";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { BetaPlanSwitcher } from "./beta-plan-switcher";
@@ -209,12 +209,23 @@ export function BillingContainer() {
                 )}
               </div>
               <p className="text-muted-foreground text-sm">
-                {subscription?.plan === "FREE"
-                  ? "Free forever"
-                  : subscription?.plan && PLAN_PRICE_IDR[subscription.plan]
-                    ? `${formatPrice(PLAN_PRICE_IDR[subscription.plan])}${t("billing.perMonth")}`
-                    : t("profile.subscription.pricing.enterprise")}
+                {subscription?.customPriceAmount != null
+                  ? `${formatCurrency(subscription.customPriceAmount, subscription.customPriceCurrency ?? "EUR")}${
+                      subscription.customPriceInterval === "YEARLY"
+                        ? t("billing.perYear")
+                        : t("billing.perMonth")
+                    }`
+                  : subscription?.plan === "FREE"
+                    ? "Free forever"
+                    : subscription?.plan && PLAN_PRICE_IDR[subscription.plan]
+                      ? `${formatPrice(PLAN_PRICE_IDR[subscription.plan])}${t("billing.perMonth")}`
+                      : t("profile.subscription.pricing.enterprise")}
               </p>
+              {subscription?.customPriceAmount != null && (
+                <p className="text-muted-foreground text-xs">
+                  {isBeta ? t("billing.customPriceNoteBeta") : t("billing.customPriceNoteStripe")}
+                </p>
+              )}
             </div>
             {subscription?.plan === "POS" && (
               <Button

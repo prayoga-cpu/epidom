@@ -5,7 +5,6 @@ export interface UpdateProfilePayload {
   phone?: string;
   locale?: string;
   timezone?: string;
-  currency?: string;
   image?: string;
 }
 
@@ -24,13 +23,7 @@ export function getProfileUpdateType(
   }
 
   // Check if other fields are being updated (DRY - extract to avoid duplication)
-  const otherFields: (keyof UpdateProfilePayload)[] = [
-    "name",
-    "phone",
-    "locale",
-    "timezone",
-    "currency",
-  ];
+  const otherFields: (keyof UpdateProfilePayload)[] = ["name", "phone", "locale", "timezone"];
   const hasOtherFields = otherFields.some((field) => variables[field] !== undefined);
 
   // If image is being removed (empty string or null)
@@ -51,7 +44,7 @@ export function getProfileUpdateType(
  */
 export function buildSessionUpdate(data: ProfileData): Record<string, any> {
   const update: Record<string, any> = {};
-  const fields: (keyof ProfileData)[] = ["currency", "locale", "timezone", "name", "phone"];
+  const fields: (keyof ProfileData)[] = ["locale", "timezone", "name", "phone"];
 
   fields.forEach((field) => {
     if (data[field] !== undefined && data[field] !== null) {

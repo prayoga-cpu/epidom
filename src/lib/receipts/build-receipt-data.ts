@@ -40,7 +40,7 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
       store: {
         select: {
           name: true,
-          business: { select: { locale: true, user: { select: { currency: true } } } },
+          business: { select: { locale: true } },
         },
       },
     },
@@ -52,15 +52,14 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     getFinanceSettings(order.storeId),
   ]);
 
-  // The store owner's *current* account currency — this is what every
+  // The store's *current* resolved currency — this is what every
   // MenuItem/cart/order amount is actually stored literally in (see
-  // CurrencyProvider's own docs: `useCurrency()` reads User.currency, not
-  // Business.currency, and the whole POS/dashboard treats that as the
+  // CurrencyProvider's own docs: `useCurrency()` reads the store/business
+  // finance settings, and the whole POS/dashboard treats that as the
   // store's display currency with no conversion). Orders don't freeze a
   // currency snapshot at creation time, so this is only wrong if the owner
-  // changes their account currency after the fact — rare, and out of scope
-  // here.
-  const currency = order.store.business.user.currency;
+  // changes it after the fact — rare, and out of scope here.
+  const currency = financeSettings.currency;
   const receiptLocale = resolveReceiptLocale(order.store.business.locale);
 
   const items: ReceiptData["items"] = order.items.map((item) => {
@@ -102,7 +101,13 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     discountAmount: Number(order.discountAmount) > 0 ? Number(order.discountAmount) : undefined,
     discountReason: order.discountReason ?? undefined,
     total: Number(order.total),
-    paymentMethod: order.paymentMethod,
+    // "OTHER" alone tells the customer nothing — show what the cashier
+    // actually typed instead (see pos-checkout-dialog.tsx's own buildReceipt,
+    // which does the same for the printed thermal receipt).
+    paymentMethod:
+      order.paymentMethod === "OTHER" && order.paymentNote
+        ? order.paymentNote
+        : order.paymentMethod,
     tableLabel: order.tableNumber ?? order.table?.label ?? undefined,
     notes: order.notes ?? undefined,
   };

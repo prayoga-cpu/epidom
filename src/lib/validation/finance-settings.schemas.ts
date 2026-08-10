@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { PaymentMarket } from "@prisma/client";
+import { currencySchema } from "./common.schemas";
+import { paymentMethodEnum } from "./pos.schemas";
+import { PAYMENT_METHOD_LABELS } from "@/config/payment-fees.config";
 
 /**
  * Store-level fees & taxes settings validation
@@ -20,24 +24,28 @@ export const paymentFeeRateSchema = z.object({
 
 export type PaymentFeeRateInput = z.infer<typeof paymentFeeRateSchema>;
 
-// Partial — only methods the merchant explicitly overrode are present
+// Partial — only methods the merchant explicitly overrode are present.
+// Built from PAYMENT_METHOD_LABELS' keys (every PaymentMethod enum value)
+// instead of a hand-maintained list, so a newly added payment method can't
+// silently drift out of sync and get rejected by .strict() again.
 export const paymentFeeOverridesSchema = z
-  .object({
-    CASH: paymentFeeRateSchema.optional(),
-    QRIS: paymentFeeRateSchema.optional(),
-    GOPAY: paymentFeeRateSchema.optional(),
-    OVO: paymentFeeRateSchema.optional(),
-    DANA: paymentFeeRateSchema.optional(),
-    SHOPEEPAY: paymentFeeRateSchema.optional(),
-    BANK_TRANSFER: paymentFeeRateSchema.optional(),
-    STRIPE_CARD: paymentFeeRateSchema.optional(),
-    PAY_LATER: paymentFeeRateSchema.optional(),
-  })
+  .object(
+    Object.fromEntries(
+      Object.keys(PAYMENT_METHOD_LABELS).map((method) => [method, paymentFeeRateSchema.optional()])
+    ) as Record<keyof typeof PAYMENT_METHOD_LABELS, z.ZodOptional<typeof paymentFeeRateSchema>>
+  )
   .strict();
 
 export type PaymentFeeOverridesInput = z.infer<typeof paymentFeeOverridesSchema>;
 
 const financeSettingsFieldsSchema = z.object({
+  // Moved here from the old User.currency — see StoreFinanceSettings.currency
+  // in schema.prisma for why this now lives per-store/per-business.
+  currency: currencySchema.optional(),
+  market: z.nativeEnum(PaymentMarket).optional(),
+  // Which methods POS checkout actually offers. PAY_LATER is excluded — it
+  // has its own dedicated payLaterEnabled toggle, never part of this list.
+  enabledPaymentMethods: z.array(paymentMethodEnum.exclude(["PAY_LATER"])).optional(),
   taxEnabled: z.boolean().optional(),
   taxRate: rateSchema.optional(),
   taxLabel: z.string().max(50, "Tax label is too long").optional(),

@@ -1,6 +1,74 @@
 "use client";
 
+import { useI18n, type Locale } from "@/components/lang/i18n-provider";
+
+interface MenuItem {
+  n: string;
+  d: string;
+  p: string;
+  c: string;
+}
+
+const CONTENT: Record<
+  Locale,
+  {
+    shopName: string;
+    tagline: string;
+    categories: string[];
+    items: MenuItem[];
+    cartLabel: string;
+    cartTotal: string;
+    payLabel: string;
+  }
+> = {
+  fr: {
+    shopName: "CAFÉ BRETONNE",
+    tagline: "Café de spécialité · Rennes",
+    categories: ["Café", "Thé", "Pâtisserie", "Snacks"],
+    items: [
+      { n: "Latte Vanille", d: "Origine unique · option avoine", p: "4,50 €", c: "#7a4f2f" },
+      { n: "Matcha Glacé", d: "Qualité cérémonielle", p: "5,00 €", c: "#79925a" },
+      { n: "Croffle Original", d: "Beurre maison · érable", p: "3,50 €", c: "#c69a5e" },
+      { n: "Cookie Chocolat", d: "Chocolat noir 70%", p: "2,80 €", c: "#5a3a2a" },
+    ],
+    cartLabel: "2 articles",
+    cartTotal: "8,00 €",
+    payLabel: "Payer CB →",
+  },
+  id: {
+    shopName: "WARUNG SARI",
+    tagline: "Specialty coffee · Bandung",
+    categories: ["Coffee", "Tea", "Pastry", "Snacks"],
+    items: [
+      { n: "Vanilla Latte", d: "Single origin · oat option", p: "Rp 38k", c: "#7a4f2f" },
+      { n: "Iced Matcha", d: "Ceremonial grade", p: "Rp 42k", c: "#79925a" },
+      { n: "Croffle Original", d: "House butter · maple", p: "Rp 28k", c: "#c69a5e" },
+      { n: "Choco Cookie", d: "Dark chocolate 70%", p: "Rp 18k", c: "#5a3a2a" },
+    ],
+    cartLabel: "2 items",
+    cartTotal: "Rp 66k",
+    payLabel: "Pay QRIS →",
+  },
+  en: {
+    shopName: "THE GRIND HOUSE",
+    tagline: "Specialty coffee · Worldwide",
+    categories: ["Coffee", "Tea", "Pastry", "Snacks"],
+    items: [
+      { n: "Vanilla Latte", d: "Single origin · oat option", p: "$4.50", c: "#7a4f2f" },
+      { n: "Iced Matcha", d: "Ceremonial grade", p: "$5.00", c: "#79925a" },
+      { n: "Croffle Original", d: "House butter · maple", p: "$3.50", c: "#c69a5e" },
+      { n: "Choco Cookie", d: "Dark chocolate 70%", p: "$2.80", c: "#5a3a2a" },
+    ],
+    cartLabel: "2 items",
+    cartTotal: "$8.00",
+    payLabel: "Pay Card →",
+  },
+};
+
 export function PhoneMenu() {
+  const { locale } = useI18n();
+  const content = CONTENT[locale];
+
   return (
     <div
       style={{
@@ -97,19 +165,19 @@ export function PhoneMenu() {
                 lineHeight: 1,
               }}
             >
-              WARUNG SARI
+              {content.shopName}
             </div>
             <div
               style={{ fontSize: 10, color: "var(--epi-cream-100)", marginTop: 4, opacity: 0.9 }}
             >
-              Specialty coffee · Bandung
+              {content.tagline}
             </div>
           </div>
         </div>
 
         {/* Category tabs */}
         <div style={{ display: "flex", gap: 6, padding: "14px 14px 4px", overflow: "hidden" }}>
-          {["Coffee", "Tea", "Pastry", "Snacks"].map((c, i) => (
+          {content.categories.map((c, i) => (
             <div
               key={i}
               style={{
@@ -137,12 +205,7 @@ export function PhoneMenu() {
             overflow: "hidden",
           }}
         >
-          {[
-            { n: "Vanilla Latte", d: "Single origin · oat option", p: "Rp 38k", c: "#7a4f2f" },
-            { n: "Iced Matcha", d: "Ceremonial grade", p: "Rp 42k", c: "#79925a" },
-            { n: "Croffle Original", d: "House butter · maple", p: "Rp 28k", c: "#c69a5e" },
-            { n: "Choco Cookie", d: "Dark chocolate 70%", p: "Rp 18k", c: "#5a3a2a" },
-          ].map((m, i) => (
+          {content.items.map((m, i) => (
             <div key={i} style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <div
                 style={{
@@ -201,9 +264,11 @@ export function PhoneMenu() {
                 textTransform: "uppercase",
               }}
             >
-              2 items
+              {content.cartLabel}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>Rp 66k</div>
+            <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
+              {content.cartTotal}
+            </div>
           </div>
           <div
             style={{
@@ -218,7 +283,7 @@ export function PhoneMenu() {
               whiteSpace: "nowrap",
             }}
           >
-            Pay QRIS →
+            {content.payLabel}
           </div>
         </div>
 

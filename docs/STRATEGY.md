@@ -6,7 +6,7 @@ The business case behind every technical decision in this repo. Update this doc 
 
 ## 1. One-line positioning
 
-> Epidom is the public storefront, ordering layer, and operating system for small Indonesian F&B businesses, free at the front of the funnel and laddering into paid operations and finance tools.
+> Epidom is the public storefront, ordering layer, and operating system for small F&B businesses — free at the front of the funnel and laddering into paid operations and finance tools. Primary market France, secondary market Indonesia, worldwide beyond both (re-prioritized 2026-08-10; see §3).
 
 ---
 
@@ -31,8 +31,9 @@ The pivot trades a saturated niche (French bakeries) for a defensible wedge (Ind
 
 ### Geographic priority
 
-1. **Indonesia first.** All product and pricing decisions optimize here.
-2. France is paused. The codebase keeps Stripe and EUR pricing for a future return, but no new French copy.
+1. **France — primary market (re-prioritized 2026-08-10).** Reactivated ahead of the original "5,000 paying Indonesian merchants" trigger (see §12), and promoted to primary alongside the marketing-site SEO/CRO/AEO/GEO overhaul — ad spend and content now lead with France. `fr` is a live, maintained locale again: new French copy is expected, not prohibited (see `AGENTS.md` §2, updated to match). EUR pricing and Stripe support were already in place from the original codebase. Domain (`epidom.fr`) already matched this market before the positioning caught up to it.
+2. **Indonesia — secondary market.** Everything in §§2-11 below (the pivot rationale, the 5.28M-business TAM, the storefront-as-wedge mechanics, the IDR pricing calibration) remains true and load-bearing — Indonesia is not deprioritized in substance, just no longer positioned as #1 in go-to-market sequencing.
+3. **Worldwide — tertiary**, served by the `en` locale and USD pricing, same product either way.
 
 ### Customer segments
 
@@ -47,7 +48,7 @@ The pivot trades a saturated niche (French bakeries) for a defensible wedge (Ind
 
 ## 4. Wedge mechanics
 
-The wedge is the **public storefront** (`epidom.id/@warung-pak-budi`). Free forever. Replaces:
+The wedge is the **public storefront** (`epidom.fr/@warung-pak-budi`). Free forever. Replaces:
 
 - Linktree (link in Instagram bio)
 - Google Drive PDF menu
@@ -186,4 +187,4 @@ These are unresolved. Decide before Phase 2 closes.
 1. Do we charge for QRIS transaction fees on the FREE tier? (Probably yes, ~0.7% on top of Xendit's 0.7% = 1.4% to the merchant. Aligns incentives, keeps free tier sustainable.)
 2. Do we white-label for kopi chains (e.g., Janji Jiwa, Kopi Kenangan franchises)? (Maybe, in Phase 5.)
 3. Do we go after small home-kitchen / catering operators with a sub-FREE "social tier" that's just a menu page? (Possibly, easy to add.)
-4. When do we reactivate French market? (Not before Indonesia hits 5,000 paying merchants.)
+4. ~~When do we reactivate French market?~~ **Resolved 2026-08-10: reactivated now and promoted to primary market**, ahead of the original "5,000 paying Indonesian merchants" trigger — see §3.

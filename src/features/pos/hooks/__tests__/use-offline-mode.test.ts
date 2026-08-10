@@ -56,24 +56,48 @@ describe("useOfflineMode", () => {
     expect(setOfflineModeEnabled).toHaveBeenCalledWith("store-1", true);
   });
 
-  it("does not re-enable if the user has already explicitly turned it off", async () => {
+  it("re-enables even if the user had previously turned it off — no opt-out once installed", async () => {
     offlineModeStore.set("store-1", false);
     mockUsePwaInstall.mockReturnValue({ isStandalone: true, canInstall: false, install: vi.fn() });
 
     const { result } = renderHook(() => useOfflineMode("store-1"), { wrapper: makeWrapper() });
 
-    // Give the detector's async check a tick to (not) fire.
-    await waitFor(() => expect(result.current.enabled).toBe(false));
-    expect(setOfflineModeEnabled).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.enabled).toBe(true));
+    expect(setOfflineModeEnabled).toHaveBeenCalledWith("store-1", true);
   });
 
-  it("does not call setOfflineModeEnabled again if already explicitly on", async () => {
-    offlineModeStore.set("store-1", true);
+  it("reports enabled immediately while standalone, even before the persisted state loads", () => {
     mockUsePwaInstall.mockReturnValue({ isStandalone: true, canInstall: false, install: vi.fn() });
 
     const { result } = renderHook(() => useOfflineMode("store-1"), { wrapper: makeWrapper() });
 
+    // Synchronous first render, before any async effect has resolved.
+    expect(result.current.enabled).toBe(true);
+  });
+
+  it("disableOfflineMode is a no-op while standalone", async () => {
+    offlineModeStore.set("store-1", true);
+    mockUsePwaInstall.mockReturnValue({ isStandalone: true, canInstall: false, install: vi.fn() });
+
+    const { result } = renderHook(() => useOfflineMode("store-1"), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.enabled).toBe(true));
+
+    vi.clearAllMocks();
+    await result.current.disableOfflineMode();
+
     expect(setOfflineModeEnabled).not.toHaveBeenCalled();
+    expect(result.current.enabled).toBe(true);
+  });
+
+  it("disableOfflineMode still works when not standalone", async () => {
+    offlineModeStore.set("store-1", true);
+    mockUsePwaInstall.mockReturnValue({ isStandalone: false, canInstall: false, install: vi.fn() });
+
+    const { result } = renderHook(() => useOfflineMode("store-1"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.enabled).toBe(true));
+
+    await result.current.disableOfflineMode();
+
+    expect(setOfflineModeEnabled).toHaveBeenCalledWith("store-1", false);
   });
 });

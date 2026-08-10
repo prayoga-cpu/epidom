@@ -48,6 +48,34 @@ export function mapPaymentMethodLabel(t: (key: string) => string, method: string
   return t(`publicOrder.paymentMethods.${method}`);
 }
 
+// Payment methods offered at checkout/Mark Paid, clustered by the market
+// they're actually popular in — CASH/STRIPE_CARD lead every list since
+// they're universal, "OTHER" (free-text custom label, see Order.paymentNote)
+// is handled separately by each dialog rather than listed here.
+export type PaymentMethodGroupKey = "common" | "indonesia" | "france" | "worldwide";
+
+export const PAYMENT_METHOD_GROUPS: { key: PaymentMethodGroupKey; methods: string[] }[] = [
+  { key: "common", methods: ["CASH", "STRIPE_CARD"] },
+  {
+    key: "indonesia",
+    methods: ["QRIS", "GOPAY", "OVO", "DANA", "SHOPEEPAY", "LINKAJA", "BANK_TRANSFER"],
+  },
+  { key: "france", methods: ["CHEQUE", "TITRE_RESTAURANT"] },
+  { key: "worldwide", methods: ["PAYPAL", "APPLE_PAY", "GOOGLE_PAY"] },
+];
+
+// "common" always leads; the market group matching the dashboard's own
+// language surfaces next so the cashier's most likely options need the
+// least scrolling — every other market stays available right below it,
+// since a store can always serve a customer from a different market.
+export function orderPaymentMethodGroups(locale: string) {
+  const [common, ...markets] = PAYMENT_METHOD_GROUPS;
+  const leadKey: PaymentMethodGroupKey =
+    locale === "fr" ? "france" : locale === "id" ? "indonesia" : "worldwide";
+  const reordered = [...markets].sort((a) => (a.key === leadKey ? -1 : 0));
+  return [common, ...reordered];
+}
+
 /**
  * An order that hasn't been settled yet — the case the "Unpaid" badge,
  * payment alerts, and the active-queue payment follow-up (delivered orders

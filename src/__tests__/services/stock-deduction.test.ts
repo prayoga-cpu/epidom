@@ -18,12 +18,18 @@ vi.mock("@/lib/prisma", () => {
     order: { findUnique: vi.fn() },
     stockMovement: { findFirst: vi.fn() },
     alert: { findFirst: vi.fn(), create: vi.fn() },
+    // fireLowStockAlert resolves the store owner's email to send a MagicBell
+    // alert alongside the Alert row — see stock-deduction.service.ts.
+    user: { findUnique: vi.fn().mockResolvedValue({ email: "owner@example.com" }) },
     $transaction: vi.fn((fn: any, _opts?: any) => fn(txMock)),
   };
   return { prisma: prismaMock };
 });
 vi.mock("@/lib/utils/types.server", () => ({
   toDecimal: (n: number) => n,
+}));
+vi.mock("@/lib/magicbell/client", () => ({
+  sendMerchantAlert: vi.fn(),
 }));
 
 import { deductStockForOrder } from "@/lib/services/stock-deduction.service";

@@ -362,7 +362,6 @@ export interface User {
   role: UserRole;
   locale: string;
   timezone: string;
-  currency: string;
   businessId?: string;
   permissions?: string[];
   lastLoginAt?: Date;

@@ -15,7 +15,7 @@ How the codebase is organized and why. This doc evolves as the product evolves. 
             ▼                    ▼                    ▼
     ┌───────────────┐   ┌────────────────┐   ┌──────────────┐
     │ (marketing)   │   │   (public)     │   │   (app)      │
-    │ epidom.id     │   │ epidom.id/@x   │   │ epidom.id/   │
+    │ epidom.fr     │   │ epidom.fr/@x   │   │ epidom.fr/   │
     │               │   │                │   │   store/...  │
     │ Landing,      │   │ Storefronts,   │   │              │
     │ Pricing,      │   │ Menus,         │   │ Authed       │
@@ -235,7 +235,7 @@ All async work that takes more than 1 second goes through Inngest. API routes st
 
 ### Phase 5: Aggregator email ingestion pipeline
 
-Merchants forward aggregator order emails to `orders@epidom.id` with a subject prefix `[@their-slug]`.
+Merchants forward aggregator order emails to `orders@epidom.fr` with a subject prefix `[@their-slug]`.
 
 ```
 Aggregator email (GoFood / GrabFood / ShopeeFood / Tokopedia)
@@ -394,8 +394,8 @@ Key principles:
 | ----------- | --------- | ------------------------ | ----------------------------------------- |
 | Development | (local)   | `localhost:3000`         | Local Postgres or Docker                  |
 | Preview     | All PRs   | `epidom-pr-N.vercel.app` | Neon preview branch                       |
-| Staging     | `staging` | `staging.epidom.id`      | Neon staging                              |
-| Production  | `main`    | `epidom.id`              | Neon prod (Singapore region from Phase 3) |
+| Staging     | `staging` | `staging.epidom.fr`      | Neon staging                              |
+| Production  | `main`    | `epidom.fr`              | Neon prod (Singapore region from Phase 3) |
 
 Every PR gets a preview deployment with its own database branch. Merging to `staging` deploys to staging. Merging to `main` deploys to prod after a manual approval gate.
 

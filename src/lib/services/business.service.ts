@@ -413,7 +413,6 @@ export class BusinessService {
       business = await this.businessRepo.create({
         userId,
         name: "My Business",
-        currency: "EUR",
         timezone: "UTC",
         locale: "en",
       });

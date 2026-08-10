@@ -37,7 +37,7 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/epidom"
 # DATABASE_URL="file:./dev.db"
 
 # Operator email (used for low-level system notifications)
-EPIDOM_OWNER_EMAIL=owner@epidom.id
+EPIDOM_OWNER_EMAIL=owner@epidom.fr
 ```
 
 ---
@@ -198,13 +198,13 @@ Local development uses the Inngest Dev Server (no env vars needed for that flow)
 
 ```bash
 RESEND_API_KEY=re_...
-EMAIL_FROM="Epidom <noreply@epidom.id>"
+EMAIL_FROM="Epidom <noreply@epidom.fr>"
 ```
 
 **Where to get a key:**
 
 1. Sign up at resend.com
-2. Add and verify your domain (`epidom.id`)
+2. Add and verify your domain (`epidom.fr`)
 3. Create an API key under API Keys
 
 DNS records required at the domain level:
@@ -416,7 +416,7 @@ INNGEST_SIGNING_KEY=
 
 # === Resend (email) ===
 RESEND_API_KEY=re_
-EMAIL_FROM=Epidom <noreply@epidom.id>
+EMAIL_FROM=Epidom <noreply@epidom.fr>
 
 # === Sentry (error tracking, Phase 1) ===
 SENTRY_DSN=
@@ -433,7 +433,7 @@ NEXT_PUBLIC_FEATURE_STOREFRONT_EDITOR=false
 NEXT_PUBLIC_FEATURE_AGGREGATOR=false
 
 # === Operator ===
-EPIDOM_OWNER_EMAIL=owner@epidom.id
+EPIDOM_OWNER_EMAIL=owner@epidom.fr
 ```
 
 ---

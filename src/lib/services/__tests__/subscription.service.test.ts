@@ -56,6 +56,9 @@ const mockSubscription = {
   currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   trialEndsAt: null,
   cancelAtPeriodEnd: false,
+  customPriceAmount: null,
+  customPriceCurrency: null,
+  customPriceInterval: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -71,6 +74,7 @@ const mockUser = {
   timezone: "UTC",
   currency: "EUR",
   defaultLanding: "dashboard",
+  rememberLastVisited: true,
   stripeConnectAccountId: null,
   stripeConnectOnboarded: false,
   createdAt: new Date(),

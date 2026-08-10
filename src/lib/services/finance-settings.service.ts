@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma, PaymentMarket, type PaymentMethod } from "@prisma/client";
 import type {
   UpdateFinanceSettingsInput,
   UpdateStoreFinanceSettingsInput,
 } from "@/lib/validation/finance-settings.schemas";
 import {
   PAYMENT_FEE_DEFAULTS,
+  DEFAULT_ENABLED_PAYMENT_METHODS,
   resolvePaymentFeeRate,
   type PaymentFeeOverrides,
 } from "@/config/payment-fees.config";
@@ -14,6 +15,9 @@ import type { ResolvedFinanceSettings } from "@/lib/finance/order-charges";
 /** Resolved settings plus the fully materialized fee-rate table (defaults merged with overrides). */
 export interface FinanceSettingsDto extends ResolvedFinanceSettings {
   storeId: string;
+  currency: string;
+  market: PaymentMarket;
+  enabledPaymentMethods: PaymentMethod[];
   taxLabel: string | null;
   feeRates: typeof PAYMENT_FEE_DEFAULTS;
   /** True when this store's settings are inherited from BusinessFinanceSettings. */
@@ -24,11 +28,17 @@ export interface FinanceSettingsDto extends ResolvedFinanceSettings {
 
 export interface BusinessFinanceSettingsDto extends ResolvedFinanceSettings {
   businessId: string;
+  currency: string;
+  market: PaymentMarket;
+  enabledPaymentMethods: PaymentMethod[];
   taxLabel: string | null;
   feeRates: typeof PAYMENT_FEE_DEFAULTS;
 }
 
 interface FinanceSettingsRow {
+  currency: string;
+  market: PaymentMarket;
+  enabledPaymentMethods: PaymentMethod[];
   taxEnabled: boolean;
   taxRate: Prisma.Decimal;
   taxLabel: string | null;
@@ -55,6 +65,9 @@ function buildFeeRates(overrides: PaymentFeeOverrides | null): typeof PAYMENT_FE
 function resolveRow(row: FinanceSettingsRow | null) {
   const overrides = row ? parseOverrides(row.processingFeeOverrides) : null;
   return {
+    currency: row?.currency ?? "IDR",
+    market: row?.market ?? PaymentMarket.INDONESIA,
+    enabledPaymentMethods: row?.enabledPaymentMethods ?? DEFAULT_ENABLED_PAYMENT_METHODS,
     taxEnabled: row?.taxEnabled ?? false,
     taxRate: row ? Number(row.taxRate) : 0,
     taxLabel: row?.taxLabel ?? null,
@@ -69,6 +82,9 @@ function resolveRow(row: FinanceSettingsRow | null) {
 
 function buildCreateData(input: UpdateFinanceSettingsInput) {
   return {
+    currency: input.currency ?? "IDR",
+    market: input.market ?? PaymentMarket.INDONESIA,
+    enabledPaymentMethods: input.enabledPaymentMethods ?? DEFAULT_ENABLED_PAYMENT_METHODS,
     taxEnabled: input.taxEnabled ?? false,
     taxRate: input.taxRate ?? 0,
     taxLabel: input.taxLabel,
@@ -82,6 +98,11 @@ function buildCreateData(input: UpdateFinanceSettingsInput) {
 
 function buildUpdateData(input: UpdateFinanceSettingsInput) {
   return {
+    ...(input.currency !== undefined && { currency: input.currency }),
+    ...(input.market !== undefined && { market: input.market }),
+    ...(input.enabledPaymentMethods !== undefined && {
+      enabledPaymentMethods: input.enabledPaymentMethods,
+    }),
     ...(input.taxEnabled !== undefined && { taxEnabled: input.taxEnabled }),
     ...(input.taxRate !== undefined && { taxRate: input.taxRate }),
     ...(input.taxLabel !== undefined && { taxLabel: input.taxLabel }),

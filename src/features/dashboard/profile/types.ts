@@ -6,7 +6,6 @@ export interface ProfileData {
   phone: string | null;
   locale: "en" | "fr" | "id" | undefined;
   timezone: string;
-  currency: string;
   defaultLanding: string;
   createdAt: Date;
   business: {
@@ -18,6 +17,7 @@ export interface ProfileData {
     phone: string | null;
     email: string | null;
     website: string | null;
+    locale: string;
   } | null;
   subscription: {
     plan: string;

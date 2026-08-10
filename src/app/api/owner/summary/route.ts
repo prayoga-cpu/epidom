@@ -19,6 +19,7 @@ import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { planHasFeature } from "@/lib/plans/entitlements";
 import { getExchangeRate } from "@/lib/services/exchange-rate.service";
 import { storefrontService } from "@/lib/services/storefront.service";
+import { getBusinessFinanceSettings } from "@/lib/services/finance-settings.service";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,6 @@ export async function GET(request: Request) {
     where: { userId },
     include: {
       stores: { select: { id: true, name: true, image: true } },
-      user: { select: { currency: true } },
     },
   });
 
@@ -55,13 +55,16 @@ export async function GET(request: Request) {
     });
   }
 
-  // Order.total (→ revenue) is already a literal value in the owner's own
+  // Order.total (→ revenue) is already a literal value in the business's own
   // currency, but Material.unitCost/WasteEntry.totalValue (→ cogs/wasteLoss)
   // are stored in IDR, the platform base currency. Mixing them in
   // `revenue - cogs` without converting first produces a nonsensical number
   // for any non-IDR business (subtracting IDR-scale cost from e.g. a EUR
-  // total) — convert cogs/waste into the owner's currency before combining.
-  const ownerCurrency = business.user?.currency ?? "IDR";
+  // total) — convert cogs/waste into the business's currency before combining.
+  // This rolls up across every store in the business, so the shared
+  // business-level currency (BusinessFinanceSettings) is the one source that
+  // makes sense here, regardless of any individual store's own override.
+  const ownerCurrency = (await getBusinessFinanceSettings(business.id)).currency;
   const ownerRate =
     ownerCurrency === "IDR" ? 1 : (await getExchangeRate("IDR", ownerCurrency)).rate;
 

@@ -9,6 +9,30 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.51.0] - 2026-08-10 · feat
+
+- **Marketing site now remembers your last chosen language**: picking a language from the switcher on epidom's marketing pages (`/`, `/pricing`, etc.) now sticks on every future visit to an unprefixed URL — a bookmark, the logo click, typing the bare domain — instead of only lasting for that page load. Previously the site only auto-guessed a language once from your browser settings on first visit; an explicit pick now always wins over that guess, on a real cookie so it's honored before the page even renders.
+
+## [2.50.0] - 2026-08-10 · fix
+
+- **Fixed a redirect loop in "Resume where I left off"**: clicking the EPIDOM logo (the way back to the marketing homepage from inside the app) now records `/` itself as the last-visited page before navigating, so the marketing site loads normally instead of instantly bouncing back into the app. Previously the logo linked straight to `/` without updating the tracked URL, so the stale in-app URL was still "last visited" and the resume redirect fired immediately — signed-in users had no way to actually see the marketing site.
+
+## [2.49.0] - 2026-08-10 · feat
+
+- **"Resume where I left off"**: signed-in visitors who land on the marketing homepage are now sent straight back to the last app page they had open on that device — including filters/tabs, since most of those already live in the URL — instead of seeing marketing content. New Profile setting (replaces "Default landing page") lets you turn this off. Device-local (localStorage), cleared on logout so the next person on a shared device isn't bounced into someone else's page.
+- **"Back to Stores" added to the account dropdown**, alongside Switch Account/Account Access — there was no way back to the store picker from inside a store without using the browser back button.
+
+## [2.48.0] - 2026-08-10 · feat
+
+- **Offline Mode is now mandatory (no opt-out) once the app is installed as a PWA** — previously it auto-enabled once but respected an explicit prior "off," which meant an installed app could still end up without offline support. `disableOfflineMode` itself now refuses while standalone, not just the UI.
+- **PWA install flow rebuilt on `@khmyznikov/pwa-install`**, replacing the hand-rolled iOS-detection code — its own richer, per-platform install guide (opened from a dedicated button), and its `isUnderStandaloneMode` is now the source of truth for "already installed" in this component. The install button (and the whole Offline & Sync dialog) is hidden entirely once installed — nothing left to configure once Offline Mode can't be toggled anyway. The app-preview screenshot (device-appropriate — phone vs. desktop) is still shown up front in our own dialog, same as before.
+
+## [2.47.0] - 2026-08-10 · feat
+
+- **NotificationBell: upload your own custom sound** instead of only the built-in Chime/Ping — pick "Custom" to select an MP3/WAV/OGG/M4A clip (validated: audio only, 3 seconds max, 1MB max), stored on-device only (no server upload). A trash icon next to "Custom" removes it and falls back to Chime.
+- **Push toggle and sound options merged into one row** in the NotificationBell popover — a single switch for enabling/disabling push, plus a "customize" dropdown covering why push can't be toggled right now (blocked/iOS-install-needed) and the full sound picker, instead of two separately-bordered always-expanded sections.
+- **Fixed a test regression from the MagicBell change (2.43.0)**: the low-stock alert test suite's Prisma mock didn't define `user.findUnique`, which `fireLowStockAlert` now calls to resolve the MagicBell recipient — crashed 3 tests. Production was never affected (the real Prisma client always has `.user`); this was a test-mock gap only, caught during this session's pre-push verification.
+
 ## [2.46.0] - 2026-08-10 · fix
 
 - **Billing page now shows "Lifetime access" instead of a literal far-future date** (e.g. "May 4th, 2126") for accounts granted a lifetime period from the admin panel — mirrors the admin user table's existing lifetime detection, now shared via one `isLifetimePeriod()` helper instead of two separately-maintained thresholds.

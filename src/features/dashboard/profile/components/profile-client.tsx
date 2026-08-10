@@ -10,7 +10,6 @@ import { FeesAndTaxesCard } from "./fees-and-taxes-card";
 import { ReceiptSettingsCard } from "./receipt-settings-card";
 import { useProfile } from "../hooks/use-profile";
 import type { ProfileData } from "../types";
-import { CurrencyProvider } from "@/components/providers/currency-provider";
 
 import { useSession } from "@/lib/auth-client";
 import { useEffect, useRef } from "react";
@@ -20,9 +19,16 @@ interface ProfileClientProps {
   isOwner: boolean;
   storeId?: string;
   storeName?: string;
+  storeCountry?: string | null;
 }
 
-export function ProfileClient({ initialProfile, isOwner, storeId, storeName }: ProfileClientProps) {
+export function ProfileClient({
+  initialProfile,
+  isOwner,
+  storeId,
+  storeName,
+  storeCountry,
+}: ProfileClientProps) {
   const { t } = useI18n();
   const { data: session, refetch } = useSession();
 
@@ -58,45 +64,48 @@ export function ProfileClient({ initialProfile, isOwner, storeId, storeName }: P
   }
 
   return (
-    <CurrencyProvider>
-      <div className="min-h-[calc(100vh-150px)] w-full space-y-4 md:space-y-6">
-        <div className="animate-slide-up">
-          <ProfileHeader
-            user={profileData}
-            subscription={profileData.subscription}
-            onUpdate={undefined}
-          />
-        </div>
-
-        <div className="animate-slide-up-delayed grid gap-4 md:grid-cols-2 md:gap-6">
-          <PersonalInfoCard user={profileData} onUpdate={undefined} />
-          <SubscriptionInfoCard subscription={profileData.subscription} />
-        </div>
-
-        <div className="animate-slide-up-delayed-2">
-          <BusinessInfoCard
-            business={profileData.business}
-            userId={profileData.id}
-            onUpdate={undefined}
-          />
-        </div>
-
-        {storeId && (
-          <div className="animate-slide-up-delayed-3">
-            <FeesAndTaxesCard storeId={storeId} storeName={storeName} />
-          </div>
-        )}
-
-        {storeId && (
-          <div className="animate-slide-up-delayed-3">
-            <ReceiptSettingsCard storeId={storeId} storeName={storeName} />
-          </div>
-        )}
-
-        <div className="animate-slide-up-delayed-3">
-          <AccountSettingsCard userEmail={profileData.email} />
-        </div>
+    <div className="min-h-[calc(100vh-150px)] w-full space-y-4 md:space-y-6">
+      <div className="animate-slide-up">
+        <ProfileHeader
+          user={profileData}
+          subscription={profileData.subscription}
+          onUpdate={undefined}
+        />
       </div>
-    </CurrencyProvider>
+
+      <div className="animate-slide-up-delayed grid gap-4 md:grid-cols-2 md:gap-6">
+        <PersonalInfoCard user={profileData} onUpdate={undefined} />
+        <SubscriptionInfoCard subscription={profileData.subscription} />
+      </div>
+
+      <div className="animate-slide-up-delayed-2">
+        <BusinessInfoCard
+          business={profileData.business}
+          userId={profileData.id}
+          onUpdate={undefined}
+        />
+      </div>
+
+      {storeId && (
+        <div className="animate-slide-up-delayed-3">
+          <FeesAndTaxesCard
+            storeId={storeId}
+            storeName={storeName}
+            storeCountry={storeCountry}
+            businessLocale={profileData.business?.locale}
+          />
+        </div>
+      )}
+
+      {storeId && (
+        <div className="animate-slide-up-delayed-3">
+          <ReceiptSettingsCard storeId={storeId} storeName={storeName} />
+        </div>
+      )}
+
+      <div className="animate-slide-up-delayed-3">
+        <AccountSettingsCard userEmail={profileData.email} />
+      </div>
+    </div>
   );
 }

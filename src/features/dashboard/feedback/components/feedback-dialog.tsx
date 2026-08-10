@@ -37,6 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { getAllDashboardNavItems } from "@/config/navigation.config";
 import { compressImage, isValidImage, isValidImageSize } from "@/lib/utils/image-compression";
@@ -106,7 +107,7 @@ const ticketRefOf = (id: string) => "#" + id.slice(-8).toUpperCase();
  * Shows a success step with the ticket reference and community CTAs after submission
  */
 export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale, formatDateTime } = useI18n();
   const pathname = usePathname();
   const { storeId } = useCurrentStore();
   const submitFeedback = useSubmitFeedback();
@@ -343,9 +344,10 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
   };
 
   const ticketRef = submittedId ? submittedId.slice(-8).toUpperCase() : "";
-  const whatsappHref =
-    "https://wa.me/33781732386?text=" +
-    encodeURIComponent(t("feedback.whatsappPrefill") + " #" + ticketRef);
+  const feedbackWhatsappHref = whatsappHref(
+    getWhatsAppOptions(locale)[0].number,
+    t("feedback.whatsappPrefill") + " #" + ticketRef
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -686,7 +688,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                 </a>
               </Button>
               <Button asChild variant="outline">
-                <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                <a href={feedbackWhatsappHref} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="mr-1.5 h-4 w-4" />
                   {t("feedback.chatWhatsApp")}
                 </a>

@@ -11,7 +11,7 @@ import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { nanoid } from "@/lib/utils/nanoid";
 import { STRIPE_CONFIG } from "@/config/stripe.config";
 import { planHasFeature } from "@/lib/plans/entitlements";
-import { resolveFinanceSettingsForOrder } from "@/lib/services";
+import { getFinanceSettings } from "@/lib/services";
 import { computeOrderCharges } from "@/lib/finance/order-charges";
 
 function generateOrderNumber(): string {
@@ -44,7 +44,6 @@ export async function POST(request: Request) {
               include: {
                 user: {
                   select: {
-                    currency: true,
                     stripeConnectAccountId: true,
                     stripeConnectOnboarded: true,
                     subscription: { select: { plan: true, status: true } },
@@ -122,7 +121,7 @@ export async function POST(request: Request) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const slug = storefront.slug;
 
-    const financeSettings = await resolveFinanceSettingsForOrder(storefront.storeId);
+    const financeSettings = await getFinanceSettings(storefront.storeId);
     const charges = computeOrderCharges({
       itemsTotal: subtotal,
       paymentMethod: input.paymentMethod as PaymentMethod,
@@ -200,7 +199,7 @@ export async function POST(request: Request) {
         const payment = await initiatePayment({
           orderId: order.id,
           amount: charges.total,
-          currency: storefront.store.business.user.currency,
+          currency: financeSettings.currency,
           customerName: input.customerName,
           customerPhone: input.customerPhone,
           description: `Pesanan ${orderNumber} - ${storefront.displayName}`,
@@ -257,7 +256,7 @@ export async function POST(request: Request) {
           orderNumber,
           customerName: input.customerName,
           totalAmount: charges.total,
-          currency: storefront.store.business.user.currency,
+          currency: financeSettings.currency,
           paymentMethod: input.paymentMethod,
           items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
           merchantPhone: store.phone ?? null,

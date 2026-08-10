@@ -1,21 +1,34 @@
 "use client";
 import * as React from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useI18n } from "./i18n-provider";
+import { stripLocalePrefix, getLocalizedPath, LOCALE_PREF_COOKIE } from "@/lib/i18n-routing";
 
 const OPTS = [
-  { label: "English", value: "en", short: "EN", flag: "🇺🇸" },
-  { label: "Indonesia", value: "id", short: "ID", flag: "🇮🇩" },
   { label: "Français", value: "fr", short: "FR", flag: "🇫🇷" },
+  { label: "Indonesia", value: "id", short: "ID", flag: "🇮🇩" },
+  { label: "English", value: "en", short: "EN", flag: "🇺🇸" },
 ] as const;
 
 export default function LangSwitcher({
   className = "",
   dropUp = false,
+  /**
+   * True on the marketing site, where language is URL-driven (/, /id/*,
+   * /en/*) — selecting a language navigates instead of just flipping
+   * client state, so it survives the next server render. Leave false (the
+   * dashboard/topbar/sidebar usage) where locale is purely a client
+   * preference and there's no per-locale URL to go to.
+   */
+  urlDriven = false,
 }: {
   className?: string;
   dropUp?: boolean;
+  urlDriven?: boolean;
 }) {
   const { locale, setLocale } = useI18n();
+  const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
@@ -108,6 +121,19 @@ export default function LangSwitcher({
                 onClick={() => {
                   setLocale(opt.value);
                   setOpen(false);
+                  if (urlDriven) {
+                    // Real HTTP cookie (not the localStorage-based
+                    // preference setLocale already wrote) so the Edge proxy
+                    // can honor this pick on every future unprefixed visit
+                    // — see src/lib/i18n-routing.ts.
+                    try {
+                      document.cookie = `${LOCALE_PREF_COOKIE}=${opt.value}; path=/; max-age=${60 * 60 * 24 * 365}`;
+                    } catch {}
+                    if (pathname) {
+                      const { basePath } = stripLocalePrefix(pathname);
+                      router.push(getLocalizedPath(basePath, opt.value));
+                    }
+                  }
                 }}
                 style={{
                   display: "flex",

@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CURRENCIES } from "@/lib/constants/currencies";
+import { Switch } from "@/components/ui/switch";
 import {
   Form,
   FormControl,
@@ -44,18 +44,12 @@ interface EditPersonalInfoDialogProps {
     phone?: string | null;
     locale: "en" | "fr" | "id" | undefined;
     timezone: string;
-    currency: string;
-    defaultLanding?: string;
+    rememberLastVisited?: boolean;
   };
   onUpdate?: () => void;
 }
 
 type FormData = z.infer<typeof updateProfileSchema>;
-
-const CURRENCY_OPTIONS: ComboboxOption[] = CURRENCIES.map((c) => ({
-  value: c.code,
-  label: `${c.code} — ${c.name}`,
-}));
 
 const TIMEZONE_OPTIONS: ComboboxOption[] = Intl.supportedValuesOf("timeZone").map((tz) => ({
   value: tz,
@@ -78,12 +72,7 @@ export function EditPersonalInfoDialog({
       phone: user.phone || "",
       locale: user.locale,
       timezone: user.timezone,
-      currency: user.currency,
-      defaultLanding: (user.defaultLanding ?? "dashboard") as
-        | "dashboard"
-        | "pos"
-        | "storefront"
-        | "data",
+      rememberLastVisited: user.rememberLastVisited ?? true,
     },
   });
 
@@ -95,12 +84,7 @@ export function EditPersonalInfoDialog({
         phone: user.phone || "",
         locale: user.locale,
         timezone: user.timezone,
-        currency: user.currency,
-        defaultLanding: (user.defaultLanding ?? "dashboard") as
-          | "dashboard"
-          | "pos"
-          | "storefront"
-          | "data",
+        rememberLastVisited: user.rememberLastVisited ?? true,
       });
     }
   }, [open, user, form]);
@@ -187,47 +171,28 @@ export function EditPersonalInfoDialog({
               )}
             />
 
-            <div className="grid grid-cols-2 items-start gap-4">
-              <FormField
-                control={form.control}
-                name="locale"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("profile.personal.language")}</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="en">{t("common.language.en")}</SelectItem>
-                        <SelectItem value="fr">{t("common.language.fr")}</SelectItem>
-                        <SelectItem value="id">{t("common.language.id")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="currency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("profile.personal.currency")}</FormLabel>
-                    <Combobox
-                      options={CURRENCY_OPTIONS}
-                      value={field.value}
-                      onChange={field.onChange}
-                      searchPlaceholder={t("profile.personal.currencySearchPlaceholder")}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="locale"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("profile.personal.language")}</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="en">{t("common.language.en")}</SelectItem>
+                      <SelectItem value="fr">{t("common.language.fr")}</SelectItem>
+                      <SelectItem value="id">{t("common.language.id")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -248,36 +213,18 @@ export function EditPersonalInfoDialog({
 
             <FormField
               control={form.control}
-              name="defaultLanding"
+              name="rememberLastVisited"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("profile.personal.defaultLanding")}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="dashboard">
-                        {t("profile.personal.landingOptions.dashboard")}
-                      </SelectItem>
-                      <SelectItem value="pos">
-                        {t("profile.personal.landingOptions.pos")}
-                      </SelectItem>
-                      <SelectItem value="storefront">
-                        {t("profile.personal.landingOptions.storefront")}
-                      </SelectItem>
-                      <SelectItem value="data">
-                        {t("profile.personal.landingOptions.data")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>{t("profile.personal.defaultLandingHint")}</FormDescription>
+                <FormItem className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel>{t("profile.personal.rememberLastVisited")}</FormLabel>
+                    <FormDescription>
+                      {t("profile.personal.rememberLastVisitedHint")}
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

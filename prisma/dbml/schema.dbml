@@ -14,8 +14,8 @@ Table user {
   locale String [not null, default: 'id']
   timezone String [not null, default: 'Asia/Jakarta']
   timezoneUpdatedAt DateTime
-  currency String [not null, default: 'IDR']
   defaultLanding String [not null, default: 'dashboard']
+  rememberLastVisited Boolean [not null, default: true]
   stripeConnectAccountId String
   stripeConnectOnboarded Boolean [not null, default: false]
   isAdmin Boolean [not null, default: false]
@@ -80,7 +80,6 @@ Table businesses {
   email String
   logo String
   website String
-  currency String [not null, default: 'IDR']
   timezone String [not null, default: 'Asia/Jakarta']
   locale String [not null, default: 'id']
   ownerPin String
@@ -138,6 +137,9 @@ Table stores {
 Table store_finance_settings {
   id String [pk]
   storeId String [unique, not null]
+  currency String [not null, default: 'IDR']
+  market PaymentMarket [not null, default: 'INDONESIA']
+  enabledPaymentMethods PaymentMethod[] [not null]
   taxEnabled Boolean [not null, default: false]
   taxRate Decimal [not null, default: 0]
   taxLabel String
@@ -172,6 +174,9 @@ receipt instead of duplicating the same fields here).'
 Table business_finance_settings {
   id String [pk]
   businessId String [unique, not null]
+  currency String [not null, default: 'IDR']
+  market PaymentMarket [not null, default: 'INDONESIA']
+  enabledPaymentMethods PaymentMethod[] [not null]
   taxEnabled Boolean [not null, default: false]
   taxRate Decimal [not null, default: 0]
   taxLabel String
@@ -201,6 +206,9 @@ Table subscriptions {
   currentPeriodEnd DateTime
   trialEndsAt DateTime
   cancelAtPeriodEnd Boolean [not null, default: false]
+  customPriceAmount Decimal
+  customPriceCurrency String
+  customPriceInterval BillingInterval
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   user user [not null]
@@ -1105,6 +1113,19 @@ Enum PaymentMethod {
   BANK_TRANSFER
   STRIPE_CARD
   PAY_LATER
+  LINKAJA
+  CHEQUE
+  TITRE_RESTAURANT
+  PAYPAL
+  APPLE_PAY
+  GOOGLE_PAY
+  OTHER
+}
+
+Enum PaymentMarket {
+  INDONESIA
+  FRANCE
+  INTERNATIONAL
 }
 
 Enum PaymentStatus {
@@ -1164,6 +1185,11 @@ Enum PayType {
   HOURLY
   MONTHLY
   NONE
+}
+
+Enum BillingInterval {
+  MONTHLY
+  YEARLY
 }
 
 Enum ScheduleStatus {

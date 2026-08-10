@@ -320,6 +320,13 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
     status: SubscriptionStatus.CANCELED,
     cancelAtPeriodEnd: true,
+    // A subscription that's truly deleted (not just canceled-at-period-end)
+    // will only ever come back via a fresh Checkout Session on the catalog
+    // price — clear any admin custom-price override so it doesn't linger
+    // and misdisplay against a future re-subscribe.
+    customPriceAmount: null,
+    customPriceCurrency: null,
+    customPriceInterval: null,
   });
 
   subscriptionService.invalidateUserCache(existingSubscription.userId);

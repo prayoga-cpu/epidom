@@ -74,7 +74,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
     name: item.name,
     description: item.description,
     price: Number(item.price),
-    currency: storefront.store.business.user.currency,
+    currency: storefront.store.currency,
     imageUrl: item.imageUrl,
     isAvailable: item.isAvailable,
     isFeatured: item.isFeatured,

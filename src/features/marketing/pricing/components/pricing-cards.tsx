@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUser } from "@/lib/auth-client";
 import { useToast } from "@/hooks/use-toast";
 import { trackEvent, trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
+import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 const TIERS = [
   { idx: 0, key: "t1", highlight: false, promo: false, plan: "FREE" },
@@ -26,9 +29,10 @@ export function PricingCards({
   yearly: boolean;
   currentPlan?: string | null;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user, loading: userLoading } = useUser();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [confirming, setConfirming] = useState<{
     key: string;
@@ -82,7 +86,15 @@ export function PricingCards({
     trackEvent("cta_click", { event_category: "engagement", event_label: `pricing_${tierKey}` });
     if (tierKey === "t4") {
       trackConversion("contact_whatsapp", { event_label: "pricing_enterprise" });
-      window.open("https://wa.me/33781732386", "_blank");
+      const waOptions = getWhatsAppOptions(locale);
+      if (waOptions.length === 1) {
+        window.open(whatsappHref(waOptions[0].number), "_blank");
+      } else {
+        // Worldwide (en): more than one real number to choose from — send
+        // to the contact page, which lists each market's WhatsApp option,
+        // rather than guessing which one this visitor wants.
+        router.push(getLocalizedPath("/contact", locale));
+      }
       return;
     }
     const name = t(`redesign.pricingPage.${tierKey}name` as const);

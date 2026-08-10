@@ -1,10 +1,14 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import { useUser } from "@/lib/auth-client";
 import { formatCurrency, type Currency } from "@/lib/utils/formatting";
 import { CURRENCIES } from "@/lib/constants/currencies";
+import {
+  useFinanceSettings,
+  useBusinessFinanceSettings,
+} from "@/features/dashboard/profile/hooks/use-finance-settings";
 
 export type { Currency };
 
@@ -45,35 +49,24 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Use the same query key as use-profile.ts so this reads from the shared
-  // cache and re-runs when the profile is invalidated after a currency update.
-  // select() extracts just the currency regardless of what shape the cache
-  // holds (full profile object vs. raw API envelope).
-  const { data: currencyFromProfile } = useQuery<any, Error, string | undefined>({
-    queryKey: ["profile", user?.id],
-    queryFn: () =>
-      fetch("/api/user/profile")
-        .then((r) => r.json())
-        .then((d) => (d?.success && d?.data ? d.data : d)),
-    enabled: !!user?.id && !userLoading,
-    staleTime: 5 * 60 * 1000,
-    select: (data: any): string | undefined => {
-      // data can be: full profile object { currency, ... }
-      //           or API envelope        { success, data: { currency, ... } }
-      //           or just a string       "EUR" (legacy cache entry)
-      if (typeof data === "string") return data;
-      if (data?.currency) return data.currency as string;
-      if (data?.data?.currency) return data.data.currency as string;
-      return undefined;
-    },
+  // Currency moved off the old per-user profile field onto the store (or
+  // shared business) finance settings — see Fees & Taxes. Routes under
+  // /store/[storeId]/... resolve it from that store; everything else
+  // (e.g. /profile, /billing) falls back to the business-level default.
+  const params = useParams<{ storeId?: string }>();
+  const storeId = params?.storeId;
+  const { data: storeSettings } = useFinanceSettings(storeId);
+  const { data: businessSettings } = useBusinessFinanceSettings({
+    enabled: !storeId && !!user?.id && !userLoading,
   });
+  const currencyFromSettings = storeId ? storeSettings?.currency : businessSettings?.currency;
 
   useEffect(() => {
-    if (!currencyFromProfile) return;
-    if (CURRENCIES.some((c) => c.code === currencyFromProfile)) {
-      setUserCurrency(currencyFromProfile);
+    if (!currencyFromSettings) return;
+    if (CURRENCIES.some((c) => c.code === currencyFromSettings)) {
+      setUserCurrency(currencyFromSettings);
     }
-  }, [currencyFromProfile]);
+  }, [currencyFromSettings]);
 
   // Fetch the BASE_CURRENCY -> userCurrency rate whenever the display
   // currency actually differs from the base — for any currency, not just USD.

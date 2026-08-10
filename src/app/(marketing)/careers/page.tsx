@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import { generateMetadata } from "@/lib/seo";
 import { CareersClient } from "./client";
-export const metadata: Metadata = {
+export const metadata = generateMetadata({
   title: "Careers — EPIDOM",
-  description: "Join the Epidom team. We're building the future of F&B operations.",
-};
+  description: "Join the Epidom team. We're building the free operating system for F&B businesses.",
+  canonical: "https://epidom.fr/careers",
+});
 export default function CareersPage() {
   return <CareersClient />;
 }

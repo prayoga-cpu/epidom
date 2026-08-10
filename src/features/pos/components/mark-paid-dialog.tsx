@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -13,23 +12,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import type { SettlePaymentMethod } from "../types/pos.types";
+import { PaymentMethodChip } from "./payment-method-chip";
+import { mapPaymentMethodLabel, orderPaymentMethodGroups } from "../lib/order-status-display";
 
-// Same set offered at POS checkout (see pos-checkout-dialog.tsx), minus
-// PAY_LATER — marking an order paid always means a real method was used.
-const SETTLE_PAYMENT_METHODS: { value: SettlePaymentMethod; label: string }[] = [
-  { value: "CASH", label: "cash" },
-  { value: "QRIS", label: "QRIS" },
-  { value: "GOPAY", label: "GoPay" },
-  { value: "OVO", label: "OVO" },
-  { value: "DANA", label: "DANA" },
-  { value: "SHOPEEPAY", label: "ShopeePay" },
-  { value: "BANK_TRANSFER", label: "virtualAccount" },
-  { value: "STRIPE_CARD", label: "creditCard" },
-];
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export interface MarkPaidConfirmData {
   paymentMethod: SettlePaymentMethod;
@@ -52,7 +42,7 @@ export function MarkPaidDialog({
   isSubmitting,
   description,
 }: MarkPaidDialogProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [paymentMethod, setPaymentMethod] = useState<SettlePaymentMethod>("CASH");
   const [note, setNote] = useState("");
 
@@ -65,57 +55,77 @@ export function MarkPaidDialog({
     }
   }, [open]);
 
+  const isOther = paymentMethod === "OTHER";
+  const otherNoteMissing = isOther && !note.trim();
+
   const handleConfirm = async () => {
     await onConfirm({ paymentMethod, paymentNote: note.trim() || undefined });
   };
 
+  // Same grouping as POS checkout (see pos-checkout-dialog.tsx) minus
+  // PAY_LATER — marking an order paid always means a real method was used.
+  const paymentMethodGroups = orderPaymentMethodGroups(locale);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("pos.markPaid.title")}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
 
         <div className="space-y-5">
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Label>{t("pos.checkout.paymentMethod")}</Label>
             <RadioGroup
               value={paymentMethod}
               onValueChange={(v) => setPaymentMethod(v as SettlePaymentMethod)}
-              className="grid grid-cols-2 gap-2"
+              className="space-y-3"
             >
-              {SETTLE_PAYMENT_METHODS.map((m) => (
-                <Label
-                  key={m.value}
-                  htmlFor={`mark-paid-method-${m.value}`}
-                  className={cn(
-                    "flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-normal",
-                    paymentMethod === m.value
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-foreground/40"
+              {paymentMethodGroups.map((group) => (
+                <div key={group.key} className="space-y-2">
+                  {group.key !== "common" && (
+                    <p className="text-muted-foreground text-xs font-semibold uppercase">
+                      {t(`pos.checkout.market${capitalize(group.key)}`)}
+                    </p>
                   )}
-                >
-                  <RadioGroupItem value={m.value} id={`mark-paid-method-${m.value}`} />
-                  {m.label === "cash"
-                    ? t("pos.checkout.cash")
-                    : m.label === "virtualAccount"
-                      ? t("pos.markPaid.virtualAccount")
-                      : m.label === "creditCard"
-                        ? t("pos.markPaid.creditCard")
-                        : m.label}
-                </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {group.methods.map((method) => (
+                      <PaymentMethodChip
+                        key={method}
+                        idPrefix="mark-paid-method"
+                        value={method}
+                        selected={paymentMethod === method}
+                        label={mapPaymentMethodLabel(t, method)}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
+              <div className="grid grid-cols-2 gap-2">
+                <PaymentMethodChip
+                  idPrefix="mark-paid-method"
+                  value="OTHER"
+                  selected={isOther}
+                  label={t("pos.checkout.other")}
+                />
+              </div>
             </RadioGroup>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mark-paid-note">{t("pos.markPaid.noteLabel")}</Label>
+            <Label htmlFor="mark-paid-note">
+              {isOther ? t("pos.checkout.customPaymentMethodLabel") : t("pos.markPaid.noteLabel")}
+            </Label>
             <Textarea
               id="mark-paid-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder={t("pos.markPaid.notePlaceholder")}
+              placeholder={
+                isOther
+                  ? t("pos.checkout.customPaymentMethodPlaceholder")
+                  : t("pos.markPaid.notePlaceholder")
+              }
               className="resize-none"
               maxLength={300}
             />
@@ -131,7 +141,7 @@ export function MarkPaidDialog({
           >
             {t("common.actions.cancel")}
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={isSubmitting}>
+          <Button type="button" onClick={handleConfirm} disabled={isSubmitting || otherNoteMissing}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t("pos.orderCard.markPaid")}
           </Button>

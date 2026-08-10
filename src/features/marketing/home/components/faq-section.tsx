@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { FaqStructuredData } from "@/components/seo/structured-data";
+import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 
 export function FaqSection() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [open, setOpen] = useState<number>(0);
+  const waOptions = getWhatsAppOptions(locale);
 
   const faqs = [1, 2, 3, 4, 5, 6].map((n) => ({
     q: t(`redesign.faq.q${n}` as const),
@@ -14,6 +17,7 @@ export function FaqSection() {
 
   return (
     <section className="epi-section">
+      <FaqStructuredData faqs={faqs} />
       <div className="epi-container">
         <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
           {/* Left — sticky heading */}
@@ -54,12 +58,21 @@ export function FaqSection() {
               }}
             >
               {t("redesign.faq.helpText")}{" "}
-              <span
-                style={{ color: "#25D366", borderBottom: "1px solid #25D366", cursor: "pointer" }}
-                onClick={() => window.open("https://wa.me/33781732386", "_blank")}
-              >
-                {t("redesign.faq.helpWa")}
-              </span>{" "}
+              {waOptions.map((opt, i) => (
+                <span key={opt.number}>
+                  {i > 0 && " / "}
+                  <span
+                    style={{
+                      color: "#25D366",
+                      borderBottom: "1px solid #25D366",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => window.open(whatsappHref(opt.number), "_blank")}
+                  >
+                    {waOptions.length > 1 ? `${t("redesign.faq.helpWa")} (${opt.label})` : t("redesign.faq.helpWa")}
+                  </span>
+                </span>
+              ))}{" "}
               {t("redesign.faq.helpOr")}{" "}
               <a
                 href={`mailto:${t("redesign.faq.helpEmail")}`}

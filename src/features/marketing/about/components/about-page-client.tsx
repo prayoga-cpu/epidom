@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 const STATS = ["stat1", "stat2", "stat3", "stat4"] as const;
 const VALUES = ["v1", "v2", "v3"] as const;
 
 export function AboutPageClient() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
 
   return (
@@ -182,7 +183,7 @@ export function AboutPageClient() {
             {t("about.valuesEyebrow")}
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3" style={{ gap: 28 }}>
-            {VALUES.map((v) => (
+            {VALUES.map((v, i) => (
               <div
                 key={v}
                 style={{
@@ -193,21 +194,17 @@ export function AboutPageClient() {
                 }}
               >
                 <div
+                  className="epi-script"
+                  aria-hidden="true"
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    marginBottom: 20,
-                    background: "rgba(217,174,59,0.12)",
-                    border: "1px solid rgba(217,174,59,0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    fontSize: 30,
+                    lineHeight: 1,
+                    color: "var(--epi-gold-500)",
+                    opacity: 0.85,
+                    marginBottom: 18,
                   }}
                 >
-                  {v === "v1" && <LeafIcon />}
-                  {v === "v2" && <WrenchIcon />}
-                  {v === "v3" && <ShieldIcon />}
+                  {String(i + 1).padStart(2, "0")}
                 </div>
                 <h3
                   style={{
@@ -259,6 +256,21 @@ export function AboutPageClient() {
             <p style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(251,249,228,0.6)", margin: 0 }}>
               {t("about.teamBody")}
             </p>
+            <a
+              href={getLocalizedPath("/build-with-us", locale)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                marginTop: 20,
+                fontSize: 14,
+                color: "var(--epi-gold-400)",
+                textDecoration: "none",
+                borderBottom: "1px solid rgba(217,174,59,0.4)",
+              }}
+            >
+              {t("about.buildWithUs")} →
+            </a>
           </div>
 
           {/* Avatar grid placeholder */}
@@ -338,57 +350,5 @@ export function AboutPageClient() {
         </button>
       </section>
     </div>
-  );
-}
-
-function LeafIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--epi-gold-400)"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M11 20A7 7 0 0118 6.16C14.63 5.4 11 5.35 7 8c-4 2.67-5 8-3 13" />
-      <path d="M11 20c0-3.86 1.29-7 5-10" />
-    </svg>
-  );
-}
-
-function WrenchIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--epi-gold-400)"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--epi-gold-400)"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
   );
 }

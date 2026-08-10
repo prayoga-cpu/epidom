@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { lookupPublicOrdersSchema } from "@/lib/validation/public-orders.schemas";
 import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { getFinanceSettings } from "@/lib/services";
 
 export async function POST(request: Request) {
   try {
@@ -57,11 +58,12 @@ export async function POST(request: Request) {
         paymentStatus: true,
         total: true,
         createdAt: true,
-        // All orders here share one storefront, so the owner's live currency
-        // (not each item's persisted currency snapshot, which goes stale the
-        // moment the owner changes it in Profile settings) only needs fetching once.
+        // All orders here share one storefront, so the store's live resolved
+        // currency (not each item's persisted currency snapshot, which goes
+        // stale the moment the owner changes it in Fees & Taxes settings)
+        // only needs fetching once.
         storefront: {
-          select: { store: { select: { business: { select: { user: { select: { currency: true } } } } } } },
+          select: { store: { select: { id: true } } },
         },
         items: {
           select: {
@@ -73,7 +75,8 @@ export async function POST(request: Request) {
       },
     });
 
-    const currency = orders[0]?.storefront?.store.business.user.currency ?? "IDR";
+    const firstStoreId = orders[0]?.storefront?.store.id;
+    const currency = firstStoreId ? (await getFinanceSettings(firstStoreId)).currency : "IDR";
 
     const mapped = orders.map((o) => ({
       id: o.id,

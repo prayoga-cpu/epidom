@@ -13,10 +13,10 @@ export function PressClient() {
       <PlaceholderSection
         title="About Epidom"
         items={[
-          "Founded: 2024 — Jakarta, Indonesia",
+          "Founded: 2024",
+          "Built by Prionation — an AI product engineering studio based in Bali, Indonesia",
           "Focus: all-in-one operations platform for independent F&B businesses",
-          "Markets: Indonesia, France, and South-East Asia",
-          "Backed by PRIONATION",
+          "Markets: France (primary), Indonesia, worldwide",
         ]}
       />
       <PlaceholderSection

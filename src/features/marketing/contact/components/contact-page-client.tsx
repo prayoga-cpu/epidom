@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useI18n, type Locale } from "@/components/lang/i18n-provider";
 import { trackEvent } from "@/lib/analytics";
+import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 const SUBJECT_OPTS: Record<Locale, string[]> = {
   en: ["Getting started", "Pricing question", "Technical support", "Partnership", "Press", "Other"],
@@ -259,27 +261,30 @@ export function ContactPageClient() {
 
             {/* Channel cards */}
             <ChannelCard
-              icon={<MailIconLg />}
+              index="01"
               title={t("contact.page.channel1title")}
               body={t("contact.page.channel1body")}
               cta="cro@prionation.io, ceo@prionation.io, consult@prionation.io"
               href="mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io"
             />
+            {getWhatsAppOptions(locale).map((opt, i, arr) => (
+              <ChannelCard
+                key={opt.number}
+                index={String(i + 2).padStart(2, "0")}
+                title={arr.length > 1 ? `${t("contact.page.channel2title")} (${opt.label})` : t("contact.page.channel2title")}
+                body={t("contact.page.channel2body")}
+                cta={t("contact.page.whatsappCta")}
+                href={whatsappHref(opt.number)}
+                external
+                gold={i === 0}
+              />
+            ))}
             <ChannelCard
-              icon={<WaIconLg />}
-              title={t("contact.page.channel2title")}
-              body={t("contact.page.channel2body")}
-              cta={t("contact.page.whatsappCta")}
-              href="https://wa.me/33781732386"
-              external
-              gold
-            />
-            <ChannelCard
-              icon={<DocsIconLg />}
+              index={String(2 + getWhatsAppOptions(locale).length).padStart(2, "0")}
               title={t("contact.page.channel3title")}
               body={t("contact.page.channel3body")}
               cta={t("contact.page.channel3cta")}
-              href="/docs"
+              href={getLocalizedPath("/docs", locale)}
             />
           </div>
         </div>
@@ -322,7 +327,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function ChannelCard({
-  icon,
+  index,
   title,
   body,
   cta,
@@ -330,7 +335,7 @@ function ChannelCard({
   external,
   gold,
 }: {
-  icon: React.ReactNode;
+  index: string;
   title: string;
   body: string;
   cta: string;
@@ -352,20 +357,18 @@ function ChannelCard({
       }}
     >
       <div
+        className="epi-script"
+        aria-hidden="true"
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
+          fontSize: 28,
+          lineHeight: 1,
           flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: gold ? "rgba(217,174,59,0.12)" : "rgba(255,255,255,0.05)",
-          border: `1px solid ${gold ? "rgba(217,174,59,0.2)" : "rgba(255,255,255,0.08)"}`,
-          color: gold ? "var(--epi-gold-400)" : "rgba(251,249,228,0.5)",
+          width: 40,
+          color: gold ? "var(--epi-gold-400)" : "rgba(251,249,228,0.4)",
+          opacity: 0.85,
         }}
       >
-        {icon}
+        {index}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p
@@ -403,49 +406,3 @@ function ChannelCard({
   );
 }
 
-function MailIconLg() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
-    </svg>
-  );
-}
-
-function WaIconLg() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.125.552 4.122 1.523 5.854L0 24l6.335-1.492A11.96 11.96 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.882 0-3.659-.5-5.2-1.378l-.372-.215-3.758.884.934-3.65-.236-.389A10 10 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10z" />
-    </svg>
-  );
-}
-
-function DocsIconLg() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
-      <path d="M9 7h6M9 11h6M9 15h4" />
-    </svg>
-  );
-}

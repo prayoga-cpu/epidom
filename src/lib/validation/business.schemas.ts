@@ -4,7 +4,6 @@ import {
   phoneSchema,
   emailSchema,
   urlSchema,
-  currencySchema,
   timezoneSchema,
   localeSchema,
 } from "./common.schemas";
@@ -23,7 +22,6 @@ export const createBusinessSchema = z.object({
   email: emailSchema.optional(),
   website: urlSchema,
   logo: urlSchema,
-  currency: currencySchema.optional(),
   timezone: timezoneSchema.optional(),
   locale: localeSchema.optional(),
 });

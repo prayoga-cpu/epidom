@@ -1,8 +1,137 @@
 "use client";
 
+import { useI18n, type Locale } from "@/components/lang/i18n-provider";
 import { Sparkline } from "./sparkline";
 
+interface OrderRow {
+  id: string;
+  who: string;
+  items: string;
+  val: string;
+  s: "paid" | "kitchen";
+}
+
+const CONTENT: Record<
+  Locale,
+  {
+    ownerName: string;
+    shopName: string;
+    dateLabel: string;
+    navItems: string[];
+    planLabel: string;
+    todayLive: string;
+    greeting: string;
+    posOpen: string;
+    newOrders: string;
+    revenueLabel: string;
+    revenueSource: string;
+    revenueVal: string;
+    revenueDelta: string;
+    thisWeek: string;
+    lastWeek: string;
+    kpis: Array<{ l: string; v: string; d: string }>;
+    recentOrders: string;
+    ordersMenu: string;
+    orders: OrderRow[];
+    statusLabel: Record<"paid" | "kitchen", string>;
+  }
+> = {
+  fr: {
+    ownerName: "Camille",
+    shopName: "Café Bretonne",
+    dateLabel: "Lun · 22 mai",
+    navItems: ["Tableau de bord", "Commandes", "Menu", "Caisse", "Cuisine", "Stock", "Équipe", "Rapports"],
+    planLabel: "Forfait · Opérations",
+    todayLive: "Aujourd'hui · en direct",
+    greeting: "Bonjour, Camille.",
+    posOpen: "Caisse ouverte",
+    newOrders: "3 nouvelles commandes",
+    revenueLabel: "Revenu · cette semaine",
+    revenueSource: "via IG et lien menu",
+    revenueVal: "2 850 €",
+    revenueDelta: "▲ 12,4%",
+    thisWeek: "Cette semaine",
+    lastWeek: "Semaine dernière",
+    kpis: [
+      { l: "Commandes aujourd'hui", v: "47", d: "+9 vs hier" },
+      { l: "Panier moyen", v: "6,20 €", d: "+8%" },
+      { l: "Coût matière", v: "32%", d: "objectif atteint" },
+    ],
+    recentOrders: "Commandes récentes",
+    ordersMenu: "commandes et menu",
+    orders: [
+      { id: "#1042", who: "Hugo · Sur place", items: "Latte · Croffle", val: "4,80 €", s: "paid" },
+      { id: "#1041", who: "Manon · Lien IG", items: "Matcha · Cookie", val: "5,60 €", s: "kitchen" },
+      { id: "#1040", who: "Théo · QR table 4", items: "Espresso × 2", val: "3,80 €", s: "paid" },
+    ],
+    statusLabel: { paid: "payé", kitchen: "cuisine" },
+  },
+  id: {
+    ownerName: "Sari",
+    shopName: "Warung Sari",
+    dateLabel: "Sen · 22 Mei",
+    navItems: ["Dashboard", "Pesanan", "Menu", "Kasir", "Dapur", "Stok", "Staf", "Laporan"],
+    planLabel: "Paket · Operations",
+    todayLive: "Hari ini · langsung",
+    greeting: "Selamat pagi, Sari.",
+    posOpen: "Kasir buka",
+    newOrders: "3 pesanan baru",
+    revenueLabel: "Pendapatan · minggu ini",
+    revenueSource: "via IG & link menu",
+    revenueVal: "Rp 24.8M",
+    revenueDelta: "▲ 12.4%",
+    thisWeek: "Minggu ini",
+    lastWeek: "Minggu lalu",
+    kpis: [
+      { l: "Pesanan hari ini", v: "47", d: "+9 dari kemarin" },
+      { l: "Rata-rata pesanan", v: "Rp 62k", d: "+8%" },
+      { l: "COGS hari ini", v: "32%", d: "sesuai target" },
+    ],
+    recentOrders: "Pesanan terbaru",
+    ordersMenu: "pesanan & menu",
+    orders: [
+      { id: "#1042", who: "Andi · Walk-in", items: "Latte · Croffle", val: "Rp 48k", s: "paid" },
+      { id: "#1041", who: "Maya · IG link", items: "Matcha · Cookie", val: "Rp 56k", s: "kitchen" },
+      { id: "#1040", who: "Riko · QR table 4", items: "Espresso × 2", val: "Rp 38k", s: "paid" },
+    ],
+    statusLabel: { paid: "paid", kitchen: "kitchen" },
+  },
+  en: {
+    ownerName: "Alex",
+    shopName: "The Grind House",
+    dateLabel: "Mon · May 22",
+    navItems: ["Dashboard", "Orders", "Menu", "POS", "Kitchen", "Stock", "Staff", "Reports"],
+    planLabel: "Plan · Operations",
+    todayLive: "Today · live",
+    greeting: "Good morning, Alex.",
+    posOpen: "POS open",
+    newOrders: "3 new orders",
+    revenueLabel: "Revenue · this week",
+    revenueSource: "via IG & menu link",
+    revenueVal: "$3,150",
+    revenueDelta: "▲ 12.4%",
+    thisWeek: "This week",
+    lastWeek: "Last week",
+    kpis: [
+      { l: "Orders today", v: "47", d: "+9 from yesterday" },
+      { l: "Avg ticket", v: "$6.20", d: "+8%" },
+      { l: "COGS today", v: "32%", d: "within target" },
+    ],
+    recentOrders: "Recent orders",
+    ordersMenu: "orders & menu",
+    orders: [
+      { id: "#1042", who: "Jordan · Walk-in", items: "Latte · Croffle", val: "$4.80", s: "paid" },
+      { id: "#1041", who: "Sam · IG link", items: "Matcha · Cookie", val: "$5.60", s: "kitchen" },
+      { id: "#1040", who: "Riley · QR table 4", items: "Espresso × 2", val: "$3.80", s: "paid" },
+    ],
+    statusLabel: { paid: "paid", kitchen: "kitchen" },
+  },
+};
+
 export function PosDashboard() {
+  const { locale } = useI18n();
+  const c = CONTENT[locale];
+
   return (
     <div
       style={{
@@ -31,17 +160,17 @@ export function PosDashboard() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ display: "flex", gap: 4 }}>
-            {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => (
+            {["#FF5F57", "#FEBC2E", "#28C840"].map((clr) => (
               <div
-                key={c}
-                style={{ width: 8, height: 8, borderRadius: "50%", background: c, opacity: 0.7 }}
+                key={clr}
+                style={{ width: 8, height: 8, borderRadius: "50%", background: clr, opacity: 0.7 }}
               />
             ))}
           </div>
           <span
             style={{ fontFamily: "var(--epi-font-display)", fontSize: 13, letterSpacing: "0.12em" }}
           >
-            ÉPIDOM
+            EPIDOM
           </span>
           <span
             style={{
@@ -54,7 +183,7 @@ export function PosDashboard() {
               border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            Warung Sari
+            {c.shopName}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -67,7 +196,7 @@ export function PosDashboard() {
               textTransform: "uppercase",
             }}
           >
-            Mon · May 22
+            {c.dateLabel}
           </span>
           <div
             style={{
@@ -82,7 +211,7 @@ export function PosDashboard() {
               fontWeight: 700,
             }}
           >
-            S
+            {c.ownerName.charAt(0)}
           </div>
         </div>
       </div>
@@ -101,18 +230,7 @@ export function PosDashboard() {
             gap: 2,
           }}
         >
-          {(
-            [
-              ["◆", "Dashboard", true],
-              ["◇", "Orders", false],
-              ["◇", "Menu", false],
-              ["◇", "POS", false],
-              ["◇", "Kitchen", false],
-              ["◇", "Stock", false],
-              ["◇", "Staff", false],
-              ["◇", "Reports", false],
-            ] as [string, string, boolean][]
-          ).map((it, i) => (
+          {c.navItems.map((label, i) => (
             <div
               key={i}
               style={{
@@ -120,9 +238,9 @@ export function PosDashboard() {
                 borderRadius: 7,
                 fontSize: 11,
                 color: "var(--epi-cream-50)",
-                opacity: it[2] ? 1 : 0.45,
-                background: it[2] ? "rgba(217,174,59,0.10)" : "transparent",
-                borderLeft: it[2] ? "2px solid var(--epi-gold-500)" : "2px solid transparent",
+                opacity: i === 0 ? 1 : 0.45,
+                background: i === 0 ? "rgba(217,174,59,0.10)" : "transparent",
+                borderLeft: i === 0 ? "2px solid var(--epi-gold-500)" : "2px solid transparent",
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
@@ -131,14 +249,14 @@ export function PosDashboard() {
             >
               <span
                 style={{
-                  color: it[2] ? "var(--epi-gold-400)" : "var(--epi-cream-50)",
-                  opacity: it[2] ? 1 : 0.4,
+                  color: i === 0 ? "var(--epi-gold-400)" : "var(--epi-cream-50)",
+                  opacity: i === 0 ? 1 : 0.4,
                   fontSize: 9,
                 }}
               >
-                {it[0]}
+                {i === 0 ? "◆" : "◇"}
               </span>
-              {it[1]}
+              {label}
             </div>
           ))}
           <div
@@ -154,7 +272,7 @@ export function PosDashboard() {
               textOverflow: "ellipsis",
             }}
           >
-            Plan · Operations
+            {c.planLabel}
           </div>
         </aside>
 
@@ -181,7 +299,7 @@ export function PosDashboard() {
                   textTransform: "uppercase",
                 }}
               >
-                Today · live
+                {c.todayLive}
               </div>
               <div
                 style={{
@@ -192,7 +310,7 @@ export function PosDashboard() {
                   marginTop: 2,
                 }}
               >
-                Good morning, Sari.
+                {c.greeting}
               </div>
             </div>
             <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
@@ -209,7 +327,7 @@ export function PosDashboard() {
                   whiteSpace: "nowrap",
                 }}
               >
-                POS open
+                {c.posOpen}
               </span>
               <span
                 style={{
@@ -224,7 +342,7 @@ export function PosDashboard() {
                   whiteSpace: "nowrap",
                 }}
               >
-                3 new orders
+                {c.newOrders}
               </span>
             </div>
           </div>
@@ -262,7 +380,7 @@ export function PosDashboard() {
               >
                 <div>
                   <div style={{ fontSize: 10, color: "var(--epi-cream-50)", fontWeight: 500 }}>
-                    Revenue · this week
+                    {c.revenueLabel}
                   </div>
                   <div
                     style={{
@@ -272,7 +390,7 @@ export function PosDashboard() {
                       marginTop: 1,
                     }}
                   >
-                    via IG &amp; menu link
+                    {c.revenueSource}
                   </div>
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -284,9 +402,9 @@ export function PosDashboard() {
                       color: "var(--epi-cream-50)",
                     }}
                   >
-                    Rp 24.8M
+                    {c.revenueVal}
                   </div>
-                  <div style={{ fontSize: 9, color: "var(--epi-gold-400)" }}>▲ 12.4%</div>
+                  <div style={{ fontSize: 9, color: "var(--epi-gold-400)" }}>{c.revenueDelta}</div>
                 </div>
               </div>
               <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
@@ -313,21 +431,17 @@ export function PosDashboard() {
                 }}
               >
                 <span>
-                  <span style={{ color: "var(--epi-gold-400)", opacity: 1 }}>●</span> This week
+                  <span style={{ color: "var(--epi-gold-400)", opacity: 1 }}>●</span> {c.thisWeek}
                 </span>
                 <span>
-                  <span style={{ color: "var(--epi-navy-400)", opacity: 1 }}>●</span> Last week
+                  <span style={{ color: "var(--epi-navy-400)", opacity: 1 }}>●</span> {c.lastWeek}
                 </span>
               </div>
             </div>
 
             {/* KPI cards */}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[
-                { l: "Orders today", v: "47", d: "+9 from yesterday", col: "var(--epi-gold-400)" },
-                { l: "Avg ticket", v: "Rp 62k", d: "+8%", col: "var(--epi-gold-400)" },
-                { l: "COGS today", v: "32%", d: "within target", col: "var(--epi-navy-400)" },
-              ].map((k, i) => (
+              {c.kpis.map((k, i) => (
                 <div
                   key={i}
                   style={{
@@ -366,7 +480,15 @@ export function PosDashboard() {
                   >
                     {k.v}
                   </div>
-                  <div style={{ fontSize: 9, color: k.col, whiteSpace: "nowrap" }}>{k.d}</div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      color: i < 2 ? "var(--epi-gold-400)" : "var(--epi-navy-400)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {k.d}
+                  </div>
                 </div>
               ))}
             </div>
@@ -394,32 +516,10 @@ export function PosDashboard() {
                 justifyContent: "space-between",
               }}
             >
-              <span>Recent orders</span>
-              <span>orders &amp; menu</span>
+              <span>{c.recentOrders}</span>
+              <span>{c.ordersMenu}</span>
             </div>
-            {[
-              {
-                id: "#1042",
-                who: "Andi · Walk-in",
-                items: "Latte · Croffle",
-                val: "Rp 48k",
-                s: "paid",
-              },
-              {
-                id: "#1041",
-                who: "Maya · IG link",
-                items: "Matcha · Cookie",
-                val: "Rp 56k",
-                s: "kitchen",
-              },
-              {
-                id: "#1040",
-                who: "Riko · QR table 4",
-                items: "Espresso × 2",
-                val: "Rp 38k",
-                s: "paid",
-              },
-            ].map((o, i) => (
+            {c.orders.map((o, i) => (
               <div
                 key={i}
                 style={{
@@ -482,7 +582,7 @@ export function PosDashboard() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {o.s}
+                  {c.statusLabel[o.s]}
                 </span>
               </div>
             ))}

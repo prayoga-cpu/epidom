@@ -41,9 +41,10 @@ export function usePublicStorefrontMenu(slug: string, initialCategories?: Public
       const storefront = json?.data;
       const categories: any[] = storefront?.menuCategories ?? [];
       // Same source the initial server render uses (storefront.service.ts's
-      // getStorefrontBySlug) — the owner's live currency, not a per-item
-      // snapshot, so a currency change in Profile settings is reflected here too.
-      const currency: string = storefront?.store?.business?.user?.currency ?? "IDR";
+      // getStorefrontBySlug) — the store's live resolved currency, not a
+      // per-item snapshot, so a currency change in Fees & Taxes settings is
+      // reflected here too.
+      const currency: string = storefront?.store?.currency ?? "IDR";
 
       return categories.map((cat) => ({
         id: cat.id,

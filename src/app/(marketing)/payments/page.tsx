@@ -8,6 +8,7 @@
  * @page
  */
 
+import { generateMetadata } from "@/lib/seo";
 import { PaymentHero } from "@/features/marketing/payments/components/payment-hero";
 import { PaymentForm } from "@/features/marketing/payments/components/payment-form";
 import { PaymentSummary } from "@/features/marketing/payments/components/payment-summary";
@@ -18,6 +19,13 @@ import {
   type PlanType,
   isStripePlan,
 } from "@/features/marketing/payments/utils/plan-validation";
+
+export const metadata = generateMetadata({
+  title: "Checkout — EPIDOM",
+  description: "Upgrade your Epidom plan securely — POS, Operations, or Enterprise.",
+  canonical: "https://epidom.fr/payments",
+  robots: { index: false, follow: true, googleBot: { index: false, follow: true } },
+});
 
 /**
  * Props for PaymentsPage component

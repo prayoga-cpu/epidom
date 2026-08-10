@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import type { PaymentMethod } from "@prisma/client";
+import type { PaymentMethod, PaymentMarket } from "@prisma/client";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { FormDialogFooter } from "@/components/ui/form-dialog-footer";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import {
   Select,
   SelectContent,
@@ -25,7 +26,13 @@ import {
   useUpdateBusinessFinanceSettings,
   type FinanceSettingsFields,
 } from "../hooks/use-finance-settings";
-import { PAYMENT_FEE_DEFAULTS, PAYMENT_METHOD_LABELS } from "@/config/payment-fees.config";
+import {
+  PAYMENT_FEE_DEFAULTS,
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_METHODS_BY_MARKET,
+  inferMarket,
+} from "@/config/payment-fees.config";
+import { CURRENCIES } from "@/lib/constants/currencies";
 
 interface EditFeesAndTaxesDialogProps {
   open: boolean;
@@ -37,9 +44,21 @@ interface EditFeesAndTaxesDialogProps {
   settings: FinanceSettingsFields;
   /** Owner-only Pay Later toggle — always store-specific, never resolved from the business config. */
   payLaterEnabled: boolean;
+  /** Signals for the "Detect automatically" market suggestion only — never written anywhere. */
+  storeCountry?: string | null;
+  businessLocale?: string;
 }
 
-const PAYMENT_METHODS = Object.keys(PAYMENT_FEE_DEFAULTS) as PaymentMethod[];
+// Every method except PAY_LATER, which keeps its own dedicated toggle above
+// the fee table and is never part of the enable/disable list below.
+const PAYMENT_METHODS = (Object.keys(PAYMENT_FEE_DEFAULTS) as PaymentMethod[]).filter(
+  (m) => m !== "PAY_LATER"
+);
+
+const CURRENCY_OPTIONS: ComboboxOption[] = CURRENCIES.map((c) => ({
+  value: c.code,
+  label: `${c.code} — ${c.name}`,
+}));
 
 interface FeeRow {
   percent: string; // displayed as whole-number percent, e.g. "0.7"
@@ -47,6 +66,8 @@ interface FeeRow {
 }
 
 interface FormValues {
+  currency: string;
+  market: PaymentMarket;
   syncFinanceWithBusiness: boolean;
   payLaterEnabled: boolean;
   taxEnabled: boolean;
@@ -57,6 +78,8 @@ interface FormValues {
   serviceChargeRate: string;
   processingFeeEnabled: boolean;
   feeRows: Record<PaymentMethod, FeeRow>;
+  /** Which methods POS checkout offers — everything in PAYMENT_METHODS, minus PAY_LATER. */
+  enabledMethods: Record<PaymentMethod, boolean>;
 }
 
 // Rates are stored server-side with up to 4 decimal places, so as a whole-number
@@ -72,17 +95,31 @@ function percentStringToRate(percent: string): number {
   return Number(((parseFloat(percent) || 0) / 100).toFixed(4));
 }
 
+function buildFeeRows(overrides?: (method: PaymentMethod) => { percent: number; flat: number }) {
+  const feeRows = {} as Record<PaymentMethod, FeeRow>;
+  for (const method of Object.keys(PAYMENT_FEE_DEFAULTS) as PaymentMethod[]) {
+    const rate = overrides?.(method) ?? PAYMENT_FEE_DEFAULTS[method];
+    feeRows[method] = { percent: rateToPercentString(rate.percent), flat: String(rate.flat) };
+  }
+  return feeRows;
+}
+
+function buildEnabledMethods(enabled: PaymentMethod[]): Record<PaymentMethod, boolean> {
+  const enabledSet = new Set(enabled);
+  return Object.fromEntries(PAYMENT_METHODS.map((m) => [m, enabledSet.has(m)])) as Record<
+    PaymentMethod,
+    boolean
+  >;
+}
+
 function toFormValues(
   settings: FinanceSettingsFields,
   syncedWithBusiness: boolean,
   payLaterEnabled: boolean
 ): FormValues {
-  const feeRows = {} as Record<PaymentMethod, FeeRow>;
-  for (const method of PAYMENT_METHODS) {
-    const rate = settings.feeRates[method] ?? PAYMENT_FEE_DEFAULTS[method];
-    feeRows[method] = { percent: rateToPercentString(rate.percent), flat: String(rate.flat) };
-  }
   return {
+    currency: settings.currency,
+    market: settings.market,
     syncFinanceWithBusiness: syncedWithBusiness,
     payLaterEnabled,
     taxEnabled: settings.taxEnabled,
@@ -92,19 +129,9 @@ function toFormValues(
     serviceChargeEnabled: settings.serviceChargeEnabled,
     serviceChargeRate: rateToPercentString(settings.serviceChargeRate),
     processingFeeEnabled: settings.processingFeeEnabled,
-    feeRows,
+    feeRows: buildFeeRows((method) => settings.feeRates[method] ?? PAYMENT_FEE_DEFAULTS[method]),
+    enabledMethods: buildEnabledMethods(settings.enabledPaymentMethods),
   };
-}
-
-function defaultFeeRows(): Record<PaymentMethod, FeeRow> {
-  const feeRows = {} as Record<PaymentMethod, FeeRow>;
-  for (const method of PAYMENT_METHODS) {
-    feeRows[method] = {
-      percent: rateToPercentString(PAYMENT_FEE_DEFAULTS[method].percent),
-      flat: String(PAYMENT_FEE_DEFAULTS[method].flat),
-    };
-  }
-  return feeRows;
 }
 
 export function EditFeesAndTaxesDialog({
@@ -114,6 +141,8 @@ export function EditFeesAndTaxesDialog({
   syncedWithBusiness,
   settings,
   payLaterEnabled,
+  storeCountry,
+  businessLocale,
 }: EditFeesAndTaxesDialogProps) {
   const { t } = useI18n();
   const updateStoreSettings = useUpdateFinanceSettings(storeId);
@@ -144,8 +173,17 @@ export function EditFeesAndTaxesDialog({
         },
         {} as Record<PaymentMethod, { percent: number; flat: number }>
       );
+      // PAY_LATER's rate is fixed at zero (see PAYMENT_FEE_DEFAULTS) and isn't
+      // editable in this form, but the overrides map is still keyed by every
+      // PaymentMethod — carry the shipped default through untouched.
+      processingFeeOverrides.PAY_LATER = PAYMENT_FEE_DEFAULTS.PAY_LATER;
+
+      const enabledPaymentMethods = PAYMENT_METHODS.filter((m) => data.enabledMethods[m]);
 
       const fields = {
+        currency: data.currency,
+        market: data.market,
+        enabledPaymentMethods,
         taxEnabled: data.taxEnabled,
         taxRate: percentStringToRate(data.taxRate),
         taxLabel: data.taxLabel || undefined,
@@ -190,6 +228,32 @@ export function EditFeesAndTaxesDialog({
   const taxEnabled = form.watch("taxEnabled");
   const serviceChargeEnabled = form.watch("serviceChargeEnabled");
   const processingFeeEnabled = form.watch("processingFeeEnabled");
+  const currency = form.watch("currency");
+  const market = form.watch("market");
+  const enabledMethods = form.watch("enabledMethods");
+  const feeRows = form.watch("feeRows");
+
+  function resetProcessingFeeDefaults() {
+    form.setValue("feeRows", buildFeeRows());
+    form.setValue("enabledMethods", buildEnabledMethods(PAYMENT_METHODS_BY_MARKET[market]));
+  }
+
+  function detectMarket() {
+    form.setValue("market", inferMarket({ currency, locale: businessLocale, country: storeCountry }));
+  }
+
+  // Always show this market's recommended methods, plus anything the
+  // merchant already enabled or customized for a different market — so
+  // switching market never silently hides an already-configured method.
+  const marketMethods = PAYMENT_METHODS_BY_MARKET[market];
+  const extraMethods = PAYMENT_METHODS.filter((method) => {
+    if (marketMethods.includes(method)) return false;
+    if (enabledMethods[method]) return true;
+    const row = feeRows[method];
+    const def = PAYMENT_FEE_DEFAULTS[method];
+    return row.percent !== rateToPercentString(def.percent) || row.flat !== String(def.flat);
+  });
+  const visibleMethods = [...marketMethods, ...extraMethods];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -237,6 +301,51 @@ export function EditFeesAndTaxesDialog({
                 {t("profile.feesAndTaxes.sync.activeNote")}
               </p>
             )}
+          </section>
+
+          <Separator />
+
+          {/* Currency + Market */}
+          <section className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>{t("profile.feesAndTaxes.currency")}</Label>
+                <Combobox
+                  options={CURRENCY_OPTIONS}
+                  value={currency}
+                  onChange={(value) => form.setValue("currency", value)}
+                  searchPlaceholder={t("profile.feesAndTaxes.currencySearchPlaceholder")}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("profile.feesAndTaxes.market.title")}</Label>
+                <Select
+                  value={market}
+                  onValueChange={(value) => form.setValue("market", value as PaymentMarket)}
+                >
+                  <SelectTrigger className="h-11 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="INDONESIA">
+                      {t("profile.feesAndTaxes.market.indonesia")}
+                    </SelectItem>
+                    <SelectItem value="FRANCE">{t("profile.feesAndTaxes.market.france")}</SelectItem>
+                    <SelectItem value="INTERNATIONAL">
+                      {t("profile.feesAndTaxes.market.international")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-muted-foreground text-xs">
+                {t("profile.feesAndTaxes.market.description")}
+              </p>
+              <Button type="button" variant="ghost" size="sm" onClick={detectMarket}>
+                {t("profile.feesAndTaxes.market.detect")}
+              </Button>
+            </div>
           </section>
 
           <Separator />
@@ -346,7 +455,6 @@ export function EditFeesAndTaxesDialog({
                   type="number"
                   step="0.01"
                   min="0"
-                  max="100"
                   className="h-11"
                   {...form.register("serviceChargeRate")}
                 />
@@ -373,28 +481,33 @@ export function EditFeesAndTaxesDialog({
             </p>
             {processingFeeEnabled && (
               <div className="space-y-3">
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => form.setValue("feeRows", defaultFeeRows())}
-                  >
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground text-xs">
+                    {t("profile.feesAndTaxes.processingFee.enableHint")}
+                  </p>
+                  <Button type="button" variant="ghost" size="sm" onClick={resetProcessingFeeDefaults}>
                     {t("profile.feesAndTaxes.processingFee.resetDefaults")}
                   </Button>
                 </div>
                 <div className="-mx-4 overflow-x-auto sm:mx-0">
-                  <div className="min-w-[420px] space-y-2 px-4 sm:px-0">
-                    <div className="text-muted-foreground grid grid-cols-[1fr_100px_120px] gap-2 text-xs font-medium">
+                  <div className="min-w-[480px] space-y-2 px-4 sm:px-0">
+                    <div className="text-muted-foreground grid grid-cols-[40px_1fr_100px_120px] gap-2 text-xs font-medium">
+                      <span />
                       <span>{t("common.method") ?? "Method"}</span>
                       <span>{t("profile.feesAndTaxes.processingFee.percent")}</span>
                       <span>{t("profile.feesAndTaxes.processingFee.flat")}</span>
                     </div>
-                    {PAYMENT_METHODS.map((method) => (
+                    {visibleMethods.map((method) => (
                       <div
                         key={method}
-                        className="grid grid-cols-[1fr_100px_120px] items-center gap-2"
+                        className="grid grid-cols-[40px_1fr_100px_120px] items-center gap-2"
                       >
+                        <Switch
+                          checked={enabledMethods[method]}
+                          onCheckedChange={(checked) =>
+                            form.setValue(`enabledMethods.${method}`, checked)
+                          }
+                        />
                         <span className="text-sm">{PAYMENT_METHOD_LABELS[method]}</span>
                         <Input
                           type="number"
@@ -412,6 +525,12 @@ export function EditFeesAndTaxesDialog({
                         />
                       </div>
                     ))}
+                    <div className="grid grid-cols-[40px_1fr_100px_120px] items-center gap-2 opacity-70">
+                      <span />
+                      <span className="text-sm">{PAYMENT_METHOD_LABELS.PAY_LATER}</span>
+                      <Input type="number" value="0" disabled className="h-10" />
+                      <Input type="number" value="0" disabled className="h-10" />
+                    </div>
                   </div>
                 </div>
               </div>

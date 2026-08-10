@@ -14,8 +14,8 @@ export interface UserDto {
   phone: string | null;
   locale: string;
   timezone: string;
-  currency: string;
   defaultLanding: string;
+  rememberLastVisited: boolean;
   emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -39,7 +39,6 @@ export interface BusinessDto {
   email: string | null;
   logo: string | null;
   website: string | null;
-  currency: string;
   timezone: string;
   locale: string;
   createdAt: Date;

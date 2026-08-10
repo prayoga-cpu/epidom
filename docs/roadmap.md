@@ -231,7 +231,7 @@ These were not deleted in Phase 0; just hidden. They come back behind plan gatin
 
 **Aggregator ingestion (realistic approach):**
 
-- v1: email forwarding parser. Merchants forward order confirmation emails from GoFood/GrabFood/ShopeeFood to `orders@epidom.id`. Inngest worker parses via the existing AI SDK and creates `Order` records.
+- v1: email forwarding parser. Merchants forward order confirmation emails from GoFood/GrabFood/ShopeeFood to `orders@epidom.fr`. Inngest worker parses via the existing AI SDK and creates `Order` records.
 - v2: pursue official partner API access. This takes 6-12 months of relationship-building. Not a v1 problem.
 
 **Finance reports:**

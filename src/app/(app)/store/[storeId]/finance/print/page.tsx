@@ -17,7 +17,6 @@ import { getBusinessDateKey, businessDateKeyToDate } from "@/lib/attendance/busi
 import { commissionRate, AGGREGATOR_LABELS } from "@/config/aggregator.config";
 import { wasteService } from "@/lib/services/waste.service";
 import { storefrontService } from "@/lib/services/storefront.service";
-import { getExchangeRate } from "@/lib/services/exchange-rate.service";
 import { FinancePrintView } from "@/features/dashboard/finance/components/finance-print-view";
 
 // Deliberately outside the (dashboard) route group — see pos/orders/print's
@@ -72,25 +71,20 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   if (staffId) urlParams.set("staffId", staffId);
   const shiftWhere = shiftFilter(urlParams);
 
-  const [business, staffMember, categoryRecord] = await Promise.all([
+  const [business, staffMember, categoryRecord, { currency, rate: ownerRate }] = await Promise.all([
     prisma.store.findUnique({
       where: { id: storeId },
-      // Business.currency is a legacy field nothing keeps in sync — the
-      // real source of truth for a store owner's currency is the live
-      // User.currency (see storefront.service.ts's getOwnerCurrencyAndRate
-      // and every other currency lookup in this codebase).
       select: {
-        business: { select: { timezone: true, user: { select: { currency: true } } } },
+        business: { select: { timezone: true } },
       },
     }),
     staffId ? prisma.staffMember.findUnique({ where: { id: staffId }, select: { name: true } }) : null,
     categoryId && categoryId !== UNCATEGORIZED
       ? prisma.menuCategory.findUnique({ where: { id: categoryId }, select: { name: true } })
       : null,
+    storefrontService.getOwnerCurrencyAndRate(storeId),
   ]);
-  const currency = business?.business.user?.currency ?? "IDR";
   const timezone = business?.business.timezone ?? "UTC";
-  const ownerRate = currency === "IDR" ? 1 : (await getExchangeRate("IDR", currency)).rate;
 
   // ─── Summary ───
   const revenueResult = await prisma.order.aggregate({

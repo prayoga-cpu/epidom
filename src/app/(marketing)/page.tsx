@@ -1,17 +1,11 @@
 /**
  * Home Page (Landing Page)
  *
- * Redesigned landing page for Cookie Bar inventory management.
- * Features 6 main sections in order:
- * 1. Hero Section - Main headline with CTAs
- * 2. Social Proof - Cookie bar logos & Instagram testimonials
- * 3. How to Use - Feature showcase
- * 4. Pricing - 3 tiers (Free promo, Pro, Custom)
- * 5. Pain+Gain - Old way vs Epidom way comparison
- * 6. Closing CTA - Final call-to-action
- *
- * Each section is wrapped with an error boundary to prevent
- * one section's failure from crashing the entire page.
+ * Landing page for Epidom's free F&B storefront + POS platform.
+ * Composed of the sections in landing-page-sections.tsx (hero, trust bar,
+ * how-it-works, pricing teaser, pain/gain, use cases, FAQ, closing CTA).
+ * Each section is wrapped with an error boundary to prevent one section's
+ * failure from crashing the entire page.
  *
  * @page
  */
@@ -19,11 +13,13 @@
 import { generateMetadata } from "@/lib/seo";
 import { ProductStructuredData } from "@/components/seo/structured-data";
 import { LandingPageSections } from "@/features/marketing/home/components/landing-page-sections";
+import { ResumeLastVisited } from "@/features/marketing/home/components/resume-last-visited";
+import { storefrontService } from "@/lib/services";
 
 export const metadata = generateMetadata({
   title: "Epidom — Online Store, Menu & POS for F&B Businesses",
   description:
-    "Create a menu page for Instagram, accept QRIS payments, manage your cashier — all free. For cafés, warungs, and restaurants worldwide.",
+    "Create a menu page for Instagram, accept online payments, manage your cashier — all free. For cafés, restaurants, and warungs worldwide.",
   keywords: [
     "free pos app",
     "digital menu qr code",
@@ -34,6 +30,7 @@ export const metadata = generateMetadata({
     "kitchen display system",
     "epidom",
   ],
+  canonical: "https://epidom.fr",
   openGraph: {
     title: "Epidom — Online Store & POS for F&B",
     description: "Menu page, online orders, and POS cashier in one link. Free forever.",
@@ -42,13 +39,19 @@ export const metadata = generateMetadata({
   },
 });
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Real, currently-published storefront to link as a live example — never
+  // hardcoded (see storefrontService.getExampleStorefrontSlug), so it can't
+  // go stale or 404 if that merchant unpublishes later.
+  const exampleStorefrontSlug = await storefrontService.getExampleStorefrontSlug();
+
   return (
     <>
       <ProductStructuredData />
+      <ResumeLastVisited />
 
       <main className="w-full overflow-x-hidden">
-        <LandingPageSections />
+        <LandingPageSections exampleStorefrontSlug={exampleStorefrontSlug} />
       </main>
     </>
   );

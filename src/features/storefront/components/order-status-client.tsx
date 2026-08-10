@@ -16,6 +16,9 @@ import {
 } from "../lib/order-status-config";
 
 type OrderType = "DINE_IN" | "TAKEAWAY" | "DELIVERY";
+// Widened to the full Order.paymentMethod column type (not just the methods
+// public-menu.tsx's storefront checkout actually offers) since this page
+// renders whatever a given order was stored with.
 type PaymentMethod =
   | "CASH"
   | "QRIS"
@@ -25,7 +28,14 @@ type PaymentMethod =
   | "SHOPEEPAY"
   | "BANK_TRANSFER"
   | "STRIPE_CARD"
-  | "PAY_LATER";
+  | "PAY_LATER"
+  | "LINKAJA"
+  | "CHEQUE"
+  | "TITRE_RESTAURANT"
+  | "PAYPAL"
+  | "APPLE_PAY"
+  | "GOOGLE_PAY"
+  | "OTHER";
 
 interface OrderItem {
   id: string;

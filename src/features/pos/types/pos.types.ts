@@ -160,6 +160,9 @@ export interface OrderHistoryItem {
   orderType: OrderType;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
+  // Cashier-typed label when paymentMethod is "OTHER" (also doubles as the
+  // free-text note from Mark Paid) — see order-history-detail-dialog.tsx.
+  paymentNote?: string | null;
   customerName: string;
   customerPhone?: string | null;
   notes?: string | null;

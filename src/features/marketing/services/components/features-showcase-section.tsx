@@ -1,10 +1,37 @@
 "use client";
 
-import { useI18n } from "@/components/lang/i18n-provider";
+import { useI18n, type Locale } from "@/components/lang/i18n-provider";
 import { PhoneMenu } from "@/features/marketing/shared/components/phone-menu";
 import { PhoneKDS } from "@/features/marketing/shared/components/phone-kds";
+import { PAYMENT_METHODS } from "@/features/marketing/shared/content/payment-methods";
+import { INTEGRATIONS } from "@/features/marketing/shared/content/integrations";
 
-function OrderVisual({ t }: { t: (k: string) => string }) {
+const ORDER_VISUAL_COPY: Record<
+  Locale,
+  { who: string; amount: string; settled: string; fee: string }
+> = {
+  fr: {
+    who: "Hugo · commande #1041",
+    amount: "4,80 € · payé par carte",
+    settled: "Versé sur votre compte · jour ouvré suivant",
+    fee: "Frais de traitement",
+  },
+  id: {
+    who: "Maya · order #1041",
+    amount: "Rp 56,000 · paid via QRIS",
+    settled: "Settled to your bank · next business day",
+    fee: "−0.7% fee",
+  },
+  en: {
+    who: "Jordan · order #1041",
+    amount: "$5.60 · paid by card",
+    settled: "Settled to your bank · next business day",
+    fee: "Processing fee",
+  },
+};
+
+function OrderVisual({ t, locale }: { t: (k: string) => string; locale: Locale }) {
+  const copy = ORDER_VISUAL_COPY[locale];
   return (
     <div
       style={{
@@ -18,14 +45,7 @@ function OrderVisual({ t }: { t: (k: string) => string }) {
         {t("redesign.servicesPage.checkoutSim")}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-        {[
-          { n: "QRIS", c: "#0066B3" },
-          { n: "GoPay", c: "#00AED5" },
-          { n: "OVO", c: "#4C2A86" },
-          { n: "Card", c: "#1F4373" },
-          { n: "Bank", c: "#3A5B7A" },
-          { n: "Cash", c: "#5A4A2A" },
-        ].map((p, i) => (
+        {PAYMENT_METHODS[locale].map((p, i) => (
           <div
             key={i}
             style={{
@@ -64,10 +84,10 @@ function OrderVisual({ t }: { t: (k: string) => string }) {
               textTransform: "uppercase",
             }}
           >
-            Maya · order #1041
+            {copy.who}
           </div>
           <div style={{ fontSize: 16, color: "var(--epi-cream-50)", fontWeight: 600 }}>
-            Rp 56,000 · paid via QRIS
+            {copy.amount}
           </div>
         </div>
         <div
@@ -98,8 +118,8 @@ function OrderVisual({ t }: { t: (k: string) => string }) {
           justifyContent: "space-between",
         }}
       >
-        <span>Settled to your bank · next business day</span>
-        <span style={{ color: "var(--epi-gold-400)" }}>−0.7% fee</span>
+        <span>{copy.settled}</span>
+        <span style={{ color: "var(--epi-gold-400)" }}>{copy.fee}</span>
       </div>
     </div>
   );
@@ -309,21 +329,8 @@ const FEATURE_ROWS = [
   { key: "r5", side: "report" },
 ] as const;
 
-const INTEGRATIONS = [
-  "QRIS",
-  "GoPay",
-  "OVO",
-  "Stripe",
-  "SumUp",
-  "WhatsApp",
-  "Brother",
-  "Dymo",
-  "Google Sheets",
-  "QuickBooks",
-];
-
 export function FeaturesShowcaseSection() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   function getVisual(side: string) {
     if (side === "menu")
@@ -332,7 +339,7 @@ export function FeaturesShowcaseSection() {
           <PhoneMenu />
         </div>
       );
-    if (side === "order") return <OrderVisual t={t} />;
+    if (side === "order") return <OrderVisual t={t} locale={locale} />;
     if (side === "pos")
       return (
         <div style={{ display: "grid", placeItems: "center" }}>
@@ -440,7 +447,7 @@ export function FeaturesShowcaseSection() {
             </h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-5" style={{ gap: 14 }}>
-            {INTEGRATIONS.map((name, i) => (
+            {INTEGRATIONS[locale].map((name, i) => (
               <div
                 key={i}
                 style={{

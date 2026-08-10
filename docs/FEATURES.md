@@ -11,9 +11,9 @@ If you add a feature, update this doc in the same PR. If a feature is in develop
 | Tier           | Price (IDR/mo) | Who it's for                               | Phase delivered |
 | -------------- | -------------- | ------------------------------------------ | --------------- |
 | **FREE**       | Rp 0           | Any merchant who wants a public storefront | Phase 1-2       |
-| **POS**        | Rp 99,000      | Merchant with a cashier and >50 orders/day | Phase 3         |
-| **OPERATIONS** | Rp 249,000     | Multi-staff café or restaurant             | Phase 4         |
-| **ENTERPRISE** | Rp 499,000+    | Multi-outlet brand, small manufacturer     | Phase 5         |
+| **POS**        | Rp 229,000     | Merchant with a cashier and >50 orders/day | Phase 3         |
+| **OPERATIONS** | Rp 459,000     | Multi-staff café or restaurant             | Phase 4         |
+| **ENTERPRISE** | Custom         | Multi-outlet brand, small manufacturer     | Phase 5         |
 
 Each tier includes everything in the tier below. The upgrade always preserves data.
 
@@ -25,7 +25,7 @@ The wedge. Forever free. Replaces Linktree + Google Drive menu + WhatsApp orderi
 
 ### Public storefront _(Phase 1)_
 
-- Branded landing page at `epidom.id/@your-slug`
+- Branded landing page at `epidom.fr/@your-slug`
 - Logo and theme color customization
 - Hero image
 - Business name, tagline, description
@@ -86,7 +86,7 @@ Hitting any of these prompts an upgrade to POS tier.
 
 ---
 
-## POS tier (Rp 99,000/mo)
+## POS tier (Rp 229,000/mo)
 
 For merchants who run service in-person. Everything in FREE, plus:
 
@@ -147,7 +147,7 @@ For merchants who run service in-person. Everything in FREE, plus:
 
 ---
 
-## OPERATIONS tier (Rp 249,000/mo)
+## OPERATIONS tier (Rp 459,000/mo)
 
 For merchants with staff and ingredient cost concerns. Everything in POS, plus:
 
@@ -204,7 +204,7 @@ For merchants with staff and ingredient cost concerns. Everything in POS, plus:
 
 ---
 
-## ENTERPRISE tier (Rp 499,000+/mo)
+## ENTERPRISE tier (custom pricing)
 
 For multi-outlet brands and small manufacturers. Everything in OPERATIONS, plus:
 
@@ -250,7 +250,7 @@ For multi-outlet brands and small manufacturers. Everything in OPERATIONS, plus:
 
 ### Custom domains _(Phase 5+)_
 
-- Use your own domain instead of `epidom.id/@slug`
+- Use your own domain instead of `epidom.fr/@slug`
 - TLS certificates auto-provisioned
 
 ### White-label option _(Phase 5+)_

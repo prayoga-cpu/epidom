@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdminUser } from "@/lib/admin";
 import { z } from "zod";
 import { hashPassword } from "better-auth/crypto";
-import { userService } from "@/lib/services";
+import { userService, subscriptionService } from "@/lib/services";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -37,7 +37,6 @@ export async function GET() {
       createdAt: true,
       timezone: true,
       timezoneUpdatedAt: true,
-      currency: true,
       deactivatedAt: true,
       purgeAt: true,
       accounts: {
@@ -50,6 +49,9 @@ export async function GET() {
           currentPeriodStart: true,
           currentPeriodEnd: true,
           stripeCustomerId: true,
+          customPriceAmount: true,
+          customPriceCurrency: true,
+          customPriceInterval: true,
         },
       },
       business: {
@@ -66,7 +68,21 @@ export async function GET() {
   const sanitized = users.map((u) => {
     const providers = u.accounts.map((a) => a.providerId);
     const hasPassword = u.accounts.some((a) => a.providerId === "credential" && !!a.password);
-    return { ...u, accounts: undefined, providers, hasPassword };
+    return {
+      ...u,
+      accounts: undefined,
+      providers,
+      hasPassword,
+      subscription: u.subscription
+        ? {
+            ...u.subscription,
+            customPriceAmount:
+              u.subscription.customPriceAmount != null
+                ? Number(u.subscription.customPriceAmount)
+                : null,
+          }
+        : null,
+    };
   });
 
   return NextResponse.json({ users: sanitized });
@@ -84,6 +100,17 @@ const updateSchema = z.discriminatedUnion("action", [
     userId: z.string(),
     months: z.number().int().min(1).max(1200).optional(),
     lifetime: z.boolean().optional(),
+  }),
+  z.object({
+    action: z.literal("set-custom-price"),
+    userId: z.string(),
+    amount: z.number().nonnegative().finite().multipleOf(0.01),
+    currency: z.string().length(3),
+    interval: z.enum(["MONTHLY", "YEARLY"]),
+  }),
+  z.object({
+    action: z.literal("clear-custom-price"),
+    userId: z.string(),
   }),
   z.object({
     action: z.literal("set-admin"),
@@ -181,6 +208,34 @@ export async function PATCH(req: NextRequest) {
       },
     });
     return NextResponse.json({ subscription });
+  }
+
+  if (input.action === "set-custom-price") {
+    try {
+      const subscription = await subscriptionService.setCustomPrice(input.userId, {
+        amount: input.amount,
+        currency: input.currency.toUpperCase(),
+        interval: input.interval,
+      });
+      return NextResponse.json({ subscription });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Failed to set custom price" },
+        { status: 400 }
+      );
+    }
+  }
+
+  if (input.action === "clear-custom-price") {
+    try {
+      const subscription = await subscriptionService.clearCustomPrice(input.userId);
+      return NextResponse.json({ subscription });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Failed to clear custom price" },
+        { status: 400 }
+      );
+    }
   }
 
   if (input.action === "set-admin") {

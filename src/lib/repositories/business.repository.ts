@@ -53,7 +53,6 @@ export class BusinessRepository extends BaseRepository {
     email?: string;
     website?: string;
     logo?: string;
-    currency?: string;
     timezone?: string;
     locale?: string;
   }): Promise<Business> {

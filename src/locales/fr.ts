@@ -192,571 +192,6 @@ export const fr = {
       tracking: "Suivi",
     },
   },
-  home: {
-    hero: {
-      badge: "✨ Gratuit pour toujours pour les restaurants & cafés",
-      headlinePart1: "Menu en ligne, commandes,",
-      headlineHighlight: "et caisse",
-      headlinePart2: "en un seul lien.",
-      headline: "Menu en ligne, commandes, et caisse — en un seul lien.",
-      description:
-        "Remplacez vos menus PDF, commandes WhatsApp, et caisses séparées. Créez votre page café ou restaurant en 5 minutes. Gratuit.",
-      ctaStartFree: "Créer ma page gratuitement",
-      ctaDemo: "Voir la démo",
-      mockupTitle: "Epidom — page menu et caisse",
-      mockupSubtitle: "Vue Mobile & Bureau",
-      mockupUrl: "epidom.fr/menu",
-      notificationTitle: "Nouvelle commande !",
-      notificationDetail: "Café latte x2 — 11,00 €",
-      statsValue: "98%",
-      statsLabel: "Gaspillage Réduit",
-      socialProofMini: "Approuvé par 500+ cafés et restaurants",
-      trustNoCard: "Sans carte bancaire",
-      trustSetup: "Prêt en 5 minutes",
-      trustQris: "Paiement CB & Lydia",
-    },
-    socialProof: {
-      trustedBy: "Approuvé par des restaurants du monde entier",
-      yourBrand: "Votre établissement ici",
-      instagramTitle: "Donnez-nous votre avis",
-      instagramSubtitle: "Voyez ce que nos clients disent",
-      testimonial1:
-        "Epidom a simplifié notre prise de commande. Les clients commandent eux-mêmes !",
-      author1: "Claire Dubois",
-      role1: "Propriétaire, Café des Arts, Lyon",
-      testimonial2:
-        "Installation en 10 minutes, lien partagé sur Instagram. Révolutionnaire pour notre petit resto.",
-      author2: "Pierre Martin",
-      role2: "Gérant, Brasserie du Port, Bordeaux",
-      testimonial3:
-        "Le rapport quotidien automatique me montre exactement ce que j'ai gagné. Plus besoin de compter manuellement.",
-      author3: "Sophie Laurent",
-      role3: "Chef, La Petite Table, Paris",
-    },
-    howToUse: {
-      headline: "Créer, Recevoir, Gérer",
-      description: "Epidom centralise votre menu, vos commandes et votre caisse en un seul outil.",
-      aiGenerated: "Contenu généré : Profil, Tableau de bord, Gestion, Suivi, Données, Alertes.",
-      features: {
-        profile: {
-          title: "Profil",
-          description: "Gérez votre profil d'établissement et les membres de votre équipe",
-        },
-        dashboard: {
-          title: "Tableau de bord",
-          description: "Vue en temps réel de votre activité et de vos commandes",
-        },
-        management: {
-          title: "Gestion",
-          description: "Organisez vos menus, recettes et fournisseurs efficacement",
-        },
-        tracking: {
-          title: "Suivi",
-          description: "Suivez les niveaux de stock et les mouvements en temps réel",
-        },
-        data: {
-          title: "Données",
-          description: "Rapports détaillés et analyses pour de meilleures décisions",
-        },
-        alerts: {
-          title: "Alertes",
-          description: "Ne manquez jamais un niveau de stock critique",
-        },
-      },
-    },
-    pricing: {
-      headline: "Tarification simple et transparente",
-      subheadline: "Choisissez le plan adapté à votre établissement",
-      ribbon: "Offre de lancement",
-      mostPopular: "Le Plus Populaire",
-      cta: "Commencer",
-      note: "Tous les plans incluent le support",
-      free: {
-        name: "GRATUIT — Pour toujours",
-        features: {
-          limitedTime: "Gratuit pour toujours",
-          creditCard: "Sans carte bancaire",
-          fullAccess: "Page menu + commandes + paiement CB",
-          f1: "1 établissement",
-          f2: "Page menu en ligne",
-          f3: "Commandes en ligne",
-        },
-      },
-      pos: {
-        name: "CAISSE",
-        features: {
-          f1: "Tout du GRATUIT",
-          f2: "Caisse enregistreuse",
-          f3: "Gestion des tables",
-        },
-      },
-      operations: {
-        name: "OPÉRATIONS",
-        features: {
-          f1: "Tout de la CAISSE",
-          f2: "Gestion des stocks",
-          f3: "Multi-établissements",
-          f4: "Rapports quotidiens",
-        },
-      },
-      enterprise: {
-        name: "ENTREPRISE",
-        cta: "Contacter les ventes",
-        features: {
-          f1: "Intégrations personnalisées",
-          f2: "Support dédié",
-          f3: "Échelle illimitée",
-        },
-      },
-      pro: {
-        name: "Le Plus Populaire",
-        features: {
-          multiStore: "Plusieurs établissements",
-          unlimited: "dans un seul tableau de bord",
-          advanced: "Analyses et rapports avancés",
-          priority: "Support email prioritaire",
-          whatsapp: "Canal de support dédié",
-        },
-      },
-      custom: {
-        name: "Sur mesure",
-        cta: "Contacter les ventes",
-        features: {
-          franchise: "Pour franchises et forte demande",
-          dedicated: "Responsable de compte dédié",
-          custom: "Intégrations et fonctionnalités sur mesure",
-          onboarding: "Intégration et formation personnalisées",
-        },
-      },
-    },
-    trustBar: {
-      heading: "Approuvé par des propriétaires de cafés et restaurants à travers le monde",
-      stat1Value: "500+",
-      stat1Label: "Établissements actifs",
-      stat2Value: "20+",
-      stat2Label: "Pays",
-      stat3Value: "10 000+",
-      stat3Label: "Commandes traitées",
-      logoNote: "Rejoignez les restaurants qui se développent déjà avec Epidom",
-    },
-    whatYouGet: {
-      headline: "Un lien qui travaille pour vous",
-      subheadline:
-        "Le client ouvre votre lien → consulte le menu → commande → paye. Vous recevez une notification. C'est tout.",
-      feature1Title: "Page Menu",
-      feature1Desc:
-        "QR code + lien partageable sur Instagram. Les clients consultent le menu et commandent à tout moment.",
-      feature2Title: "Recevoir des commandes",
-      feature2Desc: "CB, Lydia, PayPal, virement — tous les moyens de paiement disponibles.",
-      feature3Title: "Caisse & Cuisine",
-      feature3Desc:
-        "Caisse enregistreuse, écran cuisine, gestion des tables et tickets thermiques.",
-    },
-    howItWorks: {
-      headline: "Démarrez en 3 étapes",
-      subheadline: "Aucune expérience technique requise. Aucune application à télécharger.",
-      step1Title: "Inscrivez-vous gratuitement",
-      step1Desc: "Créez un compte avec votre email — sans carte bancaire.",
-      step2Title: "Ajoutez votre menu",
-      step2Desc: "Ajoutez catégories, plats, prix et photos de vos produits.",
-      step3Title: "Partagez avec vos clients",
-      step3Desc: "Copiez votre lien, ajoutez-le à votre bio Instagram, ou imprimez un QR code.",
-    },
-    featureLadder: {
-      headline: "Commencez gratuitement, évoluez à votre rythme",
-      subheadline: "Du petit café à la chaîne de restaurants — un plan pour chaque étape.",
-      popular: "Populaire",
-      viewFull: "Voir la comparaison complète",
-      tier1Name: "GRATUIT",
-      tier1Price: "0 €",
-      tier1f1: "Page menu + commandes en ligne",
-      tier1f2: "Paiement CB & Lydia",
-      tier1f3: "1 établissement",
-      tier2Name: "CAISSE",
-      tier2Price: "9,99 €/mois",
-      tier2f1: "Tout du GRATUIT",
-      tier2f2: "Caisse, écran cuisine, tables",
-      tier2f3: "Tickets thermiques",
-      tier3Name: "OPÉRATIONS",
-      tier3Price: "24,99 €/mois",
-      tier3f1: "Tout de CAISSE",
-      tier3f2: "Personnel, fiches techniques & coût matière",
-      tier3f3: "Stock automatique & alertes",
-      tier3f4: "Rapports quotidiens",
-      tier4Name: "ENTREPRISE",
-      tier4Price: "Sur mesure",
-      tier4f1: "Rapports financiers complets",
-      tier4f2: "Multi-établissements & tableau de bord dirigeant",
-      tier4f3: "Support dédié",
-    },
-    testimonials: {
-      headline: "Ce que disent nos utilisateurs",
-      subheadline: "Propriétaires de cafés et restaurants en France.",
-      t1Name: "Claire Dubois",
-      t1Role: "Propriétaire café, Lyon",
-      t1Quote:
-        "Les clients commandent depuis Instagram maintenant. Mes commandes WhatsApp ont chuté de 80% !",
-      t2Name: "Pierre Martin",
-      t2Role: "Gérant brasserie, Bordeaux",
-      t2Quote:
-        "Installation en 10 minutes et j'ai partagé le lien aux clients. Le paiement CB fonctionne immédiatement.",
-      t3Name: "Sophie Laurent",
-      t3Role: "Restaurant, Paris",
-      t3Quote:
-        "Le rapport quotidien automatique me dit exactement ce que j'ai gagné chaque jour. Avant je comptais tout à la main.",
-      ratingBadge: "4,9★ des utilisateurs Epidom",
-    },
-    painGain: {
-      headline: "L'ancienne méthode complique tout. La nouvelle simplifie.",
-      description:
-        "Comparez comment Epidom remplace le chaos manuel par une seule plateforme simple.",
-      oldWay: {
-        title: "L'ancienne méthode qui complique tout",
-        subtitle: "Méthode Traditionnelle",
-        items: {
-          manualNotes: "Commandes notées à la main, souvent des erreurs",
-          driveMenu: "Menu sur Google Drive, les clients s'y perdent",
-          waOrder: "Commandes par WhatsApp, chat saturé, facile de rater",
-          unknownProfit: "On ne sait jamais combien on a gagné aujourd'hui",
-        },
-      },
-      epidomWay: {
-        title: "La nouvelle méthode qui simplifie tout",
-        subtitle: "Solution Intelligente",
-        items: {
-          oneLink: "Un lien pour le menu, les commandes et le paiement",
-          selfOrder: "Les clients commandent eux-mêmes, caisse sur votre téléphone",
-          waNotif: "Notification automatique pour chaque nouvelle commande",
-          autoReport: "Rapport quotidien automatique, coût matière par plat",
-        },
-      },
-    },
-    closingCta: {
-      badge: "Commencez aujourd'hui — gratuit pour toujours",
-      headline: "Prêt à créer votre page café ou restaurant ?",
-      description: "Gratuit pour toujours. Prêt en 5 minutes. Sans carte bancaire.",
-      ctaStartFree: "Commencer gratuitement",
-      ctaWhatsApp: "Nous contacter",
-      ctaDemo: "Démo 1 sur 1",
-      badges: {
-        secure: {
-          title: "Données sécurisées",
-          description: "Vos données sont chiffrées et protégées",
-        },
-        mobile: {
-          title: "Sans téléchargement",
-          description: "Accessible directement depuis le navigateur",
-        },
-        cancel: {
-          title: "Sans engagement",
-          description: "Annulez à tout moment",
-        },
-        quick: {
-          title: "Prêt en 5 minutes",
-          description: "Immédiatement disponible pour vos clients",
-        },
-      },
-    },
-  },
-  hero: {
-    title: "EPIDOM",
-    subtitle: "Une solution pour la gestion de votre stock alimentaire",
-    p1: "La gestion des stocks alimentaires consiste à suivre les ingrédients achetés qui n'ont pas encore été consommés. Cette pratique est essentielle pour éviter le gaspillage et faire fonctionner votre activité efficacement.",
-    p2: "En surveillant les entrées et les consommations, vous pouvez mieux planifier les achats, maintenir la fraîcheur et prendre des décisions fondées sur les données pour protéger vos marges.",
-    p3: "Le bon flux de travail aide à éviter les ruptures, réduire le surstock et optimiser votre cuisine ou service alimentaire jour après jour.",
-    cta: "Rejoindre la liste d'attente",
-  },
-  countdown: {
-    title: "Bientôt Disponible",
-    subtitle:
-      "Nous travaillons dur pour vous apporter la solution ultime de gestion des stocks alimentaires",
-    days: "Jours",
-    hours: "Heures",
-    minutes: "Minutes",
-    seconds: "Secondes",
-    targetDate: "Date de Lancement: 20 Novembre 2025",
-    email: "mrcaoevan@gmail.com",
-    whatsapp: "WhatsApp",
-    waitlistText: "Demandez un essai pour découvrir notre solution",
-  },
-  services: {
-    heroTitle: "Tout ce dont vous avez besoin pour vendre plus facilement",
-    heroDesc:
-      "D'une page menu en ligne à la caisse et aux rapports d'exploitation — Epidom est la plateforme tout-en-un pour les cafés et restaurants.",
-    featureBlock: {
-      management: "Menu & Commandes",
-      tracking: "Caisse & Cuisine",
-      data: "Rapports & Stock",
-    },
-    dashboard: {
-      subtitle: "Vue d'ensemble du tableau de bord complet",
-      description:
-        "Avec son tableau de bord complet, Epidom fournit une vision globale et instantanée de l'état du stock et de l'activité. Les utilisateurs peuvent consulter facilement les commandes à passer, les matières critiques ou encore les performances globales. Cette approche orientée données aide les responsables à prendre des décisions plus rapides et mieux informées.",
-    },
-    management: {
-      title: "Modules flexibles et gestion avancée des permissions",
-      subtitle: "Adapté aux besoins de chaque structure",
-      description:
-        "Enfin, Epidom s'adapte aux besoins de chaque structure grâce à ses modules flexibles et à sa gestion des permissions. La plateforme favorise la collaboration entre les différents services, améliore la communication interne et s'intègre parfaitement dans les processus existants. Epidom est ainsi un allié essentiel pour toute entreprise souhaitant professionnaliser la gestion de ses matières premières.",
-    },
-    tracking: {
-      title: "Suivi en temps réel des matières premières",
-      description:
-        "Le logiciel offre un suivi en temps réel des matières premières, depuis leur réception jusqu'à leur utilisation. Grâce à une visualisation claire de l'historique des stocks, des alertes de seuil et des consommations, Epidom permet d'éviter les ruptures tout comme les surstocks. Les entreprises peuvent ainsi planifier leurs achats de manière plus intelligente et mieux anticiper les besoins.",
-    },
-    data: {
-      title: "Outils dédiés à la production et traçabilité",
-      description1:
-        "Epidom intègre également un ensemble d'outils dédiés à la production, permettant par exemple de suivre l'évolution des recettes, les pertes, ou encore les quantités utilisées par période. Ces fonctionnalités assurent une meilleure traçabilité et permettent une meilleure compréhension des cycles de consommation.",
-      description2:
-        "Elles contribuent à optimiser les coûts et à limiter le gaspillage alimentaire.",
-    },
-    alerts: {
-      title: "Alertes de seuil et analyses de consommation",
-      description:
-        "Grâce à une visualisation claire de l'historique des stocks, des alertes de seuil et des consommations, Epidom permet d'éviter les ruptures tout comme les surstocks. Les entreprises peuvent ainsi planifier leurs achats de manière plus intelligente et mieux anticiper les besoins.",
-    },
-    dashboardDesc1:
-      "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés.",
-    dashboardDesc2:
-      "Cette démarche est essentielle pour éviter toute perte et optimiser votre activité de restauration.",
-    managementTitle: "Gestion efficace",
-    managementDesc1:
-      "Créez et organisez des produits, des recettes et des fournisseurs avec des flux de travail propres. Gardez les niveaux de stock précis avec des mouvements structurés et des validations.",
-    managementDesc2:
-      "Rationalisez vos opérations avec des outils intuitifs pour la gestion des commandes, la modification des stocks et le suivi de la production.",
-    trackingTitle: "Suivi de stocks actifs",
-    dataTitle: "Un suivi des données complet",
-    dataDesc1:
-      "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés. Cette démarche est essentielle pour éviter toute perte et optimiser votre activité de restauration.",
-    dataDesc2:
-      "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés.",
-    alertsTitle: "Alertes visibles et accessibles",
-    alertsDesc1:
-      "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés. Cette démarche est essentielle pour éviter toute perte et optimiser votre activité de restauration.",
-    alertsDesc2:
-      "La gestion du stock alimentaire est le processus de suivi des produits alimentaires achetés et non encore consommés.",
-    cardDesc:
-      "Nos tableaux de bord centralisent les produits, les mouvements, les fournisseurs et les coûts en un seul endroit afin que vous puissiez planifier, suivre et optimiser les opérations quotidiennes avec confiance.",
-    bullets: {
-      u1: "Vue unifiée des indicateurs clés et des actions",
-      u2: "Navigation claire vers la gestion, le suivi et les données",
-      u3: "Interface utilisateur propre et lisible avec des composants accessibles",
-    },
-    sections: {
-      management: {
-        title: "Gestion efficace",
-        desc: "Créez et organisez des produits, des recettes et des fournisseurs avec des flux de travail propres. Gardez les niveaux de stock précis avec des mouvements structurés et des validations.",
-        rightCard: {
-          title: "Opérations",
-          desc: "Commandes d'achat et flux de réception.",
-        },
-        thumbs: {
-          products: {
-            title: "Produits",
-            desc: "Catalogue avec des détails de coût et d'unité.",
-          },
-          recipes: {
-            title: "Recettes",
-            desc: "Yields et portions standardisés.",
-          },
-          suppliers: {
-            title: "Fournisseurs",
-            desc: "Contacts et conditions en un seul endroit.",
-          },
-        },
-      },
-      tracking: {
-        title: "Suivi actif des stocks",
-        desc: "Des indicateurs en direct montrent les stocks critiques, les articles rapides et les shortages prévus. Prévoyez à l'avance avec des barres de progression visuelles simples.",
-      },
-      data: {
-        title: "Suivi complet des données",
-        desc: "Les enregistrements des fournisseurs, les factures et les changements de prix sont stockés en un seul endroit pour des audits rapides et des rapports.",
-        aside: {
-          p: "Maintenez un historique complet des coûts, des quantités et des changements de fournisseurs. Exportez des instantanés lorsque vous avez besoin d'une trace d'audit rapide.",
-          u1: "Factures consolidées et recherchables",
-          u2: "Données des fournisseurs et des conditions centralisées",
-          u3: "Visibilité claire de l'évolution des prix",
-        },
-        tiles: {
-          priceChanges: {
-            title: "Changements de prix",
-            desc: "Suivez les variations parmi les fournisseurs.",
-          },
-          documents: {
-            title: "Documents",
-            desc: "Attachez et prévisualisez les fichiers des fournisseurs.",
-          },
-        },
-      },
-      alerts: {
-        title: "Alertes visibles et accessibles",
-        desc: "Ne manquez jamais une mise à jour critique avec des avertissements clairs et des listes prioritaires qui vous aident à agir rapidement.",
-        cards: {
-          expiries: {
-            title: "Dates d'expiration",
-            desc: "Lots se rapprochant des dates limite.",
-          },
-          critical: {
-            title: "Articles critiques",
-            desc: "Indiquez les articles rapides ou faibles.",
-          },
-        },
-      },
-    },
-    cta: {
-      title: "Prêt à simplifier vos opérations de stock ?",
-      desc: "Nous sommes en pré-lancement. Rejoignez la liste d'attente aujourd'hui ; les options de mise à niveau seront disponibles au lancement.",
-      viewPlans: "Voir les plans",
-    },
-    tiers: {
-      badge: "Tous les forfaits",
-      title: "Choisissez le forfait adapté à votre activité F&B",
-      subtitle: "Commencez gratuitement, évoluez à tout moment. Sans carte bancaire.",
-      free: {
-        name: "GRATUIT",
-        tagline: "Vitrine & Commandes en ligne",
-        price: "0 €",
-        cta: "Commencer gratuitement",
-      },
-      pos: { name: "POS", tagline: "Caisse & Cuisine", price: "9,99 €/mois", cta: "Essayer" },
-      operations: {
-        name: "Operations",
-        tagline: "Opérations complètes",
-        price: "24,99 €/mois",
-        cta: "Essayer",
-      },
-      enterprise: {
-        name: "Enterprise",
-        tagline: "Multi-établissement",
-        price: "Nous contacter",
-        cta: "Contacter les ventes",
-      },
-    },
-    freeTier: {
-      badge: "GRATUIT — Pour toujours",
-      title: "Votre vitrine numérique en 5 minutes",
-      desc: "Créez une belle page menu, acceptez les commandes en ligne et soyez payé instantanément — entièrement gratuit, sans carte bancaire.",
-      feat1: {
-        title: "Page menu numérique",
-        desc: "Créez une page publique avec votre menu, vos photos et vos prix. Les clients l'ouvrent depuis n'importe quel téléphone, sans application.",
-      },
-      feat2: {
-        title: "QR code & lien partageable",
-        desc: "Un lien pour votre bio Instagram, WhatsApp, ou à imprimer comme QR code physique sur vos tables.",
-      },
-      feat3: {
-        title: "Commandes en ligne",
-        desc: "Les clients parcourent votre menu et envoient leurs commandes directement depuis leur téléphone vers votre cuisine ou caisse.",
-      },
-      feat4: {
-        title: "Paiements numériques",
-        desc: "Acceptez les paiements par carte, virement ou solution de paiement numérique. Confirmation automatique.",
-      },
-      feat5: {
-        title: "Catalogue produits illimité",
-        desc: "Ajoutez des produits, catégories, photos, prix et descriptions. Aucune limite sur le nombre de produits.",
-      },
-      feat6: {
-        title: "Tableau de bord basique",
-        desc: "Suivez les commandes entrantes et leur statut depuis un tableau de bord propre et simple.",
-      },
-    },
-    posTier: {
-      badge: "Forfait POS",
-      title: "Une caisse complète en main",
-      desc: "Une interface de caisse rapide et intuitive pour les transactions en salle — avec KDS, gestion des tables et tickets thermiques.",
-      feat1: {
-        title: "Interface Point de Vente",
-        desc: "Une interface de caisse rapide et intuitive pour traiter les transactions en salle avec précision.",
-      },
-      feat2: {
-        title: "Kitchen Display System (KDS)",
-        desc: "Affichage en temps réel des commandes en cuisine. Le personnel sait instantanément quoi préparer.",
-      },
-      feat3: {
-        title: "Gestion des tables",
-        desc: "Gérez les plans de salle, les statuts et les commandes par table. Idéal pour les restaurants avec service en salle.",
-      },
-      feat4: {
-        title: "Impression de tickets thermiques",
-        desc: "Imprimez automatiquement les tickets sur imprimante thermique dans un format professionnel avec votre logo.",
-      },
-      feat5: {
-        title: "Gestion des commandes",
-        desc: "Suivez toutes les commandes — sur place, à emporter et en ligne — dans une vue unifiée.",
-      },
-      feat6: {
-        title: "Mode hors ligne",
-        desc: "La caisse continue de fonctionner même en cas de coupure temporaire d'internet.",
-      },
-    },
-    operationsTier: {
-      badge: "Forfait Operations",
-      title: "Contrôle total de vos opérations",
-      desc: "Gérez le personnel, calculez les coûts, suivez les stocks et recevez des alertes automatiques — tout pour une exploitation F&B professionnelle.",
-      feat1: {
-        title: "Gestion du personnel & des shifts",
-        desc: "Planifiez les shifts, suivez les présences et surveillez les performances. Données stockées proprement pour la paie.",
-      },
-      feat2: {
-        title: "Recettes & calcul des coûts",
-        desc: "Entrez vos recettes et Epidom calcule automatiquement le coût de revient (food cost) par article.",
-      },
-      feat3: {
-        title: "Gestion des stocks",
-        desc: "Suivez les matières premières en temps réel. Chaque transaction POS déduit automatiquement le stock.",
-      },
-      feat4: {
-        title: "Alertes stock & péremption",
-        desc: "Notifications automatiques quand un stock approche du seuil minimum ou qu'un ingrédient arrive à péremption.",
-      },
-      feat5: {
-        title: "Gestion des fournisseurs",
-        desc: "Enregistrez les données fournisseurs, l'historique des achats et comparez les prix entre fournisseurs.",
-      },
-      feat6: {
-        title: "Rapports opérationnels",
-        desc: "Rapports quotidiens, hebdomadaires et mensuels sur les ventes, les stocks et les coûts opérationnels.",
-      },
-    },
-    enterpriseTier: {
-      badge: "Forfait Enterprise",
-      title: "Développez-vous sur plusieurs établissements",
-      desc: "Gestion centralisée multi-établissements, rapports financiers complets et tableau de bord propriétaire pour les groupes F&B.",
-      feat1: {
-        title: "Gestion multi-établissements",
-        desc: "Gérez plusieurs établissements depuis un tableau de bord centralisé. Les données de chaque site sont séparées et sécurisées.",
-      },
-      feat2: {
-        title: "Rapports financiers",
-        desc: "Rapports financiers complets : compte de résultat, flux de trésorerie et analyse des marges par plat.",
-      },
-      feat3: {
-        title: "Tableau de bord propriétaire",
-        desc: "Un tableau de bord dédié aux dirigeants avec un résumé des performances de tous les établissements.",
-      },
-      feat4: {
-        title: "Gestion des accès par rôle",
-        desc: "Définissez les droits d'accès du personnel par établissement. Les managers n'accèdent qu'aux données de leur site.",
-      },
-      feat5: {
-        title: "Support prioritaire",
-        desc: "Account manager dédié et support prioritaire avec garantie de réponse en 2 heures ouvrées.",
-      },
-      feat6: {
-        title: "Intégration personnalisée",
-        desc: "Accès API et intégrations sur mesure avec vos systèmes existants — comptabilité, ERP ou plateformes de livraison.",
-      },
-    },
-    serviceCta: {
-      title: "Prêt à transformer votre activité F&B ?",
-      desc: "Commencez avec une page menu gratuite aujourd'hui — passez au POS, Operations ou Enterprise quand vous êtes prêt.",
-      primary: "Commencer gratuitement",
-      secondary: "Nous contacter",
-    },
-  },
   contact: {
     title: "Nous contacter",
     subtitle:
@@ -864,52 +299,6 @@ export const fr = {
         f2: "Responsable de compte dédié",
         f3: "Intégrations & onboarding sur mesure",
       },
-    },
-    compare: {
-      title: "Comparaison complète des fonctionnalités",
-      headers: {
-        feature: "Fonctionnalité",
-        free: "GRATUIT",
-        starter: "CAISSE",
-        pro: "OPÉRATIONS",
-        enterprise: "ENTREPRISE",
-      },
-      rows: {
-        menuPage: { name: "Page menu en ligne" },
-        qrisPayment: { name: "Paiement CB & Lydia" },
-        pointOfSale: { name: "Caisse enregistreuse" },
-        kds: { name: "Écran cuisine (KDS)" },
-        multiSite: { name: "Multi-établissements" },
-        staffShift: { name: "Personnel & plannings" },
-        recipeCosting: { name: "Fiches techniques & coût matière" },
-        stockAlerts: { name: "Stock automatique & alertes" },
-        reports: { name: "Rapports quotidiens" },
-        support: {
-          name: "Support",
-          free: "Email",
-          starter: "Email",
-          pro: "Prioritaire",
-          enterprise: "Dédié",
-        },
-      },
-    },
-    faq: {
-      title: "Questions fréquentes",
-      q1: "Le plan GRATUIT est-il vraiment gratuit pour toujours ?",
-      a1: "Oui. Le plan GRATUIT n'a pas de limite de temps et ne nécessite pas de carte bancaire. Vous pouvez créer votre page menu, recevoir des commandes et accepter les paiements CB sans frais.",
-      q2: "Puis-je changer ou résilier mon plan à tout moment ?",
-      a2: "Oui. Les mises à niveau sont immédiates, les rétrogradations s'appliquent au prochain cycle de facturation. Aucune pénalité.",
-      q3: "Quels modes de paiement acceptez-vous pour les abonnements ?",
-      a3: "Nous acceptons les cartes CB, Lydia, PayPal et virement bancaire. La facturation est mensuelle.",
-      q4: "Y a-t-il un engagement minimum ?",
-      a4: "Non. Tous les plans sont sans engagement minimum. Vous pouvez annuler à tout moment.",
-    },
-    finalCta: {
-      title: "Prêt à vendre plus facilement ?",
-      desc: "Rejoignez des centaines de cafés et restaurants qui utilisent déjà Epidom. Gratuit pour toujours pour le plan de base.",
-      ctaFree: "Commencer gratuitement",
-      ctaWhatsApp: "Nous contacter",
-      goPayments: "Voir la comparaison",
     },
   },
   paymentsPage: {
@@ -1891,6 +1280,13 @@ export const fr = {
       payLaterNoteTitle: "Le client paie après la livraison",
       payLaterNoteDesc:
         "Cette commande sera envoyée en cuisine maintenant. Elle apparaîtra comme en attente de paiement jusqu'à ce que quelqu'un la marque comme payée.",
+      marketIndonesia: "Indonésie",
+      marketFrance: "France",
+      marketWorldwide: "International",
+      other: "Autre",
+      customPaymentMethodLabel: "Nom du mode de paiement personnalisé",
+      customPaymentMethodPlaceholder: "ex. Titre-Restaurant, Crypto...",
+      customPaymentMethodRequired: "Indiquez un nom pour ce mode de paiement.",
     },
     queue: {
       title: "File d'Attente",
@@ -2121,6 +1517,7 @@ export const fr = {
       moreItems: "+{n} de plus",
       detailTitle: "Détails de la commande",
       detailNotes: "Notes",
+      detailPaymentNote: "Note de paiement",
       detailDelivered: "Livrée le",
       bulk: {
         selectedCount: "{n} sélectionnée(s)",
@@ -3169,7 +2566,6 @@ export const fr = {
       phone: "Numéro de Téléphone",
       language: "Langue",
       timezone: "Fuseau Horaire",
-      currency: "Devise",
       defaultLanding: "Page d'accueil par défaut",
       defaultLandingHint: "La page ouverte en premier lorsque vous entrez dans une boutique.",
       landingOptions: {
@@ -3208,6 +2604,17 @@ export const fr = {
       disabled: "Désactivé",
       notConfigured: "Pas encore configuré",
       appliesToNewOrdersOnly: "Les modifications s'appliquent uniquement aux nouvelles commandes.",
+      currency: "Devise",
+      currencySearchPlaceholder: "Rechercher une devise…",
+      market: {
+        title: "Marché",
+        description:
+          "Détermine les moyens de paiement proposés ci-dessous et en caisse. Suggéré automatiquement à partir de votre devise, langue et pays — modifiable à tout moment.",
+        indonesia: "Indonésie",
+        france: "France",
+        international: "International",
+        detect: "Détecter automatiquement",
+      },
       tax: {
         enabled: "Taxe",
         rate: "Taux de Taxe",
@@ -3229,6 +2636,7 @@ export const fr = {
         resetDefaults: "Réinitialiser par Défaut",
         estimateDisclaimer:
           "Une estimation basée sur les taux que vous définissez — pas une réconciliation directe avec Xendit/Stripe.",
+        enableHint: "Activez une méthode pour la proposer en caisse.",
       },
       sync: {
         title: "Utiliser les paramètres partagés de l'entreprise",
@@ -4351,14 +3759,17 @@ export const fr = {
     linkHome: "Accueil",
     linkFeatures: "Fonctionnalités",
     linkPricing: "Tarifs",
+    linkCompare: "Comparatifs",
     linkContact: "Contact",
     linkBlog: "Blog",
+    linkDocs: "Aide & Documentation",
     linkChangelog: "Nouveautés",
     linkStatus: "Statut",
     linkAbout: "À propos",
     linkCareers: "Carrières",
     linkPress: "Presse",
     linkPartners: "Partenaires",
+    linkBuildWithUs: "Construire le vôtre",
     linkTerms: "Conditions d'utilisation",
     linkPrivacy: "Politique de confidentialité",
     linkRefunds: "Politique de remboursement",
@@ -4398,7 +3809,12 @@ export const fr = {
     title: "Facturation et Abonnement",
     currentPlan: "Forfait Actuel",
     planStatus: "Statut du Forfait",
+    perMonth: "/mois",
+    perYear: "/an",
     nextBilling: "Prochaine date de facturation",
+    lifetime: "Accès à vie",
+    customPriceNoteBeta: "Prix personnalisé défini par l'opérateur",
+    customPriceNoteStripe: "Prix personnalisé — facturé via Stripe",
     storeUsage: "Utilisation des magasins",
     stores: "magasins",
     unlimited: "Illimité",
@@ -4799,8 +4215,8 @@ export const fr = {
     headline1: "Construit derrière",
     headlineAccent: "un vrai comptoir.",
     script: "on a commencé avec un café. le tableur a lâché. epidom était la solution.",
-    p1: "Nous étions deux — un barista et un ingénieur logiciel — à cogérer un petit café. Chaque samedi après-midi, les commandes WhatsApp s'accumulaient si vite qu'on en ratait la moitié. Le lien menu sur Google Drive avait toujours une version de retard. La clôture de caisse était un jeu de devinettes.",
-    p2: "On a construit un outil interne pour s'en sortir. Puis un ami a voulu l'utiliser. Puis dix inconnus. C'est là qu'on a compris que le problème n'était pas que le nôtre — c'était celui de tous les gérants de petits établissements F&B qui avaient dépassé le tableur sans encore avoir trouvé un vrai système.",
+    p1: "Epidom est né de Prionation, un studio d'AI product engineering basé à Bali. Au contact direct de petits établissements F&B, le même mur revenait sans cesse : une belle vitrine, une caisse qui fonctionne et de vraies données de commande étaient trois problèmes séparés, rafistolés avec Linktree, un menu PDF et WhatsApp — pas un seul système.",
+    p2: "Evan Cao, fondateur d'Epidom et opérateur basé à Paris, a poussé pour quelque chose de plus simple : un seul lien qui fait vraiment tourner l'établissement, pas seulement sa vitrine. Darwin Prayoga, fondateur de Prionation, a dirigé l'équipe qui l'a construit.",
     p3: "Epidom, c'est ce qu'on aurait voulu avoir à l'époque. Un seul lien qui gère le menu, les commandes, les paiements, le flux cuisine et les rapports — calme par défaut, puissant quand on en a besoin.",
     numbersLabel: "Les chiffres",
     stat1label: "Établissements actifs",
@@ -4824,9 +4240,47 @@ export const fr = {
     teamEyebrow: "L'équipe",
     teamTitle: "Une petite équipe, un vrai focus.",
     teamBody:
-      "Nous sommes une équipe produit de six personnes, basée en Indonésie et en France. Nous travaillons sur une seule chose : rendre la gestion d'un établissement F&B moins stressante.",
+      "Nous sommes l'équipe produit de Prionation, basée à Bali et à Paris. Nous travaillons sur une seule chose : rendre la gestion d'un établissement F&B moins stressante.",
+    buildWithUs: "Vous construisez votre propre SaaS ?",
     ctaTitle: "Prêt à essayer ?",
     ctaBody: "Cinq minutes. Sans carte. Votre premier lien est gratuit pour toujours.",
+    ctaButton: "Démarrer gratuitement →",
+  },
+
+  compareDelivery: {
+    eyebrow: "Epidom vs. commission des apps de livraison",
+    title1: "Chaque commande via Deliveroo, Uber Eats",
+    title2: "ou une app de livraison locale",
+    title3: "vous coûte une commission. Pas Epidom.",
+    lede: "Les apps de livraison sont utiles pour se faire découvrir — mais chaque commande qui passe par elles paie une commission, et la relation client reste à la plateforme, pas à vous. Une vitrine que vous possédez ne vous facture rien par commande.",
+    colFeature: "",
+    colEpidom: "Epidom",
+    colDelivery: "Apps de livraison",
+    r1feature: "Commission par commande",
+    r1epidom: "0 € — gratuit pour toujours",
+    r1delivery: "Une part de chaque commande, fixée par la plateforme",
+    r2feature: "Qui possède la relation client",
+    r2epidom: "Vous — contact WhatsApp direct, commandes récurrentes",
+    r2delivery: "La plateforme — les données client lui restent",
+    r3feature: "Contrôle du menu et des prix",
+    r3epidom: "Contrôle total, mise à jour instantanée",
+    r3delivery: "Soumis aux règles et au placement de la plateforme",
+    r4feature: "Moyens de paiement",
+    r4epidom: "Carte, virement, espèces — à votre choix",
+    r4delivery: "Versement géré par la plateforme, à son rythme",
+    r5feature: "Compatible avec vos listings existants",
+    r5epidom: "Oui — la plupart des établissements utilisent les deux",
+    r5delivery: "—",
+    note: "Ce n'est pas un argument pour arrêter les apps de livraison — la plupart des établissements utilisent les deux. C'est l'intérêt d'avoir aussi un canal direct, sans commission, plutôt que de dépendre uniquement des apps de livraison.",
+    faqEyebrow: "Questions",
+    faqTitle: "Commission vs. commande directe",
+    faq1q: "Dois-je arrêter Deliveroo ou Uber Eats ?",
+    faq1a: "Non — elles restent utiles pour la découverte. Epidom vous donne un second canal, sans commission, pour les clients qui vous connaissent déjà : bio Instagram, QR code en salle, diffusion WhatsApp.",
+    faq2q: "Comment Epidom gagne de l'argent si la vitrine est gratuite ?",
+    faq2a: "La vitrine et la commande en ligne sont gratuites pour toujours. Epidom facture la couche opérationnelle au-dessus — caisse POS, écran cuisine, inventaire, rapports financiers multi-établissements — une fois que l'établissement en a besoin.",
+    faq3q: "Faut-il un développeur pour configurer tout ça ?",
+    faq3a: "Non. Vous créez une vitrine gratuite, ajoutez votre menu, partagez le lien — la plupart des établissements sont en ligne en environ 5 minutes.",
+    ctaTitle: "Gardez 100 % de votre prochaine commande.",
     ctaButton: "Démarrer gratuitement →",
   },
 
@@ -4839,9 +4293,10 @@ export const fr = {
       headline3: "paiements.",
       headlineAccent: "paiements.",
       serifAccent: "— une façon plus sereine de gérer votre café.",
-      lede: "Les clients ouvrent votre lien → voient le menu → commandent → paient. Vous recevez une notification WhatsApp. La caisse, la cuisine et les rapports journaliers sont inclus. Gratuit à vie pour menu + commandes.",
+      lede: "Vos clients commandent et paient depuis un seul lien. Vous recevez juste une notification WhatsApp.",
       ctaPrimary: "Commencer gratuitement → 5 min",
       ctaSecondary: "Découvrir le produit →",
+      ctaLiveExample: "Voir une vraie vitrine, en direct →",
       proof1Val: "500+",
       proof1Label: "Établissements actifs",
       proof2Val: "20+",
@@ -4868,7 +4323,7 @@ export const fr = {
       step2n: "02",
       step2t: "Il commande + paie",
       step2b:
-        "Carte, virement, QR local. Aucune appli à installer, s'ouvre directement dans le navigateur.",
+        "Carte, virement ou espèces. Aucune appli à installer, s'ouvre directement dans le navigateur.",
       step3n: "03",
       step3t: "Vous recevez une notif WhatsApp",
       step3b:
@@ -4909,11 +4364,11 @@ export const fr = {
       p2title1: "Tous les moyens de paiement,",
       p2title2: "un seul checkout.",
       p2body:
-        "Carte, virement, QR local. Les clients n'installent rien. Vous recevez la notif WhatsApp dès qu'ils paient.",
+        "Carte, virement, espèces. Les clients n'installent rien. Vous recevez la notif WhatsApp dès qu'ils paient.",
       p2checkoutLabel: "Checkout · aperçu en direct",
       p2orderName: "Commande de Léa",
       p2orderVal: "12,00 € · payé",
-      p2feeLabel: "Frais · 0,7 %",
+      p2feeLabel: "Frais de traitement",
       p2settled: "réglé le lendemain",
       p3tag: "03 · Caisse & Cuisine",
       p3title1: "Commande en salle,",
@@ -4955,8 +4410,8 @@ export const fr = {
         "Imprimez un QR par table. Les clients scannent, commandent, paient — la cuisine imprime automatiquement.",
       f2hint: "Compatible tous smartphones",
       f3title: "Multi-paiement",
-      f3body: "Carte, virement, QR, espèces. Un seul checkout, un seul reversement.",
-      f3hint: "Frais 0,7 %",
+      f3body: "Carte, virement, espèces. Un seul checkout, un seul reversement.",
+      f3hint: "Aucun frais d'installation",
       f4title: "Caisse + KDS",
       f4body:
         "Un téléphone, une tablette ou un vrai terminal. Les tickets arrivent en temps réel sur l'affichage cuisine.",
@@ -5101,15 +4556,15 @@ export const fr = {
       helpOr: "ou par e-mail",
       helpEmail: "cro@prionation.io, ceo@prionation.io, consult@prionation.io",
       q1: "Epidom est-il vraiment gratuit à vie ?",
-      a1: "Oui. Le forfait Free vous donne une page menu illimitée, un QR code, des commandes en ligne et les paiements QR sur un établissement — pour toujours. Nous gagnons de l'argent quand vous passez à POS, Opérations ou Entreprise.",
+      a1: "Oui. Le forfait Free vous donne une page menu illimitée, un QR code, des commandes en ligne et les paiements en ligne sur un établissement — pour toujours. Nous gagnons de l'argent quand vous passez à POS, Opérations ou Entreprise.",
       q2: "Combien de temps prend la mise en place ?",
       a2: "La plupart des établissements sont en ligne en 5 à 10 minutes. Créez un compte, renseignez votre menu (ou importez une photo de l'existant — on gère l'OCR) et partagez le lien. Aucune compétence technique requise.",
       q3: "Ai-je besoin d'un lecteur de carte ou d'un matériel spécifique ?",
       a3: "Non. Epidom fonctionne sur n'importe quel téléphone, tablette ou ordinateur avec un navigateur. Nous supportons les imprimantes thermiques Bluetooth pour les reçus, mais c'est optionnel.",
       q4: "Quels moyens de paiement supportez-vous ?",
-      a4: "Carte, virement, QR local, espèces. Stripe et SumUp sont supportés. Le reversement a lieu le jour ouvré suivant. Frais de transaction : 0,7 %.",
-      q5: "Epidom fonctionne-t-il en dehors de l'Indonésie ?",
-      a5: "Oui. La plateforme est utilisée dans plus de 20 pays. Les moyens de paiement s'adaptent à votre région — Stripe, SumUp et QR locaux sont supportés.",
+      a4: "Carte bancaire, virement, espèces. Le reversement a lieu le jour ouvré suivant.",
+      q5: "Est-ce qu'Epidom fonctionne dans mon pays ?",
+      a5: "Oui. La plateforme est utilisée dans plus de 20 pays. Les moyens de paiement s'adaptent à votre région — Stripe pour les cartes partout dans le monde, plus des méthodes locales comme QRIS en Indonésie.",
       q6: "Mes données sont-elles en sécurité ?",
       a6: "Vos données sont chiffrées au repos et en transit, hébergées dans des data centers régionaux, et exportables en CSV à tout moment. Vous en êtes propriétaire. Vous pouvez partir quand vous le souhaitez.",
     },
@@ -5145,10 +4600,10 @@ export const fr = {
       r2eyebrow: "02 · Commandes & Paiements",
       r2title: "Tous les moyens de paiement, un seul checkout.",
       r2body:
-        "Carte, virement, QR, espèces — votre client choisit. Reversement le lendemain. Vous recevez une notif WhatsApp dès qu'il paie.",
-      r2b1: "Carte / virement / QR / espèces",
+        "Carte, virement, espèces — votre client choisit. Reversement le lendemain. Vous recevez une notif WhatsApp dès qu'il paie.",
+      r2b1: "Carte / virement / espèces",
       r2b2: "Notifications WhatsApp business",
-      r2b3: "Frais 0,7 %, pas de frais d'installation",
+      r2b3: "Aucun frais d'installation",
       r2b4: "Rapprochement automatique avec les rapports journaliers",
       r3eyebrow: "03 · Caisse & KDS",
       r3title: "Commande en salle, cuisine en arrière.",
@@ -5229,7 +4684,7 @@ export const fr = {
       t4cta: "Nous contacter",
       t1f1: "Page menu + QR code",
       t1f2: "Commandes en ligne (tout appareil)",
-      t1f3: "Paiements QR / virement",
+      t1f3: "Paiements carte / virement",
       t1f4: "Notifications WhatsApp",
       t1f5: "1 établissement",
       t1f6: "Caisse + KDS",
@@ -5260,6 +4715,7 @@ export const fr = {
       t4f7: "Responsable de compte dédié",
       t4f8: "SLAs personnalisés",
       cmpEyebrow: "Côte à côte",
+      compareDeliveryLink: "Combien vous coûte vraiment la commission Deliveroo/Uber Eats ? →",
       cmpTitle: "Tout dans le détail.",
       cmpSub:
         "La matrice complète des fonctionnalités. Parcourez les lignes qui comptent pour votre établissement.",
@@ -5271,7 +4727,7 @@ export const fr = {
       cmp_qr: "Générateur de QR code",
       cmp_branding: "Image de marque personnalisée",
       cmp_multilingual: "Menus multilingues",
-      cmp_qris: "QR / virement",
+      cmp_qris: "Carte / virement",
       cmp_gopay: "Carte / espèces",
       cmp_wa: "Notifications WhatsApp",
       cmp_fee: "Frais de transaction",
@@ -5327,6 +4783,13 @@ export const fr = {
       BANK_TRANSFER: "Virement bancaire",
       STRIPE_CARD: "Carte de crédit/débit",
       PAY_LATER: "Paiement différé",
+      LINKAJA: "LinkAja",
+      CHEQUE: "Chèque",
+      TITRE_RESTAURANT: "Titre-Restaurant",
+      PAYPAL: "PayPal",
+      APPLE_PAY: "Apple Pay",
+      GOOGLE_PAY: "Google Pay",
+      OTHER: "Autre",
     },
     orderStatus: {
       title: "Statut de la commande",

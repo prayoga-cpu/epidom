@@ -19,7 +19,7 @@ import { useOwnerPinStatus } from "./hooks/use-owner-pin";
 import { useHasSwitchableStaff } from "./hooks/use-has-switchable-staff";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 import { isAdminEmail } from "@/lib/admin";
-import { Shield, TrendingUp, KeyRound, ShieldCheck, LogOut, RefreshCw } from "lucide-react";
+import { Shield, TrendingUp, KeyRound, ShieldCheck, LogOut, RefreshCw, Store } from "lucide-react";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { apiClient } from "@/lib/api/client";
 import { VerifyOwnerPinDialog } from "./verify-owner-pin-dialog";
@@ -113,6 +113,15 @@ export function NavUser() {
         // Best-effort — proceeding to sign out regardless.
       }
     }
+    // Otherwise the next signed-out (or different) visitor on this device
+    // would get bounced from the marketing homepage straight into a
+    // login-required page — see LastVisitedTracker/ResumeLastVisited.
+    try {
+      localStorage.removeItem("epidom:lastVisitedUrl");
+      localStorage.removeItem("epidom:rememberLastVisited");
+    } catch {
+      // Ignore — worst case the stale value just gets overwritten on next sign-in.
+    }
     await signOut();
     window.location.href = "/login";
   };
@@ -182,6 +191,13 @@ export function NavUser() {
             <ShieldCheck className="mr-2 h-3.5 w-3.5" />
             {t("nav.accountAccess")}
           </DropdownMenuItem>
+
+          {!actingAsStaff && (
+            <DropdownMenuItem onClick={() => router.push("/stores")}>
+              <Store className="mr-2 h-3.5 w-3.5" />
+              {t("nav.backToStores")}
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuSeparator />
           {actingAsStaff && (

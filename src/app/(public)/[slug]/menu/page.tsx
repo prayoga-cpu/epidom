@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { storefrontService } from "@/lib/services";
 import { PublicMenu } from "@/features/storefront/components/public-menu";
 import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
+import { MenuStructuredData } from "@/components/seo/structured-data";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -19,9 +20,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const url = `https://epidom.fr/@${cleanSlug}/menu`;
+  const description = `View the menu from ${storefront.displayName} and order directly via WhatsApp.`;
+
   return {
     title: `Menu - ${storefront.displayName} | Epidom Storefront`,
-    description: `View the menu from ${storefront.displayName} and order directly via WhatsApp.`,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title: `${storefront.displayName} Menu`, description, url, type: "website" },
   };
 }
 
@@ -35,10 +41,10 @@ export default async function MenuPage({ params }: PageProps) {
     notFound();
   }
 
-  // The owner's live account currency, not each item's persisted currency
+  // The store's live resolved currency, not each item's persisted currency
   // snapshot — the latter goes stale the moment the owner changes it in
-  // Profile settings, since nothing re-saves existing menu items at that point.
-  const ownerCurrency = storefront.store.business.user.currency;
+  // Fees & Taxes settings, since nothing re-saves existing menu items at that point.
+  const ownerCurrency = storefront.store.currency;
 
   // Cast menu categories with items
   const menuCategories = storefront.menuCategories.map((cat) => ({
@@ -71,5 +77,14 @@ export default async function MenuPage({ params }: PageProps) {
     acceptsReservations: storefront.acceptsReservations,
   };
 
-  return <PublicMenu storefront={storefrontData} menuCategories={menuCategories} />;
+  return (
+    <>
+      <MenuStructuredData
+        slug={cleanSlug}
+        displayName={storefront.displayName}
+        categories={menuCategories}
+      />
+      <PublicMenu storefront={storefrontData} menuCategories={menuCategories} />
+    </>
+  );
 }

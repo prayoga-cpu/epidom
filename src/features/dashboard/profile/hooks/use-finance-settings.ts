@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { PaymentMethod } from "@prisma/client";
+import type { PaymentMethod, PaymentMarket } from "@prisma/client";
 import type { PaymentFeeRate } from "@/config/payment-fees.config";
 
 export interface FinanceSettingsFields {
+  currency: string;
+  market: PaymentMarket;
+  enabledPaymentMethods: PaymentMethod[];
   taxEnabled: boolean;
   taxRate: number;
   taxLabel: string | null;
@@ -27,6 +30,9 @@ export interface BusinessFinanceSettingsData extends FinanceSettingsFields {
 }
 
 interface UpdateFinanceSettingsFields {
+  currency?: string;
+  market?: PaymentMarket;
+  enabledPaymentMethods?: PaymentMethod[];
   taxEnabled?: boolean;
   taxRate?: number;
   taxLabel?: string;
@@ -60,6 +66,14 @@ const fetchFinanceSettings = async (storeId: string): Promise<FinanceSettingsDat
   return parseFinanceSettingsResponse<FinanceSettingsData>(
     response,
     "Failed to fetch finance settings"
+  );
+};
+
+const fetchBusinessFinanceSettings = async (): Promise<BusinessFinanceSettingsData> => {
+  const response = await fetch("/api/user/business/finance-settings");
+  return parseFinanceSettingsResponse<BusinessFinanceSettingsData>(
+    response,
+    "Failed to fetch business finance settings"
   );
 };
 
@@ -102,6 +116,16 @@ export const useFinanceSettings = (storeId: string | undefined) => {
   });
 };
 
+export const useBusinessFinanceSettings = (options?: { enabled?: boolean }) => {
+  return useQuery<BusinessFinanceSettingsData>({
+    queryKey: ["business-finance-settings"],
+    queryFn: fetchBusinessFinanceSettings,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+};
+
 export const useUpdateFinanceSettings = (storeId: string | undefined) => {
   const queryClient = useQueryClient();
 
@@ -121,8 +145,10 @@ export const useUpdateBusinessFinanceSettings = () => {
     mutationFn: updateBusinessFinanceSettingsRequest,
     onSuccess: async () => {
       // Every store reads its effective values through ["finance-settings", storeId] —
-      // synced stores resolve from this same business config, so invalidate both.
+      // synced stores resolve from this same business config, so invalidate both,
+      // plus the standalone business-level query used outside store context.
       await queryClient.invalidateQueries({ queryKey: ["finance-settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["business-finance-settings"] });
     },
   });
 };

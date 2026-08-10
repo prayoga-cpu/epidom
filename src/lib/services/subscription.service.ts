@@ -1,4 +1,4 @@
-import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
+import { Prisma, SubscriptionPlan, SubscriptionStatus, type Subscription } from "@prisma/client";
 import { stripe } from "@/lib/stripe";
 import {
   subscriptionRepository,
@@ -403,6 +403,129 @@ export class SubscriptionService {
       cancelAtPeriodEnd: false,
     });
     this.invalidateUserCache(userId);
+  }
+
+  /**
+   * Admin-set custom price. Behavior splits on how the account is actually
+   * billed:
+   *  - Real Stripe subscription (stripeCustomerId doesn't start with "admin_"
+   *    or "free_"): live override via Stripe's ad-hoc price_data on the
+   *    subscription item — actually changes what Stripe charges next cycle.
+   *  - admin_/free_ accounts: reference-only — stored and displayed, no
+   *    Stripe call, since there's no real billing happening to override.
+   */
+  async setCustomPrice(
+    userId: string,
+    input: { amount: number; currency: string; interval: "MONTHLY" | "YEARLY" }
+  ): Promise<Subscription> {
+    let subscription = await this.subscriptionRepo.findByUserId(userId);
+    // A user who's never had a subscription row yet is treated the same way
+    // admin/users route's "set-plan" upsert treats them: admin-granted.
+    if (!subscription) {
+      const now = new Date();
+      subscription = await (this.subscriptionRepo as any).db.subscription.create({
+        data: {
+          userId,
+          stripeCustomerId: `admin_${userId}`,
+          plan: SubscriptionPlan.FREE,
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: now,
+          currentPeriodEnd: new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+
+    const isRealStripe =
+      !subscription!.stripeCustomerId.startsWith("admin_") &&
+      !subscription!.stripeCustomerId.startsWith("free_");
+
+    if (isRealStripe) {
+      if (!subscription!.stripeSubscriptionId) {
+        throw new AppError(
+          "This account has no active Stripe subscription to apply a live price override to.",
+          ApiErrorCode.VALIDATION_ERROR,
+          422
+        );
+      }
+      const stripeSub = await stripe.subscriptions.retrieve(subscription!.stripeSubscriptionId);
+      const item = stripeSub.items.data[0];
+      if (!item) {
+        throw new AppError(
+          "Stripe subscription has no line item to update.",
+          ApiErrorCode.VALIDATION_ERROR,
+          422
+        );
+      }
+      const existingProductId =
+        typeof item.price.product === "string" ? item.price.product : item.price.product.id;
+
+      await stripe.subscriptions.update(subscription!.stripeSubscriptionId, {
+        items: [
+          {
+            id: item.id,
+            price_data: {
+              currency: input.currency.toLowerCase(),
+              unit_amount: Math.round(input.amount * 100),
+              recurring: { interval: input.interval === "YEARLY" ? "year" : "month" },
+              product: existingProductId,
+            },
+          },
+        ],
+        // "none": new price applies starting next invoice/renewal, no
+        // surprise mid-cycle prorated charge/credit. The operator can still
+        // use the Stripe dashboard directly for a one-off prorated
+        // adjustment if ever needed.
+        proration_behavior: "none",
+      });
+    }
+
+    const updated = await this.subscriptionRepo.update(userId, {
+      customPriceAmount: new Prisma.Decimal(input.amount),
+      customPriceCurrency: input.currency,
+      customPriceInterval: input.interval,
+    });
+    this.invalidateUserCache(userId);
+    return updated;
+  }
+
+  /**
+   * Reverts to standard catalog pricing. For a real Stripe account on a plan
+   * with a catalog price, also restores the subscription item to that price
+   * (always the monthly price — the original billing interval isn't
+   * separately tracked once overridden, an accepted simplification).
+   */
+  async clearCustomPrice(userId: string): Promise<Subscription> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+    if (!subscription) {
+      throw new Error("No subscription found");
+    }
+
+    const isRealStripe =
+      !subscription.stripeCustomerId.startsWith("admin_") &&
+      !subscription.stripeCustomerId.startsWith("free_");
+
+    if (isRealStripe && subscription.stripeSubscriptionId) {
+      const stripeSub = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
+      const item = stripeSub.items.data[0];
+      const catalogPriceId =
+        subscription.plan === "POS" || subscription.plan === "OPERATIONS"
+          ? STRIPE_CONFIG.PRICE_IDS[subscription.plan].MONTHLY
+          : null;
+      if (item && catalogPriceId) {
+        await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+          items: [{ id: item.id, price: catalogPriceId }],
+          proration_behavior: "none",
+        });
+      }
+    }
+
+    const updated = await this.subscriptionRepo.update(userId, {
+      customPriceAmount: null,
+      customPriceCurrency: null,
+      customPriceInterval: null,
+    });
+    this.invalidateUserCache(userId);
+    return updated;
   }
 
   /**

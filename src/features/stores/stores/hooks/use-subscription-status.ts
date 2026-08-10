@@ -29,6 +29,9 @@ export interface SubscriptionStatusResponse {
     canManagePayment: boolean;
     canCancel: boolean;
     isBeta: boolean;
+    customPriceAmount: number | null;
+    customPriceCurrency: string | null;
+    customPriceInterval: "MONTHLY" | "YEARLY" | null;
   } | null;
   storeUsage: {
     current: number;

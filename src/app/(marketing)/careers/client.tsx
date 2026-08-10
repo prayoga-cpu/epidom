@@ -8,23 +8,13 @@ export function CareersClient() {
     <PlaceholderPage
       eyebrow="Careers"
       title="Build the future of F&B ops."
-      body="We're a small team with a big mission: give every independent food business the tools that enterprise chains take for granted. Join us."
+      body="Epidom is built by Prionation's product team, working as a small, focused pod rather than a large fixed org. We don't have a running req list — but we're always glad to hear from people who want in."
     >
       <PlaceholderSection
-        title="Open roles"
+        title="How we work"
         items={[
-          "Full-stack Engineer (Next.js / Rust) — Remote",
-          "Product Designer (Mobile & Web) — Remote",
-          "F&B Partnerships Lead — Jakarta / Remote",
-        ]}
-      />
-      <PlaceholderSection
-        title="What we offer"
-        items={[
-          "Fully remote-first culture with async-first communication",
-          "Equity in a fast-growing SaaS product",
-          "Budget for courses, conferences, and hardware",
-          "Meaningful work — every line of code helps real shop owners",
+          "A small pod of AI product engineers, based in Bali and Paris, remote-friendly",
+          "No open roles posted right now — reach out anyway if Epidom's mission fits what you're looking for",
         ]}
       />
       <PlaceholderSection

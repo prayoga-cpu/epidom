@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { formatCurrency } from "@/lib/utils/formatting";
+import { getFinanceSettings } from "@/lib/services/finance-settings.service";
 import { SupplierOrderPrintView } from "@/features/dashboard/management/edit-stock/reorder/supplier-order-print-view";
 
 // Deliberately outside the (dashboard) route group — see pos/orders/print's
@@ -35,19 +36,17 @@ export default async function SupplierOrderPrintPage({ params, searchParams }: P
     notFound();
   }
 
-  const [order, business] = await Promise.all([
+  const [order, { currency }] = await Promise.all([
     prisma.supplierOrder.findFirst({
       where: { id: orderId, storeId },
       include: { supplier: true, items: { include: { material: true } } },
     }),
-    prisma.business.findUnique({ where: { id: store.businessId }, select: { currency: true } }),
+    getFinanceSettings(storeId),
   ]);
 
   if (!order) {
     notFound();
   }
-
-  const currency = business?.currency ?? "IDR";
 
   return (
     <SupplierOrderPrintView

@@ -22,9 +22,16 @@ export function PartnersClient() {
       <PlaceholderSection
         title="Current integrations"
         items={[
-          "Stripe — card payments and invoicing",
-          "SumUp — in-person card terminals",
-          "WhatsApp Business API — order and stock notifications",
+          "Stripe — subscription billing and card payments",
+          "Xendit — QRIS, GoPay, OVO, DANA (Indonesia)",
+          "WhatsApp — order and low-stock notifications",
+        ]}
+      />
+      <PlaceholderSection
+        title="Supplier & affiliate partnerships"
+        items={[
+          "Bean roasters, frozen-food distributors, bakery suppliers — bundle a free period of Epidom with your orders",
+          "F&B consultants — recurring commission for every business you refer",
         ]}
       />
       <PlaceholderSection

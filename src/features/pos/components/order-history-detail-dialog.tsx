@@ -344,6 +344,15 @@ export function OrderHistoryDetailDialog({
               )}
             </div>
 
+            {order.paymentNote && (
+              <div className="text-sm">
+                <p className="text-muted-foreground text-xs font-semibold uppercase">
+                  {t("pos.history.detailPaymentNote")}
+                </p>
+                <p>{order.paymentNote}</p>
+              </div>
+            )}
+
             {order.notes && (
               <div className="text-sm">
                 <p className="text-muted-foreground text-xs font-semibold uppercase">

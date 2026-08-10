@@ -27,6 +27,13 @@ export const paymentMethodEnum = z.enum([
   "BANK_TRANSFER",
   "STRIPE_CARD",
   "PAY_LATER",
+  "LINKAJA",
+  "CHEQUE",
+  "TITRE_RESTAURANT",
+  "PAYPAL",
+  "APPLE_PAY",
+  "GOOGLE_PAY",
+  "OTHER",
 ]);
 
 // The method actually used to settle a payment — excludes PAY_LATER, which
@@ -34,7 +41,10 @@ export const paymentMethodEnum = z.enum([
 // money changed hands.
 export const settlePaymentMethodEnum = paymentMethodEnum.exclude(["PAY_LATER"]);
 
-export const createPosOrderSchema = z.object({
+// Plain object (not the refined version below) so createHoldOrderSchema can
+// still reach `.shape.items` — .refine() wraps a schema in ZodEffects, which
+// drops `.shape`.
+const posOrderObjectSchema = z.object({
   items: z
     .array(
       z.object({
@@ -61,7 +71,18 @@ export const createPosOrderSchema = z.object({
   // server-side in computeOrderCharges() — never trust this alone.
   discountAmount: z.number().min(0).optional(),
   discountReason: z.string().max(200, "Reason is too long").optional(),
+  // The cashier-typed label for paymentMethod: "OTHER" (e.g. "Crypto",
+  // "Company account") — required in that case, see the refine below.
+  paymentNote: z.string().max(200, "Note is too long").optional(),
 });
+
+export const createPosOrderSchema = posOrderObjectSchema.refine(
+  (data) => data.paymentMethod !== "OTHER" || !!data.paymentNote?.trim(),
+  {
+    message: "paymentNote is required when paymentMethod is OTHER",
+    path: ["paymentNote"],
+  }
+);
 
 export type CreatePosOrderInput = z.infer<typeof createPosOrderSchema>;
 
@@ -72,7 +93,7 @@ export type CreatePosOrderInput = z.infer<typeof createPosOrderSchema>;
  * creating a duplicate row.
  */
 export const createHoldOrderSchema = z.object({
-  items: createPosOrderSchema.shape.items,
+  items: posOrderObjectSchema.shape.items,
   orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
   tableId: z.string().cuid().optional(),
   tableNumber: z.string().optional(),

@@ -22,7 +22,7 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     const response = await fetch(url.toString(), {
       headers: {
         // Required by Nominatim's usage policy — identifies the caller.
-        "User-Agent": "epidom-app/1.0 (attendance-clock-in; contact: support@epidom.id)",
+        "User-Agent": "epidom-app/1.0 (attendance-clock-in; contact: support@epidom.fr)",
         Accept: "application/json",
       },
       signal: AbortSignal.timeout(3000),

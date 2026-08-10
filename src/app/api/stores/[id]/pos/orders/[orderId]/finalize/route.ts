@@ -144,6 +144,7 @@ export async function POST(
           shiftId: input.shiftId ?? existing.shiftId,
           paymentMethod: input.paymentMethod as PaymentMethod,
           paymentStatus: input.paymentMethod === "PAY_LATER" ? "PENDING" : "PAID",
+          paymentNote: input.paymentNote,
           status: settledStatus,
           ...(immediatelyDelivered && { deliveredDate: new Date() }),
           notes: input.notes,

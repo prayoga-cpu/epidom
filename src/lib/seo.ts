@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { LOCALES, DEFAULT_LOCALE, getLocalizedPath } from "@/lib/i18n-routing";
 
 export interface SEOConfig {
   title: string;
@@ -46,31 +47,40 @@ export interface SEOConfig {
 }
 
 const defaultSEO: SEOConfig = {
-  title: "Epidom — Online Store, Menu & POS for F&B",
+  title: "Epidom — Free Storefront, Online Ordering & POS for F&B",
   description:
-    "Create a menu page, accept online orders, manage your POS cashier and kitchen — all in one platform. Free forever for cafés, warungs, and restaurants.",
+    "Free public menu page, online ordering, and POS cashier for cafés, restaurants, and warungs. No commission, no delivery-app fees. Free forever.",
+  // Market priority (2026-08-10): France primary, Indonesia secondary,
+  // worldwide beyond both — see docs/STRATEGY.md §3. This is the
+  // locale-agnostic base default; per-locale pages should override with
+  // market-specific terms (fr: "logiciel caisse restaurant gratuit",
+  // "carte qr code restaurant"; id: "aplikasi kasir warung gratis", "menu
+  // qr resto") once locale routing lands.
   keywords: [
-    "f&b pos app",
-    "digital menu page",
+    "restaurant pos software",
+    "digital menu qr code",
     "online food ordering",
-    "restaurant cashier software",
+    "free pos app",
+    "cafe cashier software",
+    "qr code menu restaurant",
     "kitchen display system",
-    "qris payments",
-    "inventory management",
+    "f&b storefront",
     "epidom",
   ],
   openGraph: {
-    title: "Epidom — Online Store, Menu & POS for F&B",
+    title: "Epidom — Free Storefront, Online Ordering & POS for F&B",
     description:
-      "Create a menu page, accept online orders, manage your POS cashier and kitchen. Free forever.",
+      "Free public menu page, WhatsApp & online ordering, and POS cashier for cafés, restaurants, and warungs. Free forever.",
     url: "https://epidom.fr",
     siteName: "Epidom",
     images: [
       {
-        url: "https://epidom.fr/images/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Epidom — F&B Online Store & POS Platform",
+        // TODO(operator): swap for a dedicated 1200x630 designed OG card —
+        // this is a real product screenshot used as a stopgap, see STATUS.md.
+        url: "https://epidom.fr/images/screenshot-wide-1.png",
+        width: 1602,
+        height: 1067,
+        alt: "Epidom — F&B Online Storefront & POS Platform",
       },
     ],
     locale: "en_US",
@@ -80,10 +90,10 @@ const defaultSEO: SEOConfig = {
     card: "summary_large_image",
     site: "@epidom",
     creator: "@epidom",
-    title: "Epidom — Online Store, Menu & POS for F&B",
+    title: "Epidom — Free Storefront, Online Ordering & POS for F&B",
     description:
-      "Create a menu page, accept online orders, and manage your POS cashier. Free forever for F&B businesses.",
-    images: ["https://epidom.fr/images/twitter-card.jpg"],
+      "Free public menu page, WhatsApp & online ordering, and POS cashier. Free forever for F&B businesses.",
+    images: ["https://epidom.fr/images/screenshot-wide-1.png"],
   },
   robots: {
     index: true,
@@ -98,8 +108,25 @@ const defaultSEO: SEOConfig = {
   },
 };
 
+/**
+ * hreflang alternates for a marketing page, derived from its canonical URL
+ * (always the unprefixed/fr form — see src/lib/i18n-routing.ts). fr has no
+ * prefix (primary market, docs/STRATEGY.md §3); id/en are prefixed.
+ * x-default points at fr, same reasoning.
+ */
+function buildHreflangAlternates(canonicalUrl: string): Record<string, string> {
+  const basePath = canonicalUrl.replace("https://epidom.fr", "") || "/";
+  const languages: Record<string, string> = {};
+  for (const locale of LOCALES) {
+    languages[locale] = `https://epidom.fr${getLocalizedPath(basePath, locale)}`;
+  }
+  languages["x-default"] = languages[DEFAULT_LOCALE];
+  return languages;
+}
+
 export function generateMetadata(config: Partial<SEOConfig> = {}): Metadata {
   const seo = { ...defaultSEO, ...config };
+  const canonicalUrl = seo.canonical || seo.alternates?.canonical;
 
   return {
     title: {
@@ -118,8 +145,12 @@ export function generateMetadata(config: Partial<SEOConfig> = {}): Metadata {
     },
     metadataBase: new URL("https://epidom.fr"),
     alternates: {
-      canonical: seo.canonical || seo.alternates?.canonical,
-      languages: seo.alternates?.languages,
+      canonical: canonicalUrl,
+      languages:
+        seo.alternates?.languages ??
+        (canonicalUrl?.startsWith("https://epidom.fr")
+          ? buildHreflangAlternates(canonicalUrl)
+          : undefined),
     },
     robots: seo.robots,
     openGraph: {
@@ -186,12 +217,10 @@ export function generateStructuredData(
       "Online store, menu page, and POS cashier platform for cafés, warungs, and restaurants.",
     url: baseUrl,
     logo: `${baseUrl}/images/logo.svg`,
-    image: `${baseUrl}/images/og-image.jpg`,
-    sameAs: [
-      "https://twitter.com/epidom",
-      "https://linkedin.com/company/epidom",
-      "https://github.com/epidom",
-    ],
+    image: `${baseUrl}/images/screenshot-wide-1.png`,
+    // Kept in sync with SOCIAL in site-footer.tsx — Instagram is the only
+    // actively maintained account.
+    sameAs: ["https://instagram.com/epidom.fr"],
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer service",

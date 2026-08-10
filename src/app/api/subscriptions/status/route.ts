@@ -91,6 +91,11 @@ export const GET = withApiHandler(
           // Admin-granted (privilege) account — no payment method attached. These
           // "BETA" accounts may switch plans freestyle without Stripe checkout.
           isBeta: subscription.stripeCustomerId.startsWith("admin_"),
+          // Admin-set custom price override — see Subscription.customPriceAmount.
+          customPriceAmount:
+            subscription.customPriceAmount != null ? Number(subscription.customPriceAmount) : null,
+          customPriceCurrency: subscription.customPriceCurrency,
+          customPriceInterval: subscription.customPriceInterval,
         },
         storeUsage,
       })

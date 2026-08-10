@@ -12,9 +12,18 @@ import { EditFeesAndTaxesDialog } from "./edit-fees-and-taxes-dialog";
 interface FeesAndTaxesCardProps {
   storeId: string;
   storeName?: string;
+  /** Store's own address country, used only as a signal for the "Detect automatically" market suggestion. */
+  storeCountry?: string | null;
+  /** Business's UI locale, used the same way. */
+  businessLocale?: string;
 }
 
-export function FeesAndTaxesCard({ storeId, storeName }: FeesAndTaxesCardProps) {
+export function FeesAndTaxesCard({
+  storeId,
+  storeName,
+  storeCountry,
+  businessLocale,
+}: FeesAndTaxesCardProps) {
   const { t } = useI18n();
   const [editOpen, setEditOpen] = useState(false);
   const {
@@ -26,7 +35,20 @@ export function FeesAndTaxesCard({ storeId, storeName }: FeesAndTaxesCardProps) 
     isRefetching,
   } = useFinanceSettings(storeId);
 
-  const enabledMethodCount = settings ? Object.keys(settings.feeRates).length : 0;
+  const enabledMethodCount = settings
+    ? settings.enabledPaymentMethods.length + (settings.payLaterEnabled ? 1 : 0)
+    : 0;
+
+  const marketLabel = (market?: string) => {
+    switch (market) {
+      case "FRANCE":
+        return t("profile.feesAndTaxes.market.france");
+      case "INTERNATIONAL":
+        return t("profile.feesAndTaxes.market.international");
+      default:
+        return t("profile.feesAndTaxes.market.indonesia");
+    }
+  };
 
   return (
     <>
@@ -79,6 +101,20 @@ export function FeesAndTaxesCard({ storeId, storeName }: FeesAndTaxesCardProps) 
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-sm font-medium">
+                  {t("profile.feesAndTaxes.currency")}
+                </p>
+                <span className="text-base font-semibold">{settings.currency}</span>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-sm font-medium">
+                  {t("profile.feesAndTaxes.market.title")}
+                </p>
+                <span className="text-base font-semibold">{marketLabel(settings.market)}</span>
+              </div>
+
               <div className="space-y-1">
                 <p className="text-muted-foreground text-sm font-medium">
                   {t("profile.feesAndTaxes.tax.rate")}
@@ -164,6 +200,8 @@ export function FeesAndTaxesCard({ storeId, storeName }: FeesAndTaxesCardProps) 
           syncedWithBusiness={settings.syncFinanceWithBusiness}
           settings={settings}
           payLaterEnabled={settings.payLaterEnabled}
+          storeCountry={storeCountry}
+          businessLocale={businessLocale}
         />
       )}
     </>

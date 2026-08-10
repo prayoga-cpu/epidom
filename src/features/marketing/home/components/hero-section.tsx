@@ -1,12 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { PosDashboard } from "@/features/marketing/shared/components/pos-dashboard";
 import { PhoneMenu } from "@/features/marketing/shared/components/phone-menu";
 import { trackEvent } from "@/lib/analytics";
 
-export function HeroSection() {
+// Entrance choreography: pill, then each headline line, then lede/CTAs —
+// each child starts as the previous one is still finishing, matching the
+// "cascade" feel of Framer/Webflow hero reveals rather than one flat fade.
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0, y: 22 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] as const } },
+};
+
+export function HeroSection({
+  exampleStorefrontSlug,
+}: {
+  exampleStorefrontSlug?: string | null;
+}) {
   const router = useRouter();
   const { t } = useI18n();
 
@@ -51,8 +68,8 @@ export function HeroSection() {
       <div className="epi-container">
         <div className="relative z-10 grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
           {/* Left — copy */}
-          <div>
-            <div className="epi-pill">
+          <motion.div variants={stagger} initial="hidden" animate="show">
+            <motion.div variants={fadeUp} className="epi-pill">
               <span
                 style={{
                   width: 6,
@@ -64,9 +81,10 @@ export function HeroSection() {
                 }}
               />
               {t("redesign.hero.badge")}
-            </div>
+            </motion.div>
 
-            <h1
+            <motion.h1
+              variants={fadeUp}
               className="epi-display"
               style={{
                 fontSize: "clamp(56px, 8vw, 124px)",
@@ -95,9 +113,10 @@ export function HeroSection() {
               >
                 {t("redesign.hero.serifAccent")}
               </span>
-            </h1>
+            </motion.h1>
 
-            <p
+            <motion.p
+              variants={fadeUp}
               style={{
                 color: "var(--epi-cream-50)",
                 opacity: 0.72,
@@ -109,9 +128,13 @@ export function HeroSection() {
               }}
             >
               {t("redesign.hero.lede")}
-            </p>
+            </motion.p>
 
-            <div className="flex flex-col flex-wrap sm:flex-row" style={{ gap: 14, marginTop: 36 }}>
+            <motion.div
+              variants={fadeUp}
+              className="flex flex-col flex-wrap sm:flex-row"
+              style={{ gap: 14, marginTop: 36 }}
+            >
               <button
                 onClick={() => {
                   trackEvent("cta_click", {
@@ -171,10 +194,39 @@ export function HeroSection() {
               >
                 {t("redesign.hero.ctaSecondary")}
               </button>
-            </div>
+            </motion.div>
+
+            {exampleStorefrontSlug && (
+              <motion.a
+                variants={fadeUp}
+                href={`/@${exampleStorefrontSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() =>
+                  trackEvent("cta_click", {
+                    event_category: "engagement",
+                    event_label: "hero_live_storefront_example",
+                  })
+                }
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginTop: 18,
+                  fontSize: 13,
+                  color: "var(--epi-gold-400)",
+                  textDecoration: "none",
+                  borderBottom: "1px solid rgba(217,174,59,0.4)",
+                  width: "fit-content",
+                }}
+              >
+                {t("redesign.hero.ctaLiveExample")}
+              </motion.a>
+            )}
 
             {/* Proof stats */}
-            <div
+            <motion.div
+              variants={fadeUp}
               style={{
                 display: "flex",
                 gap: 36,
@@ -210,11 +262,17 @@ export function HeroSection() {
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Right — mockups */}
-          <div className="hidden lg:block" style={{ position: "relative", minHeight: 540 }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] as const }}
+            className="hidden lg:block"
+            style={{ position: "relative", minHeight: 540 }}
+          >
             <div
               style={{
                 position: "absolute",
@@ -295,7 +353,7 @@ export function HeroSection() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>

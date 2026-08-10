@@ -34,7 +34,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ storeI
     phone: profileDto.phone,
     locale: profileDto.locale as "en" | "fr" | "id" | undefined,
     timezone: profileDto.timezone,
-    currency: profileDto.currency,
     defaultLanding: profileDto.defaultLanding,
     createdAt: profileDto.createdAt,
     business: profileDto.business
@@ -47,6 +46,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ storeI
           phone: profileDto.business.phone,
           email: profileDto.business.email,
           website: profileDto.business.website,
+          locale: profileDto.business.locale,
         }
       : null,
     subscription: profileDto.subscription
@@ -71,6 +71,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ storeI
       isOwner={isOwner}
       storeId={storeId}
       storeName={store?.name}
+      storeCountry={store?.country ?? null}
     />
   );
 }

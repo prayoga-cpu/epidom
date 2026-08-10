@@ -29,7 +29,6 @@ export default async function ProfilePage() {
     phone: profileDto.phone,
     locale: profileDto.locale as "en" | "fr" | "id" | undefined,
     timezone: profileDto.timezone,
-    currency: profileDto.currency,
     defaultLanding: profileDto.defaultLanding,
     createdAt: profileDto.createdAt,
     business: profileDto.business
@@ -42,6 +41,7 @@ export default async function ProfilePage() {
           phone: profileDto.business.phone,
           email: profileDto.business.email,
           website: profileDto.business.website,
+          locale: profileDto.business.locale,
         }
       : null,
     subscription: profileDto.subscription

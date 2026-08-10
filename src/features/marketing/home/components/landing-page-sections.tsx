@@ -17,11 +17,15 @@ import {
   ClosingCtaSection,
 } from "@/features/marketing/home/components";
 
-export function LandingPageSections() {
+export function LandingPageSections({
+  exampleStorefrontSlug,
+}: {
+  exampleStorefrontSlug: string | null;
+}) {
   return (
     <>
       <SectionErrorBoundary sectionName="Hero">
-        <HeroSection />
+        <HeroSection exampleStorefrontSlug={exampleStorefrontSlug} />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Trust Bar">

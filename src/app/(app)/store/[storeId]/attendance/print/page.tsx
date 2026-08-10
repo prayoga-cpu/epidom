@@ -8,6 +8,7 @@ import { pairAttendanceIntoWorkdays } from "@/lib/attendance/hours-aggregation";
 import { getBusinessDateKey } from "@/lib/attendance/business-date";
 import { fetchUnifiedLog } from "@/lib/attendance/unified-log";
 import { formatCurrency } from "@/lib/utils/formatting";
+import { getFinanceSettings } from "@/lib/services/finance-settings.service";
 
 // Deliberately outside the (dashboard) route group — see pos/orders/print's
 // page.tsx for the original precedent.
@@ -93,11 +94,7 @@ export default async function AttendancePrintPage({ params, searchParams }: Prin
     );
   }
 
-  const business = await prisma.store.findUnique({
-    where: { id: storeId },
-    select: { business: { select: { currency: true } } },
-  });
-  const currency = business?.business.currency ?? "IDR";
+  const { currency } = await getFinanceSettings(storeId);
 
   const records = await fetchUnifiedLog({
     storeId,

@@ -3,21 +3,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
-import {
-  isOfflineModeEnabled,
-  setOfflineModeEnabled,
-  getOfflineModeState,
-} from "@/lib/pwa/offline-mode";
+import { isOfflineModeEnabled, setOfflineModeEnabled } from "@/lib/pwa/offline-mode";
 import { isOfflinePersistedQueryKey } from "@/lib/pwa/query-persister";
 
 /**
- * Offline Mode = an explicit opt-in that eagerly primes the offline data
- * mirror (instead of waiting for the cashier to naturally browse every
- * screen) and requests durable storage. Detects the app running installed
- * (standalone display mode) and auto-enables it the first time — someone
- * who installed Epidom to their home screen has already signaled "I want
- * this to work without a connection," so it shouldn't also require finding
- * a separate switch.
+ * Offline Mode eagerly primes the offline data mirror (instead of waiting
+ * for the cashier to naturally browse every screen) and requests durable
+ * storage. It's mandatory, not opt-in, once the app is running installed
+ * (standalone display mode) — someone who installed Epidom to their home
+ * screen has already signaled "I want this to work without a connection,"
+ * so there's no toggle to turn it back off in that state: `enabled` reports
+ * `true` unconditionally while standalone, and `disableOfflineMode` is a
+ * no-op then (the UI backs this up by disabling the switch, but the hook
+ * itself refuses too, so no other call site can bypass it).
  */
 export function useOfflineMode(storeId: string) {
   const { isStandalone } = usePwaInstall();
@@ -59,33 +57,35 @@ export function useOfflineMode(storeId: string) {
   }, [storeId, primeOfflineData]);
 
   const disableOfflineMode = useCallback(async () => {
-    if (!storeId) return;
+    // No opt-out while installed — see the module docstring.
+    if (!storeId || isStandalone) return;
     await setOfflineModeEnabled(storeId, false);
     setEnabledState(false);
-  }, [storeId]);
+  }, [storeId, isStandalone]);
 
   useEffect(() => {
     if (!storeId) return;
     isOfflineModeEnabled(storeId).then(setEnabledState);
   }, [storeId]);
 
-  // Standalone-install detector: fires once ever per store, the first time
-  // the app is confirmed running installed. Checks the raw undecided state
-  // (not isOfflineModeEnabled's false-default) so a user who has explicitly
-  // turned Offline Mode off never has it silently flipped back on just by
-  // reopening the installed app.
+  // Standalone-install detector: unlike before, this no longer checks for a
+  // prior explicit opt-out — installed means mandatory, full stop — so it
+  // just turns Offline Mode on (idempotent) once per standalone/store change.
   useEffect(() => {
     if (!isStandalone || !storeId) return;
-    let cancelled = false;
-    getOfflineModeState(storeId).then((state) => {
-      if (state === null && !cancelled) enableOfflineMode();
-    });
-    return () => {
-      cancelled = true;
-    };
+    enableOfflineMode();
     // Intentionally omits enableOfflineMode — only re-run when standalone/store identity changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStandalone, storeId]);
 
-  return { enabled, isPriming, isStandalone, enableOfflineMode, disableOfflineMode };
+  return {
+    // Forced true while standalone regardless of the persisted/async-loaded
+    // value, so the UI never shows "off" even for the one tick before the
+    // effect above resolves.
+    enabled: isStandalone || enabled,
+    isPriming,
+    isStandalone,
+    enableOfflineMode,
+    disableOfflineMode,
+  };
 }

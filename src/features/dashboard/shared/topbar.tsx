@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Search, Menu } from "lucide-react";
@@ -19,10 +20,26 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { EpidomLogo } from "@/features/marketing/shared/components/epidom-logo";
 
 export function Topbar() {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { t } = useI18n();
   const { storeId } = useCurrentStore();
+
+  // The brand mark is the one deliberate way back to the marketing site from
+  // inside the app — LastVisitedTracker only runs in (app), so without this
+  // the click would land on "/" with the OLD app URL still recorded as "last
+  // visited" and ResumeLastVisited would immediately bounce back into the
+  // app, making it impossible to ever actually see the marketing page again.
+  // Recording "/" itself as the last-visited URL first breaks that loop.
+  const handleLogoClick = () => {
+    try {
+      localStorage.setItem("epidom:lastVisitedUrl", "/");
+    } catch {
+      // Ignore — worst case this one click still redirects, same as before.
+    }
+    router.push("/");
+  };
 
   // Edge-swipe-right anywhere on screen opens the nav drawer (below the xl
   // breakpoint, where the fixed desktop rail isn't shown and the hamburger
@@ -141,7 +158,7 @@ export function Topbar() {
               </SheetContent>
             </Sheet>
             <div className="flex min-w-0 items-center justify-center">
-              <EpidomLogo size={22} />
+              <EpidomLogo size={22} onClick={handleLogoClick} />
             </div>
           </div>
 
@@ -204,7 +221,7 @@ export function Topbar() {
               </SheetContent>
             </Sheet>
             <div className="flex items-center">
-              <EpidomLogo size={26} />
+              <EpidomLogo size={26} onClick={handleLogoClick} />
             </div>
           </div>
 

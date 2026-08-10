@@ -2,6 +2,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import { storefrontService } from "@/lib/services";
 import { PublicProfile } from "@/features/storefront/components/public-profile";
+import { StorefrontStructuredData } from "@/components/seo/structured-data";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -21,11 +22,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const url = `https://epidom.fr/@${cleanSlug}`;
+  const description =
+    storefront.description ||
+    storefront.tagline ||
+    `${storefront.displayName} on Epidom. Lihat menu dan hubungi kami langsung.`;
+  const image = storefront.heroImageUrl || storefront.logoUrl;
+
   return {
     title: `${storefront.displayName} | Epidom Storefront`,
-    description:
-      storefront.description ||
-      `${storefront.displayName} on Epidom. Lihat menu dan hubungi kami langsung.`,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: storefront.displayName,
+      description,
+      url,
+      type: "website",
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title: storefront.displayName,
+      description,
+      images: image ? [image] : undefined,
+    },
   };
 }
 
@@ -60,5 +80,22 @@ export default async function StorefrontPage({ params }: PageProps) {
     reservableTables,
   };
 
-  return <PublicProfile storefront={serialized as any} />;
+  return (
+    <>
+      <StorefrontStructuredData
+        slug={cleanSlug}
+        displayName={storefront.displayName}
+        tagline={storefront.tagline}
+        description={storefront.description}
+        logoUrl={storefront.logoUrl}
+        heroImageUrl={storefront.heroImageUrl}
+        whatsappNumber={storefront.whatsappNumber}
+        instagramUrl={storefront.instagramUrl}
+        tiktokUrl={storefront.tiktokUrl}
+        googleMapsUrl={storefront.googleMapsUrl}
+        openingHours={storefront.openingHours}
+      />
+      <PublicProfile storefront={serialized as any} />
+    </>
+  );
 }

@@ -5,9 +5,10 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useRouter } from "next/navigation";
 import { PhoneMenu } from "@/features/marketing/shared/components/phone-menu";
 import { PhoneKDS } from "@/features/marketing/shared/components/phone-kds";
+import { PAYMENT_METHODS } from "@/features/marketing/shared/content/payment-methods";
 
 export function FeatureLadderSection() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
 
   const cardBase: React.CSSProperties = {
@@ -223,14 +224,7 @@ export function FeatureLadderSection() {
                 {t("redesign.coreProducts.p2checkoutLabel")}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                {[
-                  { n: "QRIS", c: "#0066B3" },
-                  { n: "GoPay", c: "#00AED5" },
-                  { n: "OVO", c: "#4C2A86" },
-                  { n: "Card", c: "#1F4373" },
-                  { n: "Bank", c: "#3A5B7A" },
-                  { n: "Cash", c: "#5A4A2A" },
-                ].map((p, i) => (
+                {PAYMENT_METHODS[locale].map((p, i) => (
                   <div
                     key={i}
                     style={{

@@ -13,6 +13,7 @@ import { EpidomLogo } from "./epidom-logo";
 import { useSession, signOut } from "@/lib/auth-client";
 import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
 import { trackEvent } from "@/lib/analytics";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 /**
  * BUTTON MODE SELECTION
@@ -34,7 +35,7 @@ export const SiteHeader = memo(function SiteHeader({
 }: SiteHeaderProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
 
@@ -44,6 +45,10 @@ export const SiteHeader = memo(function SiteHeader({
 
   const variant = useMemo(() => variantOverride ?? "landing", [variantOverride]);
   const navigationItems = useMemo(() => getNavigationByVariant(variant), [variant]);
+  // navigation.config.ts hrefs are locale-agnostic ("/pricing") — only the
+  // "landing" variant (marketing site) participates in URL-based locale
+  // routing, "authenticated" (in-app shell) never does.
+  const localizeHref = (href: string) => (variant === "landing" ? getLocalizedPath(href, locale) : href);
 
   const handleLogin = () => router.push("/login");
   const handleStartFree = () => {
@@ -57,11 +62,12 @@ export const SiteHeader = memo(function SiteHeader({
   };
 
   const renderDesktopNavLink = (item: NavItem) => {
-    const isActive = pathname === item.href;
+    const href = localizeHref(item.href);
+    const isActive = pathname === href;
     return (
       <li key={item.href}>
         <Link
-          href={item.href}
+          href={href}
           aria-current={isActive ? "page" : undefined}
           className={`transition-colors ${
             isActive
@@ -85,13 +91,14 @@ export const SiteHeader = memo(function SiteHeader({
   };
 
   const renderMobileNavLink = (item: NavItem) => {
-    const isActive = pathname === item.href;
+    const href = localizeHref(item.href);
+    const isActive = pathname === href;
     const Icon = item.icon;
     return (
       <li key={item.href}>
         <SheetClose asChild>
           <Link
-            href={item.href}
+            href={href}
             aria-current={isActive ? "page" : undefined}
             className={`flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               isActive
@@ -163,7 +170,7 @@ export const SiteHeader = memo(function SiteHeader({
 
   return (
     <nav className="epi-floating-nav backdrop-blur-xs" role="navigation" aria-label="Main header">
-      <EpidomLogo href="/" size={30} />
+      <EpidomLogo href={localizeHref("/")} size={30} />
 
       {/* Desktop nav links */}
       {showNav && (
@@ -178,7 +185,7 @@ export const SiteHeader = memo(function SiteHeader({
       {/* Right side */}
       <div className="flex items-center gap-3">
         <div className="hidden items-center gap-3 lg:flex">
-          <LangSwitcher />
+          <LangSwitcher urlDriven />
           {mounted && <DesktopCTA />}
         </div>
 
@@ -226,7 +233,7 @@ export const SiteHeader = memo(function SiteHeader({
                 className="flex items-center justify-between p-6"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
               >
-                <EpidomLogo href="/" size={24} />
+                <EpidomLogo href={localizeHref("/")} size={24} />
                 <SheetClose asChild>
                   <button
                     className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full hover:bg-white/10"
@@ -297,7 +304,7 @@ export const SiteHeader = memo(function SiteHeader({
                     )}
                   </div>
                   <div className="flex-shrink-0">
-                    <LangSwitcher dropUp />
+                    <LangSwitcher dropUp urlDriven />
                   </div>
                 </div>
               </div>
