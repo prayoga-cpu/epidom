@@ -59,6 +59,11 @@ const posOrderObjectSchema = z.object({
     .min(1),
   paymentMethod: paymentMethodEnum,
   orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
+  // Pax at the table — only meaningful for DINE_IN, so the checkout dialog
+  // omits it entirely for takeaway rather than sending a misleading 1. Left
+  // optional here (not `.default(1)`) so "not recorded" stays distinguishable
+  // from "one guest" all the way down to Order.guestCount.
+  guestCount: z.number().int().min(1).max(99).optional(),
   tableId: z.string().cuid().optional(),
   tableNumber: z.string().optional(),
   customerName: z.string().optional(),
@@ -95,6 +100,7 @@ export type CreatePosOrderInput = z.infer<typeof createPosOrderSchema>;
 export const createHoldOrderSchema = z.object({
   items: posOrderObjectSchema.shape.items,
   orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
+  guestCount: posOrderObjectSchema.shape.guestCount,
   tableId: z.string().cuid().optional(),
   tableNumber: z.string().optional(),
   customerName: z.string().optional(),

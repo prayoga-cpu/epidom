@@ -14,7 +14,7 @@ import { PosOrderPrimaryAction } from "./pos-order-primary-action";
 import {
   getOrderSourceBadgeVariant,
   getOrderStatusAccentClass,
-  getOrderStatusBadgeVariant,
+  getOrderStatusBadgeClass,
   isAwaitingPayment,
   mapOrderStatusLabel,
   mapPaymentMethodLabel,
@@ -66,7 +66,7 @@ export function PosOrderRow({ order, storeId, onUpdateStatus }: PosOrderRowProps
       </div>
 
       <div className="flex items-center gap-1.5">
-        <Badge variant={getOrderStatusBadgeVariant(order.status)}>
+        <Badge variant="outline" className={getOrderStatusBadgeClass(order.status)}>
           {mapOrderStatusLabel(t, order.status)}
         </Badge>
         <Badge variant={getOrderSourceBadgeVariant(order.source)}>

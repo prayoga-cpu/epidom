@@ -54,11 +54,17 @@ export function AlertsCard({ initialAlerts, storeId }: AlertsCardProps) {
         </div>
       ) : (
         <div className="flex flex-1 flex-col overflow-hidden rounded-lg border">
-          {/* Table Header */}
-          <div className="from-foreground/90 to-foreground/80 text-background flex shrink-0 bg-gradient-to-r px-3 py-2 text-xs font-bold">
-            <div className="w-2/5">{t("dashboard.alertsCard.material")}</div>
-            <div className="w-2/5 text-center">{t("dashboard.alertsCard.stockLevel")}</div>
-            <div className="w-1/5 text-right">{t("dashboard.alertsCard.current")}</div>
+          {/* Table Header. Name flexes, the numeric columns hold a fixed
+              width — a fraction-based split strands long material names on a
+              375px phone. */}
+          <div className="from-foreground/90 to-foreground/80 text-background flex shrink-0 items-center gap-2 bg-gradient-to-r px-3 py-2 text-xs font-bold">
+            <div className="min-w-0 flex-1">{t("dashboard.alertsCard.material")}</div>
+            <div className="w-1/4 shrink-0 text-center sm:w-2/5">
+              {t("dashboard.alertsCard.stockLevel")}
+            </div>
+            <div className="w-16 shrink-0 text-right sm:w-24">
+              {t("dashboard.alertsCard.current")}
+            </div>
           </div>
 
           {/* Table Body */}
@@ -67,16 +73,16 @@ export function AlertsCard({ initialAlerts, storeId }: AlertsCardProps) {
               return (
                 <div
                   key={alert.id}
-                  className="hover:bg-muted/30 flex items-center px-3 py-2.5 text-sm transition-colors"
+                  className="hover:bg-muted/30 flex items-center gap-2 px-3 py-2.5 text-sm transition-colors"
                 >
-                  <div className="w-2/5 truncate font-medium">{alert.materialName}</div>
-                  <div className="w-2/5 px-2">
+                  <div className="min-w-0 flex-1 truncate font-medium">{alert.materialName}</div>
+                  <div className="w-1/4 shrink-0 sm:w-2/5">
                     <Progress
                       value={Math.min(alert.stockPercentage, 100)}
                       className={`[&>div]:bg-destructive bg-muted h-2`}
                     />
                   </div>
-                  <div className="w-1/5 text-right font-semibold text-red-600 dark:text-red-400">
+                  <div className="w-16 shrink-0 truncate text-right font-semibold text-red-600 sm:w-24 dark:text-red-400">
                     {alert.currentStock} {alert.unit}
                   </div>
                 </div>

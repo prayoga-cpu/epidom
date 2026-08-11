@@ -20,7 +20,7 @@ import Stripe from "stripe";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { ApiErrorCode } from "@/types/api/responses";
-import { planHasFeature } from "@/lib/plans/entitlements";
+import { planHasFeature, type PlanTier } from "@/lib/plans/entitlements";
 
 /**
  * Subscription Service
@@ -257,6 +257,23 @@ export class SubscriptionService {
       limit,
       current: currentProductCount,
     };
+  }
+
+  /**
+   * The user's effective plan tier — their subscription's plan while ACTIVE,
+   * otherwise FREE. For callers that need to evaluate several entitlements at
+   * once (e.g. the dashboard deciding which cards to render) and would
+   * otherwise issue one query per `has*Access` call. Pair with
+   * `planHasFeature` from `@/lib/plans/entitlements`.
+   */
+  async getActivePlan(userId: string): Promise<PlanTier> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+
+    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+      return "FREE";
+    }
+
+    return subscription.plan;
   }
 
   /**

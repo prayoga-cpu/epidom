@@ -141,6 +141,21 @@ export async function invalidateMaterialRelatedQueries(
     // This allows UI to respond faster while background sync happens
     invalidateMaterialQueriesImmediate(queryClient, storeId, skipMaterials);
 
+    // The primary materials list gets refetchType "all", not the default
+    // "active". The page that mutates stock frequently has no materials query
+    // mounted at all — /production reads material stock off the *recipes*
+    // query — so "active" found nothing to refetch and the merchant landed on
+    // /management still looking at pre-mutation numbers. Only this one key is
+    // promoted; the deferred set below stays "none" so a single stock write
+    // can't stampede every list in the app.
+    if (!skipMaterials) {
+      queryClient.invalidateQueries({
+        queryKey: ["materials", storeId],
+        exact: false,
+        refetchType: "all",
+      });
+    }
+
     // Also invalidate recipes immediately (they contain material stock data)
     // This ensures production tab sees updated stock when user navigates
     queryClient.invalidateQueries({
@@ -236,12 +251,15 @@ export async function invalidateProductRelatedQueries(
 
     await Promise.all(invalidations);
   } else {
-    // Non-blocking: Invalidate critical queries immediately, defer others
+    // Non-blocking: Invalidate critical queries immediately, defer others.
+    // "all" rather than "active" for the same reason as the materials list
+    // above: completing a production batch adds finished-goods stock from a
+    // page that has no products query mounted.
     if (!skipProducts) {
       queryClient.invalidateQueries({
         queryKey: ["products", storeId],
         exact: false,
-        refetchType: "active",
+        refetchType: "all",
       });
     }
 

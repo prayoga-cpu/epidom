@@ -5,6 +5,9 @@ import type { CartItem } from "../types/pos.types";
 export interface HoldOrderInput {
   items: CartItem[];
   orderType: "DINE_IN" | "TAKEAWAY";
+  /** Pax, DINE_IN only — carried through to finalize so a held dine-in order
+   * keeps the guest count the cashier already entered. */
+  guestCount?: number;
   tableId?: string;
   tableNumber?: string;
   customerName?: string;
@@ -34,6 +37,7 @@ export function useHoldOrder(storeId: string) {
           notes: i.notes,
         })),
         orderType: input.orderType,
+        guestCount: input.guestCount,
         tableId: input.tableId,
         tableNumber: input.tableNumber,
         customerName: input.customerName,

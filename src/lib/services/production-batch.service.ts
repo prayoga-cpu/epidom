@@ -16,7 +16,10 @@ import { recipeRepository } from "../repositories/recipe.repository";
 import { materialRepository } from "../repositories/material.repository";
 import { productRepository } from "../repositories/product.repository";
 import { prisma } from "../prisma";
-import { convertStockToIngredientUnit } from "../utils/unit-conversion";
+import { convertUnit } from "../utils/unit-conversion";
+import { publishStoreEvent, publishStockChanged } from "../realtime/publish";
+import { REALTIME_EVENTS } from "../realtime/channels";
+import { fireLowStockAlertsForEntities } from "./stock-alerts.helpers";
 
 /**
  * Production Batch Service
@@ -90,7 +93,7 @@ export class ProductionBatchService {
       const materialStock = Number(ingredient.material.currentStock);
       const materialUnit = ingredient.material.unit;
       const ingredientUnit = ingredient.unit;
-      const available = convertStockToIngredientUnit(materialStock, materialUnit, ingredientUnit);
+      const available = convertUnit(materialStock, materialUnit, ingredientUnit);
 
       let status: "sufficient" | "low" | "insufficient";
 
@@ -182,8 +185,9 @@ export class ProductionBatchService {
     const batchNumber = await productionBatchRepository.generateBatchNumber(data.storeId, "BATCH");
 
     // Start transaction with enhanced error handling and timeout
+    let startedBatch: ProductionBatchWithRelations;
     try {
-      return await prisma.$transaction(
+      startedBatch = await prisma.$transaction(
         async (tx) => {
           // 1. Create production batch
           const batch = await tx.productionBatch.create({
@@ -278,7 +282,7 @@ export class ProductionBatchService {
             // Convert deduction from ingredient unit to material unit
             // ingredient.material.unit comes from RecipeWithIngredients type
             const materialUnit = ingredient.material.unit;
-            const deductionAmount = convertStockToIngredientUnit(
+            const deductionAmount = convertUnit(
               deductionInIngredientUnit,
               ingredient.unit,
               materialUnit
@@ -370,6 +374,25 @@ export class ProductionBatchService {
         `Failed to start production batch. Please check your materials and try again. If the problem continues, contact support.`
       );
     }
+
+    // Materials were just decremented — tell every connected /management,
+    // /data and /production view to refetch. Deliberately outside the
+    // try/$transaction above: a rolled-back batch must not push a change that
+    // never landed, and a failed push must not be reported as a failed batch.
+    const deductedMaterialIds = recipe.ingredients.map((ing) => ing.materialId);
+    publishStockChanged(data.storeId, { materialIds: deductedMaterialIds });
+
+    // Same LOW_STOCK/CRITICAL_STOCK alert a sale raises — a recipe run that
+    // empties a material is just as much a reorder signal. Never throws.
+    await fireLowStockAlertsForEntities(
+      data.storeId,
+      deductedMaterialIds.map((materialId) => ({
+        entityId: materialId,
+        entityType: "material" as const,
+      }))
+    );
+
+    return startedBatch;
   }
 
   /**
@@ -439,7 +462,7 @@ export class ProductionBatchService {
     }
 
     // Start transaction with timeout
-    return prisma.$transaction(
+    const completedBatch = await prisma.$transaction(
       async (tx) => {
         // 1. Get current product stock
         const product = await tx.product.findUnique({
@@ -490,6 +513,21 @@ export class ProductionBatchService {
         timeout: 20000,
       }
     );
+
+    // Finished-goods stock went UP — push after commit so the Products/Data
+    // views reflect it without waiting for the 30s poll. PRODUCT_CHANGED too,
+    // since the product row itself (its currentStock column) changed and the
+    // product list listens on that event, not on STOCK_CHANGED.
+    publishStockChanged(storeId, { productIds: [batch.productId] });
+    publishStoreEvent(storeId, REALTIME_EVENTS.PRODUCT_CHANGED, {
+      action: "updated",
+      entityId: batch.productId,
+    });
+
+    // No low-stock check here on purpose: completing a batch only ever adds
+    // stock, so nothing can cross a minimum downwards.
+
+    return completedBatch;
   }
 
   /**
@@ -528,8 +566,13 @@ export class ProductionBatchService {
       throw new Error("Batch is already cancelled");
     }
 
+    // Ids of the materials actually credited back inside the transaction
+    // below, collected so the post-commit push knows exactly what moved
+    // (a recipe ingredient whose material was since deleted is skipped).
+    const restoredMaterialIds: string[] = [];
+
     // Start transaction with timeout
-    return prisma.$transaction(
+    const cancelledBatch = await prisma.$transaction(
       async (tx) => {
         // 1. If restoring materials, add them back to stock (optimized)
         if (restoreMaterials && batch.recipe) {
@@ -568,7 +611,7 @@ export class ProductionBatchService {
             const restorationInIngredientUnit = Number(ingredient.quantity) * batchMultiplier;
             // ingredient.material.unit comes from ProductionBatchWithRelations type
             const materialUnit = ingredient.material.unit;
-            const restorationAmount = convertStockToIngredientUnit(
+            const restorationAmount = convertUnit(
               restorationInIngredientUnit,
               ingredient.unit,
               materialUnit
@@ -579,6 +622,7 @@ export class ProductionBatchService {
               id: ingredient.materialId,
               newStock: newBalance,
             });
+            restoredMaterialIds.push(ingredient.materialId);
 
             stockMovements.push({
               materialId: ingredient.materialId,
@@ -624,6 +668,15 @@ export class ProductionBatchService {
         timeout: 20000,
       }
     );
+
+    // Only after the restore actually committed. No low-stock check: a
+    // cancellation credits stock back, it can't push anything under its
+    // minimum.
+    if (restoredMaterialIds.length > 0) {
+      publishStockChanged(storeId, { materialIds: restoredMaterialIds });
+    }
+
+    return cancelledBatch;
   }
 
   /**

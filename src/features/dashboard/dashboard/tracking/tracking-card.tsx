@@ -54,11 +54,17 @@ export function TrackingCard({ stockLevels }: TrackingCardProps) {
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border">
-          {/* Table Header */}
-          <div className="from-foreground/90 to-foreground/80 text-background flex bg-gradient-to-r px-3 py-2 text-xs font-bold">
-            <div className="w-1/5">{t("dashboard.trackingCard.material")}</div>
-            <div className="w-3/5 text-center">{t("dashboard.trackingCard.stockLevel")}</div>
-            <div className="w-1/5 text-right">{t("dashboard.trackingCard.current")}</div>
+          {/* Table Header. The name column flexes and the two numeric columns
+              are fixed-ish, so a long material name isn't squeezed into ~60px
+              on a 375px phone the way a fixed 1/5 split does. */}
+          <div className="from-foreground/90 to-foreground/80 text-background flex items-center gap-2 bg-gradient-to-r px-3 py-2 text-xs font-bold">
+            <div className="min-w-0 flex-1">{t("dashboard.trackingCard.material")}</div>
+            <div className="w-1/3 shrink-0 text-center sm:w-1/2">
+              {t("dashboard.trackingCard.stockLevel")}
+            </div>
+            <div className="w-16 shrink-0 text-right sm:w-24">
+              {t("dashboard.trackingCard.current")}
+            </div>
           </div>
 
           {/* Table Body */}
@@ -81,16 +87,18 @@ export function TrackingCard({ stockLevels }: TrackingCardProps) {
               return (
                 <div
                   key={item.id}
-                  className="hover:bg-muted/30 flex items-center px-3 py-2.5 text-sm transition-colors"
+                  className="hover:bg-muted/30 flex items-center gap-2 px-3 py-2.5 text-sm transition-colors"
                 >
-                  <div className="w-1/5 truncate font-medium">{item.name}</div>
-                  <div className="w-3/5 px-2">
+                  <div className="min-w-0 flex-1 truncate font-medium">{item.name}</div>
+                  <div className="w-1/3 shrink-0 sm:w-1/2">
                     <Progress
                       value={Math.min(item.stockPercentage, 100)}
                       className={`bg-muted h-2 ${progressColor}`}
                     />
                   </div>
-                  <div className={`w-1/5 text-right font-semibold ${textColor}`}>
+                  <div
+                    className={`w-16 shrink-0 truncate text-right font-semibold sm:w-24 ${textColor}`}
+                  >
                     {item.currentStock} {item.unit}
                   </div>
                 </div>

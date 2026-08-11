@@ -130,6 +130,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
       await holdOrder.mutateAsync({
         items: cart.items,
         orderType: data.orderType,
+        guestCount: data.orderType === "DINE_IN" ? data.guestCount : undefined,
         tableNumber: data.tableNumber || undefined,
         customerName: data.customerName || undefined,
         notes: data.notes || undefined,

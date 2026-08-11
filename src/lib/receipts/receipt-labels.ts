@@ -101,6 +101,183 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
   },
 };
 
+/**
+ * Fixed vocabulary for the shift / daily report ("Z-report"), kept next to
+ * RECEIPT_LABELS and used by both render paths — the ESC/POS thermal print
+ * (thermal-printer.ts) and the browser report page — so the paper and the
+ * screen never word the same block differently.
+ *
+ * Deliberately NOT routed through `useI18n()`: the thermal path is a non-React
+ * module, and everything here has to survive `toPrinterAscii` (CP437 only
+ * round-trips ASCII), so the strings are chosen to stay legible after accents
+ * are stripped.
+ */
+interface ShiftReportLabels {
+  title: string;
+  shiftReportTitle: string;
+  period: string;
+  cashier: string;
+  stillOpen: string;
+  printedAt: string;
+  // Sales block
+  grossSales: string;
+  discount: string;
+  serviceCharge: string;
+  tax: string;
+  processingFee: string;
+  delivery: string;
+  refund: string;
+  total: string;
+  // Invoices
+  invoicesHeading: string;
+  invoiceCount: string;
+  averagePerInvoice: string;
+  // Cancellations
+  cancellationsHeading: string;
+  cancelledItems: string;
+  // Splits
+  byOrderTypeHeading: string;
+  byGuestHeading: string;
+  totalGuests: string;
+  invoicesWithGuests: string;
+  averageGuestsPerDay: string;
+  averageSalesPerGuest: string;
+  byPaymentHeading: string;
+  byProductHeading: string;
+  uncategorized: string;
+  // Cash drawer
+  cashDrawerHeading: string;
+  openingCash: string;
+  closingCash: string;
+  expectedCash: string;
+  difference: string;
+  // Order types
+  dineIn: string;
+  takeaway: string;
+  deliveryType: string;
+  noData: string;
+}
+
+export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
+  id: {
+    title: "LAPORAN HARIAN",
+    shiftReportTitle: "LAPORAN SHIFT",
+    period: "Periode",
+    cashier: "Kasir",
+    stillOpen: "masih buka",
+    printedAt: "Dicetak",
+    grossSales: "Penjualan",
+    discount: "Diskon",
+    serviceCharge: "Biaya Layanan",
+    tax: "Pajak",
+    processingFee: "Biaya Proses",
+    delivery: "Pengiriman",
+    refund: "Pengembalian",
+    total: "TOTAL",
+    invoicesHeading: "Invoices",
+    invoiceCount: "Jumlah Invoices",
+    averagePerInvoice: "Rata-rata Per Invoice",
+    cancellationsHeading: "Ringkasan Pembatalan",
+    cancelledItems: "Jumlah Item",
+    byOrderTypeHeading: "Berdasarkan Tipe Penjualan",
+    byGuestHeading: "Berdasarkan Tamu",
+    totalGuests: "Total Tamu",
+    invoicesWithGuests: "Invoice Dgn Data Tamu",
+    averageGuestsPerDay: "Rata-rata Tamu Per Hari",
+    averageSalesPerGuest: "Rata-rata Penjualan/Tamu",
+    byPaymentHeading: "Berdasarkan Pembayaran",
+    byProductHeading: "Berdasarkan Produk (Gross)",
+    uncategorized: "Tanpa Kategori",
+    cashDrawerHeading: "Kas Laci",
+    openingCash: "Kas Awal",
+    closingCash: "Kas Akhir",
+    expectedCash: "Kas Seharusnya",
+    difference: "Selisih",
+    dineIn: "Makan di Tempat",
+    takeaway: "Bawa Pulang",
+    deliveryType: "Pengiriman",
+    noData: "Tidak ada transaksi",
+  },
+  en: {
+    title: "DAILY REPORT",
+    shiftReportTitle: "SHIFT REPORT",
+    period: "Period",
+    cashier: "Cashier",
+    stillOpen: "still open",
+    printedAt: "Printed",
+    grossSales: "Sales",
+    discount: "Discount",
+    serviceCharge: "Service Charge",
+    tax: "Tax",
+    processingFee: "Processing Fee",
+    delivery: "Delivery",
+    refund: "Refunds",
+    total: "TOTAL",
+    invoicesHeading: "Invoices",
+    invoiceCount: "Invoice Count",
+    averagePerInvoice: "Average Per Invoice",
+    cancellationsHeading: "Cancellation Summary",
+    cancelledItems: "Item Count",
+    byOrderTypeHeading: "By Sale Type",
+    byGuestHeading: "By Guest",
+    totalGuests: "Total Guests",
+    invoicesWithGuests: "Invoices With Guest Data",
+    averageGuestsPerDay: "Average Guests Per Day",
+    averageSalesPerGuest: "Average Sales Per Guest",
+    byPaymentHeading: "By Payment Method",
+    byProductHeading: "By Product (Gross)",
+    uncategorized: "Uncategorized",
+    cashDrawerHeading: "Cash Drawer",
+    openingCash: "Opening Cash",
+    closingCash: "Closing Cash",
+    expectedCash: "Expected Cash",
+    difference: "Difference",
+    dineIn: "Dine In",
+    takeaway: "Takeaway",
+    deliveryType: "Delivery",
+    noData: "No transactions",
+  },
+  fr: {
+    title: "RAPPORT JOURNALIER",
+    shiftReportTitle: "RAPPORT DE SERVICE",
+    period: "Periode",
+    cashier: "Caissier",
+    stillOpen: "en cours",
+    printedAt: "Imprime le",
+    grossSales: "Ventes",
+    discount: "Remise",
+    serviceCharge: "Frais de service",
+    tax: "Taxe",
+    processingFee: "Frais de traitement",
+    delivery: "Livraison",
+    refund: "Remboursements",
+    total: "TOTAL",
+    invoicesHeading: "Factures",
+    invoiceCount: "Nombre de factures",
+    averagePerInvoice: "Moyenne par facture",
+    cancellationsHeading: "Recapitulatif des annulations",
+    cancelledItems: "Nombre d'articles",
+    byOrderTypeHeading: "Par type de vente",
+    byGuestHeading: "Par couvert",
+    totalGuests: "Total couverts",
+    invoicesWithGuests: "Factures avec couverts",
+    averageGuestsPerDay: "Couverts moyens par jour",
+    averageSalesPerGuest: "Ventes moyennes/couvert",
+    byPaymentHeading: "Par moyen de paiement",
+    byProductHeading: "Par produit (brut)",
+    uncategorized: "Sans categorie",
+    cashDrawerHeading: "Caisse",
+    openingCash: "Fond de caisse",
+    closingCash: "Caisse finale",
+    expectedCash: "Caisse attendue",
+    difference: "Ecart",
+    dineIn: "Sur place",
+    takeaway: "A emporter",
+    deliveryType: "Livraison",
+    noData: "Aucune transaction",
+  },
+};
+
 /** Our own domain, shown in the receipt footer — not the merchant's. */
 export const RECEIPT_POWERED_BY_URL = "www.epidom.fr";
 

@@ -15,6 +15,13 @@ vi.mock("@/lib/prisma", () => {
       findMany: vi.fn(),
       count: vi.fn(),
     },
+    // Every committing waste path now runs a post-commit low-stock check
+    // (stock-alerts.helpers) — it re-reads the entity and the store owner.
+    store: { findUnique: vi.fn().mockResolvedValue({ business: { userId: "user-1" } }) },
+    material: { findMany: vi.fn().mockResolvedValue([]) },
+    product: { findMany: vi.fn().mockResolvedValue([]) },
+    alert: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
+    user: { findUnique: vi.fn().mockResolvedValue({ email: "owner@example.com" }) },
     $transaction: vi.fn(async (fn: any) => {
       capturedTx = {
         material: { update: vi.fn() },

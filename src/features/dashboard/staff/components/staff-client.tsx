@@ -36,6 +36,10 @@ import { apiClient, ApiClientError } from "@/lib/api/client";
 import { UserRound, Plus, Pencil, UserX, Crown, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { StaffRole } from "@prisma/client";
+import {
+  STAFF_ROLE_LABEL_KEYS,
+  staffRoleLabel,
+} from "@/features/dashboard/shared/lib/staff-role-label";
 import { useOwnerPinStatus } from "@/features/dashboard/shared/hooks/use-owner-pin";
 import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
 import { PageAccessChecklist } from "./page-access-checklist";
@@ -67,13 +71,6 @@ interface StaffClientProps {
    * on, not the viewer's own browser timezone. */
   storeTimeZoneLabel: string;
 }
-
-const ROLE_LABEL_KEYS: Record<StaffRole, string> = {
-  OWNER: "pages.staffRoleOwner",
-  MANAGER: "pages.staffRoleManager",
-  CASHIER: "pages.staffRoleCashier",
-  KITCHEN: "pages.staffRoleKitchen",
-};
 
 const ROLES_FOR_SELECT: StaffRole[] = ["MANAGER", "CASHIER", "KITCHEN"];
 const CUSTOM_ROLE_VALUE = "CUSTOM";
@@ -172,9 +169,9 @@ export function StaffClient({
 
   const staff = data?.staff ?? [];
   const activeCount = staff.filter((s) => s.isActive).length;
-  const roleLabel = (r: StaffRole) => t(ROLE_LABEL_KEYS[r]);
+  const roleLabel = (r: StaffRole) => t(STAFF_ROLE_LABEL_KEYS[r]);
   const displayRoleLabel = (member: Pick<StaffMember, "role" | "customRoleLabel">) =>
-    member.customRoleLabel?.trim() || roleLabel(member.role);
+    staffRoleLabel(member, t);
 
   const {
     register,

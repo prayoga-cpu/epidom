@@ -13,6 +13,8 @@ import {
 } from "../hooks/use-order-history";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosStaffList } from "../hooks/use-pos-staff-list";
+import { useStoreShifts } from "../hooks/use-store-shifts";
+import { formatShiftLabel, resolveShiftWindow } from "@/lib/finance/shift-window";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
@@ -48,9 +50,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useConfirm } from "@/components/ui/use-confirm";
-import { FileText, Loader2, Search, X } from "lucide-react";
+import { Download, FileText, Loader2, Printer, ReceiptText, Search, X } from "lucide-react";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api/client";
+import {
+  isBluetoothSupported,
+  isPrinterConnected,
+  printShiftReport,
+} from "@/lib/pwa/thermal-printer";
+import { usePrinterSettings } from "../hooks/use-printer-settings";
+import type { ShiftReportData } from "@/lib/finance/shift-report";
 
 const ORDER_STATUSES = [
   "CONFIRMED",
@@ -72,6 +88,7 @@ const HISTORY_FILTER_KEYS = [
   "product",
   "staff",
   "paymentMethod",
+  "shift",
   "dateRange",
 ] as const;
 type HistoryFilterKey = (typeof HISTORY_FILTER_KEYS)[number];
@@ -107,6 +124,10 @@ interface HistoryFiltersState {
   department: string;
   staffId: string;
   paymentMethod: string;
+  /** A till session (`Shift`). Selecting one drives `from`/`to` to that
+   * session's open→close window as full ISO datetimes — it is a date-range
+   * preset, not a separate server-side filter. See lib/finance/shift-window.ts. */
+  shiftId: string;
   activeFilterKeys: HistoryFilterKey[];
 }
 
@@ -121,6 +142,7 @@ const HISTORY_FILTERS_DEFAULTS: HistoryFiltersState = {
   department: "ALL",
   staffId: "ALL",
   paymentMethod: "ALL",
+  shiftId: "ALL",
   activeFilterKeys: [],
 };
 
@@ -133,6 +155,10 @@ const HISTORY_FILTER_RESET: Record<HistoryFilterKey, Partial<HistoryFiltersState
   product: { productId: "ALL" },
   staff: { staffId: "ALL" },
   paymentMethod: { paymentMethod: "ALL" },
+  // Clearing the shift also clears the window it drove — otherwise the
+  // session's ISO from/to would keep silently narrowing results with no
+  // visible control left to explain why.
+  shift: { shiftId: "ALL", datePreset: "all", from: "", to: "" },
   dateRange: { datePreset: "all", from: "", to: "" },
 };
 
@@ -159,6 +185,7 @@ function sanitizeHistoryFilters(raw: unknown, defaults: HistoryFiltersState): Hi
     department: pick(r.department, DEPARTMENT_VALUES, defaults.department),
     staffId: typeof r.staffId === "string" ? r.staffId : defaults.staffId,
     paymentMethod: pick(r.paymentMethod, PAYMENT_METHOD_FILTER_VALUES, defaults.paymentMethod),
+    shiftId: typeof r.shiftId === "string" ? r.shiftId : defaults.shiftId,
     activeFilterKeys,
   };
 }
@@ -217,7 +244,7 @@ interface OrderHistoryTabProps {
 }
 
 export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
-  const { t, formatDayDate, formatTimeOnly } = useI18n();
+  const { t, locale, formatDayDate, formatTimeOnly } = useI18n();
   // Order amounts are literal in the store's display currency, never IDR —
   // passing `currency` skips formatPrice's default base-currency conversion.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
@@ -225,6 +252,8 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<OrderHistoryItem | null>(null);
+  const [isPrintingReport, setIsPrintingReport] = useState(false);
+  const paperWidth = usePrinterSettings((s) => s.paperWidth);
 
   const [filterState, setFilterState] = usePersistedState(
     `epidom-pos-history-filters-${storeId}`,
@@ -242,6 +271,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     department,
     staffId,
     paymentMethod,
+    shiftId,
     activeFilterKeys,
   } = filterState;
   const patchFilters = (patch: Partial<HistoryFiltersState>) =>
@@ -280,6 +310,19 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     [staffList]
   );
 
+  // Only shifts this filter can actually resolve to a window are fetched —
+  // the list is small (a store runs a handful of till sessions a day).
+  const { data: shiftList } = useStoreShifts(storeId, activeFilterKeys.includes("shift"));
+  const shiftOptions = shiftList ?? [];
+  const selectedShift = shiftOptions.find((s) => s.id === shiftId) ?? null;
+
+  const shiftLabel = (shift: (typeof shiftOptions)[number]) =>
+    formatShiftLabel(shift, {
+      formatDayDate,
+      formatTimeOnly,
+      openLabel: t("pos.history.shiftStillOpen"),
+    });
+
   const handlePresetChange = (preset: DateRangePreset) => {
     if (preset === "custom") {
       patchFilters({ datePreset: preset });
@@ -287,6 +330,30 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     }
     const range = resolveDateRangePreset(preset);
     patchFilters({ datePreset: preset, from: range?.from ?? "", to: range?.to ?? "" });
+  };
+
+  // A shift is a date-range *preset*, not a separate server filter: it resolves
+  // to the session's open→close window and writes it into from/to as full ISO
+  // datetimes, which buildOrderHistoryParams passes through untouched. That's
+  // why no API change is needed here — and why every downstream consumer (the
+  // payment totals strip, the PDF export, the daily report) inherits the
+  // window for free.
+  const handleShiftChange = (nextShiftId: string) => {
+    if (nextShiftId === "ALL") {
+      patchFilters({ shiftId: "ALL", datePreset: "all", from: "", to: "" });
+      return;
+    }
+    const shift = shiftOptions.find((s) => s.id === nextShiftId);
+    if (!shift) return;
+    // Not named `window` — this file calls the global window.open elsewhere,
+    // and a shadowing local is a trap for the next edit.
+    const shiftWindow = resolveShiftWindow(shift);
+    patchFilters({
+      shiftId: nextShiftId,
+      datePreset: "custom",
+      from: shiftWindow.from.toISOString(),
+      to: shiftWindow.to.toISOString(),
+    });
   };
 
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -511,6 +578,73 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     window.open(`/store/${storeId}/pos/orders/print?${params.toString()}`, "_blank");
   }
 
+  // The shift/daily report ("Z-report") — a summary of the current window, not
+  // a row-per-order listing like openPrintReport above. Passes shiftId when a
+  // session is selected so the report can add its cash-drawer block; otherwise
+  // it falls back to whatever from/to the date filters resolved to.
+  function dailyReportParams(): URLSearchParams {
+    const params = new URLSearchParams();
+    if (shiftId !== "ALL") {
+      params.set("shiftId", shiftId);
+    } else {
+      const built = buildOrderHistoryParams(filters, 0);
+      const rangeFrom = built.get("from");
+      const rangeTo = built.get("to");
+      if (rangeFrom) params.set("from", rangeFrom);
+      if (rangeTo) params.set("to", rangeTo);
+    }
+    return params;
+  }
+
+  function openDailyReport() {
+    window.open(
+      `/store/${storeId}/pos/orders/daily-report?${dailyReportParams().toString()}`,
+      "_blank"
+    );
+  }
+
+  async function printDailyReportThermal() {
+    if (isPrintingReport) return;
+    if (!isBluetoothSupported()) {
+      toast.error(t("pos.print.bluetoothUnsupported"));
+      return;
+    }
+    setIsPrintingReport(true);
+    try {
+      const res = await apiClient.get<{
+        report: ShiftReportData;
+        shiftLabel: string | null;
+        storeName: string;
+        currency: string;
+      }>(`/stores/${storeId}/reports/shift-report?${dailyReportParams().toString()}`);
+      if (!isPrinterConnected()) {
+        const ok = await usePrinterSettings.getState().connect();
+        if (!ok) {
+          toast.error(t("pos.print.connectFailed"));
+          return;
+        }
+      }
+      await printShiftReport({
+        report: res.report,
+        // Store name and currency come off the response, not this component —
+        // they're the same values the server aggregated the numbers in.
+        storeName: res.storeName,
+        currency: res.currency,
+        // Print in the cashier's current dashboard language, matching the
+        // reprint path in order-history-detail-dialog.tsx.
+        locale,
+        width: paperWidth,
+        shiftLabel: res.shiftLabel,
+        generatedAt: new Date(),
+      });
+      toast.success(t("pos.print.success"));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("pos.print.failed"));
+    } finally {
+      setIsPrintingReport(false);
+    }
+  }
+
   return (
     <div className="space-y-4 p-6">
       {/* Filters */}
@@ -633,6 +767,23 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
             </Select>
           </RemovableFilter>
         )}
+        {activeFilterKeys.includes("shift") && (
+          <RemovableFilter onRemove={() => removeFilter("shift")}>
+            <Select value={shiftId} onValueChange={handleShiftChange}>
+              <SelectTrigger className="w-full lg:w-64">
+                <SelectValue placeholder={t("pos.history.filterAllShifts")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("pos.history.filterAllShifts")}</SelectItem>
+                {shiftOptions.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {shiftLabel(s)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </RemovableFilter>
+        )}
         {activeFilterKeys.includes("dateRange") && (
           <RemovableFilter onRemove={() => removeFilter("dateRange")}>
             <Select
@@ -653,16 +804,21 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
             </Select>
           </RemovableFilter>
         )}
-        {activeFilterKeys.includes("dateRange") && datePreset === "custom" && (
-          <DateRangeField
-            id="history-date-range"
-            from={from}
-            to={to}
-            presets={[]}
-            className="w-full lg:w-64"
-            onChange={(nextFrom, nextTo) => patchFilters({ from: nextFrom, to: nextTo })}
-          />
-        )}
+        {/* Suppressed while a shift drives the range: from/to then hold full
+            ISO datetimes, which a <input type="date"> can't represent — the
+            resolved window is shown as read-only text below instead. */}
+        {activeFilterKeys.includes("dateRange") &&
+          datePreset === "custom" &&
+          shiftId === "ALL" && (
+            <DateRangeField
+              id="history-date-range"
+              from={from}
+              to={to}
+              presets={[]}
+              className="w-full lg:w-64"
+              onChange={(nextFrom, nextTo) => patchFilters({ from: nextFrom, to: nextTo })}
+            />
+          )}
         <AddFilterMenu
           options={HISTORY_FILTER_KEYS.filter((k) => !activeFilterKeys.includes(k)).map((k) => ({
             key: k,
@@ -670,11 +826,44 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
           }))}
           onAdd={(k) => addFilter(k as HistoryFilterKey)}
         />
-        <Button variant="outline" onClick={openPrintReport} className="h-9 shrink-0">
-          <FileText className="mr-2 h-4 w-4" />
-          {t("pos.history.exportPdf")}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="h-9 shrink-0" disabled={isPrintingReport}>
+              {isPrintingReport ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {t("common.actions.export")}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuItem className="h-10" onClick={openPrintReport}>
+              <FileText className="mr-2 h-4 w-4" />
+              {t("pos.history.exportPdf")}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="h-10" onClick={openDailyReport}>
+              <ReceiptText className="mr-2 h-4 w-4" />
+              {t("pos.history.exportDailyReport")}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="h-10" onClick={printDailyReportThermal}>
+              <Printer className="mr-2 h-4 w-4" />
+              {t("pos.history.exportDailyReportThermal")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      {/* A selected shift drives from/to as ISO datetimes, which the date
+          controls can't display — surface the resolved window so it's never
+          unclear why the table is narrowed. */}
+      {selectedShift && (
+        <div className="bg-muted/30 text-muted-foreground flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-xs">
+          <ReceiptText className="h-3.5 w-3.5 shrink-0" />
+          <span className="font-medium">{t("pos.history.shiftWindowLabel")}</span>
+          <span>{shiftLabel(selectedShift)}</span>
+        </div>
+      )}
 
       {/* Payment method totals — audits "how much came in via each method"
           for whatever's currently filtered above, independent of Finance

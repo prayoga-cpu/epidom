@@ -1,7 +1,13 @@
 import { MovementType, WasteReason, type WasteEntry, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDecimal } from "@/lib/utils/types.server";
-import { resolveStockItem, applyStockDelta } from "@/lib/services/stock-item.helpers";
+import {
+  resolveStockItem,
+  applyStockDelta,
+  type ResolvedStockItem,
+} from "@/lib/services/stock-item.helpers";
+import { fireLowStockAlertsForEntities } from "@/lib/services/stock-alerts.helpers";
+import { publishStockChanged } from "@/lib/realtime/publish";
 import { ValidationError } from "@/lib/errors";
 
 /**
@@ -57,6 +63,30 @@ function reasonLabel(reason: WasteReason, customReason?: string | null): string 
   return reason === WasteReason.OTHER && customReason ? customReason : reason;
 }
 
+/**
+ * Realtime push (+ low-stock check for the paths that consume stock) for the
+ * single Material or Product a waste path just moved.
+ *
+ * Always call this AFTER the `$transaction` promise resolves, never inside
+ * the callback: a rolled-back waste entry must not tell every dashboard to
+ * refetch a change that never landed. Neither call can throw, so a Pusher
+ * outage or an alerting hiccup can't fail a committed stock write.
+ */
+async function notifyStockChanged(
+  storeId: string,
+  item: ResolvedStockItem,
+  { checkLowStock }: { checkLowStock: boolean }
+): Promise<void> {
+  publishStockChanged(
+    storeId,
+    item.kind === "material" ? { materialIds: [item.id] } : { productIds: [item.id] }
+  );
+
+  if (checkLowStock) {
+    await fireLowStockAlertsForEntities(storeId, [{ entityId: item.id, entityType: item.kind }]);
+  }
+}
+
 class WasteService {
   async recordWaste(input: RecordWasteInput): Promise<{
     wasteEntry: WasteEntry;
@@ -79,7 +109,7 @@ class WasteService {
     const unitCostSnapshot = item.unitCost;
     const totalValue = round2(input.quantity * unitCostSnapshot);
 
-    return prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
         const wasteEntry = await tx.wasteEntry.create({
           data: {
@@ -118,6 +148,12 @@ class WasteService {
       },
       { isolationLevel: "Serializable", maxWait: 5000, timeout: 10000 }
     );
+
+    // Waste always consumes stock, so this is the one path that can drop an
+    // item under its minimum — same alert a sale raises.
+    await notifyStockChanged(input.storeId, item, { checkLowStock: true });
+
+    return result;
   }
 
   async updateWasteEntry(
@@ -161,7 +197,7 @@ class WasteService {
       );
     }
 
-    return prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
         let movement: Prisma.StockMovementGetPayload<object> | null = null;
 
@@ -200,6 +236,16 @@ class WasteService {
       },
       { isolationLevel: "Serializable", maxWait: 5000, timeout: 10000 }
     );
+
+    // A metadata-only correction (same quantity) moved no stock, so there is
+    // nothing for the stock views to refetch. A correction that *increased*
+    // the wasted quantity (stockDelta < 0) consumed more and can cross the
+    // minimum; one that gave stock back can't.
+    if (stockDelta !== 0) {
+      await notifyStockChanged(storeId, item, { checkLowStock: stockDelta < 0 });
+    }
+
+    return result;
   }
 
   async deleteWasteEntry(storeId: string, wasteEntryId: string): Promise<{ success: true }> {
@@ -241,6 +287,10 @@ class WasteService {
       },
       { isolationLevel: "Serializable", maxWait: 5000, timeout: 10000 }
     );
+
+    // Deleting a waste entry credits the stock back — push, but no low-stock
+    // check: nothing can drop below its minimum by going up.
+    await notifyStockChanged(storeId, item, { checkLowStock: false });
 
     return { success: true };
   }

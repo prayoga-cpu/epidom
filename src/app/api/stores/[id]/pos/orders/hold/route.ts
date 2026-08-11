@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireSessionApi } from "@/lib/auth/require-session";
 import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
 import { createHoldOrderSchema } from "@/lib/validation/pos.schemas";
@@ -32,12 +32,8 @@ function generateOrderNumber(): string {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
 
-  const session = await getSession();
-  if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-      status: 401,
-    });
-  }
+  const session = await requireSessionApi();
+  if (session instanceof NextResponse) return session;
 
   const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
   if (verification instanceof NextResponse) return verification;
@@ -128,6 +124,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           data: {
             customerName: input.customerName ?? existing.customerName,
             orderType: input.orderType as OrderType,
+            guestCount: input.orderType === "DINE_IN" ? input.guestCount : null,
             tableNumber: input.tableNumber,
             tableId: input.tableId,
             notes: input.notes,
@@ -172,6 +169,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           storeId,
           customerName: input.customerName ?? "Walk-in",
           orderType: input.orderType as OrderType,
+          guestCount: input.orderType === "DINE_IN" ? input.guestCount : null,
           tableNumber: input.tableNumber,
           tableId: input.tableId,
           shiftId: input.shiftId,

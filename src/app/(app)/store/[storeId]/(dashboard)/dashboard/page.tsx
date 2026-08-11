@@ -1,32 +1,26 @@
 /**
  * Dashboard Page
  *
- * Main dashboard page showing overview of materials, suppliers, production batches, and alerts.
- * Server-side rendered with parallel data fetching for optimal performance.
+ * Main dashboard overview. Server-side rendered with parallel data fetching.
+ *
+ * The dashboard is reachable on every plan, so it resolves which surfaces the
+ * viewer is actually entitled to *here* rather than letting each card
+ * discover its own 403 client-side: an OPERATIONS-only card renders for an
+ * OPERATIONS viewer, and everyone below that gets a single upgrade tile
+ * instead of a wall of locked ones. Doing it server-side also means no
+ * flash-then-disappear on load, and no queries run for cards nobody will see.
  */
 
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import {
-  fetchSuppliersForPage,
-  fetchProductionBatchesForPage,
-  fetchAlertsForPage,
-  fetchStockLevelsForPage,
-} from "@/lib/server/data-fetchers";
+import { prisma } from "@/lib/prisma";
+import { fetchAlertsForPage, fetchStockLevelsForPage } from "@/lib/server/data-fetchers";
 import { DashboardClient } from "@/features/dashboard/dashboard/components/dashboard-client";
-import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
-import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
-import type { ProductionBatchWithRelations } from "@/lib/repositories/production-batch.repository";
-import type { Alert } from "@/features/dashboard/shared/hooks/use-alerts";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
+import { getActiveStaffSession } from "@/lib/staff-session";
+import { subscriptionService } from "@/lib/services";
+import { planHasFeature } from "@/lib/plans/entitlements";
 
-/**
- * Dashboard Page Component
- *
- * @param {Object} props - Component props
- * @param {Promise<{storeId: string}>} props.params - Route parameters
- * @returns {Promise<JSX.Element>} Dashboard page component
- */
 export default async function DashboardPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
   const session = await getSession();
@@ -36,28 +30,48 @@ export default async function DashboardPage({ params }: { params: Promise<{ stor
   }
   await requireStaffPageAccess(storeId, "/dashboard");
 
-  // Fetch all initial data in parallel for optimal performance
-  const [stockLevelsResult, suppliersResult, productionBatchesResult, alertsResult] =
-    await Promise.all([
-      fetchStockLevelsForPage(storeId),
-      fetchSuppliersForPage(storeId, { take: 4, sortBy: "name", sortOrder: "asc" }),
-      fetchProductionBatchesForPage(storeId, {
-        status: "COMPLETED",
-        sortBy: "scheduledDate",
-        sortOrder: "desc",
-        skip: 0,
-        take: 10,
-      }),
-      fetchAlertsForPage(storeId),
-    ]);
+  const [plan, staffSession, store] = await Promise.all([
+    subscriptionService.getActivePlan(session.user.id),
+    getActiveStaffSession(),
+    prisma.store.findUnique({
+      where: { id: storeId },
+      select: { productionEnabled: true },
+    }),
+  ]);
+
+  const hasOperationsAccess = planHasFeature(plan, "staffOperations");
+
+  // Attendance and till sessions are the manager audit surface — a CASHIER or
+  // KITCHEN PIN persona shouldn't see the whole floor's clock records, same
+  // rule the /attendance API enforces via requireManagerOrOwnerApi.
+  const isRestrictedStaff =
+    !!staffSession &&
+    staffSession.storeId === storeId &&
+    staffSession.role !== "OWNER" &&
+    staffSession.role !== "MANAGER";
+
+  // Both gates must hold: the plan sets the ceiling, the owner's per-store
+  // toggle the intent. A store that never opted into recipe→batch production
+  // has nothing but a flat zero line to show.
+  const showProductionHistory =
+    planHasFeature(plan, "production") && (store?.productionEnabled ?? false);
+  const showOperations = hasOperationsAccess && !isRestrictedStaff;
+
+  // Stock levels and alerts back OPERATIONS-only cards — skip the queries
+  // outright when the viewer can't see them.
+  const [stockLevelsResult, alertsResult] = await Promise.all([
+    hasOperationsAccess ? fetchStockLevelsForPage(storeId) : null,
+    hasOperationsAccess ? fetchAlertsForPage(storeId) : null,
+  ]);
 
   return (
     <DashboardClient
-      initialStockLevels={stockLevelsResult.materials}
-      initialSuppliers={suppliersResult.suppliers}
-      initialProductionBatches={productionBatchesResult.batches}
-      initialAlerts={alertsResult.alerts}
+      initialStockLevels={stockLevelsResult?.materials ?? []}
+      initialAlerts={alertsResult?.alerts ?? []}
       storeId={storeId}
+      hasOperationsAccess={hasOperationsAccess}
+      showProductionHistory={showProductionHistory}
+      showOperations={showOperations}
     />
   );
 }

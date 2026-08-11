@@ -1,10 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { MovementType, AlertType, AlertSeverity, OrderItemStatus } from "@prisma/client";
+import { MovementType, OrderItemStatus } from "@prisma/client";
 import { toDecimal } from "@/lib/utils/types.server";
 import { convertUnit } from "@/lib/utils/unit-conversion";
-import { publishStoreEvent } from "@/lib/realtime/publish";
-import { REALTIME_EVENTS } from "@/lib/realtime/channels";
-import { sendMerchantAlert } from "@/lib/magicbell/client";
+import { publishStockChanged } from "@/lib/realtime/publish";
+import { fireLowStockAlert } from "@/lib/services/stock-alerts.helpers";
 
 /**
  * Deduct stock when an order is purchased/confirmed.
@@ -357,72 +356,19 @@ export async function deductStockForOrder(
     { isolationLevel: "Serializable" }
   );
 
-  for (const p of productDeductions) {
-    publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, {
-      action: "updated",
-      entityId: p.productId,
-    });
-  }
-  for (const d of materialDeductions) {
-    publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, {
-      action: "updated",
-      entityId: d.materialId,
-    });
-  }
+  publishStockChanged(storeId, {
+    productIds: productDeductions.map((p) => p.productId),
+    materialIds: materialDeductions.map((d) => d.materialId),
+  });
 
-  // Fire alerts outside the transaction — non-critical, OK to be eventually consistent.
-  const fireLowStockAlert = async (params: {
-    entityId: string;
-    entityType: "product" | "material";
-    name: string;
-    newStock: number;
-    minStock: number;
-    unit: string;
-  }) => {
-    if (params.minStock <= 0 || params.newStock > params.minStock) return;
-
-    const isCritical = params.newStock <= params.minStock * 0.25;
-    const existing = await prisma.alert.findFirst({
-      where: {
-        userId,
-        entityId: params.entityId,
-        type: { in: [AlertType.LOW_STOCK, AlertType.CRITICAL_STOCK] },
-        isRead: false,
-      },
-    });
-    if (existing) return;
-
-    await prisma.alert.create({
-      data: {
-        userId,
-        type: isCritical ? AlertType.CRITICAL_STOCK : AlertType.LOW_STOCK,
-        severity: isCritical ? AlertSeverity.CRITICAL : AlertSeverity.WARNING,
-        title: isCritical ? `Stok kritis: ${params.name}` : `Stok rendah: ${params.name}`,
-        message: `Sisa stok ${params.name}: ${params.newStock.toFixed(2)} ${params.unit} (min: ${params.minStock} ${params.unit})`,
-        entityType: params.entityType,
-        entityId: params.entityId,
-      },
-    });
-
-    // Only alerts when a NEW alert row was actually created above — the dedup
-    // check just above already blocks re-firing on every subsequent order
-    // once an unread alert exists for this entity, so reuse it as-is
-    // rather than a second dedup layer.
-    const owner = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-    if (owner) {
-      sendMerchantAlert({
-        recipientEmail: owner.email,
-        recipientExternalId: userId,
-        category: "low-stock",
-        title: isCritical ? `Stok kritis: ${params.name}` : `Stok rendah: ${params.name}`,
-        content: `Sisa stok: ${params.newStock.toFixed(2)} ${params.unit} (min: ${params.minStock} ${params.unit})`,
-        actionUrl: `/store/${storeId}/data`,
-      });
-    }
-  };
-
+  // Fire alerts outside the transaction — non-critical, OK to be eventually
+  // consistent. Shared with production/waste via stock-alerts.helpers so every
+  // stock writer raises the same alert; the numbers are passed in directly
+  // here since this flow already computed them.
   for (const p of productDeductions) {
     await fireLowStockAlert({
+      userId,
+      storeId,
       entityId: p.productId,
       entityType: "product",
       name: p.productName,
@@ -434,6 +380,8 @@ export async function deductStockForOrder(
 
   for (const d of materialDeductions) {
     await fireLowStockAlert({
+      userId,
+      storeId,
       entityId: d.materialId,
       entityType: "material",
       name: d.materialName,
@@ -538,12 +486,10 @@ export async function reverseStockForOrder(
     { isolationLevel: "Serializable" }
   );
 
-  for (const movement of saleMovements) {
-    const entityId = movement.productId ?? movement.materialId;
-    if (entityId) {
-      publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, { action: "updated", entityId });
-    }
-  }
+  publishStockChanged(storeId, {
+    productIds: saleMovements.map((m) => m.productId).filter((id): id is string => Boolean(id)),
+    materialIds: saleMovements.map((m) => m.materialId).filter((id): id is string => Boolean(id)),
+  });
 
   return { reversed: saleMovements.length };
 }

@@ -27,6 +27,23 @@ export function useDebouncedValue<T>(value: T, delay = 300): T {
   return debounced;
 }
 
+/**
+ * The date filters normally hold a date-only `YYYY-MM-DD` (what
+ * `<input type="date">` produces) and get widened to a whole-day window. A
+ * shift filter instead stores a full ISO datetime — a till session's
+ * open→close window has minute precision — and must pass through untouched,
+ * or `2026-08-09T22:00:00.000ZT00:00:00Z` reaches the server as garbage.
+ */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+function toRangeStart(value: string): string {
+  return DATE_ONLY.test(value) ? `${value}T00:00:00Z` : value;
+}
+
+function toRangeEnd(value: string): string {
+  return DATE_ONLY.test(value) ? `${value}T23:59:59Z` : value;
+}
+
 export function buildOrderHistoryParams(
   filters: OrderHistoryFilters,
   take: number,
@@ -36,8 +53,8 @@ export function buildOrderHistoryParams(
   if (filters.q) params.set("q", filters.q);
   if (filters.status && filters.status !== "ALL") params.set("status", filters.status);
   if (filters.source && filters.source !== "ALL") params.set("source", filters.source);
-  if (filters.from) params.set("from", `${filters.from}T00:00:00Z`);
-  if (filters.to) params.set("to", `${filters.to}T23:59:59Z`);
+  if (filters.from) params.set("from", toRangeStart(filters.from));
+  if (filters.to) params.set("to", toRangeEnd(filters.to));
   if (filters.unpaidOnly) params.set("unpaid", "1");
   if (filters.productId && filters.productId !== "ALL") params.set("productId", filters.productId);
   if (filters.department && filters.department !== "ALL")

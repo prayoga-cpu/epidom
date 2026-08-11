@@ -100,7 +100,10 @@ export function useStockMovements(storeId: string, filters?: StockMovementFilter
     staleTime: 10 * 1000,
     refetchInterval: 15 * 1000, // Safety-net poll — Pusher covers the instant case
     refetchIntervalInBackground: false, // Only poll when tab is active
-    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    // See use-materials.ts — `false` suppressed the refetch even for a query a
+    // mutation had just invalidated, so the movements ledger could disagree
+    // with the stock figure it is supposed to explain.
+    refetchOnMount: true,
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
       refetchInterval: 15 * 1000, // Store in meta for smart polling

@@ -89,20 +89,12 @@ export function convertUnit(quantity: number, fromUnit: string, toUnit: string):
   return quantity;
 }
 
-/**
- * Convert material stock to recipe ingredient unit
- * @param materialStock - Current stock in material's unit
- * @param materialUnit - Material's unit (e.g., "kg")
- * @param ingredientUnit - Recipe ingredient's unit (e.g., "g")
- * @returns Stock converted to ingredient unit
- */
-export function convertStockToIngredientUnit(
-  materialStock: number,
-  materialUnit: string,
-  ingredientUnit: string
-): number {
-  return convertUnit(materialStock, materialUnit, ingredientUnit);
-}
+// NOTE: a `convertStockToIngredientUnit(materialStock, materialUnit,
+// ingredientUnit)` wrapper used to live here. It was a bare passthrough to
+// convertUnit, but half its callers passed (value, ingredientUnit,
+// materialUnit) — the exact reverse of what its parameter names promised.
+// The results were right and the names were a trap, so it's gone: call
+// convertUnit directly and read the direction off the argument order.
 
 /**
  * Get display-friendly unit conversion info

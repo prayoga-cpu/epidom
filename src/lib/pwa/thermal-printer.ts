@@ -7,9 +7,11 @@ import {
   RECEIPT_INTL_LOCALE,
   RECEIPT_LABELS,
   RECEIPT_POWERED_BY_URL,
+  SHIFT_REPORT_LABELS,
   resolveReceiptLocale,
   type ReceiptLocale,
 } from "@/lib/receipts/receipt-labels";
+import type { ShiftReportData } from "@/lib/finance/shift-report";
 
 export interface ReceiptData {
   storeName: string;
@@ -250,18 +252,16 @@ function labelRow(label: string, value: string): string {
   return `${label.padEnd(9)}: ${value}`;
 }
 
-export function buildEscPos(receipt: ReceiptData): Uint8Array {
-  const cols = receipt.width ?? 32;
-  const divider = "-".repeat(cols);
-  const currency = receipt.currency ?? "IDR";
-  const locale = resolveReceiptLocale(receipt.locale);
-  const labels = RECEIPT_LABELS[locale];
-  const money = (amount: number) => formatMoney(amount, currency, locale);
+// ESC/POS command bytes
+const ESC = 0x1b;
+const LF = 0x0a;
 
-  // ESC/POS command bytes
-  const ESC = 0x1b;
-  const LF = 0x0a;
-
+/**
+ * Byte-emitting primitives shared by the receipt and shift-report builders,
+ * so both speak the same ESC/POS dialect (and both get `toPrinterAscii`'s
+ * codepage safety) instead of each hand-rolling its own escape sequences.
+ */
+function createEscPosWriter() {
   const commands: number[] = [];
 
   const push = (...bytes: number[]) => commands.push(...bytes);
@@ -285,20 +285,37 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   const bold = (on: boolean) => push(ESC, 0x45, on ? 0x01 : 0x00);
   const center = () => push(ESC, 0x61, 0x01);
   const left = () => push(ESC, 0x61, 0x00);
+  const doubleSize = (on: boolean) => push(ESC, 0x21, on ? 0x30 : 0x00);
+  const init = () => push(ESC, 0x40);
+  const bytes = () => new Uint8Array(commands);
+
+  return { push, text, line, lines, blank, bold, center, left, doubleSize, init, bytes };
+}
+
+export function buildEscPos(receipt: ReceiptData): Uint8Array {
+  const cols = receipt.width ?? 32;
+  const divider = "-".repeat(cols);
+  const currency = receipt.currency ?? "IDR";
+  const locale = resolveReceiptLocale(receipt.locale);
+  const labels = RECEIPT_LABELS[locale];
+  const money = (amount: number) => formatMoney(amount, currency, locale);
+
+  const w = createEscPosWriter();
+  const { line, lines, blank, bold, center, left, doubleSize } = w;
 
   // Initialize printer
-  push(ESC, 0x40);
+  w.init();
 
   // ---- Header: store name (bold double-size), tagline ----
   center();
-  push(ESC, 0x21, 0x30);
+  doubleSize(true);
   // Double-width glyphs take 2 cell-widths each, so the usable line length
   // here is half of `cols` — this is the actual root cause of the old
   // "TAHOMA CAFE & EA" truncation bug (it hardcoded 16 = 32/2 and never
   // adapted when `cols` changed). Wrapping instead of truncating means a
   // long name spans multiple bold/double-size lines instead of losing text.
   lines(wrapText(receipt.storeName, Math.max(1, Math.floor(cols / 2))));
-  push(ESC, 0x21, 0x00);
+  doubleSize(false);
 
   if (receipt.tagline) {
     lines(wrapText(receipt.tagline, cols));
@@ -412,7 +429,229 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   line(divider);
   blank(6);
 
-  return new Uint8Array(commands);
+  return w.bytes();
+}
+
+export interface ShiftReportPrintInput {
+  report: ShiftReportData;
+  storeName: string;
+  /** ISO 4217 the amounts are literally denominated in — no conversion. */
+  currency: string;
+  locale?: ReceiptLocale | string | null;
+  width?: 32 | 48;
+  /** Cashier name when the report is scoped to one till session. */
+  shiftLabel?: string | null;
+  generatedAt?: Date;
+}
+
+/**
+ * The shift / daily report ("Z-report") as ESC/POS bytes — the paper
+ * equivalent of the browser report page, rendered from the exact same
+ * ShiftReportData so the two can't disagree.
+ *
+ * Every string goes through the writer's `toPrinterAscii`, and every money
+ * figure through `formatMoney`, which swaps a non-ASCII currency symbol for
+ * the plain ISO code — CP437 only round-trips ASCII.
+ */
+export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array {
+  const cols = input.width ?? 32;
+  const divider = "-".repeat(cols);
+  const thickDivider = "=".repeat(cols);
+  const locale = resolveReceiptLocale(
+    typeof input.locale === "string" ? input.locale : undefined
+  );
+  const labels = SHIFT_REPORT_LABELS[locale];
+  const intlLocale = RECEIPT_INTL_LOCALE[locale];
+  const money = (amount: number) => formatMoney(amount, input.currency, locale);
+  const dateTime = (value: string | Date) =>
+    new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short" }).format(
+      new Date(value)
+    );
+
+  const { report } = input;
+  const w = createEscPosWriter();
+  const { line, lines, blank, bold, center, left, doubleSize } = w;
+
+  /**
+   * `label` left, `value` right-aligned to the paper width.
+   *
+   * `formatCols` forces a minimum one-space gap, so it silently overflows the
+   * paper whenever label + value already fills the width — on 58mm (32 cols)
+   * that happens with entirely ordinary content ("Makan di Tempat (46)" plus
+   * a 7-figure rupiah total is 33 chars). An overflowing line wraps at the
+   * printer's own discretion, which is what produces a value orphaned on its
+   * own line mid-column. Instead, detect the case and lay it out deliberately:
+   * label wrapped on its own line(s), value right-aligned underneath.
+   */
+  const row = (label: string, value: string) => {
+    if (label.length + value.length < cols) {
+      line(formatCols(label, value, cols));
+      return;
+    }
+    lines(wrapText(label, cols));
+    line(value.length >= cols ? value : value.padStart(cols));
+  };
+  const heading = (title: string) => {
+    blank();
+    bold(true);
+    lines(wrapText(title, cols));
+    bold(false);
+    line(divider);
+  };
+
+  w.init();
+
+  // ---- Header ------------------------------------------------------------
+  center();
+  doubleSize(true);
+  lines(wrapText(input.storeName, Math.max(1, Math.floor(cols / 2))));
+  doubleSize(false);
+  bold(true);
+  // A session-scoped run is a shift report; an arbitrary date window is a
+  // daily report. Same layout, honest title.
+  lines(wrapText(report.cashDrawer ? labels.shiftReportTitle : labels.title, cols));
+  bold(false);
+  left();
+  line(divider);
+
+  // ---- Window / cashier --------------------------------------------------
+  // An open till's window runs to "now" and keeps moving — say so on the
+  // paper, otherwise a mid-shift printout reads as a final Z-report.
+  const windowTo = report.window.isOpen
+    ? `${dateTime(report.window.to)} (${labels.stillOpen})`
+    : dateTime(report.window.to);
+  lines(wrapText(`${labels.period}: ${dateTime(report.window.from)}`, cols));
+  lines(wrapText(`${" ".repeat(labels.period.length + 2)}${windowTo}`, cols));
+  if (input.shiftLabel) lines(wrapText(`${labels.cashier}: ${input.shiftLabel}`, cols));
+  line(divider);
+
+  // ---- Sales -------------------------------------------------------------
+  row(labels.grossSales, money(report.sales.grossSales));
+  if (report.sales.discount) row(labels.discount, `-${money(report.sales.discount)}`);
+  if (report.sales.serviceCharge) row(labels.serviceCharge, money(report.sales.serviceCharge));
+  if (report.sales.tax) row(labels.tax, money(report.sales.tax));
+  // The reference report's "Pembulatan" (rounding) line has no equivalent
+  // field here; these two are Epidom's actual non-item charges.
+  if (report.sales.processingFee) row(labels.processingFee, money(report.sales.processingFee));
+  if (report.sales.delivery) row(labels.delivery, money(report.sales.delivery));
+  if (report.sales.refund) row(labels.refund, `-${money(report.sales.refund)}`);
+  line(divider);
+  bold(true);
+  row(labels.total, money(report.sales.total));
+  bold(false);
+
+  if (report.invoices.count === 0) {
+    blank();
+    center();
+    lines(wrapText(labels.noData, cols));
+    left();
+  }
+
+  // ---- Invoices ----------------------------------------------------------
+  heading(labels.invoicesHeading);
+  row(labels.invoiceCount, String(report.invoices.count));
+  row(labels.averagePerInvoice, money(report.invoices.averagePerInvoice));
+
+  // ---- Cancellations -----------------------------------------------------
+  heading(labels.cancellationsHeading);
+  row(labels.invoiceCount, String(report.cancellations.invoiceCount));
+  row(labels.cancelledItems, String(report.cancellations.itemCount));
+  row(labels.total, money(report.cancellations.total));
+
+  // ---- By sale type ------------------------------------------------------
+  if (report.byOrderType.length > 0) {
+    heading(labels.byOrderTypeHeading);
+    for (const bucket of report.byOrderType) {
+      const typeLabel =
+        bucket.orderType === "DINE_IN"
+          ? labels.dineIn
+          : bucket.orderType === "TAKEAWAY"
+            ? labels.takeaway
+            : labels.deliveryType;
+      row(`${typeLabel} (${bucket.orderCount})`, money(bucket.total));
+    }
+    line(divider);
+    bold(true);
+    row(labels.total, money(report.sales.total));
+    bold(false);
+  }
+
+  // ---- By guest (omitted entirely when no pax was ever recorded) ----------
+  if (report.byGuest) {
+    heading(labels.byGuestHeading);
+    row(labels.totalGuests, String(report.byGuest.totalGuests));
+    row(labels.invoicesWithGuests, String(report.byGuest.invoicesWithGuestCount));
+    row(labels.averageGuestsPerDay, report.byGuest.averageGuestsPerDay.toFixed(2));
+    row(labels.averageSalesPerGuest, money(report.byGuest.averageSalesPerGuest));
+  }
+
+  // ---- By payment method -------------------------------------------------
+  if (report.byPaymentMethod.length > 0) {
+    heading(labels.byPaymentHeading);
+    for (const method of report.byPaymentMethod) {
+      row(method.paymentMethod, money(method.revenue));
+    }
+    line(divider);
+    bold(true);
+    row(labels.total, money(report.sales.total));
+    bold(false);
+  }
+
+  // ---- By product, grouped by category -----------------------------------
+  if (report.byProduct.categories.length > 0) {
+    heading(labels.byProductHeading);
+    for (const category of report.byProduct.categories) {
+      lines(wrapText(category.categoryName, cols));
+      for (const item of category.lines) {
+        // Quantity prefix on its own column, name wrapped under it — long
+        // item names must wrap rather than be truncated (the bug class
+        // wrapText() exists to prevent).
+        const prefix = `x${item.quantity} `;
+        const nameLines = wrapText(item.name, Math.max(1, cols - prefix.length - 12));
+        row(`${prefix}${nameLines[0] ?? ""}`, money(item.gross));
+        for (const extra of nameLines.slice(1)) {
+          line(`${" ".repeat(prefix.length)}${extra}`);
+        }
+      }
+      row(`${labels.total} (${category.totalQuantity})`, money(category.totalGross));
+      blank();
+    }
+    line(divider);
+    bold(true);
+    row(`${labels.total} (${report.byProduct.totalQuantity})`, money(report.byProduct.totalGross));
+    bold(false);
+  }
+
+  // ---- Cash drawer (session-scoped runs only) ----------------------------
+  if (report.cashDrawer) {
+    heading(labels.cashDrawerHeading);
+    row(labels.openingCash, money(report.cashDrawer.openingCash));
+    if (report.cashDrawer.expectedCash != null) {
+      row(labels.expectedCash, money(report.cashDrawer.expectedCash));
+    }
+    if (report.cashDrawer.closingCash != null) {
+      row(labels.closingCash, money(report.cashDrawer.closingCash));
+    }
+    if (report.cashDrawer.cashDifference != null) {
+      bold(true);
+      row(labels.difference, money(report.cashDrawer.cashDifference));
+      bold(false);
+    }
+  }
+
+  // ---- Footer ------------------------------------------------------------
+  line(thickDivider);
+  center();
+  lines(wrapText(`${labels.printedAt} ${dateTime(input.generatedAt ?? new Date())}`, cols));
+  lines(wrapText(`${RECEIPT_POWERED_BY_URL} | ${RECEIPT_LABELS[locale].poweredByTitle}`, cols));
+
+  // Same tear-guide + feed as the receipt path — cheap cutter-less printers
+  // rely on the customer tearing by hand.
+  blank(2);
+  line(divider);
+  blank(6);
+
+  return w.bytes();
 }
 
 // Sent as its own write, after PRINT_SETTLE_DELAY_MS, instead of being part
@@ -425,6 +664,19 @@ export async function printReceipt(receipt: ReceiptData): Promise<void> {
   await writeChunks(data);
   // Give the printer time to physically finish rendering the last line(s)
   // before it receives the cut command — see PRINT_SETTLE_DELAY_MS above.
+  await sleep(PRINT_SETTLE_DELAY_MS);
+  await writeChunks(CUT_COMMAND);
+}
+
+/**
+ * Prints the shift / daily report. Same chunked-write + settle + cut
+ * discipline as printReceipt() — a report is materially longer than a
+ * receipt, so the small-input-buffer overflow this guards against is *more*
+ * likely here, not less.
+ */
+export async function printShiftReport(input: ShiftReportPrintInput): Promise<void> {
+  if (!isPrinterConnected()) throw new Error("Printer tidak terhubung");
+  await writeChunks(buildShiftReportEscPos(input));
   await sleep(PRINT_SETTLE_DELAY_MS);
   await writeChunks(CUT_COMMAND);
 }

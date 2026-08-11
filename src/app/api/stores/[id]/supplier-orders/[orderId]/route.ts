@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/prisma";
 import { subscriptionService } from "@/lib/services";
+import { publishStockChanged } from "@/lib/realtime/publish";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
@@ -116,6 +117,17 @@ export const PATCH = withApiHandler(
             notes: notes !== undefined ? notes : undefined,
           },
         });
+      });
+
+      // Receiving a delivery is the single most common way stock goes UP, and
+      // it moved every material on the order — tell the other open views to
+      // refetch. Published after the transaction resolves, never inside it, so
+      // a rollback can't announce a restock that never happened.
+      // storeId is non-null here: `requireStoreAuth: true` throws before the
+      // handler runs when it can't be resolved (see api-handler.ts), it just
+      // isn't narrowed in the context type.
+      publishStockChanged(storeId!, {
+        materialIds: existingOrder.items.map((item) => item.materialId),
       });
     } else {
       // Just update the order without stock changes

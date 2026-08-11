@@ -127,10 +127,105 @@ function verifySignedCookie(signedValue: string, secret: string): string | null 
 }
 
 /**
+ * Postgres/Prisma failures that mean "the database was momentarily out of
+ * reach", not "this query has no answer". Serverless Postgres (Neon) drops
+ * idle pooled connections and cold-starts compute, so a `pg` pool that has
+ * been sitting idle between two POS actions can hand back a dead client on
+ * the first query and a perfectly good one on the retry.
+ */
+const TRANSIENT_DB_ERROR_CODES = new Set([
+  // Prisma: unreachable / timed out / server closed the connection / pool timeout
+  "P1001",
+  "P1002",
+  "P1008",
+  "P1017",
+  "P2024",
+  // Node socket errors surfaced straight through by the pg driver
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "EPIPE",
+  // Postgres class 08 (connection exception) + admin-initiated disconnects
+  "08000",
+  "08001",
+  "08003",
+  "08006",
+  "57P01",
+  "57P03",
+]);
+
+const TRANSIENT_DB_MESSAGES = [
+  "connection terminated",
+  "connection closed",
+  "not queryable",
+  "socket hang up",
+  "timed out fetching a new connection",
+  "can't reach database server",
+  "server has closed the connection",
+  "connection reset by peer",
+];
+
+function isTransientDbError(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (typeof code === "string" && TRANSIENT_DB_ERROR_CODES.has(code)) return true;
+
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  return TRANSIENT_DB_MESSAGES.some((fragment) => message.includes(fragment));
+}
+
+const SESSION_LOOKUP_ATTEMPTS = 3;
+/** One entry per retry, so the last attempt falls through instead of sleeping. */
+const SESSION_LOOKUP_BACKOFF_MS = [60, 180];
+
+/**
+ * Resolve a session token against the database, retrying the transient
+ * connection failures above. Anything else (and a still-failing transient
+ * error) propagates — the caller turns that into "session state unknown",
+ * which is emphatically not the same thing as "not signed in".
+ */
+async function lookupSessionByToken(sessionToken: string) {
+  for (let attempt = 0; attempt < SESSION_LOOKUP_ATTEMPTS; attempt++) {
+    try {
+      return await prisma.session.findUnique({
+        where: { token: sessionToken },
+        include: { user: true },
+      });
+    } catch (error) {
+      if (!isTransientDbError(error)) throw error;
+
+      const backoff = SESSION_LOOKUP_BACKOFF_MS[attempt];
+      if (backoff === undefined) throw error;
+      await new Promise((resolve) => setTimeout(resolve, backoff));
+    }
+  }
+
+  // Unreachable — the loop either returns or throws on its last iteration.
+  return null;
+}
+
+export interface SessionResult {
+  session: Session;
+  /**
+   * The request carried a session cookie but we couldn't resolve it because
+   * the database was unreachable. Callers must NOT read this as "signed
+   * out": answering 401 here logs a working cashier out mid-checkout over a
+   * transient blip. Answer 503 and let them retry instead.
+   */
+  unavailable: boolean;
+}
+
+/**
  * Server-side session retrieval
  * Securely verifies signed cookies before querying database
+ *
+ * Splits the two failure modes that used to collapse into a bare `null`:
+ * a missing/invalid/expired cookie (genuinely signed out) versus a failed
+ * database lookup (unknown). Conflating them is what turned a momentary Neon
+ * hiccup into a mid-checkout "Unauthorized" on the POS.
  */
-export const getSession = cache(async function getSession() {
+export const getSessionResult = cache(async function getSessionResult(): Promise<SessionResult> {
+  let sessionToken: string | null = null;
+
   try {
     const cookieStore = await cookies();
 
@@ -140,24 +235,24 @@ export const getSession = cache(async function getSession() {
       cookieStore.get("__Secure-better-auth.session_token")?.value;
 
     if (!sessionTokenCookie) {
-      return null;
+      return { session: null, unavailable: false };
     }
 
     const secret = process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
     if (!secret) {
       console.error("[getSession] No secret configured");
-      return null;
+      return { session: null, unavailable: false };
     }
 
     // Try to verify signature first
-    let sessionToken = verifySignedCookie(sessionTokenCookie, secret);
+    let token = verifySignedCookie(sessionTokenCookie, secret);
 
     // If signature verification fails, it might be using a different signing method
     // Fall back to extracting token (legacy support) but log a warning
-    if (!sessionToken) {
+    if (!token) {
       const parts = sessionTokenCookie.split(".");
       if (parts.length >= 1 && parts[0]) {
-        sessionToken = parts[0];
+        token = parts[0];
         // Only log in development to avoid log spam in production
         if (process.env.NODE_ENV === "development") {
           console.warn("[getSession] Signature verification failed, using token directly");
@@ -165,61 +260,89 @@ export const getSession = cache(async function getSession() {
       }
     }
 
-    if (!sessionToken) {
-      return null;
-    }
-
-    // Look up session in database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionToken },
-      include: { user: true },
-    });
-
-    if (!session) {
-      return null;
-    }
-
-    // Check if session is expired
-    if (new Date() > session.expiresAt) {
-      // Optionally: Clean up expired session
-      // await prisma.session.delete({ where: { id: session.id } });
-      return null;
-    }
-
-    // Return session data (excluding sensitive token)
-    return {
-      session: {
-        id: session.id,
-        userId: session.userId,
-        expiresAt: session.expiresAt,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt,
-        ipAddress: session.ipAddress,
-        userAgent: session.userAgent,
-      },
-      user: {
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-        emailVerified: session.user.emailVerified,
-        image: session.user.image,
-        createdAt: session.user.createdAt,
-        updatedAt: session.user.updatedAt,
-        deactivatedAt: session.user.deactivatedAt,
-      },
-    };
+    sessionToken = token;
   } catch (error) {
-    // Only log in development or if it's an unexpected error
+    // Reading/parsing the cookie failed — most often `cookies()` called
+    // outside a request scope. Nothing here says anything about the database,
+    // so this stays a plain "no session".
     if (
       process.env.NODE_ENV === "development" ||
       !(error instanceof Error && error.message.includes("cookies"))
     ) {
       console.error("[getSession] Error:", error);
     }
-    return null;
+    return { session: null, unavailable: false };
   }
+
+  if (!sessionToken) {
+    return { session: null, unavailable: false };
+  }
+
+  let row: Awaited<ReturnType<typeof lookupSessionByToken>>;
+  try {
+    row = await lookupSessionByToken(sessionToken);
+  } catch (error) {
+    // We had a token and couldn't check it. Reporting "signed out" here is a
+    // lie that costs a cashier their in-progress checkout, so say so plainly
+    // and let the caller answer 503.
+    console.error("[getSession] Session lookup failed:", error);
+    return { session: null, unavailable: true };
+  }
+
+  if (!row) {
+    return { session: null, unavailable: false };
+  }
+
+  // Check if session is expired
+  if (new Date() > row.expiresAt) {
+    // Optionally: Clean up expired session
+    // await prisma.session.delete({ where: { id: session.id } });
+    return { session: null, unavailable: false };
+  }
+
+  return { session: toSessionPayload(row), unavailable: false };
+});
+
+/** Session data as callers see it — deliberately excludes the session token. */
+function toSessionPayload(row: NonNullable<Awaited<ReturnType<typeof lookupSessionByToken>>>) {
+  return {
+    session: {
+      id: row.id,
+      userId: row.userId,
+      expiresAt: row.expiresAt,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      ipAddress: row.ipAddress,
+      userAgent: row.userAgent,
+    },
+    user: {
+      id: row.user.id,
+      name: row.user.name,
+      email: row.user.email,
+      emailVerified: row.user.emailVerified,
+      image: row.user.image,
+      createdAt: row.user.createdAt,
+      updatedAt: row.user.updatedAt,
+      deactivatedAt: row.user.deactivatedAt,
+    },
+  };
+}
+
+/**
+ * The session, or null when there isn't one. Unchanged contract — it still
+ * collapses "signed out" and "couldn't reach the database" into null, which
+ * is the right trade for the ~70 read-only call sites (a server component
+ * rendering a signed-out shell during a blip is survivable). Mutating API
+ * routes should prefer `requireSessionApi`, which keeps the two apart.
+ */
+export const getSession = cache(async function getSession() {
+  return (await getSessionResult()).session;
 });
 
 // Type definitions for session
-export type Session = Awaited<ReturnType<typeof getSession>>;
+// Derived from toSessionPayload rather than from getSession's return type:
+// SessionResult already names Session, so keying it off getSession (which is
+// now defined in terms of SessionResult) would be circular. Same resolved
+// shape either way, so every existing consumer is unaffected.
+export type Session = ReturnType<typeof toSessionPayload> | null;
 export type User = NonNullable<Session>["user"];

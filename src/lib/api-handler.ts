@@ -9,7 +9,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { getSession, type Session } from "@/lib/auth";
+import { type Session } from "@/lib/auth";
+import { requireSessionApi } from "@/lib/auth/require-session";
 import { checkRateLimitByUser } from "@/lib/middleware/rate-limit";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { handleApiError } from "@/lib/utils/api-error-handler";
@@ -55,12 +56,8 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
       // ========================================
       // Authentication (FIRST - we need user ID for rate limiting)
       // ========================================
-      const session = await getSession();
-      if (!session?.user?.id) {
-        return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-          status: 401,
-        });
-      }
+      const session = await requireSessionApi();
+      if (session instanceof NextResponse) return session;
 
       if (session.user.deactivatedAt && !options.allowDeactivated) {
         return NextResponse.json(

@@ -8,7 +8,16 @@ import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, GripVertical, Settings2, Trash2, ArrowRight, Loader2, Link2 } from "lucide-react";
+import {
+  Plus,
+  GripVertical,
+  Settings2,
+  Trash2,
+  ArrowRight,
+  Loader2,
+  Link2,
+  Unlink2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -129,6 +138,24 @@ function SortableItemRow({ item, t, formatPrice, onEdit, onDelete }: SortableIte
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t("storefront.menu.fromProductTooltip")}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {/* The complement of the badge above. An unlinked menu item is a
+                supported configuration (MenuItem.productId is optional on
+                purpose — AGENTS.md §7 rule 4), but it means selling it moves
+                no stock at all, which reads as "the POS isn't deducting"
+                unless we say so. Informational, not an error. */}
+            {!item.productId && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                    <Unlink2 className="mr-1 size-2.5" />
+                    {t("storefront.menu.noStockBadge")}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("storefront.menu.noStockTooltip")}</p>
                 </TooltipContent>
               </Tooltip>
             )}

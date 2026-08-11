@@ -1,17 +1,42 @@
-export function getOrderStatusBadgeVariant(
-  status: string
-): "default" | "secondary" | "outline" | "destructive" {
+/**
+ * Solid status fill for the queue's order badges, keyed to the same color
+ * family as the toolbar's status tiles (STATUS_META) and the card's left
+ * border accent — so a status reads the same wherever it shows up. Filled
+ * rather than outlined on purpose: the badge is what the eye lands on first
+ * on a dense queue, and the previous variant map rendered CONFIRMED and
+ * IN_PRODUCTION as visually interchangeable chips.
+ *
+ * DELIVERED is the one deliberate non-hue: white fill with black text, since
+ * "done" shouldn't compete for attention with the statuses that still need a
+ * cashier to act. Every fill and text color here is literal, not a theme
+ * token, because a status has to read the same in light and dark — a
+ * token pair (`bg-foreground text-background`) would invert between themes
+ * and turn one badge into two different signals.
+ *
+ * The text colors carry Tailwind's important modifier (`text-black!`, the v4
+ * trailing-`!` syntax — the v3 `!text-black` prefix does not compile here).
+ * `Badge`'s cva always emits a text color of its own, and unlike the plain
+ * classes it isn't reliably dropped when these are merged in — most visibly
+ * in dark mode, where the variant's near-white `text-foreground` left the
+ * DELIVERED badge unreadable on its white fill. The fill is fixed regardless
+ * of theme, so the text on it has to be too.
+ */
+export function getOrderStatusBadgeClass(status: string): string {
   switch (status) {
     case "CONFIRMED":
-      return "default";
+      return "border-transparent bg-blue-500 text-white!";
     case "IN_PRODUCTION":
-      return "outline";
+      return "border-transparent bg-orange-500 text-white!";
     case "READY":
-      return "default";
+      return "border-transparent bg-emerald-500 text-white!";
     case "HELD":
-      return "secondary";
+      return "border-transparent bg-slate-500 text-white!";
+    case "DELIVERED":
+      return "border-transparent bg-white text-black!";
+    case "CANCELLED":
+      return "border-transparent bg-destructive text-white!";
     default:
-      return "outline";
+      return "border-transparent bg-muted text-muted-foreground";
   }
 }
 

@@ -765,6 +765,14 @@ model Order {
   // Phase 2 fields
   storefrontId       String?
   orderType          OrderType       @default(DINE_IN)
+  // Pax at the table, captured at POS checkout for DINE_IN orders. Powers the
+  // "by guest" block of the shift/daily report (avg guests per day, avg sales
+  // per guest). Nullable on purpose and never defaulted to 1: legacy rows,
+  // takeaway, and storefront orders have a genuinely *unknown* pax count, and
+  // reading null as 1 would silently invent guests that were never counted.
+  // buildShiftReport() sums only non-null values and reports how many invoices
+  // actually carried one.
+  guestCount         Int?
   tableNumber        String?
   paymentMethod      PaymentMethod   @default(CASH)
   paymentStatus      PaymentStatus   @default(PENDING)

@@ -42,6 +42,13 @@ export const FEATURE_MIN_PLAN = {
   advancedReports: "OPERATIONS",
   multiStore: "OPERATIONS",
   customProducts: "OPERATIONS",
+  // Recipe→batch production tracking: the Production page and the dashboard's
+  // Production History chart. The plan sets the ceiling, `Store.
+  // productionEnabled` the intent — both must be true to show the workflow.
+  production: "OPERATIONS",
+  // Staff rosters, clock-in/out attendance and POS till sessions: the
+  // Schedule page and the dashboard's Live Operations card.
+  staffOperations: "OPERATIONS",
   finance: "ENTERPRISE",
 } satisfies Record<string, PlanTier>;
 

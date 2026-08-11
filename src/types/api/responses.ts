@@ -40,6 +40,11 @@ export enum ApiErrorCode {
   INTERNAL_ERROR = "INTERNAL_ERROR",
   DATABASE_ERROR = "DATABASE_ERROR",
 
+  // Temporary server errors (503) — the request was well-formed and the
+  // caller did nothing wrong; a dependency was momentarily out of reach and
+  // the same request is expected to succeed on retry.
+  SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE",
+
   // Business logic errors (422)
   BUSINESS_LOGIC_ERROR = "BUSINESS_LOGIC_ERROR",
   INSUFFICIENT_STOCK = "INSUFFICIENT_STOCK",

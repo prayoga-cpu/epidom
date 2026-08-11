@@ -20,7 +20,7 @@ import { useProductionBatches } from "./hooks/use-production-batches";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { hasMaterialStockChanged } from "./utils/recipe-helpers";
 import { getTranslatedCategory } from "@/features/dashboard/data/recipes/utils/category-helpers";
-import { convertStockToIngredientUnit } from "@/lib/utils/unit-conversion";
+import { convertUnit } from "@/lib/utils/unit-conversion";
 
 export function RecipeProductionCard() {
   const { t } = useI18n();
@@ -107,7 +107,7 @@ export function RecipeProductionCard() {
       const materialStock = Number(ingredient.material.currentStock);
       const materialUnit = ingredient.material.unit;
       const ingredientUnit = ingredient.unit;
-      const available = convertStockToIngredientUnit(materialStock, materialUnit, ingredientUnit);
+      const available = convertUnit(materialStock, materialUnit, ingredientUnit);
 
       let status: "sufficient" | "low" | "insufficient";
 

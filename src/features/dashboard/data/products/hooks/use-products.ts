@@ -266,7 +266,10 @@ export function useProducts(
     staleTime: 20 * 1000,
     refetchInterval: 30 * 1000, // Safety-net poll — Pusher covers the instant case
     refetchIntervalInBackground: false, // Only poll when tab is active
-    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    // See the same option in use-materials.ts — `false` also swallowed the
+    // refetch for an invalidated query, so finished-goods stock went stale on
+    // every page the mutation didn't happen on.
+    refetchOnMount: true,
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
       refetchInterval: 30 * 1000, // Store in meta for smart polling

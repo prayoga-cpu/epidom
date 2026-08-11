@@ -56,6 +56,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { WasteFormDialog } from "@/features/dashboard/management/waste/waste-form-dialog";
 import { mapPaymentMethodLabel } from "@/features/pos/lib/order-status-display";
+import { useStoreShifts } from "@/features/pos/hooks/use-store-shifts";
+import { formatShiftLabel, resolveShiftWindow } from "@/lib/finance/shift-window";
 import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
 import {
   useWasteEntries,
@@ -322,7 +324,7 @@ function ReportStatusRow({
 }
 
 export function FinanceClient({ storeId, staff, categories, showOwnerLink }: FinanceClientProps) {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, formatDayDate, formatTimeOnly } = useI18n();
   // formatPrice(value): real IDR->owner-currency conversion (its default
   // behavior), for genuinely IDR-stored figures (waste-entry cost
   // snapshots below). formatOrderPrice: no-op passthrough, for
@@ -351,6 +353,13 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
   const [from, setFromState] = useState(searchParams.get("from") ?? startOfMonthLocalISO());
   const [to, setToState] = useState(searchParams.get("to") ?? todayLocalISO());
   const [staffId, setStaffIdState] = useState(searchParams.get("staffId") ?? ALL);
+  // A till session (`Shift`). Like on Order History, it's a date-range
+  // *preset*: picking one drives from/to to the session's open→close window as
+  // full ISO datetimes. Every finance/* route already parses those params as
+  // arbitrary ISO strings, so no route changes are needed — and the whole page
+  // (KPI cards, P&L, every tab) narrows consistently instead of only the tabs
+  // that happen to understand a shift.
+  const [shiftId, setShiftIdState] = useState(searchParams.get("shiftId") ?? ALL);
   const [categoryId, setCategoryIdState] = useState(searchParams.get("category") ?? ALL);
   const [department, setDepartmentState] = useState(searchParams.get("department") ?? ALL);
   const [channel, setChannelState] = useState(searchParams.get("channel") ?? ALL);
@@ -360,6 +369,8 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
   const [comparePrevious, setComparePreviousState] = useState(
     searchParams.get("compare") === "1"
   );
+
+  const shifts = useStoreShifts(storeId);
 
   // Reflects the current filter set into the URL — a filtered report view is
   // then shareable/bookmarkable and survives a refresh. Same pattern as
@@ -381,11 +392,39 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
   const setDateRange = (nextFrom: string, nextTo: string) => {
     setFromState(nextFrom);
     setToState(nextTo);
-    syncUrl({ from: nextFrom, to: nextTo });
+    // Editing the date range by hand means the shift's window no longer
+    // describes what's on screen — drop the selection rather than leave a
+    // picker claiming a session it isn't showing.
+    setShiftIdState(ALL);
+    syncUrl({ from: nextFrom, to: nextTo, shiftId: null });
   };
   const setStaffId = (v: string) => {
     setStaffIdState(v);
     syncUrl({ staffId: v });
+  };
+  const setShiftId = (v: string) => {
+    if (v === ALL) {
+      // Restore a sane default range rather than leaving the report pinned to
+      // a window whose explaining control has just been cleared.
+      const nextFrom = startOfMonthLocalISO();
+      const nextTo = todayLocalISO();
+      setShiftIdState(ALL);
+      setFromState(nextFrom);
+      setToState(nextTo);
+      syncUrl({ shiftId: null, from: nextFrom, to: nextTo });
+      return;
+    }
+    const shift = (shifts.data ?? []).find((s) => s.id === v);
+    if (!shift) return;
+    // Not named `window` — this file calls the global window.open elsewhere,
+    // and a shadowing local is a trap for the next edit.
+    const shiftWindow = resolveShiftWindow(shift);
+    const nextFrom = shiftWindow.from.toISOString();
+    const nextTo = shiftWindow.to.toISOString();
+    setShiftIdState(v);
+    setFromState(nextFrom);
+    setToState(nextTo);
+    syncUrl({ shiftId: v, from: nextFrom, to: nextTo });
   };
   const setCategoryId = (v: string) => {
     setCategoryIdState(v);
@@ -427,7 +466,15 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
   // keeps this page's wording in sync with the POS queue/history views.
   const paymentMethodLabel = (method: string) => mapPaymentMethodLabel(t, method);
 
-  const dateParams = `from=${from}T00:00:00Z&to=${to}T23:59:59Z`;
+  // `from`/`to` normally hold a date-only YYYY-MM-DD, widened here to a whole
+  // day. A shift selection instead stores a full ISO datetime (a till session
+  // has minute precision) which must pass through untouched — otherwise
+  // `...T00:00:00.000ZT00:00:00Z` reaches the server as garbage. Same guard as
+  // buildOrderHistoryParams in use-order-history.ts.
+  const isDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const rangeFrom = isDateOnly(from) ? `${from}T00:00:00Z` : from;
+  const rangeTo = isDateOnly(to) ? `${to}T23:59:59Z` : to;
+  const dateParams = `from=${encodeURIComponent(rangeFrom)}&to=${encodeURIComponent(rangeTo)}`;
   const staffParam = staffId !== ALL ? `&staffId=${staffId}` : "";
   const categoryParam = categoryId !== ALL ? `&category=${categoryId}` : "";
   const departmentParam = department !== ALL ? `&department=${department}` : "";
@@ -462,7 +509,9 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
       apiClient.get<SummaryData>(
         `${base}/summary?${previousDateParams}${staffParam}${channelParam}${paymentMethodParam}`
       ),
-    enabled: comparePrevious,
+    // See the toggle below — a shift-scoped range has no meaningful
+    // "previous equal-length period", and previousRange would be NaN.
+    enabled: comparePrevious && shiftId === ALL,
   });
 
   const channels = useQuery({
@@ -935,7 +984,10 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
   };
 
   const s = summary.data;
-  const sPrev = comparePrevious ? summaryPrevious.data : undefined;
+  // Matches summaryPrevious's own `enabled` — with a shift selected there is
+  // no previous period, so the delta badges must not render stale data from
+  // before the selection.
+  const sPrev = comparePrevious && shiftId === ALL ? summaryPrevious.data : undefined;
 
   /** % change vs. the previous-period value, or null if there's nothing to compare against. */
   const deltaPct = (key: keyof SummaryData) => {
@@ -1008,12 +1060,42 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
       <div className="flex flex-wrap gap-4">
         <div className="space-y-1">
           <Label htmlFor="finance-date-range">{t("common.datePicker.dateRange")}</Label>
-          <DateRangeField
-            id="finance-date-range"
-            from={from}
-            to={to}
-            onChange={(nextFrom, nextTo) => setDateRange(nextFrom, nextTo)}
-          />
+          {/* While a shift drives the range, from/to hold full ISO datetimes
+              that a <input type="date"> can't represent — show the resolved
+              window as read-only text instead of feeding it a value it would
+              silently mangle. Clearing the shift restores the picker. */}
+          {shiftId === ALL ? (
+            <DateRangeField
+              id="finance-date-range"
+              from={from}
+              to={to}
+              onChange={(nextFrom, nextTo) => setDateRange(nextFrom, nextTo)}
+            />
+          ) : (
+            <div className="bg-muted/30 text-muted-foreground flex h-9 items-center rounded-md border px-3 text-xs">
+              {formatDateTime(from)} — {formatDateTime(to)}
+            </div>
+          )}
+        </div>
+        <div className="space-y-1">
+          <Label>{t("pages.financeShiftSession")}</Label>
+          <Select value={shiftId} onValueChange={setShiftId}>
+            <SelectTrigger className="w-full sm:w-64">
+              <SelectValue placeholder={t("filters.allShifts")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>{t("filters.allShifts")}</SelectItem>
+              {(shifts.data ?? []).map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {formatShiftLabel(s, {
+                    formatDayDate,
+                    formatTimeOnly,
+                    openLabel: t("pos.history.shiftStillOpen"),
+                  })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <Label>{t("pages.financeStaff")}</Label>
@@ -1097,18 +1179,25 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-end gap-2 pb-1.5">
-          <Switch
-            id="finance-compare-previous"
-            checked={comparePrevious}
-            onCheckedChange={setComparePrevious}
-          />
-          <Label htmlFor="finance-compare-previous" className="cursor-pointer font-normal">
-            {t("pages.financeComparePrevious")}
-          </Label>
-        </div>
+        {/* Unavailable while a shift is selected: previousPeriodLocalISO
+            works in whole local days off a YYYY-MM-DD pair, and "the equal
+            length stretch before this till session" isn't a meaningful
+            comparison anyway. Hidden rather than silently producing a NaN
+            range. */}
+        {shiftId === ALL && (
+          <div className="flex items-end gap-2 pb-1.5">
+            <Switch
+              id="finance-compare-previous"
+              checked={comparePrevious}
+              onCheckedChange={setComparePrevious}
+            />
+            <Label htmlFor="finance-compare-previous" className="cursor-pointer font-normal">
+              {t("pages.financeComparePrevious")}
+            </Label>
+          </div>
+        )}
       </div>
-      {comparePrevious && (
+      {comparePrevious && shiftId === ALL && (
         <p className="text-muted-foreground text-xs">
           {t("pages.financeComparePreviousHint")
             .replace("{from}", previousRange.from)

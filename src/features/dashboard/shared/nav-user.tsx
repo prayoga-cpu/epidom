@@ -26,6 +26,7 @@ import { VerifyOwnerPinDialog } from "./verify-owner-pin-dialog";
 import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE } from "@/lib/last-visited";
 import { SetOwnerPinDialog } from "./set-owner-pin-dialog";
 import { AccountAccessDialog } from "./account-access-dialog";
+import { ZoomControl } from "./zoom-control";
 
 export function NavUser() {
   const router = useRouter();
@@ -220,6 +221,12 @@ export function NavUser() {
               {t("nav.backToStores")}
             </DropdownMenuItem>
           )}
+
+          {/* Its own section: a display preference, not an account action —
+              and available to staff personas too, since the cashier tablet is
+              exactly where the browser's own zoom is out of reach. */}
+          <DropdownMenuSeparator />
+          <ZoomControl />
 
           <DropdownMenuSeparator />
           {actingAsStaff && (

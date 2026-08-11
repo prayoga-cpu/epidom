@@ -527,6 +527,7 @@ Table orders {
   storeId String [not null]
   storefrontId String
   orderType OrderType [not null, default: 'DINE_IN']
+  guestCount Int
   tableNumber String
   paymentMethod PaymentMethod [not null, default: 'CASH']
   paymentStatus PaymentStatus [not null, default: 'PENDING']

@@ -21,6 +21,21 @@ export function useMarkOrderReady(storeId: string) {
         .filter((i) => i.status !== "READY" && i.status !== "SERVED" && i.status !== "CANCELLED")
         .map((i) => i.id);
 
+      // Nothing left to advance item by item. That's not an edge case — it's
+      // the normal shape of an order made entirely of CUSTOM product-line
+      // items, which have no prep step and are therefore created SERVED (see
+      // resolveInitialOrderItemStatus) and never appear on the KDS. With no
+      // item PATCH to piggyback on, the server's
+      // advanceOrderToReadyIfAllItemsReady never ran, so the order sat in
+      // IN_PRODUCTION forever and this button silently did nothing. Advance
+      // the order itself instead: the invariant that helper guards — every
+      // item terminal — already holds, so this reaches the same end state by
+      // the only route available.
+      if (pendingIds.length === 0) {
+        await apiClient.patch(`/stores/${storeId}/pos/orders/${order.id}`, { status: "READY" });
+        return;
+      }
+
       await Promise.all(
         pendingIds.map((itemId) =>
           apiClient.patch(`/stores/${storeId}/pos/orders/${order.id}/items/${itemId}`, {

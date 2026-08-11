@@ -14,7 +14,7 @@ import { PosOrderPrimaryAction } from "./pos-order-primary-action";
 import {
   getOrderSourceBadgeVariant,
   getOrderStatusAccentClass,
-  getOrderStatusBadgeVariant,
+  getOrderStatusBadgeClass,
   isAwaitingPayment,
   mapOrderStatusLabel,
   mapPaymentMethodLabel,
@@ -59,7 +59,10 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
           <span className="text-muted-foreground text-xs">{timeAgo}</span>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Badge variant={getOrderStatusBadgeVariant(order.status)} className="w-full px-2 py-1">
+          <Badge
+            variant="outline"
+            className={cn("w-full px-2 py-1", getOrderStatusBadgeClass(order.status))}
+          >
             {mapOrderStatusLabel(t, order.status)}
           </Badge>
           <Badge variant={getOrderSourceBadgeVariant(order.source)} className="w-full">

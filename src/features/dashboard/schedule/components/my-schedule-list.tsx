@@ -9,6 +9,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import {
   CalendarOff,
@@ -17,6 +18,7 @@ import {
   History as HistoryIcon,
   ImageOff,
   MapPin,
+  ReceiptText,
 } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +33,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { todayLocalISO } from "@/lib/utils/date-range";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
 import type { StaffScheduleEntry } from "./staff-schedule-cell-dialog";
 
@@ -66,6 +69,25 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
 
   const [clockDialogOpen, setClockDialogOpen] = useState(false);
   const [cashDialogOpen, setCashDialogOpen] = useState(false);
+  // The shift just closed, kept so the "View report" link survives the
+  // openShift query flipping to null the moment the close succeeds.
+  const [closedShiftId, setClosedShiftId] = useState<string | null>(null);
+
+  // Whether closing a till should immediately produce its daily report.
+  // Persisted so a cashier who wants the paper every night doesn't re-tick it
+  // each shift; the report stays reachable either way (see the link below),
+  // so this controls automation, never access.
+  const [{ printOnClose }, setPrintOnClose] = usePersistedState(
+    `epidom-shift-close-print-${storeId}`,
+    { printOnClose: false },
+    (raw, defaults) =>
+      raw && typeof raw === "object" && typeof (raw as any).printOnClose === "boolean"
+        ? { printOnClose: (raw as any).printOnClose }
+        : defaults
+  );
+
+  const dailyReportHref = (shiftId: string, autoPrint: boolean) =>
+    `/store/${storeId}/pos/orders/daily-report?shiftId=${shiftId}${autoPrint ? "" : "&print=0"}`;
 
   const { data, isLoading } = useQuery({
     queryKey: ["staff-schedules", storeId, "mine", staffMemberId],
@@ -123,9 +145,18 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
     mutationFn: (body: CloseShiftInput) =>
       apiClient.patch(`/stores/${storeId}/shifts/${openShift!.id}`, body),
     onSuccess: () => {
+      // Captured before invalidateShift() clears `openShift` — the report
+      // needs the id of the session that was just closed.
+      const closedId = openShift!.id;
+      setClosedShiftId(closedId);
       invalidateShift();
       setCashDialogOpen(false);
       closeForm.reset({ closingCash: 0 });
+      if (printOnClose) {
+        // A new tab, not an inline dialog: the report auto-calls
+        // window.print(), which would otherwise capture this whole page.
+        window.open(dailyReportHref(closedId, true), "_blank");
+      }
     },
   });
 
@@ -157,6 +188,19 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
             <Button size="sm" variant="outline" onClick={() => setCashDialogOpen(true)}>
               <Wallet className="mr-2 h-4 w-4" />
               {openShift ? t("pages.closeShift") : t("pages.openShift")}
+            </Button>
+          )}
+          {/* Survives the close: `openShift` goes null immediately, but the
+              cashier still needs one click to the report they just generated
+              (or to reach it if the print-on-close toggle was off). */}
+          {canUseCash && !openShift && closedShiftId && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.open(dailyReportHref(closedShiftId, false), "_blank")}
+            >
+              <ReceiptText className="mr-2 h-4 w-4" />
+              {t("pages.shiftViewReport")}
             </Button>
           )}
         </div>
@@ -302,6 +346,35 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
                   <Label htmlFor="my-notes">Notes</Label>
                   <Input id="my-notes" {...closeForm.register("notes")} />
                 </div>
+
+                <div className="flex items-center justify-between gap-3 border-t pt-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="my-print-on-close" className="text-sm font-medium">
+                      {t("pages.shiftPrintReportOnClose")}
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      {t("pages.shiftPrintReportOnCloseDesc")}
+                    </p>
+                  </div>
+                  <Switch
+                    id="my-print-on-close"
+                    checked={printOnClose}
+                    onCheckedChange={(checked) => setPrintOnClose({ printOnClose: checked })}
+                  />
+                </div>
+
+                {/* Reachable mid-shift too — a cashier can sanity-check the
+                    numbers before committing the closing cash count. */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={() => window.open(dailyReportHref(openShift.id, false), "_blank")}
+                >
+                  <ReceiptText className="h-3.5 w-3.5" />
+                  {t("pages.shiftViewReport")}
+                </Button>
               </form>
             </FormDialogLayout>
           ) : (

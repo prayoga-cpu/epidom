@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireSessionApi } from "@/lib/auth/require-session";
 import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
 import { createPosOrderSchema } from "@/lib/validation/pos.schemas";
@@ -35,12 +35,8 @@ export async function POST(
 ) {
   const { id: storeId, orderId } = await params;
 
-  const session = await getSession();
-  if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-      status: 401,
-    });
-  }
+  const session = await requireSessionApi();
+  if (session instanceof NextResponse) return session;
 
   const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
   if (verification instanceof NextResponse) return verification;
@@ -146,6 +142,14 @@ export async function POST(
           customerName: input.customerName ?? existing.customerName,
           customerPhone: input.customerPhone,
           orderType: input.orderType as OrderType,
+          // Falls back to whatever the hold already recorded — the checkout
+          // dialog only sends guestCount for DINE_IN, so finalizing a
+          // takeaway must not wipe a pax count a dine-in hold had captured
+          // before the cashier switched the order type.
+          guestCount:
+            input.orderType === "DINE_IN"
+              ? (input.guestCount ?? existing.guestCount)
+              : null,
           tableNumber: input.tableNumber,
           tableId: input.tableId,
           shiftId: input.shiftId ?? existing.shiftId,

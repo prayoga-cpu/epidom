@@ -88,7 +88,13 @@ export function useMaterials(
     staleTime: 20 * 1000,
     refetchInterval: 30 * 1000, // Safety-net poll — Pusher covers the instant case
     refetchIntervalInBackground: false, // Only poll when tab is active
-    refetchOnMount: false, // Don't refetch if data is fresh (within staleTime)
+    // Refetch on mount only when the cached data is actually stale — which
+    // `staleTime` above still keeps cheap, and which `invalidateQueries` forces
+    // regardless of age. This was `false`, and `false` suppresses the refetch
+    // even for a query a mutation just invalidated: producing a recipe on
+    // /production left /management rendering pre-production stock until the 30s
+    // poll below happened to tick (production feedback "Ticket id #01").
+    refetchOnMount: true,
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
       refetchInterval: 30 * 1000, // Store in meta for smart polling

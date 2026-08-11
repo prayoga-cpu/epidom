@@ -14,6 +14,7 @@ import { PwaProvider } from "@/components/providers/pwa-provider";
 import { ChunkErrorReloader } from "@/components/providers/chunk-error-reloader";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { ZOOM_BOOT_SCRIPT } from "@/lib/app-zoom";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
 import { Metadata, Viewport } from "next";
@@ -49,6 +50,10 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        {/* Applies the device's saved UI zoom before first paint, so a 70%
+            or 150% preference doesn't render at 100% and snap on hydration.
+            See src/lib/app-zoom.ts. */}
+        <script dangerouslySetInnerHTML={{ __html: ZOOM_BOOT_SCRIPT }} />
         <MetaPixelScript />
         <MetaPixelConsentBridge />
       </head>

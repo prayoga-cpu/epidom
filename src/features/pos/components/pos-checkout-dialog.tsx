@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
 import { useReceiptSettings } from "@/features/dashboard/profile/hooks/use-receipt-settings";
+import { useKdsSettings } from "../hooks/use-kds-settings";
 import { createPosOrderSchema, type CreatePosOrderInput } from "@/lib/validation/pos.schemas";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -47,6 +48,7 @@ import {
 import { usePrinterSettings } from "../hooks/use-printer-settings";
 import { useLastReceipt, type LastReceiptMeta } from "../hooks/use-last-receipt";
 import { PaymentMethodChip } from "./payment-method-chip";
+import { GuestCountStepper } from "./guest-count-stepper";
 import { mapPaymentMethodLabel, orderPaymentMethodGroups } from "../lib/order-status-display";
 import type { PaymentMethod } from "@prisma/client";
 
@@ -81,6 +83,10 @@ export function PosCheckoutDialog({
   const cart = usePosCart();
   const { data: financeSettings } = useFinanceSettings(storeId);
   const { data: receiptSettings } = useReceiptSettings(storeId);
+  // Drives the "when does stock move" hint at the bottom of the form. Defaults
+  // to the kitchen-display-on wording while the setting loads, since that is
+  // the deferred (and more surprising) of the two behaviours.
+  const kdsEnabled = useKdsSettings(storeId).data?.kitchenDisplayEnabled ?? true;
   const autoPrint = usePrinterSettings((s) => s.autoPrint);
   const paperWidth = usePrinterSettings((s) => s.paperWidth);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,6 +107,7 @@ export function PosCheckoutDialog({
       })),
       paymentMethod: "CASH",
       orderType: "DINE_IN",
+      guestCount: 1,
       amountTendered: undefined,
       customerName: "",
       customerPhone: "",
@@ -126,6 +133,9 @@ export function PosCheckoutDialog({
   // useWatch (not form.watch) so this component reliably re-renders when the
   // payment method changes (shows/hides the cash vs. bank-transfer section).
   const paymentMethod = useWatch({ control: form.control, name: "paymentMethod" });
+  // Pax is a dine-in-only concept — the stepper below is hidden for takeaway,
+  // and the server nulls guestCount out for non-DINE_IN regardless.
+  const orderType = useWatch({ control: form.control, name: "orderType" });
   // Only used to gate the Confirm button below — the live Change/error text
   // next to the input itself is computed from that FormField's own
   // field.value directly, not from this, so it can never lag a keystroke.
@@ -425,6 +435,26 @@ export function PosCheckoutDialog({
                 )}
               />
 
+              {orderType === "DINE_IN" && (
+                <FormField
+                  control={form.control}
+                  name="guestCount"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>{t("pos.checkout.guestCount")}</FormLabel>
+                      <FormControl>
+                        <GuestCountStepper
+                          idPrefix="checkout"
+                          value={field.value ?? 1}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               <FormField
                 control={form.control}
                 name="paymentMethod"
@@ -677,6 +707,17 @@ export function PosCheckoutDialog({
                   </FormItem>
                 )}
               />
+
+              {/* When ingredients actually leave inventory is not obvious from
+                  the till: stock is deducted at DELIVERED, so with the kitchen
+                  display on, ringing an order up moves nothing yet. A merchant
+                  read that gap as "the POS doesn't deduct at all" and filed it
+                  as a bug (production feedback "Ticket id #01"). */}
+              <p className="text-muted-foreground text-xs">
+                {kdsEnabled
+                  ? t("pos.checkout.stockDeductedOnDelivery")
+                  : t("pos.checkout.stockDeductedOnPayment")}
+              </p>
             </form>
           </Form>
         </FormDialogLayout>

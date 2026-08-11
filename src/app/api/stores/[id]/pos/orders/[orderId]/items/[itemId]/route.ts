@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireSessionApi } from "@/lib/auth/require-session";
 import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
@@ -19,12 +19,8 @@ export async function PATCH(
 ) {
   const { id: storeId, orderId, itemId } = await params;
 
-  const session = await getSession();
-  if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-      status: 401,
-    });
-  }
+  const session = await requireSessionApi();
+  if (session instanceof NextResponse) return session;
 
   const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
   if (v instanceof NextResponse) return v;

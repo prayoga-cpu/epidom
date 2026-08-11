@@ -24,7 +24,7 @@ vi.mock("better-auth/adapters/prisma", () => ({ prismaAdapter: vi.fn() }));
 
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getSession, getSessionResult } from "@/lib/auth";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -130,6 +130,97 @@ describe("getSession", () => {
 
   it("returns null and does not throw when cookies() throws", async () => {
     vi.mocked(cookies).mockRejectedValue(new Error("headers unavailable") as never);
+    expect(await getSession()).toBeNull();
+  });
+});
+
+// A dropped pooled connection used to come back to the caller as a bare
+// `null`, which every API route turned into 401 "Unauthorized" — a cashier
+// mid-checkout was told they were signed out over a blip they could have just
+// retried through. These pin the two failure modes apart.
+describe("getSessionResult", () => {
+  function transientError(message: string, code?: string) {
+    const err = new Error(message) as Error & { code?: string };
+    if (code) err.code = code;
+    return err;
+  }
+
+  it("reports a resolved session as available", async () => {
+    vi.mocked(cookies).mockResolvedValue(makeCookieStore("valid-token") as never);
+    vi.mocked(prisma.session.findUnique).mockResolvedValue(BASE_SESSION as never);
+
+    const result = await getSessionResult();
+
+    expect(result.unavailable).toBe(false);
+    expect(result.session?.user.id).toBe("user-1");
+  });
+
+  it("reports a missing cookie as signed out, not unavailable", async () => {
+    vi.mocked(cookies).mockResolvedValue({ get: vi.fn(() => undefined) } as never);
+
+    const result = await getSessionResult();
+
+    expect(result.session).toBeNull();
+    expect(result.unavailable).toBe(false);
+  });
+
+  it("reports an expired session as signed out, not unavailable", async () => {
+    vi.mocked(cookies).mockResolvedValue(makeCookieStore("expired-token") as never);
+    vi.mocked(prisma.session.findUnique).mockResolvedValue({
+      ...BASE_SESSION,
+      token: "expired-token",
+      expiresAt: PAST,
+    } as never);
+
+    const result = await getSessionResult();
+
+    expect(result.session).toBeNull();
+    expect(result.unavailable).toBe(false);
+  });
+
+  it("retries a dropped connection and succeeds on a later attempt", async () => {
+    vi.mocked(cookies).mockResolvedValue(makeCookieStore("valid-token") as never);
+    vi.mocked(prisma.session.findUnique)
+      .mockRejectedValueOnce(transientError("Connection terminated unexpectedly"))
+      .mockResolvedValueOnce(BASE_SESSION as never);
+
+    const result = await getSessionResult();
+
+    expect(prisma.session.findUnique).toHaveBeenCalledTimes(2);
+    expect(result.unavailable).toBe(false);
+    expect(result.session?.user.id).toBe("user-1");
+  });
+
+  it("reports unavailable when every retry hits a transient error", async () => {
+    vi.mocked(cookies).mockResolvedValue(makeCookieStore("valid-token") as never);
+    vi.mocked(prisma.session.findUnique).mockRejectedValue(
+      transientError("Timed out fetching a new connection from the connection pool", "P2024")
+    );
+
+    const result = await getSessionResult();
+
+    expect(prisma.session.findUnique).toHaveBeenCalledTimes(3);
+    expect(result.session).toBeNull();
+    expect(result.unavailable).toBe(true);
+  });
+
+  it("does not retry a non-transient database error, but still reports unavailable", async () => {
+    vi.mocked(cookies).mockResolvedValue(makeCookieStore("valid-token") as never);
+    vi.mocked(prisma.session.findUnique).mockRejectedValue(new Error("column does not exist"));
+
+    const result = await getSessionResult();
+
+    expect(prisma.session.findUnique).toHaveBeenCalledTimes(1);
+    expect(result.session).toBeNull();
+    expect(result.unavailable).toBe(true);
+  });
+
+  it("keeps getSession's null contract for an unavailable database", async () => {
+    vi.mocked(cookies).mockResolvedValue(makeCookieStore("valid-token") as never);
+    vi.mocked(prisma.session.findUnique).mockRejectedValue(
+      transientError("Can't reach database server", "P1001")
+    );
+
     expect(await getSession()).toBeNull();
   });
 });

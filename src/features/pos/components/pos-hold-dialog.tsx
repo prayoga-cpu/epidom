@@ -12,10 +12,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2 } from "lucide-react";
+import {
+  GuestCountStepper,
+  GUEST_COUNT_MAX,
+  GUEST_COUNT_MIN,
+} from "./guest-count-stepper";
 
 const holdFormSchema = z.object({
   customerName: z.string().optional(),
   orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
+  guestCount: z.number().int().min(GUEST_COUNT_MIN).max(GUEST_COUNT_MAX).optional(),
   tableNumber: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -38,10 +44,15 @@ export function PosHoldDialog({ open, onOpenChange, onSubmit, isSubmitting }: Po
     defaultValues: {
       customerName: "",
       orderType: "DINE_IN",
+      guestCount: 1,
       tableNumber: "",
       notes: "",
     },
   });
+
+  // Pax only applies to dine-in — see Order.guestCount. Watched so the stepper
+  // shows/hides as the cashier flips the order type.
+  const orderType = form.watch("orderType");
 
   const handleSubmit = async (data: HoldFormValues) => {
     await onSubmit(data);
@@ -118,6 +129,25 @@ export function PosHoldDialog({ open, onOpenChange, onSubmit, isSubmitting }: Po
                 </FormItem>
               )}
             />
+
+            {orderType === "DINE_IN" && (
+              <FormField
+                control={form.control}
+                name="guestCount"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>{t("pos.checkout.guestCount")}</FormLabel>
+                    <FormControl>
+                      <GuestCountStepper
+                        idPrefix="hold"
+                        value={field.value ?? 1}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
