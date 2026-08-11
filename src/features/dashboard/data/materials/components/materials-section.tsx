@@ -786,10 +786,18 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
         open={viewDialogOpen}
         onOpenChange={setViewDialogOpen}
         material={selectedMaterial}
-        onEdit={handleEdit}
+        // Close the details first — the edit form and the delete confirmation
+        // replace it instead of stacking a second modal on top of it, same as
+        // the products/recipes/suppliers sections do.
+        onEdit={(material) => {
+          setViewDialogOpen(false);
+          handleEdit(material);
+        }}
         onDelete={(id) => {
           const material = materials.find((m) => m.id === id);
-          if (material) handleDeleteClick(material);
+          if (!material) return;
+          setViewDialogOpen(false);
+          handleDeleteClick(material);
         }}
       />
 
@@ -856,10 +864,8 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
           `${count}`
         }
         confirmTitle={(category) =>
-          t("data.materials.manageCategories.confirmTitle")?.replace(
-            "{category}",
-            category.name
-          ) || category.name
+          t("data.materials.manageCategories.confirmTitle")?.replace("{category}", category.name) ||
+          category.name
         }
         uncategorizeLabel={t("data.materials.manageCategories.uncategorizeLabel")}
         uncategorizeDescription={(category) =>

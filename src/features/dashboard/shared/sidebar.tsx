@@ -110,7 +110,17 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
               )}
               <ul className="space-y-1.5">
                 {section.items.map((item) => {
-                  const fullHref = storeId ? `/store/${storeId}${item.href}` : item.href;
+                  // `storeId` comes from `useParams()`, so it's only populated while
+                  // the sidebar is actually mounted under `/store/[storeId]/…` — an
+                  // error/not-found boundary, or a shell rendered outside that segment,
+                  // leaves it undefined. The old fallback was the bare `item.href`,
+                  // which produced root-level links (`/dashboard`, `/data`, `/menu`, …).
+                  // None of those exist as routes, so the "safe" branch guaranteed a
+                  // 404 on every item. `/go/*` is the store launcher: it resolves the
+                  // signed-in user's store server-side and redirects to
+                  // `/store/{storeId}{item.href}`, so the fallback always lands on a
+                  // real page.
+                  const fullHref = storeId ? `/store/${storeId}${item.href}` : `/go${item.href}`;
                   const active = pathname === fullHref;
                   const label = t(item.labelKey);
                   const Icon = item.icon;
@@ -152,11 +162,32 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                     );
                   }
 
+                  // No explicit `prefetch` below — Next's default is deliberate, but be
+                  // precise about what it does and does not buy, because the obvious
+                  // reading is wrong: the default does NOT stop prefetching. Every
+                  // in-viewport <Link> still issues an RSC request, and on the desktop
+                  // rail all ~18 are in view at once, so the request COUNT is roughly
+                  // unchanged.
+                  //
+                  // What changes is the SHAPE of each one. `prefetch={true}` forces a
+                  // full payload for the whole target route. The default stops at the
+                  // nearest `loading.tsx` — which now exists at `(dashboard)/loading.tsx`
+                  // — so each prefetch fetches the shared shell and the skeleton rather
+                  // than the page's own server work. The heavy per-page fetches (Finance
+                  // aggregation, the Data page's four parallel repository reads) stop
+                  // running 18-at-a-time on mount against a serverless Postgres pool,
+                  // which is the actual win, and prefetches that fail on flaky in-store
+                  // wifi now cost a skeleton rather than a full render.
+                  //
+                  // Note this does not avoid re-running `(dashboard)/layout.tsx` itself:
+                  // it is dynamic (getSession reads cookies), so it executes per request
+                  // either way. If sidebar prefetch load ever needs to actually drop, the
+                  // next lever is `prefetch={false}` on the non-primary items — not
+                  // reverting this.
                   return (
                     <li key={item.href}>
                       <Link
                         href={fullHref}
-                        prefetch={true}
                         className={cn(
                           "group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition active:scale-[0.98]",
                           active

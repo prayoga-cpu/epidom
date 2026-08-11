@@ -20,7 +20,7 @@ function setCookie(name: string, value: string) {
  * already live there for most of this app, so this captures that "for free")
  * and the user's rememberLastVisited preference, to both localStorage and a
  * first-party cookie. The cookie is what actually drives the resume-on-
- * sign-in redirect now (see src/middleware.ts, which reads it Edge-side
+ * sign-in redirect now (see src/proxy.ts, which reads it Edge-side
  * before any marketing page renders — a client-side check on the marketing
  * homepage would show a flash of marketing content first). localStorage is
  * kept as a same-behavior fallback for the rare case cookies are blocked

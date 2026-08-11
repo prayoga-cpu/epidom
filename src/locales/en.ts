@@ -201,6 +201,17 @@ export const en = {
     goHome: "Go to Homepage",
     needHelp: "Need help?",
     contactSupport: "Contact Support",
+    loadingContent: "Loading page content…",
+    routeError: {
+      title: "This page didn't load",
+      description:
+        "Something went wrong while opening this page. Nothing you saved was lost — try again, or go back to the dashboard.",
+      offlineHint: "On a weak connection this usually clears up after one retry.",
+      tryAgain: "Try Again",
+      backToDashboard: "Back to Dashboard",
+      recovering: "A new version was just released. Reloading…",
+      errorReference: "Reference",
+    },
   },
   search: {
     title: "Global Search",

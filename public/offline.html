@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#18181b" />
+    <meta name="robots" content="noindex" />
+    <title>Hors ligne — Epidom</title>
+    <!--
+      Served by public/sw.js when a navigation cannot reach the network. It is
+      the last page standing between the user and a dead tab, so it must stay
+      completely self-contained: no fonts, no scripts, no images, no stylesheets
+      fetched from anywhere. Everything below is inline on purpose.
+
+      There is no i18n runtime on a static file, so all three supported locales
+      are printed at once — fr (default) first, then id, then en.
+    -->
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background-color: #18181b;
+        color: #fafafa;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.5;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 26rem;
+        background-color: #27272a;
+        border: 1px solid #3f3f46;
+        border-radius: 1rem;
+        padding: 1.75rem 1.5rem;
+        text-align: center;
+      }
+
+      .icon {
+        width: 3.5rem;
+        height: 3.5rem;
+        margin: 0 auto 1.25rem;
+        display: grid;
+        place-items: center;
+        border-radius: 0.875rem;
+        background-color: #3f3f46;
+        color: #d4d4d8;
+      }
+
+      .icon svg {
+        width: 1.75rem;
+        height: 1.75rem;
+      }
+
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: 1.375rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      p {
+        margin: 0;
+        color: #a1a1aa;
+        font-size: 0.9375rem;
+      }
+
+      .alt {
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid #3f3f46;
+        display: grid;
+        gap: 0.875rem;
+      }
+
+      .alt h2 {
+        margin: 0 0 0.125rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #e4e4e7;
+      }
+
+      .alt p {
+        font-size: 0.875rem;
+        color: #8b8b93;
+      }
+
+      button {
+        /* >=40px touch target; this is the only control on the page and it is
+           very often tapped one-handed on a counter-top phone. */
+        min-height: 48px;
+        width: 100%;
+        margin-top: 1.5rem;
+        padding: 0 1.25rem;
+        border: 0;
+        border-radius: 0.75rem;
+        background-color: #fafafa;
+        color: #18181b;
+        font-family: inherit;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button:active {
+        background-color: #d4d4d8;
+      }
+
+      button:focus-visible {
+        outline: 2px solid #fafafa;
+        outline-offset: 2px;
+      }
+
+      .brand {
+        margin-top: 1.25rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #71717a;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 2l20 20" />
+          <path d="M8.5 16.4a5 5 0 0 1 7 0" />
+          <path d="M5 12.9a10 10 0 0 1 5.2-2.7" />
+          <path d="M13.8 10.2A10 10 0 0 1 19 12.9" />
+          <path d="M2 8.8a16 16 0 0 1 5-3.1" />
+          <path d="M10.9 5.1A16 16 0 0 1 22 8.8" />
+          <path d="M12 20h.01" />
+        </svg>
+      </div>
+
+      <h1>Vous êtes hors ligne</h1>
+      <p>
+        Impossible de joindre Epidom. Vérifiez votre connexion&nbsp;: la page se
+        rechargera toute seule dès le retour du réseau.
+      </p>
+
+      <div class="alt">
+        <div lang="id">
+          <h2>Anda sedang offline</h2>
+          <p>
+            Epidom tidak dapat dijangkau. Periksa koneksi Anda — halaman akan
+            dimuat ulang otomatis begitu jaringan kembali.
+          </p>
+        </div>
+        <div lang="en">
+          <h2>You are offline</h2>
+          <p>
+            Epidom can’t be reached. Check your connection — this page reloads
+            itself as soon as the network is back.
+          </p>
+        </div>
+      </div>
+
+      <button type="button" id="retry">Réessayer · Coba lagi · Retry</button>
+
+      <p class="brand">Epidom</p>
+    </main>
+
+    <script>
+      // No framework here — the bundle is exactly what could not be downloaded.
+      (function () {
+        document.getElementById("retry").addEventListener("click", function () {
+          location.reload();
+        });
+
+        // In-store wifi drops and comes back constantly; recover without making
+        // the user notice. `online` can fire while the captive portal is still
+        // negotiating, so re-check navigator.onLine before committing.
+        window.addEventListener("online", function () {
+          if (navigator.onLine !== false) location.reload();
+        });
+      })();
+    </script>
+  </body>
+</html>

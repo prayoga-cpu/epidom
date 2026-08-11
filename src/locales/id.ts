@@ -203,6 +203,17 @@ export const id = {
     goHome: "Kembali ke Beranda",
     needHelp: "Butuh bantuan?",
     contactSupport: "Hubungi Dukungan",
+    loadingContent: "Memuat konten halaman…",
+    routeError: {
+      title: "Halaman ini gagal dimuat",
+      description:
+        "Terjadi kesalahan saat membuka halaman ini. Data yang sudah Anda simpan tetap aman — coba lagi, atau kembali ke dasbor.",
+      offlineHint: "Pada koneksi lemah, biasanya cukup satu kali coba lagi.",
+      tryAgain: "Coba Lagi",
+      backToDashboard: "Kembali ke Dasbor",
+      recovering: "Versi baru baru saja dirilis. Memuat ulang…",
+      errorReference: "Referensi",
+    },
   },
   pagination: {
     of: "dari",

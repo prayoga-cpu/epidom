@@ -36,8 +36,6 @@ import {
   getCurrencySymbol,
   formatDerivedUnitCost,
 } from "@/lib/utils/formatting";
-import { useState } from "react";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useMaterials } from "../../materials/hooks/use-materials";
@@ -60,7 +58,6 @@ export function RecipeDetailsDialog({
   onEdit,
   onDelete,
 }: RecipeDetailsDialogProps) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t, formatDate } = useI18n();
   const { currency, convertPrice, formatPrice } = useCurrency();
   const params = useParams();
@@ -101,11 +98,12 @@ export function RecipeDetailsDialog({
     return { suggestedPrice, profit, margin };
   };
 
+  // Straight to the owner's confirmation (it closes this dialog first) — a
+  // confirm rendered here would both stack a second modal on the details and
+  // ask the user twice for the same delete.
   const handleDelete = async () => {
     if (onDelete) {
       await onDelete(recipe.id);
-      // setDeleteDialogOpen(false); // Handled by ConfirmationDialog
-      // onOpenChange(false); // Handled by ConfirmationDialog or parent update
     }
   };
 
@@ -132,7 +130,7 @@ export function RecipeDetailsDialog({
                   </Button>
                 )}
                 {onDelete && (
-                  <Button variant="outline" size="sm" onClick={() => setDeleteDialogOpen(true)}>
+                  <Button variant="outline" size="sm" onClick={handleDelete}>
                     <Trash2 className="text-destructive h-4 w-4" />
                   </Button>
                 )}
@@ -561,19 +559,6 @@ export function RecipeDetailsDialog({
           </div>
         </DialogContent>
       </Dialog>
-
-      <ConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDelete}
-        title={t("data.recipes.deleteConfirm.title") || "Delete Recipe"}
-        description={
-          t("data.recipes.deleteConfirm.description")?.replace("{name}", recipe.name) ||
-          `Are you sure you want to delete "${recipe.name}"? This action cannot be undone.`
-        }
-        confirmText={t("actions.delete") || "Delete"}
-        variant="destructive"
-      />
     </>
   );
 }

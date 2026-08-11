@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useConfirm } from "@/components/ui/use-confirm";
+import { useDialogSwap } from "@/components/ui/use-dialog-swap";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { useRefundOrder } from "../hooks/use-refund-order";
 import { useOrderReceiptSends, useSendOrderReceipt } from "../hooks/use-order-receipt-sends";
@@ -100,8 +101,9 @@ export function OrderHistoryDetailDialog({
   const refundOrder = useRefundOrder(storeId);
   const { data: receiptSends } = useOrderReceiptSends(storeId, order?.id);
   const sendReceipt = useSendOrderReceipt(storeId);
-  const [showMarkPaid, setShowMarkPaid] = useState(false);
-  const [showRefund, setShowRefund] = useState(false);
+  // Mark-paid / refund / cancel-confirm each replace this dialog instead of
+  // stacking a second modal on top of it — see useDialogSwap.
+  const swap = useDialogSwap<"markPaid" | "refund" | "cancelConfirm">(!!order);
   const [isReprinting, setIsReprinting] = useState(false);
   const lastReceiptSend = receiptSends?.[0];
 
@@ -154,14 +156,16 @@ export function OrderHistoryDetailDialog({
   const handleCancel = async () => {
     if (!order) return;
     const wasDelivered = order.status === "DELIVERED";
-    const ok = await confirm({
-      title: t("pos.orderCard.cancelConfirmTitle"),
-      description: wasDelivered
-        ? t("pos.orderCard.cancelConfirmDescDelivered")
-        : t("pos.orderCard.cancelConfirmDesc"),
-      confirmText: t("pos.orderCard.cancel"),
-      variant: "destructive",
-    });
+    const ok = await swap.withLayer("cancelConfirm", () =>
+      confirm({
+        title: t("pos.orderCard.cancelConfirmTitle"),
+        description: wasDelivered
+          ? t("pos.orderCard.cancelConfirmDescDelivered")
+          : t("pos.orderCard.cancelConfirmDesc"),
+        confirmText: t("pos.orderCard.cancel"),
+        variant: "destructive",
+      })
+    );
     if (!ok) return;
 
     try {
@@ -183,7 +187,7 @@ export function OrderHistoryDetailDialog({
         paymentNote,
       });
       toast.success(t("pos.orderCard.markPaidSuccess"));
-      setShowMarkPaid(false);
+      swap.close();
     } catch {
       toast.error(t("pos.queue.updateFailed"));
     }
@@ -194,7 +198,7 @@ export function OrderHistoryDetailDialog({
     try {
       await refundOrder.mutateAsync({ orderId: order.id, amount, reason });
       toast.success(t("pos.refund.success"));
-      setShowRefund(false);
+      swap.close();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("pos.queue.updateFailed"));
     }
@@ -251,246 +255,251 @@ export function OrderHistoryDetailDialog({
     : 0;
 
   return (
-    <Dialog open={!!order} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto">
-        {order && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex flex-wrap items-center gap-2">
-                {t("pos.history.detailTitle")}
-                <span className="font-mono">{order.orderNumber}</span>
-              </DialogTitle>
-              <DialogDescription>{formatDateTimeWithTimezone(order.orderDate)}</DialogDescription>
-            </DialogHeader>
+    <>
+      <Dialog open={swap.baseOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+          {order && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex flex-wrap items-center gap-2">
+                  {t("pos.history.detailTitle")}
+                  <span className="font-mono">{order.orderNumber}</span>
+                </DialogTitle>
+                <DialogDescription>{formatDateTimeWithTimezone(order.orderDate)}</DialogDescription>
+              </DialogHeader>
 
-            <div className="flex flex-wrap gap-2">
-              <Badge variant={getStatusBadgeVariant(order.status)}>
-                {mapStatusLabel(order.status)}
-              </Badge>
-              <Badge variant={getPaymentBadgeVariant(order.paymentStatus)}>
-                {mapPaymentLabel(order.paymentStatus)}
-              </Badge>
-              <Badge variant={getSourceBadgeVariant(order.source)}>
-                {mapSourceLabel(order.source)}
-              </Badge>
-            </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={getStatusBadgeVariant(order.status)}>
+                  {mapStatusLabel(order.status)}
+                </Badge>
+                <Badge variant={getPaymentBadgeVariant(order.paymentStatus)}>
+                  {mapPaymentLabel(order.paymentStatus)}
+                </Badge>
+                <Badge variant={getSourceBadgeVariant(order.source)}>
+                  {mapSourceLabel(order.source)}
+                </Badge>
+              </div>
 
-            <div className="flex flex-col gap-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("pos.orderCard.customer")}:</span>
-                <span className="font-medium">
-                  {order.customerName}
-                  {order.customerPhone ? ` · ${order.customerPhone}` : ""}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("pos.orderCard.type")}:</span>
-                <span className="font-medium">
-                  {mapTypeLabel(order.orderType)}
-                  {order.table?.label ? ` · ${order.table.label}` : ""}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1 border-t pt-3 text-sm">
-              {order.items.map((item) => (
-                <div key={item.id} className="flex justify-between gap-4">
-                  <span>
-                    {Number(item.quantity)}x {item.menuItem?.name ?? item.name}
-                  </span>
-                  <span className="shrink-0 text-right">{formatPrice(Number(item.total))}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-1 border-t pt-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("pos.cart.subtotal")}</span>
-                <span>{formatPrice(Number(order.subtotal))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("pos.cart.tax")}</span>
-                <span>{formatPrice(Number(order.tax))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("pos.history.delivery")}</span>
-                <span>{formatPrice(Number(order.delivery))}</span>
-              </div>
-              {Number(order.discountAmount) > 0 && (
+              <div className="flex flex-col gap-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    {t("pos.cart.discount")}
-                    {order.discountReason ? ` (${order.discountReason})` : ""}
-                  </span>
-                  <span className="text-orange-600">
-                    -{formatPrice(Number(order.discountAmount))}
+                  <span className="text-muted-foreground">{t("pos.orderCard.customer")}:</span>
+                  <span className="font-medium">
+                    {order.customerName}
+                    {order.customerPhone ? ` · ${order.customerPhone}` : ""}
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between font-semibold">
-                <span>{t("pos.cart.total")}</span>
-                <span>{formatPrice(Number(order.total))}</span>
-              </div>
-              {Number(order.refundAmount) > 0 && (
-                <div className="text-destructive flex justify-between">
-                  <span>
-                    {t("pos.refund.refunded")}
-                    {order.refundReason ? ` (${order.refundReason})` : ""}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t("pos.orderCard.type")}:</span>
+                  <span className="font-medium">
+                    {mapTypeLabel(order.orderType)}
+                    {order.table?.label ? ` · ${order.table.label}` : ""}
                   </span>
-                  <span>-{formatPrice(Number(order.refundAmount))}</span>
                 </div>
-              )}
-            </div>
-
-            {order.paymentNote && (
-              <div className="text-sm">
-                <p className="text-muted-foreground text-xs font-semibold uppercase">
-                  {t("pos.history.detailPaymentNote")}
-                </p>
-                <p>{order.paymentNote}</p>
               </div>
-            )}
 
-            {order.notes && (
-              <div className="text-sm">
-                <p className="text-muted-foreground text-xs font-semibold uppercase">
-                  {t("pos.history.detailNotes")}
-                </p>
-                <p>{order.notes}</p>
+              <div className="flex flex-col gap-1 border-t pt-3 text-sm">
+                {order.items.map((item) => (
+                  <div key={item.id} className="flex justify-between gap-4">
+                    <span>
+                      {Number(item.quantity)}x {item.menuItem?.name ?? item.name}
+                    </span>
+                    <span className="shrink-0 text-right">{formatPrice(Number(item.total))}</span>
+                  </div>
+                ))}
               </div>
-            )}
 
-            <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-              <Button variant="outline" size="sm" className="gap-2" asChild>
-                <a href={`/r/${order.id}`} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  {t("pos.history.viewReceipt")}
-                </a>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                disabled={isReprinting}
-                onClick={handleReprint}
-              >
-                {isReprinting ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Printer className="h-3.5 w-3.5" />
+              <div className="flex flex-col gap-1 border-t pt-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t("pos.cart.subtotal")}</span>
+                  <span>{formatPrice(Number(order.subtotal))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t("pos.cart.tax")}</span>
+                  <span>{formatPrice(Number(order.tax))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t("pos.history.delivery")}</span>
+                  <span>{formatPrice(Number(order.delivery))}</span>
+                </div>
+                {Number(order.discountAmount) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      {t("pos.cart.discount")}
+                      {order.discountReason ? ` (${order.discountReason})` : ""}
+                    </span>
+                    <span className="text-orange-600">
+                      -{formatPrice(Number(order.discountAmount))}
+                    </span>
+                  </div>
                 )}
-                {t("pos.print.reprint")}
-              </Button>
-              {order.customerPhone && (
+                <div className="flex justify-between font-semibold">
+                  <span>{t("pos.cart.total")}</span>
+                  <span>{formatPrice(Number(order.total))}</span>
+                </div>
+                {Number(order.refundAmount) > 0 && (
+                  <div className="text-destructive flex justify-between">
+                    <span>
+                      {t("pos.refund.refunded")}
+                      {order.refundReason ? ` (${order.refundReason})` : ""}
+                    </span>
+                    <span>-{formatPrice(Number(order.refundAmount))}</span>
+                  </div>
+                )}
+              </div>
+
+              {order.paymentNote && (
+                <div className="text-sm">
+                  <p className="text-muted-foreground text-xs font-semibold uppercase">
+                    {t("pos.history.detailPaymentNote")}
+                  </p>
+                  <p>{order.paymentNote}</p>
+                </div>
+              )}
+
+              {order.notes && (
+                <div className="text-sm">
+                  <p className="text-muted-foreground text-xs font-semibold uppercase">
+                    {t("pos.history.detailNotes")}
+                  </p>
+                  <p>{order.notes}</p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                <Button variant="outline" size="sm" className="gap-2" asChild>
+                  <a href={`/r/${order.id}`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {t("pos.history.viewReceipt")}
+                  </a>
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   className="gap-2"
-                  disabled={sendReceipt.isPending}
-                  onClick={handleSendReceipt}
+                  disabled={isReprinting}
+                  onClick={handleReprint}
                 >
-                  {sendReceipt.isPending ? (
+                  {isReprinting ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Send className="h-3.5 w-3.5" />
+                    <Printer className="h-3.5 w-3.5" />
                   )}
-                  {sendReceipt.isPending
-                    ? t("pos.history.sendingReceipt")
-                    : lastReceiptSend
-                      ? t("pos.history.resendReceipt")
-                      : t("pos.history.sendReceipt")}
+                  {t("pos.print.reprint")}
                 </Button>
-              )}
-              {lastReceiptSend && (
-                <span
-                  className={cn(
-                    "flex items-center gap-1 text-xs",
-                    lastReceiptSend.status === "SENT"
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-destructive"
-                  )}
-                >
-                  {lastReceiptSend.status === "SENT" ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <XCircle className="h-3.5 w-3.5" />
-                  )}
-                  {lastReceiptSend.status === "SENT"
-                    ? t("pos.history.receiptSent")
-                    : t("pos.history.receiptFailed")}{" "}
-                  · {formatDateTimeWithTimezone(lastReceiptSend.sentAt)}
-                </span>
-              )}
-            </div>
-
-            <SendReceiptWhatsApp
-              storeId={storeId}
-              orderId={order.id}
-              customerName={order.customerName}
-              customerPhone={order.customerPhone}
-              total={Number(order.total)}
-              currency={currency}
-              orderDate={order.orderDate}
-              className="border-t pt-3"
-            />
-
-            {order.deliveredDate && (
-              <p className="text-muted-foreground text-xs">
-                {t("pos.history.detailDelivered")}: {formatDateTimeWithTimezone(order.deliveredDate)}
-              </p>
-            )}
-
-            {order.status !== "CANCELLED" && (
-              <DialogFooter>
-                {order.paymentStatus === "PENDING" && (
+                {order.customerPhone && (
                   <Button
                     variant="outline"
-                    disabled={updateStatus.isPending}
-                    onClick={() => setShowMarkPaid(true)}
+                    size="sm"
+                    className="gap-2"
+                    disabled={sendReceipt.isPending}
+                    onClick={handleSendReceipt}
                   >
-                    {t("pos.orderCard.markPaid")}
+                    {sendReceipt.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    {sendReceipt.isPending
+                      ? t("pos.history.sendingReceipt")
+                      : lastReceiptSend
+                        ? t("pos.history.resendReceipt")
+                        : t("pos.history.sendReceipt")}
                   </Button>
                 )}
-                {(order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED") &&
-                  remainingRefundable > 0 && (
+                {lastReceiptSend && (
+                  <span
+                    className={cn(
+                      "flex items-center gap-1 text-xs",
+                      lastReceiptSend.status === "SENT"
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-destructive"
+                    )}
+                  >
+                    {lastReceiptSend.status === "SENT" ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5" />
+                    )}
+                    {lastReceiptSend.status === "SENT"
+                      ? t("pos.history.receiptSent")
+                      : t("pos.history.receiptFailed")}{" "}
+                    · {formatDateTimeWithTimezone(lastReceiptSend.sentAt)}
+                  </span>
+                )}
+              </div>
+
+              <SendReceiptWhatsApp
+                storeId={storeId}
+                orderId={order.id}
+                customerName={order.customerName}
+                customerPhone={order.customerPhone}
+                total={Number(order.total)}
+                currency={currency}
+                orderDate={order.orderDate}
+                className="border-t pt-3"
+              />
+
+              {order.deliveredDate && (
+                <p className="text-muted-foreground text-xs">
+                  {t("pos.history.detailDelivered")}:{" "}
+                  {formatDateTimeWithTimezone(order.deliveredDate)}
+                </p>
+              )}
+
+              {order.status !== "CANCELLED" && (
+                <DialogFooter>
+                  {order.paymentStatus === "PENDING" && (
                     <Button
                       variant="outline"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      disabled={refundOrder.isPending}
-                      onClick={() => setShowRefund(true)}
+                      disabled={updateStatus.isPending}
+                      onClick={() => swap.open("markPaid")}
                     >
-                      {t("pos.refund.action")}
+                      {t("pos.orderCard.markPaid")}
                     </Button>
                   )}
-                <Button
-                  variant="outline"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  disabled={updateStatus.isPending}
-                  onClick={handleCancel}
-                >
-                  {t("pos.orderCard.cancel")}
-                </Button>
-              </DialogFooter>
-            )}
-          </>
-        )}
-      </DialogContent>
+                  {(order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED") &&
+                    remainingRefundable > 0 && (
+                      <Button
+                        variant="outline"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        disabled={refundOrder.isPending}
+                        onClick={() => swap.open("refund")}
+                      >
+                        {t("pos.refund.action")}
+                      </Button>
+                    )}
+                  <Button
+                    variant="outline"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={updateStatus.isPending}
+                    onClick={handleCancel}
+                  >
+                    {t("pos.orderCard.cancel")}
+                  </Button>
+                </DialogFooter>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Layers live outside <Dialog>, not inside <DialogContent>: that
+          content unmounts while the base is swapped out, and a layer mounted
+          in there would unmount with it before it ever rendered. */}
       {confirmDialog}
       <MarkPaidDialog
-        open={showMarkPaid}
-        onOpenChange={setShowMarkPaid}
+        {...swap.layerProps("markPaid")}
         onConfirm={handleMarkPaid}
         isSubmitting={updateStatus.isPending}
         description={order?.orderNumber}
       />
       <RefundDialog
-        open={showRefund}
-        onOpenChange={setShowRefund}
+        {...swap.layerProps("refund")}
         onConfirm={handleRefund}
         isSubmitting={refundOrder.isPending}
         orderNumber={order?.orderNumber}
         remainingAmount={remainingRefundable}
       />
-    </Dialog>
+    </>
   );
 }

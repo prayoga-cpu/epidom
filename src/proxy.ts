@@ -11,7 +11,45 @@ import {
   detectLocaleFromAcceptLanguage,
   isLikelyBot,
 } from "./lib/i18n-routing";
-import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE, isSafeRedirectTarget } from "./lib/last-visited";
+import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE, isResumableAppPath } from "./lib/last-visited";
+
+// Next 16's App Router marks a client-side navigation with the `rsc: 1`
+// request header, adds `next-router-prefetch: 1` when it's only warming the
+// cache, and appends a `_rsc=<hash>` cache-busting search param. Mirrored
+// here as plain string literals rather than imported from
+// next/dist/client/components/app-router-headers — that module is internal
+// and not part of the public export surface.
+const RSC_PREFETCH_HEADER = "next-router-prefetch";
+const RSC_UNION_QUERY = "_rsc";
+
+/**
+ * Next 16 has NO special way for middleware to answer an RSC navigation with
+ * a redirect: `x-nextjs-redirect` (see next/dist/server/web/adapter) is only
+ * emitted for Pages-Router data requests, and App Router redirects travel as
+ * an ordinary 3xx + `Location`. The router's own fetch() follows it, and
+ * soft-navigates *only* if the followed response is a 2xx Flight payload —
+ * otherwise it falls back to a full browser reload, which is exactly the
+ * "had to reload the page" symptom being chased here. Two things therefore
+ * have to hold for every redirect this proxy emits:
+ *
+ *  1. the destination must be a real App Router route (so the retry produces
+ *     a Flight payload rather than a 404), and
+ *  2. the response must never be cached anywhere — its destination depends
+ *     entirely on the request's cookies, so a CDN or browser replaying it
+ *     for a different session, or for the HTML request after the RSC one,
+ *     sends someone to another user's page.
+ *
+ * `Vary` names the request dimensions that actually change the answer, so an
+ * intermediary that ignores `no-store` still can't cross the wires.
+ */
+function markRedirectUncacheable(response: NextResponse): NextResponse {
+  response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+  response.headers.set(
+    "Vary",
+    "Cookie, RSC, Next-Router-Prefetch, Next-Router-State-Tree, Next-Url"
+  );
+  return response;
+}
 
 // Marketing base paths (unprefixed) eligible for /id and /en locale
 // rewriting — see src/lib/i18n-routing.ts. /compare/* is prefix-matched
@@ -37,6 +75,45 @@ const LOCALIZED_MARKETING_PATHS = new Set([
   "/cookie-policy",
   "/refund-policy",
 ]);
+
+/**
+ * Marketing pages the resume-redirect must never fire on, because the app
+ * itself sends signed-in users to them on purpose.
+ *
+ * `/pricing` is the dangerous one, and it is a hard infinite loop rather than
+ * a cosmetic annoyance. `upgradeHrefFor` (src/lib/plans/entitlements.ts) points
+ * every plan gate at `/pricing`, so: a merchant whose plan lapsed opens the app
+ * -> resume redirects to their remembered `/store/{id}/finance` -> that route's
+ * `requirePlan` redirects to `/pricing?upgrade=true` -> `/pricing` is a
+ * marketing path, so resume fires again and sends them back to `/finance` ->
+ * `requirePlan` bounces them to `/pricing` again. The browser gives up with
+ * ERR_TOO_MANY_REDIRECTS, and the one page that could sell them the upgrade
+ * is the exact page they can never reach.
+ *
+ * `/checkout` is exempt for the same structural reason: it is a destination
+ * the app navigates to deliberately, mid-flow, with money involved.
+ */
+const RESUME_EXEMPT_PATHS = new Set(["/pricing", "/checkout"]);
+
+/**
+ * Query params that mark a marketing URL as somewhere the app sent the user
+ * on purpose. Belt-and-braces alongside RESUME_EXEMPT_PATHS: a future upgrade
+ * destination that isn't `/pricing` still won't become a redirect trap.
+ */
+const INTENT_QUERY_PARAMS = ["upgrade", "trial", "required", "callbackUrl", "checkout"];
+
+/**
+ * Whether the resume-redirect should stand down for this request. Deliberate
+ * arrivals — an upgrade prompt, a checkout hand-off, anything carrying intent
+ * in its query string — must win over "put me back where I was".
+ */
+function isResumeExemptPath(basePath: string, req: NextRequest): boolean {
+  if (RESUME_EXEMPT_PATHS.has(basePath)) return true;
+  for (const path of RESUME_EXEMPT_PATHS) {
+    if (basePath.startsWith(`${path}/`)) return true;
+  }
+  return INTENT_QUERY_PARAMS.some((param) => req.nextUrl.searchParams.has(param));
+}
 
 /**
  * Authentication & Subscription Middleware
@@ -82,7 +159,13 @@ export default async function proxy(req: NextRequest) {
   // just "/") and never renders a page only to redirect away from it a
   // moment later (see LastVisitedTracker, which is what keeps these two
   // cookies current; this proxy only ever reads them).
-  if (isLocalizedMarketingPath) {
+  //
+  // Skipped for prefetches: the App Router warms marketing links (the logo,
+  // the footer) from inside the dashboard, and answering a prefetch of "/"
+  // with a redirect would quietly fill the router cache for the marketing URL
+  // with app content the visitor never asked to navigate to.
+  const isPrefetchRequest = req.headers.get(RSC_PREFETCH_HEADER) === "1";
+  if (isLocalizedMarketingPath && !isPrefetchRequest && !isResumeExemptPath(basePath, req)) {
     const remember = req.cookies.get(REMEMBER_PREF_COOKIE)?.value;
     const rawLastVisited = req.cookies.get(LAST_VISITED_COOKIE)?.value;
     if (remember === "true" && rawLastVisited) {
@@ -92,8 +175,13 @@ export default async function proxy(req: NextRequest) {
       } catch {
         lastVisited = null;
       }
-      if (lastVisited && lastVisited !== "/" && isSafeRedirectTarget(lastVisited)) {
-        return NextResponse.redirect(new URL(lastVisited, req.url));
+      // isResumableAppPath, not just isSafeRedirectTarget: "starts with /" is
+      // satisfied just as happily by a store that was sold last month or a
+      // section deleted in a refactor, and either one turns "open the app"
+      // into a 404. Cookies outlive routes — the shape has to be re-checked
+      // against the routes that exist today, every time.
+      if (lastVisited && isResumableAppPath(lastVisited)) {
+        return markRedirectUncacheable(NextResponse.redirect(new URL(lastVisited, req.url)));
       }
     }
   }
@@ -238,9 +326,24 @@ export default async function proxy(req: NextRequest) {
   // If no token and trying to access protected route, redirect to login
   if (!sessionCookie) {
     const loginUrl = new URL("/login", req.url);
-    // Preserve the original URL as callbackUrl so user can return after login
-    loginUrl.searchParams.set("callbackUrl", path);
-    return NextResponse.redirect(loginUrl);
+    // Preserve the original URL as callbackUrl so user can return after login.
+    // The real query string travels with it (a deep link into a filtered view
+    // is worth keeping) minus `_rsc` — that value is a hash of the RSC request
+    // that happened to trip this redirect, and echoing it back into a URL the
+    // browser will later navigate to as HTML makes Next treat a page request
+    // as a stale Flight request.
+    const callbackParams = new URLSearchParams(req.nextUrl.search);
+    callbackParams.delete(RSC_UNION_QUERY);
+    const callbackQuery = callbackParams.toString();
+    loginUrl.searchParams.set("callbackUrl", callbackQuery ? `${path}?${callbackQuery}` : path);
+
+    // An RSC navigation needs nothing else from us: it re-requests /login with
+    // the RSC header still attached (fetch keeps headers across a same-origin
+    // redirect), /login is a real App Router page, so a Flight payload comes
+    // back and the navigation stays soft. What breaks that is a cached or
+    // dirty redirect, both handled above — see markRedirectUncacheable for why
+    // there is no RSC-specific redirect header to set in Next 16.
+    return markRedirectUncacheable(NextResponse.redirect(loginUrl));
   }
   return response;
 }
@@ -265,12 +368,18 @@ export const config = {
      *   visitors too, or registration fails for anyone without a session
      *   cookie, breaking PWA installability and push notifications)
      * - manifest.webmanifest (PWA manifest, same reasoning)
+     * - offline.html (public/offline.html, the service worker's offline
+     *   fallback page). It MUST stay anonymously fetchable: the SW precaches
+     *   it at install time, and install runs on the storefront too, where
+     *   there is no session cookie. Auth-redirect it and every install would
+     *   cache the /login page under the name "offline.html" and show a login
+     *   screen the moment the wifi drops mid-shift)
      * - sitemap.xml, robots.txt (Next.js-generated from src/app/sitemap.ts
      *   and robots.ts — crawlers don't carry a session cookie, so these
      *   must never hit the auth-redirect below)
      * - llms.txt (public/llms.txt, same crawler-facing reasoning)
      * - public files (images, etc.)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|sitemap.xml|robots.txt|llms.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|txt|xml)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|offline.html|manifest.webmanifest|sitemap.xml|robots.txt|llms.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|txt|xml)$).*)",
   ],
 };

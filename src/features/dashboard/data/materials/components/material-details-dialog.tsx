@@ -8,8 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Package, DollarSign, Calendar, Edit, Trash2, Star } from "lucide-react";
 import { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
-import { useState } from "react";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 
@@ -55,7 +53,6 @@ export function MaterialDetailsDialog({
   onEdit,
   onDelete,
 }: MaterialDetailsDialogProps) {
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { t, formatDate } = useI18n();
   const { formatPrice } = useCurrency();
 
@@ -67,11 +64,12 @@ export function MaterialDetailsDialog({
   const stockStatus = getStockStatus(currentStock, minStock, maxStock, t);
   const stockPercentage = calculateStockPercentage(currentStock, maxStock);
 
+  // Straight to the owner's confirmation (it closes this dialog first) — a
+  // confirm rendered here would both stack a second modal on the details and
+  // ask the user twice for the same delete.
   const handleDelete = async () => {
     if (onDelete) {
       await onDelete(material.id);
-      // setShowDeleteConfirm(false); // Handled by ConfirmationDialog
-      // onOpenChange(false); // Handled by ConfirmationDialog or parent update
     }
   };
 
@@ -269,25 +267,13 @@ export function MaterialDetailsDialog({
               <Edit className="mr-1 hidden h-4 w-4 sm:inline" />
               {t("common.actions.edit")}
             </Button>
-            <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+            <Button variant="destructive" onClick={handleDelete}>
               <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
               {t("common.actions.delete")}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-
-      <ConfirmationDialog
-        open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
-        onConfirm={handleDelete}
-        title={t("data.materials.deleteConfirm.title")}
-        description={
-          t("data.materials.deleteConfirm.description")?.replace("{name}", material.name) || ""
-        }
-        confirmText={t("common.actions.delete")}
-        cancelText={t("common.actions.cancel")}
-      />
     </>
   );
 }

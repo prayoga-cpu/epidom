@@ -29,8 +29,6 @@ import {
   getCurrencySymbol,
   formatDerivedUnitCost,
 } from "@/lib/utils/formatting";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 
@@ -49,7 +47,6 @@ export function SupplierDetailsDialog({
   onEdit,
   onDelete,
 }: SupplierDetailsDialogProps) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t, formatDate } = useI18n();
   const { currency, convertPrice, formatPrice } = useCurrency();
 
@@ -71,8 +68,11 @@ export function SupplierDetailsDialog({
                   {t("common.actions.edit")}
                 </Button>
               )}
+              {/* Straight to the owner's confirmation (it closes this dialog
+                  first) — a confirm rendered here would both stack a second
+                  modal on the details and ask twice for the same delete. */}
               {onDelete && (
-                <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
+                <Button variant="destructive" size="sm" onClick={() => void onDelete()}>
                   <Trash2 className="mr-1 hidden h-4 w-4 sm:inline" />
                   {t("common.actions.delete")}
                 </Button>
@@ -260,23 +260,6 @@ export function SupplierDetailsDialog({
           </div>
         </div>
       </DialogContent>
-
-      {/* Delete Confirmation Dialog */}
-      {onDelete && (
-        <ConfirmationDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          title={t("data.suppliers.toasts.deleted.title")}
-          description={
-            t("data.suppliers.toasts.deleted.description")?.replace("{name}", supplier.name) || ""
-          }
-          confirmText={t("common.actions.delete")}
-          onConfirm={async () => {
-            if (onDelete) await onDelete();
-          }}
-          variant="destructive"
-        />
-      )}
     </Dialog>
   );
 }

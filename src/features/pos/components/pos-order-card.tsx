@@ -129,25 +129,31 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
         </div>
       </div>
 
-      <div className="mt-4 flex gap-2">
+      {/* h-10 / size-10: these are the cashier's main targets on an iPad, so
+          they sit at the 40px touch minimum rather than sm's 32px. */}
+      <div className="mt-4">
         <PosOrderPrimaryAction
           order={order}
           storeId={storeId}
-          className="flex-1"
+          className="h-10"
+          layout="stacked"
           onUpdateStatus={onUpdateStatus}
           onResume={handleResume}
+          trailing={
+            order.status !== "DELIVERED" ? (
+              <Button
+                size="icon-lg"
+                variant="outline"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={handleCancel}
+                title={t("pos.orderCard.cancel")}
+                aria-label={t("pos.orderCard.cancel")}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            ) : undefined
+          }
         />
-        {order.status !== "DELIVERED" && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 px-2.5"
-            onClick={handleCancel}
-            title={t("pos.orderCard.cancel")}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
       </div>
 
       {confirmDialog}

@@ -9,6 +9,14 @@ interface OfflineSyncContextValue {
   lastSyncedAt: Date | null;
   isSyncing: boolean;
   pendingCount: number;
+  /**
+   * Confirmed by a real round-trip to our own origin, not by
+   * `navigator.onLine` — so it stays `false` behind a café captive portal and
+   * on wifi that has stopped forwarding packets, which is exactly where
+   * `navigator.onLine` claims everything is fine. Any UI that tells a cashier
+   * whether they are connected should read this.
+   */
+  isOnline: boolean;
   syncNow: () => Promise<void>;
   offlineModeEnabled: boolean;
   isPriming: boolean;
@@ -37,6 +45,7 @@ export function OfflineSyncProvider({ children }: { children: ReactNode }) {
     lastSyncedAt: sync.lastSyncedAt,
     isSyncing: sync.isSyncing,
     pendingCount: sync.pendingCount,
+    isOnline: sync.isOnline,
     syncNow: sync.syncNow,
     offlineModeEnabled: mode.enabled,
     isPriming: mode.isPriming,

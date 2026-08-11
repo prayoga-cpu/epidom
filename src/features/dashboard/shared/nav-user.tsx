@@ -133,6 +133,17 @@ export function NavUser() {
     } catch {
       // Ignore — same as above.
     }
+    try {
+      // Drop the service worker's offline app shell. It holds server-rendered
+      // /store/** documents for THIS account, and a POS tablet is routinely
+      // shared — without this the next owner to sign in here could be served
+      // the previous one's dashboard the first time the wifi drops. See the
+      // SHELL_CACHE block in public/sw.js.
+      navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_APP_SHELL" });
+    } catch {
+      // Ignore — no controller yet (first load, or SW unsupported) means there
+      // is no shell cached to clear in the first place.
+    }
     await signOut();
     window.location.href = "/login";
   };

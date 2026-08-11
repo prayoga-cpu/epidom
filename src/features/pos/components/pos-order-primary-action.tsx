@@ -16,6 +16,14 @@ interface PosOrderPrimaryActionProps {
   className?: string;
   onUpdateStatus: (orderId: string, status: string) => void;
   onResume: () => void;
+  /**
+   * "inline" (default) emits bare buttons for the caller's own row — used by
+   * the compact list view, which has a `shrink-0` container and room to spare.
+   * "stacked" wraps them in a width-aware grid for the card view.
+   */
+  layout?: "inline" | "stacked";
+  /** Trailing control (the cancel ✕) laid out with the actions in "stacked". */
+  trailing?: ReactNode;
 }
 
 export function PosOrderPrimaryAction({
@@ -24,6 +32,8 @@ export function PosOrderPrimaryAction({
   className,
   onUpdateStatus,
   onResume,
+  layout = "inline",
+  trailing,
 }: PosOrderPrimaryActionProps) {
   const { t } = useI18n();
   const updateStatus = useUpdateOrderStatus(storeId);
@@ -75,7 +85,7 @@ export function PosOrderPrimaryAction({
       disabled={updateStatus.isPending}
       onClick={() => setShowMarkPaid(true)}
     >
-      {t("pos.orderCard.markPaid")}
+      <ActionLabel>{t("pos.orderCard.markPaid")}</ActionLabel>
     </Button>
   ) : null;
 
@@ -97,7 +107,7 @@ export function PosOrderPrimaryAction({
         variant="outline"
         onClick={() => onUpdateStatus(order.id, "IN_PRODUCTION")}
       >
-        {t("pos.orderCard.startProcess")}
+        <ActionLabel>{t("pos.orderCard.startProcess")}</ActionLabel>
       </Button>
     );
   } else if (order.status === "IN_PRODUCTION") {
@@ -110,7 +120,7 @@ export function PosOrderPrimaryAction({
         disabled={markReady.isPending}
         onClick={handleMarkReady}
       >
-        {t("pos.kds.markAllComplete")}
+        <ActionLabel>{t("pos.kds.markAllComplete")}</ActionLabel>
       </Button>
     );
   } else if (order.status === "READY") {
@@ -121,32 +131,72 @@ export function PosOrderPrimaryAction({
         size="sm"
         onClick={() => onUpdateStatus(order.id, "DELIVERED")}
       >
-        {t("pos.orderCard.complete")}
+        <ActionLabel>{t("pos.orderCard.complete")}</ActionLabel>
       </Button>
     );
   } else if (order.status === "HELD") {
     stageButton = (
       <Button key="stage" className={cn("min-w-0", className)} size="sm" onClick={onResume}>
-        {t("pos.orderCard.resume")}
+        <ActionLabel>{t("pos.orderCard.resume")}</ActionLabel>
       </Button>
     );
   }
 
-  if (!stageButton && !markPaidButton) return null;
+  const dialog = markPaidButton && (
+    <MarkPaidDialog
+      open={showMarkPaid}
+      onOpenChange={setShowMarkPaid}
+      onConfirm={handleMarkPaid}
+      isSubmitting={updateStatus.isPending}
+      description={order.orderNumber}
+    />
+  );
+
+  if (layout === "inline") {
+    return (
+      <>
+        {stageButton}
+        {markPaidButton}
+        {trailing}
+        {dialog}
+      </>
+    );
+  }
+
+  // Card layout. A grid, not a flex row: Button's own `shrink-0` beats a
+  // `flex-1`/`min-w-0` sibling, so in flex these boxes keep their full label
+  // width and spill over each other once the card gets narrow (the labels
+  // visibly overlapped at three buttons). Grid tracks size to the container
+  // instead, and `min-w-0` + truncate on the buttons ellipsizes a long label
+  // rather than letting it escape.
+  //
+  //   [ Mark as Paid ] [✕]      two actions: the secondary shares the top row
+  //   [    Complete     ]       with cancel, the stage action gets its own
+  //
+  // With a single action it stays one row: [ Start Process ] [✕].
+  const [inlineAction, fullWidthAction] =
+    stageButton && markPaidButton
+      ? [markPaidButton, stageButton]
+      : [stageButton ?? markPaidButton, null];
+
+  if (!inlineAction) return trailing ? <div className="flex justify-end">{trailing}</div> : null;
 
   return (
-    <>
-      {stageButton}
-      {markPaidButton}
-      {markPaidButton && (
-        <MarkPaidDialog
-          open={showMarkPaid}
-          onOpenChange={setShowMarkPaid}
-          onConfirm={handleMarkPaid}
-          isSubmitting={updateStatus.isPending}
-          description={order.orderNumber}
-        />
+    <div
+      className={cn(
+        "grid w-full items-center gap-2",
+        trailing ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-1"
       )}
-    </>
+    >
+      {inlineAction}
+      {trailing}
+      {fullWidthAction && <div className="col-span-full grid">{fullWidthAction}</div>}
+      {dialog}
+    </div>
   );
+}
+
+/** Ellipsizes instead of letting a long label escape a squeezed button. */
+function ActionLabel({ children }: { children: ReactNode }) {
+  return <span className="truncate">{children}</span>;
 }

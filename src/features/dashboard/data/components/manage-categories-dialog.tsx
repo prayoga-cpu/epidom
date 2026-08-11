@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CategoryDeleteDialog, type CategoryDeleteMode } from "@/components/ui/category-delete-dialog";
+import {
+  CategoryDeleteDialog,
+  type CategoryDeleteMode,
+} from "@/components/ui/category-delete-dialog";
 
 export interface CategoryUsage {
   /** Raw value stored on the item rows — what gets sent to the delete call. */
@@ -75,7 +78,11 @@ export function ManageCategoriesDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* The per-category delete prompt replaces this list instead of stacking
+          on it (two overlays, two focus traps) — closing it returns here with
+          the list still open. Same swap the POS order dialogs use, hand-rolled
+          because the layer carries a payload (see useDialogSwap). */}
+      <Dialog open={open && pendingCategory === null} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -121,7 +128,7 @@ export function ManageCategoriesDialog({
         // Remount per category so the destructive "delete" choice never carries
         // over as the default when the user moves on to a different category.
         key={pendingCategory?.name}
-        open={pendingCategory !== null}
+        open={open && pendingCategory !== null}
         onOpenChange={(next) => {
           if (!next) setPendingCategory(null);
         }}

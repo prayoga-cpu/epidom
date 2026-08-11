@@ -2,10 +2,27 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // vi.mock is hoisted — vi.hoisted() lets the factory safely reference a
 // mock function that's reconfigured per-test via mockReturnValue.
-const { mockUseOfflineQueue } = vi.hoisted(() => ({ mockUseOfflineQueue: vi.fn() }));
+const { mockUseOfflineQueue, network } = vi.hoisted(() => ({
+  mockUseOfflineQueue: vi.fn(),
+  // Captured `useOnlineRecovery` callback, so a test can drive the
+  // offline -> online transition directly.
+  network: { onRecovered: null as null | (() => void) },
+}));
 
 vi.mock("../use-offline-queue", () => ({
   useOfflineQueue: mockUseOfflineQueue,
+}));
+
+// The hook no longer listens for the `window` "online" event — that event
+// tracks the network interface rather than reachability, which is the whole
+// reason it was replaced (see use-offline-sync.ts). Reconnect now arrives via
+// useOnlineRecovery, driven by the probe in src/lib/pwa/reachability.ts, so
+// these tests trigger that callback instead of dispatching a DOM event.
+vi.mock("@/hooks/use-network-status", () => ({
+  useOnlineStatus: () => true,
+  useOnlineRecovery: (onRecovered: () => void) => {
+    network.onRecovered = onRecovered;
+  },
 }));
 
 vi.mock("@/lib/pwa/sync-status", () => ({
@@ -26,6 +43,7 @@ function makeWrapper(qc: QueryClient) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  network.onRecovered = null;
   mockUseOfflineQueue.mockReturnValue({
     pendingCount: 0,
     isSyncing: false,
@@ -53,7 +71,7 @@ describe("useOfflineSync", () => {
     renderHook(() => useOfflineSync("store-1"), { wrapper: makeWrapper(qc) });
 
     await act(async () => {
-      window.dispatchEvent(new Event("online"));
+      network.onRecovered?.();
     });
 
     await waitFor(() => expect(refetchSpy).toHaveBeenCalled());
@@ -72,8 +90,8 @@ describe("useOfflineSync", () => {
     renderHook(() => useOfflineSync("store-1"), { wrapper: makeWrapper(qc) });
 
     await act(async () => {
-      window.dispatchEvent(new Event("online"));
-      window.dispatchEvent(new Event("online"));
+      network.onRecovered?.();
+      network.onRecovered?.();
     });
 
     expect(refetchSpy).toHaveBeenCalledTimes(1);

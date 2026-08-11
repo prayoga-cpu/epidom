@@ -1,7 +1,17 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { Jimp, JimpMime } from "jimp";
 import { compressImageServer } from "../server-image-compression";
 import { IMAGE_MAX_DIMENSION_PX } from "@/lib/constants/image";
+
+/**
+ * These tests build and re-encode multi-megapixel images in pure JS. Since the
+ * move off native sharp to jimp they legitimately take 2.5-6.5s each, which sits
+ * right on top of Vitest's 5s default — so under normal parallel load the file
+ * failed nondeterministically (and starved neighbouring workers into timing out
+ * too). Raised here rather than globally: every other test in the suite should
+ * still be held to the tight default, where a 5s test really does mean a hang.
+ */
+vi.setConfig({ testTimeout: 30_000 });
 
 const ONE_MB = 1024 * 1024;
 

@@ -179,6 +179,17 @@ export const fr = {
     goHome: "Aller à l'Accueil",
     needHelp: "Besoin d'aide ?",
     contactSupport: "Contacter le Support",
+    loadingContent: "Chargement du contenu de la page…",
+    routeError: {
+      title: "Cette page ne s'est pas chargée",
+      description:
+        "Une erreur est survenue à l'ouverture de cette page. Rien de ce que vous avez enregistré n'a été perdu — réessayez, ou revenez au tableau de bord.",
+      offlineHint: "Avec une connexion faible, un seul nouvel essai suffit généralement.",
+      tryAgain: "Réessayer",
+      backToDashboard: "Retour au Tableau de Bord",
+      recovering: "Une nouvelle version vient d'être publiée. Rechargement…",
+      errorReference: "Référence",
+    },
   },
   search: {
     title: "Recherche Globale",

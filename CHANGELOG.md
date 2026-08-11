@@ -9,6 +9,28 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.64.1] - 2026-08-11 · ux
+
+- **The Mark as Paid window now scrolls instead of running off the screen.** With every payment method your store accepts listed at once, the top of the window and its Confirm button could both sit outside the screen on a laptop or tablet, with no way to reach them.
+- **Only one window opens at a time now.** Choosing Mark as Paid, Refund or Cancel from an order's details used to open a second window stacked on top of the first — double-dimmed background, the order details still showing around the edges. Each one now replaces the details, and closing it takes you straight back to the order where you left off.
+- **Order card buttons no longer overlap on narrow cards.** When an unpaid order showed both a stage action and Mark as Paid, the two labels printed over each other. Mark as Paid now shares the top row with the cancel ✕ and the main action (Complete, Start Process…) gets a full-width row below it, with longer labels shortened rather than spilling out. All three are also bigger to tap on a tablet.
+- **Deleting a material, recipe or supplier from its details window asks once, not twice.** The details window raised its own confirmation, which then raised the page's confirmation for the same delete.
+- **Editing or deleting a material from its details window no longer leaves the details stacked behind it**, matching how products, recipes and suppliers already behaved.
+- **Deleting a category from Manage Categories** now replaces the category list rather than stacking on top of it.
+
+## [2.64.0] - 2026-08-11 · fix
+
+- **Fixed the intermittent 404s and "page needs reloading" errors when moving between dashboard pages.** The main cause was the offline cache holding on to page data from a previous release: after a new version shipped, it kept serving the old version's data, which pointed at files that no longer existed. The cache now leaves that data alone entirely and only stores genuinely static assets.
+- **The installed app's shortcuts work again.** Long-pressing the app icon and choosing Cashier or Order Queue used to open a "page not found" screen, because those shortcuts pointed at an address that only exists inside a specific store. They now resolve to the right store automatically, and opening the installed app goes straight to your dashboard instead of the marketing homepage.
+- **Opening the app no longer lands on a dead page after a store is removed or a page is renamed.** The "continue where you left off" shortcut now checks that the saved page still exists before jumping to it, and a store that is no longer yours sends you to your store list instead of a broken dashboard.
+- **`/store/{id}` opens your preferred section** instead of a "page not found" screen — a trimmed or hand-shared store link now works.
+- **Dashboard pages show a loading skeleton while they open, and a recoverable error screen with a Try again button if something fails**, instead of a blank screen you had to reload by hand.
+- **Losing connection mid-shift now shows a proper offline screen** that reconnects on its own, rather than the browser's error page. The app also no longer tries to reload itself while offline, which previously left the screen stuck.
+- **Fixed an upgrade dead-end that could trap the browser in an endless redirect.** If your plan lapsed while your last-opened page needed a higher tier, opening the app bounced you to the pricing page, which bounced you back to that page, forever — so the one page that could restore your plan was the one page you could never reach.
+- **Fixed an endless loop for accounts with no store left.** Deleting your last store put the app in a permanent bounce between the store list and the setup screen; you now land on setup, where a new store can actually be created.
+- **Losing wifi mid-shift keeps the screen you were on.** The offline fallback now restores the actual dashboard or cashier page rather than a generic offline card, since the app's code and its local order data are both still on the device. Signing out clears it, so a shared tablet never shows one account's screen to the next.
+- **Connectivity is now detected by actually reaching the server** roughly once a second while offline, rather than trusting the device's network indicator — which reports "connected" behind café/hotel wifi sign-in pages and when a weak link silently recovers. Queued orders and cached data now sync the moment the connection genuinely returns, and the "last synced" time stays accurate.
+
 ## [2.63.0] - 2026-08-11 · fix
 
 - **Custom Products now render as their own section in POS Cashier and on the storefront**, in a visually distinct block headed by the store's name for that product line, instead of appearing as just another menu category among the food and drink headings.

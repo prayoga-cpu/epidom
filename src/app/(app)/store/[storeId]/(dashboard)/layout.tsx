@@ -34,6 +34,7 @@ export default async function Layout({
   if (session?.user?.deactivatedAt) {
     redirect("/profile");
   }
+  const userId = session?.user?.id;
 
   // FREE/POS plans have no staff feature at all (see /pos's own bypass) —
   // there's no persona to pick, so the gate would just be a pointless extra
@@ -42,10 +43,32 @@ export default async function Layout({
   // nobody but the owner to choose from, the picker has nothing real to
   // offer, so skip straight to the dashboard as Owner instead of an
   // always-the-same-answer click every time the store is opened.
-  const [subscription, staffCount] = await Promise.all([
-    session?.user?.id ? subscriptionRepository.findByUserId(session.user.id) : Promise.resolve(null),
+  //
+  // The ownership lookup rides along in the same Promise.all rather than
+  // gating it — it costs nothing extra in wall-clock time, and it's the one
+  // place that can kill the whole stale-store class of 404s at the root: a
+  // bookmark, a resumed lastVisitedUrl cookie, a shared link, or a store that
+  // was deleted or transferred all arrive here with a storeId this user has
+  // no business rendering. Every page below then gets to assume the store is
+  // theirs. `userId` is required for it to mean anything — a Prisma relation
+  // filter with an undefined field is simply dropped, which would match every
+  // store on the platform.
+  const [subscription, staffCount, ownedStore] = await Promise.all([
+    userId ? subscriptionRepository.findByUserId(userId) : Promise.resolve(null),
     prisma.staffMember.count({ where: { storeId, isActive: true, role: { not: "OWNER" } } }),
+    userId
+      ? prisma.store.findFirst({
+          where: { id: storeId, business: { userId } },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
   ]);
+  if (!userId) {
+    redirect("/login");
+  }
+  if (!ownedStore) {
+    redirect("/stores");
+  }
   const bypassAccessGate =
     subscription?.plan === "FREE" || subscription?.plan === "POS" || staffCount === 0;
 

@@ -18,8 +18,9 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { databaseUrl } from "../src/lib/db/connection-string";
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: databaseUrl() });
 const prisma = new PrismaClient({ adapter });
 
 const dryRun = process.argv.includes("--dry-run");

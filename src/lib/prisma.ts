@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { logger } from "@/lib/logger";
+import { databaseUrl } from "@/lib/db/connection-string";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -12,7 +13,7 @@ function createPrismaClient(): PrismaClient {
   // Prisma 7 requires a driver adapter. PrismaPg uses the `pg` package under the hood
   // and handles pgBouncer-compatible pooling natively (no pgbouncer=true URL flag needed).
   const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: databaseUrl(),
   });
 
   const client = new PrismaClient({

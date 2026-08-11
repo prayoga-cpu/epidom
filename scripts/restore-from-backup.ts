@@ -18,6 +18,11 @@ import { from as copyFrom } from "pg-copy-streams";
 import { createGunzip } from "node:zlib";
 import { GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { getR2Client, r2Bucket, isR2Configured } from "@/lib/backup/r2-client";
+import {
+  databaseIdentity,
+  directDatabaseUrl,
+  normalizeSslMode,
+} from "@/lib/db/connection-string";
 
 function parseArgs(): { date: string; target: string } {
   const args = new Map(
@@ -42,14 +47,24 @@ function parseArgs(): { date: string; target: string } {
 
   // Refuse anything that looks like this app's own live database — restore
   // must always go into a separate, disposable target you verify before promoting.
-  const liveUrls = [process.env.DATABASE_URL, process.env.DIRECT_URL].filter(Boolean);
-  if (liveUrls.some((u) => u === target)) {
+  // Compared on host+database rather than the raw string: differing credentials,
+  // query-param order or sslmode spelling must not let the live DB slip past this.
+  const liveUrls = [
+    process.env.DATABASE_URL,
+    process.env.DIRECT_URL,
+    directDatabaseUrl(),
+  ].filter((u): u is string => Boolean(u));
+  const targetIdentity = databaseIdentity(target);
+  const isLive = liveUrls.some((u) =>
+    targetIdentity ? databaseIdentity(u) === targetIdentity : u === target
+  );
+  if (isLive) {
     throw new Error(
       "Refusing to restore into DATABASE_URL/DIRECT_URL — point --target at a separate, fresh database."
     );
   }
 
-  return { date, target };
+  return { date, target: normalizeSslMode(target) };
 }
 
 async function assertSchemaExists(client: Client): Promise<void> {

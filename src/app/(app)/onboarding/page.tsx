@@ -65,7 +65,17 @@ export default async function OnboardingPage() {
   // already published (backward-compat for users who registered before this flag existed).
   const hasPublishedStore = user?.business?.stores?.some((s) => s.storefront?.isPublished);
 
-  if (user?.hasOnboarded || hasPublishedStore) {
+  // ...but only if there is actually a store to go back to. `hasOnboarded`
+  // stays true forever once set, while stores can be deleted afterwards
+  // (`businessService.deleteStore` has no last-store guard), so the two can
+  // disagree. When they do, sending the user to /stores is an infinite bounce:
+  // StoresContainer's compliance check sees zero stores and hard-navigates
+  // straight back to /onboarding, which lands here and redirects out again.
+  // A user with no stores belongs on onboarding — that is where a store gets
+  // created — regardless of having once completed it.
+  const hasAnyStore = (user?.business?.stores?.length ?? 0) > 0;
+
+  if (hasAnyStore && (user?.hasOnboarded || hasPublishedStore)) {
     redirect("/stores");
   }
 

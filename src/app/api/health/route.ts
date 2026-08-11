@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { REACHABILITY_HEADER } from "@/lib/pwa/reachability";
 
 interface ServiceHealth {
   status: "ok" | "degraded" | "error";
@@ -47,6 +48,39 @@ async function checkDatabase(): Promise<ServiceHealth> {
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
+}
+
+/**
+ * HEAD /api/health
+ *
+ * Connectivity probe target for the PWA reachability monitor
+ * (`src/lib/pwa/reachability.ts`), hit roughly once a second per visible tab
+ * while a device is online. It deliberately does NOT share the GET handler's
+ * work: when a route exports GET but not HEAD, Next.js auto-implements HEAD
+ * by running GET and discarding the body (see
+ * `next/dist/server/route-modules/app-route/helpers/auto-implement-methods`),
+ * which would put a `SELECT 1` on Neon for every probe from every tablet in
+ * every store. Declaring HEAD explicitly overrides that with a body-less 204
+ * that touches nothing.
+ *
+ * The `x-epidom-reachable` header is the actual payload. A captive portal
+ * answers any request with its own 200 login page, so the client treats
+ * "reachable" as "the reply carries a header only this route emits" rather
+ * than "the fetch resolved" — otherwise a café portal would read as a
+ * healthy server and the app would sync against it.
+ *
+ * @returns {NextResponse} 204 No Content, never cached
+ */
+export function HEAD() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      [REACHABILITY_HEADER]: "1",
+      // Must never be served from a cache — a cached 204 would make an
+      // offline device look permanently online.
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+    },
+  });
 }
 
 /**

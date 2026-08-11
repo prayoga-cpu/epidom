@@ -8,6 +8,7 @@ import {
   type _Object as S3Object,
 } from "@aws-sdk/client-s3";
 import { getR2Client, r2Bucket, isR2Configured } from "./r2-client";
+import { directDatabaseUrl } from "@/lib/db/connection-string";
 
 /** Tables that are schema/tooling metadata, not application data — excluded so a
  *  restore never overwrites the target DB's own (correct, freshly-migrated) history. */
@@ -15,15 +16,13 @@ const EXCLUDED_TABLES = new Set(["_prisma_migrations"]);
 
 const RETENTION_DAYS = 90;
 
-/** Mirrors prisma.config.ts's migrationUrl() — CLI config isn't importable at
- *  runtime, so this small piece of logic is intentionally duplicated. Migrations
- *  (and this bulk export) must run over the direct, non-pooled connection. */
+/** Migrations (and this bulk export) must run over the direct, non-pooled
+ *  connection — see src/lib/db/connection-string.ts, which prisma.config.ts
+ *  shares, so the derivation no longer has to be duplicated here. */
 function directConnectionString(): string {
-  if (process.env.DIRECT_URL) return process.env.DIRECT_URL;
-  const db = process.env.DATABASE_URL;
-  if (db?.includes("-pooler")) return db.replace("-pooler", "");
-  if (!db) throw new Error("DATABASE_URL is not set");
-  return db;
+  const url = directDatabaseUrl();
+  if (!url) throw new Error("DATABASE_URL is not set");
+  return url;
 }
 
 interface TableInfo {
